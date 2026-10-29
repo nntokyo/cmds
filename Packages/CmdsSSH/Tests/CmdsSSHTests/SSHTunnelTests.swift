@@ -381,14 +381,19 @@ private final class WSClient {
     }
 
     /// Whether the connection ended (or a receive failed) within 10 s.
+    /// Whether the connection ended within 10 s (messages still queued, like `state`, are skipped).
     func waitEnded() -> Bool {
-        let failed = LockedBox(false)
-        let done = DispatchSemaphore(value: 0)
-        connection.receiveMessage { data, _, _, error in
-            failed.value = error != nil || data == nil
-            done.signal()
+        let deadline = Date().addingTimeInterval(10)
+        while Date() < deadline {
+            let failed = LockedBox(false)
+            let done = DispatchSemaphore(value: 0)
+            connection.receiveMessage { data, _, _, error in
+                failed.value = error != nil || data == nil
+                done.signal()
+            }
+            guard done.wait(timeout: .now() + deadline.timeIntervalSinceNow) == .success else { break }
+            if failed.value { return true }
         }
-        if done.wait(timeout: .now() + 10) == .success, failed.value { return true }
         return endedSignal.wait(timeout: .now() + 1) == .success
     }
 
