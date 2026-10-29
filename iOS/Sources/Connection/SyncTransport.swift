@@ -51,8 +51,19 @@ struct MacTarget: Codable, Hashable, Identifiable {
             guard let p = UInt16(text[text.index(after: colon)...]) else { return nil }
             port = p
         }
-        guard !host.isEmpty, !host.contains(" ") else { return nil }
+        // Hostname, IPv4 or IPv6 literal (optionally with a %zone); anything else would end up in the URL path.
+        let allowed = Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._:%")
+        guard !host.isEmpty, host.allSatisfy(allowed.contains), webSocketURL(host: host, port: port) != nil else { return nil }
         return MacTarget(kind: .manual(host: host, port: port), displayName: host)
+    }
+
+    /// `ws://host:port/` for a manual target. NWProtocolWebSocket needs a URL endpoint to build the
+    /// HTTP upgrade request; a `.hostPort` endpoint fails with "unable to create url endpoint"
+    /// (ECONNABORTED). IPv6 literals are bracketed and their zone separator percent-encoded.
+    static func webSocketURL(host: String, port: UInt16) -> URL? {
+        let authority = host.contains(":") ? "[" + host.replacingOccurrences(of: "%", with: "%25") + "]" : host
+        guard let url = URL(string: "ws://\(authority):\(port)/"), url.host != nil, url.port == Int(port) else { return nil }
+        return url
     }
 }
 
@@ -86,7 +97,8 @@ final class WebSocketTransport: SyncTransport {
         let tcp = NWProtocolTCP.Options()
         tcp.enableKeepalive = true
         tcp.keepaliveIdle = 10
-        tcp.connectionTimeout = 8
+        // Bonjour resolution alone can take several seconds.
+        tcp.connectionTimeout = 15
         let params = NWParameters(tls: nil, tcp: tcp)
         params.defaultProtocolStack.applicationProtocols.insert(ws, at: 0)
         params.includePeerToPeer = true
@@ -96,7 +108,12 @@ final class WebSocketTransport: SyncTransport {
         case .bonjour(let name, let type, let domain):
             endpoint = .service(name: name, type: type, domain: domain, interface: nil)
         case .manual(let host, let port):
-            endpoint = .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port) ?? 47_823)
+            if let url = MacTarget.webSocketURL(host: host, port: port) {
+                endpoint = .url(url)
+            } else {
+                // Unreachable for targets built by `MacTarget.manual`; connecting fails and is reported.
+                endpoint = .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port) ?? 47_823)
+            }
         case .mock:
             preconditionFailure("mock target uses MockTransport")
         }
