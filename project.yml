@@ -15,6 +15,9 @@ settings:
 packages:
   CmdsCore:
     path: Packages/CmdsCore
+  # SSH client for the companion's remote access (Apple's swift-nio-ssh; see Packages/CmdsSSH/Package.swift).
+  CmdsSSH:
+    path: Packages/CmdsSSH
 schemes:
   CmdsApp:
     build:
@@ -122,6 +125,7 @@ targets:
       - iOS/Resources
     dependencies:
       - package: CmdsCore
+      - package: CmdsSSH
     info:
       path: iOS/Info.plist
       properties:

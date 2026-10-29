@@ -97,11 +97,14 @@ enum SyncLinkPath: Equatable {
     case network
     /// The Bluetooth fallback (`BluetoothTransport`): same pinned TLS session, relayed over L2CAP.
     case bluetooth
+    /// Remote access via an SSH relay host (`SSHTransport`): same pinned TLS session, tunnelled.
+    case ssh
 
     var label: String {
         switch self {
         case .network: return String(localized: "Wi‑Fi")
         case .bluetooth: return String(localized: "Bluetooth")
+        case .ssh: return String(localized: "SSH")
         }
     }
 }

@@ -43,6 +43,7 @@ struct MainView: View {
 struct WorkspaceListView: View {
     @Environment(CompanionClient.self) private var client
     @Binding var selection: String?
+    @State private var showingRemoteAccess = false
 
     var body: some View {
         List(selection: $selection) {
@@ -97,12 +98,18 @@ struct WorkspaceListView: View {
                         Button("Retry") { client.connect(to: target) }
                     }
                     if client.target?.kind != .mock {
+                        Button("Remote Access via SSH…", systemImage: "network") { showingRemoteAccess = true }
                         Button("Unpair This Mac", role: .destructive) { client.unpair() }
                     }
                     Button("Switch Mac…") { client.disconnect() }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
+            }
+        }
+        .sheet(isPresented: $showingRemoteAccess) {
+            if let target = client.target {
+                RemoteAccessView(targetID: target.id, macName: client.macName)
             }
         }
     }
