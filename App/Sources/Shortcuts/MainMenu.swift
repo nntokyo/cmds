@@ -52,6 +52,7 @@ enum MainMenu {
         menu.addItem(item("New Workspace", #selector(CommandRouter.newWorkspace(_:)), "n", target: router))
         menu.addItem(item("New SSH Workspace…", #selector(CommandRouter.newSSHWorkspace(_:)), "n", [.command, .shift], target: router))
         menu.addItem(item("Open Browser Split", #selector(CommandRouter.openBrowser(_:)), "b", [.command, .shift], target: router))
+        menu.addItem(item("Open in Preview…", #selector(CommandRouter.openInPreview(_:)), "o", [.command, .shift], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Close Pane", #selector(CommandRouter.closePane(_:)), "w", target: router))
         menu.addItem(item("Close Workspace", #selector(CommandRouter.closeWorkspace(_:)), "w", [.command, .shift], target: router))

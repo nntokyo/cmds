@@ -62,6 +62,7 @@ enum Format {
     static func pane(_ pane: PaneInfo, currentPane: String?) -> String {
         var line = "\(pane.focused ? ">" : " ")\(pane.attention ? "!" : " ") \(pane.id)  \(pane.kind.rawValue)  \(oneLine(pane.title))"
         if pane.kind == .browser, let url = pane.url { line += "  \(url)" }
+        if pane.kind == .preview, let file = pane.file { line += "  \(abbreviate(file))" }
         if let remote = pane.remote { line += "  ssh \(remote.host)\(remote.connected ? "" : " (disconnected)")" }
         if pane.kind == .terminal, let cwd = pane.workingDirectory { line += "  \(pane.remote == nil ? abbreviate(cwd) : cwd)" }
         if pane.id == currentPane { line += "  (this pane)" }

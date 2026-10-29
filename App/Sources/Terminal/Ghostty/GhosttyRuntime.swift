@@ -216,6 +216,7 @@ final class GhosttyRuntime {
             let v = action.action.open_url
             guard let ptr = v.url, v.len > 0 else { return false }
             let str = String(decoding: UnsafeRawBufferPointer(start: ptr, count: Int(v.len)), as: UTF8.self)
+            if view.owner?.handleOpenLink(str) == true { return true } // file paths → preview pane
             let url = URL(string: str) ?? URL(fileURLWithPath: str)
             NSWorkspace.shared.open(url)
             return true

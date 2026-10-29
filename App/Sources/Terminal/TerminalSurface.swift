@@ -26,10 +26,15 @@ protocol TerminalSurfaceDelegate: AnyObject {
     func terminalSurfaceDidClose(_ surface: TerminalSurface)
     /// Only for surfaces launched with `waitAfterCommand`: the command exited; the surface stays open.
     func terminalSurfaceChildDidExit(_ surface: TerminalSurface)
+    /// The user ⌘-clicked a link or file path (`link` as detected by the engine: a URL, or a path that the engine
+    /// already resolved against the shell's directory when the file exists). Return true when handled; false lets
+    /// the engine open it with the default app.
+    func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool
 }
 
 extension TerminalSurfaceDelegate {
     func terminalSurfaceChildDidExit(_ surface: TerminalSurface) {}
+    func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool { false }
 }
 
 @MainActor

@@ -1,7 +1,7 @@
 import AppKit
 import CmdsCore
 
-/// One pane of a workspace: a terminal surface or a browser, hosted in a `PaneContainerView`.
+/// One pane of a workspace: a terminal surface, a browser or a file preview, hosted in a `PaneContainerView`.
 @MainActor
 final class Pane {
     let id: String
@@ -10,6 +10,8 @@ final class Pane {
     /// nil for browsers, and for an SSH pane restored from the session until the user connects it.
     private(set) var terminal: TerminalSurface?
     let browser: BrowserPane?
+    /// Set for preview panes (a local file).
+    let preview: PreviewPane?
     /// Set for SSH panes (docs/SSH.md); `workingDirectory` is then a path on the remote host.
     let ssh: SSHSession?
     let container: PaneContainerView
@@ -32,6 +34,7 @@ final class Pane {
         kind = .terminal
         self.terminal = terminal
         browser = nil
+        preview = nil
         self.ssh = ssh
         title = ssh.map { $0.launch.label } ?? (terminal.title.isEmpty ? "Terminal" : terminal.title)
         workingDirectory = ssh == nil ? terminal.workingDirectory : ssh?.launch.remoteCwd
@@ -46,6 +49,7 @@ final class Pane {
         kind = .terminal
         terminal = nil
         browser = nil
+        preview = nil
         self.ssh = ssh
         title = ssh.launch.label
         workingDirectory = ssh.launch.remoteCwd
@@ -98,6 +102,7 @@ final class Pane {
         kind = .browser
         terminal = nil
         ssh = nil
+        preview = nil
         self.browser = browser
         title = "Browser"
         container = PaneContainerView(paneID: id, content: browser)
@@ -112,6 +117,25 @@ final class Pane {
         }
     }
 
+    init(id: String, workspaceID: String, preview: PreviewPane) {
+        self.id = id
+        self.workspaceID = workspaceID
+        kind = .preview
+        terminal = nil
+        ssh = nil
+        browser = nil
+        self.preview = preview
+        title = preview.fileName
+        workingDirectory = (preview.path as NSString).deletingLastPathComponent
+        container = PaneContainerView(paneID: id, content: preview)
+        preview.onStateChange = { [weak self] in
+            guard let self else { return }
+            self.title = preview.fileName
+            self.workingDirectory = (preview.path as NSString).deletingLastPathComponent
+            self.controller?.paneDidChange(self)
+        }
+    }
+
     var url: String? { browser?.currentURL?.absoluteString }
 
     func focus() {
@@ -119,6 +143,8 @@ final class Pane {
             window.makeFirstResponder(overlay)
         } else if let terminal {
             terminal.focus()
+        } else if let preview {
+            preview.focus()
         } else {
             browser?.focus()
         }
@@ -132,7 +158,8 @@ final class Pane {
 
     func info(focused: Bool) -> PaneInfo {
         PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
-                 workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo)
+                 workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
+                 file: preview?.path)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.
@@ -144,6 +171,7 @@ final class Pane {
             terminal.close()
         }
         browser?.tearDown()
+        preview?.tearDown()
         ssh?.stopAPI()
     }
 }
@@ -183,6 +211,51 @@ extension Pane: TerminalSurfaceDelegate {
             return
         }
         controller?.surfaceDidClose(self)
+    }
+
+    /// ⌘-click on a file path opens it in a preview pane; URLs, folders and missing files keep the default
+    /// (open with the default app / Finder).
+    func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool {
+        guard surface === terminal, let path = Self.localPath(fromLink: link, relativeTo: workingDirectory) else {
+            return false
+        }
+        if ssh != nil {
+            // A path printed on the server: there is no such file here (and opening a same-named local one would
+            // show the wrong file).
+            NSSound.beep()
+            return true
+        }
+        guard let file = Self.existingFile(path) else { return false }
+        controller?.openFileFromTerminal(self, path: file)
+        return true
+    }
+
+    /// `file://…`, `/abs`, `~/…` or a relative path (against `cwd`); nil for URLs with another scheme.
+    static func localPath(fromLink link: String, relativeTo cwd: String?) -> String? {
+        if link.hasPrefix("file:") {
+            guard let url = URL(string: link), url.isFileURL else { return nil }
+            return url.path
+        }
+        if link.range(of: #"^[A-Za-z][A-Za-z0-9+.-]*:"#, options: .regularExpression) != nil { return nil }
+        let expanded = (link as NSString).expandingTildeInPath
+        if expanded.hasPrefix("/") { return (expanded as NSString).standardizingPath }
+        guard let cwd else { return nil }
+        return ((cwd as NSString).appendingPathComponent(expanded) as NSString).standardizingPath
+    }
+
+    /// The path if it is an existing file, else the path without a `:line[:column]` suffix (compiler output).
+    static func existingFile(_ path: String) -> String? {
+        var candidates = [path]
+        if let range = path.range(of: #":\d+(:\d+)?:?$"#, options: .regularExpression) {
+            candidates.append(String(path[..<range.lowerBound]))
+        }
+        for candidate in candidates {
+            var isDirectory: ObjCBool = false
+            if FileManager.default.fileExists(atPath: candidate, isDirectory: &isDirectory), !isDirectory.boolValue {
+                return candidate
+            }
+        }
+        return nil
     }
 
     func terminalSurfaceChildDidExit(_ surface: TerminalSurface) {

@@ -211,6 +211,40 @@ extension CLI {
             try ctx.call("sidebar.set_status", ["workspace": ctx.workspace.json,
                                                 "text": .string(ctx.args.positionals.joined(separator: " "))])
         },
+        Command(name: "open", usage: "open [--pane P] [--down] [--no-focus] [--diff] <file|->",
+                summary: "Show a file in a preview pane split to the right of a pane (default: the current one).",
+                details: """
+                    Images, PDF, video, Office documents and text/code use Quick Look; Markdown (.md) is rendered; unified
+                    diffs (.diff/.patch, or any file with --diff) are coloured. The pane reloads when the file changes.
+                    Relative paths are resolved against the current directory. `-` reads stdin into a temporary file
+                    (e.g. `git diff | cmds open --diff -`). --pane naming a preview pane shows the file in that pane
+                    instead of splitting. --down splits below, --no-focus keeps the keyboard in the current pane.
+                    Not available from SSH panes (the file is on the server). Prints the preview pane id.
+                    """,
+                options: ["pane"], flags: ["down", "no-focus", "diff"]) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds open [--pane P] [--down] [--no-focus] [--diff] <file|->")
+            let argument = ctx.args.positionals[0]
+            let path: String
+            if argument == "-" {
+                path = try writeStandardInputToTemporaryFile(extension: ctx.args.has("diff") ? "diff" : "txt")
+            } else {
+                path = absolutePath(argument)
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+                    throw CLIError.failure("no such file: \(argument)")
+                }
+                guard !isDirectory.boolValue else { throw CLIError.failure("\(argument) is a directory") }
+            }
+            let result = try ctx.call("pane.open_file", [
+                "pane": ctx.pane.json,
+                "path": .string(path),
+                "direction": ctx.args.has("down") ? "down" : nil,
+                "focus": ctx.args.has("no-focus") ? false : nil,
+                "format": ctx.args.has("diff") ? "diff" : nil,
+            ])
+            if ctx.json { return ctx.printJSON(result) }
+            print(result["id"]?.stringValue ?? "")
+        },
         Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] <url>",
                 summary: "Open a browser split to the right of a pane (default: the current one).",
                 details: "--no-focus keeps the keyboard in the current pane. Prints the new pane id.",
@@ -333,6 +367,23 @@ extension CLI {
         }
         return titled[0].id
     }
+}
+
+/// Saves stdin under `$TMPDIR/cmds-preview/` (owner-only) for `cmds open -`.
+func writeStandardInputToTemporaryFile(extension ext: String) throws -> String {
+    let data = FileHandle.standardInput.readDataToEndOfFile()
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-preview", isDirectory: true)
+    do {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                                attributes: [.posixPermissions: 0o700])
+    } catch {
+        throw CLIError.failure("cannot create \(directory.path): \(error.localizedDescription)")
+    }
+    let file = directory.appendingPathComponent("stdin-\(UUID().uuidString.prefix(8)).\(ext)")
+    guard FileManager.default.createFile(atPath: file.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
+        throw CLIError.failure("cannot write \(file.path)")
+    }
+    return file.path
 }
 
 func absolutePath(_ path: String) -> String {

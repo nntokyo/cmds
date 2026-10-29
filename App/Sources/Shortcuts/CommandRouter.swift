@@ -50,6 +50,30 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         focusedBrowser?.focusAddressBar()
     }
 
+    /// ⇧⌘O: pick a file and show it in a preview split to the right of the focused pane.
+    @objc func openInPreview(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.message = "Choose a file to preview"
+        panel.prompt = "Preview"
+        if let directory = controller.selectedWorkspace?.workingDirectory, controller.selectedWorkspace?.isRemote == false {
+            panel.directoryURL = URL(fileURLWithPath: directory, isDirectory: true)
+        }
+        let open: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard let self, response == .OK, let url = panel.url else { return }
+            if self.controller.focusedPane == nil { self.controller.createWorkspace() }
+            do {
+                try self.controller.openFile(path: url.path)
+            } catch {
+                NSSound.beep()
+            }
+        }
+        if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: open) } else { open(panel.runModal()) }
+    }
+
     @objc func focusLeft(_ sender: Any?) { windowController?.focusNeighbor(.left) }
     @objc func focusRight(_ sender: Any?) { windowController?.focusNeighbor(.right) }
     @objc func focusUp(_ sender: Any?) { windowController?.focusNeighbor(.up) }
@@ -60,10 +84,12 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     // MARK: Browser
 
     @objc func browserFocusAddress(_ sender: Any?) { focusedBrowser?.focusAddressBar() }
-    /// ⌘R: reload the focused browser, or reconnect the focused SSH pane whose ssh is not running.
+    /// ⌘R: reload the focused browser or preview, or reconnect the focused SSH pane whose ssh is not running.
     @objc func browserReload(_ sender: Any?) {
         if let pane = controller.focusedDisconnectedSSHPane {
             try? controller.connectSSH(paneID: pane.id)
+        } else if let preview = controller.focusedPane?.preview {
+            preview.reload()
         } else {
             focusedBrowser?.reload()
         }
@@ -85,6 +111,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             Split right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩
             Focus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U
             Browser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]
+            Open in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it
             Toggle sidebar ⌘B · Rename workspace ⇧⌘R
             """
         if let window = windowController?.window { alert.beginSheetModal(for: window) } else { alert.runModal() }
@@ -121,6 +148,10 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(browserReload(_:)):
             if controller.focusedDisconnectedSSHPane != nil {
                 menuItem.title = "Reconnect SSH"
+                return true
+            }
+            if controller.focusedPane?.preview != nil {
+                menuItem.title = "Reload Preview"
                 return true
             }
             menuItem.title = "Reload Page"

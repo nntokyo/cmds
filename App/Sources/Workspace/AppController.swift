@@ -332,7 +332,7 @@ final class AppController {
     @discardableResult
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
                url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
-               ssh: SSHLaunch? = nil) throws -> PaneInfo {
+               ssh: SSHLaunch? = nil, file: PreviewTarget? = nil) throws -> PaneInfo {
         let source = try resolvePane(paneID)
         guard let workspace = workspace(id: source.workspaceID),
               let leaf = workspace.root?.leaf(for: source.id) else {
@@ -353,7 +353,7 @@ final class AppController {
             let localSource = source.ssh == nil ? source.workingDirectory : nil
             let localWorkspace = workspace.isRemote ? nil : workspace.workingDirectory
             let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? localSource ?? localWorkspace ?? NSHomeDirectory()
-            pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url)
+            pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file)
         }
         workspace.zoomedPaneID = nil
         leaf.split(axis: direction.axis, newPaneID: pane.id)
@@ -469,6 +469,44 @@ final class AppController {
 
     func browserSnapshot(paneID: String) async throws -> Data {
         try await browser(paneID: paneID).snapshot()
+    }
+
+    // MARK: - Preview
+
+    /// `pane.open_file`: shows a local file in a preview pane split off `paneID` (default: focused pane). When
+    /// `paneID` is a preview pane, the file replaces what it shows instead. `path` must be absolute and an existing
+    /// file (the CLI resolves relative paths against its cwd).
+    @discardableResult
+    func openFile(paneID: String? = nil, path: String, direction: SplitDirection = .right, focus: Bool = true,
+                  format: PreviewFormat? = nil) throws -> PaneInfo {
+        let target = try PreviewTarget.checked(path: path, format: format)
+        let source = try resolvePane(paneID)
+        if let preview = source.preview {
+            preview.open(path: target.path, format: target.format)
+            if focus { try focusPane(id: source.id) }
+            return try paneInfo(id: source.id)
+        }
+        return try split(paneID: source.id, direction: direction, kind: .preview, focus: focus, file: target)
+    }
+
+    /// ⌘-click on a file path in a terminal: shows it in the workspace's preview pane if it has one, else in a new
+    /// preview split to the right. The terminal keeps the keyboard.
+    func openFileFromTerminal(_ pane: Pane, path: String) {
+        guard let workspace = workspace(id: pane.workspaceID) else { return }
+        let existing = workspace.orderedPanes.first { $0.kind == .preview }
+        do {
+            try openFile(paneID: existing?.id ?? pane.id, path: path, focus: false)
+        } catch {
+            NSSound.beep()
+        }
+    }
+
+    /// The file shown in a preview pane (for the phone's `requestFile`; never a path from the request).
+    func previewFile(paneID: String) throws -> String {
+        let pane = try resolvePane(paneID)
+        guard let preview = pane.preview else { throw RPCError.invalidParams("pane \(pane.id) is not a preview pane") }
+        guard preview.fileExists else { throw RPCError.notFound("file not found: \(preview.fileName)") }
+        return preview.path
     }
 
     // MARK: - UI commands
@@ -668,6 +706,7 @@ final class AppController {
             case .leaf(let id):
                 let pane = workspace.panes[id]
                 if pane?.kind == .browser { return .browser(url: pane?.url) }
+                if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
                 if let pane, let ssh = pane.ssh {
                     let cwd = (try? SSHLaunch.validateRemoteCwd(pane.workingDirectory)) ?? ssh.launch.remoteCwd
                     return .ssh(host: ssh.launch.host, remoteCwd: cwd)
@@ -700,6 +739,10 @@ final class AppController {
                 return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil).id)
             case .browser(let url):
                 return SplitNode(paneID: makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url).id)
+            case .preview(let path, let format):
+                // A missing file shows a placeholder (and appears when it is created again).
+                let target = PreviewTarget(path: path, format: format.flatMap(PreviewFormat.init(rawValue:)))
+                return SplitNode(paneID: makePane(kind: .preview, in: workspace, cwd: nil, command: nil, url: nil, file: target).id)
             case .ssh(let host, let remoteCwd):
                 // Never connects on launch: the pane shows "Not connected — Connect (⌘R)".
                 guard let launch = try? SSHLaunch(host: host, remoteCwd: remoteCwd) else {
@@ -751,7 +794,8 @@ final class AppController {
         return Workspace(id: "w\(nextWorkspaceNumber)")
     }
 
-    private func makePane(kind: PaneKind, in workspace: Workspace, cwd: String?, command: String?, url: String?) -> Pane {
+    private func makePane(kind: PaneKind, in workspace: Workspace, cwd: String?, command: String?, url: String?,
+                          file: PreviewTarget? = nil) -> Pane {
         let id = "p\(nextPaneNumber)"
         nextPaneNumber += 1
         let pane: Pane
@@ -765,6 +809,9 @@ final class AppController {
             let browser = BrowserPane()
             pane = Pane(id: id, workspaceID: workspace.id, browser: browser)
             if let url, !url.isEmpty { browser.navigate(to: url) } else { browser.showStartPage() }
+        case .preview:
+            let preview = PreviewPane(path: file?.path ?? NSHomeDirectory(), format: file?.format)
+            pane = Pane(id: id, workspaceID: workspace.id, preview: preview)
         }
         pane.controller = self
         workspace.panes[id] = pane
@@ -873,6 +920,24 @@ final class AppController {
         }
         saveWorkItem = item
         DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: item)
+    }
+}
+
+/// A file for a preview pane: absolute, standardized path plus an optional forced rendering.
+struct PreviewTarget {
+    var path: String
+    var format: PreviewFormat?
+
+    /// Validates a path from the API: absolute, an existing file (not a folder).
+    static func checked(path raw: String, format: PreviewFormat?) throws -> PreviewTarget {
+        guard raw.hasPrefix("/") else { throw RPCError.invalidParams("path must be absolute: \(raw)") }
+        let path = (raw as NSString).standardizingPath
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) else {
+            throw RPCError.notFound("no such file: \(path)")
+        }
+        guard !isDirectory.boolValue else { throw RPCError.invalidParams("\(path) is a folder, not a file") }
+        return PreviewTarget(path: path, format: format)
     }
 }
 

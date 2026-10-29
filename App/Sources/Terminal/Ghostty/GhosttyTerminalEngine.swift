@@ -245,6 +245,12 @@ final class GhosttyTerminalSurface: TerminalSurface {
     }
 
     /// Child exited / libghostty asked to close: free the surface and tell the delegate.
+    /// ⌘-click on a link (libghostty's link detection); true when the shell handled it.
+    func handleOpenLink(_ link: String) -> Bool {
+        guard !closed else { return false }
+        return delegate?.terminalSurface(self, openLink: link) ?? false
+    }
+
     func handleCloseRequest() {
         close()
     }

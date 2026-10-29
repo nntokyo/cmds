@@ -157,12 +157,28 @@ final class APIServer {
                 throw RPCError.invalidParams("direction must be \"right\" or \"down\"")
             }
             let rawKind = try params.string("kind") ?? (try params.string("url") != nil ? "browser" : "terminal")
-            guard let kind = PaneKind(rawValue: rawKind) else { throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\"") }
+            guard let kind = PaneKind(rawValue: rawKind), kind != .preview else {
+                throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\" (files: pane.open_file)")
+            }
             let ssh = try params.string("ssh").map { try SSHLaunch.checked(host: $0, remoteCwd: try params.string("remoteCwd")) }
             return try .from(controller.split(paneID: try params.string("pane"), direction: direction, kind: kind,
                                               url: try params.string("url"), cwd: try params.string("cwd"),
                                               command: try params.string("command"),
                                               focus: try params.bool("focus") ?? true, ssh: ssh))
+        case "pane.open_file":
+            let rawDirection = try params.string("direction") ?? "right"
+            guard let direction = SplitDirection(rawValue: rawDirection) else {
+                throw RPCError.invalidParams("direction must be \"right\" or \"down\"")
+            }
+            let format = try params.string("format").map { raw -> PreviewFormat in
+                guard let format = PreviewFormat(rawValue: raw == "quicklook" ? "quickLook" : raw) else {
+                    throw RPCError.invalidParams("format must be \"markdown\", \"diff\" or \"quicklook\"")
+                }
+                return format
+            }
+            return try .from(controller.openFile(paneID: try params.string("pane"), path: try params.required("path"),
+                                                 direction: direction, focus: try params.bool("focus") ?? true,
+                                                 format: format))
         case "pane.reconnect":
             try controller.connectSSH(paneID: try params.string("pane"))
         case "pane.focus":
