@@ -78,7 +78,9 @@ targets:
         PRODUCT_NAME: cmds
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds
         ENABLE_HARDENED_RUNTIME: NO
-        CODE_SIGN_IDENTITY: "-"
+        # A stable signing identity keeps the firewall allowance and notification permission across rebuilds.
+        DEVELOPMENT_TEAM: LY354RVYHA
+        CODE_SIGN_IDENTITY: "Apple Development"
         OTHER_LDFLAGS: ["-lc++"]
         ARCHS: arm64
     postBuildScripts:

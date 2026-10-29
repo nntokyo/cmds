@@ -60,8 +60,16 @@ final class AppController {
     var changes: AnyPublisher<StateChange, Never> { subject.eraseToAnyPublisher() }
 
     private let subject = PassthroughSubject<StateChange, Never>()
-    private var nextWorkspaceNumber = 1
-    private var nextPaneNumber = 1
+    /// IDs keep counting across launches (and instances), so a stale ID held by a script or the phone
+    /// never reaches a different pane after a restart.
+    private var nextWorkspaceNumber: Int {
+        get { max(1, UserDefaults.standard.integer(forKey: "nextWorkspaceNumber")) }
+        set { UserDefaults.standard.set(newValue, forKey: "nextWorkspaceNumber") }
+    }
+    private var nextPaneNumber: Int {
+        get { max(1, UserDefaults.standard.integer(forKey: "nextPaneNumber")) }
+        set { UserDefaults.standard.set(newValue, forKey: "nextPaneNumber") }
+    }
     private var saveWorkItem: DispatchWorkItem?
 
     var selectedWorkspace: Workspace? { selectedWorkspaceID.flatMap(workspace(id:)) }

@@ -58,6 +58,10 @@ final class CompanionClient {
     private var backoff = SyncBackoff()
     private var reconnectTask: Task<Void, Never>?
     private var pingTask: Task<Void, Never>?
+    private var connectTimeoutTask: Task<Void, Never>?
+    /// A connection that is neither up nor failed after this long is abandoned and retried
+    /// (NWConnection can sit in "preparing" indefinitely, e.g. while the Mac's firewall drops packets).
+    private static let connectTimeout: Duration = .seconds(12)
     private var pendingPairingCode: String?
     private var subscribedPaneIDs: [String] = []
     private var pingNonce = 0
@@ -139,9 +143,24 @@ final class CompanionClient {
             self.handle(event)
         }
         transport.start()
+        connectTimeoutTask = Task { [weak self] in
+            try? await Task.sleep(for: Self.connectTimeout)
+            guard !Task.isCancelled, let self, transport === self.transport else { return }
+            switch self.status {
+            case .connecting, .authenticating:
+                self.transport?.onEvent = nil
+                self.transport?.close()
+                self.transport = nil
+                self.scheduleReconnect(reason: String(localized: "The Mac did not answer. Check that cmds is running and allowed in the Mac's firewall."))
+            default:
+                break
+            }
+        }
     }
 
     private func teardown() {
+        connectTimeoutTask?.cancel()
+        connectTimeoutTask = nil
         reconnectTask?.cancel()
         reconnectTask = nil
         pingTask?.cancel()
