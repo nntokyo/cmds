@@ -290,7 +290,18 @@ final class SyncServer {
         let nwPort = requested.flatMap { NWEndpoint.Port(rawValue: $0) } ?? .any
         let listener: NWListener
         do {
+            #if DEBUG
+            if Self.testPairing {
+                // End-to-end test mode: loopback only, so nothing on the network can reach the test
+                // instance and the firewall never asks about it.
+                params.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: nwPort)
+                listener = try NWListener(using: params)
+            } else {
+                listener = try NWListener(using: params, on: nwPort)
+            }
+            #else
             listener = try NWListener(using: params, on: nwPort)
+            #endif
         } catch {
             if requested != nil, !portIsFixed { return startListener(port: nil) }
             statusText = "Failed: \(error.localizedDescription)"
@@ -708,11 +719,18 @@ final class SyncServer {
 
     /// What the pairing window's QR code carries (docs/SYNC.md); nil until the listener is up.
     var pairingPayload: SyncPairingPayload? {
-        guard let identity, let port, let host = Self.lanHost() else { return nil }
+        guard let identity, let port, let host = Self.pairingHost() else { return nil }
         // Only an advertised name helps the phone, and a Bonjour name is at most 63 bytes.
         let name = CmdsEnv.isBonjourDisabled() ? nil : (serviceName ?? macName)
         return SyncPairingPayload(name: name.flatMap { $0.utf8.count <= 63 ? $0 : nil }, host: host, port: port,
                                   fingerprint: identity.fingerprint, code: pairingCode)
+    }
+
+    private static func pairingHost() -> String? {
+        #if DEBUG
+        if testPairing { return "127.0.0.1" }
+        #endif
+        return lanHost()
     }
 
     /// IPv4 address of the Mac on the local network (Wi-Fi/Ethernet, en0 first), else "<local host name>.local".
@@ -744,9 +762,10 @@ final class SyncServer {
     }
 
     #if DEBUG
-    /// DEBUG builds and isolated instances (`CMDS_SUPPORT_DIR`) only: `CMDS_SYNC_TEST_PAIRING=1` keeps pairing
-    /// open without the window and writes the QR payload to `sync-test-pairing.txt` (0600) in the support
-    /// directory whenever it changes, for end-to-end tests (docs/SYNC.md).
+    /// DEBUG builds and isolated instances (`CMDS_SUPPORT_DIR`) only: `CMDS_SYNC_TEST_PAIRING=1` listens on
+    /// 127.0.0.1 only, keeps pairing open without the window and writes the QR payload to
+    /// `sync-test-pairing.txt` (0600) in the support directory whenever it changes, for end-to-end tests
+    /// (docs/SYNC.md).
     static let testPairing = ProcessInfo.processInfo.environment["CMDS_SYNC_TEST_PAIRING"] == "1"
         && CmdsEnv.supportDirectoryOverride() != nil
 
