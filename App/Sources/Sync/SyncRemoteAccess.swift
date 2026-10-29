@@ -121,7 +121,7 @@ final class SyncRemoteAccess {
                 server.start { [weak self] fd in
                     DispatchQueue.main.async {
                         MainActor.assumeIsolated {
-                            guard let self else { return Darwin.close(fd) }
+                            guard let self else { Darwin.close(fd); return }
                             self.relay(fd, peer: peer)
                         }
                     }
