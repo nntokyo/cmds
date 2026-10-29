@@ -68,6 +68,8 @@ public enum CmdsEnv {
     public static let syncPort = "CMDS_SYNC_PORT"
     /// `1` = run the iOS sync server without the Bonjour advertisement, so no phone discovers the instance.
     public static let syncNoBonjour = "CMDS_SYNC_NO_BONJOUR"
+    /// `1` = no Bluetooth fallback (no advertising, no L2CAP channel), so no phone finds the instance over Bluetooth.
+    public static let syncNoBluetooth = "CMDS_SYNC_NO_BLUETOOTH"
 
     public enum SyncPortSetting: Equatable, Sendable {
         case unset
@@ -106,6 +108,10 @@ public enum CmdsEnv {
 
     public static func isBonjourDisabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         isSet(environment[syncNoBonjour])
+    }
+
+    public static func isBluetoothDisabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        isSet(environment[syncNoBluetooth])
     }
 
     private static func isSet(_ flag: String?) -> Bool {

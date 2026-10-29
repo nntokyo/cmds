@@ -213,6 +213,9 @@ final class SyncSecurityTests: XCTestCase {
         XCTAssertTrue(CmdsEnv.isBonjourDisabled(environment: ["CMDS_SYNC_NO_BONJOUR": "yes"]))
         XCTAssertFalse(CmdsEnv.isBonjourDisabled(environment: ["CMDS_SYNC_NO_BONJOUR": "0"]))
         XCTAssertFalse(CmdsEnv.isBonjourDisabled(environment: [:]))
+        XCTAssertTrue(CmdsEnv.isBluetoothDisabled(environment: ["CMDS_SYNC_NO_BLUETOOTH": "1"]))
+        XCTAssertFalse(CmdsEnv.isBluetoothDisabled(environment: ["CMDS_SYNC_NO_BLUETOOTH": "0"]))
+        XCTAssertFalse(CmdsEnv.isBluetoothDisabled(environment: [:]))
     }
 
     // MARK: - Protocol
