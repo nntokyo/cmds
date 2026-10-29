@@ -136,10 +136,13 @@ public enum ServerMessage: Equatable, Sendable {
         public var workspaces: [WorkspaceInfo]
         /// Machine-wide CPU/memory. Optional so older Macs and phones interoperate.
         public var system: SystemStats?
+        /// Latest account limits of the coding agents (Claude, Codex). Optional, omitted when none is known.
+        public var agentLimits: [AgentLimits]?
 
-        public init(workspaces: [WorkspaceInfo], system: SystemStats? = nil) {
+        public init(workspaces: [WorkspaceInfo], system: SystemStats? = nil, agentLimits: [AgentLimits]? = nil) {
             self.workspaces = workspaces
             self.system = system
+            self.agentLimits = agentLimits
         }
     }
 

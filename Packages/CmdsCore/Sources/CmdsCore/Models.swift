@@ -24,9 +24,11 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var attention: Bool
     public var workingDirectory: String?
     public var url: String?
+    /// Usage of the AI coding agent running in the pane (Claude Code, Codex); nil when none is known.
+    public var agent: AgentUsage?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
-                workingDirectory: String? = nil, url: String? = nil) {
+                workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -34,6 +36,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.attention = attention
         self.workingDirectory = workingDirectory
         self.url = url
+        self.agent = agent
     }
 }
 
