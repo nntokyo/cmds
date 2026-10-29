@@ -62,7 +62,7 @@ public enum CmdsEnv {
     /// `~/Library/Application Support/cmds/cmds.sock`, overridable with `CMDS_SOCKET_PATH`.
     public static func defaultSocketPath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
         if let path = environment[socketPath], !path.isEmpty { return path }
-        let base = FileManager.default.homeDirectoryForCurrentUser
+        let base = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
             .appendingPathComponent("Library/Application Support/cmds", isDirectory: true)
         return base.appendingPathComponent("cmds.sock").path
     }
