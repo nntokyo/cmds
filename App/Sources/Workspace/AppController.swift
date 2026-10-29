@@ -191,10 +191,11 @@ final class AppController {
     // MARK: - Panes
 
     /// Splits `paneID` (default: focused pane) and focuses the new pane.
-    /// New terminals start in the source pane's directory unless `cwd` is given.
+    /// New terminals start in the source pane's directory unless `cwd` is given. With `focus: false` the source
+    /// pane keeps focus (scripts and agents opening a helper pane must not take the user's keyboard).
     @discardableResult
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
-               url: String? = nil, cwd: String? = nil, command: String? = nil) throws -> PaneInfo {
+               url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true) throws -> PaneInfo {
         let source = try resolvePane(paneID)
         guard let workspace = workspace(id: source.workspaceID),
               let leaf = workspace.root?.leaf(for: source.id) else {
@@ -205,6 +206,10 @@ final class AppController {
         let pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url)
         workspace.zoomedPaneID = nil
         leaf.split(axis: direction.axis, newPaneID: pane.id)
+        guard focus else {
+            emit(.workspace(id: workspace.id))
+            return pane.info(focused: false)
+        }
         applyFocus(pane, in: workspace)
         emit(.workspace(id: workspace.id))
         if workspace.id == selectedWorkspaceID { pane.focus() }
@@ -288,8 +293,8 @@ final class AppController {
 
     /// Opens a browser split to the right of `paneID` (default: focused pane).
     @discardableResult
-    func openBrowser(paneID: String? = nil, url: String) throws -> PaneInfo {
-        try split(paneID: paneID, direction: .right, kind: .browser, url: url)
+    func openBrowser(paneID: String? = nil, url: String, focus: Bool = true) throws -> PaneInfo {
+        try split(paneID: paneID, direction: .right, kind: .browser, url: url, focus: focus)
     }
 
     func browser(paneID: String) throws -> BrowserPane {

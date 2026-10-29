@@ -93,10 +93,10 @@ extension CLI {
             let id = positionals.count == 2 ? try resolveWorkspace(ctx, positionals[0]) : ctx.envWorkspace
             try ctx.call("workspace.rename", ["id": id.json, "title": .string(positionals.last!)])
         },
-        Command(name: "split", usage: "split [right|down] [--pane P] [--browser URL] [--cwd DIR] [-- command…]",
+        Command(name: "split", usage: "split [right|down] [--pane P] [--browser URL] [--cwd DIR] [--no-focus] [-- command…]",
                 summary: "Split a pane (default: the current one, to the right) and focus the new pane.",
-                details: "--browser opens a browser pane instead of a terminal. Prints the new pane id.",
-                options: ["pane", "browser", "cwd"]) { ctx in
+                details: "--browser opens a browser pane instead of a terminal. --no-focus keeps the keyboard in the current pane. Prints the new pane id.",
+                options: ["pane", "browser", "cwd"], flags: ["no-focus"]) { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds split [right|down] [options]")
             let direction = ctx.args.positionals.first ?? "right"
             guard ["right", "down"].contains(direction) else { throw CLIError.usage("direction must be right or down") }
@@ -108,6 +108,7 @@ extension CLI {
                 "url": url.json,
                 "cwd": ctx.args[option: "cwd"].map { .string(absolutePath($0)) },
                 "command": shellCommand(ctx.args.rest ?? []).json,
+                "focus": ctx.args.has("no-focus") ? false : nil,
             ])
             if ctx.json { return ctx.printJSON(result) }
             print(result["id"]?.stringValue ?? "")
@@ -163,11 +164,13 @@ extension CLI {
             try ctx.call("sidebar.set_status", ["workspace": ctx.workspace.json,
                                                 "text": .string(ctx.args.positionals.joined(separator: " "))])
         },
-        Command(name: "browser open", usage: "browser open [--pane P] <url>",
+        Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] <url>",
                 summary: "Open a browser split to the right of a pane (default: the current one).",
-                options: ["pane"]) { ctx in
-            try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] <url>")
-            let result = try ctx.call("browser.open", ["pane": ctx.pane.json, "url": .string(ctx.args.positionals[0])])
+                details: "--no-focus keeps the keyboard in the current pane. Prints the new pane id.",
+                options: ["pane"], flags: ["no-focus"]) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] [--no-focus] <url>")
+            let result = try ctx.call("browser.open", ["pane": ctx.pane.json, "url": .string(ctx.args.positionals[0]),
+                                                       "focus": ctx.args.has("no-focus") ? false : nil])
             if ctx.json { return ctx.printJSON(result) }
             print(result["id"]?.stringValue ?? "")
         },

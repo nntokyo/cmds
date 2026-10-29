@@ -57,14 +57,14 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 | `workspace.close` | `id` | – |
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
-| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?` | `PaneInfo` |
+| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true) | `PaneInfo` |
 | `pane.focus` | `pane` | – |
 | `pane.close` | `pane` | – |
 | `pane.send_text` | `pane?`, `text` | – |
 | `pane.read_text` | `pane?`, `scrollback?` (lines) | `{"text": ...}` |
 | `notify` | `pane?`, `title?`, `body` | – |
 | `sidebar.set_status` | `workspace?`, `text` | – (sets notification text without ringing) |
-| `browser.open` | `pane?` (terminal to split from), `url` | `PaneInfo` |
+| `browser.open` | `pane?` (terminal to split from), `url`, `focus?` (default true) | `PaneInfo` |
 | `browser.navigate` | `pane`, `url` | – |
 | `browser.eval` | `pane`, `script` | `{"value": ...}` (JSON-serializable result) |
 | `browser.get_url` | `pane` | `{"url", "title"}` |

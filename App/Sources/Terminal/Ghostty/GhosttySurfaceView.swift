@@ -70,6 +70,9 @@ final class GhosttySurfaceView: NSView {
             return
         }
         surface = created
+        // libghostty starts a surface as focused; until this view becomes first responder in the key window it
+        // is not, and programs using focus reporting (e.g. agents that only notify while unfocused) must see that.
+        ghostty_surface_set_focus(created, false)
 
         updateTrackingAreas()
         registerForDraggedTypes([.fileURL, .string])

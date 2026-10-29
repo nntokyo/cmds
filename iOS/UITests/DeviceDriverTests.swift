@@ -5,6 +5,7 @@ import XCTest
 /// `TEST_RUNNER_CMDS_UI_SCRIPT=...`), separated by `;;`:
 ///
 ///     tap:<label or identifier>     tap the first element with that label/identifier
+///     tapContains:<text>            tap the first element whose label contains <text>
 ///     tapText:<text>                tap the first static text containing <text>
 ///     type:<text>                   type into the focused element (\n = return)
 ///     wait:<seconds>
@@ -29,6 +30,11 @@ final class DeviceDriverTests: XCTestCase {
                 let element = app.descendants(matching: .any).matching(
                     NSPredicate(format: "label == %@ OR identifier == %@", argument, argument)).firstMatch
                 XCTAssertTrue(element.waitForExistence(timeout: 5), "no element \(argument)")
+                element.tap()
+            case "tapContains":
+                let element = app.descendants(matching: .any).matching(
+                    NSPredicate(format: "label CONTAINS %@", argument)).firstMatch
+                XCTAssertTrue(element.waitForExistence(timeout: 5), "no element containing \(argument)")
                 element.tap()
             case "tapText":
                 let element = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", argument)).firstMatch

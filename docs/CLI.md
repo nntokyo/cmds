@@ -29,14 +29,14 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds new [--title T] [--cwd DIR] [-- cmd…]` | New workspace (default cwd: current directory); prints its id |
 | `cmds select <id\|index\|title>` | Select a workspace (index is 1-based like ⌘1…⌘9) |
 | `cmds close [ws]` / `cmds rename [ws] <title>` | Close / rename a workspace (default: current) |
-| `cmds split [right\|down] [--pane P] [--browser URL] [--cwd DIR] [-- cmd…]` | Split a pane; prints the new pane id |
+| `cmds split [right\|down] [--pane P] [--browser URL] [--cwd DIR] [--no-focus] [-- cmd…]` | Split a pane; prints the new pane id (`--no-focus` keeps the keyboard where it is) |
 | `cmds panes [--workspace W]` | List panes |
 | `cmds focus <pane>` / `cmds close-pane [pane]` | Focus / close a pane |
 | `cmds send [--pane P] [--enter] <text…\|->` | Type text into a terminal (`-` reads stdin; `--enter`/`-e` appends Return) |
 | `cmds read [--pane P] [--scrollback N]` | Print the screen, or the last N lines including scrollback |
 | `cmds notify [--title T] [--pane P] <body…>` | Light the attention ring + sidebar text (+ macOS notification when cmds is in the background) |
 | `cmds status [--workspace W] <text…>` | Set the sidebar text without ringing (`""` clears) |
-| `cmds browser open [--pane P] <url>` | Open a browser split to the right; prints the pane id |
+| `cmds browser open [--pane P] [--no-focus] <url>` | Open a browser split to the right; prints the pane id |
 | `cmds browser navigate [--pane P] <url>` | Load a URL |
 | `cmds browser url [--pane P]` | Print URL and title |
 | `cmds browser eval [--pane P] <script\|->` | Run JavaScript and print the JSON result. Promises are awaited; an expression may use `await`; statements with top-level `await` must `return` their value |
