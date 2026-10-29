@@ -1,17 +1,23 @@
-# iOS companion sync protocol (v1)
+# iOS companion sync protocol (v2)
 
 The cmds Mac app streams workspaces and terminal screens to the iOS/iPadOS companion over the
 local network. Code: `Packages/CmdsCore/Sources/CmdsCore/Sync/` (shared by both sides).
 
 ## Transport
 
-- WebSocket over plain TCP (Network.framework `NWProtocolWebSocket` on both sides). One JSON
-  object per **text** frame, UTF-8, max 4 MiB (`SyncCodec.maxFrameBytes`). Path is ignored.
+- WebSocket over **TLS 1.3** (Network.framework `NWProtocolWebSocket` over `NWProtocolTLS` on both
+  sides, settings in `SyncTLS`). One JSON object per **text** frame, UTF-8, max 4 MiB
+  (`SyncCodec.maxFrameBytes`). Path is ignored. TLS session resumption and tickets are off on both
+  sides, so every connection is a full handshake in which the phone checks the certificate.
+- The Mac presents its own **sync identity**: an ECDSA P-256 key and a self-signed X.509 certificate
+  (CN `cmds <Mac name>`, 20-year validity), see "Mac identity". The phone accepts only the certificate
+  whose SHA-256 it pinned when pairing; there is no CA and no plaintext fallback.
 - The Mac listens with `NWListener` and advertises Bonjour `_cmds._tcp`
-  (`SyncProtocol.bonjourServiceType`). TXT record (`SyncProtocol.txtRecord(macName:)`):
-  `name` = Mac display name, `version` = protocol version.
-- Manual entry fallback: `host[:port]`, default port `47823` (`SyncProtocol.defaultPort`).
-- No TLS in v1. Traffic is LAN-only and authenticated by token; see "Security" below.
+  (`SyncProtocol.bonjourServiceType`). TXT record (`SyncProtocol.txtRecord(macName:fingerprint:)`):
+  `name` = Mac display name, `version` = protocol version, `fp` = certificate fingerprint. `fp` is a
+  hint for diagnostics only; anyone can advertise anything, and the phone never trusts it.
+- Manual entry fallback: `host[:port]`, default port `47823` (`SyncProtocol.defaultPort`). The phone
+  connects to `wss://host:port/`.
 
 ## Envelope
 
@@ -27,7 +33,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String` | First message. Token if stored, else the 6-digit code. |
+| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. |
 | `subscribe` | `paneIDs:[String]` | Replaces the streamed set. Mac sends a full `screen` for each new pane. `[]` stops streaming. |
 | `requestScreen` | `paneID` | Ask for a full `screen` (after a diff gap). |
 | `input` | `paneID, text` | Typed/pasted text, sent as-is (no newline translation). |
@@ -40,7 +46,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `welcome` | `protocolVersion, macName, token` | Auth OK. Phone stores `token` in the Keychain per Mac. |
+| `welcome` | `protocolVersion, macName, token` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. |
 | `error` | `code:SyncErrorCode, message` | Codes: `unsupportedVersion pairingRequired invalidPairingCode invalidToken rateLimited notAuthenticated badRequest notFound internal`. After auth errors (`isAuthFailure`) the Mac closes the socket. |
 | `state` | `workspaces:[WorkspaceInfo], system?:SystemStats` | Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
 | `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?` | Full visible screen (no scrollback). Trailing spaces may be trimmed. Cursor nil = hidden. |
@@ -52,43 +58,158 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 The phone (`ScreenMirror`) ignores stale messages and sends `requestScreen` when a diff's `baseSeq`
 does not match.
 
+## Mac identity
+
+- Created on the first sync start (`SyncIdentityStore`, `App/Sources/Sync/SyncIdentity.swift`): an
+  ECDSA P-256 private key generated in the login keychain (not extractable, application tag
+  `tokyo.n-n.cmds.sync-identity`, label `cmds sync identity`) and a self-signed certificate built in
+  Swift (`SyncCertificate`: DER encoder + `SecKeyCreateSignature`), stored next to it. The certificate
+  is found again through the key's public key hash; the keychain names it after its common name.
+- Fingerprint (`SyncFingerprint`) = SHA-256 of the certificate DER. Full form: unpadded base64url (QR
+  code, TXT hint, phone storage). Short form for people: first 48 bits as `A1B2-C3D4-E5F6`, shown in the
+  Mac's pairing window ("Mac identity") and by the phone during manual pairing.
+- Creating an identity revokes every paired device (they pinned another certificate, or paired over
+  plaintext v1). If the keychain cannot be read (locked, access denied), sync does not start and the
+  identity is left alone; it is only replaced when it does not exist.
+- **Reset Sync Identity…** (pairing window) deletes key and certificate, revokes all devices, rotates
+  the code and restarts the listener with a new identity. Connected phones are told they were
+  unpaired; phones that were away report "This Mac's identity changed" on their next connection.
+- Isolated instances (`CMDS_SUPPORT_DIR`) use their own keychain items: label and tag get the suffix
+  `test-<first 12 hex digits of SHA-256(support directory)>`, so a test never touches the identity of
+  the app in use.
+
+## Pairing
+
+The code (6 digits, `PairingToken.generateCode()`) is accepted only while the Mac's "Pair
+iPhone/iPad…" window is open; it changes every 10 minutes, after each pairing and after 5 wrong tries.
+The phone always pins the Mac's fingerprint **before** it sends the code, and sends the code only on a
+TLS connection whose certificate matched that pin.
+
+1. **QR code (preferred).** The pairing window shows a QR code (CoreImage `CIQRCodeGenerator`) with
+   `SyncPairingPayload.uri`:
+
+   ```
+   cmds-pair:v2?name=<Bonjour name>&host=<IPv4 or .local host>&port=<port>&fp=<SHA-256 base64url>&code=<6 digits>
+   ```
+
+   Values are percent-encoded (only RFC 3986 unreserved characters are left as they are); unknown keys
+   are ignored; `name` is omitted when the Mac does not advertise. The phone scans it (VisionKit
+   `DataScannerViewController`, AVFoundation on devices without DataScanner support), pins `fp`,
+   connects to the Bonjour service `name` if it sees it (else `host:port`) and sends `code` in `hello`.
+   The phone has no `cmds-pair:` URL handler: a pairing code is only read by the in-app scanner.
+2. **Without a camera (manual host, no camera, camera denied).** The phone opens a TLS connection whose
+   verify block only records the presented certificate's fingerprint and refuses the handshake
+   (`SyncTLS.PeerPolicy.probe`), so nothing at all is sent. It shows the short fingerprint and asks the
+   user to compare it with "Mac identity" in the Mac's pairing window. Only after "It Matches" does it
+   ask for the code and connect pinned to that fingerprint. "It Doesn't Match" sends nothing and
+   suggests the QR code.
+
+On `welcome` the phone stores `{fingerprint, token}` as one Keychain item per Mac
+(`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, service `tokyo.n-n.cmds.companion.pairing.v2`,
+account `MacTarget.id`). Tokens of protocol v1 are deleted at launch and never sent again.
+
+Later connections are pinned to the stored fingerprint and send the stored token. If the Mac presents
+any other certificate, the handshake is refused before anything is written and the phone stops with
+"This Mac's identity changed — re-pair": no automatic retry, no fallback to plaintext or to manual
+pairing. The user re-pairs (scan the new QR code) or cancels.
+
 ## Connection flow
 
-1. Phone connects, sends `hello`.
+1. Phone connects (TLS 1.3; the verify block compares the leaf certificate's SHA-256 with the pin) and,
+   once the connection is ready, sends `hello`.
 2. Mac evaluates it with `PairingAuthenticator.evaluate(hello, currentCode:, knownTokens:)`:
    - valid token → `welcome` with the same token;
-   - correct code (shown on the Mac, 6 digits, `PairingToken.generateCode()`) → new token
-     (`PairingToken.generate()`, 32 random bytes base64url), persist it with the device name/ID,
-     invalidate the code → `welcome`;
+   - correct code → new token (`PairingToken.generate()`, 32 random bytes base64url), persist its
+     SHA-256 with the device name/ID, invalidate the code → `welcome`. Re-pairing the same device ID
+     revokes its previous token (sessions using it are dropped);
    - otherwise `error` (`pairingRequired` / `invalidPairingCode` / `invalidToken` /
-     `unsupportedVersion`) and close. The Mac should rate-limit code attempts (e.g. 5 per code,
-     then `rateLimited` and a new code).
+     `unsupportedVersion` / `rateLimited`) and close.
 3. Mac sends `state`. Any other message before `welcome` → `error{notAuthenticated}`.
 4. Phone sends `subscribe` for visible panes; Mac keeps one `ScreenStreamer` per connection and on
    each screen tick (~10 Hz, changed panes only) sends `streamer.update(paneID:snapshot:)` if non-nil.
    On `subscribe`: `streamer.reset(paneID:)` for new panes and `retain(paneIDs:)`. On `requestScreen`:
    `streamer.fullScreen(paneID:)`.
 5. Phone reconnects with exponential backoff (`SyncBackoff`, 0.5 s → 30 s, ±20 % jitter), immediately
-   on returning to the foreground. Auth failures do not auto-retry.
+   on returning to the foreground. Auth failures and identity mismatches do not auto-retry.
 
-## Mac-side API summary (CmdsCore)
+Mac-side limits: hello within 10 s; at most 16 connections and 4 unauthenticated ones per host; 1 MiB
+per incoming frame, read one frame at a time; 16 KiB per `input` and 64 KiB of input per second;
+32 subscribed panes; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
+total per minute (then 1 minute); a client that does not read 8 MiB of output is dropped.
+
+## API summary (CmdsCore)
 
 - `SyncCodec`: `encode(ServerMessage) -> Data`, `decodeClientMessage(Data)`, `peekType(Data)`.
 - `PairingToken`: `generateCode()`, `generate()`, `constantTimeEquals(_:_:)`, `matchesAny(_:in:)`.
 - `PairingAuthenticator.evaluate(...) -> .accepted(token:isNewToken:) | .rejected(ErrorInfo)`.
+- `SyncTLS`: `serverOptions(identity:)`, `clientOptions(policy:queue:onCheck:)` (`.pinned(fp)` /
+  `.probe`), `evaluate(presented:policy:)`, `leafFingerprint(of:)`.
+- `SyncFingerprint` (`base64url`, `short`, `hex`, `matches(_:)`), `SyncPairingPayload` (`uri`,
+  `parse(_:)`), `SyncCertificate.make(...)`, `DER`.
 - `ScreenStreamer` (per connection), `ScreenSnapshot` (rows, cols, lines, cursor).
 - `ScreenDiffer.diff(from:to:)` / `apply(_:to:)` for custom use.
 - `SyncKey.terminalBytes(applicationCursor:)` if writing keys straight to the pty.
 
 ## Security
 
-- Tokens are bearer secrets: store them in the Keychain (Mac) and compare in constant time.
-  Revoking a device = deleting its token.
-- v1 is unencrypted on the LAN; anyone on the network can read the stream and replay a sniffed token.
-  Planned v2: TLS with a pre-shared key derived at pairing time (`NWProtocolTLS` PSK), or a pinned
-  self-signed certificate whose fingerprint is shown with the pairing code.
+### Protected
+
+- **Confidentiality and integrity on the network.** Everything after the TCP handshake is TLS 1.3
+  (ECDHE, so recorded traffic cannot be decrypted later even with the Mac's key): screens, keystrokes,
+  pairing codes and tokens. A passive listener on the LAN learns only metadata (see below).
+- **Mac authentication.** A paired phone talks only to the certificate it pinned. Someone answering as
+  the saved Bonjour name or address (spoofed mDNS, ARP/DHCP tricks, a rogue access point) fails the
+  handshake before the phone writes a byte, so the token cannot be collected and fake terminal content
+  cannot be shown.
+- **Pairing.** The code is sent only to the pinned identity: with the QR code against the full
+  256-bit fingerprint, which defeats an active man in the middle; without a camera against the
+  identity the user compared. Codes are accepted only while the pairing window is open, are
+  rate-limited, and change after use. A phone that is not paired never sends anything secret.
+- **Tokens.** 256-bit random bearer tokens. The Mac keeps only their SHA-256
+  (`sync-devices.json`, mode 0600) and compares in constant time; the phone keeps the token with its
+  pin in the Keychain (this device only, not in backups that move to another device). Revoking a
+  device, revoking all, re-pairing a device and resetting the identity all invalidate tokens and drop
+  live sessions.
+
+### Not protected
+
+- **A compromised or unlocked paired phone.** The phone holds a bearer token that gives full control
+  of every shell in cmds (typing into terminals). Anyone with the unlocked phone, a malicious app able
+  to read its Keychain item (jailbreak), or the token itself has that access. Revoke the device on the
+  Mac ("Revoke All Devices…") if a phone is lost. There is no client certificate or per-command
+  confirmation.
+- **A compromised Mac account.** Malware running as the user can read terminals directly; it can also
+  use the sync key in the login keychain (subject to the keychain's access control), and read the
+  device list.
+- **Manual pairing is only as strong as the comparison.** The short fingerprint has 48 bits. An
+  attacker on the network during a manual pairing who has precomputed a certificate whose SHA-256
+  starts with the same 48 bits (about 2^48 hash computations, feasible with dedicated hardware) and
+  who intercepts that connection could pass the comparison, receive the code and pair with the real
+  Mac in the user's place. The QR code checks all 256 bits; prefer it.
+- **Seeing the pairing window.** The QR code and the code are on screen while the window is open.
+  Someone who can see (or photograph) them and reach the Mac before the user can pair a device. Close
+  the window after pairing; check the device list.
+- **A malicious QR code.** The scanner trusts whatever `cmds-pair:` code the user points it at; a
+  forged one pairs the phone with an attacker's machine, which then sees what the user types on the
+  phone. Only scan the code shown by cmds on your own Mac.
+- **Metadata and availability.** Bonjour advertises the Mac's name and certificate fingerprint;
+  connection timing and sizes are visible on the network. Anyone on the network can connect and
+  attempt handshakes (bounded by the connection limits) or disrupt the network.
+
+## Testing with an isolated instance
+
+Never test against the cmds instance in use or the user's phone. In addition to `CMDS_SUPPORT_DIR`
+(see ARCHITECTURE.md), which also selects separate keychain items for the sync identity:
+
+- `CMDS_SYNC_PORT=<port>`: listen on this port; unlike the default port it never falls back to another.
+- `CMDS_SYNC_NO_BONJOUR=1`: do not advertise, so no phone discovers the instance.
+- `CMDS_SYNC_TEST_PAIRING=1` (DEBUG builds with `CMDS_SUPPORT_DIR` only): listen on 127.0.0.1 only,
+  keep pairing open without the window and write the current QR payload (host 127.0.0.1) to
+  `$CMDS_SUPPORT_DIR/sync-test-pairing.txt` (0600), so a local client can pair like the scanner does.
 
 ## Versioning
 
-`SyncProtocol.version` (= 1) is checked in `hello`. Adding optional fields or new message types is
-backward compatible (receivers ignore unknown keys/types). Removing or changing fields requires a bump.
+`SyncProtocol.version` (= 2) is checked in `hello`. Version 2 introduced TLS with pinned Mac
+certificates; version 1 (plaintext) is no longer accepted by either side and v1 pairings must be
+redone. Adding optional fields or new message types is backward compatible (receivers ignore unknown
+keys/types). Removing or changing fields requires a bump.

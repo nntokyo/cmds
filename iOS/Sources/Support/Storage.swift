@@ -1,12 +1,27 @@
+import CmdsCore
 import Foundation
+import os
 import Security
 import UIKit
 
-/// Pairing tokens, one per Mac (`MacTarget.id`), stored as generic passwords.
-enum TokenStore {
-    private static let service = "tokyo.n-n.cmds.companion.pairing"
+/// Pairing storage log (subsystem tokyo.n-n.cmds.companion). Never log tokens.
+let pairingLog = Logger(subsystem: "tokyo.n-n.cmds.companion", category: "pairing")
 
-    static func token(for targetID: String) -> String? {
+/// What the phone keeps per Mac (`MacTarget.id`): the pinned certificate fingerprint and the token the
+/// Mac issued over a connection verified against it. Stored together as one Keychain item (this device
+/// only), so the token is never used without its pin.
+struct MacPairing: Codable, Equatable {
+    var fingerprint: SyncFingerprint
+    var token: String
+}
+
+/// Keychain storage of `MacPairing`s (generic passwords, JSON).
+enum PairingStore {
+    private static let service = "tokyo.n-n.cmds.companion.pairing.v2"
+    /// Tokens of protocol v1, which sent them unencrypted. They are deleted, never sent again.
+    private static let legacyService = "tokyo.n-n.cmds.companion.pairing"
+
+    static func pairing(for targetID: String) -> MacPairing? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -16,32 +31,47 @@ enum TokenStore {
         ]
         var item: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        return try? JSONDecoder().decode(MacPairing.self, from: data)
     }
 
-    static func setToken(_ token: String, for targetID: String) {
-        let base: [String: Any] = [
+    static func isPaired(_ targetID: String) -> Bool {
+        pairing(for: targetID) != nil
+    }
+
+    static func save(_ pairing: MacPairing, for targetID: String) {
+        guard let data = try? JSONEncoder().encode(pairing) else { return }
+        delete(for: targetID)
+        let add: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: targetID,
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
-        let data = Data(token.utf8)
-        let update: [String: Any] = [kSecValueData as String: data]
-        if SecItemUpdate(base as CFDictionary, update as CFDictionary) == errSecItemNotFound {
-            var add = base
-            add[kSecValueData as String] = data
-            add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-            SecItemAdd(add as CFDictionary, nil)
+        let status = SecItemAdd(add as CFDictionary, nil)
+        if status != errSecSuccess {
+            // Fails closed: without a saved pin the next connection asks to pair again. (Unsigned
+            // simulator builds have no keychain entitlement and always end up here, -34018.)
+            pairingLog.error("could not save the pairing: OSStatus \(status, privacy: .public)")
         }
     }
 
-    static func deleteToken(for targetID: String) {
+    static func delete(for targetID: String) {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: targetID,
         ]
         SecItemDelete(query as CFDictionary)
+    }
+
+    /// Deletes every v1 token; true if there was one (the user has to pair again).
+    static func removeLegacyTokens() -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: legacyService,
+        ]
+        return SecItemDelete(query as CFDictionary) == errSecSuccess
     }
 }
 

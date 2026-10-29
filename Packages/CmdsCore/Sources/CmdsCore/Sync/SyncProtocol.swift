@@ -2,26 +2,32 @@ import Foundation
 
 /// Constants for the iOS companion sync protocol. See docs/SYNC.md.
 ///
-/// Transport: WebSocket (text frames, one JSON object per frame) over TCP on the local network.
-/// The Mac advertises itself with Bonjour; every frame is a `ClientMessage` (phone → Mac) or
+/// Transport: WebSocket (text frames, one JSON object per frame) over TLS 1.3 (`SyncTLS`) on the local
+/// network. The Mac advertises itself with Bonjour; every frame is a `ClientMessage` (phone → Mac) or
 /// `ServerMessage` (Mac → phone) encoded by `SyncCodec`.
 public enum SyncProtocol {
     /// Bump when a change is not backward compatible. The Mac rejects other versions with `unsupportedVersion`.
-    public static let version = 1
+    /// 2: TLS with a pinned Mac certificate (1 was plaintext and is no longer accepted).
+    public static let version = 2
     /// Bonjour service type advertised by the Mac.
     public static let bonjourServiceType = "_cmds._tcp"
     /// TXT record key: human-readable Mac name.
     public static let txtKeyName = "name"
     /// TXT record key: protocol version (decimal string).
     public static let txtKeyVersion = "version"
+    /// TXT record key: certificate fingerprint (`SyncFingerprint.base64url`). A hint only: anyone can
+    /// advertise anything; the phone trusts only the fingerprint it pinned when pairing.
+    public static let txtKeyFingerprint = "fp"
     /// Port used for manual entry when the user gives only a host.
     public static let defaultPort: UInt16 = 47_823
     /// Number of digits in the pairing code shown on the Mac.
     public static let pairingCodeLength = 6
 
     /// TXT record contents for the Bonjour advertisement.
-    public static func txtRecord(macName: String) -> [String: String] {
-        [txtKeyName: macName, txtKeyVersion: String(version)]
+    public static func txtRecord(macName: String, fingerprint: SyncFingerprint? = nil) -> [String: String] {
+        var record = [txtKeyName: macName, txtKeyVersion: String(version)]
+        if let fingerprint { record[txtKeyFingerprint] = fingerprint.base64url }
+        return record
     }
 }
 

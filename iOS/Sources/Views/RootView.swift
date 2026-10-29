@@ -3,6 +3,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(CompanionClient.self) private var client
+    @Environment(MacBrowser.self) private var browser
 
     var body: some View {
         Group {
@@ -15,28 +16,41 @@ struct RootView: View {
         .sheet(isPresented: pairingBinding) {
             PairingSheet()
                 .environment(client)
+                .environment(browser)
                 .interactiveDismissDisabled()
         }
     }
 
+    /// Shown while pairing is needed and while a pairing attempt is in flight.
     private var pairingBinding: Binding<Bool> {
         Binding(
-            get: { if case .pairingRequired = client.status { return true } else { return false } },
-            set: { presented in if !presented, case .pairingRequired = client.status { client.disconnect() } }
+            get: { client.status.needsPairing || (client.isPairing && !client.status.isLive) },
+            set: { presented in if !presented, client.status.needsPairing { client.disconnect() } }
         )
     }
 }
 
-/// Mac picker: Bonjour results, recent Macs, manual entry, demo mode.
+/// Mac picker: pairing QR code, Bonjour results, recent Macs, manual entry, demo mode.
 struct ConnectView: View {
     @Environment(CompanionClient.self) private var client
     @Environment(MacBrowser.self) private var browser
     @State private var manualHost = ""
     @State private var recents = RecentMacs.load()
+    @State private var scanning = false
 
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    Button {
+                        scanning = true
+                    } label: {
+                        Label("Scan Pairing Code", systemImage: "qrcode.viewfinder")
+                    }
+                } footer: {
+                    Text("On the Mac, choose cmds › Pair iPhone/iPad… and scan the QR code it shows.")
+                }
+
                 Section {
                     if browser.macs.isEmpty {
                         HStack(spacing: 10) {
@@ -51,7 +65,7 @@ struct ConnectView: View {
                 } header: {
                     Text("On this network")
                 } footer: {
-                    Text("Enable “iOS companion” in cmds on your Mac. The Mac shows a 6-digit code the first time you connect.")
+                    Text("Enable iOS Sync in cmds on your Mac. The first connection to a Mac needs its pairing code.")
                 }
 
                 let otherRecents = recents.filter { r in !browser.macs.contains { $0.id == r.id } }
@@ -63,7 +77,7 @@ struct ConnectView: View {
                         .onDelete { offsets in
                             for i in offsets {
                                 RecentMacs.forget(otherRecents[i])
-                                TokenStore.deleteToken(for: otherRecents[i].id)
+                                PairingStore.delete(for: otherRecents[i].id)
                             }
                             recents = RecentMacs.load()
                         }
@@ -73,6 +87,7 @@ struct ConnectView: View {
                 Section {
                     HStack {
                         TextField("host or host:port", text: $manualHost)
+                            .accessibilityIdentifier("manualHost")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
@@ -101,6 +116,11 @@ struct ConnectView: View {
                 recents = RecentMacs.load()
             }
             .onDisappear { browser.stop() }
+            .sheet(isPresented: $scanning) {
+                PairingCodeScanner { payload in
+                    client.pair(with: payload, target: .pairingTarget(for: payload, discovered: browser.macs))
+                }
+            }
         }
     }
 
@@ -117,7 +137,7 @@ struct ConnectView: View {
                     Text(mac.subtitle).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if TokenStore.token(for: mac.id) != nil {
+                if PairingStore.isPaired(mac.id) {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(.green)
                         .accessibilityLabel("Paired")
@@ -132,42 +152,40 @@ struct ConnectView: View {
     }
 }
 
+/// Pairing with the current Mac. Preferred: scan its QR code (pins the full fingerprint and carries the
+/// code). Without a camera: read the identity the Mac presents, let the user compare it with the Mac's
+/// pairing window, then send the code over a connection pinned to it. A changed identity is a hard stop.
 struct PairingSheet: View {
     @Environment(CompanionClient.self) private var client
+    @Environment(MacBrowser.self) private var browser
     @State private var code = ""
+    @State private var scanning = false
     @FocusState private var focused: Bool
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                Image(systemName: "lock.laptopcomputer")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.tint)
-                Text("Enter the 6-digit code shown in cmds on “\(client.macName)”.")
-                    .multilineTextAlignment(.center)
-                TextField("000000", text: $code)
-                    .font(.system(size: 34, weight: .semibold, design: .monospaced))
-                    .multilineTextAlignment(.center)
-                    .keyboardType(.numberPad)
-                    .textContentType(.oneTimeCode)
-                    .focused($focused)
-                    .frame(maxWidth: 220)
-                    .padding(.vertical, 8)
-                    .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
-                    .onChange(of: code) { _, new in
-                        let digits = String(new.filter(\.isNumber).prefix(SyncProtocol.pairingCodeLength))
-                        if digits != new { code = digits }
-                        if digits.count == SyncProtocol.pairingCodeLength { submit() }
+            ScrollView {
+                VStack(spacing: 20) {
+                    switch client.status {
+                    case .pairingRequired(let message):
+                        choice(message)
+                    case .checkingIdentity:
+                        ProgressView("Reading the Mac's identity…")
+                            .padding(.top, 40)
+                    case .confirmIdentity(let fingerprint):
+                        confirm(fingerprint)
+                    case .enterCode(let message):
+                        codeEntry(message)
+                    case .identityMismatch(let message):
+                        mismatch(message)
+                    default:
+                        progress
                     }
-                if case .pairingRequired(let message?) = client.status {
-                    Text(message).foregroundStyle(.red).font(.callout)
                 }
-                Button("Pair", action: submit)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(code.count != SyncProtocol.pairingCodeLength)
-                Spacer()
+                .padding(24)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity)
             }
-            .padding(24)
             .navigationTitle("Pair with Mac")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -175,9 +193,128 @@ struct PairingSheet: View {
                     Button("Cancel") { client.disconnect() }
                 }
             }
-            .onAppear { focused = true }
+            .sheet(isPresented: $scanning) {
+                PairingCodeScanner { payload in
+                    client.pair(with: payload, target: .pairingTarget(for: payload, discovered: browser.macs))
+                }
+            }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private func choice(_ message: String?) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "lock.laptopcomputer")
+                .font(.system(size: 48))
+                .foregroundStyle(.tint)
+            Text("Pair with “\(client.macName)”")
+                .font(.headline)
+            if let message {
+                Text(message).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
+            Text("On the Mac, choose cmds › Pair iPhone/iPad…, then scan the QR code it shows.")
+                .multilineTextAlignment(.center)
+            Button {
+                scanning = true
+            } label: {
+                Label("Scan QR Code", systemImage: "qrcode.viewfinder")
+                    .frame(maxWidth: 260)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            if client.target?.kind != .mock {
+                Button("Pair Without Camera") { client.checkIdentity() }
+                    .buttonStyle(.bordered)
+            }
+        }
+    }
+
+    private func confirm(_ fingerprint: SyncFingerprint) -> some View {
+        VStack(spacing: 18) {
+            Image(systemName: "checkmark.shield")
+                .font(.system(size: 44))
+                .foregroundStyle(.tint)
+            Text("Compare with your Mac")
+                .font(.headline)
+            Text("The pairing window on “\(client.macName)” shows “Mac identity”. It must read exactly:")
+                .multilineTextAlignment(.center)
+            Text(fingerprint.short)
+                .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                .textSelection(.enabled)
+                .accessibilityIdentifier("pairingFingerprint")
+            Button("It Matches") { client.confirmIdentity(fingerprint) }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+            Button("It Doesn't Match", role: .destructive) { client.rejectIdentity() }
+            Text("Scanning the QR code is safer: it checks the Mac's full identity.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private func codeEntry(_ message: String?) -> some View {
+        VStack(spacing: 20) {
+            Image(systemName: "lock.laptopcomputer")
+                .font(.system(size: 48))
+                .foregroundStyle(.tint)
+            Text("Enter the 6-digit code shown in cmds on “\(client.macName)”.")
+                .multilineTextAlignment(.center)
+            if let pin = client.pairingPin {
+                Label("Mac identity \(pin.short)", systemImage: "checkmark.shield.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.green)
+            }
+            TextField("000000", text: $code)
+                .accessibilityIdentifier("pairingCode")
+                .font(.system(size: 34, weight: .semibold, design: .monospaced))
+                .multilineTextAlignment(.center)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .focused($focused)
+                .frame(maxWidth: 220)
+                .padding(.vertical, 8)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
+                .onChange(of: code) { _, new in
+                    let digits = String(new.filter(\.isNumber).prefix(SyncProtocol.pairingCodeLength))
+                    if digits != new { code = digits }
+                    if digits.count == SyncProtocol.pairingCodeLength { submit() }
+                }
+            if let message {
+                Text(message).foregroundStyle(.red).font(.callout)
+            }
+            Button("Pair", action: submit)
+                .buttonStyle(.borderedProminent)
+                .disabled(code.count != SyncProtocol.pairingCodeLength)
+        }
+        .onAppear { focused = true }
+    }
+
+    private func mismatch(_ message: String) -> some View {
+        VStack(spacing: 18) {
+            Image(systemName: "exclamationmark.shield.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.red)
+            Text("This Mac's identity changed — re-pair")
+                .font(.headline)
+                .multilineTextAlignment(.center)
+            Text(message)
+                .multilineTextAlignment(.center)
+            Button("Re-pair") { client.unpair() }
+                .buttonStyle(.borderedProminent)
+            Button("Cancel") { client.disconnect() }
+        }
+    }
+
+    private var progress: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+            Text("Pairing with “\(client.macName)”…")
+            if case .reconnecting(_, let reason?) = client.status {
+                Text(reason).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            }
+        }
+        .padding(.top, 40)
     }
 
     private func submit() {
