@@ -18,6 +18,50 @@ local network. Code: `Packages/CmdsCore/Sources/CmdsCore/Sync/` (shared by both 
   hint for diagnostics only; anyone can advertise anything, and the phone never trusts it.
 - Manual entry fallback: `host[:port]`, default port `47823` (`SyncProtocol.defaultPort`). The phone
   connects to `wss://host:port/`.
+- **Bluetooth fallback** when the Mac cannot be reached over IP (e.g. Wi‑Fi off): the same TLS
+  WebSocket session, carried over a Bluetooth LE L2CAP channel. See "Bluetooth".
+
+## Bluetooth
+
+Bluetooth is a dumb byte pipe. The phone runs exactly the same pinned TLS 1.3 WebSocket session as over
+the network; only the bytes travel over an L2CAP channel. Code: `CmdsCore/Sync/SyncBluetooth.swift`,
+`SyncStreamRelay.swift` (shared), `App/Sources/Sync/SyncBluetoothPeripheral.swift`,
+`iOS/Sources/Connection/BluetoothTransport.swift`, `FallbackTransport.swift`.
+
+- **Mac (peripheral).** While the sync listener runs and **Allow Bluetooth Sync** (app menu, on by default)
+  is on, a `CBPeripheralManager` publishes an L2CAP channel with link encryption
+  (`publishL2CAPChannel(withEncryption: true)`) and advertises service `SyncBluetooth.serviceUUID` (local
+  name `cmds`). Its characteristic `SyncBluetooth.infoCharacteristicUUID` is readable without pairing and
+  holds `SyncBluetooth.Info`: `version(1)=1 | PSM (UInt16 LE) | first 8 bytes of the certificate
+  fingerprint | Mac name (UTF-8, ≤ 64 bytes)`. Like the Bonjour TXT record these are hints only.
+- **Relay (Mac).** For each opened channel (at most 8) the Mac binds a TCP socket on 127.0.0.1, registers
+  its local port as peer `bluetooth:<first 8 hex digits of the CBCentral identifier>`
+  (`SyncLoopbackPeers`), connects to its own sync listener and copies bytes both ways
+  (`SyncStreamRelay`: 64 KiB buffer per direction; a full buffer stops reading that side, so Bluetooth and
+  TCP flow control push back; either side ending closes both). The sync server sees an ordinary TLS
+  client. On accept it maps a loopback connection whose remote port is registered to that peer label, so
+  every per-host limit (pending connections, failed pairing attempts, lockouts) applies per phone, not to
+  all Bluetooth peers as one "127.0.0.1". The port is registered before `connect()`, so the entry always
+  exists when the server accepts; only this process can register, any other loopback client stays
+  "127.0.0.1". No check is skipped or relaxed for relayed connections.
+- **Phone (central).** `BluetoothTransport` scans for the service, connects, reads the info of every
+  cmds service on the peripheral and opens the L2CAP channel of the one whose fingerprint hint matches the
+  pin (other Macs are skipped). It then listens on 127.0.0.1 (ephemeral port), relays the first accepted
+  socket to the channel and connects the normal `WebSocketTransport` to `wss://127.0.0.1:<port>/` with
+  the pinned policy. Pairing (QR or manual compare) and tokens work unchanged. The identity probe of
+  manual pairing is network-only.
+- **Selection.** `FallbackTransport` starts the network connection (Bonjour or address) and, if it has not
+  connected after 3 s, has failed, or the phone has no Wi‑Fi/Ethernet at all, starts the Bluetooth attempt
+  as well. The first one to finish the pinned handshake wins and the other is closed. An identity mismatch
+  on either path ends the attempt (it is never worked around via the other path). The status shows the
+  active path ("Wi‑Fi" / "Bluetooth"). A connection that started on Bluetooth stays there until it drops.
+- **Throttling.** Screen updates to a relayed connection go out at most every 250 ms (4 Hz,
+  `SyncBluetooth.screenInterval`); changes in between are coalesced into one diff per pane. This is a
+  per-connection setting on the Mac, not a protocol change.
+- **Permissions.** Both apps declare `NSBluetoothAlwaysUsageDescription`; the phone asks for Bluetooth
+  access the first time it needs the fallback. No background mode: the fallback runs while the app is in
+  the foreground. Opening the encrypted channel the first time triggers the system's Bluetooth pairing
+  (bonding) prompt on the phone.
 
 ## Envelope
 
@@ -134,7 +178,7 @@ pairing. The user re-pairs (scan the new QR code) or cancels.
 
 Mac-side limits: hello within 10 s; at most 16 connections and 4 unauthenticated ones per host; 1 MiB
 per incoming frame, read one frame at a time; 16 KiB per `input` and 64 KiB of input per second;
-32 subscribed panes; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
+32 subscribed panes; screens at most 4 per second over Bluetooth; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
 total per minute (then 1 minute); a client that does not read 8 MiB of output is dropped.
 
 ## API summary (CmdsCore)
@@ -192,7 +236,16 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
 - **A malicious QR code.** The scanner trusts whatever `cmds-pair:` code the user points it at; a
   forged one pairs the phone with an attacker's machine, which then sees what the user types on the
   phone. Only scan the code shown by cmds on your own Mac.
-- **Metadata and availability.** Bonjour advertises the Mac's name and certificate fingerprint;
+- **Bluetooth.** Trust never comes from Bluetooth: the Mac is authenticated by the pinned TLS
+  certificate exactly as on the network, and the TLS session is end to end through the relays. The
+  L2CAP link encryption (Bluetooth pairing) is defence in depth only. A peripheral that copies the cmds
+  service and fingerprint hint can only fail the handshake (the phone then reports "identity changed"
+  and stops). Per-phone limits key on the CBCentral identifier, which a hostile device can vary, like an
+  address on the LAN; the global limit on failed pairing attempts still applies. On the phone, another
+  app could connect to the short-lived loopback port first; it would only get the TLS byte stream to the
+  Mac (no token, which is sent only by our pinned connection) and make this attempt fail.
+- **Metadata and availability.** The Bluetooth advertisement reveals that a cmds Mac is nearby; its info
+  characteristic gives the Mac name and a fingerprint prefix to anyone in range. Bonjour advertises the Mac's name and certificate fingerprint;
   connection timing and sizes are visible on the network. Anyone on the network can connect and
   attempt handshakes (bounded by the connection limits) or disrupt the network.
 
@@ -203,6 +256,11 @@ Never test against the cmds instance in use or the user's phone. In addition to 
 
 - `CMDS_SYNC_PORT=<port>`: listen on this port; unlike the default port it never falls back to another.
 - `CMDS_SYNC_NO_BONJOUR=1`: do not advertise, so no phone discovers the instance.
+- `CMDS_SYNC_NO_BLUETOOTH=1`: no Bluetooth peripheral (no advertising, no L2CAP channel). Use it for
+  every test instance that does not test Bluetooth.
+- Relay test against an isolated instance: `CMDS_RELAY_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
+  swift test --filter SyncRelayTests` (in `Packages/CmdsCore`) pins the instance's certificate and pairs
+  through two relays and a simulated L2CAP channel.
 - `CMDS_SYNC_TEST_PAIRING=1` (DEBUG builds with `CMDS_SUPPORT_DIR` only): listen on 127.0.0.1 only,
   keep pairing open without the window and write the current QR payload (host 127.0.0.1) to
   `$CMDS_SUPPORT_DIR/sync-test-pairing.txt` (0600), so a local client can pair like the scanner does.

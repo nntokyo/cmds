@@ -15,7 +15,7 @@ Native macOS terminal multiplexer for coding agents. Swift + AppKit, terminal re
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents. |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`. |
-| `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window) for the iOS app. |
+| `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay fallback) for the iOS app. |
 | `iOS/Sources` | SwiftUI iOS/iPadOS companion. |
 | `vendor/ghostty` | Ghostty source (git submodule). `vendor/GhosttyKit.xcframework` is a symlink/copy of `vendor/ghostty/macos/GhosttyKit.xcframework` (gitignored). Build: `cd vendor/ghostty && zig build -Demit-xcframework=true -Dxcframework-target=native -Demit-macos-app=false -Doptimize=ReleaseFast` |
 
