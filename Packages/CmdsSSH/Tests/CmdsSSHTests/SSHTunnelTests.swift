@@ -132,6 +132,26 @@ final class SSHTunnelTests: XCTestCase {
         let key = try relay.authorizedPhoneKey(permitOpen: relayPort)
         let endpoint = relay.endpoint(relayPort: relayPort)
 
+        // That key gets no shell and cannot listen on the relay (checked with the system ssh client).
+        do {
+            let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-ssh-restricted-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            defer { try? FileManager.default.removeItem(at: dir) }
+            let keyFile = dir.appendingPathComponent("id")
+            try openSSHPrivateKeyPEM(key).write(to: keyFile, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: keyFile.path)
+            let base = ["-F", "/dev/null", "-p", String(relay.port), "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes",
+                        "-o", "IdentityAgent=none", "-o", "UserKnownHostsFile=" + relay.dir.appendingPathComponent("known_hosts").path,
+                        "-i", keyFile.path, "-l", NSUserName()]
+            let shell = try runToolStatus("/usr/bin/ssh", base + ["127.0.0.1", "echo", "SHELL-OPEN"])
+            XCTAssertFalse(shell.output.contains("SHELL-OPEN"), "restricted key ran a command")
+            XCTAssertNotEqual(shell.status, 255, "restricted key was not accepted at all")
+            let listen = try runToolStatus("/usr/bin/ssh", base + ["-o", "ExitOnForwardFailure=yes", "-N",
+                                                                   "-R", "127.0.0.1:\(try unusedPort()):127.0.0.1:9", "127.0.0.1"],
+                                           timeout: 8)
+            XCTAssertEqual(listen.status, 255, "restricted key could listen on the relay")
+        }
+
         // That key cannot open any other port on the relay.
         do {
             let echo = try TCPEcho()
@@ -287,6 +307,50 @@ private func runTool(_ tool: String, _ arguments: [String]) throws -> String {
     let data = pipe.fileHandleForReading.readDataToEndOfFile()
     process.waitUntilExit()
     return String(decoding: data, as: UTF8.self)
+}
+
+/// Runs a tool; output is stdout and stderr. Killed after `timeout` (status 15).
+private func runToolStatus(_ tool: String, _ arguments: [String], timeout: TimeInterval = 15) throws -> (status: Int32, output: String) {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: tool)
+    process.arguments = arguments
+    process.standardInput = FileHandle.nullDevice
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = pipe
+    try process.run()
+    let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }
+    DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: killer)
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    killer.cancel()
+    return (process.terminationStatus, String(decoding: data, as: UTF8.self))
+}
+
+/// OpenSSH private key file ("openssh-key-v1", unencrypted) for an Ed25519 key, for the system ssh client.
+private func openSSHPrivateKeyPEM(_ key: Curve25519.Signing.PrivateKey) -> String {
+    func string(_ bytes: Data) -> Data {
+        var length = UInt32(bytes.count).bigEndian
+        return Data(bytes: &length, count: 4) + bytes
+    }
+    func uint32(_ value: UInt32) -> Data {
+        var v = value.bigEndian
+        return Data(bytes: &v, count: 4)
+    }
+    let pub = key.publicKey.rawRepresentation
+    let publicBlob = string(Data("ssh-ed25519".utf8)) + string(pub)
+    let check = UInt32.random(in: 0...UInt32.max)
+    var privateSection = uint32(check) + uint32(check) + string(Data("ssh-ed25519".utf8)) + string(pub)
+        + string(key.rawRepresentation + pub) + string(Data("cmds-test".utf8))
+    var pad: UInt8 = 1
+    while privateSection.count % 8 != 0 {
+        privateSection.append(pad)
+        pad += 1
+    }
+    let body = Data("openssh-key-v1".utf8) + Data([0]) + string(Data("none".utf8)) + string(Data("none".utf8))
+        + string(Data()) + uint32(1) + string(publicBlob) + string(privateSection)
+    let base64 = body.base64EncodedString(options: [.lineLength64Characters, .endLineWithLineFeed])
+    return "-----BEGIN OPENSSH PRIVATE KEY-----\n" + base64 + "\n-----END OPENSSH PRIVATE KEY-----\n"
 }
 
 private func unusedPort() throws -> UInt16 {

@@ -95,7 +95,9 @@ TCP streams on its loopback. Code: `CmdsCore/Sync/SyncRemote.swift`, `App/Source
   The phone generates an Ed25519 key once (Keychain, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`,
   service `tokyo.n-n.cmds.companion.ssh-key`) and shows the line for the relay's `authorized_keys`
   (copy/share), restricted to what cmds needs:
-  `restrict,port-forwarding,permitopen="127.0.0.1:<relay port>" ssh-ed25519 AAAA… cmds-<device>`. The app
+  `restrict,port-forwarding,permitopen="127.0.0.1:<relay port>",permitlisten="127.0.0.1:1",command="false" ssh-ed25519 AAAA… cmds-<device>`
+  (`restrict` alone still allows shell/exec requests and `port-forwarding` re-enables `-R`, hence the forced
+  command and the listen limit to a privileged port; OpenSSH 7.8+). The app
   never asks for or sends a password (public key only, offered once). **Host key:** "Check Connection"
   connects without a pin; the presented key's `SHA256:` fingerprint is shown for comparison with
   `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the relay; only "It Matches" pins it (per

@@ -14,10 +14,13 @@ public enum SSHKeys {
         return cleaned.isEmpty ? base : base + " " + cleaned
     }
 
-    /// `authorized_keys` line limited to what cmds needs: forwarding to 127.0.0.1:`relayPort` only, no shell,
-    /// pty, agent or X11 forwarding (OpenSSH 7.2+ `restrict`).
+    /// `authorized_keys` line limited to what cmds needs: `direct-tcpip` to 127.0.0.1:`relayPort` only.
+    /// `restrict` turns off pty, agent and X11 forwarding (OpenSSH 7.2+); `port-forwarding` turns forwarding
+    /// back on, so `permitopen` limits local forwards and `permitlisten` (7.8+) limits remote listening to a
+    /// privileged loopback port; `command="false"` ends any shell or exec request (`restrict` alone allows them).
     public static func restrictedAuthorizedKeysLine(for key: Curve25519.Signing.PublicKey, relayPort: UInt16, comment: String) -> String {
-        "restrict,port-forwarding,permitopen=\"127.0.0.1:\(relayPort)\" " + authorizedKeysLine(for: key, comment: comment)
+        "restrict,port-forwarding,permitopen=\"127.0.0.1:\(relayPort)\",permitlisten=\"127.0.0.1:1\",command=\"false\" "
+            + authorizedKeysLine(for: key, comment: comment)
     }
 
     /// OpenSSH form of a host key (`<type> <base64>`), the value stored as the host-key pin.

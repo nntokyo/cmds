@@ -19,8 +19,8 @@ struct RemoteAccessView: View {
     @State private var checking = false
     @State private var checkResult: String?
     @State private var checkOK = false
-    /// Host key presented on first use, waiting for the user's confirmation.
-    @State private var presentedHostKey: String?
+    /// Host key presented on first use and the `host:port` that presented it, waiting for confirmation.
+    @State private var presentedHostKey: (key: String, hostKeyID: String)?
 
     var body: some View {
         NavigationStack {
@@ -76,9 +76,9 @@ struct RemoteAccessView: View {
                     }
                     if let presented = presentedHostKey {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("First connection to \(config.hostKeyID). Compare this fingerprint with the relay host's key (on the relay: ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub).")
+                            Text("First connection to \(presented.hostKeyID). Compare this fingerprint with the relay host's key (on the relay: ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub).")
                                 .font(.callout)
-                            Text(SSHKeys.fingerprint(openSSHPublicKey: presented) ?? "?")
+                            Text(SSHKeys.fingerprint(openSSHPublicKey: presented.key) ?? "?")
                                 .font(.callout.monospaced())
                                 .textSelection(.enabled)
                         }
@@ -116,6 +116,9 @@ struct RemoteAccessView: View {
             }
             .onAppear(perform: load)
             .onChange(of: relayPortText) { refreshKeyLine() }
+            // A pending confirmation belongs to the host and port that presented the key.
+            .onChange(of: config.endpoint.host) { presentedHostKey = nil }
+            .onChange(of: portText) { presentedHostKey = nil }
         }
     }
 
@@ -157,10 +160,12 @@ struct RemoteAccessView: View {
         RemoteAccessStore.save(config, for: targetID)
     }
 
-    private func trust(_ hostKey: String) {
-        config.hostKey = hostKey
-        config.hostKeyFor = config.hostKeyID
+    private func trust(_ presented: (key: String, hostKeyID: String)) {
         presentedHostKey = nil
+        // Only for the endpoint that presented it (the fields may have changed since).
+        guard applyFields(), config.hostKeyID == presented.hostKeyID else { return }
+        config.hostKey = presented.key
+        config.hostKeyFor = presented.hostKeyID
         persist()
         Task { await check() }
     }
@@ -171,15 +176,19 @@ struct RemoteAccessView: View {
         persist()
         checking = true
         checkResult = nil
+        presentedHostKey = nil
         defer { checking = false }
+        let endpoint = config.endpoint
+        let hostKeyID = config.hostKeyID
         do {
-            let tunnel = try await SSHTunnel.connect(to: config.endpoint, key: key, hostKeyPin: config.pinnedHostKey)
+            let tunnel = try await SSHTunnel.connect(to: endpoint, key: key, hostKeyPin: config.pinnedHostKey)
             defer { tunnel.close() }
             _ = try await tunnel.openForward()
             checkOK = true
             checkResult = String(localized: "The relay host accepted this device and the Mac's forwarded port answers.")
         } catch SSHTunnelError.unknownHostKey(let presented) {
-            presentedHostKey = presented
+            // Ignore it if the fields changed while connecting.
+            if applyFields(), config.hostKeyID == hostKeyID { presentedHostKey = (presented, hostKeyID) }
         } catch {
             checkOK = false
             checkResult = (error as? SSHTunnelError)?.description ?? error.localizedDescription
