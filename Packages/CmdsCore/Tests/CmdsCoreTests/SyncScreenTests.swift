@@ -82,4 +82,19 @@ final class SyncScreenTests: XCTestCase {
                        .updated(paneID: "p"))
         XCTAssertEqual(mirror["p"]?.lines, ["b"])
     }
+
+    func testResubscribedPaneIsNotStale() {
+        var streamer = ScreenStreamer()
+        var mirror = ScreenMirror()
+        let snapshot = ScreenSnapshot(rows: 1, cols: 10, lines: ["same"])
+        guard case .screen(let first)? = streamer.update(paneID: "p", snapshot: snapshot) else { return XCTFail() }
+        XCTAssertEqual(mirror.apply(first), .updated(paneID: "p"))
+
+        // The phone switches to another pane and back; the screen did not change meanwhile.
+        streamer.retain(paneIDs: ["q"])
+        streamer.retain(paneIDs: ["p"])
+        guard case .screen(let again)? = streamer.update(paneID: "p", snapshot: snapshot) else { return XCTFail() }
+        XCTAssertGreaterThan(again.seq, first.seq)
+        XCTAssertEqual(mirror.apply(again), .updated(paneID: "p"))
+    }
 }
