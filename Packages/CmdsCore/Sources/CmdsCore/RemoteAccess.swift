@@ -44,6 +44,10 @@ public enum RemoteAPIPolicy {
     /// reach another pane learns that it cannot.
     public static func authorize(method: String, params: JSONValue?, scope: RemoteScope) throws -> JSONValue? {
         guard allowedMethods.contains(method) else {
+            if method == "pane.open_file" {
+                throw forbidden("cmds open is not available over an SSH connection: the file is on the server, not on this Mac "
+                    + "(copy it to the Mac, e.g. with scp, and open it there)")
+            }
             throw forbidden("\(method) is not available over an SSH connection (remote sockets only reach their own pane)")
         }
         var object: [String: JSONValue]

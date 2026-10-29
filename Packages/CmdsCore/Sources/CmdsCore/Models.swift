@@ -6,6 +6,8 @@ import Foundation
 public enum PaneKind: String, Codable, Sendable {
     case terminal
     case browser
+    /// A local file shown with Quick Look (Markdown and diffs rendered by cmds). `PaneInfo.file` is its path.
+    case preview
 }
 
 public enum SplitAxis: String, Codable, Sendable {
@@ -28,10 +30,12 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var agent: AgentUsage?
     /// Set for SSH panes; `workingDirectory` is then a path on that host.
     public var remote: RemoteInfo?
+    /// Preview panes: absolute path of the shown file on the Mac.
+    public var file: String?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
                 workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
-                remote: RemoteInfo? = nil) {
+                remote: RemoteInfo? = nil, file: String? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -41,6 +45,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.url = url
         self.agent = agent
         self.remote = remote
+        self.file = file
     }
 }
 

@@ -233,6 +233,9 @@ read)
     fi
     out=$(call pane.read_text "$params") || exit $?
     printf '%s\n' "$out" | result_string text ;;
+open)
+    echo "cmds-remote: open is not available over SSH: the file is on this server, not on the Mac (copy it to the Mac and run cmds open there)" >&2
+    exit 1 ;;
 rpc)
     [ "$#" -ge 1 ] || usage
     params="$2"

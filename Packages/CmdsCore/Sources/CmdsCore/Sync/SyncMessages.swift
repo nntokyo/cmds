@@ -14,6 +14,7 @@ public enum ClientMessage: Equatable, Sendable {
     case selectWorkspace(SelectWorkspace)
     case focusPane(FocusPane)
     case ping(Ping)
+    case requestFile(RequestFile)
 
     /// First message on every connection. Give `token` when one is stored for this Mac,
     /// otherwise `pairingCode` (the 6 digits shown on the Mac).
@@ -24,14 +25,17 @@ public enum ClientMessage: Equatable, Sendable {
         public var deviceID: String?
         public var pairingCode: String?
         public var token: String?
+        /// Optional protocol additions this phone understands (`SyncFeature`); absent from older phones.
+        public var features: [String]?
 
         public init(protocolVersion: Int = SyncProtocol.version, deviceName: String, deviceID: String? = nil,
-                    pairingCode: String? = nil, token: String? = nil) {
+                    pairingCode: String? = nil, token: String? = nil, features: [String]? = nil) {
             self.protocolVersion = protocolVersion
             self.deviceName = deviceName
             self.deviceID = deviceID
             self.pairingCode = pairingCode
             self.token = token
+            self.features = features
         }
     }
 
@@ -77,6 +81,13 @@ public enum ClientMessage: Equatable, Sendable {
         public init(id: String) { self.id = id }
     }
 
+    /// Ask for the file shown in a preview pane (never an arbitrary path). Answered with `file` message(s),
+    /// or `error` (`notFound`, `badRequest`). Older Macs answer `error{badRequest}` (unknown type).
+    public struct RequestFile: Codable, Equatable, Sendable {
+        public var paneID: String
+        public init(paneID: String) { self.paneID = paneID }
+    }
+
     public struct Ping: Codable, Equatable, Sendable {
         /// Echoed in `pong` (optional, for RTT measurement).
         public var nonce: Int?
@@ -93,6 +104,7 @@ public enum ClientMessage: Equatable, Sendable {
         case .selectWorkspace: return "selectWorkspace"
         case .focusPane: return "focusPane"
         case .ping: return "ping"
+        case .requestFile: return "requestFile"
         }
     }
 }
@@ -107,6 +119,7 @@ public enum ServerMessage: Equatable, Sendable {
     case screenDiff(ScreenDiff)
     case notification(Notification)
     case pong(Pong)
+    case file(File)
 
     /// Authentication succeeded. The phone stores `token` (Keychain, per Mac) for future connects.
     public struct Welcome: Codable, Equatable, Sendable {
@@ -218,6 +231,31 @@ public enum ServerMessage: Equatable, Sendable {
         public init(nonce: Int? = nil) { self.nonce = nonce }
     }
 
+    /// One piece of the file of a preview pane (answer to `requestFile`). `data` (base64) holds bytes
+    /// `offset ..< offset + data.count` of `size`; the file is complete when the pieces reach `size`.
+    /// `truncated`: the file is larger than `SyncFile.maxBytes` (or unreadable), no data is sent.
+    public struct File: Codable, Equatable, Sendable {
+        public var paneID: String
+        public var name: String
+        public var mime: String
+        /// Total byte count of the file being sent.
+        public var size: Int
+        public var offset: Int
+        public var data: Data
+        public var truncated: Bool?
+
+        public init(paneID: String, name: String, mime: String, size: Int, offset: Int = 0, data: Data,
+                    truncated: Bool? = nil) {
+            self.paneID = paneID
+            self.name = name
+            self.mime = mime
+            self.size = size
+            self.offset = offset
+            self.data = data
+            self.truncated = truncated
+        }
+    }
+
     public var typeName: String {
         switch self {
         case .welcome: return "welcome"
@@ -227,6 +265,7 @@ public enum ServerMessage: Equatable, Sendable {
         case .screenDiff: return "screenDiff"
         case .notification: return "notification"
         case .pong: return "pong"
+        case .file: return "file"
         }
     }
 }
@@ -252,6 +291,7 @@ extension ClientMessage: Codable {
         case "selectWorkspace": self = .selectWorkspace(try SelectWorkspace(from: decoder))
         case "focusPane": self = .focusPane(try FocusPane(from: decoder))
         case "ping": self = .ping(try Ping(from: decoder))
+        case "requestFile": self = .requestFile(try RequestFile(from: decoder))
         default: throw UnknownSyncMessageType(type: type)
         }
     }
@@ -266,6 +306,7 @@ extension ClientMessage: Codable {
         case .selectWorkspace(let p): try p.encode(to: encoder)
         case .focusPane(let p): try p.encode(to: encoder)
         case .ping(let p): try p.encode(to: encoder)
+        case .requestFile(let p): try p.encode(to: encoder)
         }
         var c = encoder.container(keyedBy: SyncTypeKey.self)
         try c.encode(typeName, forKey: .type)
@@ -283,6 +324,7 @@ extension ServerMessage: Codable {
         case "screenDiff": self = .screenDiff(try ScreenDiff(from: decoder))
         case "notification": self = .notification(try Notification(from: decoder))
         case "pong": self = .pong(try Pong(from: decoder))
+        case "file": self = .file(try File(from: decoder))
         default: throw UnknownSyncMessageType(type: type)
         }
     }
@@ -296,6 +338,7 @@ extension ServerMessage: Codable {
         case .screenDiff(let p): try p.encode(to: encoder)
         case .notification(let p): try p.encode(to: encoder)
         case .pong(let p): try p.encode(to: encoder)
+        case .file(let p): try p.encode(to: encoder)
         }
         var c = encoder.container(keyedBy: SyncTypeKey.self)
         try c.encode(typeName, forKey: .type)
