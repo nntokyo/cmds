@@ -20,6 +20,8 @@ local network. Code: `Packages/CmdsCore/Sources/CmdsCore/Sync/` (shared by both 
   connects to `wss://host:port/`.
 - **Bluetooth fallback** when the Mac cannot be reached over IP (e.g. Wi‑Fi off): the same TLS
   WebSocket session, carried over a Bluetooth LE L2CAP channel. See "Bluetooth".
+- **Remote access via SSH** (optional) away from the LAN: the same TLS WebSocket session, carried through
+  an SSH server the user already has (the relay host). See "Remote access via SSH".
 
 ## Bluetooth
 
@@ -62,6 +64,57 @@ the network; only the bytes travel over an L2CAP channel. Code: `CmdsCore/Sync/S
   access the first time it needs the fallback. No background mode: the fallback runs while the app is in
   the foreground. Opening the encrypted channel the first time triggers the system's Bluetooth pairing
   (bonding) prompt on the phone.
+
+## Remote access via SSH
+
+SSH is a dumb byte pipe, like Bluetooth. The phone runs exactly the same pinned TLS 1.3 WebSocket session as
+on the LAN; the Mac and the phone each log in to a relay host the user controls, and the relay only joins two
+TCP streams on its loopback. Code: `CmdsCore/Sync/SyncRemote.swift`, `App/Sources/Sync/SyncRemoteAccess.swift`
+(+ `SyncRemoteAccessWindowController.swift`), `Packages/CmdsSSH` (SSH client, iOS only),
+`iOS/Sources/Connection/SSHTransport.swift`, `iOS/Sources/Support/RemoteAccessStore.swift`,
+`iOS/Sources/Views/RemoteAccessView.swift`.
+
+- **Mac.** cmds › Remote Access via SSH…: on/off, relay host (a `Host` alias from `~/.ssh/config`, or
+  `user@host`) and relay port (default `47824`, `SyncRemote.defaultRelayPort`). Saved in
+  `<support dir>/sync-remote.json` (0600), so isolated instances never share it. While on and the sync
+  listener runs, cmds runs `/usr/bin/ssh -N -T -o BatchMode=yes -o ExitOnForwardFailure=yes
+  -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -o ControlPath=none … -R 127.0.0.1:<relay port>:127.0.0.1:<ingress port> -- <host>`
+  (`SyncRemote.sshArguments`). ssh uses the user's config, keys, agent and known_hosts and never prompts;
+  a host it does not know yet fails (connect once in Terminal first). It is restarted when it exits (2 s
+  doubling to 60 s; `ExitOnForwardFailure` makes it exit while the relay still holds the port of a dead
+  session). The status shows in that window and in the pairing window. The pid is kept in
+  `sync-remote-ssh.pid` so an ssh orphaned by a crash is ended at the next launch.
+- **Ingress (Mac).** The forward does not end at the sync listener: it ends at a loopback listener of cmds
+  ("ingress", ephemeral port), which relays each connection (at most 16) to the sync listener from a socket
+  registered as peer `ssh:<relay host>` (`SyncServer.relayedPeers`, the mechanism of the Bluetooth relay).
+  The sync server applies every check as for any client, keeps SSH clients apart from other loopback
+  clients for per-host limits, and **refuses pairing codes** from them (`pairingRequired`): remote access
+  only reuses a pairing made on the LAN (QR code or manual compare). All phones behind one relay share
+  the `ssh:<host>` label (the relay does not tell who opened the channel).
+- **Phone.** Per paired Mac, ⋯ › Remote Access via SSH…: relay host, SSH port, user, relay port, on/off.
+  The phone generates an Ed25519 key once (Keychain, `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`,
+  service `tokyo.n-n.cmds.companion.ssh-key`) and shows the line for the relay's `authorized_keys`
+  (copy/share), restricted to what cmds needs:
+  `restrict,port-forwarding,permitopen="127.0.0.1:<relay port>" ssh-ed25519 AAAA… cmds-<device>`. The app
+  never asks for or sends a password (public key only, offered once). **Host key:** "Check Connection"
+  connects without a pin; the presented key's `SHA256:` fingerprint is shown for comparison with
+  `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the relay; only "It Matches" pins it (per
+  `host:port`). Remote access is used only with a pinned host key; any other key later fails the login before
+  authentication. The check then opens the channel to the relay port, so it also tells whether the Mac's
+  forward is up.
+- **Connection.** `SSHTransport` (swift-nio-ssh over Network.framework via NIOTransportServices) logs in,
+  opens a `direct-tcpip` channel to `127.0.0.1:<relay port>` on the relay (refused = the Mac is not
+  forwarding), listens on the phone's 127.0.0.1 (ephemeral port), glues the first accepted socket to the
+  channel (later ones are closed) and connects the usual `WebSocketTransport` to `wss://127.0.0.1:<port>/`
+  with the pinned policy.
+- **Selection.** `FallbackTransport` starts SSH (only if set up and its host key is pinned) 6 s after the
+  network attempt, as soon as the network and Bluetooth attempts have both failed, or at once when the
+  phone has no Wi‑Fi. First pinned handshake wins, as before; an identity mismatch on any path ends the
+  attempt. The status badge shows "<Mac> · SSH".
+- **Relay host requirements.** OpenSSH with `AllowTcpForwarding yes` (or `local` for the phone's user and
+  `remote` for the Mac's), `GatewayPorts no` (the forward binds loopback only either way, because cmds asks
+  for `127.0.0.1`), public-key login for both users; recommended `ClientAliveInterval 15` and
+  `ClientAliveCountMax 3` so a dead Mac session frees the relay port quickly.
 
 ## Envelope
 
@@ -178,7 +231,7 @@ pairing. The user re-pairs (scan the new QR code) or cancels.
 
 Mac-side limits: hello within 10 s; at most 16 connections and 4 unauthenticated ones per host; 1 MiB
 per incoming frame, read one frame at a time; 16 KiB per `input` and 64 KiB of input per second;
-32 subscribed panes; screens at most 4 per second over Bluetooth; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
+32 subscribed panes; screens at most 4 per second over Bluetooth; 16 relayed SSH connections; no pairing codes over SSH; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
 total per minute (then 1 minute); a client that does not read 8 MiB of output is dropped.
 
 ## API summary (CmdsCore)
@@ -244,6 +297,17 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
   address on the LAN; the global limit on failed pairing attempts still applies. On the phone, another
   app could connect to the short-lived loopback port first; it would only get the TLS byte stream to the
   Mac (no token, which is sent only by our pinned connection) and make this attempt fail.
+- **Remote access via SSH.** Trust never comes from SSH: the Mac is authenticated by the pinned TLS
+  certificate end to end, and the relay host only carries TLS records. A compromised relay host (or its
+  root, or another user able to connect to its loopback) sees connection timing and sizes, can drop or
+  delay traffic, and can reach the Mac's sync listener through the forward, where it still needs a token
+  (pairing codes are refused over SSH; failed tokens are rate-limited per `ssh:<host>`, so such an
+  attacker can lock out other phones using that relay for a few minutes). It cannot read or change the
+  session or learn the token. A stolen phone SSH key (or relay account) gives the same reach and nothing
+  more; remove its line from `authorized_keys`. A wrong relay host key is refused before login; the first
+  key is trusted only after the user compared its fingerprint. The Mac's ssh trusts whatever the user's
+  `known_hosts` says. Anyone on the relay host can bind the relay port first while the Mac is offline; a
+  phone would then fail the pinned handshake ("identity changed"), never send its token.
 - **Metadata and availability.** The Bluetooth advertisement reveals that a cmds Mac is nearby; its info
   characteristic gives the Mac name and a fingerprint prefix to anyone in range. Bonjour advertises the Mac's name and certificate fingerprint;
   connection timing and sizes are visible on the network. Anyone on the network can connect and
@@ -261,6 +325,15 @@ Never test against the cmds instance in use or the user's phone. In addition to 
 - Relay test against an isolated instance: `CMDS_RELAY_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
   swift test --filter SyncRelayTests` (in `Packages/CmdsCore`) pins the instance's certificate and pairs
   through two relays and a simulated L2CAP channel.
+- `CMDS_SYNC_REMOTE_SSH_CONFIG=<file>` (isolated instances only): remote access runs `ssh -F <file>`, so
+  a test never reads `~/.ssh`. Remote access E2E: `Packages/CmdsSSH/Scripts/test-relay-sshd.sh start <dir> <port>`
+  starts a throwaway sshd as the current user on 127.0.0.1 (temp host keys, `authorized_keys`, client
+  config with Host `cmds-test-relay` and its own known_hosts). Put `{"enabled":true,"host":"cmds-test-relay","relayPort":<relay port>}`
+  in `$CMDS_SUPPORT_DIR/sync-remote.json`, start the instance with `CMDS_SYNC_REMOTE_SSH_CONFIG=<dir>/ssh_config`
+  and the switches here, then in `Packages/CmdsSSH`: `CMDS_SSH_E2E_DIR=<dir> CMDS_SSH_E2E_PORT=<port>
+  CMDS_SSH_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt CMDS_SSH_E2E_RELAY_PORT=<relay port> swift test`
+  (host key TOFU/mismatch, unauthorized key, restricted key, pairing refused over SSH, token → welcome/state,
+  wrong certificate, phone-side and Mac-side tunnel drops). `test-relay-sshd.sh stop <dir>` afterwards.
 - `CMDS_SYNC_TEST_PAIRING=1` (DEBUG builds with `CMDS_SUPPORT_DIR` only): listen on 127.0.0.1 only,
   keep pairing open without the window and write the current QR payload (host 127.0.0.1) to
   `$CMDS_SUPPORT_DIR/sync-test-pairing.txt` (0600), so a local client can pair like the scanner does.

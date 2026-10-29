@@ -36,18 +36,6 @@ final class SyncRemoteTests: XCTestCase {
         XCTAssertEqual(decoded, SyncRemote.Settings(enabled: true, host: "h", relayPort: 5))
     }
 
-    func testHostAliasesFromConfig() {
-        let config = """
-        Host home
-            HostName 192.0.2.1
-        Host *.example !bad work-box
-        host=lower
-        Match host foo
-        Host home
-        """
-        XCTAssertEqual(SyncRemote.hostAliases(inConfig: config), ["home", "work-box", "lower"])
-    }
-
     func testRestartBackoff() {
         XCTAssertEqual(SyncRemote.restartDelay(failures: 0), 2)
         XCTAssertEqual(SyncRemote.restartDelay(failures: 2), 8)

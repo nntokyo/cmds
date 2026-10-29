@@ -61,20 +61,4 @@ public enum SyncRemote {
     public static func restartDelay(failures: Int) -> TimeInterval {
         min(60, 2 * pow(2, Double(max(0, min(failures, 10)))))
     }
-
-    /// Host aliases from an ssh config text (`Host` lines, without patterns or negations).
-    public static func hostAliases(inConfig text: String) -> [String] {
-        var result: [String] = []
-        for line in text.split(whereSeparator: \.isNewline) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            let parts = trimmed.split(whereSeparator: { $0 == " " || $0 == "\t" || $0 == "=" })
-            guard parts.count >= 2, parts[0].lowercased() == "host" else { continue }
-            for alias in parts.dropFirst() {
-                let name = String(alias)
-                if name.contains("*") || name.contains("?") || name.hasPrefix("!") || !isValidHost(name) { continue }
-                if !result.contains(name) { result.append(name) }
-            }
-        }
-        return result
-    }
 }

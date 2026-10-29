@@ -76,9 +76,9 @@ final class SyncRemoteAccess {
 
     /// Host aliases from the ssh config ssh will read (for the host picker).
     var configuredHosts: [String] {
-        let path = CmdsEnv.remoteSSHConfig() ?? (NSHomeDirectory() as NSString).appendingPathComponent(".ssh/config")
+        guard let path = CmdsEnv.remoteSSHConfig() else { return SSHConfigHosts.load() }
         guard let text = try? String(contentsOfFile: path, encoding: .utf8) else { return [] }
-        return SyncRemote.hostAliases(inConfig: text)
+        return SSHConfigHosts.parse(text).hosts
     }
 
     /// Stops ssh and every relay (app quit).
