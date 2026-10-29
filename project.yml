@@ -131,6 +131,7 @@ targets:
         UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         NSLocalNetworkUsageDescription: cmds connects to your Mac to mirror terminals.
         NSBonjourServices: [_cmds._tcp]
+        NSCameraUsageDescription: cmds scans the pairing QR code shown by cmds on your Mac.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.companion
