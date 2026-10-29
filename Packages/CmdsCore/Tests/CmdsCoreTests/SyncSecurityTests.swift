@@ -200,6 +200,21 @@ final class SyncSecurityTests: XCTestCase {
         XCTAssertEqual(error(good + "&broken%ZZ=1"), .invalidField("broken%ZZ=1"))
     }
 
+    // MARK: - Environment switches (isolated test instances)
+
+    func testSyncEnvironmentSwitches() {
+        XCTAssertEqual(CmdsEnv.syncPortSetting(environment: [:]), .unset)
+        XCTAssertEqual(CmdsEnv.syncPortSetting(environment: ["CMDS_SYNC_PORT": " "]), .unset)
+        XCTAssertEqual(CmdsEnv.syncPortSetting(environment: ["CMDS_SYNC_PORT": "47999"]), .port(47999))
+        XCTAssertEqual(CmdsEnv.syncPortSetting(environment: ["CMDS_SYNC_PORT": "0"]), .invalid("0"))
+        XCTAssertEqual(CmdsEnv.syncPortSetting(environment: ["CMDS_SYNC_PORT": "70000"]), .invalid("70000"))
+        XCTAssertEqual(CmdsEnv.syncPortSetting(environment: ["CMDS_SYNC_PORT": "port"]), .invalid("port"))
+        XCTAssertTrue(CmdsEnv.isBonjourDisabled(environment: ["CMDS_SYNC_NO_BONJOUR": "1"]))
+        XCTAssertTrue(CmdsEnv.isBonjourDisabled(environment: ["CMDS_SYNC_NO_BONJOUR": "yes"]))
+        XCTAssertFalse(CmdsEnv.isBonjourDisabled(environment: ["CMDS_SYNC_NO_BONJOUR": "0"]))
+        XCTAssertFalse(CmdsEnv.isBonjourDisabled(environment: [:]))
+    }
+
     // MARK: - Protocol
 
     func testVersionAndTXTRecord() {

@@ -3,6 +3,7 @@ import CmdsCore
 import Combine
 import Network
 import os
+import SystemConfiguration
 
 /// Sync server log (subsystem tokyo.n-n.cmds, category sync). Never log tokens.
 let syncLog = Logger(subsystem: "tokyo.n-n.cmds", category: "sync")
@@ -12,8 +13,9 @@ extension Notification.Name {
     static let syncServerDidChange = Notification.Name("syncServerDidChange")
 }
 
-/// Serves the iOS companion (docs/SYNC.md): WebSocket listener + Bonjour, pairing, workspace
-/// state, screen streaming and input. Network I/O runs on `queue`; everything else on main.
+/// Serves the iOS companion (docs/SYNC.md): WebSocket over TLS 1.3 with the Mac's own certificate
+/// (`SyncIdentity`, pinned by the phone at pairing), Bonjour, pairing, workspace state, screen streaming
+/// and input. Network I/O runs on `queue`; everything else on main.
 @MainActor
 final class SyncServer {
     static let shared = SyncServer()
@@ -74,6 +76,10 @@ final class SyncServer {
 
     let macName: String
     let store = SyncDeviceStore()
+    /// Key and certificate presented to phones; loaded (or created) when sync starts.
+    private(set) var identity: SyncIdentity?
+    /// Bonjour name actually registered (differs from `macName` after a name conflict).
+    private(set) var serviceName: String?
     private(set) var pairingCode: String = PairingToken.generateCode()
     private(set) var codeExpiresAt = Date()
     private(set) var port: UInt16?
@@ -82,7 +88,10 @@ final class SyncServer {
     private let queue = DispatchQueue(label: "tokyo.n-n.cmds.sync", qos: .userInitiated)
     private let codec = SyncCodec()
     private let limiter = SyncRateLimiter()
+    private let identityStore = SyncIdentityStore()
     private var listener: NWListener?
+    /// `CMDS_SYNC_PORT` is set: never fall back to another port.
+    private var portIsFixed = false
     private var clients: [UUID: Client] = [:]
     private var changesCancellable: AnyCancellable?
     private var usageCancellable: AnyCancellable?
@@ -141,8 +150,23 @@ final class SyncServer {
             didChange()
             return
         }
+        let requestedPort: UInt16
+        switch CmdsEnv.syncPortSetting() {
+        case .invalid(let raw):
+            return fail("\(CmdsEnv.syncPort)=\(raw) is not a port number")
+        case .port(let port):
+            requestedPort = port
+            portIsFixed = true
+        case .unset:
+            requestedPort = SyncProtocol.defaultPort
+            portIsFixed = false
+        }
+        guard loadIdentity() else { return }
+        #if DEBUG
+        if Self.testPairing { isPairingOpen = true }
+        #endif
         rotateCode()
-        startListener(port: SyncProtocol.defaultPort)
+        startListener(port: requestedPort)
         changesCancellable = AppController.shared.changes.sink { [weak self] change in
             self?.handle(change)
         }
@@ -157,6 +181,7 @@ final class SyncServer {
         listener?.cancel()
         listener = nil
         port = nil
+        serviceName = nil
         codeTimer?.invalidate()
         codeTimer = nil
         for client in clients.values { client.connection.close() }
@@ -209,11 +234,53 @@ final class SyncServer {
         rotateCode()
     }
 
+    /// Replaces the sync identity with a new key and certificate and unpairs every device: phones pinned
+    /// the old certificate, so they must pair again (a phone that missed this sees "identity changed").
+    func resetIdentity() {
+        let wasRunning = listener != nil
+        revokeAllDevices()
+        if wasRunning { stop() }
+        identityStore.delete()
+        identity = nil
+        syncLog.notice("sync identity reset")
+        if wasRunning { start() } else { didChange() }
+    }
+
+    /// Loads the identity, creating it on first use. A new identity unpairs every device: phones pinned
+    /// the previous certificate (or paired over the plaintext protocol v1) and must pair again.
+    private func loadIdentity() -> Bool {
+        if identity != nil { return true }
+        do {
+            if let stored = try identityStore.load() {
+                identity = stored
+            } else {
+                let created = try identityStore.create(commonName: SyncCertificate.commonName(macName: macName))
+                identity = created
+                store.revokeAll()
+                syncLog.notice("created sync identity \(created.fingerprint.short, privacy: .public)")
+            }
+            return true
+        } catch {
+            // Never replace an identity that exists but cannot be read (keychain locked, access denied).
+            fail("sync identity unavailable (\(error.localizedDescription))")
+            return false
+        }
+    }
+
+    private func fail(_ reason: String) {
+        statusText = "Failed: \(reason)"
+        syncLog.error("sync not started: \(reason, privacy: .public)")
+        didChange()
+    }
+
     private func startListener(port requested: UInt16?) {
+        guard let identity, let tls = SyncTLS.serverOptions(identity: identity.secIdentity) else {
+            return fail("the sync identity cannot be used for TLS")
+        }
         let tcp = NWProtocolTCP.Options()
         tcp.enableKeepalive = true
         tcp.keepaliveIdle = 15
-        let params = NWParameters(tls: nil, tcp: tcp)
+        let params = NWParameters(tls: tls, tcp: tcp)
         let ws = NWProtocolWebSocket.Options()
         ws.autoReplyPing = true
         ws.maximumMessageSize = Self.maxFrameBytes
@@ -225,14 +292,29 @@ final class SyncServer {
         do {
             listener = try NWListener(using: params, on: nwPort)
         } catch {
-            if requested != nil { return startListener(port: nil) }
+            if requested != nil, !portIsFixed { return startListener(port: nil) }
             statusText = "Failed: \(error.localizedDescription)"
             syncLog.error("listener failed: \(error.localizedDescription, privacy: .public)")
             didChange()
             return
         }
-        listener.service = NWListener.Service(name: macName, type: SyncProtocol.bonjourServiceType, domain: nil,
-                                              txtRecord: NWTXTRecord(SyncProtocol.txtRecord(macName: macName)))
+        // CMDS_SYNC_NO_BONJOUR: reachable by address only, so no phone ever discovers a test instance.
+        if !CmdsEnv.isBonjourDisabled() {
+            // The fingerprint in the TXT record is a hint only; phones trust the one they pinned.
+            listener.service = NWListener.Service(name: macName, type: SyncProtocol.bonjourServiceType, domain: nil,
+                                                  txtRecord: NWTXTRecord(SyncProtocol.txtRecord(macName: macName,
+                                                                                                fingerprint: identity.fingerprint)))
+            listener.serviceRegistrationUpdateHandler = { [weak self, weak listener] change in
+                guard case .add(let endpoint) = change, case .service(let name, _, _, _) = endpoint else { return }
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated {
+                        guard let self, let listener, self.listener === listener else { return }
+                        self.serviceName = name
+                        self.didChange()
+                    }
+                }
+            }
+        }
         listener.stateUpdateHandler = { [weak self, weak listener] state in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
@@ -264,7 +346,7 @@ final class SyncServer {
             listener.cancel()
             self.listener = nil
             port = nil
-            if requestedPort != nil {
+            if requestedPort != nil, !portIsFixed {
                 syncLog.notice("port \(requestedPort ?? 0, privacy: .public) unavailable (\(error.localizedDescription, privacy: .public)), using any port")
                 startListener(port: nil)
                 return
@@ -617,5 +699,68 @@ final class SyncServer {
 
     private func didChange() {
         NotificationCenter.default.post(name: .syncServerDidChange, object: self)
+        #if DEBUG
+        writeTestPairingPayload()
+        #endif
     }
+
+    // MARK: - Pairing QR code
+
+    /// What the pairing window's QR code carries (docs/SYNC.md); nil until the listener is up.
+    var pairingPayload: SyncPairingPayload? {
+        guard let identity, let port, let host = Self.lanHost() else { return nil }
+        // Only an advertised name helps the phone, and a Bonjour name is at most 63 bytes.
+        let name = CmdsEnv.isBonjourDisabled() ? nil : (serviceName ?? macName)
+        return SyncPairingPayload(name: name.flatMap { $0.utf8.count <= 63 ? $0 : nil }, host: host, port: port,
+                                  fingerprint: identity.fingerprint, code: pairingCode)
+    }
+
+    /// IPv4 address of the Mac on the local network (Wi-Fi/Ethernet, en0 first), else "<local host name>.local".
+    static func lanHost() -> String? {
+        var candidates: [(interface: String, address: String)] = []
+        var list: UnsafeMutablePointer<ifaddrs>?
+        if getifaddrs(&list) == 0, let first = list {
+            defer { freeifaddrs(list) }
+            for entry in sequence(first: first, next: { $0.pointee.ifa_next }) {
+                let flags = Int32(entry.pointee.ifa_flags)
+                guard flags & (IFF_UP | IFF_RUNNING) == (IFF_UP | IFF_RUNNING), flags & IFF_LOOPBACK == 0,
+                      let address = entry.pointee.ifa_addr, address.pointee.sa_family == UInt8(AF_INET) else { continue }
+                let interface = String(cString: entry.pointee.ifa_name)
+                guard interface.hasPrefix("en") else { continue }
+                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                guard getnameinfo(address, socklen_t(address.pointee.sa_len), &host, socklen_t(host.count),
+                                  nil, 0, NI_NUMERICHOST) == 0 else { continue }
+                let text = String(cString: host)
+                if text.hasPrefix("169.254.") { continue } // link-local: no DHCP lease
+                candidates.append((interface, text))
+            }
+        }
+        func rank(_ interface: String) -> (Int, String) { (interface == "en0" ? 0 : 1, interface) }
+        if let best = candidates.min(by: { rank($0.interface) < rank($1.interface) }) {
+            return best.address
+        }
+        if let name = SCDynamicStoreCopyLocalHostName(nil) as String?, !name.isEmpty { return name + ".local" }
+        return nil
+    }
+
+    #if DEBUG
+    /// DEBUG builds and isolated instances (`CMDS_SUPPORT_DIR`) only: `CMDS_SYNC_TEST_PAIRING=1` keeps pairing
+    /// open without the window and writes the QR payload to `sync-test-pairing.txt` (0600) in the support
+    /// directory whenever it changes, for end-to-end tests (docs/SYNC.md).
+    static let testPairing = ProcessInfo.processInfo.environment["CMDS_SYNC_TEST_PAIRING"] == "1"
+        && CmdsEnv.supportDirectoryOverride() != nil
+
+    private func writeTestPairingPayload() {
+        guard Self.testPairing, let uri = pairingPayload?.uri else { return }
+        let directory = SessionStore.directory
+        let url = directory.appendingPathComponent("sync-test-pairing.txt")
+        guard (try? String(contentsOf: url, encoding: .utf8)) != uri else { return }
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                                 attributes: [.posixPermissions: 0o700])
+        let temp = directory.appendingPathComponent(".sync-test-pairing.\(UUID().uuidString).tmp")
+        guard FileManager.default.createFile(atPath: temp.path, contents: Data(uri.utf8),
+                                             attributes: [.posixPermissions: 0o600]) else { return }
+        _ = rename(temp.path, url.path)
+    }
+    #endif
 }

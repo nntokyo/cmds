@@ -63,6 +63,18 @@ public enum CmdsEnv {
     public static let supportDirectory = "CMDS_SUPPORT_DIR"
     /// `1` = do not start the iOS sync server (no Bonjour advert, no port).
     public static let syncDisabled = "CMDS_SYNC_DISABLED"
+    /// Listen port of the iOS sync server instead of `SyncProtocol.defaultPort` (isolated test instances).
+    /// Unlike the default port, it is never replaced by another one when it is taken.
+    public static let syncPort = "CMDS_SYNC_PORT"
+    /// `1` = run the iOS sync server without the Bonjour advertisement, so no phone discovers the instance.
+    public static let syncNoBonjour = "CMDS_SYNC_NO_BONJOUR"
+
+    public enum SyncPortSetting: Equatable, Sendable {
+        case unset
+        case port(UInt16)
+        /// Set, but not a port number 1–65535 (the raw value, shortened).
+        case invalid(String)
+    }
 
     /// `$CMDS_SUPPORT_DIR` if set, else `~/Library/Application Support/cmds`.
     public static func supportDirectoryURL(environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
@@ -83,7 +95,21 @@ public enum CmdsEnv {
     }
 
     public static func isSyncDisabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
-        guard let value = environment[syncDisabled]?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }
+        isSet(environment[syncDisabled])
+    }
+
+    public static func syncPortSetting(environment: [String: String] = ProcessInfo.processInfo.environment) -> SyncPortSetting {
+        guard let raw = environment[syncPort]?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return .unset }
+        guard let port = UInt16(raw), port != 0 else { return .invalid(String(raw.prefix(32))) }
+        return .port(port)
+    }
+
+    public static func isBonjourDisabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        isSet(environment[syncNoBonjour])
+    }
+
+    private static func isSet(_ flag: String?) -> Bool {
+        guard let value = flag?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }
         return ["1", "true", "yes"].contains(value)
     }
 
