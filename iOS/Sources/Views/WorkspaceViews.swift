@@ -1,0 +1,338 @@
+import CmdsCore
+import SwiftUI
+
+/// Sidebar + detail. On iPhone (compact width) NavigationSplitView collapses into a stack.
+struct MainView: View {
+    @Environment(CompanionClient.self) private var client
+    /// `-mockWorkspace <id>` preselects a workspace (screenshots / UI checks).
+    @State private var selectedWorkspaceID: String? = UserDefaults.standard.string(forKey: "mockWorkspace")
+    @State private var columnVisibility = NavigationSplitViewVisibility.automatic
+
+    var body: some View {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
+            WorkspaceListView(selection: $selectedWorkspaceID)
+        } detail: {
+            if let workspace = client.workspace(selectedWorkspaceID) {
+                WorkspaceDetailView(workspace: workspace)
+                    .id(workspace.id)
+            } else {
+                ContentUnavailableView {
+                    Label(client.workspaces.isEmpty ? client.status.label : "Select a workspace",
+                          systemImage: "terminal")
+                } description: {
+                    if case .reconnecting(_, let reason?) = client.status { Text(reason) }
+                    if case .failed(let message) = client.status { Text(message) }
+                }
+            }
+        }
+        .onChange(of: client.workspaces) { _, workspaces in
+            // Keep selection valid; on iPad pick the workspace selected on the Mac.
+            if let id = selectedWorkspaceID, !workspaces.contains(where: { $0.id == id }) {
+                selectedWorkspaceID = nil
+            }
+            if selectedWorkspaceID == nil, UIDevice.current.userInterfaceIdiom == .pad {
+                selectedWorkspaceID = workspaces.first(where: \.selected)?.id ?? workspaces.first?.id
+            }
+        }
+        .onChange(of: selectedWorkspaceID) { _, id in
+            if id == nil { client.setVisiblePanes([]) }
+        }
+    }
+}
+
+struct WorkspaceListView: View {
+    @Environment(CompanionClient.self) private var client
+    @Binding var selection: String?
+
+    var body: some View {
+        List(selection: $selection) {
+            ForEach(client.workspaces) { workspace in
+                NavigationLink(value: workspace.id) {
+                    WorkspaceRow(workspace: workspace, attention: client.needsAttention(workspace))
+                }
+                .contextMenu {
+                    Button {
+                        client.selectWorkspaceOnMac(workspace.id)
+                    } label: {
+                        Label("Show on Mac", systemImage: "desktopcomputer")
+                    }
+                }
+            }
+        }
+        .overlay {
+            if client.workspaces.isEmpty {
+                VStack(spacing: 12) {
+                    if !client.status.isLive && !isFailure { ProgressView() }
+                    Text(emptyText).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                }
+                .padding()
+            }
+        }
+        .navigationTitle(client.macName.isEmpty ? "cmds" : client.macName)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                ConnectionStatusBadge()
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    if case .failed = client.status, let target = client.target {
+                        Button("Retry") { client.connect(to: target) }
+                    }
+                    if client.target?.kind != .mock {
+                        Button("Unpair This Mac", role: .destructive) { client.unpair() }
+                    }
+                    Button("Switch Mac…") { client.disconnect() }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+            }
+        }
+    }
+
+    private var isFailure: Bool {
+        if case .failed = client.status { return true }
+        return false
+    }
+
+    private var emptyText: String {
+        switch client.status {
+        case .failed(let message): return message
+        case .reconnecting(_, let reason): return [client.status.label, reason].compactMap { $0 }.joined(separator: "\n")
+        case .connected: return "No workspaces"
+        default: return client.status.label
+        }
+    }
+}
+
+struct WorkspaceRow: View {
+    let workspace: WorkspaceInfo
+    let attention: Bool
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Circle()
+                .fill(attention ? Color.orange : Color.clear)
+                .overlay(Circle().stroke(attention ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 1))
+                .frame(width: 9, height: 9)
+                .padding(.top, 6)
+                .accessibilityLabel(attention ? "Needs attention" : "")
+            VStack(alignment: .leading, spacing: 3) {
+                HStack {
+                    Text(workspace.title).font(.headline).lineLimit(1)
+                    if workspace.selected {
+                        Image(systemName: "desktopcomputer")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .accessibilityLabel("Active on Mac")
+                    }
+                    Spacer()
+                    if workspace.panes.count > 1 {
+                        Text("\(workspace.panes.count)")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                if let branch = workspace.gitBranch {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.triangle.branch")
+                        Text(branch).lineLimit(1)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                if let cwd = workspace.workingDirectory {
+                    Text(cwd)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.head)
+                }
+                if !workspace.ports.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(workspace.ports, id: \.self) { port in
+                            Text(":\(String(port))")
+                                .font(.caption2.monospaced())
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(.blue.opacity(0.15), in: Capsule())
+                        }
+                    }
+                }
+                if let note = workspace.notificationText, !note.isEmpty {
+                    Text(note)
+                        .font(.caption)
+                        .foregroundStyle(attention ? Color.orange : Color.secondary)
+                        .lineLimit(2)
+                }
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+/// Pane selector (tabs + split mini-map) and the selected pane's screen + input.
+struct WorkspaceDetailView: View {
+    @Environment(CompanionClient.self) private var client
+    let workspace: WorkspaceInfo
+    @State private var selectedPaneID: String?
+
+    private var orderedPanes: [PaneInfo] {
+        let order = workspace.layout?.paneIDsInOrder ?? []
+        let byID = Dictionary(uniqueKeysWithValues: workspace.panes.map { ($0.id, $0) })
+        var result = order.compactMap { byID[$0] }
+        result += workspace.panes.filter { !order.contains($0.id) }
+        return result
+    }
+
+    private var selectedPane: PaneInfo? {
+        orderedPanes.first { $0.id == selectedPaneID } ?? orderedPanes.first(where: \.focused) ?? orderedPanes.first
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if orderedPanes.count > 1 {
+                PaneSelectorBar(workspace: workspace, panes: orderedPanes, selectedID: selectedPane?.id) { id in
+                    selectedPaneID = id
+                }
+                Divider()
+            }
+            if let pane = selectedPane {
+                PaneView(pane: pane)
+                    .id(pane.id)
+            } else {
+                ContentUnavailableView("No panes", systemImage: "rectangle.dashed")
+            }
+        }
+        .navigationTitle(workspace.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        client.selectWorkspaceOnMac(workspace.id)
+                    } label: { Label("Show Workspace on Mac", systemImage: "desktopcomputer") }
+                    if let pane = selectedPane {
+                        Button {
+                            client.selectWorkspaceOnMac(workspace.id)
+                            client.focusPaneOnMac(pane.id)
+                        } label: { Label("Focus Pane on Mac", systemImage: "scope") }
+                    }
+                } label: {
+                    Image(systemName: "desktopcomputer")
+                }
+            }
+        }
+        .onAppear(perform: syncSubscription)
+        .onChange(of: selectedPane?.id) { _, _ in syncSubscription() }
+        .onDisappear { client.setViewedPane(nil, workspaceID: nil) }
+    }
+
+    private func syncSubscription() {
+        guard let pane = selectedPane else { return }
+        client.setVisiblePanes(pane.kind == .terminal ? [pane.id] : [])
+        client.setViewedPane(pane.id, workspaceID: workspace.id)
+    }
+}
+
+/// Tabs for each pane plus a mini-map of the split layout.
+struct PaneSelectorBar: View {
+    @Environment(CompanionClient.self) private var client
+    let workspace: WorkspaceInfo
+    let panes: [PaneInfo]
+    let selectedID: String?
+    let select: (String) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let layout = workspace.layout {
+                LayoutMiniMap(node: layout, selectedID: selectedID,
+                              attention: Set(panes.filter { client.needsAttention($0) }.map(\.id)),
+                              select: select)
+                    .frame(width: 54, height: 34)
+                    .accessibilityHidden(true)
+            }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(Array(panes.enumerated()), id: \.element.id) { index, pane in
+                        Button {
+                            select(pane.id)
+                        } label: {
+                            HStack(spacing: 5) {
+                                if client.needsAttention(pane) {
+                                    Circle().fill(.orange).frame(width: 7, height: 7)
+                                }
+                                Image(systemName: pane.kind == .browser ? "globe" : "terminal")
+                                    .font(.caption2)
+                                Text(pane.title.isEmpty ? "Pane \(index + 1)" : pane.title)
+                                    .font(.subheadline)
+                                    .lineLimit(1)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(pane.id == selectedID ? Color.accentColor.opacity(0.2) : Color.secondary.opacity(0.1),
+                                        in: Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(pane.id == selectedID ? .isSelected : [])
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+    }
+}
+
+/// Proportional drawing of a `LayoutNode`; tap a cell to select that pane.
+struct LayoutMiniMap: View {
+    let node: LayoutNode
+    let selectedID: String?
+    let attention: Set<String>
+    let select: (String) -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            cell(node, size: geo.size)
+        }
+    }
+
+    private func cell(_ node: LayoutNode, size: CGSize) -> AnyView {
+        switch node {
+        case .pane(let id):
+            return AnyView(
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(id == selectedID ? Color.accentColor : Color.secondary.opacity(0.25))
+                    .overlay(RoundedRectangle(cornerRadius: 2).stroke(attention.contains(id) ? Color.orange : .clear, lineWidth: 1.5))
+                    .frame(width: max(0, size.width), height: max(0, size.height))
+                    .contentShape(Rectangle())
+                    .onTapGesture { select(id) }
+            )
+        case .split(let axis, let ratio, let first, let second):
+            let gap: CGFloat = 2
+            let r = min(max(ratio, 0.05), 0.95)
+            if axis == .horizontal {
+                let w1 = (size.width - gap) * r
+                return AnyView(HStack(spacing: gap) {
+                    cell(first, size: CGSize(width: w1, height: size.height))
+                    cell(second, size: CGSize(width: size.width - gap - w1, height: size.height))
+                })
+            } else {
+                let h1 = (size.height - gap) * r
+                return AnyView(VStack(spacing: gap) {
+                    cell(first, size: CGSize(width: size.width, height: h1))
+                    cell(second, size: CGSize(width: size.width, height: size.height - gap - h1))
+                })
+            }
+        }
+    }
+}
+
+extension LayoutNode {
+    /// Pane IDs left-to-right / top-to-bottom.
+    var paneIDsInOrder: [String] {
+        switch self {
+        case .pane(let id): return [id]
+        case .split(_, _, let first, let second): return first.paneIDsInOrder + second.paneIDsInOrder
+        }
+    }
+}
