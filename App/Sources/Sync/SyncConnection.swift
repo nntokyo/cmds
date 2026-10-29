@@ -56,6 +56,13 @@ final class SyncConnection: @unchecked Sendable {
     }
 
     /// Sends one text frame. When `thenClose` is set, the connection is closed once it is written.
+    /// Bytes handed to `send` whose write has not completed yet (pacing of large transfers such as `file`).
+    var queuedBytes: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return pendingBytes
+    }
+
     func send(_ data: Data, thenClose: Bool = false) {
         lock.lock()
         if cancelled {

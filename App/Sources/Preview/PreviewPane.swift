@@ -47,6 +47,8 @@ final class PreviewPane: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    override var acceptsFirstResponder: Bool { true }
+
     // MARK: - Public API
 
     /// Shows another file in this pane.
@@ -60,7 +62,11 @@ final class PreviewPane: NSView {
     func reload() { load(keepScroll: true) }
 
     func focus() {
-        if let content, content === quickLook || content === webView { window?.makeFirstResponder(content) }
+        if let content, content === quickLook || content === webView {
+            window?.makeFirstResponder(content)
+        } else {
+            window?.makeFirstResponder(self) // image / placeholder: take the keyboard away from the previous pane
+        }
     }
 
     #if DEBUG
@@ -425,7 +431,12 @@ extension PreviewPane: WKNavigationDelegate {
         case PreviewSchemeHandler.scheme, "file":
             let target = url.scheme == "file" ? url.path : PreviewSchemeHandler.filePath(for: url)
             guard let target else { return }
-            if let fragment = url.fragment, target == path {
+            // `#anchor` resolves against the base URL, which is the document's folder.
+            var withoutFragment = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            withoutFragment?.fragment = nil
+            let sameDocument = target == path
+                || withoutFragment?.url?.absoluteString == PreviewSchemeHandler.baseURL(forDocumentAt: path)?.absoluteString
+            if let fragment = url.fragment, sameDocument {
                 webView.evaluateJavaScript("document.getElementById(\(Self.jsString(fragment)))?.scrollIntoView()")
                 return
             }

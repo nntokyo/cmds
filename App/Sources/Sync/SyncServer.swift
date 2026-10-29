@@ -695,13 +695,29 @@ final class SyncServer {
                 pieces = [SyncFile.truncated(paneID: paneID, name: name, mime: mime)]
             }
             DispatchQueue.main.async {
-                MainActor.assumeIsolated {
-                    client.sendingFile = false
-                    guard let self, !client.closing, self.clients[client.connection.id] === client else { return }
-                    for piece in pieces { self.send(.file(piece), to: client) }
-                }
+                MainActor.assumeIsolated { self?.sendFilePieces(pieces[...], to: client) }
             }
         }
+    }
+
+    /// Sends `file` pieces one after another, each only once the connection's write queue has drained below a few
+    /// MB, so a 10 MB file on a slow link (Bluetooth) never hits `SyncConnection.maxPendingBytes`.
+    private func sendFilePieces(_ pieces: ArraySlice<ServerMessage.File>, to client: Client) {
+        guard let piece = pieces.first, !client.closing, clients[client.connection.id] === client else {
+            client.sendingFile = false
+            return
+        }
+        guard client.connection.queuedBytes <= SyncConnection.maxPendingBytes / 2 else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let self else { return client.sendingFile = false }
+                    self.sendFilePieces(pieces, to: client)
+                }
+            }
+            return
+        }
+        send(.file(piece), to: client)
+        sendFilePieces(pieces.dropFirst(), to: client)
     }
 
     private func currentState() -> ServerMessage.State {
