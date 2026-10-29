@@ -42,6 +42,11 @@ final class SyncDeviceStore {
         return device
     }
 
+    /// Token hashes `add` would drop for this device ID (an existing pairing being replaced).
+    func tokenHashes(deviceID: String) -> [String] {
+        devices.filter { $0.deviceID == deviceID }.map(\.tokenHash)
+    }
+
     func device(tokenHash: String) -> Device? {
         devices.first { Self.digestsEqual($0.tokenHash, tokenHash) }
     }

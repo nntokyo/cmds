@@ -154,6 +154,19 @@ final class SyncServer {
     }
 
     /// Forgets every paired device and disconnects them.
+    /// Drops sessions authenticated with any of `tokenHashes`.
+    private func deauthorize(tokenHashes: [String], reason: String) {
+        guard !tokenHashes.isEmpty else { return }
+        for client in clients.values where client.authenticated {
+            guard let hash = client.tokenHash,
+                  tokenHashes.contains(where: { SyncDeviceStore.digestsEqual($0, hash) }) else { continue }
+            client.authenticated = false
+            client.subscribed = []
+            sendError(.invalidToken, reason, to: client, close: true)
+        }
+        pruneScreenCache()
+    }
+
     func revokeAllDevices() {
         store.revokeAll()
         for client in clients.values where client.authenticated {
@@ -369,7 +382,11 @@ final class SyncServer {
             let plainToken: String
             if isNewToken {
                 plainToken = token
-                store.add(token: token, deviceName: name, deviceID: hello.deviceID.map { String($0.prefix(128)) })
+                let deviceID = hello.deviceID.map { String($0.prefix(128)) }
+                // Re-pairing replaces the device's old token; sessions still using it must lose access too.
+                let replaced = deviceID.map { store.tokenHashes(deviceID: $0) } ?? []
+                store.add(token: token, deviceName: name, deviceID: deviceID)
+                deauthorize(tokenHashes: replaced, reason: "this device was paired again")
                 limiter.recordSuccess(host: host)
                 rotateCode()
                 syncLog.notice("paired new device \(name, privacy: .public) from \(host, privacy: .public)")
