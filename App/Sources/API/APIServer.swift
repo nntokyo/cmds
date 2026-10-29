@@ -121,7 +121,8 @@ final class APIServer {
             guard let kind = PaneKind(rawValue: rawKind) else { throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\"") }
             return try .from(controller.split(paneID: try params.string("pane"), direction: direction, kind: kind,
                                               url: try params.string("url"), cwd: try params.string("cwd"),
-                                              command: try params.string("command")))
+                                              command: try params.string("command"),
+                                              focus: try params.bool("focus") ?? true))
         case "pane.focus":
             try controller.focusPane(id: try params.required("pane"))
         case "pane.close":
@@ -137,7 +138,8 @@ final class APIServer {
             try controller.setStatus(workspaceID: try params.string("workspace"), text: try params.required("text"))
 
         case "browser.open":
-            return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url")))
+            return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url"),
+                                                    focus: try params.bool("focus") ?? true))
         case "browser.navigate":
             try controller.browserNavigate(paneID: try browserPaneID(params), url: try params.required("url"))
         case "browser.get_url":
@@ -232,6 +234,14 @@ private struct Params {
     func required(_ key: String) throws -> String {
         guard let string = try string(key) else { throw RPCError.invalidParams("missing param: \(key)") }
         return string
+    }
+
+    func bool(_ key: String) throws -> Bool? {
+        switch value?[key] {
+        case nil, .null?: return nil
+        case .bool(let bool)?: return bool
+        default: throw RPCError.invalidParams("\(key) must be a boolean")
+        }
     }
 
     func int(_ key: String) throws -> Int? {
