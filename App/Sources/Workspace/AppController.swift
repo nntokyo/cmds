@@ -1,0 +1,554 @@
+import AppKit
+import Combine
+import CmdsCore
+import UserNotifications
+
+extension Notification.Name {
+    /// Mirrors `AppController.changes`; `userInfo` has `"change"` (`StateChange`) and,
+    /// when applicable, `"workspaceID"` / `"paneID"` strings.
+    static let cmdsStateDidChange = Notification.Name("cmdsStateDidChange")
+}
+
+/// What changed in `AppController`. Subscribers re-read the state they care about.
+enum StateChange: Equatable {
+    /// Workspace list, order or selection changed (also on create/close).
+    case workspaces
+    /// Metadata, layout or focus of one workspace changed.
+    case workspace(id: String)
+    /// Title, cwd, url or attention of one pane changed.
+    case pane(workspaceID: String, paneID: String)
+    /// A pane posted a notification (OSC 9/777, bell, `notify`). Emitted even when the pane is focused.
+    case notification(workspaceID: String, paneID: String, title: String?, body: String)
+
+    var workspaceID: String? {
+        switch self {
+        case .workspaces: return nil
+        case .workspace(let id): return id
+        case .pane(let id, _), .notification(let id, _, _, _): return id
+        }
+    }
+
+    var paneID: String? {
+        switch self {
+        case .pane(_, let id), .notification(_, let id, _, _): return id
+        default: return nil
+        }
+    }
+}
+
+enum SplitDirection: String, Sendable {
+    case right
+    case down
+
+    var axis: SplitAxis { self == .right ? .horizontal : .vertical }
+}
+
+/// Single source of truth for workspaces and panes. UI, socket API and sync server all go through it.
+/// Methods taking an optional ID fall back to the selected workspace / its focused pane.
+/// Errors are `RPCError`s so the socket layer can forward them unchanged.
+@MainActor
+final class AppController {
+    static let shared = AppController()
+
+    private(set) var workspaces: [Workspace] = []
+    private(set) var selectedWorkspaceID: String?
+    /// The main window; used to decide whether a focused pane is actually visible to the user.
+    weak var window: NSWindow?
+    let socketPath = CmdsEnv.defaultSocketPath()
+
+    /// Fires synchronously on the main actor after every state change.
+    var changes: AnyPublisher<StateChange, Never> { subject.eraseToAnyPublisher() }
+
+    private let subject = PassthroughSubject<StateChange, Never>()
+    private var nextWorkspaceNumber = 1
+    private var nextPaneNumber = 1
+    private var saveWorkItem: DispatchWorkItem?
+
+    var selectedWorkspace: Workspace? { selectedWorkspaceID.flatMap(workspace(id:)) }
+    var focusedPane: Pane? { selectedWorkspace?.focusedPane }
+
+    func workspace(id: String) -> Workspace? { workspaces.first { $0.id == id } }
+
+    func pane(id: String) -> Pane? {
+        for workspace in workspaces { if let pane = workspace.panes[id] { return pane } }
+        return nil
+    }
+
+    // MARK: - Queries
+
+    func listWorkspaces() -> [WorkspaceInfo] {
+        workspaces.map { $0.info(selected: $0.id == selectedWorkspaceID) }
+    }
+
+    func workspaceInfo(id: String?) throws -> WorkspaceInfo {
+        let workspace = try resolveWorkspace(id)
+        return workspace.info(selected: workspace.id == selectedWorkspaceID)
+    }
+
+    func listPanes(workspaceID: String? = nil) throws -> [PaneInfo] {
+        try resolveWorkspace(workspaceID).paneInfos()
+    }
+
+    func paneInfo(id: String?) throws -> PaneInfo {
+        let pane = try resolvePane(id)
+        return pane.info(focused: workspace(id: pane.workspaceID)?.focusedPaneID == pane.id)
+    }
+
+    func workspaceID(forPane paneID: String) -> String? { pane(id: paneID)?.workspaceID }
+
+    // MARK: - Workspaces
+
+    /// Creates and selects a workspace with one terminal pane. `cwd` defaults to the home directory.
+    @discardableResult
+    func createWorkspace(title: String? = nil, cwd: String? = nil, command: String? = nil) -> WorkspaceInfo {
+        let workspace = makeWorkspace()
+        workspace.customTitle = title
+        let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? NSHomeDirectory()
+        let pane = makePane(kind: .terminal, in: workspace, cwd: directory, command: command, url: nil)
+        workspace.root = SplitNode(paneID: pane.id)
+        workspace.focusedPaneID = pane.id
+        workspace.workingDirectory = directory
+        workspace.gitBranch = GitInfo.branch(at: directory)
+        workspaces.append(workspace)
+        selectedWorkspaceID = workspace.id
+        emit(.workspaces)
+        focusSelectedPaneView()
+        return workspace.info(selected: true)
+    }
+
+    func selectWorkspace(id: String) throws {
+        let workspace = try resolveWorkspace(id)
+        guard workspace.id != selectedWorkspaceID else { return }
+        selectedWorkspaceID = workspace.id
+        if isWindowKey, let pane = workspace.focusedPane { clearAttention(pane) }
+        emit(.workspaces)
+        focusSelectedPaneView()
+    }
+
+    func closeWorkspace(id: String?) throws {
+        let workspace = try resolveWorkspace(id)
+        guard let index = workspaces.firstIndex(where: { $0 === workspace }) else { return }
+        workspace.panes.values.forEach { $0.tearDown() }
+        workspace.panes.removeAll()
+        workspaces.remove(at: index)
+        if selectedWorkspaceID == workspace.id {
+            selectedWorkspaceID = workspaces.isEmpty ? nil : workspaces[min(index, workspaces.count - 1)].id
+        }
+        updateDockBadge()
+        emit(.workspaces)
+        focusSelectedPaneView()
+    }
+
+    func renameWorkspace(id: String?, title: String) throws {
+        let workspace = try resolveWorkspace(id)
+        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        workspace.customTitle = trimmed.isEmpty ? nil : trimmed
+        emit(.workspace(id: workspace.id))
+    }
+
+    func moveWorkspace(id: String, to newIndex: Int) throws {
+        guard let index = workspaces.firstIndex(where: { $0.id == id }) else {
+            throw RPCError.notFound("workspace not found: \(id)")
+        }
+        let workspace = workspaces.remove(at: index)
+        workspaces.insert(workspace, at: max(0, min(newIndex, workspaces.count)))
+        emit(.workspaces)
+    }
+
+    /// Sets the sidebar notification text without lighting the ring.
+    func setStatus(workspaceID: String?, text: String) throws {
+        let workspace = try resolveWorkspace(workspaceID)
+        workspace.notificationText = text.isEmpty ? nil : text
+        emit(.workspace(id: workspace.id))
+    }
+
+    // MARK: - Panes
+
+    /// Splits `paneID` (default: focused pane) and focuses the new pane.
+    /// New terminals start in the source pane's directory unless `cwd` is given.
+    @discardableResult
+    func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
+               url: String? = nil, cwd: String? = nil, command: String? = nil) throws -> PaneInfo {
+        let source = try resolvePane(paneID)
+        guard let workspace = workspace(id: source.workspaceID),
+              let leaf = workspace.root?.leaf(for: source.id) else {
+            throw RPCError.notFound("pane not found: \(source.id)")
+        }
+        let directory = cwd.map { ($0 as NSString).expandingTildeInPath }
+            ?? source.workingDirectory ?? workspace.workingDirectory ?? NSHomeDirectory()
+        let pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url)
+        workspace.zoomedPaneID = nil
+        leaf.split(axis: direction.axis, newPaneID: pane.id)
+        applyFocus(pane, in: workspace)
+        emit(.workspace(id: workspace.id))
+        if workspace.id == selectedWorkspaceID { pane.focus() }
+        return pane.info(focused: true)
+    }
+
+    /// Focuses a pane, selecting its workspace if needed. Clears its attention ring.
+    func focusPane(id: String) throws {
+        let pane = try resolvePane(id)
+        guard let workspace = workspace(id: pane.workspaceID) else { return }
+        let changedWorkspace = workspace.id != selectedWorkspaceID
+        selectedWorkspaceID = workspace.id
+        applyFocus(pane, in: workspace)
+        clearAttention(pane)
+        emit(changedWorkspace ? .workspaces : .workspace(id: workspace.id))
+        pane.focus()
+    }
+
+    /// Closes a pane; the split tree collapses. Closing the last pane closes the workspace.
+    func closePane(id: String?) throws {
+        let pane = try resolvePane(id)
+        guard let workspace = workspace(id: pane.workspaceID), let root = workspace.root else { return }
+        let order = workspace.orderedPanes.map(\.id)
+        pane.tearDown()
+        workspace.panes[pane.id] = nil
+        workspace.root = SplitNode.removing(pane.id, from: root)
+        if workspace.zoomedPaneID == pane.id { workspace.zoomedPaneID = nil }
+        updateDockBadge()
+        guard workspace.root != nil else {
+            try closeWorkspace(id: workspace.id)
+            return
+        }
+        if workspace.focusedPaneID == pane.id {
+            // Focus the pane that followed (or preceded) the closed one in reading order.
+            let index = order.firstIndex(of: pane.id) ?? 0
+            let remaining = workspace.orderedPanes
+            if let next = remaining[safe: min(index, remaining.count - 1)] { applyFocus(next, in: workspace) }
+        }
+        emit(.workspace(id: workspace.id))
+        if workspace.id == selectedWorkspaceID { focusSelectedPaneView() }
+    }
+
+    func sendText(paneID: String?, text: String) throws {
+        try terminal(for: paneID).sendText(text)
+    }
+
+    /// Visible screen text, or scrollback + screen capped to `scrollback` lines.
+    func readText(paneID: String?, scrollback: Int? = nil) throws -> String {
+        let terminal = try terminal(for: paneID)
+        if let scrollback { return terminal.scrollbackText(maxLines: scrollback) }
+        return terminal.visibleText()
+    }
+
+    /// Lights the pane's ring (unless it is the focused pane in the key window), updates the sidebar
+    /// text and posts a macOS notification while the app is inactive.
+    func notify(paneID: String?, title: String?, body: String) throws {
+        raiseAttention(pane: try resolvePane(paneID), title: title, body: body)
+    }
+
+    func toggleZoom(paneID: String? = nil) throws {
+        let pane = try resolvePane(paneID)
+        guard let workspace = workspace(id: pane.workspaceID) else { return }
+        workspace.zoomedPaneID = workspace.zoomedPaneID == nil && workspace.panes.count > 1 ? pane.id : nil
+        applyFocus(pane, in: workspace)
+        emit(.workspace(id: workspace.id))
+        if workspace.id == selectedWorkspaceID { pane.focus() }
+    }
+
+    // MARK: - Browser
+
+    /// Opens a browser split to the right of `paneID` (default: focused pane).
+    @discardableResult
+    func openBrowser(paneID: String? = nil, url: String) throws -> PaneInfo {
+        try split(paneID: paneID, direction: .right, kind: .browser, url: url)
+    }
+
+    func browser(paneID: String) throws -> BrowserPane {
+        let pane = try resolvePane(paneID)
+        guard let browser = pane.browser else { throw RPCError.invalidParams("pane \(pane.id) is not a browser") }
+        return browser
+    }
+
+    func browserNavigate(paneID: String, url: String) throws {
+        try browser(paneID: paneID).navigate(to: url)
+    }
+
+    func browserLocation(paneID: String) throws -> (url: String?, title: String) {
+        let browser = try browser(paneID: paneID)
+        return (browser.currentURL?.absoluteString, browser.pageTitle)
+    }
+
+    func browserEvaluate(paneID: String, script: String) async throws -> JSONValue {
+        try await browser(paneID: paneID).evaluateJavaScript(script)
+    }
+
+    func browserSnapshot(paneID: String) async throws -> Data {
+        try await browser(paneID: paneID).snapshot()
+    }
+
+    // MARK: - UI commands
+
+    func selectWorkspace(at index: Int) {
+        guard workspaces.indices.contains(index) else { return }
+        try? selectWorkspace(id: workspaces[index].id)
+    }
+
+    func selectAdjacentWorkspace(offset: Int) {
+        guard !workspaces.isEmpty else { return }
+        let current = workspaces.firstIndex { $0.id == selectedWorkspaceID } ?? 0
+        let count = workspaces.count
+        selectWorkspace(at: ((current + offset) % count + count) % count)
+    }
+
+    /// Focuses the pane whose attention was raised most recently.
+    func jumpToLatestAttention() {
+        let latest = workspaces.flatMap { $0.panes.values }
+            .filter(\.attention)
+            .max { ($0.attentionDate ?? .distantPast) < ($1.attentionDate ?? .distantPast) }
+        if let latest { try? focusPane(id: latest.id) }
+    }
+
+    var attentionCount: Int { workspaces.reduce(0) { $0 + $1.panes.values.filter(\.attention).count } }
+
+    /// Called when the window becomes key / the app becomes active: the visible focused pane is "seen".
+    func windowDidBecomeKey() {
+        if let pane = focusedPane, pane.attention {
+            clearAttention(pane)
+            emit(.workspace(id: pane.workspaceID))
+        }
+    }
+
+    // MARK: - Pane callbacks
+
+    func paneDidBecomeFocused(_ pane: Pane) {
+        guard let workspace = workspace(id: pane.workspaceID), !pane.isClosing else { return }
+        guard workspace.focusedPaneID != pane.id || pane.attention || workspace.id != selectedWorkspaceID else { return }
+        let changedWorkspace = workspace.id != selectedWorkspaceID
+        selectedWorkspaceID = workspace.id
+        applyFocus(pane, in: workspace)
+        clearAttention(pane)
+        emit(changedWorkspace ? .workspaces : .workspace(id: workspace.id))
+    }
+
+    func paneDidChange(_ pane: Pane) {
+        emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))
+    }
+
+    func paneDidChangeWorkingDirectory(_ pane: Pane) {
+        guard let workspace = workspace(id: pane.workspaceID) else { return }
+        if workspace.focusedPaneID == pane.id, let cwd = pane.workingDirectory {
+            workspace.workingDirectory = cwd
+            workspace.gitBranch = GitInfo.branch(at: cwd)
+            emit(.workspace(id: workspace.id))
+        }
+        emit(.pane(workspaceID: workspace.id, paneID: pane.id))
+    }
+
+    /// A divider was dragged; ratios are already stored in the split tree.
+    func layoutDidChange(workspaceID: String) {
+        emit(.workspace(id: workspaceID))
+    }
+
+    func surfaceDidClose(_ pane: Pane) {
+        try? closePane(id: pane.id)
+    }
+
+    func raiseAttention(pane: Pane, title: String?, body: String) {
+        guard let workspace = workspace(id: pane.workspaceID) else { return }
+        let text = [title, body].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ": ")
+        workspace.notificationText = text.isEmpty ? nil : text
+        emit(.notification(workspaceID: workspace.id, paneID: pane.id, title: title, body: body))
+        if !isVisiblyFocused(pane) {
+            pane.setAttention(true)
+            updateDockBadge()
+            if !NSApp.isActive { postUserNotification(pane: pane, workspace: workspace, title: title, body: body) }
+            emit(.pane(workspaceID: workspace.id, paneID: pane.id))
+        }
+        emit(.workspace(id: workspace.id))
+    }
+
+    /// Applies results of the background metadata scan (git branch, listening ports).
+    func applyMetadata(_ metadata: [String: WorkspaceMetadata]) {
+        for workspace in workspaces {
+            guard let update = metadata[workspace.id] else { continue }
+            if update.workingDirectory != workspace.workingDirectory { continue } // cwd moved meanwhile
+            if update.gitBranch != workspace.gitBranch || update.ports != workspace.ports {
+                workspace.gitBranch = update.gitBranch
+                workspace.ports = update.ports
+                emit(.workspace(id: workspace.id))
+            }
+        }
+    }
+
+    // MARK: - Session
+
+    func sessionState() -> SessionState {
+        func node(_ split: SplitNode, in workspace: Workspace) -> SessionState.Node {
+            switch split.content {
+            case .leaf(let id):
+                let pane = workspace.panes[id]
+                if pane?.kind == .browser { return .browser(url: pane?.url) }
+                return .terminal(cwd: pane?.workingDirectory)
+            case .split(let axis, let first, let second):
+                return .split(axis: axis, ratio: split.ratio, first: node(first, in: workspace), second: node(second, in: workspace))
+            }
+        }
+        let states = workspaces.compactMap { workspace -> SessionState.WorkspaceState? in
+            guard let root = workspace.root else { return nil }
+            return SessionState.WorkspaceState(
+                title: workspace.customTitle, workingDirectory: workspace.workingDirectory,
+                layout: node(root, in: workspace),
+                focusedPaneIndex: workspace.focusedPaneID.flatMap { root.paneIDs.firstIndex(of: $0) })
+        }
+        return SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
+    }
+
+    /// Recreates workspaces from a saved session (cwd + layout; running programs are not restored).
+    func restore(_ state: SessionState) {
+        let fileManager = FileManager.default
+        func existing(_ path: String?) -> String {
+            guard let path, fileManager.fileExists(atPath: path) else { return NSHomeDirectory() }
+            return path
+        }
+        func build(_ node: SessionState.Node, in workspace: Workspace) -> SplitNode {
+            switch node {
+            case .terminal(let cwd):
+                return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil).id)
+            case .browser(let url):
+                return SplitNode(paneID: makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url).id)
+            case .split(let axis, let ratio, let first, let second):
+                return SplitNode(axis: axis, ratio: ratio, first: build(first, in: workspace), second: build(second, in: workspace))
+            }
+        }
+        for saved in state.workspaces {
+            let workspace = makeWorkspace()
+            workspace.customTitle = saved.title
+            let root = build(saved.layout, in: workspace)
+            workspace.root = root
+            let ids = root.paneIDs
+            workspace.focusedPaneID = ids[safe: saved.focusedPaneIndex ?? 0] ?? ids.first
+            workspace.workingDirectory = workspace.focusedPane?.workingDirectory ?? existing(saved.workingDirectory)
+            workspace.gitBranch = workspace.workingDirectory.flatMap(GitInfo.branch(at:))
+            workspaces.append(workspace)
+        }
+        selectedWorkspaceID = workspaces[safe: state.selectedIndex ?? 0]?.id ?? workspaces.first?.id
+        emit(.workspaces)
+        focusSelectedPaneView()
+    }
+
+    func saveSession() {
+        saveWorkItem?.cancel()
+        saveWorkItem = nil
+        SessionStore.save(sessionState())
+    }
+
+    // MARK: - Internals
+
+    private var isWindowKey: Bool { NSApp.isActive && window?.isKeyWindow == true }
+
+    private func isVisiblyFocused(_ pane: Pane) -> Bool {
+        isWindowKey && pane.workspaceID == selectedWorkspaceID && focusedPane === pane
+    }
+
+    private func makeWorkspace() -> Workspace {
+        defer { nextWorkspaceNumber += 1 }
+        return Workspace(id: "w\(nextWorkspaceNumber)")
+    }
+
+    private func makePane(kind: PaneKind, in workspace: Workspace, cwd: String?, command: String?, url: String?) -> Pane {
+        let id = "p\(nextPaneNumber)"
+        nextPaneNumber += 1
+        let pane: Pane
+        switch kind {
+        case .terminal:
+            let config = TerminalLaunchConfig(
+                workingDirectory: cwd, command: command,
+                environment: [CmdsEnv.socketPath: socketPath, CmdsEnv.workspaceID: workspace.id, CmdsEnv.paneID: id])
+            pane = Pane(id: id, workspaceID: workspace.id, terminal: TerminalEngineProvider.shared.makeSurface(config: config))
+            if pane.workingDirectory == nil { pane.workingDirectory = cwd }
+        case .browser:
+            let browser = BrowserPane()
+            pane = Pane(id: id, workspaceID: workspace.id, browser: browser)
+            if let url, !url.isEmpty { browser.navigate(to: url) } else { browser.showStartPage() }
+        }
+        pane.controller = self
+        workspace.panes[id] = pane
+        return pane
+    }
+
+    private func applyFocus(_ pane: Pane, in workspace: Workspace) {
+        workspace.focusedPaneID = pane.id
+        if let zoomed = workspace.zoomedPaneID, zoomed != pane.id { workspace.zoomedPaneID = nil }
+        if pane.kind == .terminal, let cwd = pane.workingDirectory, cwd != workspace.workingDirectory {
+            workspace.workingDirectory = cwd
+            workspace.gitBranch = GitInfo.branch(at: cwd)
+        }
+        if isWindowKey, workspace.id == selectedWorkspaceID { clearAttention(pane) }
+    }
+
+    private func clearAttention(_ pane: Pane) {
+        guard pane.attention else { return }
+        pane.setAttention(false)
+        updateDockBadge()
+        emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))
+    }
+
+    /// Makes the selected workspace's focused pane first responder (after the UI has rebuilt).
+    private func focusSelectedPaneView() {
+        focusedPane?.focus()
+    }
+
+    private func updateDockBadge() {
+        let count = attentionCount
+        NSApp.dockTile.badgeLabel = count > 0 ? String(count) : nil
+    }
+
+    private func postUserNotification(pane: Pane, workspace: Workspace, title: String?, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title ?? workspace.title
+        content.subtitle = title == nil ? "" : workspace.title
+        content.body = body
+        content.sound = .default
+        content.userInfo = ["paneID": pane.id]
+        let request = UNNotificationRequest(identifier: "cmds.\(pane.id).\(UUID().uuidString)", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func resolveWorkspace(_ id: String?) throws -> Workspace {
+        if let id {
+            guard let workspace = workspace(id: id) else { throw RPCError.notFound("workspace not found: \(id)") }
+            return workspace
+        }
+        guard let workspace = selectedWorkspace else { throw RPCError.notFound("no workspace") }
+        return workspace
+    }
+
+    private func resolvePane(_ id: String?) throws -> Pane {
+        if let id {
+            guard let pane = pane(id: id) else { throw RPCError.notFound("pane not found: \(id)") }
+            return pane
+        }
+        guard let pane = focusedPane else { throw RPCError.notFound("no focused pane") }
+        return pane
+    }
+
+    private func terminal(for paneID: String?) throws -> TerminalSurface {
+        let pane = try resolvePane(paneID)
+        guard let terminal = pane.terminal else { throw RPCError.invalidParams("pane \(pane.id) is not a terminal") }
+        return terminal
+    }
+
+    private func emit(_ change: StateChange) {
+        subject.send(change)
+        var userInfo: [String: Any] = ["change": change]
+        if let id = change.workspaceID { userInfo["workspaceID"] = id }
+        if let id = change.paneID { userInfo["paneID"] = id }
+        NotificationCenter.default.post(name: .cmdsStateDidChange, object: self, userInfo: userInfo)
+        scheduleSave()
+    }
+
+    private func scheduleSave() {
+        guard saveWorkItem == nil else { return }
+        let item = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated { self?.saveSession() }
+        }
+        saveWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2, execute: item)
+    }
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? { indices.contains(index) ? self[index] : nil }
+}
