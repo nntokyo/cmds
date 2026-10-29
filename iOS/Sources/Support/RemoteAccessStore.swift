@@ -104,7 +104,6 @@ enum PhoneSSHKey {
     /// `authorized_keys` line limited to what cmds needs: forwarding to the relay port only, no shell,
     /// no agent or X11 forwarding, no pty.
     static func restrictedAuthorizedKeysLine(_ key: Curve25519.Signing.PublicKey, relayPort: UInt16) -> String {
-        "restrict,port-forwarding,permitopen=\"127.0.0.1:\(relayPort)\" "
-            + SSHKeys.authorizedKeysLine(for: key, comment: comment)
+        SSHKeys.restrictedAuthorizedKeysLine(for: key, relayPort: relayPort, comment: comment)
     }
 }

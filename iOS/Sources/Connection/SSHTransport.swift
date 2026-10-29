@@ -9,8 +9,9 @@ import Foundation
 /// SSH is only the pipe: the relay host sees the TLS session's ciphertext, and nothing is sent to the Mac
 /// before its certificate matched the pin.
 ///
-/// Only for pinned connections with a usable `RemoteAccessConfig`. Main thread only.
-final class SSHTransport: SyncTransport {
+/// Only for pinned connections with a usable `RemoteAccessConfig`. Main thread only (`@unchecked Sendable`
+/// so the tunnel's close callback can hop back to main).
+final class SSHTransport: SyncTransport, @unchecked Sendable {
     var onEvent: ((TransportEvent) -> Void)?
     var linkPath: SyncLinkPath { .ssh }
 

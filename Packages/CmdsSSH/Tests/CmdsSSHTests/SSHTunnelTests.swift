@@ -128,8 +128,21 @@ final class SSHTunnelTests: XCTestCase {
         let payload = try SyncPairingPayload.parse(String(contentsOfFile: path, encoding: .utf8))
         XCTAssertEqual(payload.host, "127.0.0.1", "only ever test against a loopback-only test instance")
         let codec = SyncCodec()
-        let key = try relay.authorizedPhoneKey()
+        // Restricted key line as shown by the app: forwarding to the relay port only.
+        let key = try relay.authorizedPhoneKey(permitOpen: relayPort)
         let endpoint = relay.endpoint(relayPort: relayPort)
+
+        // That key cannot open any other port on the relay.
+        do {
+            let echo = try TCPEcho()
+            defer { echo.stop() }
+            let tunnel = try await SSHTunnel.connect(to: relay.endpoint(relayPort: echo.port), key: key, hostKeyPin: relay.hostKey)
+            defer { tunnel.close() }
+            do {
+                _ = try await tunnel.openForward()
+                XCTFail("restricted key opened a port other than the relay port")
+            } catch SSHTunnelError.forwardRefused {}
+        }
 
         // Pairing over SSH is refused: pairing happens on the local network only.
         do {
@@ -249,14 +262,17 @@ private struct Relay {
         SSHRelayEndpoint(host: "127.0.0.1", port: port, user: NSUserName(), relayPort: relayPort)
     }
 
-    /// A new phone key, added to the sshd's authorized_keys (read on every login).
-    func authorizedPhoneKey() throws -> Curve25519.Signing.PrivateKey {
+    /// A new phone key, added to the sshd's authorized_keys (read on every login); with `permitOpen` in the
+    /// restricted form the app shows.
+    func authorizedPhoneKey(permitOpen: UInt16? = nil) throws -> Curve25519.Signing.PrivateKey {
         let key = Curve25519.Signing.PrivateKey()
+        let line = permitOpen.map { SSHKeys.restrictedAuthorizedKeysLine(for: key.publicKey, relayPort: $0, comment: "cmds-test-phone") }
+            ?? SSHKeys.authorizedKeysLine(for: key.publicKey, comment: "cmds-test-phone")
         let file = dir.appendingPathComponent("authorized_keys")
         let handle = try FileHandle(forWritingTo: file)
         defer { try? handle.close() }
         try handle.seekToEnd()
-        try handle.write(contentsOf: Data((SSHKeys.authorizedKeysLine(for: key.publicKey, comment: "cmds-test-phone") + "\n").utf8))
+        try handle.write(contentsOf: Data((line + "\n").utf8))
         return key
     }
 }
