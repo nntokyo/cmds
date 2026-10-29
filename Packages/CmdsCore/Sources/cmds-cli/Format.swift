@@ -64,7 +64,8 @@ enum Format {
         if pane.kind == .terminal, let cwd = pane.workingDirectory { line += "  \(abbreviate(cwd))" }
         if pane.id == currentPane { line += "  (this pane)" }
         if let agent = pane.agent {
-            line += "  [\(AgentFormat.summary(agent))\(agent.isStale ? ", idle" : "")]"
+            // Account limits are left to `cmds agents` / `cmds stats` (the session's own copy may be older).
+            line += "  [\(AgentFormat.summary(agent, limits: []))\(agent.isStale ? ", idle" : "")]"
         }
         return line
     }
@@ -82,10 +83,12 @@ enum Format {
                 return name
             }
             let nameWidth = names.map(\.count).max() ?? 0
-            for (entry, name) in zip(list.panes, names) {
+            let workspaceNames = list.panes.map { String(oneLine(titles[$0.workspace] ?? $0.workspace).prefix(24)) }
+            let workspaceWidth = workspaceNames.map(\.count).max() ?? 0
+            for ((entry, name), workspace) in zip(zip(list.panes, names), workspaceNames) {
                 let marker = entry.pane == currentPane ? ">" : " "
                 var line = "\(marker) \(entry.pane.padding(toLength: paneWidth, withPad: " ", startingAt: 0))  "
-                    + "\(oneLine(titles[entry.workspace] ?? entry.workspace))  "
+                    + "\(workspace.padding(toLength: workspaceWidth, withPad: " ", startingAt: 0))  "
                     + name.padding(toLength: nameWidth, withPad: " ", startingAt: 0)
                 let figures = AgentFormat.statusLine(entry.usage)
                 if !figures.isEmpty { line += "  " + figures }

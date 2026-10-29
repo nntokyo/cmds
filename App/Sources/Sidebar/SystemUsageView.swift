@@ -15,7 +15,7 @@ final class SystemUsageView: NSView {
 
     /// Title column: "CPU"/"Mem" alone, wide enough for "Claude"/"Codex" when agent rows show (meters stay aligned).
     static let titleWidth: CGFloat = 26
-    static let agentTitleWidth: CGFloat = 38
+    static let agentTitleWidth: CGFloat = 34
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -254,7 +254,7 @@ private final class AgentLimitsRow: NSView {
             // A lone segment gets an empty partner so it is as wide as the others.
             let line = NSStackView(views: pair.count == 2 ? pair : pair + [NSView()])
             line.orientation = .horizontal
-            line.spacing = 10
+            line.spacing = 8
             line.distribution = .fillEqually
             lines.addView(line, in: .top)
             line.widthAnchor.constraint(equalTo: lines.widthAnchor).isActive = true

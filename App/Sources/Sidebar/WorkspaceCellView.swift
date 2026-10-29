@@ -24,7 +24,8 @@ final class WorkspaceCellView: NSTableCellView {
     private let directoryLabel = NSTextField(labelWithString: "")
     private let portsLabel = NSTextField(labelWithString: "")
     private let usageLabel = NSTextField(labelWithString: "")
-    /// `Claude Opus · ctx 53% · $117.99 · 5h 40%` for the workspace's agent pane.
+    /// The workspace's agent pane: `Claude Opus 4.5` over `ctx 53% · $117.99 · 5h 40%`.
+    private let agentNameLabel = NSTextField(labelWithString: "")
     private let agentLabel = NSTextField(labelWithString: "")
     private var agentKey: String?
     private var agentTooltip: String?
@@ -61,9 +62,11 @@ final class WorkspaceCellView: NSTableCellView {
         usageLabel.font = Self.usageFont
         usageLabel.lineBreakMode = .byClipping
         usageLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        agentLabel.font = Self.usageFont
-        agentLabel.lineBreakMode = .byTruncatingTail
-        agentLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        for label in [agentNameLabel, agentLabel] {
+            label.font = Self.usageFont
+            label.lineBreakMode = .byTruncatingTail
+            label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        }
         notificationLabel.font = Self.detailFont
         notificationLabel.textColor = .labelColor.withAlphaComponent(0.8)
         notificationLabel.maximumNumberOfLines = 2
@@ -81,7 +84,7 @@ final class WorkspaceCellView: NSTableCellView {
             dot.heightAnchor.constraint(equalToConstant: 8),
         ])
 
-        stack.setViews([titleRow, branchLabel, directoryLabel, portsLabel, agentLabel, usageLabel, notificationLabel], in: .top)
+        stack.setViews([titleRow, branchLabel, directoryLabel, portsLabel, agentNameLabel, agentLabel, usageLabel, notificationLabel], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = Self.spacing
@@ -95,6 +98,7 @@ final class WorkspaceCellView: NSTableCellView {
             titleRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             notificationLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
             agentLabel.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
+            agentNameLabel.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
         ])
     }
 
@@ -115,6 +119,7 @@ final class WorkspaceCellView: NSTableCellView {
         portsLabel.stringValue = workspace.ports.map { ":\($0)" }.joined(separator: "  ")
         usageLabel.isHidden = !Self.showsUsage(workspace)
         agentLabel.isHidden = !Self.showsAgent(workspace)
+        agentNameLabel.isHidden = agentLabel.isHidden
         updateUsage(with: workspace)
         notificationLabel.isHidden = workspace.notificationText == nil
         notificationLabel.stringValue = workspace.notificationText ?? ""
@@ -128,7 +133,7 @@ final class WorkspaceCellView: NSTableCellView {
         if workspace.workingDirectory != nil { lines.append(detailHeight) }
         if !workspace.ports.isEmpty { lines.append(detailHeight) }
         if showsUsage(workspace) { lines.append(detailHeight) }
-        if showsAgent(workspace) { lines.append(detailHeight) }
+        if showsAgent(workspace) { lines += [detailHeight, detailHeight] }
         if let text = workspace.notificationText {
             let available = max(width - 2 * horizontalInset - 24, 40) // source-list rows are inset
             let bounds = (text as NSString).boundingRect(
@@ -163,7 +168,12 @@ final class WorkspaceCellView: NSTableCellView {
         let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)"
         if key != agentKey {
             agentKey = key
-            agentLabel.attributedStringValue = Self.agentText(parts, stale: usage.isStale, others: others)
+            let name = parts.prefix { $0.style == .name }
+            var figures = Array(parts.drop { $0.style == .name })
+            if figures.first?.style == .separator { figures.removeFirst() }
+            if figures.isEmpty { figures = [AgentFormat.Part("–", .label)] }
+            agentNameLabel.attributedStringValue = Self.agentText(Array(name), stale: usage.isStale, others: others)
+            agentLabel.attributedStringValue = Self.agentText(figures, stale: usage.isStale, others: 0)
         }
         let now = Date()
         var blocks = workspace.agentPanes.compactMap { pane -> String? in
@@ -179,6 +189,7 @@ final class WorkspaceCellView: NSTableCellView {
         if tooltip != agentTooltip {
             agentTooltip = tooltip
             agentLabel.toolTip = tooltip
+            agentNameLabel.toolTip = tooltip
         }
     }
 
