@@ -91,12 +91,33 @@ enum TransportEvent {
     case disconnected(reason: String?)
 }
 
+/// How a connection reaches the Mac (shown in the connection status).
+enum SyncLinkPath: Equatable {
+    /// Wi‑Fi, Ethernet or peer-to-peer Wi‑Fi (Bonjour or an address).
+    case network
+    /// The Bluetooth fallback (`BluetoothTransport`): same pinned TLS session, relayed over L2CAP.
+    case bluetooth
+
+    var label: String {
+        switch self {
+        case .network: return String(localized: "Wi‑Fi")
+        case .bluetooth: return String(localized: "Bluetooth")
+        }
+    }
+}
+
 /// A bidirectional message pipe to one Mac. Events are delivered on the main queue.
 protocol SyncTransport: AnyObject {
     var onEvent: ((TransportEvent) -> Void)? { get set }
+    /// Path of the connection; meaningful once `.connected` was delivered.
+    var linkPath: SyncLinkPath { get }
     func start()
     func send(_ message: ClientMessage)
     func close()
+}
+
+extension SyncTransport {
+    var linkPath: SyncLinkPath { .network }
 }
 
 /// WebSocket over TLS 1.3 via Network.framework (text frames, one JSON message per frame). The Mac's

@@ -333,7 +333,7 @@ struct ConnectionStatusBadge: View {
             Circle()
                 .fill(color)
                 .frame(width: 8, height: 8)
-            Text(client.status.isLive ? client.macName : client.status.label)
+            Text(client.status.isLive ? [client.macName, client.linkPath?.label].compactMap { $0 }.joined(separator: " · ") : client.status.label)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

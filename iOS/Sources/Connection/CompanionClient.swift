@@ -70,6 +70,8 @@ final class CompanionClient {
     private(set) var unreadWorkspaceIDs: Set<String> = []
     private(set) var lastNotification: ServerMessage.Notification?
     private(set) var roundTripTime: TimeInterval?
+    /// How the live connection reaches the Mac (Wi‑Fi or the Bluetooth fallback); nil when not connected.
+    private(set) var linkPath: SyncLinkPath?
     /// Fingerprint pinned for the pairing in progress (from the QR code, or confirmed by the user).
     /// Saved with the token once the Mac accepts the code.
     private(set) var pairingPin: SyncFingerprint?
@@ -91,7 +93,8 @@ final class CompanionClient {
     private var connectTimeoutTask: Task<Void, Never>?
     /// A connection that is neither up nor failed after this long is abandoned and retried
     /// (NWConnection can sit in "preparing" indefinitely, e.g. while the Mac's firewall drops packets).
-    private static let connectTimeout: Duration = .seconds(12)
+    /// Leaves room for the Bluetooth fallback (scan, connect, L2CAP, TLS) after the network attempt.
+    private static let connectTimeout: Duration = .seconds(20)
     private var pendingPairingCode: String?
     private var subscribedPaneIDs: [String] = []
     private var pingNonce = 0
@@ -108,9 +111,11 @@ final class CompanionClient {
     }
 
     static func live() -> CompanionClient {
-        CompanionClient { target, policy in
+        _ = NetworkPathMonitor.shared // learn about Wi‑Fi before the first connection needs it
+        return CompanionClient { target, policy in
             guard target.kind != .mock, let policy else { return MockTransport() }
-            return WebSocketTransport(target: target, policy: policy)
+            // Network first, Bluetooth when the Mac cannot be reached over IP (same pinned TLS either way).
+            return FallbackTransport(target: target, policy: policy)
         }
     }
 
@@ -265,6 +270,7 @@ final class CompanionClient {
     }
 
     private func dropTransport() {
+        linkPath = nil
         transport?.onEvent = nil
         transport?.close()
         transport = nil
@@ -284,6 +290,7 @@ final class CompanionClient {
         lastInbound = Date()
         switch event {
         case .connected:
+            linkPath = transport?.linkPath
             status = .authenticating
             sendHello()
         case .message(let message):
@@ -301,6 +308,7 @@ final class CompanionClient {
                 : String(localized: "“\(macName)” presented a different identity than when you paired, so nothing was sent. If you reset its sync identity, pair again. Otherwise something else may be answering for it."))
         case .disconnected(let reason):
             transport = nil
+            linkPath = nil
             pingTask?.cancel()
             switch status {
             case .checkingIdentity:
