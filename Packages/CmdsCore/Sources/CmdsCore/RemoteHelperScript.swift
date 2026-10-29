@@ -6,6 +6,24 @@ import Foundation
 public enum RemoteHelperScript {
     public static let fileName = "cmds-remote.sh"
 
+    /// One line typed into the remote shell: writes `~/.local/bin/cmds-remote.sh` (and a `cmds` link when the
+    /// server has no `cmds`). Runs under `sh -c` so it works whatever the login shell is (fish, tcsh…); the script
+    /// travels base64-encoded as `$0`. Starts with a space (kept out of history where `ignorespace` is set).
+    public static func installCommand() -> String {
+        let payload = Data(source.utf8).base64EncodedString()
+        let script = [
+            #"d="$HOME/.local/bin""#,
+            #"mkdir -p "$d""#,
+            #"printf %s "$0" | base64 -d > "$d/cmds-remote.sh.tmp""#,
+            #"chmod 755 "$d/cmds-remote.sh.tmp""#,
+            #"mv -f "$d/cmds-remote.sh.tmp" "$d/cmds-remote.sh""#,
+            #"if command -v cmds >/dev/null 2>&1; then :; else ln -sf cmds-remote.sh "$d/cmds"; fi"#,
+            #"echo "cmds: installed $d/cmds-remote.sh""#,
+            #"case ":$PATH:" in *":$d:"*) ;; *) echo "cmds: add $d to PATH" ;; esac"#,
+        ].joined(separator: "; ")
+        return " sh -c '\(script)' \(payload)"
+    }
+
     public static let source = ##"""
 #!/bin/sh
 # cmds-remote.sh - talk to the cmds app on your Mac from a server you reached

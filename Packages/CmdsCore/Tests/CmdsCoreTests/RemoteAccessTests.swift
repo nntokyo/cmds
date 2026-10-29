@@ -203,6 +203,22 @@ final class RemoteHelperScriptTests: XCTestCase {
         }
     }
 
+    func testInstallCommand() throws {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", RemoteHelperScript.installCommand()]
+        process.environment = ["HOME": directory.path, "PATH": "/usr/bin:/bin"]
+        process.standardOutput = Pipe()
+        try process.run()
+        process.waitUntilExit()
+        XCTAssertEqual(process.terminationStatus, 0)
+        let installed = directory.appendingPathComponent(".local/bin/cmds-remote.sh")
+        XCTAssertEqual(try String(contentsOf: installed, encoding: .utf8), RemoteHelperScript.source)
+        XCTAssertTrue(FileManager.default.isExecutableFile(atPath: installed.path))
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: directory.appendingPathComponent(".local/bin/cmds").path),
+                       "cmds-remote.sh")
+    }
+
     func testHooksAreSilentOutsideCmds() throws {
         let result = try run([script.path, "hook", "claude"], socket: nil, transport: "python3", stdin: "{}")
         XCTAssertEqual(result.status, 0)

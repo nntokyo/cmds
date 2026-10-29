@@ -63,22 +63,6 @@ enum SSHConnectSheet {
 /// (so the same Claude Code hook lines work there).
 @MainActor
 enum RemoteHelperInstaller {
-    /// The installer line: runs under `sh -c` so it works whatever the login shell is (fish, tcsh…).
-    static func installCommand() -> String {
-        let payload = Data(RemoteHelperScript.source.utf8).base64EncodedString()
-        let script = [
-            #"d="$HOME/.local/bin""#,
-            #"mkdir -p "$d""#,
-            #"printf %s "$0" | base64 -d > "$d/cmds-remote.sh.tmp""#,
-            #"chmod 755 "$d/cmds-remote.sh.tmp""#,
-            #"mv -f "$d/cmds-remote.sh.tmp" "$d/cmds-remote.sh""#,
-            #"if command -v cmds >/dev/null 2>&1; then :; else ln -sf cmds-remote.sh "$d/cmds"; fi"#,
-            #"echo "cmds: installed $d/cmds-remote.sh""#,
-            #"case ":$PATH:" in *":$d:"*) ;; *) echo "cmds: add $d to PATH" ;; esac"#,
-        ].joined(separator: "; ")
-        return " sh -c '\(script)' \(payload)\n"
-    }
-
     static func confirmAndInstall(pane: Pane, window: NSWindow?) {
         guard let ssh = pane.ssh, ssh.connected, let terminal = pane.terminal else { return }
         let alert = NSAlert()
@@ -94,7 +78,7 @@ enum RemoteHelperInstaller {
         alert.addButton(withTitle: "Cancel")
         let handle: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .alertFirstButtonReturn, ssh.connected, pane.terminal === terminal else { return }
-            terminal.sendText(installCommand())
+            terminal.sendText(RemoteHelperScript.installCommand() + "\n")
         }
         if let window { alert.beginSheetModal(for: window, completionHandler: handle) } else { handle(alert.runModal()) }
     }

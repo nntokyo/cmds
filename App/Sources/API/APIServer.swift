@@ -163,6 +163,8 @@ final class APIServer {
                                               url: try params.string("url"), cwd: try params.string("cwd"),
                                               command: try params.string("command"),
                                               focus: try params.bool("focus") ?? true, ssh: ssh))
+        case "pane.reconnect":
+            try controller.connectSSH(paneID: try params.string("pane"))
         case "pane.focus":
             try controller.focusPane(id: try params.required("pane"))
         case "pane.close":

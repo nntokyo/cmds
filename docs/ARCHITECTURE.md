@@ -25,6 +25,9 @@ Project file is generated: `xcodegen generate` (do not commit `cmds.xcodeproj`).
 
 - **Workspace** = one vertical tab. Holds a split tree of panes. Each workspace has a primary working directory.
 - **Pane** = terminal (`TerminalSurface`) or browser (`WKWebView`). IDs are short stable strings (e.g. `p1`, `w1`).
+- **SSH pane** ([SSH.md](SSH.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
+  forwarded to the server (`ssh -R`); `PaneInfo.remote` = `{host, connected, branch?}`, `WorkspaceInfo.remoteHost`
+  while the focused pane is one (its cwd/branch are then remote). Survives `ssh` exiting (Reconnect overlay).
 - **Attention / notification ring**: a pane lights up (colored ring border) when its program sends OSC 9/777,
   rings the bell, or `cmds notify` targets it — and the pane is not the focused pane of the key window.
   Focusing the pane clears it. The workspace row in the sidebar shows a dot + the latest notification text.
@@ -69,14 +72,18 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 | `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
 | `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits]}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known) |
 | `agent.report` | `pane?`, `usage` (`AgentUsage`), `pid?` (agent process) | – (sets the pane's agent usage; its `limits` become that agent's account limits) |
+| `agent.claude_hook` | `pane?`, `input` (Claude Code hook JSON, object or JSON text) | – (notifies like `cmds hook claude`; never reads the transcript) |
+| `agent.claude_status` | `pane?`, `input` (status-line JSON) | – (like `cmds hook claude-status`, without a pid) |
+| `remote.location` | `pane?`, `cwd?`, `branch?` | – (SSH panes: remote cwd/branch from `cmds-remote.sh prompt`) |
 | `agent.list` | – | `{"panes": [{"workspace", "pane", "usage": AgentUsage}], "limits": [AgentLimits]}` |
 | `workspace.list` | – | `[WorkspaceInfo]` |
-| `workspace.create` | `title?`, `cwd?`, `command?` | `WorkspaceInfo` |
+| `workspace.create` | `title?`, `cwd?`, `command?` or `ssh` (host), `remoteCwd?` | `WorkspaceInfo` |
 | `workspace.select` | `id` | – |
 | `workspace.close` | `id` | – |
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
-| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true) | `PaneInfo` |
+| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?` | `PaneInfo` |
+| `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
 | `pane.focus` | `pane` | – |
 | `pane.close` | `pane` | – |
 | `pane.send_text` | `pane?`, `text` | – |
@@ -92,7 +99,8 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 
 `pane?` / `workspace?` default to `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` (sent by the CLI), else the focused one.
 `browser.*` without `pane` use the focused (else first) browser pane of `workspace?` (default: selected).
-Methods without a result return `{}`. CLI usage: [CLI.md](CLI.md).
+Methods without a result return `{}`. CLI usage: [CLI.md](CLI.md). The per-pane sockets of SSH panes accept only an
+allowlist of these, pinned to their pane/workspace ([SSH.md](SSH.md#what-the-server-may-do-enforced-in-the-app)).
 `WorkspaceInfo` (so also `workspace.list`, events and sync) has optional `cpuPercent` (100 = one core) and
 `memoryBytes` (physical footprint). `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`,
 `memoryTotalBytes`, `memoryPressure` (1/2/4, optional).
@@ -110,6 +118,8 @@ dropped instead of failing.
 | Action | Key |
 |---|---|
 | New workspace | ⌘N |
+| New SSH workspace… | ⇧⌘N |
+| Reconnect SSH pane (when disconnected; otherwise browser reload) | ⌘R |
 | Close pane | ⌘W |
 | Close workspace | ⇧⌘W |
 | Select workspace 1–9 | ⌘1 … ⌘9 |

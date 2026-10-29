@@ -50,6 +50,15 @@ Claude's spend limit; orange from 80 %, red from 95 %, reset times in the toolti
 
 Data older than 3 minutes is dimmed (idle agent); it disappears when the agent exits.
 
+## Agents on a server (SSH panes)
+
+Open the server with **File → New SSH Workspace…** or `cmds new --ssh HOST` ([SSH.md](SSH.md)). The pane forwards a
+restricted cmds socket over the same SSH connection and sets `CMDS_SOCKET_PATH`/`CMDS_PANE_ID` there. Use
+**Pane → Install Remote Helper…** once per server: it installs `~/.local/bin/cmds-remote.sh` (and `cmds` when the server
+has none), so the Claude Code hook and status-line lines above work on the server unchanged (`cmds-remote.sh` speaks
+`hook claude` / `hook claude-status`, `notify`, `status`). Codex: its OSC 9 notifications travel through SSH as usual.
+The remote helper can only reach its own pane.
+
 ## Other agents
 
 Use whatever "on finish / needs input" hook the tool has to run `cmds notify "<text>"` (no-op outside cmds is up to

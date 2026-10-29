@@ -202,10 +202,11 @@ public struct SSHLaunch: Sendable, Equatable, Codable {
         ]
     }
 
-    /// The local command line for the terminal (run by `/bin/sh -c` / `bash -c`).
+    /// The local command line for the terminal. libghostty runs it as `bash -c "exec -l <command>"`, so it must
+    /// start with the program (no `exec` of its own).
     public func localCommand(paneID: String, workspaceID: String, localSocket: String, remoteSocket: String,
                              ssh: String = "ssh") -> String {
-        (["exec", Self.singleQuoted(ssh)]
+        ([Self.singleQuoted(ssh)]
             + arguments(paneID: paneID, workspaceID: workspaceID, localSocket: localSocket, remoteSocket: remoteSocket)
             .map(Self.singleQuoted)).joined(separator: " ")
     }

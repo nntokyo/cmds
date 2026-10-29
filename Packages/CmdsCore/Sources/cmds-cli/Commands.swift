@@ -150,6 +150,11 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             print(result["id"]?.stringValue ?? "")
         },
+        Command(name: "reconnect", usage: "reconnect [pane]",
+                summary: "Reconnect an SSH pane whose ssh exited (as ⌘R or its Reconnect button do).") { ctx in
+            try ctx.args.expectPositionals(0...1, usage: "cmds reconnect [pane]")
+            try ctx.call("pane.reconnect", ["pane": (ctx.args.positionals.first ?? ctx.envPane).json])
+        },
         Command(name: "remote-helper", usage: "remote-helper",
                 summary: "Print cmds-remote.sh, the sh client for servers reached through an SSH pane (docs/SSH.md).",
                 details: "E.g. `cmds remote-helper > cmds-remote.sh` to copy it yourself. In the app: Pane → Install Remote Helper….") { _ in
