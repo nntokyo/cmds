@@ -63,6 +63,8 @@ final class CompanionClient {
     private(set) var workspaces: [WorkspaceInfo] = []
     /// Mac-wide CPU/memory from the latest `state` (nil for Macs that do not send it).
     private(set) var systemStats: SystemStats?
+    /// Account limits of the coding agents (Claude, Codex) from the latest `state` (empty for older Macs).
+    private(set) var agentLimits: [AgentLimits] = []
     /// Bumped whenever any screen changes (cheap observation hook).
     private(set) var screens: [String: ScreenSnapshot] = [:]
     /// Panes that raised a `notification` and have not been viewed since.
@@ -182,6 +184,7 @@ final class CompanionClient {
         pendingPairingCode = nil
         workspaces = []
         systemStats = nil
+        agentLimits = []
         screens = [:]
         mirror.removeAll()
     }
@@ -214,6 +217,7 @@ final class CompanionClient {
         if self.target != target {
             workspaces = []
             systemStats = nil
+            agentLimits = []
             screens = [:]
             mirror.removeAll()
             unreadPaneIDs = []
@@ -389,6 +393,7 @@ final class CompanionClient {
             // Usage samples arrive every ~2 s; skip no-op assignments so unchanged parts do not re-render.
             if workspaces != state.workspaces { workspaces = state.workspaces }
             if systemStats != state.system { systemStats = state.system }
+            if agentLimits != state.agentLimits ?? [] { agentLimits = state.agentLimits ?? [] }
             let live = Set(state.workspaces.flatMap { $0.panes.map(\.id) })
             unreadPaneIDs.formIntersection(live)
             unreadWorkspaceIDs.formIntersection(Set(state.workspaces.map(\.id)))

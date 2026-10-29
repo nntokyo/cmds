@@ -14,6 +14,8 @@ final class MockTransport: SyncTransport {
     private var tick = 0
     private var closed = false
     private var system: SystemStats?
+    private var agentLimits: [AgentLimits] = []
+    private let startedAt = Date()
 
     init() {
         workspaces = MockData.workspaces
@@ -21,7 +23,7 @@ final class MockTransport: SyncTransport {
         updateUsage()
     }
 
-    private var currentState: ServerMessage.State { .init(workspaces: workspaces, system: system) }
+    private var currentState: ServerMessage.State { .init(workspaces: workspaces, system: system, agentLimits: agentLimits) }
 
     func start() {
         deliver(after: 0.15, .connected)
@@ -122,6 +124,44 @@ final class MockTransport: SyncTransport {
         system = SystemStats(cpuPercent: tenth(31 + 17 * sin(t / 4)),
                              memoryUsedBytes: UInt64((warning ? 13.6 : 11.2 + 0.4 * sin(t / 9)) * gib),
                              memoryTotalBytes: UInt64(16 * gib), memoryPressure: warning ? 2 : 1)
+        updateAgents()
+    }
+
+    /// Claude Code in the API workspace (cost and context creeping up) and Codex in dotfiles, plus account limits:
+    /// Claude comfortable, Codex's 5-hour window nearly used up.
+    private func updateAgents() {
+        let t = Double(tick)
+        let now = Date()
+        let claudeLimits = [
+            UsageLimit(id: UsageLimit.fiveHour, usedPercent: (40 + t / 30).rounded(), resetsAt: startedAt.addingTimeInterval(2 * 3600 + 600)),
+            UsageLimit(id: UsageLimit.sevenDay, usedPercent: 12, resetsAt: startedAt.addingTimeInterval(3 * 86400)),
+            UsageLimit(id: UsageLimit.spend, usedPercent: 24, usedUSD: 12, limitUSD: 50, period: "monthly"),
+        ]
+        let codexLimits = [
+            UsageLimit(id: UsageLimit.fiveHour, usedPercent: 96, resetsAt: startedAt.addingTimeInterval(3900)),
+            UsageLimit(id: UsageLimit.sevenDay, usedPercent: 55, resetsAt: startedAt.addingTimeInterval(4 * 86400)),
+        ]
+        let claude = AgentUsage(agent: .claude, model: "Opus 4.5", effort: "high",
+                                contextUsedPercent: min(99, (53 + t / 20).rounded()), contextTokens: 527_000 + tick * 500,
+                                contextWindow: 1_000_000, contextOver200k: true, costUSD: 117.99 + t * 0.02,
+                                sessionDurationMs: 12_300_000 + tick * 1000, apiDurationMs: 13_200_000,
+                                linesAdded: 17_642 + tick / 3, linesRemoved: 330, cacheHitRatio: 0.98, cacheWarm: true,
+                                limits: claudeLimits, updatedAt: now)
+        let codex = AgentUsage(agent: .codex, model: "gpt-5-codex", effort: "medium", contextUsedPercent: 31,
+                               contextTokens: 151_000, contextWindow: 475_000, inputTokens: 600_000,
+                               cachedInputTokens: 450_000, outputTokens: 12_400, limits: codexLimits, plan: "plus",
+                               updatedAt: now)
+        for w in workspaces.indices {
+            for p in workspaces[w].panes.indices {
+                switch workspaces[w].panes[p].id {
+                case "p-agent": workspaces[w].panes[p].agent = claude
+                case "p-dot": workspaces[w].panes[p].agent = codex
+                default: break
+                }
+            }
+        }
+        agentLimits = [AgentLimits(agent: .claude, limits: claudeLimits, updatedAt: now),
+                       AgentLimits(agent: .codex, limits: codexLimits, plan: "plus", updatedAt: now)]
     }
 
     private func clearAttention(paneID: String) {
@@ -271,7 +311,7 @@ enum MockData {
         WorkspaceInfo(
             id: "w-dot", title: "dotfiles", selected: false, gitBranch: "master",
             workingDirectory: "~/.dotfiles", ports: [], notificationText: nil, attention: false,
-            panes: [PaneInfo(id: "p-dot", kind: .terminal, title: "nvim", focused: true, attention: false)],
+            panes: [PaneInfo(id: "p-dot", kind: .terminal, title: "codex", focused: true, attention: false)],
             layout: .pane(id: "p-dot")),
     ]
 
