@@ -141,6 +141,22 @@ final class SyncServer {
                                    tokenHash: $0.tokenHash ?? "") }
     }
 
+    /// Every open connection, authenticated or not, oldest first (`sync.status`). No tokens.
+    var clientReports: [SyncStatusReport.Client] {
+        let now = Date()
+        let iso = ISO8601DateFormatter()
+        return clients.values.sorted { $0.connectedAt < $1.connectedAt }.map { client in
+            let bytes = client.connection.byteCounts
+            let peer = client.connection.remoteHost
+            return SyncStatusReport.Client(deviceName: client.deviceName, authenticated: client.authenticated, peer: peer,
+                                           path: SyncStatusReport.Client.path(forPeer: peer),
+                                           subscribedPanes: client.subscribed.count,
+                                           bytesSent: bytes.sent, bytesReceived: bytes.received,
+                                           connectedSince: iso.string(from: client.connectedAt),
+                                           connectedSeconds: max(0, Int(now.timeIntervalSince(client.connectedAt))))
+        }
+    }
+
     // MARK: - Lifecycle
 
     func startIfEnabled() {

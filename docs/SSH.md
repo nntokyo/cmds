@@ -53,7 +53,7 @@ ssh -t -o StreamLocalBindUnlink=yes -R /tmp/cmds-<96 random bits>.sock:<local pa
 
 Everything else is refused with 403: other panes and workspaces, `workspace.create/close/select/rename`,
 `pane.split/focus/close/reconnect` (a new local terminal would mean code execution on the Mac), `browser.*`,
-`events.subscribe`, `system.stats`, `agent.list`. `agent.report`'s `pid` is dropped (a remote pid means nothing here);
+`events.subscribe`, `system.stats`, `agent.list`, `sync.status`. `agent.report`'s `pid` is dropped (a remote pid means nothing here);
 reported usage is removed when the SSH connection drops (else after 30 min without updates). `agent.claude_hook` never
 reads the transcript (a remote path); `Stop` uses `last_assistant_message`.
 

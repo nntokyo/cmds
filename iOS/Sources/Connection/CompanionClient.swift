@@ -84,6 +84,8 @@ final class CompanionClient {
     private(set) var viewedPaneID: String?
 
     // MARK: Private
+    /// Path and progress of the connection attempts (status badge accessibility value, debug row).
+    let diagnostics = ConnectionDiagnostics.shared
     private let makeTransport: (MacTarget, SyncTLS.PeerPolicy?) -> SyncTransport
     private var transport: SyncTransport?
     /// Policy of `transport` (nil for the demo Mac).
@@ -117,7 +119,8 @@ final class CompanionClient {
         return CompanionClient { target, policy in
             guard target.kind != .mock, let policy else { return MockTransport() }
             // Network first, Bluetooth when the Mac cannot be reached over IP (same pinned TLS either way).
-            return FallbackTransport(target: target, policy: policy)
+            // Debug builds may force one path (`-cmdsTransport`, docs/SYNC.md "Testing on a device").
+            return FallbackTransport(target: target, policy: policy, mode: TransportMode.current)
         }
     }
 
@@ -248,6 +251,7 @@ final class CompanionClient {
             policy = .pinned(pin)
         }
         status = policy == .probe ? .checkingIdentity : .connecting
+        diagnostics.begin(mode: target.kind == .mock ? .auto : TransportMode.current)
         transportPolicy = policy
         let transport = makeTransport(target, policy)
         self.transport = transport
@@ -260,6 +264,7 @@ final class CompanionClient {
             try? await Task.sleep(for: Self.connectTimeout)
             guard !Task.isCancelled, let self, transport === self.transport else { return }
             let hint = String(localized: "The Mac did not answer. Check that cmds is running and allowed in the Mac's firewall.")
+            if !self.status.isLive { self.diagnostics.failed(nil, "timed out after \(Self.connectTimeout)") }
             switch self.status {
             case .connecting, .authenticating:
                 self.dropTransport()
@@ -275,6 +280,7 @@ final class CompanionClient {
 
     private func dropTransport() {
         linkPath = nil
+        diagnostics.ended()
         transport?.onEvent = nil
         transport?.close()
         transport = nil
@@ -295,6 +301,7 @@ final class CompanionClient {
         switch event {
         case .connected:
             linkPath = transport?.linkPath
+            if let linkPath { diagnostics.stage(linkPath, "TLS ok, hello sent") }
             status = .authenticating
             sendHello()
         case .message(let message):
@@ -313,6 +320,7 @@ final class CompanionClient {
         case .disconnected(let reason):
             transport = nil
             linkPath = nil
+            diagnostics.ended()
             pingTask?.cancel()
             switch status {
             case .checkingIdentity:
@@ -369,6 +377,7 @@ final class CompanionClient {
             pairingPin = nil
             pendingPairingCode = nil
             status = .connected
+            diagnostics.connected(linkPath)
             backoff.reset()
             mirror.removeAll()
             if !subscribedPaneIDs.isEmpty { send(.subscribe(.init(paneIDs: subscribedPaneIDs))) }
@@ -395,7 +404,10 @@ final class CompanionClient {
             default:
                 break // per-request error; connection stays up
             }
-            if info.code.isAuthFailure { teardown() }
+            if info.code.isAuthFailure {
+                diagnostics.failed(linkPath, "Mac refused: \(info.code.rawValue)")
+                teardown()
+            }
 
         case .state(let state):
             // Usage samples arrive every ~2 s; skip no-op assignments so unchanged parts do not re-render.

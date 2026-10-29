@@ -77,7 +77,21 @@ extension CLI {
                 Thread.sleep(forTimeInterval: interval)
             }
         },
-        Command(name: "new", usage: "new [--title T] [--cwd DIR] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
+        Command(name: "sync", usage: "sync",
+                summary: "Show the iOS sync status: listener, Bonjour, Bluetooth, SSH remote access and connected devices.",
+                details: """
+                    Read-only. Bluetooth shows the app's permission (CBManager authorization: allowedAlways, denied,
+                    restricted, notDetermined), the peripheral state, advertising and the L2CAP PSM. Each connection shows
+                    its device name, whether it authenticated, its peer (IP, bluetooth:<peer> or ssh:<relay host>), path,
+                    subscribed panes, bytes sent/received and how long it has been connected. Not available on the
+                    socket an SSH pane forwards to a server. See docs/SYNC.md "Testing on a device".
+                    """) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds sync")
+            let result = try ctx.call("sync.status")
+            if ctx.json { return ctx.printJSON(result) }
+            print(Format.sync(try perform { try result.decode(SyncStatusReport.self) }), terminator: "")
+        },
+        Command(name: "new", usage:"new [--title T] [--cwd DIR] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
                 summary: "Create a workspace (in the current directory by default) and select it.",
                 details: """
                     --ssh opens an SSH workspace: the pane runs your `ssh HOST` (respecting ~/.ssh/config) and forwards a

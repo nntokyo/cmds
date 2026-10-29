@@ -324,6 +324,50 @@ struct PairingSheet: View {
     }
 }
 
+#if DEBUG
+/// Debug builds only: the connection diagnostics as a row a UI test driver can read
+/// (`accessibilityIdentifier` "syncDiagnostics"; label and value are the summary).
+struct ConnectionDiagnosticsRow: View {
+    @Environment(CompanionClient.self) private var client
+
+    var body: some View {
+        Text(client.diagnostics.summary)
+            .font(.caption2.monospaced())
+            .foregroundStyle(.secondary)
+            .lineLimit(3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("syncDiagnostics")
+            .accessibilityValue(client.diagnostics.summary)
+    }
+}
+
+/// Debug builds only: forces the transport (as `-cmdsTransport` does) and reconnects.
+struct TransportModeMenu: View {
+    @Environment(CompanionClient.self) private var client
+
+    var body: some View {
+        Menu {
+            ForEach(TransportMode.allCases, id: \.self) { mode in
+                Button {
+                    TransportMode.set(mode)
+                    if let target = client.target { client.connect(to: target) }
+                } label: {
+                    if client.diagnostics.mode == mode {
+                        Label("Transport: \(mode.rawValue)", systemImage: "checkmark")
+                    } else {
+                        Text("Transport: \(mode.rawValue)")
+                    }
+                }
+                .accessibilityIdentifier("transport.\(mode.rawValue)")
+            }
+        } label: {
+            Label("Transport (Debug)", systemImage: "ladybug")
+        }
+        .accessibilityIdentifier("debugTransport")
+    }
+}
+#endif
+
 /// Small dot + label describing the connection.
 struct ConnectionStatusBadge: View {
     @Environment(CompanionClient.self) private var client
@@ -339,6 +383,19 @@ struct ConnectionStatusBadge: View {
                 .lineLimit(1)
         }
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("connectionStatus")
+        .accessibilityValue(accessibilityValue)
+    }
+
+    /// Debug builds: the full `ConnectionDiagnostics` summary (mode, path, stage per path, last error) for UI
+    /// test drivers. Release: the path, or the last error while not connected.
+    private var accessibilityValue: String {
+        #if DEBUG
+        return client.diagnostics.summary
+        #else
+        if client.status.isLive { return client.linkPath?.label ?? "" }
+        return client.diagnostics.lastError ?? ""
+        #endif
     }
 
     private var color: Color {

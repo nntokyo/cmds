@@ -10,6 +10,9 @@ import XCTest
 ///     type:<text>                   type into the focused element (\n = return)
 ///     wait:<seconds>
 ///     pinch:<scale>                 pinch the terminal screen (>1 zooms in)
+///     value:<identifier>            print `CMDS_UI_VALUE <identifier> <accessibility value>`
+///     waitValue:<id>~<text>[~secs]  wait (default 30 s) until that value contains <text>, else fail;
+///                                   e.g. waitValue:connectionStatus~path=bluetooth (debug builds)
 ///     back                          navigation bar back button
 ///     dump                          print the accessibility tree
 ///
@@ -51,6 +54,24 @@ final class DeviceDriverTests: XCTestCase {
                 XCTAssertTrue(element.waitForExistence(timeout: 5), "no terminal screen")
                 let scale = CGFloat(Double(argument) ?? 2)
                 element.pinch(withScale: scale, velocity: scale >= 1 ? 1 : -1)
+            case "value":
+                let element = Self.element(app, argument)
+                XCTAssertTrue(element.waitForExistence(timeout: 5), "no element \(argument)")
+                print("CMDS_UI_VALUE \(argument) \(element.value as? String ?? "")")
+            case "waitValue":
+                // waitValue:<identifier>~<substring>[~seconds]
+                let parts = argument.components(separatedBy: "~")
+                guard parts.count >= 2 else { XCTFail("usage: waitValue:<identifier>~<substring>[~seconds]"); break }
+                let element = Self.element(app, parts[0])
+                let deadline = Date().addingTimeInterval(parts.count > 2 ? Double(parts[2]) ?? 30 : 30)
+                var value = ""
+                while Date() < deadline {
+                    value = element.exists ? element.value as? String ?? "" : ""
+                    if value.contains(parts[1]) { break }
+                    Thread.sleep(forTimeInterval: 0.5)
+                }
+                print("CMDS_UI_VALUE \(parts[0]) \(value)")
+                XCTAssertTrue(value.contains(parts[1]), "\(parts[0]) value does not contain \(parts[1]): \(value)")
             case "back":
                 app.navigationBars.buttons.element(boundBy: 0).tap()
             case "dump":
@@ -59,6 +80,11 @@ final class DeviceDriverTests: XCTestCase {
                 XCTFail("unknown step \(step)")
             }
         }
+    }
+
+    private static func element(_ app: XCUIApplication, _ identifier: String) -> XCUIElement {
+        app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@ OR label == %@", identifier, identifier)).firstMatch
     }
 
     private static func split(_ step: String) -> (String, String) {

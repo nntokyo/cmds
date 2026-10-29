@@ -121,6 +121,41 @@ enum Format {
         }.joined()
     }
 
+    /// `cmds sync`: server, Bonjour, Bluetooth, SSH remote access, then one line per connection.
+    static func sync(_ report: SyncStatusReport) -> String {
+        func yes(_ flag: Bool) -> String { flag ? "on" : "off" }
+        var out = "sync       \(report.enabled ? "enabled" : "disabled") · \(report.state)"
+        if let port = report.port, !report.state.contains("port \(port)") { out += " · port \(port)" }
+        if let fingerprint = report.fingerprint { out += " · identity \(fingerprint)" }
+        out += " · \(report.pairedDevices) paired\(report.pairingWindowOpen ? " · pairing window open" : "")\n"
+        out += "bonjour    \(yes(report.bonjour.enabled))\(report.bonjour.serviceName.map { " · \"\($0)\"" } ?? "")\n"
+        let bt = report.bluetooth
+        out += "bluetooth  \(bt.allowed ? "allowed" : "not allowed")\(bt.disabledByEnvironment ? " (disabled by CMDS_SYNC_NO_BLUETOOTH)" : "")"
+            + " · authorization \(bt.authorization) · manager \(bt.managerState)"
+            + " · advertising \(yes(bt.advertising))\(bt.psm.map { " · PSM \($0)" } ?? "")"
+            + " · \(bt.channels) channel\(bt.channels == 1 ? "" : "s") · \(bt.status)\n"
+        let remote = report.remote
+        out += "ssh relay  \(yes(remote.enabled))"
+        if !remote.host.isEmpty { out += " · \(remote.host) 127.0.0.1:\(remote.relayPort)" }
+        out += " · forwarding \(yes(remote.forwarding)) · \(remote.status)\n"
+        guard !report.clients.isEmpty else { return out + "no connections\n" }
+        for client in report.clients {
+            let name = client.deviceName.isEmpty ? "(no hello yet)" : oneLine(client.deviceName)
+            out += "  \(client.authenticated ? "✓" : "…") \(name)  \(client.peer)  \(client.path)"
+                + "  \(client.subscribedPanes) pane\(client.subscribedPanes == 1 ? "" : "s")"
+                + "  sent \(ResourceFormat.bytes(UInt64(max(0, client.bytesSent))))"
+                + "  received \(ResourceFormat.bytes(UInt64(max(0, client.bytesReceived))))"
+                + "  for \(duration(client.connectedSeconds))\n"
+        }
+        return out
+    }
+
+    private static func duration(_ seconds: Int) -> String {
+        if seconds < 60 { return "\(seconds)s" }
+        if seconds < 3600 { return "\(seconds / 60)m\(String(format: "%02d", seconds % 60))s" }
+        return "\(seconds / 3600)h\(String(format: "%02d", seconds / 60 % 60))m"
+    }
+
     /// Box-drawing tree of the split layout.
     private static func tree(_ node: LayoutNode, panes: [String: PaneInfo], currentPane: String?, prefix: String) -> String {
         func render(_ node: LayoutNode, _ indent: String, _ last: Bool, root: Bool) -> String {

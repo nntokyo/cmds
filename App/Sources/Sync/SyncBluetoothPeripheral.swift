@@ -62,6 +62,33 @@ final class SyncBluetoothPeripheral: NSObject {
         reconcile()
     }
 
+    /// Peripheral state for `sync.status`. Reading `CBManager.authorization` never prompts.
+    var report: SyncStatusReport.Bluetooth {
+        let authorization: String
+        switch CBManager.authorization {
+        case .allowedAlways: authorization = "allowedAlways"
+        case .denied: authorization = "denied"
+        case .restricted: authorization = "restricted"
+        case .notDetermined: authorization = "notDetermined"
+        @unknown default: authorization = "unknown"
+        }
+        let state: String
+        switch manager?.state {
+        case nil: state = "off"
+        case .poweredOn?: state = "poweredOn"
+        case .poweredOff?: state = "poweredOff"
+        case .unauthorized?: state = "unauthorized"
+        case .unsupported?: state = "unsupported"
+        case .resetting?: state = "resetting"
+        case .unknown?: state = "unknown"
+        @unknown default: state = "unknown"
+        }
+        return SyncStatusReport.Bluetooth(allowed: isAllowed, disabledByEnvironment: CmdsEnv.isBluetoothDisabled(),
+                                          authorization: authorization, managerState: state,
+                                          advertising: manager?.isAdvertising ?? false, psm: psm,
+                                          channels: relays.count, status: statusText)
+    }
+
     // MARK: - Lifecycle
 
     /// What should be advertised now, or nil when Bluetooth sync should be off.

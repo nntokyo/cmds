@@ -26,6 +26,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds ping` / `cmds identify` | Check the app is up / show version, pid, socket path |
 | `cmds ls` | Workspaces (branch, cwd, ports, `CPU 12% · 1.2 GB`, `!` attention, sidebar text) with a tree of panes (`>` focused) |
 | `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
+| `cmds sync` | iOS sync status (read-only): listener port, Bonjour, Bluetooth (permission `authorization`, peripheral state, advertising, PSM), SSH remote access, and each connection (device, authenticated, peer `ip` / `bluetooth:…` / `ssh:…`, panes, bytes, connected for). `--json` for the full report; see [SYNC.md](SYNC.md#testing-on-a-device) |
 | `cmds new [--title T] [--cwd DIR] [-- cmd…]` | New workspace (default cwd: current directory); prints its id |
 | `cmds new --ssh HOST [--remote-cwd DIR] [--title T]` | New SSH workspace ([SSH.md](SSH.md)) |
 | `cmds reconnect [pane]` | Reconnect an SSH pane whose `ssh` exited |

@@ -72,12 +72,15 @@ struct WorkspaceListView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             // Older Macs do not send system stats or agent limits; show nothing rather than placeholders.
-            if client.systemStats != nil || !client.agentLimits.isEmpty {
+            if client.systemStats != nil || !client.agentLimits.isEmpty || showsDiagnostics {
                 VStack(spacing: 8) {
                     ForEach(client.agentLimits) { limits in
                         AgentLimitsBar(limits: limits)
                     }
                     if let stats = client.systemStats { SystemStatsBar(stats: stats) }
+                    #if DEBUG
+                    if showsDiagnostics { ConnectionDiagnosticsRow() }
+                    #endif
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
@@ -102,9 +105,14 @@ struct WorkspaceListView: View {
                         Button("Unpair This Mac", role: .destructive) { client.unpair() }
                     }
                     Button("Switch Mac…") { client.disconnect() }
+                    #if DEBUG
+                    if client.target?.kind != .mock { TransportModeMenu() }
+                    #endif
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .accessibilityLabel("More")
                 }
+                .accessibilityIdentifier("moreMenu")
             }
         }
         .sheet(isPresented: $showingRemoteAccess) {
@@ -112,6 +120,15 @@ struct WorkspaceListView: View {
                 RemoteAccessView(targetID: target.id, macName: client.macName)
             }
         }
+    }
+
+    /// Debug builds connected to a real Mac show the connection diagnostics row.
+    private var showsDiagnostics: Bool {
+        #if DEBUG
+        return client.target?.kind != .mock
+        #else
+        return false
+        #endif
     }
 
     private var isFailure: Bool {
