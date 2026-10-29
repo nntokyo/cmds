@@ -26,6 +26,8 @@ let package = Package(
         .testTarget(name: "CmdsSSHTests", dependencies: [
             "CmdsSSH",
             .product(name: "CmdsCore", package: "CmdsCore"),
+            .product(name: "NIOSSH", package: "swift-nio-ssh"),
+            .product(name: "Crypto", package: "swift-crypto"),
         ]),
     ]
 )
