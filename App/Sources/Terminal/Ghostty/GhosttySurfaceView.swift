@@ -594,7 +594,8 @@ final class GhosttySurfaceView: NSView {
         return ghostty_surface_key(surface, ev)
     }
 
-    private func sendCommittedText(_ action: ghostty_input_action_e, _ text: String) {
+    /// Committed text as a key event (keycode 0, no mods, not composing), as Ghostty does for IME commits.
+    func sendCommittedText(_ action: ghostty_input_action_e, _ text: String) {
         guard let surface, !text.isEmpty else { return }
         var ev = ghostty_input_key_s()
         ev.action = action

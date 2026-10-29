@@ -156,7 +156,11 @@ struct TerminalInputBar: View {
     let paneID: String
     @State private var text = ""
     @State private var ctrlLatched = false
-    @FocusState private var fieldFocused: Bool
+    @State private var directFocused = false
+    @FocusState private var lineFieldFocused: Bool
+    /// Direct: every keystroke goes to the terminal (the Mac's line editor and cursor are the truth).
+    /// Line: compose a whole line locally and send it with Enter.
+    @AppStorage("inputMode") private var lineMode = false
 
     private struct KeyButton: Identifiable {
         let id: String
@@ -168,10 +172,12 @@ struct TerminalInputBar: View {
     private let keys: [KeyButton] = [
         .init(id: "esc", label: "esc", key: .escape),
         .init(id: "tab", label: "tab", key: .tab),
-        .init(id: "up", label: "↑", key: .up, systemImage: "arrow.up"),
-        .init(id: "down", label: "↓", key: .down, systemImage: "arrow.down"),
         .init(id: "left", label: "←", key: .left, systemImage: "arrow.left"),
         .init(id: "right", label: "→", key: .right, systemImage: "arrow.right"),
+        .init(id: "up", label: "↑", key: .up, systemImage: "arrow.up"),
+        .init(id: "down", label: "↓", key: .down, systemImage: "arrow.down"),
+        .init(id: "home", label: "home", key: .home),
+        .init(id: "end", label: "end", key: .end),
         .init(id: "ctrlc", label: "^C", key: .ctrlC),
         .init(id: "ctrld", label: "^D", key: .ctrlD),
         .init(id: "bksp", label: "⌫", key: .backspace, systemImage: "delete.left"),
@@ -194,6 +200,7 @@ struct TerminalInputBar: View {
 
                     ForEach(keys) { k in
                         Button {
+                            if lineMode { flushLine() }
                             client.sendKey(k.key, to: paneID)
                             ctrlLatched = false
                         } label: {
@@ -210,32 +217,34 @@ struct TerminalInputBar: View {
                 .padding(.horizontal, 8)
             }
             HStack(spacing: 8) {
-                TextField(ctrlLatched ? "ctrl + letter" : "Type a command", text: $text)
-                    .font(.body.monospaced())
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .submitLabel(.send)
-                    .focused($fieldFocused)
-                    .onSubmit { send(withEnter: true) }
-                    .onChange(of: text) { old, new in
-                        // With ctrl latched, the next typed letter becomes a control chord.
-                        guard ctrlLatched, new.count == old.count + 1, let ch = new.last, ch.isLetter || "@[\\]^_".contains(ch) else { return }
-                        client.sendKey(.ctrl(ch), to: paneID)
-                        ctrlLatched = false
-                        text = old
-                    }
+                Button {
+                    flushLine()
+                    lineMode.toggle()
+                    directFocused = !lineMode
+                    lineFieldFocused = lineMode
+                } label: {
+                    Image(systemName: lineMode ? "text.line.first.and.arrowtriangle.forward" : "keyboard")
+                        .frame(minWidth: 28, minHeight: 28)
+                }
+                .buttonStyle(.bordered)
+                .tint(.secondary)
+                .accessibilityLabel(lineMode ? "Line mode" : "Direct mode")
+                .accessibilityHint("Switches between sending each key immediately and sending a whole line")
+
+                if lineMode {
+                    lineField
+                } else {
+                    DirectInputField(
+                        placeholder: ctrlLatched ? "ctrl + letter" : "Keys go straight to the terminal",
+                        ctrlLatched: $ctrlLatched,
+                        isFocused: $directFocused,
+                        onText: { client.sendText($0, to: paneID) },
+                        onKey: { client.sendKey($0, to: paneID) }
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 8)
                     .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-                Button {
-                    send(withEnter: true)
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Send")
-                .contextMenu {
-                    Button("Send without Enter") { send(withEnter: false) }
                 }
             }
             .padding(.horizontal, 8)
@@ -244,11 +253,50 @@ struct TerminalInputBar: View {
         .background(.bar)
     }
 
+    private var lineField: some View {
+        HStack(spacing: 8) {
+            TextField(ctrlLatched ? "ctrl + letter" : "Type a line", text: $text)
+                .font(.body.monospaced())
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.send)
+                .focused($lineFieldFocused)
+                .onSubmit { send(withEnter: true) }
+                .onChange(of: text) { old, new in
+                    // With ctrl latched, the next typed letter becomes a control chord.
+                    guard ctrlLatched, new.count == old.count + 1, let ch = new.last, ch.isLetter || "@[\\]^_".contains(ch) else { return }
+                    client.sendKey(.ctrl(ch), to: paneID)
+                    ctrlLatched = false
+                    text = old
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+            Button {
+                send(withEnter: true)
+            } label: {
+                Image(systemName: "paperplane.fill")
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityLabel("Send")
+            .contextMenu {
+                Button("Send without Enter") { send(withEnter: false) }
+            }
+        }
+    }
+
+    /// Line mode: a key from the key bar acts on the Mac's line, so send what was typed first.
+    private func flushLine() {
+        guard !text.isEmpty else { return }
+        client.sendText(text, to: paneID)
+        text = ""
+    }
+
     private func send(withEnter: Bool) {
         client.sendText(text, to: paneID)
         if withEnter { client.sendKey(.enter, to: paneID) }
         text = ""
-        fieldFocused = true
+        lineFieldFocused = true
     }
 }
 

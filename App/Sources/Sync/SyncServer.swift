@@ -75,11 +75,8 @@ final class SyncServer {
     private var codeFailures = 0
 
     private var screenTimer: Timer?
-    /// Last text read per streamed pane; skips snapshot work when nothing changed.
-    private var lastScreenText: [String: String] = [:]
-    /// Sticky grid size per pane: the engine contract only returns text, whose trailing blank rows
-    /// and columns are trimmed, so we keep the largest size seen to avoid resending full screens.
-    private var paneGrid: [String: (rows: Int, cols: Int)] = [:]
+    /// Last snapshot read per streamed pane; skips per-client work when nothing changed.
+    private var lastSnapshot: [String: ScreenSnapshot] = [:]
 
     private var stateScheduled = false
     private var lastStateSentAt = Date.distantPast
@@ -329,7 +326,12 @@ final class SyncServer {
                 sendError(.notFound, "pane not found: \(req.paneID.prefix(64))", to: client)
             }
         case .input(let input):
-            perform(client) { try AppController.shared.sendText(paneID: input.paneID, text: input.text) }
+            // Keystrokes from the phone are typed (no bracketed paste); multi-line text keeps the paste path.
+            if input.text.contains(where: \.isNewline) {
+                perform(client) { try AppController.shared.sendText(paneID: input.paneID, text: input.text) }
+            } else {
+                perform(client) { try AppController.shared.typeText(paneID: input.paneID, text: input.text) }
+            }
         case .key(let key):
             guard let bytes = key.key.terminalBytes(applicationCursor: false) else {
                 sendError(.badRequest, "unknown key: \(key.key.rawValue.prefix(20))", to: client)
@@ -497,8 +499,7 @@ final class SyncServer {
 
     private func pruneScreenCache() {
         let panes = subscribedPanes
-        lastScreenText = lastScreenText.filter { panes.contains($0.key) }
-        paneGrid = paneGrid.filter { panes.contains($0.key) }
+        lastSnapshot = lastSnapshot.filter { panes.contains($0.key) }
         if panes.isEmpty { stopScreenTimer() }
     }
 
@@ -521,13 +522,13 @@ final class SyncServer {
         let panes = subscribedPanes
         guard !panes.isEmpty else { return stopScreenTimer() }
         for paneID in panes {
-            guard let text = try? AppController.shared.readText(paneID: paneID) else {
-                lastScreenText[paneID] = nil
+            guard let snapshot = snapshot(paneID: paneID) else {
+                lastSnapshot[paneID] = nil
                 continue
             }
-            if lastScreenText[paneID] == text { continue }
-            lastScreenText[paneID] = text
-            let snapshot = makeSnapshot(paneID: paneID, text: text)
+            // Compare the whole snapshot: a cursor move alone (e.g. ← on a prompt) must reach the phone.
+            if lastSnapshot[paneID] == snapshot { continue }
+            lastSnapshot[paneID] = snapshot
             for client in clients.values where client.authenticated && client.subscribed.contains(paneID) {
                 if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
             }
@@ -536,26 +537,19 @@ final class SyncServer {
 
     /// Current screen of a pane, or nil if it does not exist / is not a terminal.
     private func snapshot(paneID: String) -> ScreenSnapshot? {
-        guard !paneID.isEmpty, let text = try? AppController.shared.readText(paneID: paneID) else { return nil }
-        return makeSnapshot(paneID: paneID, text: text)
-    }
-
-    private func makeSnapshot(paneID: String, text: String) -> ScreenSnapshot {
-        var lines = text.components(separatedBy: "\n").map { line -> String in
+        guard !paneID.isEmpty, let state = try? AppController.shared.screenState(paneID: paneID) else { return nil }
+        var lines = state.text.components(separatedBy: "\n").map { line -> String in
             var line = line
             if line.hasSuffix("\r") { line.removeLast() }
             while line.hasSuffix(" ") { line.removeLast() }
             return line
         }
-        while lines.count > 1, lines.last?.isEmpty == true { lines.removeLast() }
-        let widest = lines.reduce(0) { max($0, $1.count) }
-        var grid = paneGrid[paneID] ?? (rows: 0, cols: 0)
-        grid.rows = max(grid.rows, lines.count)
-        grid.cols = max(grid.cols, widest, 20)
-        paneGrid[paneID] = grid
-        if lines.count < grid.rows { lines += Array(repeating: "", count: grid.rows - lines.count) }
-        // Cursor: not exposed by the TerminalSurface contract yet, so it is omitted.
-        return ScreenSnapshot(rows: grid.rows, cols: grid.cols, lines: lines)
+        let rows = max(1, state.grid?.rows ?? lines.count)
+        let cols = max(1, state.grid?.cols ?? lines.reduce(20) { max($0, $1.count) })
+        if lines.count > rows { lines.removeLast(lines.count - rows) }
+        if lines.count < rows { lines += Array(repeating: "", count: rows - lines.count) }
+        return ScreenSnapshot(rows: rows, cols: cols, lines: lines,
+                              cursorRow: state.cursor?.row, cursorCol: state.cursor?.col)
     }
 
     // MARK: - Sending

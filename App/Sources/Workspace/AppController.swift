@@ -71,8 +71,16 @@ final class AppController {
 
     private let subject = PassthroughSubject<StateChange, Never>()
     private let usageSubject = PassthroughSubject<Void, Never>()
-    private var nextWorkspaceNumber = 1
-    private var nextPaneNumber = 1
+    /// IDs keep counting across launches (and instances), so a stale ID held by a script or the phone
+    /// never reaches a different pane after a restart.
+    private var nextWorkspaceNumber: Int {
+        get { max(1, UserDefaults.standard.integer(forKey: "nextWorkspaceNumber")) }
+        set { UserDefaults.standard.set(newValue, forKey: "nextWorkspaceNumber") }
+    }
+    private var nextPaneNumber: Int {
+        get { max(1, UserDefaults.standard.integer(forKey: "nextPaneNumber")) }
+        set { UserDefaults.standard.set(newValue, forKey: "nextPaneNumber") }
+    }
     private var saveWorkItem: DispatchWorkItem?
 
     var selectedWorkspace: Workspace? { selectedWorkspaceID.flatMap(workspace(id:)) }
@@ -243,11 +251,22 @@ final class AppController {
         try terminal(for: paneID).sendText(text)
     }
 
+    /// Like `sendText`, but printable text arrives as keystrokes rather than a paste.
+    func typeText(paneID: String?, text: String) throws {
+        try terminal(for: paneID).typeText(text)
+    }
+
     /// Visible screen text, or scrollback + screen capped to `scrollback` lines.
     func readText(paneID: String?, scrollback: Int? = nil) throws -> String {
         let terminal = try terminal(for: paneID)
         if let scrollback { return terminal.scrollbackText(maxLines: scrollback) }
         return terminal.visibleText()
+    }
+
+    /// Visible screen with its grid size and cursor, read back to back.
+    func screenState(paneID: String?) throws -> (text: String, grid: (rows: Int, cols: Int)?, cursor: (row: Int, col: Int)?) {
+        let terminal = try terminal(for: paneID)
+        return (terminal.visibleText(), terminal.gridSize, terminal.cursorPosition)
     }
 
     /// Lights the pane's ring (unless it is the focused pane in the key window), updates the sidebar

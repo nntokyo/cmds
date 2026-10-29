@@ -33,10 +33,17 @@ protocol TerminalSurface: AnyObject {
 
     /// Types text as if pasted/typed by the user (no bracketed paste for "\n").
     func sendText(_ text: String)
+    /// Like `sendText`, but printable text arrives as typed keystrokes (never as a bracketed paste).
+    func typeText(_ text: String)
     /// Makes the terminal the first responder.
     func focus()
     /// Plain text of the visible screen (rows joined by "\n").
     func visibleText() -> String
+    /// Cursor cell, 0-based: `row` indexes the lines of `visibleText()`, `col` counts cells
+    /// (a wide character occupies two). nil if unknown or scrolled out of view.
+    var cursorPosition: (row: Int, col: Int)? { get }
+    /// Terminal grid size in cells; nil if unknown.
+    var gridSize: (rows: Int, cols: Int)? { get }
     /// Plain text of scrollback + screen, capped to `maxLines` from the bottom.
     func scrollbackText(maxLines: Int) -> String
     func close()
