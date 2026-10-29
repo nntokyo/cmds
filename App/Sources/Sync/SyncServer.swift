@@ -31,7 +31,7 @@ final class SyncServer {
     /// Text in one `input` message (the phone sends keystrokes, lines or a paste).
     static let maxInputBytes = 16 * 1024
     /// Input a client may send per second; more is dropped with `rateLimited`.
-    static let maxInputBytesPerSecond = 64 * 1024
+    nonisolated static let maxInputBytesPerSecond = 64 * 1024
     static let screenInterval: TimeInterval = 0.1
     static let stateInterval: TimeInterval = 0.1
     /// Minimum spacing of `state` pushes caused only by resource-usage samples.
