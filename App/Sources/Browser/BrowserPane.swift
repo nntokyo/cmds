@@ -67,11 +67,34 @@ final class BrowserPane: NSView {
         if webView.url == nil || addressField.stringValue.isEmpty { focusAddressBar() } else { window?.makeFirstResponder(webView) }
     }
 
-    /// Runs `script` as an expression in the page (promises are awaited) and returns its JSON form.
+    /// Runs `script` in the page and returns its JSON form (promises are awaited).
+    /// An expression may use `await` (`await fetch("/api").then(r => r.json())`); a statement list keeps
+    /// eval's completion value (`const a = 1; a + 1`), or, when it uses top-level `await`, runs as an async
+    /// function body whose value is what it `return`s.
     func evaluateJavaScript(_ script: String) async throws -> JSONValue {
+        // Parse checks use the Function constructors, which compile without running the script.
         let body = """
-            const __v = await (0, eval)(__cmdsScript);
-            return __v === undefined ? null : JSON.stringify(__v);
+            const AsyncFunction = (async function () {}).constructor;
+            const parses = (make) => {
+              try { make(); return true; } catch (e) { if (e instanceof SyntaxError) return false; throw e; }
+            };
+            const src = __cmdsScript;
+            const asExpression = "return (" + src + "\\n);";
+            let value;
+            if (parses(() => new AsyncFunction(asExpression))) {
+              value = await new AsyncFunction(asExpression)();
+            } else if (parses(() => new Function(src))) {
+              // A top-level `return` fails eval at parse time (nothing has run), so retry it as a function body.
+              try {
+                value = await (0, eval)(src);
+              } catch (e) {
+                if (!(e instanceof SyntaxError && /Return statements are only valid inside functions/.test(e.message))) throw e;
+                value = await new Function(src)();
+              }
+            } else {
+              value = await new AsyncFunction(src)();
+            }
+            return value === undefined ? null : JSON.stringify(value);
             """
         let result = try await webView.callAsyncJavaScript(body, arguments: ["__cmdsScript": script],
                                                           in: nil, contentWorld: .page)

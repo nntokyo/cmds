@@ -97,9 +97,12 @@ public struct ScreenStreamer: Sendable {
         panes[paneID]?.last = nil
     }
 
-    /// Drop all state for panes not in `paneIDs` (unsubscribed or closed).
+    /// Forget the snapshots of panes not in `paneIDs` (unsubscribed or closed). Their `seq` is kept so a
+    /// re-subscribed pane continues above what the phone already has instead of looking stale.
     public mutating func retain(paneIDs: Set<String>) {
-        panes = panes.filter { paneIDs.contains($0.key) }
+        for paneID in panes.keys where !paneIDs.contains(paneID) {
+            panes[paneID]?.last = nil
+        }
     }
 }
 
