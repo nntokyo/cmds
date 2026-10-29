@@ -23,6 +23,10 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
     private var pendingServices = 0
     private var pendingReads = 0
     private var channelRequested = false
+    /// CoreBluetooth never times out a connection: a candidate that does not get as far as the channel
+    /// in this time is dropped and scanning resumes.
+    private static let candidateTimeout: TimeInterval = 5
+    private var candidateTimer: DispatchWorkItem?
     private var listener: SyncLoopback.Listener?
     private var relay: SyncStreamRelay?
     private var inner: WebSocketTransport?
@@ -58,6 +62,8 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
     }
 
     private func teardown() {
+        candidateTimer?.cancel()
+        candidateTimer = nil
         inner?.onEvent = nil
         inner?.close()
         inner = nil
@@ -95,6 +101,8 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
         rejected.insert(candidate.identifier)
         central?.cancelPeripheralConnection(candidate)
         guard candidate === peripheral, inner == nil else { return }
+        candidateTimer?.cancel()
+        candidateTimer = nil
         peripheral = nil
         pendingServices = 0
         pendingReads = 0
@@ -167,6 +175,12 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
         self.peripheral = peripheral
         peripheral.delegate = self
         central.connect(peripheral)
+        let timer = DispatchWorkItem { [weak self, weak peripheral] in
+            guard let self, let peripheral, peripheral === self.peripheral, !self.channelRequested, !self.finished else { return }
+            self.reject(peripheral)
+        }
+        candidateTimer = timer
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.candidateTimeout, execute: timer)
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
@@ -219,6 +233,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
            let info = SyncBluetooth.Info(encoded: value), info.matches(pin) {
             // A hint only: the pinned TLS handshake decides whether this is the Mac.
             channelRequested = true
+            candidateTimer?.cancel()
             peripheral.openL2CAPChannel(CBL2CAPPSM(info.psm))
             return
         }
