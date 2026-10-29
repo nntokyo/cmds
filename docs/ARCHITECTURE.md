@@ -13,6 +13,7 @@ Native macOS terminal multiplexer for coding agents. Swift + AppKit, terminal re
 | `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, coding agent (model, context, cost, 5-hour limit), CPU/memory, latest notification text, attention dot. Footer: account limits per agent (Claude, Codex) and Mac-wide CPU and memory meters. |
 | `App/Sources/Panes` | Split container views, pane container with notification ring. |
 | `App/Sources/Browser` | WKWebView browser pane. |
+| `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
 | `App/Sources/Shortcuts` | Main menu + key equivalents. |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay fallback) for the iOS app. |
@@ -24,7 +25,21 @@ Project file is generated: `xcodegen generate` (do not commit `cmds.xcodeproj`).
 ## Key concepts
 
 - **Workspace** = one vertical tab. Holds a split tree of panes. Each workspace has a primary working directory.
-- **Pane** = terminal (`TerminalSurface`) or browser (`WKWebView`). IDs are short stable strings (e.g. `p1`, `w1`).
+- **Pane** = terminal (`TerminalSurface`), browser (`WKWebView`) or preview (a local file). IDs are short stable strings (e.g. `p1`, `w1`).
+- **Preview pane** (`PaneKind.preview`, `PaneInfo.file` = absolute path): header (name, folder → Reveal in Finder,
+  Open in Default App, Reload/⌘R). Images: `NSImageView`; Markdown (`.md`): `MarkdownHTML` (GitHub-flavoured subset,
+  raw HTML escaped, only http(s)/mailto/file/relative links) and unified diffs (`.diff`/`.patch` or `format: diff`):
+  `DiffHTML`, both in a WKWebView with JavaScript off, a CSP, light/dark CSS, and local images of the Markdown's folder
+  served by a `cmds-preview:` scheme handler (images/media inside that folder only); text without a known type as
+  `<pre>`; everything else `QLPreviewView`. Rendered text is capped at 8 MB. A vnode `DispatchSource` reloads on
+  writes (coalesced, scroll position kept); on delete/rename (atomic save) it re-attaches to the new file, and while
+  the file is missing the pane shows a placeholder and polls once a second. Opened by `pane.open_file`, File › Open in
+  Preview… (⇧⌘O) and ⌘-click on a file path in a terminal: libghostty detects links (its default regex covers URLs and
+  paths, resolving relative paths against the shell's OSC 7 directory when the file exists) and reports
+  `GHOSTTY_ACTION_OPEN_URL`; `TerminalSurfaceDelegate.terminalSurface(_:openLink:)` turns an existing local file
+  (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
+  URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
+  (the file is on the server). Session restore keeps preview panes (path, forced format).
 - **SSH pane** ([SSH.md](SSH.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
   forwarded to the server (`ssh -R`); `PaneInfo.remote` = `{host, connected, branch?}`, `WorkspaceInfo.remoteHost`
   while the focused pane is one (its cwd/branch are then remote). Survives `ssh` exiting (Reconnect overlay).
@@ -84,6 +99,7 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
 | `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?` | `PaneInfo` |
+| `pane.open_file` | `path` (absolute, existing file), `pane?` (to split from; a preview pane shows the file itself instead), `direction?` (`right`/`down`), `focus?` (default true), `format?` (`markdown`/`diff`/`quicklook`) | `PaneInfo` (kind `preview`); refused (403) on SSH panes' sockets |
 | `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
 | `pane.focus` | `pane` | – |
 | `pane.close` | `pane` | – |
@@ -120,7 +136,7 @@ dropped instead of failing.
 |---|---|
 | New workspace | ⌘N |
 | New SSH workspace… | ⇧⌘N |
-| Reconnect SSH pane (when disconnected; otherwise browser reload) | ⌘R |
+| Reconnect SSH pane (when disconnected; otherwise browser / preview reload) | ⌘R |
 | Close pane | ⌘W |
 | Close workspace | ⇧⌘W |
 | Select workspace 1–9 | ⌘1 … ⌘9 |
@@ -128,6 +144,8 @@ dropped instead of failing.
 | Split right / down | ⌘D / ⇧⌘D |
 | Focus pane left/right/up/down | ⌥⌘←/→/↑/↓ |
 | Open browser split | ⇧⌘B |
+| Open in Preview… (file picker) | ⇧⌘O |
+| Preview a file path in a terminal | ⌘-click |
 | Browser: focus address bar / reload / back / forward | ⌘L / ⌘R / ⌘[ / ⌘] |
 | Jump to latest attention pane | ⇧⌘U |
 | Toggle sidebar | ⌘B |
@@ -153,6 +171,9 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `CMDS_SYNC_TEST_PAIRING=1` for loopback-only pairing without the window, see [SYNC.md](SYNC.md#testing-with-an-isolated-instance)).
   The instance's sync identity lives in separate keychain items derived from `CMDS_SUPPORT_DIR`.
 - Launch the binary directly; `open` does not pass the environment reliably.
+- A window that is not on screen (another Space, hidden) is not drawn, so `screencapture` shows nothing. DEBUG
+  builds answer `debug.preview_snapshot {pane}` → `{"png_base64"}` with a picture of a preview pane drawn off screen
+  (web content via WKWebView's snapshot; Quick Look's out-of-process view stays blank).
 
 ## iOS companion sync
 

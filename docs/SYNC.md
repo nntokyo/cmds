@@ -133,7 +133,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. |
+| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"). |
 | `subscribe` | `paneIDs:[String]` | Replaces the streamed set. Mac sends a full `screen` for each new pane. `[]` stops streaming. |
 | `requestScreen` | `paneID` | Ask for a full `screen` (after a diff gap). |
 | `input` | `paneID, text` | Typed/pasted text, sent as-is (no newline translation). |
@@ -141,6 +141,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 | `selectWorkspace` | `id` | Switch the Mac to that workspace. |
 | `focusPane` | `id` | Focus a pane on the Mac. |
 | `ping` | `nonce?:Int` | Phone pings every 10 s; reconnects if nothing received for 30 s. |
+| `requestFile` | `paneID` | Optional (feature `preview`). The file shown in that preview pane. Answered with `file` pieces or `error` (`notFound`: no such pane / file missing; `badRequest`: not a preview pane, feature not announced, a request already running). Older Macs answer `error{badRequest}` (unknown type). |
 
 ## Mac → Phone (`ServerMessage`)
 
@@ -153,10 +154,25 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 | `screenDiff` | `paneID, seq, baseSeq, changes:[{row,text}], cursorRow?, cursorCol?` | Only when rows/cols unchanged. Applies to the screen with `seq == baseSeq`; cursor is absolute. |
 | `notification` | `paneID?, workspaceID, title, body` | Pane raised attention (agent waiting, OSC 9/777…). Phone posts a local notification. |
 | `pong` | `nonce?` | Echo of `ping.nonce`. |
+| `file` | `paneID, name, mime, size:Int, offset:Int, data:base64, truncated?:Bool` | Answer to `requestFile`: bytes `offset ..< offset+len(data)` of the `size`-byte file, in pieces of ≤ 2 MiB (`SyncFile.chunkBytes`, so a frame stays under 4 MiB), in order; complete when the pieces reach `size` (an empty file is one piece with `size` 0). `truncated: true` (no data): over `SyncFile.maxBytes` (10 MB) or unreadable. |
 
 `seq` increases per pane for every `screen`/`screenDiff` and never goes backwards on a connection.
 The phone (`ScreenMirror`) ignores stale messages and sends `requestScreen` when a diff's `baseSeq`
 does not match.
+
+## Preview panes
+
+Preview panes (`PaneKind.preview`, `PaneInfo.file` = path on the Mac) appear in `state` only for phones whose
+`hello.features` contains `"preview"`. Other (older) phones fail to decode an unknown pane kind, so the Mac sends
+them preview panes as `browser` panes with `url` = `file://<path>` (`ServerMessage.State.withoutPreviewPanes`; the
+state is encoded once per variant). Such a phone shows the pane like a browser pane.
+
+The phone fetches images (`image/*`) and PDFs with `requestFile {paneID}` and shows them (SwiftUI image with
+pinch zoom, PDFKit); other types show the name and "Open on Mac" (`focusPane`). What can be fetched is bounded by the
+Mac: only the file currently shown in an existing preview pane (the request names a pane, never a path; the user or
+an agent on the Mac chose that file), at most 10 MB, one request at a time per connection, read off the main thread.
+The phone keeps the result per pane until the pane goes away or its file changes (reload button to fetch again).
+`SyncFileAssembler` (CmdsCore) joins the pieces; pieces out of order restart it.
 
 ## Mac identity
 
