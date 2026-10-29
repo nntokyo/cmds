@@ -29,6 +29,8 @@ enum MainMenu {
         let menu = NSMenu(title: "cmds")
         menu.addItem(item("About cmds", #selector(NSApplication.orderFrontStandardAboutPanel(_:)), "", target: NSApp))
         menu.addItem(.separator())
+        menu.addItem(item("Install Command Line Tool…", #selector(CLIInstaller.installCommandLineTool(_:)), "", target: CLIInstaller.shared))
+        menu.addItem(.separator())
         SyncMenuActions.items().forEach(menu.addItem)
         menu.addItem(.separator())
         let services = NSMenu(title: "Services")

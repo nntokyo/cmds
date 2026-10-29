@@ -37,6 +37,7 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 | Method | Params | Result |
 |---|---|---|
 | `system.ping` | – | `{"pong": true}` |
+| `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
 | `workspace.list` | – | `[WorkspaceInfo]` |
 | `workspace.create` | `title?`, `cwd?`, `command?` | `WorkspaceInfo` |
 | `workspace.select` | `id` | – |
@@ -55,9 +56,11 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 | `browser.eval` | `pane`, `script` | `{"value": ...}` (JSON-serializable result) |
 | `browser.get_url` | `pane` | `{"url", "title"}` |
 | `browser.snapshot` | `pane` | `{"png_base64"}` |
-| `events.subscribe` | – | then server pushes `RPCEvent`s (`notification`, `workspace.changed`, `pane.changed`) |
+| `events.subscribe` | – | then server pushes `RPCEvent`s (`notification`, `workspace.changed`, `pane.changed`, `workspaces.changed`) |
 
 `pane?` / `workspace?` default to `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` (sent by the CLI), else the focused one.
+`browser.*` without `pane` use the focused (else first) browser pane of `workspace?` (default: selected).
+Methods without a result return `{}`. CLI usage: [CLI.md](CLI.md).
 
 ## Keyboard shortcuts (defaults)
 
