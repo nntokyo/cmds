@@ -36,6 +36,20 @@ notification_condition = "always"   # cmds keeps the ring off for the pane you a
 The sidebar then shows Codex's last message when a turn ends or an approval is needed. (`notify = [...]` is left
 alone; it may already be used by other tools.)
 
+## Usage and limits
+
+The sidebar shows, per workspace, the agent of its focused (else most recently active) pane — model, context %, cost
+and the 5-hour limit, details in the tooltip — and in its footer the account limits per agent (5-hour / 7-day windows,
+Claude's spend limit; orange from 80 %, red from 95 %, reset times in the tooltip). The phone shows the same, and
+`cmds agents` lists everything.
+
+- **Claude Code**: add `cmds hook claude-status` to the status line (snippet in docs/CLI.md).
+- **Codex**: nothing to configure. cmds finds the session file of each `codex` running in a pane (also when the
+  shared app-server daemon writes it) and reads only its usage events (`token_count`) and model (`turn_context`) —
+  never the conversation.
+
+Data older than 3 minutes is dimmed (idle agent); it disappears when the agent exits.
+
 ## Other agents
 
 Use whatever "on finish / needs input" hook the tool has to run `cmds notify "<text>"` (no-op outside cmds is up to

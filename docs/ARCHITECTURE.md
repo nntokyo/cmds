@@ -10,7 +10,7 @@ Native macOS terminal multiplexer for coding agents. Swift + AppKit, terminal re
 | `Packages/CmdsCore` | SwiftPM package shared by macOS app, CLI and iOS: RPC wire types, snapshot models, sync protocol. Also the `cmds` CLI executable (`Sources/cmds-cli`). |
 | `App/Sources/Terminal` | `TerminalSurface.swift` (contract) + `Ghostty/` (libghostty implementation). |
 | `App/Sources/Workspace` | Workspace/pane model, split tree, `AppController` (single source of truth, main actor). |
-| `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, CPU/memory, latest notification text, attention dot. Footer: Mac-wide CPU and memory meters. |
+| `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, coding agent (model, context, cost, 5-hour limit), CPU/memory, latest notification text, attention dot. Footer: account limits per agent (Claude, Codex) and Mac-wide CPU and memory meters. |
 | `App/Sources/Panes` | Split container views, pane container with notification ring. |
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents. |
@@ -41,6 +41,23 @@ Project file is generated: `xcodegen generate` (do not commit `cmds.xcodeproj`).
   app (internal − purgeable) + wired + compressed pages (Activity Monitor's "Memory Used"); pressure =
   `kern.memorystatus_vm_pressure_level` (1 normal, 2 warning, 4 critical). Updates go through
   `AppController.usageChanges`, not `changes`: only the usage labels redraw (no reloads, session saves or socket events).
+- **Agent usage** (`CmdsCore/AgentUsage.swift`, `AgentFormat.swift`, `ClaudeStatusLine.swift`, `CodexRollout.swift`;
+  app: `Workspace/CodexSessionWatcher.swift`, `AppController` "Agents"): per terminal pane an optional `AgentUsage`
+  (`PaneInfo.agent`) plus the latest account limits per agent kind (`AgentLimits`).
+  - Claude Code: its status-line command runs `cmds hook claude-status`, which parses the status-line JSON and sends
+    `agent.report` with the Claude process id (nearest ancestor recognised as Claude, else the nearest non-shell).
+    The usage is dropped when that process exits (without a pid: after 30 min without updates).
+  - Codex: the metadata scan finds `codex` processes (exec path / argv; `app-server`/`exec-server`/`mcp-server` are
+    services, `login`/`features`… are ignored) and places sessions in panes by `CMDS_PANE_ID` (else pane tty). A
+    session process that holds its `rollout-*.jsonl` open owns it. Codex ≥ 0.16x TUIs run their sessions in the shared
+    app-server daemon, which holds the files instead; such a file is matched by `session_meta.cwd` and time
+    (`CodexSessionMatcher`: the most recently started Codex pane before the session was created, else before its last
+    write, for resumed sessions). Files are read only when size/mtime change, only the appended bytes (≤ 256 KB tail);
+    only lines mentioning `token_count`/`turn_context` are decoded, into types holding just the usage fields. Context
+    % uses Codex's own formula (12k baseline). Usage is dropped when the pane has no Codex process left.
+  - Usage without updates for 3 min is marked `stale` (idle agent, dimmed). Limits whose `resetsAt` passed are left
+    out. Report-driven updates go through `usageChanges` (coalesced to 4/s); only appearing/disappearing agents emit
+    `pane` changes (row height).
 
 ## Socket API (JSON lines, see `CmdsCore/RPC.swift`)
 
@@ -50,7 +67,9 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 |---|---|---|
 | `system.ping` | – | `{"pong": true}` |
 | `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
-| `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}]}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes) |
+| `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits]}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known) |
+| `agent.report` | `pane?`, `usage` (`AgentUsage`), `pid?` (agent process) | – (sets the pane's agent usage; its `limits` become that agent's account limits) |
+| `agent.list` | – | `{"panes": [{"workspace", "pane", "usage": AgentUsage}], "limits": [AgentLimits]}` |
 | `workspace.list` | – | `[WorkspaceInfo]` |
 | `workspace.create` | `title?`, `cwd?`, `command?` | `WorkspaceInfo` |
 | `workspace.select` | `id` | – |
@@ -77,6 +96,14 @@ Methods without a result return `{}`. CLI usage: [CLI.md](CLI.md).
 `WorkspaceInfo` (so also `workspace.list`, events and sync) has optional `cpuPercent` (100 = one core) and
 `memoryBytes` (physical footprint). `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`,
 `memoryTotalBytes`, `memoryPressure` (1/2/4, optional).
+`PaneInfo.agent?` = `AgentUsage`: `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`,
+`effort`, `sessionID`, `contextUsedPercent`, `contextTokens`, `contextWindow`, `contextOver200k`, `costUSD`,
+`sessionDurationMs`, `apiDurationMs`, `linesAdded`, `linesRemoved`, `cacheHitRatio` (0–1), `cacheWarm`,
+`inputTokens`, `cachedInputTokens`, `outputTokens`, `reasoningTokens`, `plan`, `stale` (only when true).
+`UsageLimit` = `id` (`five_hour`, `seven_day`, `spend`, …), `usedPercent`, optional `resetsAt`, `windowMinutes`,
+`usedUSD`, `limitUSD`, `period`. `AgentLimits` = `agent`, `limits`, `plan?`, `updatedAt`. Dates are Unix epoch
+seconds (decoding also takes milliseconds and ISO 8601); unknown agent names decode as `other`, malformed fields are
+dropped instead of failing.
 
 ## Keyboard shortcuts (defaults)
 
