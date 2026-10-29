@@ -7,8 +7,11 @@ final class Pane {
     let id: String
     let workspaceID: String
     let kind: PaneKind
-    let terminal: TerminalSurface?
+    /// nil for browsers, and for an SSH pane restored from the session until the user connects it.
+    private(set) var terminal: TerminalSurface?
     let browser: BrowserPane?
+    /// Set for SSH panes (docs/SSH.md); `workingDirectory` is then a path on the remote host.
+    let ssh: SSHSession?
     let container: PaneContainerView
 
     var title: String
@@ -23,16 +26,70 @@ final class Pane {
 
     weak var controller: AppController?
 
-    init(id: String, workspaceID: String, terminal: TerminalSurface) {
+    init(id: String, workspaceID: String, terminal: TerminalSurface, ssh: SSHSession? = nil) {
         self.id = id
         self.workspaceID = workspaceID
         kind = .terminal
         self.terminal = terminal
         browser = nil
-        title = terminal.title.isEmpty ? "Terminal" : terminal.title
-        workingDirectory = terminal.workingDirectory
+        self.ssh = ssh
+        title = ssh.map { $0.launch.label } ?? (terminal.title.isEmpty ? "Terminal" : terminal.title)
+        workingDirectory = ssh == nil ? terminal.workingDirectory : ssh?.launch.remoteCwd
         container = PaneContainerView(paneID: id, content: terminal.view)
         terminal.delegate = self
+    }
+
+    /// An SSH pane without a terminal yet (restored from the session; connects when the user asks).
+    init(id: String, workspaceID: String, ssh: SSHSession) {
+        self.id = id
+        self.workspaceID = workspaceID
+        kind = .terminal
+        terminal = nil
+        browser = nil
+        self.ssh = ssh
+        title = ssh.launch.label
+        workingDirectory = ssh.launch.remoteCwd
+        let placeholder = NSView()
+        placeholder.wantsLayer = true
+        placeholder.layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
+        container = PaneContainerView(paneID: id, content: placeholder)
+    }
+
+    /// Replaces the terminal surface (SSH reconnect); the old one is closed without close callbacks.
+    func attach(terminal newTerminal: TerminalSurface) {
+        if let old = terminal {
+            old.delegate = nil
+            old.close()
+        }
+        terminal = newTerminal
+        newTerminal.delegate = self
+        container.setContent(newTerminal.view)
+    }
+
+    /// Shows or hides the SSH overlay (Disconnected / Not connected).
+    func setSSHOverlay(_ state: SSHOverlayView.State?) {
+        guard let state, let ssh else {
+            container.setOverlay(nil)
+            return
+        }
+        let overlay = SSHOverlayView(host: ssh.launch.host, state: state)
+        overlay.onReconnect = { [weak self] in
+            guard let self else { return }
+            try? self.controller?.connectSSH(paneID: self.id)
+        }
+        overlay.onClose = { [weak self] in
+            guard let self else { return }
+            try? self.controller?.closePane(id: self.id)
+        }
+        overlay.onFocus = { [weak self] in
+            guard let self else { return }
+            self.controller?.paneDidBecomeFocused(self)
+        }
+        container.setOverlay(overlay)
+    }
+
+    var remoteInfo: RemoteInfo? {
+        ssh.map { RemoteInfo(host: $0.launch.host, connected: $0.connected, branch: $0.remoteBranch) }
     }
 
     init(id: String, workspaceID: String, browser: BrowserPane) {
@@ -40,6 +97,7 @@ final class Pane {
         self.workspaceID = workspaceID
         kind = .browser
         terminal = nil
+        ssh = nil
         self.browser = browser
         title = "Browser"
         container = PaneContainerView(paneID: id, content: browser)
@@ -57,7 +115,13 @@ final class Pane {
     var url: String? { browser?.currentURL?.absoluteString }
 
     func focus() {
-        if let terminal { terminal.focus() } else { browser?.focus() }
+        if let overlay = container.overlay, let window = overlay.window {
+            window.makeFirstResponder(overlay)
+        } else if let terminal {
+            terminal.focus()
+        } else {
+            browser?.focus()
+        }
     }
 
     func setAttention(_ lit: Bool) {
@@ -68,7 +132,7 @@ final class Pane {
 
     func info(focused: Bool) -> PaneInfo {
         PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
-                 workingDirectory: workingDirectory, url: url, agent: agentUsage)
+                 workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.
@@ -80,18 +144,21 @@ final class Pane {
             terminal.close()
         }
         browser?.tearDown()
+        ssh?.stopAPI()
     }
 }
 
 extension Pane: TerminalSurfaceDelegate {
     func terminalSurface(_ surface: TerminalSurface, didChangeTitle title: String) {
-        guard !title.isEmpty, title != self.title else { return }
+        guard surface === terminal, !title.isEmpty, title != self.title else { return }
         self.title = title
         controller?.paneDidChange(self)
     }
 
     func terminalSurface(_ surface: TerminalSurface, didChangeWorkingDirectory path: String) {
-        guard path != workingDirectory else { return }
+        guard surface === terminal, path != workingDirectory else { return }
+        // OSC 7 from a remote shell must say `localhost` (libghostty drops other hosts); the path is remote.
+        if ssh != nil, ssh?.remoteBranch != nil { ssh?.remoteBranch = nil }
         workingDirectory = path
         controller?.paneDidChangeWorkingDirectory(self)
     }
@@ -109,7 +176,17 @@ extension Pane: TerminalSurfaceDelegate {
     }
 
     func terminalSurfaceDidClose(_ surface: TerminalSurface) {
-        guard !isClosing else { return }
+        guard !isClosing, surface === terminal else { return }
+        if ssh != nil {
+            // An SSH pane stays (with its overlay) until the user closes it.
+            controller?.sshDidDisconnect(self)
+            return
+        }
         controller?.surfaceDidClose(self)
+    }
+
+    func terminalSurfaceChildDidExit(_ surface: TerminalSurface) {
+        guard !isClosing, surface === terminal, ssh != nil else { return }
+        controller?.sshDidDisconnect(self)
     }
 }

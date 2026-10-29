@@ -39,6 +39,15 @@ final class Workspace {
 
     var hasTerminal: Bool { panes.values.contains { $0.kind == .terminal } }
 
+    /// The focused pane is an SSH pane: `workingDirectory`/`gitBranch` are on its host.
+    var isRemote: Bool { focusedPane?.ssh != nil }
+
+    /// Host of the focused SSH pane (nil when the focused pane is local).
+    var remoteHost: String? { focusedPane?.ssh?.launch.host }
+
+    /// SSH panes in reading order (sidebar host line).
+    var sshPanes: [Pane] { orderedPanes.filter { $0.ssh != nil } }
+
     /// Panes running a coding agent with known usage, in reading order.
     var agentPanes: [Pane] { orderedPanes.filter { $0.agentUsage != nil } }
 
@@ -63,7 +72,7 @@ final class Workspace {
         WorkspaceInfo(id: id, title: title, selected: selected, gitBranch: gitBranch,
                       workingDirectory: workingDirectory, ports: ports, notificationText: notificationText,
                       attention: attention, panes: paneInfos(), layout: root?.layoutNode,
-                      cpuPercent: cpuPercent, memoryBytes: memoryBytes)
+                      cpuPercent: cpuPercent, memoryBytes: memoryBytes, remoteHost: remoteHost)
     }
 
     func paneInfos() -> [PaneInfo] {

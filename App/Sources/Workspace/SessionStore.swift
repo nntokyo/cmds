@@ -7,6 +7,8 @@ struct SessionState: Codable {
     indirect enum Node: Codable {
         case terminal(cwd: String?)
         case browser(url: String?)
+        /// SSH pane: reconnected only when the user clicks Connect (never on launch).
+        case ssh(host: String, remoteCwd: String?)
         case split(axis: SplitAxis, ratio: Double, first: Node, second: Node)
     }
 

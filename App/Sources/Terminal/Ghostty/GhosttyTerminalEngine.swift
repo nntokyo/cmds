@@ -234,6 +234,16 @@ final class GhosttyTerminalSurface: TerminalSurface {
         delegate?.terminalSurfaceDidBecomeFocused(self)
     }
 
+    /// The command exited on a surface launched with `waitAfterCommand` (it stays open).
+    func handleChildExited() {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, !self.closed else { return }
+                self.delegate?.terminalSurfaceChildDidExit(self)
+            }
+        }
+    }
+
     /// Child exited / libghostty asked to close: free the surface and tell the delegate.
     func handleCloseRequest() {
         close()

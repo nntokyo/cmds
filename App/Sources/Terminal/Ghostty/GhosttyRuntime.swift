@@ -226,8 +226,11 @@ final class GhosttyRuntime {
             return true
 
         case GHOSTTY_ACTION_SHOW_CHILD_EXITED:
-            // Let libghostty print its own "process exited" message in the terminal.
-            return false
+            // Surfaces that wait after their command (SSH panes) show the app's own overlay; others let libghostty
+            // print its "process exited" message in the terminal.
+            guard view.waitsAfterCommand else { return false }
+            view.owner?.handleChildExited()
+            return true
 
         case GHOSTTY_ACTION_COLOR_CHANGE, GHOSTTY_ACTION_RENDERER_HEALTH, GHOSTTY_ACTION_SCROLLBAR,
              GHOSTTY_ACTION_MOUSE_OVER_LINK, GHOSTTY_ACTION_SELECTION_CHANGED, GHOSTTY_ACTION_CONFIG_CHANGE,

@@ -77,9 +77,26 @@ extension CLI {
                 Thread.sleep(forTimeInterval: interval)
             }
         },
-        Command(name: "new", usage: "new [--title T] [--cwd DIR] [-- command…]",
+        Command(name: "new", usage: "new [--title T] [--cwd DIR] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
                 summary: "Create a workspace (in the current directory by default) and select it.",
-                options: ["title", "cwd"]) { ctx in
+                details: """
+                    --ssh opens an SSH workspace: the pane runs your `ssh HOST` (respecting ~/.ssh/config) and forwards a
+                    restricted cmds socket to the server for cmds-remote.sh (docs/SSH.md). --remote-cwd is a directory on
+                    the server (absolute or ~/…).
+                    """,
+                options: ["title", "cwd", "ssh", "remote-cwd"]) { ctx in
+            if let host = ctx.args[option: "ssh"] {
+                guard ctx.args[option: "cwd"] == nil, ctx.args.rest == nil else {
+                    throw CLIError.usage("--ssh takes --remote-cwd, not --cwd or a command")
+                }
+                let result = try ctx.call("workspace.create", [
+                    "ssh": .string(host),
+                    "remoteCwd": ctx.args[option: "remote-cwd"].json,
+                    "title": ctx.args[option: "title"].json,
+                ])
+                if ctx.json { return ctx.printJSON(result) }
+                return print(result["id"]?.stringValue ?? "")
+            }
             let cwd = ctx.args[option: "cwd"] ?? FileManager.default.currentDirectoryPath
             let result = try ctx.call("workspace.create", [
                 "title": ctx.args[option: "title"].json,
@@ -107,10 +124,14 @@ extension CLI {
             let id = positionals.count == 2 ? try resolveWorkspace(ctx, positionals[0]) : ctx.envWorkspace
             try ctx.call("workspace.rename", ["id": id.json, "title": .string(positionals.last!)])
         },
-        Command(name: "split", usage: "split [right|down] [--pane P] [--browser URL] [--cwd DIR] [--no-focus] [-- command…]",
+        Command(name: "split", usage: "split [right|down] [--pane P] [--browser URL | --ssh HOST [--remote-cwd DIR]] [--cwd DIR] [--no-focus] [-- command…]",
                 summary: "Split a pane (default: the current one, to the right) and focus the new pane.",
-                details: "--browser opens a browser pane instead of a terminal. --no-focus keeps the keyboard in the current pane. Prints the new pane id.",
-                options: ["pane", "browser", "cwd"], flags: ["no-focus"]) { ctx in
+                details: """
+                    --browser opens a browser pane instead of a terminal; --ssh an SSH pane (docs/SSH.md). Splitting an SSH
+                    pane without --cwd or a command opens another connection to the same host. --no-focus keeps the
+                    keyboard in the current pane. Prints the new pane id.
+                    """,
+                options: ["pane", "browser", "cwd", "ssh", "remote-cwd"], flags: ["no-focus"]) { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds split [right|down] [options]")
             let direction = ctx.args.positionals.first ?? "right"
             guard ["right", "down"].contains(direction) else { throw CLIError.usage("direction must be right or down") }
@@ -123,9 +144,16 @@ extension CLI {
                 "cwd": ctx.args[option: "cwd"].map { .string(absolutePath($0)) },
                 "command": shellCommand(ctx.args.rest ?? []).json,
                 "focus": ctx.args.has("no-focus") ? false : nil,
+                "ssh": ctx.args[option: "ssh"].json,
+                "remoteCwd": ctx.args[option: "remote-cwd"].json,
             ])
             if ctx.json { return ctx.printJSON(result) }
             print(result["id"]?.stringValue ?? "")
+        },
+        Command(name: "remote-helper", usage: "remote-helper",
+                summary: "Print cmds-remote.sh, the sh client for servers reached through an SSH pane (docs/SSH.md).",
+                details: "E.g. `cmds remote-helper > cmds-remote.sh` to copy it yourself. In the app: Pane → Install Remote Helper….") { _ in
+            print(RemoteHelperScript.source, terminator: "")
         },
         Command(name: "panes", usage: "panes [--workspace W]", summary: "List the panes of a workspace.",
                 options: ["workspace"]) { ctx in

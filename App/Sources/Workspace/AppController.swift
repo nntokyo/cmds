@@ -172,6 +172,25 @@ final class AppController {
         scheduleAgentRefresh()
     }
 
+    /// `agent.claude_hook`: a Claude Code hook payload forwarded as is (`cmds-remote.sh hook claude` on a server).
+    /// The transcript is never read (it is a path on another machine); `Stop` uses `last_assistant_message`.
+    func claudeHook(paneID: String?, input: JSONValue) throws {
+        let pane = try resolvePane(paneID)
+        let data = try JSONEncoder().encode(input)
+        guard let notification = ClaudeHook.notification(fromHookInput: data, readTranscript: false) else { return }
+        raiseAttention(pane: pane, title: notification.title, body: notification.body)
+    }
+
+    /// `agent.claude_status`: Claude Code's status-line JSON forwarded as is (`cmds-remote.sh hook claude-status`).
+    /// No process to watch: the usage goes when the SSH connection drops, else after `unwatchedAgentTimeout`.
+    func claudeStatus(paneID: String?, input: JSONValue) throws {
+        let data = try JSONEncoder().encode(input)
+        guard let usage = ClaudeStatusLine.usage(fromJSON: data) else {
+            throw RPCError.invalidParams("input is not Claude Code status-line JSON")
+        }
+        try reportAgentUsage(paneID: paneID, usage: usage, pid: nil)
+    }
+
     /// Applies a metadata scan: drops usage of agents that exited, marks idle ones stale, takes Codex usage from its
     /// session files (a pane reporting through `agent.report` keeps that) and the newest Codex limits.
     /// The caller sends the usage update (`applyResourceUsage`) right after.
@@ -242,6 +261,23 @@ final class AppController {
         return workspace.info(selected: true)
     }
 
+    /// Creates and selects a workspace with one SSH pane, connected right away.
+    @discardableResult
+    func createSSHWorkspace(_ launch: SSHLaunch, title: String? = nil) throws -> WorkspaceInfo {
+        let workspace = makeWorkspace()
+        workspace.customTitle = title
+        let pane = makeSSHPane(launch, in: workspace)
+        workspace.root = SplitNode(paneID: pane.id)
+        workspace.focusedPaneID = pane.id
+        updateLocation(of: workspace, from: pane)
+        workspaces.append(workspace)
+        selectedWorkspaceID = workspace.id
+        try connectSSH(pane: pane, emitChange: false)
+        emit(.workspaces)
+        focusSelectedPaneView()
+        return workspace.info(selected: true)
+    }
+
     func selectWorkspace(id: String) throws {
         let workspace = try resolveWorkspace(id)
         guard workspace.id != selectedWorkspaceID else { return }
@@ -295,15 +331,30 @@ final class AppController {
     /// pane keeps focus (scripts and agents opening a helper pane must not take the user's keyboard).
     @discardableResult
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
-               url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true) throws -> PaneInfo {
+               url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
+               ssh: SSHLaunch? = nil) throws -> PaneInfo {
         let source = try resolvePane(paneID)
         guard let workspace = workspace(id: source.workspaceID),
               let leaf = workspace.root?.leaf(for: source.id) else {
             throw RPCError.notFound("pane not found: \(source.id)")
         }
-        let directory = cwd.map { ($0 as NSString).expandingTildeInPath }
-            ?? source.workingDirectory ?? workspace.workingDirectory ?? NSHomeDirectory()
-        let pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url)
+        // A plain terminal split of an SSH pane opens another connection to the same host, in its remote directory.
+        var ssh = ssh
+        if ssh == nil, kind == .terminal, cwd == nil, command == nil, let sourceSSH = source.ssh {
+            ssh = (try? SSHLaunch(host: sourceSSH.launch.host, remoteCwd: source.workingDirectory)) ?? sourceSSH.launch
+        }
+        let pane: Pane
+        if let ssh, kind == .terminal {
+            pane = makeSSHPane(ssh, in: workspace)
+            try connectSSH(pane: pane, emitChange: false)
+        } else {
+            // Remote paths mean nothing here: local terminals split from an SSH pane start in the workspace's
+            // local directory (else home).
+            let localSource = source.ssh == nil ? source.workingDirectory : nil
+            let localWorkspace = workspace.isRemote ? nil : workspace.workingDirectory
+            let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? localSource ?? localWorkspace ?? NSHomeDirectory()
+            pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url)
+        }
         workspace.zoomedPaneID = nil
         leaf.split(axis: direction.axis, newPaneID: pane.id)
         guard focus else {
@@ -470,12 +521,88 @@ final class AppController {
 
     func paneDidChangeWorkingDirectory(_ pane: Pane) {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
-        if workspace.focusedPaneID == pane.id, let cwd = pane.workingDirectory {
-            workspace.workingDirectory = cwd
-            workspace.gitBranch = GitInfo.branch(at: cwd)
+        if workspace.focusedPaneID == pane.id, pane.workingDirectory != nil {
+            updateLocation(of: workspace, from: pane)
             emit(.workspace(id: workspace.id))
         }
         emit(.pane(workspaceID: workspace.id, paneID: pane.id))
+    }
+
+    // MARK: - SSH panes
+
+    /// `remote.location`: cwd and git branch reported by the remote shell (`cmds-remote.sh prompt`).
+    func setRemoteLocation(paneID: String?, cwd: String?, branch: String?) throws {
+        let pane = try resolvePane(paneID)
+        guard let ssh = pane.ssh else { throw RPCError.invalidParams("pane \(pane.id) is not an SSH pane") }
+        let cwd = cwd.flatMap { $0.isEmpty || $0.count > 4096 ? nil : $0 }
+        let branch = branch.flatMap { $0.isEmpty || $0.count > 256 ? nil : $0 }
+        guard cwd != nil && cwd != pane.workingDirectory || branch != ssh.remoteBranch else { return }
+        if let cwd { pane.workingDirectory = cwd }
+        ssh.remoteBranch = branch
+        paneDidChangeWorkingDirectory(pane)
+    }
+
+    /// Starts (or restarts) the `ssh` of an SSH pane: a new terminal surface running the same command with a fresh
+    /// remote socket. The pane's restricted API socket is created on first use.
+    func connectSSH(paneID: String?) throws {
+        try connectSSH(pane: try resolvePane(paneID), emitChange: true)
+    }
+
+    private func connectSSH(pane: Pane, emitChange: Bool) throws {
+        guard let ssh = pane.ssh else { throw RPCError.invalidParams("pane \(pane.id) is not an SSH pane") }
+        guard !ssh.connected else { return }
+        if !ssh.startAPI(controller: self, scope: RemoteScope(paneID: pane.id, workspaceID: pane.workspaceID)) {
+            // Still connect: the terminal works, only `cmds-remote.sh` will report that it is unavailable.
+            NSLog("cmds: could not create the API socket of SSH pane \(pane.id)")
+        }
+        let config = ssh.makeLaunchConfig(paneID: pane.id, workspaceID: pane.workspaceID,
+                                          environment: terminalEnvironment(paneID: pane.id, workspaceID: pane.workspaceID))
+        pane.attach(terminal: TerminalEngineProvider.shared.makeSurface(config: config))
+        ssh.didConnect()
+        pane.setSSHOverlay(nil)
+        guard emitChange else { return }
+        emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))
+        emit(.workspace(id: pane.workspaceID))
+        if let workspace = workspace(id: pane.workspaceID), workspace.focusedPaneID == pane.id,
+           workspace.id == selectedWorkspaceID {
+            pane.focus()
+        }
+    }
+
+    /// The pane's `ssh` exited: keep the pane and its last screen, show the Reconnect overlay, drop agent usage
+    /// reported over that connection.
+    func sshDidDisconnect(_ pane: Pane) {
+        guard let ssh = pane.ssh, ssh.connected else { return }
+        ssh.didDisconnect()
+        if pane.agentUsage != nil {
+            pane.agentUsage = nil
+            pane.agentSource = nil
+            scheduleAgentRefresh()
+        }
+        pane.setSSHOverlay(.disconnected)
+        if let workspace = workspace(id: pane.workspaceID), workspace.focusedPaneID == pane.id,
+           workspace.id == selectedWorkspaceID {
+            pane.focus()
+        }
+        emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))
+        emit(.workspace(id: pane.workspaceID))
+    }
+
+    /// Focused pane is an SSH pane whose `ssh` is not running (⌘R reconnects).
+    var focusedDisconnectedSSHPane: Pane? {
+        guard let pane = focusedPane, let ssh = pane.ssh, !ssh.connected else { return nil }
+        return pane
+    }
+
+    /// Workspace cwd/branch from the pane: local panes ask git here, SSH panes use what their remote shell reported.
+    private func updateLocation(of workspace: Workspace, from pane: Pane) {
+        if let ssh = pane.ssh {
+            workspace.workingDirectory = pane.workingDirectory
+            workspace.gitBranch = ssh.remoteBranch
+        } else if let cwd = pane.workingDirectory {
+            workspace.workingDirectory = cwd
+            workspace.gitBranch = GitInfo.branch(at: cwd)
+        }
     }
 
     /// A divider was dragged; ratios are already stored in the split tree.
@@ -505,6 +632,14 @@ final class AppController {
     func applyMetadata(_ metadata: [String: WorkspaceMetadata]) {
         for workspace in workspaces {
             guard let update = metadata[workspace.id] else { continue }
+            if workspace.isRemote {
+                // cwd and branch are remote (reported by the server); only local ports (e.g. `ssh -L`) apply.
+                if update.ports != workspace.ports {
+                    workspace.ports = update.ports
+                    emit(.workspace(id: workspace.id))
+                }
+                continue
+            }
             if update.workingDirectory != workspace.workingDirectory { continue } // cwd moved meanwhile
             if update.gitBranch != workspace.gitBranch || update.ports != workspace.ports {
                 workspace.gitBranch = update.gitBranch
@@ -533,6 +668,10 @@ final class AppController {
             case .leaf(let id):
                 let pane = workspace.panes[id]
                 if pane?.kind == .browser { return .browser(url: pane?.url) }
+                if let pane, let ssh = pane.ssh {
+                    let cwd = (try? SSHLaunch.validateRemoteCwd(pane.workingDirectory)) ?? ssh.launch.remoteCwd
+                    return .ssh(host: ssh.launch.host, remoteCwd: cwd)
+                }
                 return .terminal(cwd: pane?.workingDirectory)
             case .split(let axis, let first, let second):
                 return .split(axis: axis, ratio: split.ratio, first: node(first, in: workspace), second: node(second, in: workspace))
@@ -561,6 +700,14 @@ final class AppController {
                 return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil).id)
             case .browser(let url):
                 return SplitNode(paneID: makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url).id)
+            case .ssh(let host, let remoteCwd):
+                // Never connects on launch: the pane shows "Not connected — Connect (⌘R)".
+                guard let launch = try? SSHLaunch(host: host, remoteCwd: remoteCwd) else {
+                    return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: NSHomeDirectory(), command: nil, url: nil).id)
+                }
+                let pane = makeSSHPane(launch, in: workspace)
+                pane.setSSHOverlay(.notConnected)
+                return SplitNode(paneID: pane.id)
             case .split(let axis, let ratio, let first, let second):
                 return SplitNode(axis: axis, ratio: ratio, first: build(first, in: workspace), second: build(second, in: workspace))
             }
@@ -572,8 +719,12 @@ final class AppController {
             workspace.root = root
             let ids = root.paneIDs
             workspace.focusedPaneID = ids[safe: saved.focusedPaneIndex ?? 0] ?? ids.first
-            workspace.workingDirectory = workspace.focusedPane?.workingDirectory ?? existing(saved.workingDirectory)
-            workspace.gitBranch = workspace.workingDirectory.flatMap(GitInfo.branch(at:))
+            if let focused = workspace.focusedPane, focused.ssh != nil {
+                updateLocation(of: workspace, from: focused)
+            } else {
+                workspace.workingDirectory = workspace.focusedPane?.workingDirectory ?? existing(saved.workingDirectory)
+                workspace.gitBranch = workspace.workingDirectory.flatMap(GitInfo.branch(at:))
+            }
             workspaces.append(workspace)
         }
         selectedWorkspaceID = workspaces[safe: state.selectedIndex ?? 0]?.id ?? workspaces.first?.id
@@ -606,13 +757,7 @@ final class AppController {
         let pane: Pane
         switch kind {
         case .terminal:
-            var environment = [CmdsEnv.socketPath: socketPath, CmdsEnv.workspaceID: workspace.id, CmdsEnv.paneID: id]
-            environment["PATH"] = BundledCLI.terminalPATH  // bundled `cmds` CLI first
-            // Isolated instance: hand terminals the resolved directory (a relative CMDS_SUPPORT_DIR would point
-            // the CLI elsewhere after `cd`, and it takes precedence over CMDS_SOCKET_PATH).
-            if let supportDirectory = CmdsEnv.supportDirectoryOverride() {
-                environment[CmdsEnv.supportDirectory] = supportDirectory
-            }
+            let environment = terminalEnvironment(paneID: id, workspaceID: workspace.id)
             let config = TerminalLaunchConfig(workingDirectory: cwd, command: command, environment: environment)
             pane = Pane(id: id, workspaceID: workspace.id, terminal: TerminalEngineProvider.shared.makeSurface(config: config))
             if pane.workingDirectory == nil { pane.workingDirectory = cwd }
@@ -626,12 +771,34 @@ final class AppController {
         return pane
     }
 
+    private func terminalEnvironment(paneID: String, workspaceID: String) -> [String: String] {
+        var environment = [CmdsEnv.socketPath: socketPath, CmdsEnv.workspaceID: workspaceID, CmdsEnv.paneID: paneID]
+        environment["PATH"] = BundledCLI.terminalPATH  // bundled `cmds` CLI first
+        // Isolated instance: hand terminals the resolved directory (a relative CMDS_SUPPORT_DIR would point
+        // the CLI elsewhere after `cd`, and it takes precedence over CMDS_SOCKET_PATH).
+        if let supportDirectory = CmdsEnv.supportDirectoryOverride() {
+            environment[CmdsEnv.supportDirectory] = supportDirectory
+        }
+        return environment
+    }
+
+    /// An SSH pane, not connected yet (`connectSSH`).
+    private func makeSSHPane(_ launch: SSHLaunch, in workspace: Workspace) -> Pane {
+        let id = "p\(nextPaneNumber)"
+        nextPaneNumber += 1
+        let pane = Pane(id: id, workspaceID: workspace.id, ssh: SSHSession(launch: launch, paneID: id))
+        pane.controller = self
+        workspace.panes[id] = pane
+        return pane
+    }
+
     private func applyFocus(_ pane: Pane, in workspace: Workspace) {
+        let wasRemote = workspace.isRemote
         workspace.focusedPaneID = pane.id
         if let zoomed = workspace.zoomedPaneID, zoomed != pane.id { workspace.zoomedPaneID = nil }
-        if pane.kind == .terminal, let cwd = pane.workingDirectory, cwd != workspace.workingDirectory {
-            workspace.workingDirectory = cwd
-            workspace.gitBranch = GitInfo.branch(at: cwd)
+        if pane.kind == .terminal, pane.workingDirectory != nil,
+           pane.workingDirectory != workspace.workingDirectory || pane.ssh != nil || wasRemote {
+            updateLocation(of: workspace, from: pane)
         }
         if isWindowKey, workspace.id == selectedWorkspaceID { clearAttention(pane) }
     }
@@ -684,6 +851,7 @@ final class AppController {
 
     private func terminal(for paneID: String?) throws -> TerminalSurface {
         let pane = try resolvePane(paneID)
+        if pane.ssh != nil, pane.terminal == nil { throw RPCError.invalidParams("SSH pane \(pane.id) is not connected") }
         guard let terminal = pane.terminal else { throw RPCError.invalidParams("pane \(pane.id) is not a terminal") }
         return terminal
     }

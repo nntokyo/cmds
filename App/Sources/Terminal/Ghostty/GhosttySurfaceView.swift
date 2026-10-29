@@ -10,6 +10,8 @@ import GhosttyKit
 final class GhosttySurfaceView: NSView {
     private(set) var surface: ghostty_surface_t?
     weak var owner: GhosttyTerminalSurface?
+    /// Launched with `waitAfterCommand`: libghostty keeps the surface when the command exits.
+    private(set) var waitsAfterCommand = false
 
     /// Cell size in points (libghostty reports pixels via CELL_SIZE).
     private(set) var cellSize: CGSize = .zero
@@ -41,7 +43,8 @@ final class GhosttySurfaceView: NSView {
         cfg.platform = ghostty_platform_u(macos: ghostty_platform_macos_s(nsview: userdata))
         cfg.scale_factor = Double(NSScreen.main?.backingScaleFactor ?? 2.0)
         cfg.font_size = 0  // inherit from config
-        cfg.wait_after_command = false
+        waitsAfterCommand = config.waitAfterCommand
+        cfg.wait_after_command = config.waitAfterCommand
         cfg.context = GHOSTTY_SURFACE_CONTEXT_SPLIT
 
         // Build C strings that stay alive until ghostty_surface_new returns (libghostty copies them).
