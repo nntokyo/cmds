@@ -1,7 +1,8 @@
 #if CMDS_GHOSTTY_HARNESS
 // Standalone debug harness for the libghostty engine. Not compiled normally; build with
 //   SWIFT_ACTIVE_COMPILATION_CONDITIONS='DEBUG CMDS_GHOSTTY_HARNESS'
-// Opens one window with a terminal surface. Env CMDS_HARNESS_SEND="text" types text after 1s,
+// Opens one window with a terminal surface. Env CMDS_HARNESS_SEND="text" (or CMDS_HARNESS_SEND_FILE=path)
+// sends text after 1.5s (literal \e \n \r \t are decoded),
 // CMDS_HARNESS_DUMP=/path writes visibleText() to that file after 3s.
 import AppKit
 
@@ -57,7 +58,13 @@ final class GhosttyHarnessApp: NSObject, NSApplicationDelegate, TerminalSurfaceD
         NSApp.activate(ignoringOtherApps: true)
         surface.focus()
 
-        if let text = env["CMDS_HARNESS_SEND"] {
+        let sendFromFile = env["CMDS_HARNESS_SEND_FILE"].flatMap { try? String(contentsOfFile: $0, encoding: .utf8) }
+        if let raw = sendFromFile ?? env["CMDS_HARNESS_SEND"] {
+            // Literal \e, \n, \r, \t in the env value are decoded so escape sequences can be tested.
+            let text = raw.replacingOccurrences(of: "\\e", with: "\u{1b}")
+                .replacingOccurrences(of: "\\n", with: "\n")
+                .replacingOccurrences(of: "\\r", with: "\r")
+                .replacingOccurrences(of: "\\t", with: "\t")
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                 MainActor.assumeIsolated { self.surface?.sendText(text) }
             }
@@ -66,7 +73,11 @@ final class GhosttyHarnessApp: NSObject, NSApplicationDelegate, TerminalSurfaceD
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
                 MainActor.assumeIsolated {
                     let s = self.surface
-                    let out = "TITLE: \(s?.title ?? "")\nPWD: \(s?.workingDirectory ?? "")\n--- visible ---\n"
+                    let g = s as? GhosttyTerminalSurface
+                    let grid = g.map { "\($0.gridSize.rows)x\($0.gridSize.columns)" } ?? "-"
+                    let cursor = g?.cursorPosition.map { "row \($0.row) col \($0.column)" } ?? "-"
+                    let out = "TITLE: \(s?.title ?? "")\nPWD: \(s?.workingDirectory ?? "")\nGRID: \(grid)\nCURSOR: \(cursor)\n"
+                        + "--- visible ---\n"
                         + (s?.visibleText() ?? "") + "\n--- scrollback(5) ---\n" + (s?.scrollbackText(maxLines: 5) ?? "")
                     try? out.write(toFile: path, atomically: true, encoding: .utf8)
                 }

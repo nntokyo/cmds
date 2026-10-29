@@ -652,6 +652,22 @@ final class GhosttySurfaceView: NSView {
         return action.withCString { ghostty_surface_binding_action(surface, $0, UInt(action.utf8.count)) }
     }
 
+    /// Writes bytes to the pty unmodified (libghostty's `text:` binding action; never bracketed).
+    func writeRaw(_ bytes: [UInt8]) {
+        guard !bytes.isEmpty else { return }
+        var action = "text:"
+        for b in bytes {
+            switch b {
+            case 0x5C: action += "\\\\"
+            case 0x20...0x7E: action.unicodeScalars.append(Unicode.Scalar(b))
+            default: action += String(format: "\\x%02x", b)
+            }
+        }
+        if !performBinding(action) {
+            ghosttyLog.warning("raw write via text: binding failed")
+        }
+    }
+
     @objc func copy(_ sender: Any?) { _ = performBinding("copy_to_clipboard") }
     @objc func paste(_ sender: Any?) { _ = performBinding("paste_from_clipboard") }
     @objc func pasteAsPlainText(_ sender: Any?) { _ = performBinding("paste_from_clipboard") }

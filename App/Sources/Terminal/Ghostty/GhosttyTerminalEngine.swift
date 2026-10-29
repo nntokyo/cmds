@@ -50,44 +50,7 @@ final class GhosttyTerminalSurface: TerminalSurface {
     // MARK: TerminalSurface
 
     func sendText(_ text: String) {
-        guard let surface = surfaceView.surface, !text.isEmpty else { return }
-        var buffer = ""
-        func flush() {
-            guard !buffer.isEmpty else { return }
-            let chunk = buffer
-            buffer = ""
-            chunk.withCString { ghostty_surface_text(surface, $0, UInt(chunk.utf8.count)) }
-        }
-        // Printable runs go through ghostty_surface_text (bracketed only if the program enabled
-        // bracketed paste); newlines and control characters are sent as real key presses so that
-        // "\n" executes instead of being pasted.
-        var previousWasCR = false
-        for scalar in text.unicodeScalars {
-            let v = scalar.value
-            if v == 0x0A && previousWasCR {
-                previousWasCR = false
-                continue
-            }
-            previousWasCR = (v == 0x0D)
-            switch v {
-            case 0x0A, 0x0D:
-                flush(); surfaceView.sendKey(keyCode: 0x24, unshifted: 0x0D)  // Return
-            case 0x09:
-                flush(); surfaceView.sendKey(keyCode: 0x30, unshifted: 0x09)  // Tab
-            case 0x1B:
-                flush(); surfaceView.sendKey(keyCode: 0x35, unshifted: 0x1B)  // Escape
-            case 0x08, 0x7F:
-                flush(); surfaceView.sendKey(keyCode: 0x33, unshifted: 0x7F)  // Backspace
-            case 0x01...0x1A:
-                flush()
-                let idx = Int(v - 1)
-                surfaceView.sendKey(keyCode: GhosttyInput.letterKeyCodes[idx], mods: GHOSTTY_MODS_CTRL,
-                                    unshifted: 0x61 + UInt32(idx))
-            default:
-                buffer.unicodeScalars.append(scalar)
-            }
-        }
-        flush()
+        surfaceView.sendText(text)
     }
 
     func focus() {
@@ -107,6 +70,35 @@ final class GhosttyTerminalSurface: TerminalSurface {
             lines.removeLast()
         }
         return lines.suffix(maxLines).joined(separator: "\n")
+    }
+
+    // Not (yet) part of the TerminalSurface contract; candidates requested by the iOS sync.
+
+    /// Terminal grid size in cells.
+    var gridSize: (rows: Int, columns: Int) {
+        guard let surface = surfaceView.surface else { return (0, 0) }
+        let size = ghostty_surface_size(surface)
+        return (Int(size.rows), Int(size.columns))
+    }
+
+    /// Cursor cell (0-based) in the active screen, i.e. the viewport when scrolled to the bottom.
+    /// Derived from `ghostty_surface_ime_point`, which is exact while the configured window padding is
+    /// smaller than one cell (Ghostty's default). libghostty's embedding API does not expose cursor visibility.
+    var cursorPosition: (row: Int, column: Int)? {
+        guard let surface = surfaceView.surface else { return nil }
+        let size = ghostty_surface_size(surface)
+        guard size.rows > 0, size.columns > 0, size.cell_width_px > 0, size.cell_height_px > 0 else { return nil }
+        var x = 0.0, y = 0.0, w = 0.0, h = 0.0
+        ghostty_surface_ime_point(surface, &x, &y, &w, &h)
+        guard h > 0 else { return nil }
+        // ime_point: x = (col*cellW + padLeft + cellW/2) / scale, y = (row*cellH + padTop + cellH) / scale,
+        // h = cellH / scale.
+        let scale = Double(size.cell_height_px) / h
+        let cellW = Double(size.cell_width_px)
+        let cellH = Double(size.cell_height_px)
+        let row = Int((y * scale / cellH + 1e-6).rounded(.down)) - 1
+        let col = Int(((x * scale - cellW / 2) / cellW + 1e-6).rounded(.down))
+        return (min(max(row, 0), Int(size.rows) - 1), min(max(col, 0), Int(size.columns) - 1))
     }
 
     func close() {
@@ -217,5 +209,7 @@ private final class FallbackSurface: TerminalSurface {
     func focus() { view.window?.makeFirstResponder(textView) }
     func visibleText() -> String { textView.string }
     func scrollbackText(maxLines: Int) -> String { textView.string }
+    var gridSize: (rows: Int, columns: Int) { (0, 0) }
+    var cursorPosition: (row: Int, column: Int)? { nil }
     func close() { delegate?.terminalSurfaceDidClose(self) }
 }
