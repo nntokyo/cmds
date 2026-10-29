@@ -36,6 +36,13 @@ targets:
         optional: true
     dependencies:
       - package: CmdsCore
+      # The `cmds` CLI ships at cmds.app/Contents/Resources/bin/cmds (PATH of spawned terminals, "Install Command Line Tool…").
+      - target: cmds-cli
+        embed: true
+        codeSign: true
+        copy:
+          destination: resources
+          subpath: bin
       - framework: vendor/GhosttyKit.xcframework
         embed: false
       - sdk: Carbon.framework
@@ -76,6 +83,22 @@ targets:
           for d in ghostty terminfo; do
             if [ -d "$SRC/$d" ]; then rsync -a --delete "$SRC/$d/" "$DST/$d/"; fi
           done
+  cmds-cli:
+    # Same sources as the SwiftPM `cmds` executable, built by Xcode so plain xcodebuild can bundle it.
+    type: tool
+    platform: macOS
+    sources:
+      - Packages/CmdsCore/Sources/cmds-cli
+    dependencies:
+      - package: CmdsCore
+    settings:
+      base:
+        PRODUCT_NAME: cmds
+        PRODUCT_MODULE_NAME: cmds_cli
+        ARCHS: arm64
+        CODE_SIGN_IDENTITY: "-"
+        ENABLE_HARDENED_RUNTIME: NO
+        SKIP_INSTALL: YES
   CmdsCompanion:
     type: application
     platform: iOS

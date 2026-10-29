@@ -453,9 +453,9 @@ final class AppController {
         let pane: Pane
         switch kind {
         case .terminal:
-            let config = TerminalLaunchConfig(
-                workingDirectory: cwd, command: command,
-                environment: [CmdsEnv.socketPath: socketPath, CmdsEnv.workspaceID: workspace.id, CmdsEnv.paneID: id])
+            var environment = [CmdsEnv.socketPath: socketPath, CmdsEnv.workspaceID: workspace.id, CmdsEnv.paneID: id]
+            environment["PATH"] = BundledCLI.terminalPATH  // bundled `cmds` CLI first
+            let config = TerminalLaunchConfig(workingDirectory: cwd, command: command, environment: environment)
             pane = Pane(id: id, workspaceID: workspace.id, terminal: TerminalEngineProvider.shared.makeSurface(config: config))
             if pane.workingDirectory == nil { pane.workingDirectory = cwd }
         case .browser:

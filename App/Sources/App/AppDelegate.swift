@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var windowController: MainWindowController!
     private var router: CommandRouter!
     private var metadataMonitor: MetadataMonitor!
+    private var apiServer: APIServer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         windowController = MainWindowController(controller: controller)
@@ -25,11 +26,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         metadataMonitor = MetadataMonitor(controller: controller)
         metadataMonitor.start()
+        apiServer = APIServer(controller: controller)
+        apiServer?.start()
         NSApp.activate()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         metadataMonitor?.stop()
+        apiServer?.stop()
         controller.saveSession()
     }
 

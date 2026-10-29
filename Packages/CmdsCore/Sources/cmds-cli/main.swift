@@ -1,4 +1,4 @@
-import CmdsCore
+import Foundation
 
-// Implemented by the API/CLI phase.
-print("cmds: not implemented yet")
+setvbuf(stdout, nil, _IOLBF, 0)
+exit(CLI.main(Array(CommandLine.arguments.dropFirst()), environment: ProcessInfo.processInfo.environment))
