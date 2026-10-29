@@ -108,7 +108,7 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
 - `CMDS_SUPPORT_DIR` replaces `~/Library/Application Support/cmds` (session.json, sync-devices.json, cmds.sock) and
   wins over an inherited `CMDS_SOCKET_PATH`, so neither the instance nor a CLI given the variable can reach the
   live app. Such an instance also leaves the saved window/sidebar frames alone and does not activate itself on
-  launch (it never takes keyboard focus from the app in use). Its terminals inherit the variable.
+  launch (it never takes keyboard focus from the app in use). Its terminals get the resolved absolute path.
 - `CMDS_SYNC_DISABLED=1` skips the iOS sync server (no Bonjour advert, no port).
 - Launch the binary directly; `open` does not pass the environment reliably.
 

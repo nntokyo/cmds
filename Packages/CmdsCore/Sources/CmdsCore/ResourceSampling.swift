@@ -152,12 +152,17 @@ public struct ProcessUsageAccountant: Sendable {
             var departedByPID: [Int32: ProcessUsageSample] = [:]
             for sample in departed.values { departedByPID[sample.pid] = sample }
             for (key, sample) in departed {
+                // A credit it had not used up (a child it reaped after its last reading) moves up with it: that
+                // child's time now reaches the ancestor inside the departed process's total.
+                let carried = credits.removeValue(forKey: key)?.amount ?? 0
                 // Never counted (started after the last scan): its whole time is new when it shows up in the
                 // reaper's child time.
-                guard let counted = previous[key],
+                let counted = previous[key].map { $0.cpuTime.addingClamped($0.childCPUTime) } ?? 0
+                let amount = counted.addingClamped(carried)
+                guard amount > 0,
                       let reaper = Self.liveAncestor(of: sample, alive: aliveByPID, departed: departedByPID) else { continue }
                 var credit = credits[reaper] ?? Credit(amount: 0, age: 0)
-                credit.amount = credit.amount.addingClamped(counted.cpuTime.addingClamped(counted.childCPUTime))
+                credit.amount = credit.amount.addingClamped(amount)
                 credit.age = 0
                 credits[reaper] = credit
             }

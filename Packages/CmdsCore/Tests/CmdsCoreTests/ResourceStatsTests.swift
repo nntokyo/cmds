@@ -250,6 +250,22 @@ final class ProcessUsageAccountantTests: XCTestCase {
         XCTAssertEqual(try XCTUnwrap(usage["w1"]?.cpuPercent), 100, accuracy: 1e-6) // (1 + 1) / 2
     }
 
+    func testUnusedCreditMovesUpWhenItsReaperExits() throws {
+        var accountant = ProcessUsageAccountant(cpuCount: 8)
+        // shell 10 → make 11 → cc 12
+        let first = [proc(10, cpu: 1), proc(11, parent: 10, cpu: 1), proc(12, parent: 11, cpu: 3)]
+        _ = accountant.update(samples: first, alivePIDs: pids(first), now: 100 * second)
+        // make was read (+0.5 s), then reaped cc (final 3.4 s) after that reading: its child time does not show it yet.
+        let second = [proc(10, cpu: 1), proc(11, parent: 10, cpu: 1.5)]
+        var usage = accountant.update(samples: second, alivePIDs: pids(second), now: 102 * self.second)
+        XCTAssertEqual(try XCTUnwrap(usage["w1"]?.cpuPercent), 25, accuracy: 1e-6)
+        // make (+0.2 s) exited and was reaped by the shell: its total 1.7 s own + 3.4 s cc reaches the shell.
+        let third = [proc(10, cpu: 1, children: 5.1)]
+        usage = accountant.update(samples: third, alivePIDs: pids(third), now: 104 * self.second)
+        // New: make's 0.2 s and cc's unseen last 0.4 s. cc's 3 s counted earlier must not come back.
+        XCTAssertEqual(try XCTUnwrap(usage["w1"]?.cpuPercent), 30, accuracy: 1e-6)
+    }
+
     func testOrphansAndForeignParentsAreNotCredited() throws {
         var accountant = ProcessUsageAccountant(cpuCount: 8)
         // 11's parent (500) is not a workspace process (e.g. login, launchd after reparenting).
@@ -391,6 +407,10 @@ final class CmdsEnvTests: XCTestCase {
         XCTAssertEqual(CmdsEnv.supportDirectoryURL(environment: ["CMDS_SUPPORT_DIR": "/tmp/x/../y"]).path, "/tmp/y")
         XCTAssertNil(CmdsEnv.supportDirectoryOverride(environment: ["CMDS_SUPPORT_DIR": "  "]))
         XCTAssertEqual(CmdsEnv.supportDirectoryOverride(environment: ["CMDS_SUPPORT_DIR": "~/t"]), NSHomeDirectory() + "/t")
+        // Relative paths resolve against the current directory once (the app passes the result to its terminals).
+        let cwd = (FileManager.default.currentDirectoryPath as NSString).standardizingPath
+        XCTAssertEqual(CmdsEnv.supportDirectoryOverride(environment: ["CMDS_SUPPORT_DIR": "rel/dir"]),
+                       ((cwd as NSString).appendingPathComponent("rel/dir") as NSString).standardizingPath)
     }
 
     func testSyncDisabledFlag() {

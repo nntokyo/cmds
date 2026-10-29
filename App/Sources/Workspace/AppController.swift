@@ -503,6 +503,11 @@ final class AppController {
         case .terminal:
             var environment = [CmdsEnv.socketPath: socketPath, CmdsEnv.workspaceID: workspace.id, CmdsEnv.paneID: id]
             environment["PATH"] = BundledCLI.terminalPATH  // bundled `cmds` CLI first
+            // Isolated instance: hand terminals the resolved directory (a relative CMDS_SUPPORT_DIR would point
+            // the CLI elsewhere after `cd`, and it takes precedence over CMDS_SOCKET_PATH).
+            if let supportDirectory = CmdsEnv.supportDirectoryOverride() {
+                environment[CmdsEnv.supportDirectory] = supportDirectory
+            }
             let config = TerminalLaunchConfig(workingDirectory: cwd, command: command, environment: environment)
             pane = Pane(id: id, workspaceID: workspace.id, terminal: TerminalEngineProvider.shared.makeSurface(config: config))
             if pane.workingDirectory == nil { pane.workingDirectory = cwd }
