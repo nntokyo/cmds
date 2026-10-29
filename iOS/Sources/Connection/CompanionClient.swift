@@ -335,7 +335,20 @@ final class CompanionClient {
 
     func sendText(_ text: String, to paneID: String) {
         guard !text.isEmpty else { return }
-        send(.input(.init(paneID: paneID, text: text)))
+        // The Mac takes at most 16 KiB of text per `input` message.
+        var chunk = ""
+        var chunkBytes = 0
+        for character in text {
+            let size = character.utf8.count
+            if chunkBytes + size > 16 * 1024 {
+                send(.input(.init(paneID: paneID, text: chunk)))
+                chunk = ""
+                chunkBytes = 0
+            }
+            chunk.append(character)
+            chunkBytes += size
+        }
+        if !chunk.isEmpty { send(.input(.init(paneID: paneID, text: chunk))) }
     }
 
     func sendKey(_ key: SyncKey, to paneID: String) {

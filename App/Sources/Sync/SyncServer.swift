@@ -28,6 +28,10 @@ final class SyncServer {
     static let maxConnections = 16
     static let maxPendingPerHost = 4
     static let maxSubscribedPanes = 32
+    /// Text in one `input` message (the phone sends keystrokes, lines or a paste).
+    static let maxInputBytes = 16 * 1024
+    /// Input a client may send per second; more is dropped with `rateLimited`.
+    static let maxInputBytesPerSecond = 64 * 1024
     static let screenInterval: TimeInterval = 0.1
     static let stateInterval: TimeInterval = 0.1
     /// Minimum spacing of `state` pushes caused only by resource-usage samples.
@@ -44,6 +48,18 @@ final class SyncServer {
         var helloTimer: DispatchWorkItem?
         /// Set once a closing error was sent; later frames (e.g. pipelined hellos) are ignored.
         var closing = false
+        var inputWindowStart = Date.distantPast
+        var inputBytesInWindow = 0
+
+        /// Charges `bytes` of input to the current one-second window; false when over budget.
+        func spendInput(_ bytes: Int, now: Date = Date()) -> Bool {
+            if now.timeIntervalSince(inputWindowStart) >= 1 {
+                inputWindowStart = now
+                inputBytesInWindow = 0
+            }
+            inputBytesInWindow += bytes
+            return inputBytesInWindow <= SyncServer.maxInputBytesPerSecond
+        }
 
         init(connection: SyncConnection) { self.connection = connection }
     }
@@ -168,6 +184,19 @@ final class SyncServer {
     }
 
     /// Forgets every paired device and disconnects them.
+    /// Drops sessions authenticated with any of `tokenHashes`.
+    private func deauthorize(tokenHashes: [String], reason: String) {
+        guard !tokenHashes.isEmpty else { return }
+        for client in clients.values where client.authenticated {
+            guard let hash = client.tokenHash,
+                  tokenHashes.contains(where: { SyncDeviceStore.digestsEqual($0, hash) }) else { continue }
+            client.authenticated = false
+            client.subscribed = []
+            sendError(.invalidToken, reason, to: client, close: true)
+        }
+        pruneScreenCache()
+    }
+
     func revokeAllDevices() {
         store.revokeAll()
         for client in clients.values where client.authenticated {
@@ -326,6 +355,15 @@ final class SyncServer {
                 sendError(.notFound, "pane not found: \(req.paneID.prefix(64))", to: client)
             }
         case .input(let input):
+            let size = input.text.utf8.count
+            guard size <= Self.maxInputBytes else {
+                sendError(.badRequest, "input too large (max \(Self.maxInputBytes) bytes per message)", to: client)
+                return
+            }
+            guard client.spendInput(size) else {
+                sendError(.rateLimited, "too much input; slow down", to: client)
+                return
+            }
             // Keystrokes from the phone are typed (no bracketed paste); multi-line text keeps the paste path.
             if input.text.contains(where: \.isNewline) {
                 perform(client) { try AppController.shared.sendText(paneID: input.paneID, text: input.text) }
@@ -333,6 +371,10 @@ final class SyncServer {
                 perform(client) { try AppController.shared.typeText(paneID: input.paneID, text: input.text) }
             }
         case .key(let key):
+            guard client.spendInput(8) else {
+                sendError(.rateLimited, "too much input; slow down", to: client)
+                return
+            }
             guard let bytes = key.key.terminalBytes(applicationCursor: false) else {
                 sendError(.badRequest, "unknown key: \(key.key.rawValue.prefix(20))", to: client)
                 return
@@ -383,7 +425,11 @@ final class SyncServer {
             let plainToken: String
             if isNewToken {
                 plainToken = token
-                store.add(token: token, deviceName: name, deviceID: hello.deviceID.map { String($0.prefix(128)) })
+                let deviceID = hello.deviceID.map { String($0.prefix(128)) }
+                // Re-pairing replaces the device's old token; sessions still using it must lose access too.
+                let replaced = deviceID.map { store.tokenHashes(deviceID: $0) } ?? []
+                store.add(token: token, deviceName: name, deviceID: deviceID)
+                deauthorize(tokenHashes: replaced, reason: "this device was paired again")
                 limiter.recordSuccess(host: host)
                 rotateCode()
                 syncLog.notice("paired new device \(name, privacy: .public) from \(host, privacy: .public)")
