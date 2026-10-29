@@ -15,6 +15,17 @@ settings:
 packages:
   CmdsCore:
     path: Packages/CmdsCore
+schemes:
+  CmdsApp:
+    build:
+      targets:
+        cmds: all
+    run:
+      config: Debug
+  CmdsCompanion:
+    build:
+      targets:
+        CmdsCompanion: all
 targets:
   cmds:
     type: application
@@ -53,6 +64,18 @@ targets:
         ENABLE_HARDENED_RUNTIME: NO
         CODE_SIGN_IDENTITY: "-"
         OTHER_LDFLAGS: ["-lc++"]
+        ARCHS: arm64
+    postBuildScripts:
+      - name: Bundle Ghostty resources
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          SRC="$SRCROOT/vendor/ghostty/zig-out/share"
+          DST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
+          mkdir -p "$DST"
+          for d in ghostty terminfo; do
+            if [ -d "$SRC/$d" ]; then rsync -a --delete "$SRC/$d/" "$DST/$d/"; fi
+          done
   CmdsCompanion:
     type: application
     platform: iOS
