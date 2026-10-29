@@ -9,6 +9,7 @@ import XCTest
 ///     tapText:<text>                tap the first static text containing <text>
 ///     type:<text>                   type into the focused element (\n = return)
 ///     wait:<seconds>
+///     pinch:<scale>                 pinch the terminal screen (>1 zooms in)
 ///     back                          navigation bar back button
 ///     dump                          print the accessibility tree
 ///
@@ -44,6 +45,12 @@ final class DeviceDriverTests: XCTestCase {
                 app.typeText(argument.replacingOccurrences(of: "\\n", with: "\n"))
             case "wait":
                 Thread.sleep(forTimeInterval: Double(argument) ?? 1)
+            case "pinch":
+                let element = app.descendants(matching: .any).matching(
+                    NSPredicate(format: "label == %@", "Terminal screen")).firstMatch
+                XCTAssertTrue(element.waitForExistence(timeout: 5), "no terminal screen")
+                let scale = CGFloat(Double(argument) ?? 2)
+                element.pinch(withScale: scale, velocity: scale >= 1 ? 1 : -1)
             case "back":
                 app.navigationBars.buttons.element(boundBy: 0).tap()
             case "dump":

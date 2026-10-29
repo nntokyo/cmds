@@ -206,6 +206,8 @@ struct FakeShell {
     var prompt: String
     var current = ""
     var ctrlHistory: [String] = []
+    /// Fixed screen (a full-screen TUI), ignoring `lines`/`prompt`.
+    var fixed: ScreenSnapshot?
 
     init(rows: Int = 24, cols: Int = 80, prompt: String, lines: [String] = []) {
         self.rows = rows
@@ -215,6 +217,7 @@ struct FakeShell {
     }
 
     var snapshot: ScreenSnapshot {
+        if let fixed { return fixed }
         var visible = lines + [prompt + current]
         if visible.count > rows { visible = Array(visible.suffix(rows)) }
         let cursorRow = visible.count - 1
@@ -317,7 +320,7 @@ enum MockData {
 
     static func shells() -> [String: FakeShell] {
         let prompt = "demo@mac cmds % "
-        return [
+        var shells = [
             "p-shell": FakeShell(prompt: prompt, lines: [
                 "Last login: Thu Oct 29 09:12:44 on ttys003",
                 prompt + "git log --oneline -3",
@@ -340,5 +343,24 @@ enum MockData {
             "p-api-shell": FakeShell(prompt: "demo@mac api % ", lines: ["npm run dev", "> api@1.4.0 dev", "listening on :8080"]),
             "p-dot": FakeShell(prompt: "demo@mac .dotfiles % "),
         ]
+        if ProcessInfo.processInfo.arguments.contains("-mockFullScreenTUI") {
+            shells["p-agent"]?.fixed = fullScreenTUI()
+        }
+        return shells
+    }
+
+    /// Like Claude Code in a large Mac pane: 56×150, a header at the top, the prompt and status lines at the
+    /// bottom, empty rows in between, cursor (hidden on the Mac) on the prompt row.
+    static func fullScreenTUI(rows: Int = 56, cols: Int = 150) -> ScreenSnapshot {
+        let rule = String(repeating: "─", count: cols)
+        let header = ["", " ▐▛███▜▌   Claude Code v2.1", "▝▜█████▛▘  Opus · Claude Team", "  ▘▘ ▝▝    ~/Source/web/api"]
+        let footer = [
+            String(repeating: " ", count: cols - 20) + "◐ medium · /effort",
+            rule, "❯\u{a0}", rule,
+            "  ◆ Opus (medium) │ 📁 api │ ctx ░░░░░░░░ 12% │ 日本語",
+            "  ⏵⏵ auto mode on (shift+tab to cycle)",
+        ]
+        let lines = header + Array(repeating: "", count: rows - header.count - footer.count) + footer
+        return ScreenSnapshot(rows: rows, cols: cols, lines: lines, cursorRow: rows - 4, cursorCol: 2)
     }
 }

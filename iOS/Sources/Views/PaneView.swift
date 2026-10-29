@@ -40,7 +40,9 @@ struct TerminalScreenView: View {
     @GestureState private var pinch: CGFloat = 1
     @FocusState private var keyboardFocused: Bool
 
-    private static let cursorAnchor = "cursor"
+    /// Focus row vertically centred, line starts at the left edge (centring a long row horizontally would
+    /// scroll the start of every line off screen).
+    private static let focusAnchor = UnitPoint(x: 0, y: 0.5)
     private static let minFont: CGFloat = 5
     private static let maxFont: CGFloat = 36
     private static let padding: CGFloat = 6
@@ -74,9 +76,9 @@ struct TerminalScreenView: View {
                     .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
                     // The terminal grid is usually taller than the phone; follow the cursor (the prompt) instead
                     // of pinning to the bottom, where a mostly empty screen shows only blank rows.
-                    .onAppear { proxy.scrollTo(Self.cursorAnchor, anchor: .center) }
-                    .onChange(of: snapshot.cursorRow) { proxy.scrollTo(Self.cursorAnchor, anchor: .center) }
-                    .onChange(of: fontSize) { proxy.scrollTo(Self.cursorAnchor, anchor: .center) }
+                    .onAppear { proxy.scrollTo(Self.focusRow(snapshot), anchor: Self.focusAnchor) }
+                    .onChange(of: snapshot.cursorRow) { proxy.scrollTo(Self.focusRow(snapshot), anchor: Self.focusAnchor) }
+                    .onChange(of: fontSize) { proxy.scrollTo(Self.focusRow(snapshot), anchor: Self.focusAnchor) }
                 }
             } else {
                 VStack(spacing: 8) {
@@ -110,24 +112,27 @@ struct TerminalScreenView: View {
         .accessibilityValue(snapshot?.lines.joined(separator: "\n") ?? "")
     }
 
+    /// Row to keep in view: the cursor row, else the last non-empty row. Each row view carries its index as
+    /// scroll id. (A single zero-content anchor view pushed down with padding did not work: scrollTo left a
+    /// zoomed full-screen TUI scrolled to its empty middle rows, i.e. a blank screen.)
+    static func focusRow(_ s: ScreenSnapshot) -> Int {
+        if let row = s.cursorRow, s.lines.indices.contains(row) { return row }
+        return s.lines.lastIndex { !$0.isEmpty } ?? 0
+    }
+
     private func screen(_ s: ScreenSnapshot, fontSize: CGFloat, cellW: CGFloat, lineH: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(s.lines.enumerated()), id: \.offset) { _, line in
+                ForEach(Array(s.lines.enumerated()), id: \.offset) { row, line in
                     Text(verbatim: line.isEmpty ? " " : line)
                         .font(.system(size: fontSize, design: .monospaced))
                         .foregroundStyle(Color(white: 0.92))
                         .lineLimit(1)
                         .fixedSize()
                         .frame(height: lineH, alignment: .leading)
+                        .id(row)
                 }
             }
-            // Scroll target: the cursor row, else the last non-empty row.
-            Color.clear
-                .frame(width: 1, height: lineH)
-                .id(Self.cursorAnchor)
-                // Padding (not offset) so the anchor's layout frame, which scrollTo uses, sits on the row.
-                .padding(.top, CGFloat(s.cursorRow ?? (s.lines.lastIndex { !$0.isEmpty } ?? 0)) * lineH)
             if let row = s.cursorRow, let col = s.cursorCol, row >= 0, row < s.rows {
                 Rectangle()
                     .fill(Color.accentColor.opacity(0.65))
