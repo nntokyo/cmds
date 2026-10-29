@@ -36,6 +36,13 @@ final class SSHTunnelTests: XCTestCase {
         XCTAssertEqual(fields.count >= 2 ? String(fields[1]) : nil, SSHKeys.fingerprint(openSSHPublicKey: line))
     }
 
+    func testRestrictedLineListsEveryRelayPortOnce() {
+        let key = Curve25519.Signing.PrivateKey().publicKey
+        let line = SSHKeys.restrictedAuthorizedKeysLine(for: key, relayPorts: [47_824, 47_900, 47_824, 0], comment: "c")
+        XCTAssertTrue(line.hasPrefix("restrict,port-forwarding,permitopen=\"127.0.0.1:47824\",permitopen=\"127.0.0.1:47900\",permitlisten=\"127.0.0.1:1\",command=\"false\" ssh-ed25519 "))
+        XCTAssertTrue(line.hasSuffix(" c"))
+    }
+
     func testHostKeyPinMatching() throws {
         let a = NIOSSHPrivateKey(ed25519Key: .init()).publicKey
         let b = NIOSSHPrivateKey(ed25519Key: .init()).publicKey
@@ -282,11 +289,11 @@ private struct Relay {
         SSHRelayEndpoint(host: "127.0.0.1", port: port, user: NSUserName(), relayPort: relayPort)
     }
 
-    /// A new phone key, added to the sshd's authorized_keys (read on every login); with `permitOpen` in the
+    /// A new phone key, added to the sshd's authorized_keys (read on every login); with `permitOpen` (listed second, after another port) in the
     /// restricted form the app shows.
     func authorizedPhoneKey(permitOpen: UInt16? = nil) throws -> Curve25519.Signing.PrivateKey {
         let key = Curve25519.Signing.PrivateKey()
-        let line = permitOpen.map { SSHKeys.restrictedAuthorizedKeysLine(for: key.publicKey, relayPort: $0, comment: "cmds-test-phone") }
+        let line = permitOpen.map { SSHKeys.restrictedAuthorizedKeysLine(for: key.publicKey, relayPorts: [47_999, $0], comment: "cmds-test-phone") }
             ?? SSHKeys.authorizedKeysLine(for: key.publicKey, comment: "cmds-test-phone")
         let file = dir.appendingPathComponent("authorized_keys")
         let handle = try FileHandle(forWritingTo: file)

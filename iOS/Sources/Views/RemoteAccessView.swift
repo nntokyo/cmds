@@ -61,7 +61,7 @@ struct RemoteAccessView: View {
                 } header: {
                     Text("This Device's Key")
                 } footer: {
-                    Text("Add this line to ~/.ssh/authorized_keys of that user on the relay host. It only allows forwarding to the relay port: no shell. The private key never leaves this device.")
+                    Text("Add this line to ~/.ssh/authorized_keys of that user on the relay host (replace an older cmds line for this device: it lists the relay ports of all your Macs). It only allows forwarding to those ports: no shell. The private key never leaves this device.")
                 }
 
                 Section {

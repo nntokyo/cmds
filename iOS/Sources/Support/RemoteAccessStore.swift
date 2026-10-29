@@ -46,6 +46,14 @@ enum RemoteAccessStore {
     static func delete(for targetID: String) {
         UserDefaults.standard.removeObject(forKey: key(targetID))
     }
+
+    /// Relay ports of every Mac set up on this phone (the phone key's authorized_keys line allows them all).
+    static func allRelayPorts() -> [UInt16] {
+        UserDefaults.standard.dictionaryRepresentation().keys.filter { $0.hasPrefix("remoteAccess.") }.sorted()
+            .compactMap { UserDefaults.standard.data(forKey: $0) }
+            .compactMap { try? JSONDecoder().decode(RemoteAccessConfig.self, from: $0) }
+            .map(\.endpoint.relayPort)
+    }
 }
 
 /// The phone's SSH key: Ed25519, generated on the phone, stored in the Keychain for this device only
@@ -104,6 +112,6 @@ enum PhoneSSHKey {
     /// `authorized_keys` line limited to what cmds needs: forwarding to the relay port only, no shell,
     /// no agent or X11 forwarding, no pty.
     static func restrictedAuthorizedKeysLine(_ key: Curve25519.Signing.PublicKey, relayPort: UInt16) -> String {
-        SSHKeys.restrictedAuthorizedKeysLine(for: key, relayPort: relayPort, comment: comment)
+        SSHKeys.restrictedAuthorizedKeysLine(for: key, relayPorts: [relayPort] + RemoteAccessStore.allRelayPorts(), comment: comment)
     }
 }

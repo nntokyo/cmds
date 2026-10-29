@@ -18,9 +18,18 @@ public enum SSHKeys {
     /// `restrict` turns off pty, agent and X11 forwarding (OpenSSH 7.2+); `port-forwarding` turns forwarding
     /// back on, so `permitopen` limits local forwards and `permitlisten` (7.8+) limits remote listening to a
     /// privileged loopback port; `command="false"` ends any shell or exec request (`restrict` alone allows them).
-    public static func restrictedAuthorizedKeysLine(for key: Curve25519.Signing.PublicKey, relayPort: UInt16, comment: String) -> String {
-        "restrict,port-forwarding,permitopen=\"127.0.0.1:\(relayPort)\",permitlisten=\"127.0.0.1:1\",command=\"false\" "
+    /// One key has one line in an `authorized_keys` file (the first match wins), so every relay port the phone
+    /// uses with that account goes into the same line.
+    public static func restrictedAuthorizedKeysLine(for key: Curve25519.Signing.PublicKey, relayPorts: [UInt16], comment: String) -> String {
+        var ports: [UInt16] = []
+        for port in relayPorts where port != 0 && !ports.contains(port) { ports.append(port) }
+        let open = ports.map { "permitopen=\"127.0.0.1:\($0)\"" }.joined(separator: ",")
+        return "restrict,port-forwarding,\(open),permitlisten=\"127.0.0.1:1\",command=\"false\" "
             + authorizedKeysLine(for: key, comment: comment)
+    }
+
+    public static func restrictedAuthorizedKeysLine(for key: Curve25519.Signing.PublicKey, relayPort: UInt16, comment: String) -> String {
+        restrictedAuthorizedKeysLine(for: key, relayPorts: [relayPort], comment: comment)
     }
 
     /// OpenSSH form of a host key (`<type> <base64>`), the value stored as the host-key pin.
