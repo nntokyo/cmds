@@ -52,6 +52,11 @@ final class SyncServer {
         var closing = false
         var inputWindowStart = Date.distantPast
         var inputBytesInWindow = 0
+        /// Panes changed since the last screen update sent to this client (throttled links only).
+        var pendingScreens: Set<String> = []
+        var lastScreensSentAt = Date.distantPast
+        /// Minimum spacing of screen updates for this connection (Bluetooth: 4 Hz; network: every tick).
+        var screenInterval: TimeInterval { connection.viaBluetooth ? SyncBluetooth.screenInterval : 0 }
 
         /// Charges `bytes` of input to the current one-second window; false when over budget.
         func spendInput(_ bytes: Int, now: Date = Date()) -> Bool {
@@ -387,7 +392,9 @@ final class SyncServer {
             nwConnection.cancel()
             return
         }
+        // Bluetooth relays connect over loopback; tag them per phone so per-host limits stay per peer.
         let connection = SyncConnection(connection: nwConnection, queue: queue,
+                                        relayedPeer: SyncBluetoothPeripheral.relayedPeer(of: nwConnection.endpoint),
                                         onFrame: { [weak self] conn, data in self?.received(data, from: conn) },
                                         onClose: { [weak self] conn in self?.closed(conn) })
         // One host must not fill every slot with connections that never say hello.
@@ -668,6 +675,7 @@ final class SyncServer {
     private func screenTick() {
         let panes = subscribedPanes
         guard !panes.isEmpty else { return stopScreenTimer() }
+        var changed: Set<String> = []
         for paneID in panes {
             guard let snapshot = snapshot(paneID: paneID) else {
                 lastSnapshot[paneID] = nil
@@ -676,9 +684,20 @@ final class SyncServer {
             // Compare the whole snapshot: a cursor move alone (e.g. ← on a prompt) must reach the phone.
             if lastSnapshot[paneID] == snapshot { continue }
             lastSnapshot[paneID] = snapshot
-            for client in clients.values where client.authenticated && client.subscribed.contains(paneID) {
+            changed.insert(paneID)
+        }
+        // Throttled (Bluetooth) clients get the changes of several ticks coalesced into one diff per pane.
+        let now = Date()
+        for client in clients.values where client.authenticated {
+            client.pendingScreens.formUnion(changed.intersection(client.subscribed))
+            guard !client.pendingScreens.isEmpty,
+                  now.timeIntervalSince(client.lastScreensSentAt) >= client.screenInterval - Self.screenInterval / 4 else { continue }
+            for paneID in client.pendingScreens where client.subscribed.contains(paneID) {
+                guard let snapshot = lastSnapshot[paneID] else { continue }
                 if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
             }
+            client.pendingScreens = []
+            client.lastScreensSentAt = now
         }
     }
 

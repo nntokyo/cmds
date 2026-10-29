@@ -279,8 +279,14 @@ final class SyncMenuActions: NSObject, NSMenuItemValidation {
     static func items() -> [NSMenuItem] {
         let pair = NSMenuItem(title: "Pair iPhone/iPad…", action: #selector(showPairing(_:)), keyEquivalent: "")
         let toggle = NSMenuItem(title: "Enable iOS Sync", action: #selector(toggleSync(_:)), keyEquivalent: "")
-        for item in [pair, toggle] { item.target = shared }
-        return [pair, toggle]
+        let bluetooth = NSMenuItem(title: "Allow Bluetooth Sync", action: #selector(toggleBluetooth(_:)), keyEquivalent: "")
+        bluetooth.toolTip = "Lets the iPhone/iPad connect over Bluetooth when Wi‑Fi is off. The connection stays encrypted and pinned to this Mac's identity."
+        for item in [pair, toggle, bluetooth] { item.target = shared }
+        return [pair, toggle, bluetooth]
+    }
+
+    @objc func toggleBluetooth(_ sender: Any?) {
+        SyncBluetoothPeripheral.shared.isAllowed.toggle()
     }
 
     @objc func showPairing(_ sender: Any?) {
@@ -294,6 +300,11 @@ final class SyncMenuActions: NSObject, NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         if menuItem.action == #selector(toggleSync(_:)) {
             menuItem.state = SyncServer.shared.isEnabled ? .on : .off
+        }
+        if menuItem.action == #selector(toggleBluetooth(_:)) {
+            let bluetooth = SyncBluetoothPeripheral.shared
+            menuItem.state = bluetooth.isAllowed && bluetooth.isAvailable ? .on : .off
+            return bluetooth.isAvailable
         }
         return true
     }

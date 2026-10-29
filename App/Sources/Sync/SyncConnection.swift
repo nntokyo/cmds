@@ -9,8 +9,11 @@ final class SyncConnection: @unchecked Sendable {
     static let maxPendingBytes = 8 * 1024 * 1024
 
     let id = UUID()
-    /// Remote IP (no port), used for rate limiting and display.
+    /// Remote IP (no port), or `bluetooth:<peer>` for a connection relayed from Bluetooth; used for rate
+    /// limiting and display.
     let remoteHost: String
+    /// Relayed from the Bluetooth fallback (slow link: screens are throttled).
+    let viaBluetooth: Bool
 
     private let connection: NWConnection
     private let queue: DispatchQueue
@@ -22,14 +25,15 @@ final class SyncConnection: @unchecked Sendable {
     private var cancelled = false
     private var notifiedClose = false
 
-    init(connection: NWConnection, queue: DispatchQueue,
+    init(connection: NWConnection, queue: DispatchQueue, relayedPeer: String? = nil,
          onFrame: @escaping @MainActor (SyncConnection, Data) -> Void,
          onClose: @escaping @MainActor (SyncConnection) -> Void) {
         self.connection = connection
         self.queue = queue
         self.onFrame = onFrame
         self.onClose = onClose
-        remoteHost = Self.host(of: connection.endpoint)
+        remoteHost = relayedPeer ?? Self.host(of: connection.endpoint)
+        viaBluetooth = relayedPeer != nil
     }
 
     func start() {

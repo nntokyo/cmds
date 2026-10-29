@@ -1,0 +1,265 @@
+import CmdsCore
+@preconcurrency import CoreBluetooth
+import Foundation
+import Network
+
+/// Bluetooth fallback for the iOS companion (docs/SYNC.md "Bluetooth"): a CoreBluetooth peripheral that
+/// advertises `SyncBluetooth.serviceUUID`, publishes an encrypted L2CAP channel and relays every opened
+/// channel, byte for byte, to the sync listener on 127.0.0.1. The sync server therefore sees an ordinary
+/// TLS client and applies every check it applies to network clients; the phone authenticates the Mac by
+/// its pinned certificate, never by Bluetooth.
+///
+/// Runs while the sync listener is up and "Allow Bluetooth Sync" is on, unless `CMDS_SYNC_NO_BLUETOOTH` is
+/// set. Relayed connections are tagged per Bluetooth peer (`relayedPeer(of:)`), so rate limits and
+/// lockouts keep working per phone.
+@MainActor
+final class SyncBluetoothPeripheral: NSObject {
+    static let shared = SyncBluetoothPeripheral()
+    static let enabledDefaultsKey = "SyncBluetoothEnabled"
+    /// Open channels at most (the sync server has its own, lower per-peer limits).
+    static let maxChannels = 8
+
+    /// Local ports of relay connections → `bluetooth:<peer>`; read by the sync server on accept.
+    nonisolated static let peers = SyncLoopbackPeers()
+
+    private(set) var statusText = "Off"
+
+    private var manager: CBPeripheralManager?
+    private var psm: CBL2CAPPSM?
+    private var service: CBMutableService?
+    private var publishedInfo: SyncBluetooth.Info?
+    private var relays: [UUID: SyncStreamRelay] = [:]
+    private var observer: NSObjectProtocol?
+
+    private override init() {
+        super.init()
+        UserDefaults.standard.register(defaults: [Self.enabledDefaultsKey: true])
+    }
+
+    /// "Allow Bluetooth Sync" (menu). On by default; only takes effect while sync runs.
+    var isAllowed: Bool {
+        get { UserDefaults.standard.bool(forKey: Self.enabledDefaultsKey) }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Self.enabledDefaultsKey)
+            reconcile()
+        }
+    }
+
+    /// Whether the menu toggle can apply (sync enabled and not switched off by the environment).
+    var isAvailable: Bool {
+        SyncServer.shared.isEnabled && !CmdsEnv.isSyncDisabled() && !CmdsEnv.isBluetoothDisabled()
+    }
+
+    /// Starts following the sync server (call once at launch).
+    func activate() {
+        guard observer == nil else { return }
+        observer = NotificationCenter.default.addObserver(forName: .syncServerDidChange, object: SyncServer.shared,
+                                                          queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.reconcile() }
+        }
+        reconcile()
+    }
+
+    /// Connection from the sync listener's point of view: the Bluetooth peer it relays, if `endpoint` is the
+    /// loopback address and port of one of our relay sockets. Any other loopback client stays "127.0.0.1".
+    nonisolated static func relayedPeer(of endpoint: NWEndpoint) -> String? {
+        guard case .hostPort(let host, let port) = endpoint else { return nil }
+        let loopback: Bool
+        switch host {
+        case .ipv4(let address): loopback = address == .loopback
+        case .ipv6(let address): loopback = address == .loopback || address.asIPv4 == .loopback
+        default: loopback = false
+        }
+        guard loopback else { return nil }
+        return peers.peer(forPort: port.rawValue)
+    }
+
+    // MARK: - Lifecycle
+
+    /// What should be advertised now, or nil when Bluetooth sync should be off.
+    private var wantedInfo: SyncBluetooth.Info? {
+        let server = SyncServer.shared
+        guard isAllowed, !CmdsEnv.isBluetoothDisabled(), server.port != nil, let identity = server.identity else { return nil }
+        return SyncBluetooth.Info(psm: psm ?? 0, fingerprint: identity.fingerprint, name: server.macName)
+    }
+
+    private func reconcile() {
+        guard let wanted = wantedInfo else {
+            if manager != nil { stop() }
+            return
+        }
+        guard let manager else {
+            statusText = "Starting…"
+            // Creating the manager asks for Bluetooth permission the first time.
+            manager = CBPeripheralManager(delegate: self, queue: .main,
+                                          options: [CBPeripheralManagerOptionShowPowerAlertKey: false])
+            return
+        }
+        // Identity reset or new Mac name: publish the new hint.
+        if manager.state == .poweredOn, psm != nil, let published = publishedInfo, published != wanted {
+            publishService()
+        }
+    }
+
+    private func stop() {
+        if let manager {
+            manager.stopAdvertising()
+            manager.removeAllServices()
+            if let psm { manager.unpublishL2CAPChannel(psm) }
+            manager.delegate = nil
+        }
+        manager = nil
+        psm = nil
+        service = nil
+        publishedInfo = nil
+        for relay in relays.values { relay.close() }
+        relays.removeAll()
+        statusText = "Off"
+    }
+
+    private func publishService() {
+        guard let manager, let psm, var info = wantedInfo else { return }
+        info.psm = psm
+        manager.stopAdvertising()
+        if let service { manager.remove(service) }
+        // Readable without pairing, like the Bonjour TXT record: hints only, nothing secret.
+        let characteristic = CBMutableCharacteristic(type: CBUUID(string: SyncBluetooth.infoCharacteristicUUID),
+                                                     properties: .read, value: info.encoded, permissions: .readable)
+        let service = CBMutableService(type: CBUUID(string: SyncBluetooth.serviceUUID), primary: true)
+        service.characteristics = [characteristic]
+        self.service = service
+        publishedInfo = info
+        manager.add(service)
+    }
+
+    // MARK: - Channels
+
+    private func open(_ channel: CBL2CAPChannel) {
+        guard relays.count < Self.maxChannels, let port = SyncServer.shared.port else {
+            syncLog.notice("bluetooth: refusing channel (\(self.relays.count, privacy: .public) open)")
+            channel.inputStream.close()
+            channel.outputStream.close()
+            return
+        }
+        let id = UUID()
+        // Per-peer label for the sync server's limits; CBCentral identifiers are stable per phone.
+        let peer = SyncBluetooth.peerHostPrefix + channel.peer.identifier.uuidString.prefix(8).lowercased()
+        let streams = (input: channel.inputStream!, output: channel.outputStream!)
+        // Connecting is blocking (loopback, immediate); keep it off the main thread anyway.
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            var localPort: UInt16?
+            let socket: Int32
+            do {
+                socket = try SyncLoopback.connect(port: port) { bound in
+                    localPort = bound
+                    Self.peers.register(port: bound, peer: peer)
+                }
+            } catch {
+                if let localPort { Self.peers.unregister(port: localPort) }
+                syncLog.error("bluetooth: cannot reach the sync listener: \(String(describing: error), privacy: .public)")
+                streams.input.close()
+                streams.output.close()
+                return
+            }
+            let relay = SyncStreamRelay(streams, SyncLoopback.streams(socket: socket), anchors: [channel]) {
+                if let localPort { Self.peers.unregister(port: localPort) }
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { _ = self?.relays.removeValue(forKey: id) }
+                }
+            }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self, self.manager != nil else {
+                        relay.start()
+                        return relay.close()
+                    }
+                    self.relays[id] = relay
+                    relay.start()
+                    syncLog.notice("bluetooth: relaying \(peer, privacy: .public)")
+                }
+            }
+        }
+    }
+}
+
+extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
+    nonisolated func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
+        MainActor.assumeIsolated {
+            guard peripheral === manager else { return }
+            switch peripheral.state {
+            case .poweredOn:
+                statusText = "Starting…"
+                if psm == nil {
+                    // Encryption on the link is defence in depth; trust comes from TLS pinning.
+                    peripheral.publishL2CAPChannel(withEncryption: true)
+                } else {
+                    publishService()
+                }
+            case .unauthorized:
+                statusText = "Not allowed (System Settings › Privacy & Security › Bluetooth)"
+            case .unsupported:
+                statusText = "Not supported on this Mac"
+            case .poweredOff:
+                statusText = "Bluetooth is off"
+                // L2CAP channel, services and relays are gone; start over when it comes back.
+                psm = nil
+                service = nil
+                publishedInfo = nil
+                for relay in relays.values { relay.close() }
+                relays.removeAll()
+            default:
+                statusText = "Unavailable"
+            }
+        }
+    }
+
+    nonisolated func peripheralManager(_ peripheral: CBPeripheralManager, didPublishL2CAPChannel PSM: CBL2CAPPSM, error: Error?) {
+        MainActor.assumeIsolated {
+            guard peripheral === manager else { return }
+            if let error {
+                statusText = "Failed: \(error.localizedDescription)"
+                syncLog.error("bluetooth: L2CAP publish failed: \(error.localizedDescription, privacy: .public)")
+                return
+            }
+            psm = PSM
+            publishService()
+        }
+    }
+
+    nonisolated func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
+        MainActor.assumeIsolated {
+            guard peripheral === manager, service === self.service else { return }
+            if let error {
+                statusText = "Failed: \(error.localizedDescription)"
+                syncLog.error("bluetooth: adding the service failed: \(error.localizedDescription, privacy: .public)")
+                return
+            }
+            peripheral.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [CBUUID(string: SyncBluetooth.serviceUUID)],
+                                         CBAdvertisementDataLocalNameKey: "cmds"])
+        }
+    }
+
+    nonisolated func peripheralManagerDidStartAdvertising(_ peripheral: CBPeripheralManager, error: Error?) {
+        MainActor.assumeIsolated {
+            guard peripheral === manager else { return }
+            if let error {
+                statusText = "Failed: \(error.localizedDescription)"
+                syncLog.error("bluetooth: advertising failed: \(error.localizedDescription, privacy: .public)")
+            } else {
+                statusText = "Advertising (PSM \(psm.map(String.init) ?? "?"))"
+                syncLog.notice("bluetooth: advertising, PSM \(self.psm ?? 0, privacy: .public)")
+            }
+        }
+    }
+
+    nonisolated func peripheralManager(_ peripheral: CBPeripheralManager, didOpen channel: CBL2CAPChannel?, error: Error?) {
+        MainActor.assumeIsolated {
+            guard peripheral === manager else { return }
+            guard let channel, error == nil else {
+                syncLog.notice("bluetooth: channel failed: \(error?.localizedDescription ?? "-", privacy: .public)")
+                return
+            }
+            open(channel)
+        }
+    }
+}

@@ -60,6 +60,7 @@ targets:
       - sdk: CoreText.framework
       - sdk: WebKit.framework
       - sdk: Network.framework
+      - sdk: CoreBluetooth.framework
       - sdk: UserNotifications.framework
       - sdk: libc++.tbd
     info:
@@ -73,6 +74,7 @@ targets:
         NSHighResolutionCapable: true
         NSLocalNetworkUsageDescription: cmds syncs terminals to the iOS companion over the local network.
         NSBonjourServices: [_cmds._tcp]
+        NSBluetoothAlwaysUsageDescription: cmds lets the iOS companion connect over Bluetooth when Wi‑Fi is off. The connection stays end-to-end encrypted.
     settings:
       base:
         PRODUCT_NAME: cmds
@@ -132,6 +134,7 @@ targets:
         NSLocalNetworkUsageDescription: cmds connects to your Mac to mirror terminals.
         NSBonjourServices: [_cmds._tcp]
         NSCameraUsageDescription: cmds scans the pairing QR code shown by cmds on your Mac.
+        NSBluetoothAlwaysUsageDescription: cmds connects to your Mac over Bluetooth when it cannot reach it over Wi‑Fi. The connection stays end-to-end encrypted.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.companion
