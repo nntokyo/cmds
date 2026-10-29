@@ -10,9 +10,27 @@ final class SidebarViewController: NSViewController {
     private let controller: AppController
     private let tableView = NSTableView()
     private let usageFooter = SystemUsageView()
+    private let compactFooter = CompactUsageView()
+    private let compactButton = NSButton()
     private var rowIDs: [String] = []
     private var isSyncingSelection = false
     private var lastWidth: CGFloat = 0
+    /// Constraints swapped between the full sidebar and the compact rail.
+    private var fullConstraints: [NSLayoutConstraint] = []
+    private var compactConstraints: [NSLayoutConstraint] = []
+
+    /// Width of the compact rail.
+    static let compactWidth: CGFloat = 52
+    /// The toggle button at the top of the sidebar was clicked (the window controller resizes the split).
+    var onToggleCompact: (() -> Void)?
+
+    /// Compact rail: workspace numbers, attention dots and status colours; tiny meters in the footer.
+    var isCompact = false {
+        didSet {
+            guard isCompact != oldValue, isViewLoaded else { return }
+            applyMode()
+        }
+    }
 
     init(controller: AppController) {
         self.controller = controller
@@ -55,28 +73,75 @@ final class SidebarViewController: NSViewController {
         separator.boxType = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
         usageFooter.translatesAutoresizingMaskIntoConstraints = false
+        compactFooter.translatesAutoresizingMaskIntoConstraints = false
+
+        compactButton.isBordered = false
+        compactButton.imagePosition = .imageOnly
+        compactButton.contentTintColor = .tertiaryLabelColor
+        compactButton.target = self
+        compactButton.action = #selector(compactClicked)
+        compactButton.translatesAutoresizingMaskIntoConstraints = false
 
         let view = NSView()
-        view.addSubview(scrollView)
-        view.addSubview(separator)
-        view.addSubview(usageFooter)
-        view.addSubview(addButton)
+        for subview in [compactButton, scrollView, separator, usageFooter, compactFooter, addButton] as [NSView] {
+            view.addSubview(subview)
+        }
         NSLayoutConstraint.activate([
+            compactButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 2),
+            compactButton.widthAnchor.constraint(equalToConstant: 20),
+            compactButton.heightAnchor.constraint(equalToConstant: 16),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 4),
+            scrollView.topAnchor.constraint(equalTo: compactButton.bottomAnchor, constant: 2),
             scrollView.bottomAnchor.constraint(equalTo: separator.topAnchor, constant: -4),
             separator.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
             separator.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            addButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
+        ])
+        fullConstraints = [
+            compactButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
             separator.bottomAnchor.constraint(equalTo: usageFooter.topAnchor, constant: -8),
             usageFooter.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
             usageFooter.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
             usageFooter.bottomAnchor.constraint(equalTo: addButton.topAnchor, constant: -8),
             addButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            addButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
-        ])
+        ]
+        compactConstraints = [
+            compactButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            separator.bottomAnchor.constraint(equalTo: compactFooter.topAnchor, constant: -8),
+            compactFooter.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
+            compactFooter.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            compactFooter.bottomAnchor.constraint(equalTo: addButton.topAnchor, constant: -8),
+            addButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+        ]
         self.view = view
+        applyMode()
+    }
+
+    /// Swaps cells, footer and button placement for the current mode (width is set by the window controller).
+    private func applyMode() {
+        NSLayoutConstraint.deactivate(isCompact ? fullConstraints : compactConstraints)
+        NSLayoutConstraint.activate(isCompact ? compactConstraints : fullConstraints)
+        usageFooter.isHidden = isCompact
+        compactFooter.isHidden = !isCompact
+        let symbol = isCompact ? "sidebar.right" : "sidebar.leading"
+        compactButton.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 11, weight: .regular))
+        compactButton.toolTip = isCompact ? "Expand Sidebar (⌃⌘S)" : "Compact Sidebar (⌃⌘S)"
+        compactButton.setAccessibilityLabel(isCompact ? "Expand Sidebar" : "Compact Sidebar")
+        tableView.intercellSpacing = NSSize(width: 0, height: isCompact ? 2 : 4)
+        rowIDs = controller.workspaces.map(\.id)
+        tableView.reloadData()
+        isSyncingSelection = true
+        if let selected = controller.selectedWorkspaceID, let row = rowIDs.firstIndex(of: selected) {
+            tableView.selectRowIndexes([row], byExtendingSelection: false)
+        }
+        isSyncingSelection = false
         updateUsage()
+    }
+
+    @objc private func compactClicked() {
+        onToggleCompact?()
     }
 
     override func viewDidLayout() {
@@ -94,8 +159,9 @@ final class SidebarViewController: NSViewController {
             tableView.reloadData()
         } else {
             for row in 0..<ids.count {
-                (tableView.view(atColumn: 0, row: row, makeIfNecessary: false) as? WorkspaceCellView)?
-                    .configure(with: controller.workspaces[row], index: row)
+                let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: false)
+                (cell as? WorkspaceCellView)?.configure(with: controller.workspaces[row], index: row)
+                (cell as? CompactWorkspaceCellView)?.configure(with: controller.workspaces[row], index: row)
             }
             tableView.noteHeightOfRows(withIndexesChanged: IndexSet(integersIn: 0..<ids.count))
         }
@@ -115,10 +181,18 @@ final class SidebarViewController: NSViewController {
     /// height changes (the usage line's visibility does not depend on the values), selection untouched.
     func updateUsage() {
         for (row, workspace) in controller.workspaces.enumerated() where rowIDs[safe: row] == workspace.id {
-            (tableView.view(atColumn: 0, row: row, makeIfNecessary: false) as? WorkspaceCellView)?.updateUsage(with: workspace)
+            let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: false)
+            (cell as? WorkspaceCellView)?.updateUsage(with: workspace)
+            (cell as? CompactWorkspaceCellView)?.updateUsage(with: workspace)
         }
-        usageFooter.update(sample: controller.systemSample)
-        usageFooter.update(agentLimits: controller.activeAgentLimits())
+        let limits = controller.activeAgentLimits()
+        if isCompact {
+            compactFooter.update(sample: controller.systemSample)
+            compactFooter.update(agentLimits: limits)
+        } else {
+            usageFooter.update(sample: controller.systemSample)
+            usageFooter.update(agentLimits: limits)
+        }
     }
 
     // MARK: - Actions
@@ -170,6 +244,12 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
     func numberOfRows(in tableView: NSTableView) -> Int { rowIDs.count }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        if isCompact {
+            let cell = tableView.makeView(withIdentifier: CompactWorkspaceCellView.identifier, owner: nil)
+                as? CompactWorkspaceCellView ?? CompactWorkspaceCellView()
+            if let workspace = controller.workspaces[safe: row] { cell.configure(with: workspace, index: row) }
+            return cell
+        }
         let cell = tableView.makeView(withIdentifier: WorkspaceCellView.identifier, owner: nil) as? WorkspaceCellView
             ?? WorkspaceCellView()
         if let workspace = controller.workspaces[safe: row] { cell.configure(with: workspace, index: row) }
@@ -177,6 +257,7 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
     }
 
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
+        if isCompact { return CompactWorkspaceCellView.height }
         guard let workspace = controller.workspaces[safe: row] else { return 40 }
         return WorkspaceCellView.height(for: workspace, width: tableView.bounds.width)
     }

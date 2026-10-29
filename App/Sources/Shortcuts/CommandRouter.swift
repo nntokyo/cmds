@@ -57,6 +57,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     // MARK: View / Help
 
     @objc func toggleSidebar(_ sender: Any?) { windowController?.toggleSidebar() }
+    @objc func toggleCompactSidebar(_ sender: Any?) { windowController?.toggleCompactSidebar() }
 
     @objc func showShortcuts(_ sender: Any?) {
         let alert = NSAlert()
@@ -107,6 +108,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
              #selector(splitDown(_:)), #selector(openBrowser(_:)), #selector(renameWorkspace(_:)),
              #selector(focusLeft(_:)), #selector(focusRight(_:)), #selector(focusUp(_:)), #selector(focusDown(_:)):
             return controller.focusedPane != nil
+        case #selector(toggleCompactSidebar(_:)):
+            menuItem.state = windowController?.sidebar.isCompact == true ? .on : .off
+            return true
         case #selector(toggleZoom(_:)):
             menuItem.state = controller.selectedWorkspace?.zoomedPaneID != nil ? .on : .off
             return (controller.selectedWorkspace?.panes.count ?? 0) > 1

@@ -105,6 +105,20 @@ final class WorkspaceCellView: NSTableCellView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    /// Attributed strings are built when the cell may not be in the window yet (other appearance); rebuild them
+    /// on the next sample once it is.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        agentKey = nil
+        usageKey = nil
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        agentKey = nil
+        usageKey = nil
+    }
+
     @MainActor
     func configure(with workspace: Workspace, index: Int) {
         titleLabel.stringValue = workspace.title

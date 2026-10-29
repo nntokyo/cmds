@@ -130,6 +130,90 @@ final class SystemUsageView: NSView {
     }
 }
 
+/// Footer of the compact sidebar: tiny meters without text — the most used window per agent (coloured by level),
+/// then CPU and memory (coloured by memory pressure). Values are in the tooltip.
+final class CompactUsageView: NSView {
+    private let stack = NSStackView()
+    private var agentMeters: [AgentKind: MeterView] = [:]
+    private let cpuMeter = MeterView()
+    private let memoryMeter = MeterView()
+    private var agentText: [String] = []
+    private var systemText = "Measuring CPU and memory…"
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 5
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.topAnchor.constraint(equalTo: topAnchor),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+        for meter in [cpuMeter, memoryMeter] { add(meter) }
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityLabel("Usage")
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func add(_ meter: MeterView, at index: Int? = nil) {
+        if let index { stack.insertView(meter, at: index, in: .top) } else { stack.addView(meter, in: .top) }
+        meter.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            meter.heightAnchor.constraint(equalToConstant: 4),
+            meter.widthAnchor.constraint(equalTo: stack.widthAnchor),
+        ])
+    }
+
+    func update(sample: SystemSample?) {
+        if let stats = sample?.stats {
+            cpuMeter.set(fraction: stats.cpuPercent / 100, color: .controlAccentColor)
+            let pressure = stats.pressure
+            memoryMeter.set(fraction: stats.memoryFraction, color: pressure == .critical ? .systemRed
+                            : pressure == .warning ? .systemYellow : .systemGreen)
+            systemText = "CPU \(ResourceFormat.wholePercent(stats.cpuPercent)) · Mem "
+                + "\(ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)) (\(pressure.name))"
+        }
+        updateTooltip()
+    }
+
+    func update(agentLimits: [AgentLimits]) {
+        let kinds = agentLimits.map(\.agent)
+        for (kind, meter) in agentMeters where !kinds.contains(kind) {
+            stack.removeView(meter)
+            agentMeters[kind] = nil
+        }
+        agentText = []
+        for (index, limits) in agentLimits.enumerated() {
+            let meter = agentMeters[limits.agent] ?? {
+                let meter = MeterView()
+                add(meter, at: min(index, stack.views.count))
+                agentMeters[limits.agent] = meter
+                return meter
+            }()
+            let top = limits.limits.max { $0.usedPercent < $1.usedPercent }
+            let level = UsageLevel(percent: top?.usedPercent)
+            meter.set(fraction: (top?.usedPercent ?? 0) / 100,
+                      color: level == .critical ? .systemRed : level == .warning ? .systemOrange : .systemGreen)
+            agentText.append("\(limits.agent.displayName) \(AgentFormat.limitsSummary(limits.limits))")
+        }
+        updateTooltip()
+    }
+
+    private func updateTooltip() {
+        let text = (agentText + [systemText]).joined(separator: "\n")
+        guard text != toolTip else { return }
+        toolTip = text
+        setAccessibilityValue(text)
+    }
+}
+
 /// `CPU ▰▰▰▱▱▱  23%`: title, flexible meter, value.
 private final class MeterRow: NSView {
     private let titleLabel: NSTextField

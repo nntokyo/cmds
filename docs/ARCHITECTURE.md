@@ -120,6 +120,7 @@ dropped instead of failing.
 | Browser: focus address bar / reload / back / forward | ⌘L / ⌘R / ⌘[ / ⌘] |
 | Jump to latest attention pane | ⇧⌘U |
 | Toggle sidebar | ⌘B |
+| Compact sidebar (52 pt rail: workspace numbers, attention dot, status colour, tiny meters; also the button at the top of the sidebar; remembered in `UserDefaults` `SidebarCompact`, not by isolated instances, which start compact with `CMDS_SIDEBAR_COMPACT=1`) | ⌃⌘S |
 | Rename workspace | ⇧⌘R |
 | Zoom pane (toggle) | ⇧⌘↩ |
 
