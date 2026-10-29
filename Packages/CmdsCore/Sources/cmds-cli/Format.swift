@@ -124,7 +124,7 @@ enum Format {
     static func sync(_ report: SyncStatusReport) -> String {
         func yes(_ flag: Bool) -> String { flag ? "on" : "off" }
         var out = "sync       \(report.enabled ? "enabled" : "disabled") · \(report.state)"
-        if let port = report.port { out += " · port \(port)" }
+        if let port = report.port, !report.state.contains("port \(port)") { out += " · port \(port)" }
         if let fingerprint = report.fingerprint { out += " · identity \(fingerprint)" }
         out += " · \(report.pairedDevices) paired\(report.pairingWindowOpen ? " · pairing window open" : "")\n"
         out += "bonjour    \(yes(report.bonjour.enabled))\(report.bonjour.serviceName.map { " · \"\($0)\"" } ?? "")\n"

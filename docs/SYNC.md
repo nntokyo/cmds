@@ -341,6 +341,78 @@ Never test against the cmds instance in use or the user's phone. In addition to 
   keep pairing open without the window and write the current QR payload (host 127.0.0.1) to
   `$CMDS_SUPPORT_DIR/sync-test-pairing.txt` (0600), so a local client can pair like the scanner does.
 
+## Testing on a device
+
+The sync paths can be checked end to end on a real iPhone without touching it: `xcrun devicectl` installs,
+launches and screenshots the app over Wi‑Fi, the `CmdsDeviceDriver` UI test target taps and reads it, and
+`cmds sync` shows the Mac's side. Wi‑Fi has to stay on for `devicectl`, so a debug build of the companion can
+be told to use only one path. Use a device and Mac instance meant for testing, never the ones in use.
+
+**Forcing a path (debug builds only).** Launch argument `-cmdsTransport <auto|network|bluetooth|ssh>`:
+`bluetooth` connects only through `BluetoothTransport` (no LAN/AWDL attempt even though Wi‑Fi works), `ssh`
+only through `SSHTransport` (remote access must be set up for that Mac), `network` never falls back. The same
+choice is in the ⋯ menu (`moreMenu`) › "Transport (Debug)" (`debugTransport`) › "Transport: bluetooth"
+(`transport.bluetooth`, …; the driver's `tap:` also matches the labels); it reconnects at once, wins over the launch argument for that run and is
+remembered for later launches without the argument. Every mode keeps the pinned TLS check; a path that
+cannot be used fails with a reason instead of falling back. Release builds ignore the argument and hide the
+menu.
+
+**Reading the phone's state.** The status badge (`connectionStatus`) carries, in debug builds, an
+accessibility value like
+`mode=bluetooth path=bluetooth | bluetooth: welcome` or
+`mode=bluetooth path=none | bluetooth: error: Bluetooth is off. | lastError: bluetooth: Bluetooth is off.`
+(release builds: the path, or the last error). Stages per path: network `connecting`; Bluetooth
+`waiting for Bluetooth`, `scanning`, `found peripheral, connecting`, `connected peripheral, reading service info`,
+`opening L2CAP (PSM n)`, `L2CAP open, TLS handshake`; SSH `connecting to the relay host`,
+`relay login ok, opening the forward`, `forward open, TLS handshake`; then `TLS ok, hello sent` and `welcome`,
+or `error: <reason>`. Debug builds also show it as a row at the bottom of the workspace list
+(`syncDiagnostics`). No tokens, keys or codes appear in it.
+
+**Mac side.** `cmds sync` (`--json` for everything; socket API `sync.status`, refused on SSH-pane sockets):
+
+```
+sync       enabled · Listening on port 47961 · identity 41F2-E114-519A · 1 paired
+bonjour    on · "Mac"
+bluetooth  allowed · authorization allowedAlways · manager poweredOn · advertising on · PSM 193 · 1 channel · Advertising (PSM 193)
+ssh relay  off · forwarding off · Off
+  ✓ iPhone  bluetooth:1a2b3c4d  bluetooth  2 panes  sent 1.2 MB  received 3.4 KB  for 1m05s
+```
+
+`authorization` is the Mac app's Bluetooth permission (`allowedAlways`, `denied`, `restricted`,
+`notDetermined`); `manager` is `off` while the peripheral is not running (sync off, "Allow Bluetooth Sync"
+off, `CMDS_SYNC_NO_BLUETOOTH`). A connection is `…` until its `hello` authenticated.
+
+**Commands** (`UDID` = the test device, `$SOCK` = the Mac instance's socket):
+
+```sh
+# Build and install the debug companion and the driver once.
+xcodebuild -scheme CmdsCompanion -destination id=$UDID -derivedDataPath build/dd-ios -allowProvisioningUpdates build
+xcrun devicectl device install app --device $UDID build/dd-ios/Build/Products/Debug-iphoneos/CmdsCompanion.app
+xcodebuild -scheme CmdsDeviceDriver -destination id=$UDID -derivedDataPath build/dd-driver -allowProvisioningUpdates build-for-testing
+
+# Launch forced to Bluetooth (the app reconnects to its most recent Mac).
+xcrun devicectl device process launch --device $UDID --terminate-existing tokyo.n-n.cmds.companion -cmdsTransport bluetooth
+
+# Wait until it is connected over Bluetooth, then print the diagnostics.
+TEST_RUNNER_CMDS_UI_SCRIPT='waitValue:connectionStatus~path=bluetooth~45;;value:syncDiagnostics' \
+  xcodebuild test-without-building -xctestrun build/dd-driver/Build/Products/CmdsDeviceDriver_*.xctestrun \
+  -destination id=$UDID | grep CMDS_UI_VALUE
+
+# Or switch the running app without relaunching it.
+TEST_RUNNER_CMDS_UI_SCRIPT='tap:moreMenu;;tap:debugTransport;;tap:transport.ssh;;waitValue:connectionStatus~path=ssh~45' \
+  xcodebuild test-without-building -xctestrun build/dd-driver/Build/Products/CmdsDeviceDriver_*.xctestrun -destination id=$UDID
+
+# The Mac's view of the same connection.
+cmds --socket $SOCK sync --json | jq '.bluetooth, [.clients[] | {deviceName, authenticated, peer, path}]'
+
+# Back to normal.
+xcrun devicectl device process launch --device $UDID --terminate-existing tokyo.n-n.cmds.companion -cmdsTransport auto
+```
+
+The phone must already be paired with the Mac instance under test (pairing over Bluetooth works with a
+scanned QR code; pairing codes are refused over SSH). For Bluetooth the instance must run without
+`CMDS_SYNC_NO_BLUETOOTH`, and `cmds sync` should show `authorization allowedAlways` and `advertising on`.
+
 ## Versioning
 
 `SyncProtocol.version` (= 2) is checked in `hello`. Version 2 introduced TLS with pinned Mac

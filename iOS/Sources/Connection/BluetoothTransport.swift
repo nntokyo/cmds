@@ -53,7 +53,7 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
         }
         // Creating the manager asks for Bluetooth permission the first time it is needed.
         stage("waiting for Bluetooth")
-        central =CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionShowPowerAlertKey: false])
+        central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionShowPowerAlertKey: false])
     }
 
     func send(_ message: ClientMessage) {
