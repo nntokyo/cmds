@@ -120,6 +120,7 @@ final class WorkspaceCellView: NSTableCellView {
         usageLabel.isHidden = !Self.showsUsage(workspace)
         agentLabel.isHidden = !Self.showsAgent(workspace)
         agentNameLabel.isHidden = agentLabel.isHidden
+        agentKey = nil // reloads (selection changes) redraw the coloured runs for the row's new background
         updateUsage(with: workspace)
         notificationLabel.isHidden = workspace.notificationText == nil
         notificationLabel.stringValue = workspace.notificationText ?? ""
