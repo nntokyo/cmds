@@ -15,7 +15,7 @@ Native macOS terminal multiplexer for coding agents. Swift + AppKit, terminal re
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents. |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`. |
-| `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket) for the iOS app. |
+| `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window) for the iOS app. |
 | `iOS/Sources` | SwiftUI iOS/iPadOS companion. |
 | `vendor/ghostty` | Ghostty source (git submodule). `vendor/GhosttyKit.xcframework` is a symlink/copy of `vendor/ghostty/macos/GhosttyKit.xcframework` (gitignored). Build: `cd vendor/ghostty && zig build -Demit-xcframework=true -Dxcframework-target=native -Demit-macos-app=false -Doptimize=ReleaseFast` |
 
@@ -109,11 +109,17 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   wins over an inherited `CMDS_SOCKET_PATH`, so neither the instance nor a CLI given the variable can reach the
   live app. Such an instance also leaves the saved window/sidebar frames alone and does not activate itself on
   launch (it never takes keyboard focus from the app in use). Its terminals get the resolved absolute path.
-- `CMDS_SYNC_DISABLED=1` skips the iOS sync server (no Bonjour advert, no port).
+- `CMDS_SYNC_DISABLED=1` skips the iOS sync server (no Bonjour advert, no port). To test sync instead, give the
+  instance its own port and no advert: `CMDS_SYNC_PORT=47911 CMDS_SYNC_NO_BONJOUR=1` (DEBUG builds: add
+  `CMDS_SYNC_TEST_PAIRING=1` for loopback-only pairing without the window, see [SYNC.md](SYNC.md#testing-with-an-isolated-instance)).
+  The instance's sync identity lives in separate keychain items derived from `CMDS_SUPPORT_DIR`.
 - Launch the binary directly; `open` does not pass the environment reliably.
 
 ## iOS companion sync
 
-Mac runs a WebSocket server (Network.framework) advertised as `_cmds._tcp`. Pairing: the Mac shows a 6-digit code;
-the phone sends it in `hello`. Messages are JSON (`CmdsCore/Sync`). The Mac pushes workspace snapshots and per-pane
-screen text (only changed panes, ~10 Hz); the phone sends `input` (text/keys) and `select`/`focus` commands.
+Mac runs a WebSocket server over TLS 1.3 (Network.framework) advertised as `_cmds._tcp`, presenting its own
+self-signed certificate (ECDSA P-256 key in the login keychain). Pairing: "Pair iPhone/iPad…" shows a QR code with the
+certificate fingerprint and a 6-digit code; the phone pins the fingerprint (from the QR code, or after the user compared
+a short fingerprint) before it sends the code, and afterwards accepts only that certificate. Messages are JSON
+(`CmdsCore/Sync`). The Mac pushes workspace snapshots and per-pane screen text (only changed panes, ~10 Hz); the phone
+sends `input` (text/keys) and `select`/`focus` commands. Protocol, pairing and threat model: [SYNC.md](SYNC.md).
