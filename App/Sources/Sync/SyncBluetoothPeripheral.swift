@@ -29,6 +29,8 @@ final class SyncBluetoothPeripheral: NSObject {
     private var service: CBMutableService?
     private var publishedInfo: SyncBluetooth.Info?
     private var relays: [UUID: SyncStreamRelay] = [:]
+    /// Channels whose relay is still being set up (they count against `maxChannels`).
+    private var settingUp = 0
     private var observer: NSObjectProtocol?
 
     private override init() {
@@ -112,6 +114,7 @@ final class SyncBluetoothPeripheral: NSObject {
         psm = nil
         service = nil
         publishedInfo = nil
+        // Relays still being set up see `manager == nil` and close themselves.
         for relay in relays.values { relay.close() }
         relays.removeAll()
         statusText = "Off"
@@ -135,7 +138,7 @@ final class SyncBluetoothPeripheral: NSObject {
     // MARK: - Channels
 
     private func open(_ channel: CBL2CAPChannel) {
-        guard relays.count < Self.maxChannels, let port = SyncServer.shared.port else {
+        guard relays.count + settingUp < Self.maxChannels, let port = SyncServer.shared.port else {
             syncLog.notice("bluetooth: refusing channel (\(self.relays.count, privacy: .public) open)")
             channel.inputStream.close()
             channel.outputStream.close()
@@ -145,6 +148,7 @@ final class SyncBluetoothPeripheral: NSObject {
         // Per-peer label for the sync server's limits; CBCentral identifiers are stable per phone.
         let peer = SyncBluetooth.peerHostPrefix + channel.peer.identifier.uuidString.prefix(8).lowercased()
         let streams = (input: channel.inputStream!, output: channel.outputStream!)
+        settingUp += 1
         // Connecting is blocking (loopback, immediate); keep it off the main thread anyway.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             var localPort: UInt16?
@@ -159,6 +163,9 @@ final class SyncBluetoothPeripheral: NSObject {
                 syncLog.error("bluetooth: cannot reach the sync listener: \(String(describing: error), privacy: .public)")
                 streams.input.close()
                 streams.output.close()
+                DispatchQueue.main.async {
+                    MainActor.assumeIsolated { self?.settingUp -= 1 }
+                }
                 return
             }
             let relay = SyncStreamRelay(streams, SyncLoopback.streams(socket: socket), anchors: [channel]) {
@@ -169,6 +176,7 @@ final class SyncBluetoothPeripheral: NSObject {
             }
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
+                    self?.settingUp -= 1
                     guard let self, self.manager != nil else {
                         relay.start()
                         return relay.close()

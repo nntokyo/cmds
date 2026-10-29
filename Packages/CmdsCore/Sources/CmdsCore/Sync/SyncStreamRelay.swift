@@ -81,10 +81,11 @@ public final class SyncStreamRelay: @unchecked Sendable {
     public func close() {
         lock.lock()
         closeRequested = true
+        // Nil before the thread runs (it then closes at once) and after it finished.
         let loop = runLoop
         lock.unlock()
         guard let loop else { return }
-        CFRunLoopPerformBlock(loop, CFRunLoopMode.defaultMode.rawValue) { [self] in finish() }
+        CFRunLoopPerformBlock(loop, CFRunLoopMode.defaultMode.rawValue) { [weak self] in self?.finish() }
         CFRunLoopWakeUp(loop)
     }
 
@@ -168,6 +169,9 @@ public final class SyncStreamRelay: @unchecked Sendable {
     private func finish() {
         guard !finished else { return }
         finished = true
+        lock.lock()
+        runLoop = nil
+        lock.unlock()
         for stream in streams {
             stream.delegate = nil
             stream.close()
