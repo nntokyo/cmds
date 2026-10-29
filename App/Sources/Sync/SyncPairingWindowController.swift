@@ -59,7 +59,8 @@ final class SyncPairingWindowController: NSWindowController {
         title.maximumNumberOfLines = 0
         title.preferredMaxLayoutWidth = 340
 
-        qrView.imageScaling = .scaleProportionallyUpOrDown
+        // Rendered at whole pixels per module; scaling it again would blur the modules.
+        qrView.imageScaling = .scaleNone
         qrView.setAccessibilityLabel("Pairing QR code")
         qrView.translatesAutoresizingMaskIntoConstraints = false
 
