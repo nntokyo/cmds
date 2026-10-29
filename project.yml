@@ -86,6 +86,7 @@ targets:
   cmds-cli:
     # Same sources as the SwiftPM `cmds` executable, built by Xcode so plain xcodebuild can bundle it.
     type: tool
+    productName: cmds
     platform: macOS
     sources:
       - Packages/CmdsCore/Sources/cmds-cli

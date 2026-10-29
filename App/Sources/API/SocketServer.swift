@@ -123,7 +123,8 @@ final class SocketServer: @unchecked Sendable {
     }
 }
 
-/// One client. The reader thread owns the descriptor and closes it (after queued writes) when the peer goes away.
+/// One client. Closed (after queued writes) once the peer has stopped sending and every request is answered,
+/// or immediately when the peer is gone.
 final class SocketConnection: @unchecked Sendable {
     /// Writes queued but not yet sent beyond this many bytes mean the client stopped reading; it gets dropped.
     static let maxPendingBytes = 32 * 1024 * 1024
@@ -135,6 +136,12 @@ final class SocketConnection: @unchecked Sendable {
     private var isClosed = false
     private var isReleased = false
     private var pendingBytes = 0
+    /// Requests handed to the dispatcher that have not been answered yet.
+    private var outstanding = 0
+    /// The peer finished sending (EOF); we still answer outstanding requests (half-close).
+    private var readFinished = false
+    /// A write failed or the connection was dropped: nothing more can be delivered.
+    private var isBroken = false
 
     init(id: Int, fd: Int32) {
         self.id = id
@@ -142,18 +149,47 @@ final class SocketConnection: @unchecked Sendable {
         writeQueue = DispatchQueue(label: "tokyo.n-n.cmds.api.write.\(id)")
     }
 
+    /// True once the connection is finished; further replies and events are dropped.
     var closed: Bool {
         lock.lock()
         defer { lock.unlock() }
         return isClosed
     }
 
+    /// Answers a request passed to the dispatcher (exactly once per request).
     func reply(id: Int, result: JSONValue?) {
         send(RPCResponse(id: id, result: result ?? .object([:])))
+        requestDidFinish()
     }
 
     func reply(id: Int, error: RPCError) {
         send(RPCResponse(id: id, error: error))
+        requestDidFinish()
+    }
+
+    private func requestDidFinish() {
+        lock.lock()
+        outstanding = max(0, outstanding - 1)
+        lock.unlock()
+        finishIfIdle()
+    }
+
+    /// Closes once the peer stopped sending and every request has been answered (or the peer is gone).
+    private func finishIfIdle() {
+        lock.lock()
+        guard !isClosed, readFinished, outstanding == 0 || isBroken else {
+            lock.unlock()
+            return
+        }
+        isClosed = true
+        lock.unlock()
+        // Flush what is queued, then release the descriptor.
+        writeQueue.async { [self] in
+            lock.lock()
+            isReleased = true
+            close(fd)
+            lock.unlock()
+        }
     }
 
     func send<T: Encodable>(_ message: T) {
@@ -179,46 +215,55 @@ final class SocketConnection: @unchecked Sendable {
         }
     }
 
-    /// Wakes the reader thread, which then closes the connection.
+    /// Drops the connection: wakes the reader thread and stops waiting for outstanding replies.
     func shutdown() {
         lock.lock()
-        defer { lock.unlock() }
+        isBroken = true
         if !isReleased { Darwin.shutdown(fd, SHUT_RDWR) }
+        lock.unlock()
+        finishIfIdle()
     }
 
     /// Reads request lines until EOF, error or an oversized line. Runs on the connection's thread.
     func readLoop(_ handle: (RPCRequest) -> Void) {
         var buffer = JSONLineBuffer()
+        var dropped = false
         reading: while true {
-            guard let chunk = try? UnixSocket.read(fd), !chunk.isEmpty else { break }
+            let chunk: Data
+            do {
+                chunk = try UnixSocket.read(fd)
+            } catch {
+                dropped = true
+                break reading
+            }
+            if chunk.isEmpty { break } // EOF; the peer may still be reading (half-close)
             let lines: [Data]
             do {
                 lines = try buffer.append(chunk)
             } catch {
-                reply(id: 0, error: RPCError(code: -32600, message: "request too large (max \(JSONLineBuffer.defaultMaxLineLength) bytes)"))
+                send(RPCResponse(id: 0, error: RPCError(code: -32600, message: "request too large (max \(JSONLineBuffer.defaultMaxLineLength) bytes)")))
+                dropped = true
                 break reading
             }
             for line in lines {
                 if let request = try? JSONDecoder().decode(RPCRequest.self, from: line) {
+                    lock.lock()
+                    outstanding += 1
+                    lock.unlock()
                     handle(request)
                 } else {
                     let value = try? JSONDecoder().decode(JSONValue.self, from: line)
                     let id = value?["id"]?.intValue ?? 0
-                    reply(id: id, error: value == nil
+                    send(RPCResponse(id: id, error: value == nil
                           ? RPCError(code: -32700, message: "parse error: invalid JSON")
-                          : RPCError(code: -32600, message: "invalid request: expected {\"id\": Int, \"method\": String, \"params\"?: …}"))
+                          : RPCError(code: -32600, message: "invalid request: expected {\"id\": Int, \"method\": String, \"params\"?: …}")))
                 }
             }
         }
         lock.lock()
-        isClosed = true
+        readFinished = true
+        if dropped { isBroken = true }
         lock.unlock()
-        // Flush what is queued, then release the descriptor.
-        writeQueue.async { [self] in
-            lock.lock()
-            isReleased = true
-            close(fd)
-            lock.unlock()
-        }
+        finishIfIdle()
     }
 }
