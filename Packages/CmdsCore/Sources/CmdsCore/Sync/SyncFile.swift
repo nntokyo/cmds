@@ -85,6 +85,18 @@ public struct SyncFileAssembler: Sendable {
     public mutating func reset(paneID: String) { buffers[paneID] = nil }
 }
 
+extension ServerMessage.State {
+    public var hasPreviewPanes: Bool { workspaces.contains { $0.panes.contains { $0.kind == .preview } } }
+
+    /// The state for phones without `SyncFeature.previewPanes`.
+    public var withoutPreviewPanes: ServerMessage.State {
+        guard hasPreviewPanes else { return self }
+        var copy = self
+        copy.workspaces = workspaces.map(\.withoutPreviewPanes)
+        return copy
+    }
+}
+
 extension WorkspaceInfo {
     /// For phones without `SyncFeature.previewPanes`: preview panes shown as browser panes with a `file://` URL.
     public var withoutPreviewPanes: WorkspaceInfo {

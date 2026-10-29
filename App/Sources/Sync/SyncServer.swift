@@ -50,6 +50,10 @@ final class SyncServer {
         var helloTimer: DispatchWorkItem?
         /// Set once a closing error was sent; later frames (e.g. pipelined hellos) are ignored.
         var closing = false
+        /// `hello.features` has `SyncFeature.previewPanes` (else preview panes are sent as browser panes).
+        var supportsPreview = false
+        /// A `requestFile` is being read/sent (one at a time per phone).
+        var sendingFile = false
         var inputWindowStart = Date.distantPast
         var inputBytesInWindow = 0
         /// Panes changed since the last screen update sent to this client (throttled links only).
@@ -527,6 +531,8 @@ final class SyncServer {
             perform(client) { try AppController.shared.selectWorkspace(id: select.id) }
         case .focusPane(let focus):
             perform(client) { try AppController.shared.focusPane(id: focus.id) }
+        case .requestFile(let request):
+            sendFile(paneID: request.paneID, to: client)
         }
     }
 
@@ -591,8 +597,9 @@ final class SyncServer {
             client.authenticated = true
             client.deviceName = name
             client.tokenHash = SyncDeviceStore.hash(plainToken)
+            client.supportsPreview = hello.features?.contains(SyncFeature.previewPanes) == true
             send(.welcome(.init(macName: macName, token: plainToken)), to: client)
-            send(.state(currentState()), to: client)
+            send(.state(currentState(for: client)), to: client)
             // This client may now be ahead of the last broadcast; never skip the next one as a duplicate.
             lastStateData = nil
             didChange()
@@ -642,9 +649,59 @@ final class SyncServer {
     private func sendState() {
         stateScheduled = false
         lastStateSentAt = Date()
-        guard let data = try? codec.encode(.state(currentState())), data != lastStateData else { return }
+        let state = currentState()
+        guard let data = try? codec.encode(.state(state)), data != lastStateData else { return }
         lastStateData = data
-        for client in clients.values where client.authenticated { client.connection.send(data) }
+        // Phones that predate preview panes cannot decode their kind: they get them as browser panes.
+        var legacyData: Data?
+        for client in clients.values where client.authenticated {
+            if client.supportsPreview || !state.hasPreviewPanes {
+                client.connection.send(data)
+            } else {
+                if legacyData == nil { legacyData = try? codec.encode(.state(state.withoutPreviewPanes)) }
+                if let legacyData { client.connection.send(legacyData) }
+            }
+        }
+    }
+
+    private func currentState(for client: Client) -> ServerMessage.State {
+        let state = currentState()
+        return client.supportsPreview ? state : state.withoutPreviewPanes
+    }
+
+    /// `requestFile`: the file shown in a preview pane, read off the main thread and sent in `file` pieces.
+    /// Only a preview pane's own file is ever sent (the request names a pane, never a path).
+    private func sendFile(paneID: String, to client: Client) {
+        guard client.supportsPreview else { return sendError(.badRequest, "requestFile needs the preview feature", to: client) }
+        guard !client.sendingFile else { return sendError(.rateLimited, "a file is already being sent", to: client) }
+        let path: String
+        do {
+            path = try AppController.shared.previewFile(paneID: paneID)
+        } catch let error as RPCError {
+            return sendError(error.code == 404 ? .notFound : .badRequest, error.message, to: client)
+        } catch {
+            return sendError(.internalError, "\(error)", to: client)
+        }
+        client.sendingFile = true
+        let name = (path as NSString).lastPathComponent
+        let mime = SyncFile.mimeType(forFileName: name)
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let pieces: [ServerMessage.File]
+            let size = (try? FileManager.default.attributesOfItem(atPath: path)[.size] as? Int) ?? nil
+            if let size, size <= SyncFile.maxBytes, let data = FileManager.default.contents(atPath: path),
+               data.count <= SyncFile.maxBytes {
+                pieces = SyncFile.messages(paneID: paneID, name: name, mime: mime, data: data)
+            } else {
+                pieces = [SyncFile.truncated(paneID: paneID, name: name, mime: mime)]
+            }
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    client.sendingFile = false
+                    guard let self, !client.closing, self.clients[client.connection.id] === client else { return }
+                    for piece in pieces { self.send(.file(piece), to: client) }
+                }
+            }
+        }
     }
 
     private func currentState() -> ServerMessage.State {

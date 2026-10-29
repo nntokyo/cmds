@@ -27,6 +27,7 @@ final class PreviewPane: NSView {
     private var content: NSView?
     private var quickLook: QLPreviewView?
     private var webView: WKWebView?
+    private var imageView: NSImageView?
     private var watcher: FileWatcher?
     private var reloadScheduled = false
 
@@ -59,8 +60,38 @@ final class PreviewPane: NSView {
     func reload() { load(keepScroll: true) }
 
     func focus() {
-        if let quickLook { window?.makeFirstResponder(quickLook) } else if let webView { window?.makeFirstResponder(webView) }
+        if let content, content === quickLook || content === webView { window?.makeFirstResponder(content) }
     }
+
+    #if DEBUG
+    /// PNG of the pane as drawn, also while the window is hidden or on another Space (tests; web content via
+    /// WKWebView's snapshot, which renders off screen).
+    func debugSnapshot() async throws -> Data {
+        layoutSubtreeIfNeeded()
+        guard let rep = bitmapImageRepForCachingDisplay(in: bounds) else { throw RPCError(code: 500, message: "no bitmap") }
+        cacheDisplay(in: bounds, to: rep)
+        let image = NSImage(size: bounds.size)
+        image.addRepresentation(rep)
+        if let webView, content === webView {
+            let web: NSImage = try await withCheckedThrowingContinuation { continuation in
+                webView.takeSnapshot(with: nil) { image, error in
+                    if let image { continuation.resume(returning: image) } else {
+                        continuation.resume(throwing: error ?? RPCError(code: 500, message: "snapshot failed"))
+                    }
+                }
+            }
+            let frame = webView.convert(webView.bounds, to: self)
+            image.lockFocusFlipped(isFlipped)
+            web.draw(in: frame)
+            image.unlockFocus()
+        }
+        guard let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff),
+              let png = bitmap.representation(using: .png, properties: [:]) else {
+            throw RPCError(code: 500, message: "PNG encoding failed")
+        }
+        return png
+    }
+    #endif
 
     func tearDown() {
         watcher?.cancel()
@@ -89,16 +120,30 @@ final class PreviewPane: NSView {
         switch renderMode {
         case .markdown, .diff, .text:
             renderHTML(keepScroll: keepScroll)
-        case .quickLook:
-            let view = quickLook ?? makeQuickLook()
+        case .image:
+            // In-process (unlike Quick Look's remote view): animated GIFs play, and snapshots/tests can see it.
+            guard let image = NSImage(contentsOfFile: path), image.isValid else { return showQuickLook(url) }
+            let view = imageView ?? makeImageView()
             if content !== view { setContent(view) }
-            // Assigning the same URL again does not refresh; go through nil.
-            view.previewItem = nil
-            view.previewItem = url as NSURL
+            // High-DPI files report a small point size; show them at one point per pixel (scaled down to fit).
+            if let rep = image.representations.first, rep.pixelsWide > Int(image.size.width) {
+                image.size = NSSize(width: rep.pixelsWide, height: rep.pixelsHigh)
+            }
+            view.image = image
+        case .quickLook:
+            showQuickLook(url)
         }
     }
 
-    private enum RenderMode { case markdown, diff, text, quickLook }
+    private func showQuickLook(_ url: URL) {
+        let view = quickLook ?? makeQuickLook()
+        if content !== view { setContent(view) }
+        // Assigning the same URL again does not refresh; go through nil.
+        view.previewItem = nil
+        view.previewItem = url as NSURL
+    }
+
+    private enum RenderMode { case markdown, diff, text, image, quickLook }
 
     private var renderMode: RenderMode {
         switch format {
@@ -107,7 +152,9 @@ final class PreviewPane: NSView {
         case .quickLook:
             // Quick Look shows only an icon for text without a known type (no extension, `.env`, `Makefile`…).
             let ext = (path as NSString).pathExtension
-            if let type = UTType(filenameExtension: ext), !ext.isEmpty, type.isDeclared { return .quickLook }
+            if let type = UTType(filenameExtension: ext), !ext.isEmpty, type.isDeclared {
+                return type.conforms(to: .image) && !type.conforms(to: .pdf) ? .image : .quickLook
+            }
             return Self.looksLikeText(path) ? .text : .quickLook
         }
     }
@@ -181,6 +228,18 @@ final class PreviewPane: NSView {
         view.shouldCloseWithWindow = false
         view.autostarts = true
         quickLook = view
+        return view
+    }
+
+    private func makeImageView() -> NSImageView {
+        let view = NSImageView()
+        view.imageScaling = .scaleProportionallyDown
+        view.imageAlignment = .alignCenter
+        view.animates = true
+        view.isEditable = false
+        view.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        view.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        imageView = view
         return view
     }
 
@@ -281,6 +340,7 @@ final class PreviewPane: NSView {
         pathButton.font = .systemFont(ofSize: 11)
         pathButton.contentTintColor = .secondaryLabelColor
         pathButton.lineBreakMode = .byTruncatingHead
+        pathButton.alignment = .left
         pathButton.toolTip = "Reveal in Finder"
         pathButton.target = self
         pathButton.action = #selector(revealInFinder)

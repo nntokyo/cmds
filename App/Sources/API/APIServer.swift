@@ -79,6 +79,18 @@ final class APIServer {
                         return ["png_base64": .string(png.base64EncodedString())]
                     }
                 }
+            #if DEBUG
+            case "debug.preview_snapshot":
+                // Tests only: picture of a preview pane even when the window is not on screen.
+                guard let preview = controller.pane(id: try params.required("pane"))?.preview else {
+                    throw RPCError.invalidParams("not a preview pane")
+                }
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        ["png_base64": .string(try await preview.debugSnapshot().base64EncodedString())]
+                    }
+                }
+            #endif
             case "events.subscribe":
                 subscribe(connection)
                 connection.reply(id: id, result: ["subscribed": true])

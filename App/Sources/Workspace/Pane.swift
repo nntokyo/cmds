@@ -126,12 +126,10 @@ final class Pane {
         browser = nil
         self.preview = preview
         title = preview.fileName
-        workingDirectory = (preview.path as NSString).deletingLastPathComponent
         container = PaneContainerView(paneID: id, content: preview)
         preview.onStateChange = { [weak self] in
             guard let self else { return }
             self.title = preview.fileName
-            self.workingDirectory = (preview.path as NSString).deletingLastPathComponent
             self.controller?.paneDidChange(self)
         }
     }
