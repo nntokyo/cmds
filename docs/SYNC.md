@@ -31,8 +31,9 @@ the network; only the bytes travel over an L2CAP channel. Code: `CmdsCore/Sync/S
 `iOS/Sources/Connection/BluetoothTransport.swift`, `FallbackTransport.swift`.
 
 - **Mac (peripheral).** While the sync listener runs and **Allow Bluetooth Sync** (app menu, on by default)
-  is on, a `CBPeripheralManager` publishes an L2CAP channel with link encryption
-  (`publishL2CAPChannel(withEncryption: true)`) and advertises service `SyncBluetooth.serviceUUID` (local
+  is on, a `CBPeripheralManager` publishes an L2CAP channel without link encryption
+  (`publishL2CAPChannel(withEncryption: false)`: an encrypted channel requires a Bluetooth bond, and the bonding prompt
+  made `openL2CAPChannel` fail with "Unknown error" on a real iPhone) and advertises service `SyncBluetooth.serviceUUID` (local
   name `cmds`). Its characteristic `SyncBluetooth.infoCharacteristicUUID` is readable without pairing and
   holds `SyncBluetooth.Info`: `version(1)=1 | PSM (UInt16 LE) | first 8 bytes of the certificate
   fingerprint | Mac name (UTF-8, ≤ 64 bytes)`. Like the Bonjour TXT record these are hints only.
@@ -294,7 +295,7 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
   phone. Only scan the code shown by cmds on your own Mac.
 - **Bluetooth.** Trust never comes from Bluetooth: the Mac is authenticated by the pinned TLS
   certificate exactly as on the network, and the TLS session is end to end through the relays. The
-  L2CAP link encryption (Bluetooth pairing) is defence in depth only. A peripheral that copies the cmds
+  L2CAP channel is not link-encrypted (no Bluetooth bond needed); it only ever carries the TLS stream. A peripheral that copies the cmds
   service and fingerprint hint can only fail the handshake (the phone then reports "identity changed"
   and stops). Per-phone limits key on the CBCentral identifier, which a hostile device can vary, like an
   address on the LAN; the global limit on failed pairing attempts still applies. On the phone, another

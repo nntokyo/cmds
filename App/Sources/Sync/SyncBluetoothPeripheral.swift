@@ -211,8 +211,10 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
             case .poweredOn:
                 statusText = "Starting…"
                 if psm == nil {
-                    // Encryption on the link is defence in depth; trust comes from TLS pinning.
-                    peripheral.publishL2CAPChannel(withEncryption: true)
+                    // No link encryption: an encrypted channel needs a Bluetooth bond, whose pairing prompt fails
+                    // silently on the phone ("Unknown error" from openL2CAPChannel, seen on a real iPhone). The
+                    // channel only carries the pinned TLS stream, which is where trust and secrecy come from.
+                    peripheral.publishL2CAPChannel(withEncryption: false)
                 } else {
                     publishService()
                 }
