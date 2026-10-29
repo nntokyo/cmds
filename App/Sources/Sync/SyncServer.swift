@@ -673,7 +673,7 @@ final class SyncServer {
     /// Only a preview pane's own file is ever sent (the request names a pane, never a path).
     private func sendFile(paneID: String, to client: Client) {
         guard client.supportsPreview else { return sendError(.badRequest, "requestFile needs the preview feature", to: client) }
-        guard !client.sendingFile else { return sendError(.rateLimited, "a file is already being sent", to: client) }
+        guard !client.sendingFile else { return sendError(.badRequest, "a file is already being sent", to: client) }
         let path: String
         do {
             path = try AppController.shared.previewFile(paneID: paneID)

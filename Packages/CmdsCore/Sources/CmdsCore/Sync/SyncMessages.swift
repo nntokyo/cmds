@@ -29,7 +29,7 @@ public enum ClientMessage: Equatable, Sendable {
         public var features: [String]?
 
         public init(protocolVersion: Int = SyncProtocol.version, deviceName: String, deviceID: String? = nil,
-                    pairingCode: String? = nil, token: String? = nil, features: [String]? = nil) {
+                    features: [String]? = nil, pairingCode: String? = nil, token: String? = nil) {
             self.protocolVersion = protocolVersion
             self.deviceName = deviceName
             self.deviceID = deviceID

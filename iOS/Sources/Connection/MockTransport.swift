@@ -1,5 +1,6 @@
 import CmdsCore
 import Foundation
+import UIKit
 
 /// In-process fake Mac for previews and `-mock` launches. Speaks the real protocol (including
 /// `ScreenStreamer` diffs) so the client code path is the same as with a real Mac.
@@ -64,6 +65,13 @@ final class MockTransport: SyncTransport {
             emit(.state(currentState))
         case .ping(let ping):
             deliver(after: 0.02, .message(.pong(.init(nonce: ping.nonce))))
+        case .requestFile(let request):
+            guard request.paneID == "p-chart" else {
+                return emit(.error(.init(code: .badRequest, message: "pane \(request.paneID) is not a preview pane")))
+            }
+            for piece in SyncFile.messages(paneID: request.paneID, name: "chart.png", mime: "image/png", data: MockData.chartPNG()) {
+                deliver(after: 0.2, .message(.file(piece)))
+            }
         }
     }
 
@@ -316,7 +324,41 @@ enum MockData {
             workingDirectory: "~/.dotfiles", ports: [], notificationText: nil, attention: false,
             panes: [PaneInfo(id: "p-dot", kind: .terminal, title: "codex", focused: true, attention: false)],
             layout: .pane(id: "p-dot")),
+        WorkspaceInfo(
+            id: "w-report", title: "report", selected: false, gitBranch: "main",
+            workingDirectory: "~/Source/report", ports: [], notificationText: "Opened chart.png", attention: false,
+            panes: [
+                PaneInfo(id: "p-report-shell", kind: .terminal, title: "zsh", focused: false, attention: false),
+                PaneInfo(id: "p-chart", kind: .preview, title: "chart.png", focused: true, attention: false,
+                         file: "/Users/demo/Source/report/out/chart.png"),
+                PaneInfo(id: "p-notes", kind: .preview, title: "NOTES.md", focused: false, attention: false,
+                         file: "/Users/demo/Source/report/NOTES.md"),
+            ],
+            layout: .split(axis: .horizontal, ratio: 0.5, first: .pane(id: "p-report-shell"),
+                           second: .split(axis: .vertical, ratio: 0.6, first: .pane(id: "p-chart"), second: .pane(id: "p-notes")))),
     ]
+
+    /// A small bar chart for the mock preview pane.
+    static func chartPNG() -> Data {
+        let size = CGSize(width: 640, height: 400)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.pngData { context in
+            UIColor(white: 0.1, alpha: 1).setFill()
+            context.fill(CGRect(origin: .zero, size: size))
+            let values: [CGFloat] = [0.35, 0.6, 0.45, 0.8, 0.7, 0.95]
+            let colors: [UIColor] = [.systemBlue, .systemTeal, .systemGreen, .systemOrange, .systemPink, .systemPurple]
+            let barWidth = size.width / CGFloat(values.count * 2)
+            for (index, value) in values.enumerated() {
+                colors[index].setFill()
+                let height = (size.height - 80) * value
+                context.fill(CGRect(x: barWidth * (CGFloat(index) * 2 + 0.5), y: size.height - 40 - height,
+                                    width: barWidth, height: height))
+            }
+            let title = "Build time per day" as NSString
+            title.draw(at: CGPoint(x: 24, y: 12), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 22),
+                                                                   .foregroundColor: UIColor.white])
+        }
+    }
 
     static func shells() -> [String: FakeShell] {
         let prompt = "demo@mac cmds % "

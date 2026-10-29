@@ -9,7 +9,9 @@ struct PaneView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if pane.kind == .browser {
+            if pane.kind == .preview {
+                PreviewFileView(pane: pane)
+            } else if pane.kind == .browser {
                 ContentUnavailableView {
                     Label(pane.title.isEmpty ? "Browser" : pane.title, systemImage: "globe")
                 } description: {

@@ -67,6 +67,10 @@ final class CompanionClient {
     private(set) var agentLimits: [AgentLimits] = []
     /// Bumped whenever any screen changes (cheap observation hook).
     private(set) var screens: [String: ScreenSnapshot] = [:]
+    /// Files of preview panes fetched with `requestFile` (images/PDFs shown on the phone).
+    let previewFiles = PreviewFileStore()
+    /// Optional protocol additions this build understands (`hello.features`).
+    static let features = [SyncFeature.previewPanes]
     /// Panes that raised a `notification` and have not been viewed since.
     private(set) var unreadPaneIDs: Set<String> = []
     private(set) var unreadWorkspaceIDs: Set<String> = []
@@ -338,14 +342,14 @@ final class CompanionClient {
     private func sendHello() {
         guard let target else { return }
         if target.kind == .mock {
-            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id)))
+            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, features: Self.features)))
             return
         }
         guard case .pinned(let pin) = transportPolicy else { return dropTransport() }
         if let code = pendingPairingCode, let pairingPin, pairingPin.matches(pin) {
-            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, pairingCode: code)))
+            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, features: Self.features, pairingCode: code)))
         } else if pendingPairingCode == nil, let saved = PairingStore.pairing(for: target.id), saved.fingerprint.matches(pin) {
-            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, token: saved.token)))
+            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, features: Self.features, token: saved.token)))
         } else {
             // The pin changed under this connection; send nothing and start over.
             teardown()
@@ -402,7 +406,7 @@ final class CompanionClient {
                 pendingPairingCode = nil
                 status = .failed(message: info.message)
             default:
-                break // per-request error; connection stays up
+                previewFiles.requestFailed(info.message) // per-request error; connection stays up
             }
             if info.code.isAuthFailure {
                 diagnostics.failed(linkPath, "Mac refused: \(info.code.rawValue)")
@@ -417,6 +421,7 @@ final class CompanionClient {
             let live = Set(state.workspaces.flatMap { $0.panes.map(\.id) })
             unreadPaneIDs.formIntersection(live)
             unreadWorkspaceIDs.formIntersection(Set(state.workspaces.map(\.id)))
+            previewFiles.retain(paneIDs: live)
             for gone in screens.keys where !live.contains(gone) {
                 screens[gone] = nil
                 mirror.remove(paneID: gone)
@@ -437,6 +442,9 @@ final class CompanionClient {
             unreadWorkspaceIDs.insert(note.workspaceID)
             AttentionNotifier.shared.post(title: note.title, body: note.body, macName: macName,
                                           workspaceID: note.workspaceID, paneID: note.paneID)
+
+        case .file(let piece):
+            previewFiles.receive(piece)
 
         case .pong(let pong):
             if let nonce = pong.nonce, let sent = pingSentAt.removeValue(forKey: nonce) {
@@ -514,6 +522,13 @@ final class CompanionClient {
             chunkBytes += size
         }
         if !chunk.isEmpty { send(.input(.init(paneID: paneID, text: chunk))) }
+    }
+
+    /// Asks the Mac for the file shown in a preview pane (the Mac sends only that pane's own file).
+    func requestFile(paneID: String) {
+        guard status.isLive else { return }
+        previewFiles.begin(paneID: paneID)
+        send(.requestFile(.init(paneID: paneID)))
     }
 
     func sendKey(_ key: SyncKey, to paneID: String) {

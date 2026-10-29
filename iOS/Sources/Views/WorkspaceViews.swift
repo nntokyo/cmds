@@ -460,7 +460,7 @@ struct PaneSelectorBar: View {
                                 if client.needsAttention(pane) {
                                     Circle().fill(.orange).frame(width: 7, height: 7)
                                 }
-                                Image(systemName: pane.kind == .browser ? "globe" : "terminal")
+                                Image(systemName: pane.kind == .browser ? "globe" : pane.kind == .preview ? "doc.richtext" : "terminal")
                                     .font(.caption2)
                                 Text(pane.title.isEmpty ? "Pane \(index + 1)" : pane.title)
                                     .font(.subheadline)
