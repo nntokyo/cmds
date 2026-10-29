@@ -1,17 +1,20 @@
 import AppKit
 import GhosttyKit
 
-/// `TerminalSurface.sendText` support: turns a string (which may contain control characters and
-/// escape sequences, e.g. key bytes forwarded from the iOS companion) into libghostty input.
+/// `TerminalSurface.sendText` / `typeText` support: turns a string (which may contain control characters
+/// and escape sequences, e.g. key bytes forwarded from the iOS companion) into libghostty input.
 ///
-/// - Printable runs → `ghostty_surface_text` (paste semantics: bracketed only if the program enabled it).
-/// - `\r`, `\n`, `\r\n` → Return key; Tab, Backspace (0x08/0x7F), Ctrl+A…Z → real key presses.
-/// - Lone ESC → Escape key.
-/// - CSI / SS3 cursor, editing and function keys (`ESC [ A`, `ESC O A`, `ESC [ 3 ~`, `ESC [ 1 ; 5 C`,
-///   `ESC [ Z`, …) → the matching key press, so libghostty encodes them for the current terminal modes
-///   (normal vs application cursor keys, kitty keyboard protocol).
-/// - Any other escape sequence (`ESC b`, `ESC [ 200 ~`, …) and the remaining C0 controls → raw bytes
-///   written to the pty via the `text:` binding action (never bracketed).
+/// - Printable runs → sendText: `ghostty_surface_text` (paste semantics: bracketed only if the program
+///   enabled it); typeText: one committed-text key event per character (never bracketed).
+/// - Key presses, encoded by libghostty for the current modes (DECCKM normal/application cursor keys,
+///   kitty keyboard protocol, modifyOtherKeys):
+///   - `\r`, `\n`, `\r\n` → Return; 0x09 → Tab; 0x7F → Backspace; lone ESC (or ESC before ESC) → Escape
+///   - 0x01…0x1A → Ctrl+A…Z (0x08 = Ctrl+H); NUL, 0x1C…0x1F → Ctrl+Space, Ctrl+\, Ctrl+], Ctrl+6, Ctrl+/
+///   - CSI / SS3 cursor, editing and function keys (`ESC [ A`, `ESC O A`, `ESC [ H`, `ESC [ 3 ~`,
+///     `ESC [ 5 ~`, `ESC [ 1 ; 5 C`, `ESC [ Z`, F1–F12, …)
+/// - Anything else starting with ESC (Alt+char such as `ESC b`, `ESC [ 200 ~`, …) → raw bytes written to
+///   the pty via the `text:` binding action (never bracketed). Alt+char is raw because libghostty
+///   only ESC-prefixes Option when `macos-option-as-alt` is set.
 @MainActor
 extension GhosttySurfaceView {
     private enum VK {
@@ -32,9 +35,28 @@ extension GhosttySurfaceView {
         static let f1: UInt16 = 0x7A, f2: UInt16 = 0x78, f3: UInt16 = 0x63, f4: UInt16 = 0x76
         static let f5: UInt16 = 0x60, f6: UInt16 = 0x61, f7: UInt16 = 0x62, f8: UInt16 = 0x64
         static let f9: UInt16 = 0x65, f10: UInt16 = 0x6D, f11: UInt16 = 0x67, f12: UInt16 = 0x6F
+        /// Keys whose Ctrl combination produces NUL, 0x1C, 0x1D, 0x1E, 0x1F (index 0 = NUL, 1…4 = 0x1C…0x1F).
+        static let ctrlSymbol: [(keyCode: UInt16, unshifted: UInt32)] = [
+            (0x31, 0x20),  // space
+            (0x2A, 0x5C),  // backslash
+            (0x1E, 0x5D),  // ]
+            (0x16, 0x36),  // 6
+            (0x2C, 0x2F),  // /
+        ]
     }
 
+    /// Printable runs are pasted (`ghostty_surface_text`; bracketed if the program enabled bracketed paste).
     func sendText(_ text: String) {
+        deliver(text, typed: false)
+    }
+
+    /// Printable text is typed: one key event per character with the text attached (keycode 0, not
+    /// composing) — the same path as an IME commit — so it is never wrapped in bracketed paste.
+    func typeText(_ text: String) {
+        deliver(text, typed: true)
+    }
+
+    private func deliver(_ text: String, typed: Bool) {
         guard let surface, !text.isEmpty else { return }
         let scalars = Array(text.unicodeScalars)
         var buffer = ""
@@ -42,7 +64,13 @@ extension GhosttySurfaceView {
             guard !buffer.isEmpty else { return }
             let chunk = buffer
             buffer = ""
-            chunk.withCString { ghostty_surface_text(surface, $0, UInt(chunk.utf8.count)) }
+            if typed {
+                for character in chunk {
+                    sendCommittedText(GHOSTTY_ACTION_PRESS, String(character))
+                }
+            } else {
+                chunk.withCString { ghostty_surface_text(surface, $0, UInt(chunk.utf8.count)) }
+            }
         }
 
         var i = 0
@@ -59,20 +87,23 @@ extension GhosttySurfaceView {
             case 0x09:
                 flush()
                 sendKey(keyCode: VK.tab, unshifted: 0x09)
-            case 0x08, 0x7F:
+            case 0x7F:
                 flush()
                 sendKey(keyCode: VK.backspace, unshifted: 0x7F)
             case 0x1B:
                 flush()
                 i = sendEscape(scalars, at: i)
             case 0x01...0x1A:
+                // Ctrl+A…Z (incl. 0x08 = Ctrl+H; 0x09/0x0A/0x0D are handled above).
                 flush()
                 let idx = Int(v - 1)
                 sendKey(keyCode: GhosttyInput.letterKeyCodes[idx], mods: GHOSTTY_MODS_CTRL,
                         unshifted: 0x61 + UInt32(idx))
             case 0x00, 0x1C...0x1F:
+                // Ctrl+Space (NUL), Ctrl+\, Ctrl+], Ctrl+6 (^^), Ctrl+/ (^_): libghostty maps these to the C0 byte.
                 flush()
-                writeRaw([UInt8(v)])
+                let key = VK.ctrlSymbol[Int(v == 0 ? 0 : v - 0x1B)]
+                sendKey(keyCode: key.keyCode, mods: GHOSTTY_MODS_CTRL, unshifted: key.unshifted)
             default:
                 buffer.unicodeScalars.append(scalars[i])
             }
@@ -84,7 +115,8 @@ extension GhosttySurfaceView {
     /// Handles the escape sequence starting at `start` (an ESC). Returns the index of the last consumed scalar.
     private func sendEscape(_ s: [Unicode.Scalar], at start: Int) -> Int {
         let n = s.count
-        guard start + 1 < n else {
+        // Lone ESC (end of input, or followed by another ESC) → Escape key press.
+        guard start + 1 < n, s[start + 1].value != 0x1B else {
             sendKey(keyCode: VK.escape, unshifted: 0x1B)
             return start
         }
