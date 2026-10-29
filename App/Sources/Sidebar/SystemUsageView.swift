@@ -187,8 +187,8 @@ private final class MeterRow: NSView {
     }
 }
 
-/// `Claude  5h ▰▰▱ 40%   7d ▰▱▱ 12%`: the agent's 5-hour and 7-day windows (or its first two); further limits
-/// (spend) continue on lines below. Meters: green, orange from 80 %, red from 95 %. Tooltip: reset times.
+/// `Claude 5h ▰▰▱ 40%` / `7d ▰▱▱ 12%` / `$ ▱▱▱ $12/$50`: one line per window (5-hour, 7-day, then spend and others).
+/// Meters: green, orange from 80 %, red from 95 %. Tooltip: reset times.
 private final class AgentLimitsRow: NSView {
     private let titleLabel: NSTextField
     private let lines = NSStackView()
@@ -227,7 +227,7 @@ private final class AgentLimitsRow: NSView {
         if windows.count != segments.count { rebuild(count: windows.count) }
         for (segment, limit) in zip(segments, windows) {
             let level = UsageLevel(percent: limit.usedPercent)
-            segment.set(label: AgentFormat.limitLabel(limit), value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit)
+            segment.set(label: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit), value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit)
                         : AgentFormat.percent(limit.usedPercent), fraction: limit.usedPercent / 100, level: level)
         }
         // Old figures (no agent ran for a while) are dimmed.
@@ -244,21 +244,13 @@ private final class AgentLimitsRow: NSView {
         }
     }
 
-    /// Two segments per line, equal widths.
+    /// One window per line (meters as long as the CPU/Mem ones, readable at the narrowest sidebar).
     private func rebuild(count: Int) {
         lines.views.forEach { lines.removeView($0) }
         segments = (0..<count).map { _ in LimitSegment() }
-        var index = 0
-        while index < count {
-            let pair: [NSView] = Array(segments[index..<min(index + 2, count)])
-            // A lone segment gets an empty partner so it is as wide as the others.
-            let line = NSStackView(views: pair.count == 2 ? pair : pair + [NSView()])
-            line.orientation = .horizontal
-            line.spacing = 8
-            line.distribution = .fillEqually
-            lines.addView(line, in: .top)
-            line.widthAnchor.constraint(equalTo: lines.widthAnchor).isActive = true
-            index += 2
+        for segment in segments {
+            lines.addView(segment, in: .top)
+            segment.widthAnchor.constraint(equalTo: lines.widthAnchor).isActive = true
         }
     }
 }
@@ -274,7 +266,9 @@ private final class LimitSegment: NSView {
         super.init(frame: .zero)
         label.font = .systemFont(ofSize: 10, weight: .medium)
         label.textColor = .tertiaryLabelColor
-        label.setContentHuggingPriority(.required, for: .horizontal)
+        label.lineBreakMode = .byClipping
+        // Fixed label column so meters of all windows line up.
+        label.widthAnchor.constraint(equalToConstant: 16).isActive = true
         value.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
         value.alignment = .right
         value.setContentCompressionResistancePriority(.required, for: .horizontal)
