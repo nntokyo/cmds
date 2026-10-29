@@ -29,6 +29,8 @@ enum MainMenu {
         let menu = NSMenu(title: "cmds")
         menu.addItem(item("About cmds", #selector(NSApplication.orderFrontStandardAboutPanel(_:)), "", target: NSApp))
         menu.addItem(.separator())
+        SyncMenuActions.items().forEach(menu.addItem)
+        menu.addItem(.separator())
         let services = NSMenu(title: "Services")
         NSApp.servicesMenu = services
         let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")

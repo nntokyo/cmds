@@ -25,11 +25,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         metadataMonitor = MetadataMonitor(controller: controller)
         metadataMonitor.start()
+        SyncServer.shared.startIfEnabled()
         NSApp.activate()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         metadataMonitor?.stop()
+        SyncServer.shared.stop()
         controller.saveSession()
     }
 
