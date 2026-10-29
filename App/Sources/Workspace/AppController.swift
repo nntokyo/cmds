@@ -225,11 +225,22 @@ final class AppController {
         try terminal(for: paneID).sendText(text)
     }
 
+    /// Like `sendText`, but printable text arrives as keystrokes rather than a paste.
+    func typeText(paneID: String?, text: String) throws {
+        try terminal(for: paneID).typeText(text)
+    }
+
     /// Visible screen text, or scrollback + screen capped to `scrollback` lines.
     func readText(paneID: String?, scrollback: Int? = nil) throws -> String {
         let terminal = try terminal(for: paneID)
         if let scrollback { return terminal.scrollbackText(maxLines: scrollback) }
         return terminal.visibleText()
+    }
+
+    /// Visible screen with its grid size and cursor, read back to back.
+    func screenState(paneID: String?) throws -> (text: String, grid: (rows: Int, cols: Int)?, cursor: (row: Int, col: Int)?) {
+        let terminal = try terminal(for: paneID)
+        return (terminal.visibleText(), terminal.gridSize, terminal.cursorPosition)
     }
 
     /// Lights the pane's ring (unless it is the focused pane in the key window), updates the sidebar

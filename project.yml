@@ -26,6 +26,13 @@ schemes:
     build:
       targets:
         CmdsCompanion: all
+  CmdsDeviceDriver:
+    build:
+      targets:
+        CmdsDeviceDriver: [test]
+    test:
+      targets:
+        - CmdsDeviceDriver
 targets:
   cmds:
     type: application
@@ -125,3 +132,14 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.companion
         DEVELOPMENT_TEAM: LY354RVYHA
         TARGETED_DEVICE_FAMILY: "1,2"
+  CmdsDeviceDriver:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - iOS/UITests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.devicedriver
+        DEVELOPMENT_TEAM: LY354RVYHA
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
