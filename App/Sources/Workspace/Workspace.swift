@@ -39,6 +39,15 @@ final class Workspace {
 
     var hasTerminal: Bool { panes.values.contains { $0.kind == .terminal } }
 
+    /// Panes running a coding agent with known usage, in reading order.
+    var agentPanes: [Pane] { orderedPanes.filter { $0.agentUsage != nil } }
+
+    /// The agent shown in the sidebar: the focused pane's, else the most recently updated one.
+    var primaryAgent: (pane: Pane, usage: AgentUsage)? {
+        AgentUsage.primary(agentPanes.compactMap { pane in pane.agentUsage.map { (pane, pane.id == focusedPaneID, $0) } })
+            .map { (pane: $0.0, usage: $0.1) }
+    }
+
     var title: String {
         if let customTitle, !customTitle.isEmpty { return customTitle }
         guard let workingDirectory else { return "Workspace" }

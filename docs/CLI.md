@@ -43,7 +43,9 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds browser snapshot [--pane P] [-o file.png]` | PNG of the visible page (to stdout when piped) |
 | `cmds events` | Stream `notification`, `workspace.changed`, `pane.changed`, `workspaces.changed` events as JSON lines |
 | `cmds rpc <method> [json-params\|-]` | Raw API call, e.g. `cmds rpc pane.split '{"direction":"down"}'` |
+| `cmds agents` | Coding agents in cmds panes: per pane the figures of Claude Code's status line (`ctx 53% 527k/1M │ $117.99 ($34.53/h) │ ⏱ 3h25m api 3h40m(107%) │ +17642 -330 │ cache ●98%`) or Codex context/tokens, then account limits per agent (5h / 7d / spend, reset times). `cmds ls` shows a short agent summary per pane, `cmds stats` the limits |
 | `cmds hook claude` | Claude Code hook (below) |
+| `cmds hook claude-status` | Claude Code status-line reporter (below) |
 
 Every command accepts `--json` (print the raw result) and `--help`. Exit codes: `0` ok, `1` the request failed
 (e.g. unknown pane), `2` usage error, `3` the app is not reachable.
@@ -87,6 +89,22 @@ so it never blocks Claude Code. Add to `~/.claude/settings.json` (or a project's
 
 (`command -v` keeps the hook quiet in terminals where `cmds` is not on `PATH`.) The ring lights only when the pane
 is not the focused pane of the key window; the sidebar text always updates.
+
+## Claude Code usage and limits (status line)
+
+`cmds hook claude-status` reads the JSON Claude Code passes to its status-line command and reports model, effort,
+context, cost, durations, lines, prompt cache and the account limits (`rate_limits`: 5-hour, 7-day, spend limit) for
+`$CMDS_PANE_ID` (`agent.report`). It prints nothing, exits 0, reads stdin for at most 150 ms, does not wait for the app
+and is a no-op outside cmds — safe to call from a status-line script. Add one line after the script reads its input
+(`input=$(cat)`):
+
+```sh
+[ -n "$CMDS_PANE_ID" ] && command -v cmds >/dev/null 2>&1 && printf '%s' "$input" | cmds hook claude-status >/dev/null 2>&1
+```
+
+Run it in the foreground (not `&`): the hook finds the Claude process among its ancestors so the pane's usage
+disappears when Claude exits. Without a status-line script, `"statusLine": {"type": "command", "command": "cmds hook
+claude-status"}` in `~/.claude/settings.json` also works (the status line then stays empty).
 
 ## Raw protocol
 

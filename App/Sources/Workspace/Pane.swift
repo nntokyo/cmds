@@ -17,6 +17,9 @@ final class Pane {
     private(set) var attentionDate: Date?
     /// Set while the app tears the pane down, so surface close callbacks are ignored.
     var isClosing = false
+    /// Usage of the coding agent running here (Claude Code via `agent.report`, Codex from its session file).
+    var agentUsage: AgentUsage?
+    var agentSource: AgentSource?
 
     weak var controller: AppController?
 
@@ -65,7 +68,7 @@ final class Pane {
 
     func info(focused: Bool) -> PaneInfo {
         PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
-                 workingDirectory: workingDirectory, url: url)
+                 workingDirectory: workingDirectory, url: url, agent: agentUsage)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.

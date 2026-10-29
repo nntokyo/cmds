@@ -18,6 +18,7 @@ final class MetadataMonitor {
     private let controller: AppController
     private let scanner: ProcessScanner
     private let systemSampler = SystemSampler()
+    private let codexWatcher = CodexSessionWatcher()
     private let queue = DispatchQueue(label: "cmds.metadata", qos: .utility)
     private var timer: Timer?
     private var scanning = false
@@ -51,17 +52,23 @@ final class MetadataMonitor {
         let directories = Dictionary(uniqueKeysWithValues: controller.workspaces.map { ($0.id, $0.workingDirectory) })
         // Each pane's pty foreground group identifies its tty, hence every process running in it.
         var foregroundGroups: [pid_t: String] = [:]
+        var paneGroups: [pid_t: String] = [:]
         for workspace in controller.workspaces {
             for pane in workspace.panes.values {
-                if let group = pane.terminal?.foregroundProcessGroupID { foregroundGroups[group] = workspace.id }
+                if let group = pane.terminal?.foregroundProcessGroupID {
+                    foregroundGroups[group] = workspace.id
+                    paneGroups[group] = pane.id
+                }
             }
         }
         scanning = true
         let scanner = scanner
         let systemSampler = systemSampler
+        let codexWatcher = codexWatcher
         queue.async { [weak self] in
             let started = DispatchTime.now().uptimeNanoseconds
-            let scan = scanner.scan(foregroundGroups: foregroundGroups)
+            let scan = scanner.scan(foregroundGroups: foregroundGroups, paneGroups: paneGroups)
+            let codex = codexWatcher.update(scan.codexProcesses)
             let system = systemSampler.sample()
             let scanned = DispatchTime.now().uptimeNanoseconds
             var result: [String: WorkspaceMetadata] = [:]
@@ -79,6 +86,7 @@ final class MetadataMonitor {
                 MainActor.assumeIsolated {
                     self?.scanning = false
                     self?.controller.applyMetadata(result)
+                    self?.controller.applyAgentScan(codex)
                     self?.controller.applyResourceUsage(scan.usage, system: system)
                 }
             }
@@ -94,6 +102,8 @@ struct ProcessScan: Sendable {
     var usage: [String: ResourceUsage] = [:]
     var listedProcesses = 0
     var workspaceProcesses = 0
+    /// Codex processes of our user (sessions in our panes and shared daemons), for `CodexSessionWatcher`.
+    var codexProcesses: [CodexProcess] = []
 }
 
 /// Finds the processes running in this app's terminals and reports their TCP listening ports and CPU/memory
@@ -107,7 +117,16 @@ final class ProcessScanner: @unchecked Sendable {
         var start: UInt64
     }
 
-    private var environmentByProcess: [ProcessKey: EnvironmentTag] = [:]
+    /// What `KERN_PROCARGS2` says about a process (read once per process lifetime).
+    private struct ProcessFacts {
+        var environment: EnvironmentTag
+        /// `CMDS_PANE_ID` when `environment` is one of our workspaces.
+        var paneID: String?
+        /// Codex processes only.
+        var codexRole: AgentProcessClassifier.CodexRole?
+    }
+
+    private var environmentByProcess: [ProcessKey: ProcessFacts] = [:]
     private var argumentBuffer = [UInt8]()
     private let uid = getuid()
     private let ownPID = getpid()
@@ -126,35 +145,57 @@ final class ProcessScanner: @unchecked Sendable {
         self.socketPath = socketPath
     }
 
-    /// - Parameter foregroundGroups: foreground process group of each terminal pane's pty → workspace ID.
-    func scan(foregroundGroups: [pid_t: String]) -> ProcessScan {
+    /// - Parameters:
+    ///   - foregroundGroups: foreground process group of each terminal pane's pty → workspace ID.
+    ///   - paneGroups: the same groups → pane ID (to place agent processes in panes).
+    func scan(foregroundGroups: [pid_t: String], paneGroups: [pid_t: String] = [:]) -> ProcessScan {
         let pids = allPIDs()
         var identities: [ProcessIdentity] = []
         identities.reserveCapacity(pids.count)
         var seen = Set<ProcessKey>()
+        var codexCandidates: [(pid: pid_t, start: UInt64, tty: UInt32?, facts: ProcessFacts)] = []
+        var paneByTTY: [UInt32: String] = [:]
         for pid in pids {
             var info = proc_bsdinfo()
             let size = Int32(MemoryLayout<proc_bsdinfo>.size)
             guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { continue }
             let ownUser = info.pbi_uid == uid && pid != ownPID
             var environment = EnvironmentTag.unknown
-            if ownUser {
-                let key = ProcessKey(pid: pid, start: info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec)
-                seen.insert(key)
-                if let cached = environmentByProcess[key] {
-                    environment = cached
-                } else {
-                    environment = environmentTag(pid: pid)
-                    environmentByProcess[key] = environment
-                }
-            }
             let hasTTY = info.e_tdev != UInt32.max && info.e_tdev != 0 // NODEV: no controlling terminal
+            if hasTTY, let pane = paneGroups[pid_t(bitPattern: info.e_tpgid)] { paneByTTY[info.e_tdev] = pane }
+            if ownUser {
+                let start = info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec
+                let key = ProcessKey(pid: pid, start: start)
+                seen.insert(key)
+                let facts: ProcessFacts
+                if let cached = environmentByProcess[key] {
+                    facts = cached
+                } else {
+                    facts = processFacts(pid: pid)
+                    environmentByProcess[key] = facts
+                }
+                environment = facts.environment
+                if facts.codexRole != nil { codexCandidates.append((pid, start, hasTTY ? info.e_tdev : nil, facts)) }
+            }
             identities.append(ProcessIdentity(pid: pid, parentPID: pid_t(bitPattern: info.pbi_ppid),
                                               tty: hasTTY ? info.e_tdev : nil,
                                               ttyForegroundGroup: hasTTY ? pid_t(bitPattern: info.e_tpgid) : nil,
                                               isOwnUser: ownUser, environment: environment))
         }
         environmentByProcess = environmentByProcess.filter { seen.contains($0.key) }
+        let knownPanes = Set(paneGroups.values)
+        var codexProcesses: [CodexProcess] = []
+        for candidate in codexCandidates {
+            guard let role = candidate.facts.codexRole, role != .utility else { continue }
+            var pane = candidate.facts.paneID.flatMap { knownPanes.contains($0) ? $0 : nil }
+            if pane == nil, candidate.facts.environment != .foreign { pane = candidate.tty.flatMap { paneByTTY[$0] } }
+            if role == .session && pane == nil { continue } // a session in another terminal app or instance
+            codexProcesses.append(CodexProcess(
+                pid: candidate.pid, started: Date(timeIntervalSince1970: Double(candidate.start) / 1_000_000),
+                paneID: role == .session ? pane : nil, isService: role == .service,
+                cwd: role == .session ? currentDirectory(pid: candidate.pid) : nil,
+                rolloutFiles: rolloutFiles(pid: candidate.pid)))
+        }
 
         let workspaces = attributor.attribute(identities, foregroundGroups: foregroundGroups)
         var ports: [String: Set<Int>] = [:]
@@ -171,14 +212,58 @@ final class ProcessScanner: @unchecked Sendable {
         let alive = Set(allPIDs())
         let usage = accountant.update(samples: samples, alivePIDs: alive, now: nanoseconds(mach_absolute_time()))
         return ProcessScan(ports: ports.mapValues { $0.sorted() }, usage: usage,
-                           listedProcesses: pids.count, workspaceProcesses: samples.count)
+                           listedProcesses: pids.count, workspaceProcesses: samples.count,
+                           codexProcesses: codexProcesses)
     }
 
-    private func environmentTag(pid: pid_t) -> EnvironmentTag {
-        let values = environmentValues(pid: pid, names: [CmdsEnv.workspaceID, CmdsEnv.socketPath])
-        if let socket = values[CmdsEnv.socketPath], socket != socketPath { return .foreign }
-        if let workspace = values[CmdsEnv.workspaceID], !workspace.isEmpty { return .workspace(workspace) }
-        return .unknown
+    private func processFacts(pid: pid_t) -> ProcessFacts {
+        guard let parsed = processArguments(pid: pid, names: [CmdsEnv.workspaceID, CmdsEnv.socketPath, CmdsEnv.paneID]) else {
+            return ProcessFacts(environment: .unknown)
+        }
+        let values = parsed.environment
+        var facts = ProcessFacts(environment: .unknown)
+        if let socket = values[CmdsEnv.socketPath], socket != socketPath {
+            facts.environment = .foreign
+        } else if let workspace = values[CmdsEnv.workspaceID], !workspace.isEmpty {
+            facts.environment = .workspace(workspace)
+            facts.paneID = values[CmdsEnv.paneID].flatMap { $0.isEmpty ? nil : $0 }
+        }
+        if AgentProcessClassifier.agent(executablePath: parsed.executable, arguments: parsed.arguments) == .codex {
+            facts.codexRole = AgentProcessClassifier.codexRole(arguments: parsed.arguments)
+        }
+        return facts
+    }
+
+    /// Working directory of a process (`PROC_PIDVNODEPATHINFO`).
+    private func currentDirectory(pid: pid_t) -> String? {
+        var info = proc_vnodepathinfo()
+        let size = Int32(MemoryLayout<proc_vnodepathinfo>.size)
+        guard proc_pidinfo(pid, PROC_PIDVNODEPATHINFO, 0, &info, size) == size else { return nil }
+        let path = withUnsafeBytes(of: &info.pvi_cdir.vip_path) { String(cString: $0.bindMemory(to: CChar.self).baseAddress!) }
+        return path.isEmpty ? nil : path
+    }
+
+    /// Codex session files (`rollout-*.jsonl`) the process has open. Only paths are read, never contents.
+    private func rolloutFiles(pid: pid_t) -> [String] {
+        var result: [String] = []
+        for fd in fileDescriptors(pid: pid) where fd.proc_fdtype == UInt32(PROX_FDTYPE_VNODE) {
+            var info = vnode_fdinfowithpath()
+            let size = Int32(MemoryLayout<vnode_fdinfowithpath>.size)
+            guard proc_pidfdinfo(pid, fd.proc_fd, PROC_PIDFDVNODEPATHINFO, &info, size) == size else { continue }
+            let path = withUnsafeBytes(of: &info.pvip.vip_path) { String(cString: $0.bindMemory(to: CChar.self).baseAddress!) }
+            if CodexRollout.isRolloutPath(path), !result.contains(path) { result.append(path) }
+        }
+        return result
+    }
+
+    private func fileDescriptors(pid: pid_t) -> [proc_fdinfo] {
+        let bufferSize = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
+        guard bufferSize > 0 else { return [] }
+        let stride = MemoryLayout<proc_fdinfo>.stride
+        var fds = [proc_fdinfo](repeating: proc_fdinfo(), count: Int(bufferSize) / stride + 8)
+        let used = fds.withUnsafeMutableBytes { proc_pidinfo(pid, PROC_PIDLISTFDS, 0, $0.baseAddress, Int32($0.count)) }
+        guard used > 0 else { return [] }
+        return Array(fds.prefix(Int(used) / stride))
     }
 
     private func usageSample(pid: pid_t, parentPID: pid_t, workspace: String) -> ProcessUsageSample? {
@@ -208,8 +293,9 @@ final class ProcessScanner: @unchecked Sendable {
         return count > 0 ? Array(pids.prefix(Int(count))) : []
     }
 
-    /// Values of the given variables in the process's initial environment (missing ones are absent).
-    private func environmentValues(pid: pid_t, names: [String]) -> [String: String] {
+    /// Executable path, first arguments and the given variables of the process's initial environment
+    /// (macOS hides the environment of Apple platform binaries).
+    private func processArguments(pid: pid_t, names: [String]) -> (executable: String, arguments: [String], environment: [String: String])? {
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
         if argumentBuffer.isEmpty {
             var argMax: Int32 = 0
@@ -220,35 +306,9 @@ final class ProcessScanner: @unchecked Sendable {
         }
         var size = argumentBuffer.count
         let ok = argumentBuffer.withUnsafeMutableBytes { sysctl(&mib, 3, $0.baseAddress, &size, nil, 0) } == 0
-        guard ok, size > MemoryLayout<Int32>.size else { return [:] }
-
-        let prefixes = names.map { (name: $0, bytes: Array(($0 + "=").utf8)) }
-        return argumentBuffer.withUnsafeBytes { raw -> [String: String] in
-            let bytes = raw.bindMemory(to: UInt8.self)
-            let argc = Int(raw.loadUnaligned(as: Int32.self))
-            var index = MemoryLayout<Int32>.size
-            // Skip the executable path and its NUL padding.
-            while index < size, bytes[index] != 0 { index += 1 }
-            while index < size, bytes[index] == 0 { index += 1 }
-            // Skip argv.
-            var skipped = 0
-            while index < size, skipped < argc {
-                while index < size, bytes[index] != 0 { index += 1 }
-                index += 1
-                skipped += 1
-            }
-            var values: [String: String] = [:]
-            while index < size, bytes[index] != 0, values.count < prefixes.count {
-                let start = index
-                while index < size, bytes[index] != 0 { index += 1 }
-                for prefix in prefixes where values[prefix.name] == nil && index - start > prefix.bytes.count
-                    && prefix.bytes.indices.allSatisfy({ bytes[start + $0] == prefix.bytes[$0] }) {
-                    values[prefix.name] = String(decoding: UnsafeBufferPointer(rebasing: bytes[(start + prefix.bytes.count)..<index]),
-                                                 as: UTF8.self)
-                }
-                index += 1
-            }
-            return values
+        guard ok, size > MemoryLayout<Int32>.size else { return nil }
+        return argumentBuffer.withUnsafeBytes { raw in
+            ProcessArguments.parse(UnsafeRawBufferPointer(rebasing: raw[0..<size]), environmentNames: names)
         }
     }
 

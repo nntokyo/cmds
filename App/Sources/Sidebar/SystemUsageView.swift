@@ -8,10 +8,22 @@ final class SystemUsageView: NSView {
     private let cpuRow = MeterRow(title: "CPU")
     private let memoryRow = MeterRow(title: "Mem")
     private var tooltipText: String?
+    /// Account limits of the coding agents, above CPU/memory; hidden while none is known.
+    private let agentStack = NSStackView()
+    private var agentRows: [AgentKind: AgentLimitsRow] = [:]
+    private let stack = NSStackView()
+
+    /// Title column: "CPU"/"Mem" alone, wide enough for "Claude"/"Codex" when agent rows show (meters stay aligned).
+    static let titleWidth: CGFloat = 26
+    static let agentTitleWidth: CGFloat = 34
 
     override init(frame: NSRect) {
         super.init(frame: frame)
-        let stack = NSStackView(views: [cpuRow, memoryRow])
+        agentStack.orientation = .vertical
+        agentStack.alignment = .leading
+        agentStack.spacing = 5
+        agentStack.isHidden = true
+        stack.setViews([agentStack, cpuRow, memoryRow], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 5
@@ -26,6 +38,7 @@ final class SystemUsageView: NSView {
             memoryRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             // Same value column width in both rows, so the two meters line up and have equal length.
             cpuRow.valueWidthAnchor.constraint(equalTo: memoryRow.valueWidthAnchor),
+            agentStack.widthAnchor.constraint(equalTo: stack.widthAnchor),
         ])
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
@@ -35,6 +48,32 @@ final class SystemUsageView: NSView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    /// One row per agent kind with active limits (`Claude 5h ▰▱ 40%  7d ▰▱ 12%`). Rows are added/removed only when an
+    /// agent's limits appear or all of its windows reset; otherwise only values and fills change.
+    func update(agentLimits: [AgentLimits], now: Date = Date()) {
+        let kinds = agentLimits.map(\.agent)
+        for (kind, row) in agentRows where !kinds.contains(kind) {
+            agentStack.removeView(row)
+            agentRows[kind] = nil
+        }
+        for (index, limits) in agentLimits.enumerated() {
+            let row: AgentLimitsRow
+            if let existing = agentRows[limits.agent] {
+                row = existing
+            } else {
+                row = AgentLimitsRow(title: limits.agent.displayName)
+                agentRows[limits.agent] = row
+                agentStack.insertView(row, at: min(index, agentStack.views.count), in: .top)
+                row.widthAnchor.constraint(equalTo: agentStack.widthAnchor).isActive = true
+            }
+            row.update(limits, now: now)
+        }
+        agentStack.isHidden = agentLimits.isEmpty
+        let width = agentLimits.isEmpty ? Self.titleWidth : Self.agentTitleWidth
+        cpuRow.titleWidth = width
+        memoryRow.titleWidth = width
+    }
 
     func update(sample: SystemSample?) {
         guard let sample else {
@@ -91,15 +130,106 @@ final class SystemUsageView: NSView {
     }
 }
 
+/// Footer of the compact sidebar: tiny meters without text — the most used window per agent (coloured by level),
+/// then CPU and memory (coloured by memory pressure). Values are in the tooltip.
+final class CompactUsageView: NSView {
+    private let stack = NSStackView()
+    private var agentMeters: [AgentKind: MeterView] = [:]
+    private let cpuMeter = MeterView()
+    private let memoryMeter = MeterView()
+    private var agentText: [String] = []
+    private var systemText = "Measuring CPU and memory…"
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 5
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            stack.topAnchor.constraint(equalTo: topAnchor),
+            stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+        for meter in [cpuMeter, memoryMeter] { add(meter) }
+        setAccessibilityElement(true)
+        setAccessibilityRole(.group)
+        setAccessibilityLabel("Usage")
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    private func add(_ meter: MeterView, at index: Int? = nil) {
+        if let index { stack.insertView(meter, at: index, in: .top) } else { stack.addView(meter, in: .top) }
+        meter.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            meter.heightAnchor.constraint(equalToConstant: 4),
+            meter.widthAnchor.constraint(equalTo: stack.widthAnchor),
+        ])
+    }
+
+    func update(sample: SystemSample?) {
+        if let stats = sample?.stats {
+            cpuMeter.set(fraction: stats.cpuPercent / 100, color: .controlAccentColor)
+            let pressure = stats.pressure
+            memoryMeter.set(fraction: stats.memoryFraction, color: pressure == .critical ? .systemRed
+                            : pressure == .warning ? .systemYellow : .systemGreen)
+            systemText = "CPU \(ResourceFormat.wholePercent(stats.cpuPercent)) · Mem "
+                + "\(ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)) (\(pressure.name))"
+        }
+        updateTooltip()
+    }
+
+    func update(agentLimits: [AgentLimits]) {
+        let kinds = agentLimits.map(\.agent)
+        for (kind, meter) in agentMeters where !kinds.contains(kind) {
+            stack.removeView(meter)
+            agentMeters[kind] = nil
+        }
+        agentText = []
+        for (index, limits) in agentLimits.enumerated() {
+            let meter = agentMeters[limits.agent] ?? {
+                let meter = MeterView()
+                add(meter, at: min(index, stack.views.count))
+                agentMeters[limits.agent] = meter
+                return meter
+            }()
+            let top = limits.limits.max { $0.usedPercent < $1.usedPercent }
+            let level = UsageLevel(percent: top?.usedPercent)
+            meter.set(fraction: (top?.usedPercent ?? 0) / 100,
+                      color: level == .critical ? .systemRed : level == .warning ? .systemOrange : .systemGreen)
+            agentText.append("\(limits.agent.displayName) \(AgentFormat.limitsSummary(limits.limits))")
+        }
+        updateTooltip()
+    }
+
+    private func updateTooltip() {
+        let text = (agentText + [systemText]).joined(separator: "\n")
+        guard text != toolTip else { return }
+        toolTip = text
+        setAccessibilityValue(text)
+    }
+}
+
 /// `CPU ▰▰▰▱▱▱  23%`: title, flexible meter, value.
 private final class MeterRow: NSView {
     private let titleLabel: NSTextField
     private let meter = MeterView()
     private let valueLabel = NSTextField(labelWithString: "")
+    private var titleWidthConstraint: NSLayoutConstraint!
+
+    var titleWidth: CGFloat {
+        get { titleWidthConstraint.constant }
+        set { if titleWidthConstraint.constant != newValue { titleWidthConstraint.constant = newValue } }
+    }
 
     init(title: String) {
         titleLabel = NSTextField(labelWithString: title)
         super.init(frame: .zero)
+        titleWidthConstraint = titleLabel.widthAnchor.constraint(equalToConstant: SystemUsageView.titleWidth)
         titleLabel.font = .systemFont(ofSize: 10, weight: .medium)
         titleLabel.textColor = .tertiaryLabelColor
         valueLabel.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
@@ -115,7 +245,7 @@ private final class MeterRow: NSView {
         }
         NSLayoutConstraint.activate([
             titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            titleLabel.widthAnchor.constraint(equalToConstant: 26),
+            titleWidthConstraint,
             titleLabel.firstBaselineAnchor.constraint(equalTo: valueLabel.firstBaselineAnchor),
             meter.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 4),
             meter.trailingAnchor.constraint(equalTo: valueLabel.leadingAnchor, constant: -8),
@@ -137,6 +267,132 @@ private final class MeterRow: NSView {
         if valueLabel.stringValue != value { valueLabel.stringValue = value }
         let textColor = valueColor ?? .secondaryLabelColor
         if valueLabel.textColor != textColor { valueLabel.textColor = textColor }
+        meter.set(fraction: fraction, color: color)
+    }
+}
+
+/// `Claude 5h ▰▰▱ 40%` / `7d ▰▱▱ 12%` / `$ ▱▱▱ $12/$50`: one line per window (5-hour, 7-day, then spend and others).
+/// Meters: green, orange from 80 %, red from 95 %. Tooltip: reset times.
+private final class AgentLimitsRow: NSView {
+    private let titleLabel: NSTextField
+    private let lines = NSStackView()
+    private var segments: [LimitSegment] = []
+    private var tooltipText: String?
+
+    init(title: String) {
+        titleLabel = NSTextField(labelWithString: title)
+        super.init(frame: .zero)
+        titleLabel.font = .systemFont(ofSize: 10, weight: .medium)
+        titleLabel.textColor = .tertiaryLabelColor
+        titleLabel.lineBreakMode = .byClipping
+        lines.orientation = .vertical
+        lines.alignment = .leading
+        lines.spacing = 4
+        for view in [titleLabel, lines] as [NSView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view)
+        }
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
+            titleLabel.widthAnchor.constraint(equalToConstant: SystemUsageView.agentTitleWidth),
+            titleLabel.topAnchor.constraint(equalTo: topAnchor),
+            lines.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 4),
+            lines.trailingAnchor.constraint(equalTo: trailingAnchor),
+            lines.topAnchor.constraint(equalTo: topAnchor),
+            lines.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    func update(_ limits: AgentLimits, now: Date) {
+        let windows = limits.ordered
+        if windows.count != segments.count { rebuild(count: windows.count) }
+        for (segment, limit) in zip(segments, windows) {
+            let level = UsageLevel(percent: limit.usedPercent)
+            segment.set(label: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit), value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit)
+                        : AgentFormat.percent(limit.usedPercent), fraction: limit.usedPercent / 100, level: level)
+        }
+        // Old figures (no agent ran for a while) are dimmed.
+        let old = now.timeIntervalSince(limits.updatedAt) > 3600
+        alphaValue = old ? 0.6 : 1
+        var tooltip = ["\(limits.agent.displayName) account limits" + (limits.plan.map { " (\($0))" } ?? "")]
+        tooltip += AgentFormat.limitLines(windows, now: now)
+        tooltip.append("Updated \(AgentFormat.age(limits.updatedAt, now: now))")
+        let text = tooltip.joined(separator: "\n")
+        if text != tooltipText {
+            tooltipText = text
+            toolTip = text
+            setAccessibilityLabel(text)
+        }
+    }
+
+    /// One window per line (meters as long as the CPU/Mem ones, readable at the narrowest sidebar).
+    private func rebuild(count: Int) {
+        lines.views.forEach { lines.removeView($0) }
+        segments = (0..<count).map { _ in LimitSegment() }
+        for segment in segments {
+            lines.addView(segment, in: .top)
+            segment.widthAnchor.constraint(equalTo: lines.widthAnchor).isActive = true
+        }
+    }
+}
+
+/// `5h ▰▰▱ 40%`.
+private final class LimitSegment: NSView {
+    private let label = NSTextField(labelWithString: "")
+    private let meter = MeterView()
+    private let value = NSTextField(labelWithString: "")
+    private var level: UsageLevel?
+
+    init() {
+        super.init(frame: .zero)
+        label.font = .systemFont(ofSize: 10, weight: .medium)
+        label.textColor = .tertiaryLabelColor
+        label.lineBreakMode = .byClipping
+        // Fixed label column so meters of all windows line up.
+        label.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        value.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
+        value.alignment = .right
+        value.setContentCompressionResistancePriority(.required, for: .horizontal)
+        for view in [label, meter, value] as [NSView] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view)
+        }
+        // Fixed value column ("100%"), so changing digits never move the meter.
+        let valueWidth = ("100%" as NSString).size(withAttributes: [.font: value.font!]).width.rounded(.up) + 1
+        NSLayoutConstraint.activate([
+            label.leadingAnchor.constraint(equalTo: leadingAnchor),
+            label.firstBaselineAnchor.constraint(equalTo: value.firstBaselineAnchor),
+            meter.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 3),
+            meter.trailingAnchor.constraint(equalTo: value.leadingAnchor, constant: -4),
+            meter.centerYAnchor.constraint(equalTo: value.centerYAnchor),
+            meter.heightAnchor.constraint(equalToConstant: 4),
+            meter.widthAnchor.constraint(greaterThanOrEqualToConstant: 8),
+            value.widthAnchor.constraint(greaterThanOrEqualToConstant: valueWidth),
+            value.trailingAnchor.constraint(equalTo: trailingAnchor),
+            value.topAnchor.constraint(equalTo: topAnchor),
+            value.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    func set(label text: String, value newValue: String, fraction: Double, level newLevel: UsageLevel) {
+        if label.stringValue != text { label.stringValue = text }
+        if value.stringValue != newValue { value.stringValue = newValue }
+        let color: NSColor
+        switch newLevel {
+        case .normal: color = .systemGreen
+        case .warning: color = .systemOrange
+        case .critical: color = .systemRed
+        }
+        if level != newLevel {
+            level = newLevel
+            value.textColor = newLevel == .normal ? .secondaryLabelColor : color
+        }
         meter.set(fraction: fraction, color: color)
     }
 }

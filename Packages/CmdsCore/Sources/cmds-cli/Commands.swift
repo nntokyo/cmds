@@ -20,6 +20,20 @@ extension CLI {
             let workspaces = try perform { try result.decode([WorkspaceInfo].self) }
             print(Format.workspaces(workspaces, currentPane: ctx.envPane), terminator: "")
         },
+        Command(name: "agents", usage: "agents",
+                summary: "Show usage of the AI coding agents in cmds panes (Claude Code, Codex) and account limits.",
+                details: """
+                    One line per pane running an agent: context, cost ($/h), session and API time, lines changed, cache
+                    (Claude Code, via `cmds hook claude-status` in its status line) or context and tokens (Codex, read
+                    from its session file). Then the latest account limits per agent (5-hour / 7-day windows, spend limit).
+                    """) { ctx in
+            let result = try ctx.call("agent.list")
+            if ctx.json { return ctx.printJSON(result) }
+            let list = try perform { try result.decode(AgentList.self) }
+            let workspaces = (try? ctx.call("workspace.list").decode([WorkspaceInfo].self)) ?? []
+            let titles = Dictionary(workspaces.map { ($0.id, $0.title) }) { first, _ in first }
+            print(Format.agents(list, titles: titles, currentPane: ctx.envPane), terminator: "")
+        },
         Command(name: "stats", usage: "stats [--watch [seconds]]",
                 summary: "Show CPU and memory use of the Mac and of each workspace's processes.",
                 details: """
@@ -242,6 +256,11 @@ extension CLI {
             }
             let client = try ctx.connect(timeout: 120)
             ctx.printJSON(try perform { try client.call(ctx.args.positionals[0], params: params) })
+        },
+        Command(name: "hook claude-status", usage: "hook claude-status",
+                summary: "Claude Code status line: read its JSON on stdin and report the session usage for this pane.",
+                details: "Prints nothing and always exits 0 within ~200 ms; a no-op outside cmds. See docs/CLI.md for the status-line snippet.") { ctx in
+            AgentHook.claudeStatus(ctx)
         },
         Command(name: "hook claude", usage: "hook claude",
                 summary: "Claude Code hook: read the hook JSON on stdin and notify (Notification / Stop events).",

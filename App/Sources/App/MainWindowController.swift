@@ -9,6 +9,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let sidebar: SidebarViewController
     let content: WorkspaceContentViewController
     private let splitViewController = NSSplitViewController()
+    private let sidebarItem: NSSplitViewItem
+    /// Sidebar width before switching to the compact rail, restored when leaving it.
+    private var expandedSidebarWidth: CGFloat = 220
     private var subscription: AnyCancellable?
     private var usageSubscription: AnyCancellable?
     private var mouseMonitor: Any?
@@ -18,9 +21,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         sidebar = SidebarViewController(controller: controller)
         content = WorkspaceContentViewController(controller: controller)
 
-        let sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebar)
-        sidebarItem.minimumThickness = 180
-        sidebarItem.maximumThickness = 420
+        sidebarItem = NSSplitViewItem(sidebarWithViewController: sidebar)
+        sidebarItem.minimumThickness = Self.sidebarMinimum
+        sidebarItem.maximumThickness = Self.sidebarMaximum
         sidebarItem.canCollapse = true
         let contentItem = NSSplitViewItem(viewController: content)
         contentItem.minimumThickness = 300
@@ -51,7 +54,58 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         // Usage samples only touch the usage labels and the footer, never a full sidebar reload.
         usageSubscription = controller.usageChanges.sink { [weak self] in self?.sidebar.updateUsage() }
         installMouseMonitor()
+        sidebar.onToggleCompact = { [weak self] in self?.toggleCompactSidebar() }
         refresh()
+        if Self.storedCompact { setCompactSidebar(true, persist: false) }
+    }
+
+    static let sidebarMinimum: CGFloat = 180
+    static let sidebarMaximum: CGFloat = 420
+    static let compactDefaultsKey = "SidebarCompact"
+    static let expandedWidthDefaultsKey = "SidebarExpandedWidth"
+
+    /// Isolated test instances share the defaults domain with the app in use: they neither read nor write the setting
+    /// and start compact only with `CMDS_SIDEBAR_COMPACT=1`.
+    private static var storedCompact: Bool {
+        if CmdsEnv.supportDirectoryOverride() != nil {
+            return ProcessInfo.processInfo.environment["CMDS_SIDEBAR_COMPACT"] == "1"
+        }
+        return UserDefaults.standard.bool(forKey: compactDefaultsKey)
+    }
+
+    func toggleCompactSidebar() {
+        setCompactSidebar(!sidebar.isCompact, persist: true)
+    }
+
+    /// Compact: a fixed `SidebarViewController.compactWidth` rail (workspace numbers, attention, status colour).
+    func setCompactSidebar(_ compact: Bool, persist: Bool) {
+        guard compact != sidebar.isCompact else { return }
+        if sidebarItem.isCollapsed { sidebarItem.animator().isCollapsed = false }
+        let isolated = CmdsEnv.supportDirectoryOverride() != nil
+        if compact {
+            // At launch (`persist == false`) the frame is not restored yet: use the width saved when compacting.
+            let width = persist ? sidebar.view.frame.width : 0
+            if width >= Self.sidebarMinimum {
+                expandedSidebarWidth = width
+                if !isolated { UserDefaults.standard.set(Double(width), forKey: Self.expandedWidthDefaultsKey) }
+            } else if !isolated, UserDefaults.standard.double(forKey: Self.expandedWidthDefaultsKey) >= Self.sidebarMinimum {
+                // Launched compact: the autosaved divider is the rail; use the width saved when compacting.
+                expandedSidebarWidth = UserDefaults.standard.double(forKey: Self.expandedWidthDefaultsKey)
+            }
+            sidebar.isCompact = true
+            sidebarItem.minimumThickness = SidebarViewController.compactWidth
+            sidebarItem.maximumThickness = SidebarViewController.compactWidth
+            splitViewController.splitView.setPosition(SidebarViewController.compactWidth, ofDividerAt: 0)
+        } else {
+            sidebar.isCompact = false
+            // Raise the maximum first so min never exceeds max.
+            sidebarItem.maximumThickness = Self.sidebarMaximum
+            sidebarItem.minimumThickness = Self.sidebarMinimum
+            splitViewController.splitView.setPosition(expandedSidebarWidth, ofDividerAt: 0)
+        }
+        if persist, !isolated {
+            UserDefaults.standard.set(compact, forKey: Self.compactDefaultsKey)
+        }
     }
 
     @available(*, unavailable)

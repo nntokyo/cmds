@@ -48,7 +48,8 @@ struct WorkspaceListView: View {
         List(selection: $selection) {
             ForEach(client.workspaces) { workspace in
                 NavigationLink(value: workspace.id) {
-                    WorkspaceRow(workspace: workspace, attention: client.needsAttention(workspace))
+                    WorkspaceRow(workspace: workspace, attention: client.needsAttention(workspace),
+                                 agentLimits: client.agentLimits)
                 }
                 .contextMenu {
                     Button {
@@ -69,10 +70,20 @@ struct WorkspaceListView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            // Older Macs do not send system stats; show nothing rather than placeholders.
-            if let stats = client.systemStats {
-                SystemStatsBar(stats: stats)
-                    .opacity(client.status.isLive ? 1 : 0.5)
+            // Older Macs do not send system stats or agent limits; show nothing rather than placeholders.
+            if client.systemStats != nil || !client.agentLimits.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(client.agentLimits) { limits in
+                        AgentLimitsBar(limits: limits)
+                    }
+                    if let stats = client.systemStats { SystemStatsBar(stats: stats) }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(.bar)
+                .overlay(alignment: .top) { Divider() }
+                .opacity(client.status.isLive ? 1 : 0.5)
             }
         }
         .navigationTitle(client.macName.isEmpty ? "cmds" : client.macName)
@@ -114,6 +125,7 @@ struct WorkspaceListView: View {
 struct WorkspaceRow: View {
     let workspace: WorkspaceInfo
     let attention: Bool
+    var agentLimits: [AgentLimits] = []
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -165,6 +177,9 @@ struct WorkspaceRow: View {
                         }
                     }
                 }
+                if let agent = workspace.primaryAgent {
+                    AgentSummaryLine(usage: agent.usage, limits: agentLimits.limits(for: agent.usage.agent)?.limits)
+                }
                 if workspace.cpuPercent != nil || workspace.memoryBytes != nil {
                     WorkspaceUsageLine(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes)
                 }
@@ -204,6 +219,63 @@ struct WorkspaceUsageLine: View {
     }
 }
 
+/// One agent's account limits: `Claude  5h ━━━ 40%  7d ━ 12%` (meters orange from 80 %, red from 95 %).
+struct AgentLimitsBar: View {
+    let limits: AgentLimits
+
+    var body: some View {
+        let windows = Array(limits.ordered.prefix(3))
+        HStack(alignment: .bottom, spacing: 12) {
+            Text(limits.agent.displayName)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .frame(width: 44, alignment: .leading)
+            ForEach(windows) { limit in
+                let level = UsageLevel(percent: limit.usedPercent)
+                UsageGauge(title: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit),
+                           value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit) : AgentFormat.percent(limit.usedPercent),
+                           fraction: limit.usedPercent / 100, tint: level.color,
+                           valueTint: level == .normal ? nil : level.color)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(limits.agent.displayName) limits: " + AgentFormat.limitLines(windows).joined(separator: ", "))
+    }
+}
+
+/// The workspace's agent pane: `Claude Opus 4.5 · ctx 53% · $117.99 · 5h 40%`.
+struct AgentSummaryLine: View {
+    let usage: AgentUsage
+    let limits: [UsageLimit]?
+
+    var body: some View {
+        let parts = AgentFormat.summaryParts(usage, limits: limits)
+        parts.reduce(Text("")) { text, part in
+            var piece = Text(part.text)
+            switch part.style {
+            case .name: piece = piece.fontWeight(.medium).foregroundColor(.primary.opacity(0.85))
+            case .label, .separator: piece = piece.foregroundColor(Color(uiColor: .tertiaryLabel))
+            case .value: piece = piece.foregroundColor(part.level == .normal ? .secondary : part.level.color)
+            }
+            return text + piece
+        }
+        .font(.caption2.monospacedDigit())
+        .lineLimit(1)
+        .opacity(usage.isStale ? 0.6 : 1)
+        .accessibilityLabel(AgentFormat.summary(usage, limits: limits) + (usage.isStale ? ", idle" : ""))
+    }
+}
+
+extension UsageLevel {
+    var color: Color {
+        switch self {
+        case .normal: return .green
+        case .warning: return .orange
+        case .critical: return .red
+        }
+    }
+}
+
 /// Mac-wide CPU and memory with thin meters; the memory meter follows the memory pressure.
 struct SystemStatsBar: View {
     let stats: SystemStats
@@ -218,11 +290,6 @@ struct SystemStatsBar: View {
                        value: memory, fraction: stats.memoryFraction, tint: pressureColor,
                        valueTint: pressure == .warning || pressure == .critical ? pressureColor : nil)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Mac CPU \(ResourceFormat.wholePercent(stats.cpuPercent)), memory \(memory), pressure \(pressure.name)")
     }

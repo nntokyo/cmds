@@ -37,6 +37,7 @@ enum Format {
         } else {
             out = "system  (measuring, try again in a second)\n"
         }
+        out += limits(snapshot.agentLimits ?? [])
         guard !snapshot.workspaces.isEmpty else { return out + "no workspaces\n" }
         let idWidth = snapshot.workspaces.map(\.id.count).max() ?? 0
         let names = snapshot.workspaces.map { oneLine(titles[$0.id] ?? "") }
@@ -62,7 +63,59 @@ enum Format {
         if pane.kind == .browser, let url = pane.url { line += "  \(url)" }
         if pane.kind == .terminal, let cwd = pane.workingDirectory { line += "  \(abbreviate(cwd))" }
         if pane.id == currentPane { line += "  (this pane)" }
+        if let agent = pane.agent {
+            // Account limits are left to `cmds agents` / `cmds stats` (the session's own copy may be older).
+            line += "  [\(AgentFormat.summary(agent, limits: []))\(agent.isStale ? ", idle" : "")]"
+        }
         return line
+    }
+
+    /// `cmds agents`: one line per agent pane, then the account limits.
+    static func agents(_ list: AgentList, titles: [String: String], currentPane: String?, now: Date = Date()) -> String {
+        var out = ""
+        if list.panes.isEmpty {
+            out = "no agents in cmds panes\n"
+        } else {
+            let paneWidth = list.panes.map(\.pane.count).max() ?? 0
+            let names = list.panes.map { entry -> String in
+                var name = AgentFormat.name(entry.usage)
+                if let effort = entry.usage.effort { name += " (\(effort))" }
+                return name
+            }
+            let nameWidth = names.map(\.count).max() ?? 0
+            let workspaceNames = list.panes.map { String(oneLine(titles[$0.workspace] ?? $0.workspace).prefix(24)) }
+            let workspaceWidth = workspaceNames.map(\.count).max() ?? 0
+            for ((entry, name), workspace) in zip(zip(list.panes, names), workspaceNames) {
+                let marker = entry.pane == currentPane ? ">" : " "
+                var line = "\(marker) \(entry.pane.padding(toLength: paneWidth, withPad: " ", startingAt: 0))  "
+                    + "\(workspace.padding(toLength: workspaceWidth, withPad: " ", startingAt: 0))  "
+                    + name.padding(toLength: nameWidth, withPad: " ", startingAt: 0)
+                let figures = AgentFormat.statusLine(entry.usage)
+                if !figures.isEmpty { line += "  " + figures }
+                line += "  (\(AgentFormat.age(entry.usage.updatedAt, now: now))\(entry.usage.isStale ? ", idle" : ""))"
+                out += line + "\n"
+            }
+        }
+        out += limits(list.limits, now: now)
+        return out
+    }
+
+    /// `Claude  5h 40% (resets 15:30 (in 2h10m)) · 7d 12% (resets Fri 09:00)`.
+    static func limits(_ limits: [AgentLimits], now: Date = Date()) -> String {
+        guard !limits.isEmpty else { return "" }
+        let width = limits.map(\.agent.displayName.count).max() ?? 0
+        return limits.map { entry in
+            var line = entry.agent.displayName.padding(toLength: width, withPad: " ", startingAt: 0) + "  "
+            line += entry.ordered.map { limit in
+                var text = "\(AgentFormat.limitLabel(limit)) \(AgentFormat.limitValue(limit))"
+                if let period = limit.period, limit.id == UsageLimit.spend { text += " \(period)" }
+                if let resetsAt = limit.resetsAt { text += " (resets \(AgentFormat.resetTime(resetsAt, now: now)))" }
+                return text
+            }.joined(separator: " · ")
+            if let plan = entry.plan { line += "  · plan \(plan)" }
+            if now.timeIntervalSince(entry.updatedAt) > 600 { line += "  (as of \(AgentFormat.age(entry.updatedAt, now: now)))" }
+            return line + "\n"
+        }.joined()
     }
 
     /// Box-drawing tree of the split layout.

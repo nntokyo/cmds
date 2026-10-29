@@ -73,10 +73,13 @@ public struct StatsSnapshot: Codable, Equatable, Sendable {
     public var system: SystemStats?
     /// In sidebar order.
     public var workspaces: [WorkspaceStats]
+    /// Latest account limits of the coding agents (Claude, Codex); omitted when none is known.
+    public var agentLimits: [AgentLimits]?
 
-    public init(system: SystemStats?, workspaces: [WorkspaceStats]) {
+    public init(system: SystemStats?, workspaces: [WorkspaceStats], agentLimits: [AgentLimits]? = nil) {
         self.system = system
         self.workspaces = workspaces
+        self.agentLimits = agentLimits
     }
 }
 

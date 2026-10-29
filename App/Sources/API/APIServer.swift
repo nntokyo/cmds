@@ -98,6 +98,17 @@ final class APIServer {
         case "system.stats":
             return try .from(controller.statsSnapshot())
 
+        case "agent.list":
+            return try .from(controller.agentList())
+        case "agent.report":
+            guard let raw = params.value?["usage"], case .object = raw,
+                  let usage = try? raw.decode(AgentUsage.self) else {
+                throw RPCError.invalidParams("usage must be an AgentUsage object")
+            }
+            let pid = try params.int("pid")
+            try controller.reportAgentUsage(paneID: try params.string("pane"), usage: usage,
+                                            pid: pid.flatMap { $0 > 0 && $0 <= Int(Int32.max) ? Int32($0) : nil })
+
         case "workspace.list":
             return try .from(controller.listWorkspaces())
         case "workspace.create":

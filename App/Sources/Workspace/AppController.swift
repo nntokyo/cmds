@@ -69,6 +69,14 @@ final class AppController {
     /// `systemStats` plus the memory breakdown (sidebar tooltip).
     private(set) var systemSample: SystemSample?
 
+    /// Latest account limits per agent kind (from whichever pane reported them last).
+    private(set) var agentLimitsByKind: [AgentKind: AgentLimits] = [:]
+    private var agentRefreshScheduled = false
+    /// Agent usage without updates for this long is marked stale (idle agent).
+    static let agentStaleAfter: TimeInterval = 180
+    /// Reported usage without a process to watch is dropped after this long without updates.
+    static let unwatchedAgentTimeout: TimeInterval = 30 * 60
+
     private let subject = PassthroughSubject<StateChange, Never>()
     private let usageSubject = PassthroughSubject<Void, Never>()
     /// IDs keep counting across launches (and instances), so a stale ID held by a script or the phone
@@ -117,9 +125,101 @@ final class AppController {
 
     /// Result of the socket method `system.stats`.
     func statsSnapshot() -> StatsSnapshot {
-        StatsSnapshot(system: systemStats, workspaces: workspaces.map {
+        let limits = activeAgentLimits()
+        return StatsSnapshot(system: systemStats, workspaces: workspaces.map {
             WorkspaceStats(id: $0.id, cpuPercent: $0.cpuPercent, memoryBytes: $0.memoryBytes)
-        })
+        }, agentLimits: limits.isEmpty ? nil : limits)
+    }
+
+    // MARK: - Agents
+
+    /// Account limits per agent kind, without windows that have reset since.
+    func activeAgentLimits(now: Date = Date()) -> [AgentLimits] {
+        agentLimitsByKind.values.compactMap { $0.active(at: now) }.sorted { $0.agent < $1.agent }
+    }
+
+    /// Result of the socket method `agent.list`.
+    func agentList() -> AgentList {
+        let panes = workspaces.flatMap { workspace in
+            workspace.agentPanes.compactMap { pane in
+                pane.agentUsage.map { AgentPaneUsage(workspace: workspace.id, pane: pane.id, usage: $0) }
+            }
+        }
+        return AgentList(panes: panes, limits: activeAgentLimits())
+    }
+
+    /// `agent.report`: usage of the agent in a terminal pane (Claude Code's status line via `cmds hook claude-status`).
+    /// With `pid` (the agent process) the usage is dropped as soon as that process exits.
+    func reportAgentUsage(paneID: String?, usage: AgentUsage, pid: Int32?) throws {
+        let pane = try resolvePane(paneID)
+        guard pane.kind == .terminal else { throw RPCError.invalidParams("pane \(pane.id) is not a terminal") }
+        let now = Date()
+        var usage = usage
+        usage.updatedAt = now
+        usage.stale = nil
+        if !usage.limits.isEmpty {
+            agentLimitsByKind[usage.agent] = AgentLimits(agent: usage.agent, limits: usage.limits, plan: usage.plan, updatedAt: now)
+        }
+        var process: AgentProcessRef?
+        if let pid {
+            if case .report(let known?)? = pane.agentSource, known.pid == pid { process = known }
+            else { process = AgentProcessRef(pid: pid) }
+        }
+        let appeared = pane.agentUsage?.agent != usage.agent
+        pane.agentUsage = usage
+        pane.agentSource = .report(process: process)
+        if appeared { emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id)) }
+        scheduleAgentRefresh()
+    }
+
+    /// Applies a metadata scan: drops usage of agents that exited, marks idle ones stale, takes Codex usage from its
+    /// session files (a pane reporting through `agent.report` keeps that) and the newest Codex limits.
+    /// The caller sends the usage update (`applyResourceUsage`) right after.
+    func applyAgentScan(_ codex: CodexWatchResult, now: Date = Date()) {
+        if let limits = codex.limits, limits.updatedAt > (agentLimitsByKind[.codex]?.updatedAt ?? .distantPast) {
+            agentLimitsByKind[.codex] = limits
+        }
+        for workspace in workspaces {
+            for pane in workspace.orderedPanes where pane.kind == .terminal {
+                var usage = pane.agentUsage
+                var source = pane.agentSource
+                switch source {
+                case .report(let process)?:
+                    let gone = process.map { !$0.isAlive }
+                        ?? (now.timeIntervalSince(usage?.updatedAt ?? now) > Self.unwatchedAgentTimeout)
+                    if gone { (usage, source) = (nil, nil) }
+                case .codexSession?:
+                    if !codex.panes.contains(pane.id) { (usage, source) = (nil, nil) }
+                case nil:
+                    break
+                }
+                if source == nil || source == .codexSession, let fresh = codex.usage[pane.id] {
+                    usage = fresh
+                    source = .codexSession
+                }
+                if var current = usage {
+                    current.stale = now.timeIntervalSince(current.updatedAt) > Self.agentStaleAfter ? true : nil
+                    usage = current
+                }
+                let appearedOrGone = (usage?.agent) != (pane.agentUsage?.agent)
+                pane.agentSource = source
+                guard usage != pane.agentUsage else { continue }
+                pane.agentUsage = usage
+                if appearedOrGone { emit(.pane(workspaceID: workspace.id, paneID: pane.id)) }
+            }
+        }
+    }
+
+    /// Reports arrive often; redraw usage labels (sidebar, phone) at most a few times a second.
+    private func scheduleAgentRefresh() {
+        guard !agentRefreshScheduled else { return }
+        agentRefreshScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            MainActor.assumeIsolated {
+                self?.agentRefreshScheduled = false
+                self?.usageSubject.send()
+            }
+        }
     }
 
     // MARK: - Workspaces
