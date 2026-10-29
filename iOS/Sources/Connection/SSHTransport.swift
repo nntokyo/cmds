@@ -42,13 +42,16 @@ final class SSHTransport: SyncTransport, @unchecked Sendable {
         let endpoint = config.endpoint
         let hostKey = hostKey
         let key = key
+        ConnectionDiagnostics.shared.stage(.ssh, "connecting to the relay host")
         task = Task { @MainActor [weak self] in
             do {
                 let tunnel = try await SSHTunnel.connect(to: endpoint, key: key, hostKeyPin: hostKey)
                 guard let self, !self.finished else { return tunnel.close() }
                 self.tunnel = tunnel
+                ConnectionDiagnostics.shared.stage(.ssh, "relay login ok, opening the forward")
                 let port = try await tunnel.openForward()
                 guard !self.finished else { return }
+                ConnectionDiagnostics.shared.stage(.ssh, "forward open, TLS handshake")
                 tunnel.closeFuture.whenComplete { _ in
                     DispatchQueue.main.async { [weak self] in
                         self?.fail(String(localized: "The SSH connection to the relay host closed."))

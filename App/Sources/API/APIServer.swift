@@ -114,6 +114,9 @@ final class APIServer {
             ]
         case "system.stats":
             return try .from(controller.statsSnapshot())
+        case "sync.status":
+            // Local socket only: not in RemoteAPIPolicy.allowedMethods, so SSH-pane sockets get 403.
+            return try .from(SyncStatusReport.current())
 
         case "agent.list":
             return try .from(controller.agentList())

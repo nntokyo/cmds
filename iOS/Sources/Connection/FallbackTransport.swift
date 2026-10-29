@@ -12,6 +12,9 @@ import Network
 /// All attempts are pinned to the same certificate and nothing is sent on any before it is `.connected`,
 /// so racing them is safe. A refused certificate (`.identityMismatch`) on any ends the whole connection:
 /// it is never worked around by trying another path.
+///
+/// `mode` (debug builds, `TransportMode`) restricts the attempt to one path: `.bluetooth` and `.ssh` start
+/// only that transport at once, `.network` never falls back. The pin check is the same in every mode.
 final class FallbackTransport: SyncTransport {
     static let fallbackDelay: TimeInterval = 3
     static let sshDelay: TimeInterval = 6
@@ -21,6 +24,8 @@ final class FallbackTransport: SyncTransport {
 
     private let target: MacTarget
     private let policy: SyncTLS.PeerPolicy
+    private let mode: TransportMode
+    private let diagnostics = ConnectionDiagnostics.shared
     private var network: SyncTransport?
     private var bluetooth: SyncTransport?
     private var ssh: SyncTransport?
@@ -34,29 +39,41 @@ final class FallbackTransport: SyncTransport {
     private var sshTimer: DispatchWorkItem?
     private var finished = false
 
-    init(target: MacTarget, policy: SyncTLS.PeerPolicy) {
+    init(target: MacTarget, policy: SyncTLS.PeerPolicy, mode: TransportMode = .auto) {
         self.target = target
         self.policy = policy
+        self.mode = mode
     }
 
     /// Bluetooth carries only pinned connections (the manual-pairing probe needs the Mac's address).
     private var canUseBluetooth: Bool {
-        guard case .pinned = policy else { return false }
+        guard mode == .auto || mode == .bluetooth, case .pinned = policy else { return false }
         return true
     }
 
     /// SSH: pinned connections to a Mac with remote access set up on this phone.
     private lazy var canUseSSH: Bool = {
-        guard case .pinned = policy else { return false }
+        guard mode == .auto || mode == .ssh, case .pinned = policy else { return false }
         return SSHTransport.isAvailable(targetID: target.id)
     }()
 
     func start() {
+        switch mode {
+        case .auto, .network:
+            break
+        case .bluetooth:
+            return startOnly(.bluetooth, possible: canUseBluetooth, unavailable: "forced transport bluetooth: "
+                + "not possible for this connection (pairing without a QR code needs the network)")
+        case .ssh:
+            return startOnly(.ssh, possible: canUseSSH, unavailable: "forced transport ssh: "
+                + "remote access via SSH is not set up for this Mac on this phone")
+        }
+        diagnostics.stage(.network, "connecting")
         let network = WebSocketTransport(target: target, policy: policy)
         self.network = network
         wire(network)
         network.start()
-        guard canUseBluetooth else { return }
+        guard mode == .auto, canUseBluetooth else { return }
         let nearby = NetworkPathMonitor.shared.hasLocalNetwork
         let timer = DispatchWorkItem { [weak self] in self?.startBluetooth() }
         fallbackTimer = timer
@@ -69,6 +86,24 @@ final class FallbackTransport: SyncTransport {
 
     func send(_ message: ClientMessage) {
         winner?.send(message)
+    }
+
+    /// Forced mode: start that one transport now, or report why it cannot run (asynchronously, like any
+    /// other failure).
+    private func startOnly(_ path: SyncLinkPath, possible: Bool, unavailable: String) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !self.finished else { return }
+            guard possible else {
+                self.diagnostics.failed(path, unavailable)
+                return self.finish(with: .disconnected(reason: unavailable))
+            }
+            path == .ssh ? self.startSSH() : self.startBluetooth()
+            // Could not even start (the reason is recorded); a transport that failed while starting has
+            // already finished this one through `handle`.
+            if !self.finished, self.network == nil, self.bluetooth == nil, self.ssh == nil {
+                self.finish(with: .disconnected(reason: self.bluetoothFailure ?? self.sshFailure ?? unavailable))
+            }
+        }
     }
 
     func close() {
@@ -88,7 +123,11 @@ final class FallbackTransport: SyncTransport {
     private func startBluetooth() {
         guard !finished, winner == nil, !bluetoothStarted, canUseBluetooth else { return }
         bluetoothStarted = true
-        guard let bluetooth = BluetoothTransport(policy: policy) else { return }
+        guard let bluetooth = BluetoothTransport(policy: policy) else {
+            bluetoothFailure = "Bluetooth needs a pinned connection"
+            diagnostics.failed(.bluetooth, bluetoothFailure ?? "")
+            return
+        }
         self.bluetooth = bluetooth
         wire(bluetooth)
         bluetooth.start()
@@ -97,7 +136,11 @@ final class FallbackTransport: SyncTransport {
     private func startSSH() {
         guard !finished, winner == nil, !sshStarted, canUseSSH else { return }
         sshStarted = true
-        guard let ssh = SSHTransport(targetID: target.id, policy: policy) else { return }
+        guard let ssh = SSHTransport(targetID: target.id, policy: policy) else {
+            sshFailure = "remote access is not set up completely (relay host key or phone key missing)"
+            diagnostics.failed(.ssh, sshFailure ?? "")
+            return
+        }
         self.ssh = ssh
         wire(ssh)
         ssh.start()
@@ -110,6 +153,7 @@ final class FallbackTransport: SyncTransport {
             guard winner == nil else { return }
             winner = transport
             linkPath = transport.linkPath
+            diagnostics.stage(transport.linkPath, "TLS ok")
             fallbackTimer?.cancel()
             sshTimer?.cancel()
             for other in [network, bluetooth, ssh] where other !== transport {
@@ -122,15 +166,19 @@ final class FallbackTransport: SyncTransport {
             onEvent?(.connected)
         case .message:
             if transport === winner { onEvent?(event) }
-        case .identityPresented, .identityMismatch:
+        case .identityPresented:
+            finish(with: event)
+        case .identityMismatch:
+            diagnostics.failed(transport.linkPath, "TLS: the Mac's certificate does not match the pin")
             finish(with: event)
         case .disconnected(let reason):
+            if let reason { diagnostics.failed(transport.linkPath, reason) }
             if transport === winner { return finish(with: event) }
             if transport === network {
                 network = nil
                 networkFailure = reason
                 // The network path failed outright: no reason to wait for the timer.
-                if !bluetoothStarted, canUseBluetooth {
+                if mode == .auto, !bluetoothStarted, canUseBluetooth {
                     fallbackTimer?.cancel()
                     startBluetooth()
                 }
@@ -142,7 +190,7 @@ final class FallbackTransport: SyncTransport {
                 sshFailure = reason
             }
             // Nothing nearby is left: no reason to wait for the SSH timer.
-            if network == nil, bluetooth == nil, !sshStarted, canUseSSH {
+            if mode == .auto, network == nil, bluetooth == nil, !sshStarted, canUseSSH {
                 sshTimer?.cancel()
                 startSSH()
             }

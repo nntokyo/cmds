@@ -25,6 +25,8 @@ final class SyncConnection: @unchecked Sendable {
 
     private let lock = NSLock()
     private var pendingBytes = 0
+    private var sentBytes = 0
+    private var receivedBytes = 0
     private var cancelled = false
     private var notifiedClose = false
 
@@ -74,9 +76,17 @@ final class SyncConnection: @unchecked Sendable {
             guard let self else { return }
             self.lock.lock()
             self.pendingBytes -= data.count
+            if error == nil { self.sentBytes += data.count }
             self.lock.unlock()
             if error != nil || thenClose { self.close() }
         })
+    }
+
+    /// WebSocket payload bytes written to and read from this connection so far (`sync.status`).
+    var byteCounts: (sent: Int, received: Int) {
+        lock.lock()
+        defer { lock.unlock() }
+        return (sentBytes, receivedBytes)
     }
 
     func close() {
@@ -99,6 +109,11 @@ final class SyncConnection: @unchecked Sendable {
             if metadata?.opcode == .close {
                 self.close()
                 return
+            }
+            if let data, !data.isEmpty {
+                self.lock.lock()
+                self.receivedBytes += data.count
+                self.lock.unlock()
             }
             if let data, !data.isEmpty, metadata?.opcode != .pong, metadata?.opcode != .ping {
                 // Backpressure: the next frame is read only after this one was handled on the main actor,

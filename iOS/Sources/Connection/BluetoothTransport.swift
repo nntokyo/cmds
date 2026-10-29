@@ -32,6 +32,11 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
     private var inner: WebSocketTransport?
     private var finished = false
 
+    /// Progress for `ConnectionDiagnostics` (no identifiers or secrets).
+    private func stage(_ text: String) {
+        if !finished { ConnectionDiagnostics.shared.stage(.bluetooth, text) }
+    }
+
     /// Nil unless `policy` pins a certificate.
     init?(policy: SyncTLS.PeerPolicy) {
         guard case .pinned(let pin) = policy else { return nil }
@@ -47,7 +52,8 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
             break
         }
         // Creating the manager asks for Bluetooth permission the first time it is needed.
-        central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionShowPowerAlertKey: false])
+        stage("waiting for Bluetooth")
+        central =CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionShowPowerAlertKey: false])
     }
 
     func send(_ message: ClientMessage) {
@@ -93,6 +99,7 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
 
     private func scan() {
         guard let central, central.state == .poweredOn, peripheral == nil else { return }
+        stage(rejected.isEmpty ? "scanning" : "scanning (\(rejected.count) candidate(s) were not the paired Mac)")
         central.scanForPeripherals(withServices: [CBUUID(string: SyncBluetooth.serviceUUID)])
     }
 
@@ -174,6 +181,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
         central.stopScan()
         self.peripheral = peripheral
         peripheral.delegate = self
+        stage("found peripheral, connecting")
         central.connect(peripheral)
         let timer = DispatchWorkItem { [weak self, weak peripheral] in
             guard let self, let peripheral, peripheral === self.peripheral, !self.channelRequested, !self.finished else { return }
@@ -185,6 +193,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         guard peripheral === self.peripheral else { return }
+        stage("connected peripheral, reading service info")
         peripheral.discoverServices([CBUUID(string: SyncBluetooth.serviceUUID)])
     }
 
@@ -234,6 +243,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
             // A hint only: the pinned TLS handshake decides whether this is the Mac.
             channelRequested = true
             candidateTimer?.cancel()
+            stage("opening L2CAP (PSM \(info.psm))")
             peripheral.openL2CAPChannel(CBL2CAPPSM(info.psm))
             return
         }
@@ -250,6 +260,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
             let reason = error?.localizedDescription ?? "-"
             return fail(String(localized: "Could not open the Bluetooth channel to the Mac (\(reason))."))
         }
+        stage("L2CAP open, TLS handshake")
         startRelay(channel)
     }
 }
