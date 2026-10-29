@@ -40,6 +40,7 @@ struct TerminalScreenView: View {
     @GestureState private var pinch: CGFloat = 1
     @FocusState private var keyboardFocused: Bool
 
+    private static let cursorAnchor = "cursor"
     private static let minFont: CGFloat = 5
     private static let maxFont: CGFloat = 36
     private static let padding: CGFloat = 6
@@ -63,16 +64,20 @@ struct TerminalScreenView: View {
                 let contentW = CGFloat(snapshot.cols) * cellW
                 let contentH = CGFloat(snapshot.rows) * lineH
 
-                ScrollView([.horizontal, .vertical]) {
-                    screen(snapshot, fontSize: fontSize, cellW: cellW, lineH: lineH)
-                        .frame(width: contentW, height: contentH, alignment: .topLeading)
-                        .padding(Self.padding)
-                        // Top-align when the screen is shorter than the viewport; the bottom
-                        // anchor below only matters when it is taller (keeps the prompt visible).
-                        .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .topLeading)
+                ScrollViewReader { proxy in
+                    ScrollView([.horizontal, .vertical]) {
+                        screen(snapshot, fontSize: fontSize, cellW: cellW, lineH: lineH)
+                            .frame(width: contentW, height: contentH, alignment: .topLeading)
+                            .padding(Self.padding)
+                            .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .topLeading)
+                    }
+                    .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
+                    // The terminal grid is usually taller than the phone; follow the cursor (the prompt) instead
+                    // of pinning to the bottom, where a mostly empty screen shows only blank rows.
+                    .onAppear { proxy.scrollTo(Self.cursorAnchor, anchor: .center) }
+                    .onChange(of: snapshot.cursorRow) { proxy.scrollTo(Self.cursorAnchor, anchor: .center) }
+                    .onChange(of: fontSize) { proxy.scrollTo(Self.cursorAnchor, anchor: .center) }
                 }
-                .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
-                .defaultScrollAnchor(.bottomLeading)
             } else {
                 VStack(spacing: 8) {
                     ProgressView()
@@ -117,6 +122,12 @@ struct TerminalScreenView: View {
                         .frame(height: lineH, alignment: .leading)
                 }
             }
+            // Scroll target: the cursor row, else the last non-empty row.
+            Color.clear
+                .frame(width: 1, height: lineH)
+                .id(Self.cursorAnchor)
+                // Padding (not offset) so the anchor's layout frame, which scrollTo uses, sits on the row.
+                .padding(.top, CGFloat(s.cursorRow ?? (s.lines.lastIndex { !$0.isEmpty } ?? 0)) * lineH)
             if let row = s.cursorRow, let col = s.cursorCol, row >= 0, row < s.rows {
                 Rectangle()
                     .fill(Color.accentColor.opacity(0.65))
