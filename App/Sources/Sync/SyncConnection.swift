@@ -93,15 +93,23 @@ final class SyncConnection: @unchecked Sendable {
                 return
             }
             if let data, !data.isEmpty, metadata?.opcode != .pong, metadata?.opcode != .ping {
+                // Backpressure: the next frame is read only after this one was handled on the main actor,
+                // so a fast sender fills its TCP window instead of the main queue.
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated { self.onFrame(self, data) }
+                    self.receiveIfOpen()
                 }
+                return
             }
-            self.lock.lock()
-            let stop = self.cancelled
-            self.lock.unlock()
-            if !stop { self.receive() }
+            self.receiveIfOpen()
         }
+    }
+
+    private func receiveIfOpen() {
+        lock.lock()
+        let stop = cancelled
+        lock.unlock()
+        if !stop { receive() }
     }
 
     private func notifyClosed() {

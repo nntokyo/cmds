@@ -28,6 +28,10 @@ final class SyncServer {
     static let maxConnections = 16
     static let maxPendingPerHost = 4
     static let maxSubscribedPanes = 32
+    /// Text in one `input` message (the phone sends keystrokes, lines or a paste).
+    static let maxInputBytes = 16 * 1024
+    /// Input a client may send per second; more is dropped with `rateLimited`.
+    static let maxInputBytesPerSecond = 64 * 1024
     static let screenInterval: TimeInterval = 0.1
     static let stateInterval: TimeInterval = 0.1
 
@@ -42,6 +46,18 @@ final class SyncServer {
         var helloTimer: DispatchWorkItem?
         /// Set once a closing error was sent; later frames (e.g. pipelined hellos) are ignored.
         var closing = false
+        var inputWindowStart = Date.distantPast
+        var inputBytesInWindow = 0
+
+        /// Charges `bytes` of input to the current one-second window; false when over budget.
+        func spendInput(_ bytes: Int, now: Date = Date()) -> Bool {
+            if now.timeIntervalSince(inputWindowStart) >= 1 {
+                inputWindowStart = now
+                inputBytesInWindow = 0
+            }
+            inputBytesInWindow += bytes
+            return inputBytesInWindow <= SyncServer.maxInputBytesPerSecond
+        }
 
         init(connection: SyncConnection) { self.connection = connection }
     }
@@ -325,6 +341,15 @@ final class SyncServer {
                 sendError(.notFound, "pane not found: \(req.paneID.prefix(64))", to: client)
             }
         case .input(let input):
+            let size = input.text.utf8.count
+            guard size <= Self.maxInputBytes else {
+                sendError(.badRequest, "input too large (max \(Self.maxInputBytes) bytes per message)", to: client)
+                return
+            }
+            guard client.spendInput(size) else {
+                sendError(.rateLimited, "too much input; slow down", to: client)
+                return
+            }
             // Keystrokes from the phone are typed (no bracketed paste); multi-line text keeps the paste path.
             if input.text.contains(where: \.isNewline) {
                 perform(client) { try AppController.shared.sendText(paneID: input.paneID, text: input.text) }
@@ -332,6 +357,10 @@ final class SyncServer {
                 perform(client) { try AppController.shared.typeText(paneID: input.paneID, text: input.text) }
             }
         case .key(let key):
+            guard client.spendInput(8) else {
+                sendError(.rateLimited, "too much input; slow down", to: client)
+                return
+            }
             guard let bytes = key.key.terminalBytes(applicationCursor: false) else {
                 sendError(.badRequest, "unknown key: \(key.key.rawValue.prefix(20))", to: client)
                 return

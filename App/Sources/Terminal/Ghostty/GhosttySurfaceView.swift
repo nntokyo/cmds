@@ -618,8 +618,11 @@ final class GhosttySurfaceView: NSView {
         }
     }
 
-    /// Sends a synthetic key press+release (used by `sendText` for newline/control keys).
-    func sendKey(keyCode: UInt16, mods: ghostty_input_mods_e = GHOSTTY_MODS_NONE, unshifted: UInt32) {
+    /// Sends a synthetic key press+release for programmatic input (`sendText` / `typeText`: the socket API
+    /// and the iOS companion). A key that matches one of the user's Ghostty keybindings is not pressed;
+    /// `fallback` (the key's plain terminal bytes) is written to the pty instead, so remote or scripted
+    /// input can only type into the terminal and never runs local actions.
+    func sendKey(keyCode: UInt16, mods: ghostty_input_mods_e = GHOSTTY_MODS_NONE, unshifted: UInt32, fallback: [UInt8]) {
         guard let surface else { return }
         var ev = ghostty_input_key_s()
         ev.keycode = UInt32(keyCode)
@@ -629,6 +632,11 @@ final class GhosttySurfaceView: NSView {
         ev.text = nil
         ev.composing = false
         ev.action = GHOSTTY_ACTION_PRESS
+        var bindingFlags = ghostty_binding_flags_e(0)
+        if ghostty_surface_key_is_binding(surface, ev, &bindingFlags) {
+            writeRaw(fallback)
+            return
+        }
         _ = ghostty_surface_key(surface, ev)
         ev.action = GHOSTTY_ACTION_RELEASE
         _ = ghostty_surface_key(surface, ev)

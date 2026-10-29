@@ -10,6 +10,8 @@ private let log = Logger(subsystem: "tokyo.n-n.cmds", category: "api")
 /// so a slow request on one connection never blocks another. Only peers with our uid are accepted.
 /// Requests are handed to `onRequest` on the reader thread; replies go through `Connection.send`.
 final class SocketServer: @unchecked Sendable {
+    /// Each client gets a reader thread; more connections than this are refused.
+    static let maxConnections = 64
     let path: String
     var onRequest: (@Sendable (RPCRequest, SocketConnection) -> Void)?
     var onClose: (@Sendable (SocketConnection) -> Void)?
@@ -100,6 +102,12 @@ final class SocketServer: @unchecked Sendable {
             setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
 
             lock.lock()
+            guard connections.count < Self.maxConnections else {
+                lock.unlock()
+                log.error("rejected connection: \(Self.maxConnections) clients already connected")
+                close(fd)
+                continue
+            }
             let id = nextConnectionID
             nextConnectionID += 1
             let connection = SocketConnection(id: id, fd: fd)
@@ -128,6 +136,8 @@ final class SocketServer: @unchecked Sendable {
 final class SocketConnection: @unchecked Sendable {
     /// Writes queued but not yet sent beyond this many bytes mean the client stopped reading; it gets dropped.
     static let maxPendingBytes = 32 * 1024 * 1024
+    /// Requests a client may have in flight; further ones are answered with an error until some finish.
+    static let maxOutstanding = 64
 
     let id: Int
     private let fd: Int32
@@ -248,9 +258,14 @@ final class SocketConnection: @unchecked Sendable {
             for line in lines {
                 if let request = try? JSONDecoder().decode(RPCRequest.self, from: line) {
                     lock.lock()
-                    outstanding += 1
+                    let busy = outstanding >= Self.maxOutstanding
+                    if !busy { outstanding += 1 }
                     lock.unlock()
-                    handle(request)
+                    if busy {
+                        send(RPCResponse(id: request.id, error: RPCError(code: 429, message: "too many requests in flight (max \(Self.maxOutstanding))")))
+                    } else {
+                        handle(request)
+                    }
                 } else {
                     let value = try? JSONDecoder().decode(JSONValue.self, from: line)
                     let id = value?["id"]?.intValue ?? 0

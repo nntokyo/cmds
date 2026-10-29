@@ -79,17 +79,17 @@ extension GhosttySurfaceView {
             switch v {
             case 0x0D:
                 flush()
-                sendKey(keyCode: VK.returnKey, unshifted: 0x0D)
+                sendKey(keyCode: VK.returnKey, unshifted: 0x0D, fallback: [0x0D])
                 if i + 1 < scalars.count, scalars[i + 1].value == 0x0A { i += 1 }  // CRLF = one Return
             case 0x0A:
                 flush()
-                sendKey(keyCode: VK.returnKey, unshifted: 0x0D)
+                sendKey(keyCode: VK.returnKey, unshifted: 0x0D, fallback: [0x0D])
             case 0x09:
                 flush()
-                sendKey(keyCode: VK.tab, unshifted: 0x09)
+                sendKey(keyCode: VK.tab, unshifted: 0x09, fallback: [0x09])
             case 0x7F:
                 flush()
-                sendKey(keyCode: VK.backspace, unshifted: 0x7F)
+                sendKey(keyCode: VK.backspace, unshifted: 0x7F, fallback: [0x7F])
             case 0x1B:
                 flush()
                 i = sendEscape(scalars, at: i)
@@ -98,12 +98,12 @@ extension GhosttySurfaceView {
                 flush()
                 let idx = Int(v - 1)
                 sendKey(keyCode: GhosttyInput.letterKeyCodes[idx], mods: GHOSTTY_MODS_CTRL,
-                        unshifted: 0x61 + UInt32(idx))
+                        unshifted: 0x61 + UInt32(idx), fallback: [UInt8(v)])
             case 0x00, 0x1C...0x1F:
                 // Ctrl+Space (NUL), Ctrl+\, Ctrl+], Ctrl+6 (^^), Ctrl+/ (^_): libghostty maps these to the C0 byte.
                 flush()
                 let key = VK.ctrlSymbol[Int(v == 0 ? 0 : v - 0x1B)]
-                sendKey(keyCode: key.keyCode, mods: GHOSTTY_MODS_CTRL, unshifted: key.unshifted)
+                sendKey(keyCode: key.keyCode, mods: GHOSTTY_MODS_CTRL, unshifted: key.unshifted, fallback: [UInt8(v)])
             default:
                 buffer.unicodeScalars.append(scalars[i])
             }
@@ -117,7 +117,7 @@ extension GhosttySurfaceView {
         let n = s.count
         // Lone ESC (end of input, or followed by another ESC) → Escape key press.
         guard start + 1 < n, s[start + 1].value != 0x1B else {
-            sendKey(keyCode: VK.escape, unshifted: 0x1B)
+            sendKey(keyCode: VK.escape, unshifted: 0x1B, fallback: [0x1B])
             return start
         }
         let next = s[start + 1].value
@@ -141,7 +141,7 @@ extension GhosttySurfaceView {
                 return j - 1
             }
             if !hasIntermediates, let key = Self.csiKey(params: params, final: s[j].value) {
-                sendKey(keyCode: key.keyCode, mods: key.mods, unshifted: key.unshifted)
+                sendKey(keyCode: key.keyCode, mods: key.mods, unshifted: key.unshifted, fallback: Self.bytes(s[start...j]))
             } else {
                 writeRaw(s[start...j])
             }
@@ -151,7 +151,7 @@ extension GhosttySurfaceView {
         // SS3: ESC O final
         if next == 0x4F, start + 2 < n, (0x40...0x7E).contains(s[start + 2].value) {
             if let key = Self.ss3Key(final: s[start + 2].value) {
-                sendKey(keyCode: key, unshifted: 0)
+                sendKey(keyCode: key, unshifted: 0, fallback: Self.bytes(s[start...(start + 2)]))
             } else {
                 writeRaw(s[start...(start + 2)])
             }
@@ -175,13 +175,14 @@ extension GhosttySurfaceView {
             guard let m = parts[1].isEmpty ? 1 : Int(parts[1]), (1...16).contains(m) else { return nil }
             modParam = m
         }
-        // xterm modifier parameter: 1 + (shift 1 | alt 2 | ctrl 4 | meta 8).
+        // xterm modifier parameter: 1 + (shift 1 | alt 2 | ctrl 4 | meta 8). Meta would become Command,
+        // which programmatic input must never press; such sequences go raw.
         let bits = modParam - 1
+        guard bits & 8 == 0 else { return nil }
         var mods = GHOSTTY_MODS_NONE.rawValue
         if bits & 1 != 0 { mods |= GHOSTTY_MODS_SHIFT.rawValue }
         if bits & 2 != 0 { mods |= GHOSTTY_MODS_ALT.rawValue }
         if bits & 4 != 0 { mods |= GHOSTTY_MODS_CTRL.rawValue }
-        if bits & 8 != 0 { mods |= GHOSTTY_MODS_SUPER.rawValue }
 
         let keyCode: UInt16
         var unshifted: UInt32 = 0
@@ -248,8 +249,12 @@ extension GhosttySurfaceView {
     }
 
     private func writeRaw<C: Collection>(_ scalars: C) where C.Element == Unicode.Scalar {
+        writeRaw(Self.bytes(scalars))
+    }
+
+    private static func bytes<C: Collection>(_ scalars: C) -> [UInt8] where C.Element == Unicode.Scalar {
         var s = ""
         s.unicodeScalars.append(contentsOf: scalars)
-        writeRaw(Array(s.utf8))
+        return Array(s.utf8)
     }
 }
