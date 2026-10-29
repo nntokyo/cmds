@@ -7,3 +7,5 @@ xcuserdata/
 .swiftpm/
 vendor/GhosttyKit.xcframework
 .claude/
+App/Info.plist
+iOS/Info.plist
