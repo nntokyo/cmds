@@ -599,9 +599,9 @@ final class AppController {
         if let ssh = pane.ssh {
             workspace.workingDirectory = pane.workingDirectory
             workspace.gitBranch = ssh.remoteBranch
-        } else if let cwd = pane.workingDirectory {
-            workspace.workingDirectory = cwd
-            workspace.gitBranch = GitInfo.branch(at: cwd)
+        } else {
+            workspace.workingDirectory = pane.workingDirectory
+            workspace.gitBranch = pane.workingDirectory.flatMap(GitInfo.branch(at:))
         }
     }
 
@@ -796,8 +796,9 @@ final class AppController {
         let wasRemote = workspace.isRemote
         workspace.focusedPaneID = pane.id
         if let zoomed = workspace.zoomedPaneID, zoomed != pane.id { workspace.zoomedPaneID = nil }
-        if pane.kind == .terminal, pane.workingDirectory != nil,
-           pane.workingDirectory != workspace.workingDirectory || pane.ssh != nil || wasRemote {
+        // Moving to or from an SSH pane always replaces the location (an SSH pane may not know its cwd yet).
+        if pane.kind == .terminal,
+           pane.ssh != nil || wasRemote || (pane.workingDirectory != nil && pane.workingDirectory != workspace.workingDirectory) {
             updateLocation(of: workspace, from: pane)
         }
         if isWindowKey, workspace.id == selectedWorkspaceID { clearAttention(pane) }
