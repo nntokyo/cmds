@@ -87,6 +87,7 @@ struct ConnectView: View {
                 Section {
                     HStack {
                         TextField("host or host:port", text: $manualHost)
+                            .accessibilityIdentifier("manualHost")
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
@@ -265,6 +266,7 @@ struct PairingSheet: View {
                     .foregroundStyle(.green)
             }
             TextField("000000", text: $code)
+                .accessibilityIdentifier("pairingCode")
                 .font(.system(size: 34, weight: .semibold, design: .monospaced))
                 .multilineTextAlignment(.center)
                 .keyboardType(.numberPad)
