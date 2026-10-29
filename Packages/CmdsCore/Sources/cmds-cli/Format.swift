@@ -8,8 +8,9 @@ enum Format {
         var out = ""
         for (index, workspace) in workspaces.enumerated() {
             var line = "\(workspace.selected ? "*" : " ") \(index + 1). \(workspace.id)  \(workspace.title)"
+            if let host = workspace.remoteHost { line += "  (ssh \(host))" }
             if let branch = workspace.gitBranch { line += "  [\(branch)]" }
-            if let cwd = workspace.workingDirectory { line += "  \(abbreviate(cwd))" }
+            if let cwd = workspace.workingDirectory { line += "  \(workspace.remoteHost == nil ? abbreviate(cwd) : cwd)" }
             if !workspace.ports.isEmpty { line += "  " + workspace.ports.map { ":\($0)" }.joined(separator: " ") }
             if workspace.cpuPercent != nil || workspace.memoryBytes != nil {
                 line += "  " + ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes)
@@ -61,7 +62,8 @@ enum Format {
     static func pane(_ pane: PaneInfo, currentPane: String?) -> String {
         var line = "\(pane.focused ? ">" : " ")\(pane.attention ? "!" : " ") \(pane.id)  \(pane.kind.rawValue)  \(oneLine(pane.title))"
         if pane.kind == .browser, let url = pane.url { line += "  \(url)" }
-        if pane.kind == .terminal, let cwd = pane.workingDirectory { line += "  \(abbreviate(cwd))" }
+        if let remote = pane.remote { line += "  ssh \(remote.host)\(remote.connected ? "" : " (disconnected)")" }
+        if pane.kind == .terminal, let cwd = pane.workingDirectory { line += "  \(pane.remote == nil ? abbreviate(cwd) : cwd)" }
         if pane.id == currentPane { line += "  (this pane)" }
         if let agent = pane.agent {
             // Account limits are left to `cmds agents` / `cmds stats` (the session's own copy may be older).

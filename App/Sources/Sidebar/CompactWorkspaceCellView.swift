@@ -97,6 +97,7 @@ final class CompactWorkspaceCellView: NSTableCellView {
     @MainActor
     private static func tooltip(_ workspace: Workspace, index: Int) -> String {
         var lines = [workspace.title + (index < 9 ? "  ⌘\(index + 1)" : "")]
+        if let host = workspace.remoteHost ?? workspace.sshPanes.first?.ssh?.launch.host { lines.append("ssh \(host)") }
         if let branch = workspace.gitBranch { lines.append("⎇ \(branch)") }
         if let cwd = workspace.workingDirectory { lines.append(cwd.abbreviatingHome) }
         if !workspace.ports.isEmpty { lines.append(workspace.ports.map { ":\($0)" }.joined(separator: "  ")) }

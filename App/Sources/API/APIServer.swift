@@ -6,15 +6,19 @@ import os
 /// Socket API (docs/ARCHITECTURE.md, "Socket API"): maps JSON-RPC methods onto `AppController`.
 /// Requests arrive on connection threads and are handled on the main actor in arrival order;
 /// async methods (browser eval/snapshot) reply when done without blocking other requests.
+/// With a `scope` (the socket an SSH pane forwards to its server) every request first goes through
+/// `RemoteAPIPolicy`: only the pane's own methods, targets pinned to that pane/workspace, results filtered.
 @MainActor
 final class APIServer {
     private let controller: AppController
     private let server: SocketServer
+    private let scope: RemoteScope?
     private var subscriptions: [Int: AnyCancellable] = [:]
 
-    init(controller: AppController) {
+    init(controller: AppController, path: String? = nil, scope: RemoteScope? = nil) {
         self.controller = controller
-        server = SocketServer(path: controller.socketPath)
+        self.scope = scope
+        server = SocketServer(path: path ?? controller.socketPath)
         server.onRequest = { [weak self] request, connection in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated { self?.handle(request, from: connection) }
@@ -27,11 +31,14 @@ final class APIServer {
         }
     }
 
-    func start() {
+    @discardableResult
+    func start() -> Bool {
         do {
             try server.start()
+            return true
         } catch {
-            Logger(subsystem: "tokyo.n-n.cmds", category: "api").error("socket API unavailable: \(String(describing: error), privacy: .public)")
+            Logger(subsystem: "tokyo.n-n.cmds", category: "api").error("socket API unavailable at \(self.server.path, privacy: .public): \(String(describing: error), privacy: .public)")
+            return false
         }
     }
 
@@ -44,8 +51,18 @@ final class APIServer {
 
     private func handle(_ request: RPCRequest, from connection: SocketConnection) {
         guard !connection.closed else { return }
-        let params = Params(request.params)
         let id = request.id
+        if let scope {
+            do {
+                let params = Params(try RemoteAPIPolicy.authorize(method: request.method, params: request.params, scope: scope))
+                let result = try perform(request.method, params)
+                connection.reply(id: id, result: RemoteAPIPolicy.filterResult(method: request.method, result: result, scope: scope))
+            } catch {
+                connection.reply(id: id, error: Self.rpcError(error))
+            }
+            return
+        }
+        let params = Params(request.params)
         do {
             switch request.method {
             case "browser.eval":
@@ -108,10 +125,21 @@ final class APIServer {
             let pid = try params.int("pid")
             try controller.reportAgentUsage(paneID: try params.string("pane"), usage: usage,
                                             pid: pid.flatMap { $0 > 0 && $0 <= Int(Int32.max) ? Int32($0) : nil })
+        case "agent.claude_hook":
+            try controller.claudeHook(paneID: try params.string("pane"), input: try params.json("input"))
+        case "agent.claude_status":
+            try controller.claudeStatus(paneID: try params.string("pane"), input: try params.json("input"))
+        case "remote.location":
+            try controller.setRemoteLocation(paneID: try params.string("pane"), cwd: try params.string("cwd"),
+                                             branch: try params.string("branch"))
 
         case "workspace.list":
             return try .from(controller.listWorkspaces())
         case "workspace.create":
+            if let host = try params.string("ssh") {
+                let launch = try SSHLaunch.checked(host: host, remoteCwd: try params.string("remoteCwd"))
+                return try .from(controller.createSSHWorkspace(launch, title: try params.string("title")))
+            }
             return try .from(controller.createWorkspace(title: try params.string("title"), cwd: try params.string("cwd"),
                                                         command: try params.string("command")))
         case "workspace.select":
@@ -130,10 +158,13 @@ final class APIServer {
             }
             let rawKind = try params.string("kind") ?? (try params.string("url") != nil ? "browser" : "terminal")
             guard let kind = PaneKind(rawValue: rawKind) else { throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\"") }
+            let ssh = try params.string("ssh").map { try SSHLaunch.checked(host: $0, remoteCwd: try params.string("remoteCwd")) }
             return try .from(controller.split(paneID: try params.string("pane"), direction: direction, kind: kind,
                                               url: try params.string("url"), cwd: try params.string("cwd"),
                                               command: try params.string("command"),
-                                              focus: try params.bool("focus") ?? true))
+                                              focus: try params.bool("focus") ?? true, ssh: ssh))
+        case "pane.reconnect":
+            try controller.connectSSH(paneID: try params.string("pane"))
         case "pane.focus":
             try controller.focusPane(id: try params.required("pane"))
         case "pane.close":
@@ -245,6 +276,19 @@ private struct Params {
     func required(_ key: String) throws -> String {
         guard let string = try string(key) else { throw RPCError.invalidParams("missing param: \(key)") }
         return string
+    }
+
+    /// Any JSON value; a string is taken as JSON text (clients that cannot embed objects).
+    func json(_ key: String) throws -> JSONValue {
+        switch value?[key] {
+        case nil, .null?: throw RPCError.invalidParams("missing param: \(key)")
+        case .string(let text)?:
+            guard let parsed = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)) else {
+                throw RPCError.invalidParams("\(key) must be JSON")
+            }
+            return parsed
+        case let other?: return other
+        }
     }
 
     func bool(_ key: String) throws -> Bool? {

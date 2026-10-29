@@ -20,6 +20,8 @@ final class WorkspaceCellView: NSTableCellView {
     private let dot = NSView()
     private let titleLabel = NSTextField(labelWithString: "")
     private let shortcutLabel = NSTextField(labelWithString: "")
+    /// `ssh home` (hosts of the workspace's SSH panes; "disconnected" while one is down).
+    private let hostLabel = NSTextField(labelWithString: "")
     private let branchLabel = NSTextField(labelWithString: "")
     private let directoryLabel = NSTextField(labelWithString: "")
     private let portsLabel = NSTextField(labelWithString: "")
@@ -51,7 +53,7 @@ final class WorkspaceCellView: NSTableCellView {
         shortcutLabel.setContentHuggingPriority(.required, for: .horizontal)
         shortcutLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
-        for label in [branchLabel, directoryLabel, portsLabel] {
+        for label in [hostLabel, branchLabel, directoryLabel, portsLabel] {
             label.font = Self.detailFont
             label.textColor = .secondaryLabelColor
             label.lineBreakMode = .byTruncatingMiddle
@@ -84,7 +86,7 @@ final class WorkspaceCellView: NSTableCellView {
             dot.heightAnchor.constraint(equalToConstant: 8),
         ])
 
-        stack.setViews([titleRow, branchLabel, directoryLabel, portsLabel, agentNameLabel, agentLabel, usageLabel, notificationLabel], in: .top)
+        stack.setViews([titleRow, hostLabel, branchLabel, directoryLabel, portsLabel, agentNameLabel, agentLabel, usageLabel, notificationLabel], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = Self.spacing
@@ -125,9 +127,12 @@ final class WorkspaceCellView: NSTableCellView {
         shortcutLabel.stringValue = index < 9 ? "⌘\(index + 1)" : ""
         dot.isHidden = !workspace.attention
 
+        hostLabel.isHidden = workspace.sshPanes.isEmpty
+        hostLabel.attributedStringValue = Self.hostText(workspace)
         branchLabel.isHidden = workspace.gitBranch == nil
         branchLabel.attributedStringValue = Self.symbolText("arrow.triangle.branch", workspace.gitBranch ?? "")
-        directoryLabel.stringValue = workspace.workingDirectory?.abbreviatingHome ?? ""
+        // A remote path is shown as is (`~` abbreviation is for this Mac's home).
+        directoryLabel.stringValue = (workspace.isRemote ? workspace.workingDirectory : workspace.workingDirectory?.abbreviatingHome) ?? ""
         directoryLabel.isHidden = workspace.workingDirectory == nil
         portsLabel.isHidden = workspace.ports.isEmpty
         portsLabel.stringValue = workspace.ports.map { ":\($0)" }.joined(separator: "  ")
@@ -144,6 +149,7 @@ final class WorkspaceCellView: NSTableCellView {
     @MainActor
     static func height(for workspace: Workspace, width: CGFloat) -> CGFloat {
         var lines: [CGFloat] = [titleHeight]
+        if !workspace.sshPanes.isEmpty { lines.append(detailHeight) }
         if workspace.gitBranch != nil { lines.append(detailHeight) }
         if workspace.workingDirectory != nil { lines.append(detailHeight) }
         if !workspace.ports.isEmpty { lines.append(detailHeight) }
@@ -256,6 +262,7 @@ final class WorkspaceCellView: NSTableCellView {
             let precise = workspace.cpuPercent.map { String(format: "%.1f%%", $0) } ?? "–"
             usageLabel.toolTip = "CPU \(precise) (100% = one core)\nMemory \(memory) (physical footprint)\n"
                 + "\(count) process\(count == 1 ? "" : "es") in this workspace's terminals"
+                + (workspace.sshPanes.isEmpty ? "" : "\nSSH panes count only the local ssh client, not the server")
         }
     }
 
@@ -274,6 +281,21 @@ final class WorkspaceCellView: NSTableCellView {
         result.append(NSAttributedString(string: "\t", attributes: label))
         result.append(NSAttributedString(string: memory, attributes: value))
         return result
+    }
+
+    /// `⌁ ssh home` for the focused SSH pane (else the first), `+N` for more hosts, orange "disconnected" while down.
+    @MainActor
+    private static func hostText(_ workspace: Workspace) -> NSAttributedString {
+        let panes = workspace.sshPanes
+        guard let shown = panes.first(where: { $0.id == workspace.focusedPaneID }) ?? panes.first,
+              let ssh = shown.ssh else { return NSAttributedString() }
+        let otherHosts = Set(panes.compactMap { $0.ssh?.launch.host }).subtracting([ssh.launch.host]).count
+        let text = symbolText("network", ssh.launch.label + (otherHosts > 0 ? "  +\(otherHosts)" : "")).mutableCopy() as! NSMutableAttributedString
+        if !ssh.connected {
+            text.append(NSAttributedString(string: " · disconnected", attributes: [
+                .font: detailFont, .foregroundColor: NSColor.systemOrange]))
+        }
+        return text
     }
 
     private static func symbolText(_ symbol: String, _ text: String) -> NSAttributedString {

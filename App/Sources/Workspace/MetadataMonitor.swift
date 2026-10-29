@@ -49,7 +49,10 @@ final class MetadataMonitor {
     func refresh() {
         guard !scanning else { return }
         // Runs without workspaces too: the sidebar footer shows machine-wide usage regardless.
-        let directories = Dictionary(uniqueKeysWithValues: controller.workspaces.map { ($0.id, $0.workingDirectory) })
+        // Remote workspaces (focused SSH pane): their cwd is on the server, never look it up here.
+        let directories = Dictionary(uniqueKeysWithValues: controller.workspaces.map {
+            ($0.id, $0.isRemote ? nil : $0.workingDirectory)
+        })
         // Each pane's pty foreground group identifies its tty, hence every process running in it.
         var foregroundGroups: [pid_t: String] = [:]
         var paneGroups: [pid_t: String] = [:]

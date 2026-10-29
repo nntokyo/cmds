@@ -14,18 +14,16 @@ final class PaneContainerView: NSView {
         didSet { if showsFocus != oldValue { updateRing() } }
     }
 
+    private(set) var content: NSView
+    /// Covers the content (SSH panes: Disconnected / Reconnect); below the ring.
+    private(set) var overlay: NSView?
+
     init(paneID: String, content: NSView) {
         self.paneID = paneID
+        self.content = content
         super.init(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         wantsLayer = true
-        content.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(content)
-        NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: trailingAnchor),
-            content.topAnchor.constraint(equalTo: topAnchor),
-            content.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
+        pin(content)
         ring.frame = bounds
         ring.autoresizingMask = [.width, .height]
         addSubview(ring)
@@ -33,6 +31,36 @@ final class PaneContainerView: NSView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Swaps the hosted view (an SSH pane gets a new terminal surface on reconnect).
+    func setContent(_ view: NSView) {
+        guard view !== content else { return }
+        content.removeFromSuperview()
+        content = view
+        pin(view, below: overlay ?? ring)
+    }
+
+    func setOverlay(_ view: NSView?) {
+        guard view !== overlay else { return }
+        overlay?.removeFromSuperview()
+        overlay = view
+        if let view { pin(view, below: ring) }
+    }
+
+    private func pin(_ view: NSView, below sibling: NSView? = nil) {
+        view.translatesAutoresizingMaskIntoConstraints = false
+        if let sibling, sibling.superview === self {
+            addSubview(view, positioned: .below, relativeTo: sibling)
+        } else {
+            addSubview(view)
+        }
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: leadingAnchor),
+            view.trailingAnchor.constraint(equalTo: trailingAnchor),
+            view.topAnchor.constraint(equalTo: topAnchor),
+            view.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+    }
 
     override func didAddSubview(_ subview: NSView) {
         super.didAddSubview(subview)

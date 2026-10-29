@@ -27,9 +27,12 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds ls` | Workspaces (branch, cwd, ports, `CPU 12% · 1.2 GB`, `!` attention, sidebar text) with a tree of panes (`>` focused) |
 | `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
 | `cmds new [--title T] [--cwd DIR] [-- cmd…]` | New workspace (default cwd: current directory); prints its id |
+| `cmds new --ssh HOST [--remote-cwd DIR] [--title T]` | New SSH workspace ([SSH.md](SSH.md)) |
+| `cmds reconnect [pane]` | Reconnect an SSH pane whose `ssh` exited |
+| `cmds remote-helper` | Print `cmds-remote.sh`, the sh client for servers reached through an SSH pane |
 | `cmds select <id\|index\|title>` | Select a workspace (index is 1-based like ⌘1…⌘9) |
 | `cmds close [ws]` / `cmds rename [ws] <title>` | Close / rename a workspace (default: current) |
-| `cmds split [right\|down] [--pane P] [--browser URL] [--cwd DIR] [--no-focus] [-- cmd…]` | Split a pane; prints the new pane id (`--no-focus` keeps the keyboard where it is) |
+| `cmds split [right\|down] [--pane P] [--browser URL \| --ssh HOST [--remote-cwd DIR]] [--cwd DIR] [--no-focus] [-- cmd…]` | Split a pane; prints the new pane id (`--no-focus` keeps the keyboard where it is). Splitting an SSH pane without `--cwd`/command connects to the same host again |
 | `cmds panes [--workspace W]` | List panes |
 | `cmds focus <pane>` / `cmds close-pane [pane]` | Focus / close a pane |
 | `cmds send [--pane P] [--enter] <text…\|->` | Type text into a terminal (`-` reads stdin; `--enter`/`-e` appends Return) |

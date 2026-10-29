@@ -50,6 +50,7 @@ enum MainMenu {
     private static func fileMenu(_ router: CommandRouter) -> NSMenu {
         let menu = NSMenu(title: "File")
         menu.addItem(item("New Workspace", #selector(CommandRouter.newWorkspace(_:)), "n", target: router))
+        menu.addItem(item("New SSH Workspace…", #selector(CommandRouter.newSSHWorkspace(_:)), "n", [.command, .shift], target: router))
         menu.addItem(item("Open Browser Split", #selector(CommandRouter.openBrowser(_:)), "b", [.command, .shift], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Close Pane", #selector(CommandRouter.closePane(_:)), "w", target: router))
@@ -100,6 +101,8 @@ enum MainMenu {
         }
         menu.addItem(.separator())
         menu.addItem(item("Jump to Latest Attention", #selector(CommandRouter.jumpToAttention(_:)), "u", [.command, .shift], target: router))
+        menu.addItem(.separator())
+        menu.addItem(item("Install Remote Helper…", #selector(CommandRouter.installRemoteHelper(_:)), "", target: router))
         return menu
     }
 

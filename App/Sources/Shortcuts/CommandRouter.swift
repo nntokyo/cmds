@@ -21,6 +21,16 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         controller.createWorkspace()
     }
 
+    @objc func newSSHWorkspace(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        SSHConnectSheet.present(in: windowController?.window, controller: controller)
+    }
+
+    @objc func installRemoteHelper(_ sender: Any?) {
+        guard let pane = controller.focusedPane else { return }
+        RemoteHelperInstaller.confirmAndInstall(pane: pane, window: windowController?.window)
+    }
+
     @objc func closePane(_ sender: Any?) { try? controller.closePane(id: nil) }
     @objc func closeWorkspace(_ sender: Any?) { try? controller.closeWorkspace(id: nil) }
 
@@ -50,7 +60,14 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     // MARK: Browser
 
     @objc func browserFocusAddress(_ sender: Any?) { focusedBrowser?.focusAddressBar() }
-    @objc func browserReload(_ sender: Any?) { focusedBrowser?.reload() }
+    /// ⌘R: reload the focused browser, or reconnect the focused SSH pane whose ssh is not running.
+    @objc func browserReload(_ sender: Any?) {
+        if let pane = controller.focusedDisconnectedSSHPane {
+            try? controller.connectSSH(paneID: pane.id)
+        } else {
+            focusedBrowser?.reload()
+        }
+    }
     @objc func browserBack(_ sender: Any?) { focusedBrowser?.goBack() }
     @objc func browserForward(_ sender: Any?) { focusedBrowser?.goForward() }
 
@@ -101,7 +118,16 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
-        case #selector(browserFocusAddress(_:)), #selector(browserReload(_:)),
+        case #selector(browserReload(_:)):
+            if controller.focusedDisconnectedSSHPane != nil {
+                menuItem.title = "Reconnect SSH"
+                return true
+            }
+            menuItem.title = "Reload Page"
+            return focusedBrowser != nil
+        case #selector(installRemoteHelper(_:)):
+            return controller.focusedPane?.ssh?.connected == true
+        case #selector(browserFocusAddress(_:)),
              #selector(browserBack(_:)), #selector(browserForward(_:)):
             return focusedBrowser != nil
         case #selector(closePane(_:)), #selector(closeWorkspace(_:)), #selector(splitRight(_:)),

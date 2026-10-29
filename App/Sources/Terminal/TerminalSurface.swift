@@ -9,6 +9,9 @@ struct TerminalLaunchConfig {
     var command: String?
     /// Extra environment (CMDS_* variables are added here by the shell).
     var environment: [String: String] = [:]
+    /// Keep the surface (and its last screen) when the command exits and report `terminalSurfaceChildDidExit`
+    /// instead of closing (SSH panes show a Reconnect overlay).
+    var waitAfterCommand = false
 }
 
 @MainActor
@@ -21,6 +24,12 @@ protocol TerminalSurfaceDelegate: AnyObject {
     func terminalSurfaceDidBecomeFocused(_ surface: TerminalSurface)
     /// The child process exited or the surface requested to close.
     func terminalSurfaceDidClose(_ surface: TerminalSurface)
+    /// Only for surfaces launched with `waitAfterCommand`: the command exited; the surface stays open.
+    func terminalSurfaceChildDidExit(_ surface: TerminalSurface)
+}
+
+extension TerminalSurfaceDelegate {
+    func terminalSurfaceChildDidExit(_ surface: TerminalSurface) {}
 }
 
 @MainActor

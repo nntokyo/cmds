@@ -26,9 +26,12 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var url: String?
     /// Usage of the AI coding agent running in the pane (Claude Code, Codex); nil when none is known.
     public var agent: AgentUsage?
+    /// Set for SSH panes; `workingDirectory` is then a path on that host.
+    public var remote: RemoteInfo?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
-                workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil) {
+                workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
+                remote: RemoteInfo? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -37,6 +40,23 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.workingDirectory = workingDirectory
         self.url = url
         self.agent = agent
+        self.remote = remote
+    }
+}
+
+/// An SSH pane (docs/SSH.md): the `ssh` destination it runs and whether the connection is up.
+public struct RemoteInfo: Codable, Equatable, Sendable {
+    /// As given by the user: `home`, `user@host`, an `~/.ssh/config` alias.
+    public var host: String
+    /// The `ssh` process is running (false: disconnected, or not connected yet after a relaunch).
+    public var connected: Bool
+    /// Git branch of the remote shell's directory, reported by `cmds-remote.sh prompt`.
+    public var branch: String?
+
+    public init(host: String, connected: Bool, branch: String? = nil) {
+        self.host = host
+        self.connected = connected
+        self.branch = branch
     }
 }
 
@@ -64,11 +84,14 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
     /// Sum of the physical footprints ("Memory" in Activity Monitor) of those processes.
     /// nil until sampled or when no process was found.
     public var memoryBytes: UInt64?
+    /// `ssh` destination when the focused terminal pane is an SSH pane: `workingDirectory` and `gitBranch` are then
+    /// remote. CPU/memory always describe local processes (for an SSH pane: the ssh client).
+    public var remoteHost: String?
 
     public init(id: String, title: String, selected: Bool, gitBranch: String? = nil, workingDirectory: String? = nil,
                 ports: [Int] = [], notificationText: String? = nil, attention: Bool = false,
                 panes: [PaneInfo] = [], layout: LayoutNode? = nil,
-                cpuPercent: Double? = nil, memoryBytes: UInt64? = nil) {
+                cpuPercent: Double? = nil, memoryBytes: UInt64? = nil, remoteHost: String? = nil) {
         self.id = id
         self.title = title
         self.selected = selected
@@ -81,5 +104,6 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.layout = layout
         self.cpuPercent = cpuPercent
         self.memoryBytes = memoryBytes
+        self.remoteHost = remoteHost
     }
 }
