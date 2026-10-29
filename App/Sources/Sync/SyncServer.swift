@@ -26,6 +26,7 @@ final class SyncServer {
     /// Wrong codes allowed per code before a new one is drawn.
     static let maxFailuresPerCode = 5
     static let maxConnections = 16
+    static let maxPendingPerHost = 4
     static let maxSubscribedPanes = 32
     static let screenInterval: TimeInterval = 0.1
     static let stateInterval: TimeInterval = 0.1
@@ -39,6 +40,8 @@ final class SyncServer {
         var streamer = ScreenStreamer()
         var subscribed: Set<String> = []
         var helloTimer: DispatchWorkItem?
+        /// Set once a closing error was sent; later frames (e.g. pipelined hellos) are ignored.
+        var closing = false
 
         init(connection: SyncConnection) { self.connection = connection }
     }
@@ -88,6 +91,15 @@ final class SyncServer {
         set {
             UserDefaults.standard.set(newValue, forKey: Self.enabledDefaultsKey)
             newValue ? start() : stop()
+        }
+    }
+
+    /// True while the pairing window is shown. Pairing codes are rejected otherwise, which keeps
+    /// the 6-digit code out of reach of guessing except while the user is actually pairing.
+    /// Closing the window retires the code.
+    var isPairingOpen = false {
+        didSet {
+            if oldValue && !isPairingOpen { rotateCode() }
         }
     }
 
@@ -148,8 +160,12 @@ final class SyncServer {
     func revokeAllDevices() {
         store.revokeAll()
         for client in clients.values where client.authenticated {
+            // Stop streaming to it at once; the error is the last frame it gets.
+            client.authenticated = false
+            client.subscribed = []
             sendError(.invalidToken, "this device was unpaired on the Mac", to: client, close: true)
         }
+        pruneScreenCache()
         rotateCode()
     }
 
@@ -233,6 +249,12 @@ final class SyncServer {
         let connection = SyncConnection(connection: nwConnection, queue: queue,
                                         onFrame: { [weak self] conn, data in self?.received(data, from: conn) },
                                         onClose: { [weak self] conn in self?.closed(conn) })
+        // One host must not fill every slot with connections that never say hello.
+        let pendingFromHost = clients.values.filter { !$0.authenticated && $0.connection.remoteHost == connection.remoteHost }
+        guard pendingFromHost.count < Self.maxPendingPerHost else {
+            nwConnection.cancel()
+            return
+        }
         let client = Client(connection: connection)
         clients[connection.id] = client
         let timer = DispatchWorkItem { [weak client] in
@@ -252,7 +274,7 @@ final class SyncServer {
     }
 
     private func received(_ data: Data, from connection: SyncConnection) {
-        guard let client = clients[connection.id] else { return }
+        guard let client = clients[connection.id], !client.closing else { return }
         guard data.count <= Self.maxFrameBytes else {
             sendError(.badRequest, "frame too large", to: client, close: true)
             return
@@ -337,7 +359,9 @@ final class SyncServer {
             return
         }
 
-        switch PairingAuthenticator.evaluate(hashed, currentCode: pairingCode, knownTokens: knownHashes) {
+        // Codes are only accepted while the pairing window is open (tokens always are).
+        let openCode = isPairingOpen ? pairingCode : nil
+        switch PairingAuthenticator.evaluate(hashed, currentCode: openCode, knownTokens: knownHashes) {
         case .accepted(let token, let isNewToken):
             let name = Self.sanitize(hello.deviceName)
             let plainToken: String
@@ -357,6 +381,8 @@ final class SyncServer {
             client.tokenHash = SyncDeviceStore.hash(plainToken)
             send(.welcome(.init(macName: macName, token: plainToken)), to: client)
             send(.state(.init(workspaces: AppController.shared.listWorkspaces())), to: client)
+            // This client may now be ahead of the last broadcast; never skip the next one as a duplicate.
+            lastStateData = nil
             didChange()
         case .rejected(let error):
             if error.code == .invalidPairingCode || error.code == .invalidToken {
@@ -413,18 +439,21 @@ final class SyncServer {
     // MARK: - Screens
 
     private func subscribe(_ client: Client, paneIDs: [String]) {
-        let wanted = Set(paneIDs.prefix(Self.maxSubscribedPanes))
+        var wanted = Set(paneIDs.prefix(Self.maxSubscribedPanes))
         let added = wanted.subtracting(client.subscribed)
-        client.subscribed = wanted
-        client.streamer.retain(paneIDs: wanted)
         for paneID in added {
             client.streamer.reset(paneID: paneID)
             if let snapshot = snapshot(paneID: paneID) {
                 if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
             } else {
+                wanted.remove(paneID)
                 sendError(.notFound, "pane not found or not a terminal: \(paneID.prefix(64))", to: client)
             }
         }
+        client.subscribed = wanted
+        // Keeps per-pane seq for unsubscribed panes (CmdsCore >= 654204a), so a later
+        // re-subscribe is not taken as stale by the phone's ScreenMirror.
+        client.streamer.retain(paneIDs: wanted)
         pruneScreenCache()
         if subscribedPanes.isEmpty { stopScreenTimer() } else { startScreenTimer() }
     }
@@ -504,6 +533,7 @@ final class SyncServer {
     }
 
     private func sendError(_ code: SyncErrorCode, _ message: String, to client: Client, close: Bool = false) {
+        if close { client.closing = true }
         send(.error(.init(code: code, message: message)), to: client, close: close)
     }
 

@@ -23,6 +23,7 @@ final class SyncPairingWindowController: NSWindowController {
         window.isReleasedWhenClosed = false
         window.hidesOnDeactivate = false
         super.init(window: window)
+        window.delegate = self
         buildContent()
         NotificationCenter.default.addObserver(self, selector: #selector(serverDidChange), name: .syncServerDidChange, object: nil)
     }
@@ -31,6 +32,8 @@ final class SyncPairingWindowController: NSWindowController {
     required init?(coder: NSCoder) { fatalError("not used") }
 
     func present() {
+        // Pairing codes are accepted only while this window is open.
+        server.isPairingOpen = true
         showWindow(nil)
         window?.center()
         window?.makeKeyAndOrderFront(nil)
@@ -104,7 +107,7 @@ final class SyncPairingWindowController: NSWindowController {
             let remaining = max(0, Int(server.codeExpiresAt.timeIntervalSinceNow))
             detailLabel.stringValue = """
             Mac: \(server.macName)   •   \(server.statusText)
-            Code changes in \(remaining / 60):\(String(format: "%02d", remaining % 60)) and after each pairing.
+            Valid only while this window is open; changes in \(remaining / 60):\(String(format: "%02d", remaining % 60)) and after each pairing.
             Unencrypted on the local network (v1); pair only on networks you trust.
             """
         } else {
@@ -172,6 +175,14 @@ final class SyncPairingWindowController: NSWindowController {
                 self?.refresh()
             }
         }
+    }
+}
+
+extension SyncPairingWindowController: NSWindowDelegate {
+    func windowWillClose(_ notification: Notification) {
+        server.isPairingOpen = false
+        countdown?.invalidate()
+        countdown = nil
     }
 }
 
