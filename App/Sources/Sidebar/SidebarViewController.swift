@@ -118,6 +118,7 @@ final class SidebarViewController: NSViewController {
             (tableView.view(atColumn: 0, row: row, makeIfNecessary: false) as? WorkspaceCellView)?.updateUsage(with: workspace)
         }
         usageFooter.update(sample: controller.systemSample)
+        usageFooter.update(agentLimits: controller.activeAgentLimits())
     }
 
     // MARK: - Actions

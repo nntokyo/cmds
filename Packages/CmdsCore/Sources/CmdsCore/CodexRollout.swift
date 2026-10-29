@@ -343,7 +343,8 @@ public enum CodexSessionMatcher {
         return result
     }
 
-    static func sameDirectory(_ a: String?, _ b: String?) -> Bool {
+    /// Same path, ignoring `/private` (`/tmp` vs `/private/tmp`); nil matches anything.
+    public static func sameDirectory(_ a: String?, _ b: String?) -> Bool {
         guard let a, let b else { return true }
         return normalize(a) == normalize(b)
     }
@@ -441,7 +442,7 @@ public enum ProcessArguments {
         while index < size, bytes[index] != 0, environment.count < prefixes.count {
             let start = index
             while index < size, bytes[index] != 0 { index += 1 }
-            for prefix in prefixes where environment[prefix.name] == nil && index - start >= prefix.bytes.count
+            for prefix in prefixes where environment[prefix.name] == nil && index - start > prefix.bytes.count
                 && prefix.bytes.indices.allSatisfy({ bytes[start + $0] == prefix.bytes[$0] }) {
                 environment[prefix.name] = string(from: start + prefix.bytes.count, to: index)
             }

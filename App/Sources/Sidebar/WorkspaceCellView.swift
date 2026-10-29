@@ -24,6 +24,10 @@ final class WorkspaceCellView: NSTableCellView {
     private let directoryLabel = NSTextField(labelWithString: "")
     private let portsLabel = NSTextField(labelWithString: "")
     private let usageLabel = NSTextField(labelWithString: "")
+    /// `Claude Opus · ctx 53% · $117.99 · 5h 40%` for the workspace's agent pane.
+    private let agentLabel = NSTextField(labelWithString: "")
+    private var agentKey: String?
+    private var agentTooltip: String?
     private let notificationLabel = NSTextField(wrappingLabelWithString: "")
     private let stack = NSStackView()
     /// What `usageLabel` currently shows; samples that change nothing visible skip the update.
@@ -57,6 +61,9 @@ final class WorkspaceCellView: NSTableCellView {
         usageLabel.font = Self.usageFont
         usageLabel.lineBreakMode = .byClipping
         usageLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        agentLabel.font = Self.usageFont
+        agentLabel.lineBreakMode = .byTruncatingTail
+        agentLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         notificationLabel.font = Self.detailFont
         notificationLabel.textColor = .labelColor.withAlphaComponent(0.8)
         notificationLabel.maximumNumberOfLines = 2
@@ -74,7 +81,7 @@ final class WorkspaceCellView: NSTableCellView {
             dot.heightAnchor.constraint(equalToConstant: 8),
         ])
 
-        stack.setViews([titleRow, branchLabel, directoryLabel, portsLabel, usageLabel, notificationLabel], in: .top)
+        stack.setViews([titleRow, branchLabel, directoryLabel, portsLabel, agentLabel, usageLabel, notificationLabel], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = Self.spacing
@@ -87,6 +94,7 @@ final class WorkspaceCellView: NSTableCellView {
             stack.topAnchor.constraint(equalTo: topAnchor, constant: Self.verticalInset),
             titleRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             notificationLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            agentLabel.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
         ])
     }
 
@@ -106,6 +114,7 @@ final class WorkspaceCellView: NSTableCellView {
         portsLabel.isHidden = workspace.ports.isEmpty
         portsLabel.stringValue = workspace.ports.map { ":\($0)" }.joined(separator: "  ")
         usageLabel.isHidden = !Self.showsUsage(workspace)
+        agentLabel.isHidden = !Self.showsAgent(workspace)
         updateUsage(with: workspace)
         notificationLabel.isHidden = workspace.notificationText == nil
         notificationLabel.stringValue = workspace.notificationText ?? ""
@@ -119,6 +128,7 @@ final class WorkspaceCellView: NSTableCellView {
         if workspace.workingDirectory != nil { lines.append(detailHeight) }
         if !workspace.ports.isEmpty { lines.append(detailHeight) }
         if showsUsage(workspace) { lines.append(detailHeight) }
+        if showsAgent(workspace) { lines.append(detailHeight) }
         if let text = workspace.notificationText {
             let available = max(width - 2 * horizontalInset - 24, 40) // source-list rows are inset
             let bounds = (text as NSString).boundingRect(
@@ -134,9 +144,78 @@ final class WorkspaceCellView: NSTableCellView {
     @MainActor
     private static func showsUsage(_ workspace: Workspace) -> Bool { workspace.hasTerminal }
 
-    /// `CPU 12%  1.2 GB`. Called for every sample; touches the label only when what it shows changes.
+    /// The agent line appears/disappears only with structural changes (an agent pane appears or goes away).
+    @MainActor
+    private static func showsAgent(_ workspace: Workspace) -> Bool { !workspace.agentPanes.isEmpty }
+
+    /// Agent line: the focused (else latest) agent pane's model, context, cost and 5-hour limit; account limits
+    /// come from the newest report of that agent kind. Touches the label only when its text or colours change.
+    @MainActor
+    private func updateAgent(with workspace: Workspace) {
+        guard let primary = workspace.primaryAgent else {
+            agentKey = nil
+            return
+        }
+        let usage = primary.usage
+        let limits = AppController.shared.agentLimitsByKind[usage.agent]?.active(at: Date())?.limits
+        let parts = AgentFormat.summaryParts(usage, limits: limits)
+        let others = workspace.agentPanes.count - 1
+        let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)"
+        if key != agentKey {
+            agentKey = key
+            agentLabel.attributedStringValue = Self.agentText(parts, stale: usage.isStale, others: others)
+        }
+        let now = Date()
+        var blocks = workspace.agentPanes.compactMap { pane -> String? in
+            guard let usage = pane.agentUsage else { return nil }
+            return (AgentFormat.detailLines(usage, now: now) + ["Pane \(pane.id)\(pane.id == primary.pane.id ? " (shown)" : "")"])
+                .joined(separator: "\n")
+        }
+        if let limits = AppController.shared.agentLimitsByKind[usage.agent]?.active(at: now) {
+            blocks.append((["\(usage.agent.displayName) account"] + AgentFormat.limitLines(limits.limits, now: now))
+                          .joined(separator: "\n"))
+        }
+        let tooltip = blocks.joined(separator: "\n\n")
+        if tooltip != agentTooltip {
+            agentTooltip = tooltip
+            agentLabel.toolTip = tooltip
+        }
+    }
+
+    private static func agentText(_ parts: [AgentFormat.Part], stale: Bool, others: Int) -> NSAttributedString {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        let result = NSMutableAttributedString()
+        for part in parts {
+            var color: NSColor
+            var font = usageFont
+            switch part.style {
+            case .name:
+                color = .labelColor.withAlphaComponent(0.85)
+                font = NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .medium)
+            case .label, .separator: color = .tertiaryLabelColor
+            case .value: color = .secondaryLabelColor
+            }
+            switch part.level {
+            case .warning: color = .systemOrange
+            case .critical: color = .systemRed
+            case .normal: break
+            }
+            if stale { color = part.style == .name ? .secondaryLabelColor : .tertiaryLabelColor }
+            result.append(NSAttributedString(string: part.text, attributes: [.font: font, .foregroundColor: color,
+                                                                              .paragraphStyle: paragraph]))
+        }
+        if others > 0 {
+            result.append(NSAttributedString(string: "  +\(others)", attributes: [
+                .font: usageFont, .foregroundColor: NSColor.tertiaryLabelColor, .paragraphStyle: paragraph]))
+        }
+        return result
+    }
+
+    /// `CPU 12%  1.2 GB` and the agent line. Called for every sample; touches labels only when what they show changes.
     @MainActor
     func updateUsage(with workspace: Workspace) {
+        updateAgent(with: workspace)
         let cpu = workspace.cpuPercent.map(ResourceFormat.percent) ?? "–"
         let memory = workspace.memoryBytes.map(ResourceFormat.bytes) ?? "–"
         let busy = workspace.busySamples >= 2

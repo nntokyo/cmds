@@ -599,7 +599,9 @@ final class SyncServer {
     }
 
     private func currentState() -> ServerMessage.State {
-        ServerMessage.State(workspaces: AppController.shared.listWorkspaces(), system: AppController.shared.systemStats)
+        let limits = AppController.shared.activeAgentLimits()
+        return ServerMessage.State(workspaces: AppController.shared.listWorkspaces(), system: AppController.shared.systemStats,
+                                   agentLimits: limits.isEmpty ? nil : limits)
     }
 
     /// A usage sample changes CPU/memory figures in nearly every `state`; push them at most every
