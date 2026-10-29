@@ -35,6 +35,7 @@ final class SyncPairingWindowController: NSWindowController {
         window.delegate = self
         buildContent()
         NotificationCenter.default.addObserver(self, selector: #selector(serverDidChange), name: .syncServerDidChange, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(serverDidChange), name: .syncRemoteAccessDidChange, object: nil)
     }
 
     @available(*, unavailable)
@@ -149,6 +150,7 @@ final class SyncPairingWindowController: NSWindowController {
             Mac: \(server.macName)   •   \(server.statusText)   •   \(address)
             The code is valid only while this window is open; it changes in \(remaining / 60):\(String(format: "%02d", remaining % 60)) and after each pairing.
             Encrypted (TLS 1.3). Your iPhone or iPad trusts only this Mac's identity.
+            Remote access via SSH: \(SyncRemoteAccess.shared.statusText)
             """
         } else {
             codeLabel.stringValue = "––– –––"
@@ -281,8 +283,14 @@ final class SyncMenuActions: NSObject, NSMenuItemValidation {
         let toggle = NSMenuItem(title: "Enable iOS Sync", action: #selector(toggleSync(_:)), keyEquivalent: "")
         let bluetooth = NSMenuItem(title: "Allow Bluetooth Sync", action: #selector(toggleBluetooth(_:)), keyEquivalent: "")
         bluetooth.toolTip = "Lets the iPhone/iPad connect over Bluetooth when Wi‑Fi is off. The connection stays encrypted and pinned to this Mac's identity."
-        for item in [pair, toggle, bluetooth] { item.target = shared }
-        return [pair, toggle, bluetooth]
+        let remote = NSMenuItem(title: "Remote Access via SSH…", action: #selector(showRemoteAccess(_:)), keyEquivalent: "")
+        remote.toolTip = "Lets a paired iPhone/iPad reach this Mac away from home through an SSH server you use. The connection stays encrypted end to end."
+        for item in [pair, toggle, bluetooth, remote] { item.target = shared }
+        return [pair, toggle, bluetooth, remote]
+    }
+
+    @objc func showRemoteAccess(_ sender: Any?) {
+        SyncRemoteAccessWindowController.shared.present()
     }
 
     @objc func toggleBluetooth(_ sender: Any?) {

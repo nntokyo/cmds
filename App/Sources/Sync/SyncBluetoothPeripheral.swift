@@ -10,7 +10,7 @@ import Network
 /// its pinned certificate, never by Bluetooth.
 ///
 /// Runs while the sync listener is up and "Allow Bluetooth Sync" is on, unless `CMDS_SYNC_NO_BLUETOOTH` is
-/// set. Relayed connections are tagged per Bluetooth peer (`relayedPeer(of:)`), so rate limits and
+/// set. Relayed connections are tagged per Bluetooth peer (`SyncServer.relayedPeer(of:)`), so rate limits and
 /// lockouts keep working per phone.
 @MainActor
 final class SyncBluetoothPeripheral: NSObject {
@@ -20,7 +20,7 @@ final class SyncBluetoothPeripheral: NSObject {
     static let maxChannels = 8
 
     /// Local ports of relay connections → `bluetooth:<peer>`; read by the sync server on accept.
-    nonisolated static let peers = SyncLoopbackPeers()
+    nonisolated static var peers: SyncLoopbackPeers { SyncServer.relayedPeers }
 
     private(set) var statusText = "Off"
 
@@ -60,20 +60,6 @@ final class SyncBluetoothPeripheral: NSObject {
             MainActor.assumeIsolated { self?.reconcile() }
         }
         reconcile()
-    }
-
-    /// Connection from the sync listener's point of view: the Bluetooth peer it relays, if `endpoint` is the
-    /// loopback address and port of one of our relay sockets. Any other loopback client stays "127.0.0.1".
-    nonisolated static func relayedPeer(of endpoint: NWEndpoint) -> String? {
-        guard case .hostPort(let host, let port) = endpoint else { return nil }
-        let loopback: Bool
-        switch host {
-        case .ipv4(let address): loopback = address == .loopback
-        case .ipv6(let address): loopback = address == .loopback || address.asIPv4 == .loopback
-        default: loopback = false
-        }
-        guard loopback else { return nil }
-        return peers.peer(forPort: port.rawValue)
     }
 
     // MARK: - Lifecycle

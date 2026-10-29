@@ -387,14 +387,32 @@ final class SyncServer {
 
     // MARK: - Connections
 
+    /// Local ports of our own relay sockets (Bluetooth, SSH remote access) → peer label
+    /// (`bluetooth:<peer>`, `ssh:<relay host>`). Relays register a port before connecting.
+    nonisolated static let relayedPeers = SyncLoopbackPeers()
+
+    /// Connection from the sync listener's point of view: the relayed peer, if `endpoint` is the loopback
+    /// address and port of one of our relay sockets. Any other loopback client stays "127.0.0.1".
+    nonisolated static func relayedPeer(of endpoint: NWEndpoint) -> String? {
+        guard case .hostPort(let host, let port) = endpoint else { return nil }
+        let loopback: Bool
+        switch host {
+        case .ipv4(let address): loopback = address == .loopback
+        case .ipv6(let address): loopback = address == .loopback || address.asIPv4 == .loopback
+        default: loopback = false
+        }
+        guard loopback else { return nil }
+        return relayedPeers.peer(forPort: port.rawValue)
+    }
+
     private func accept(_ nwConnection: NWConnection) {
         guard clients.count < Self.maxConnections else {
             nwConnection.cancel()
             return
         }
-        // Bluetooth relays connect over loopback; tag them per phone so per-host limits stay per peer.
+        // Bluetooth and SSH relays connect over loopback; tag them per peer so per-host limits stay per peer.
         let connection = SyncConnection(connection: nwConnection, queue: queue,
-                                        relayedPeer: SyncBluetoothPeripheral.relayedPeer(of: nwConnection.endpoint),
+                                        relayedPeer: Self.relayedPeer(of: nwConnection.endpoint),
                                         onFrame: { [weak self] conn, data in self?.received(data, from: conn) },
                                         onClose: { [weak self] conn in self?.closed(conn) })
         // One host must not fill every slot with connections that never say hello.
@@ -521,6 +539,14 @@ final class SyncServer {
 
         if !tokenValid, let wait = limiter.lockout(host: host) {
             sendError(.rateLimited, "too many failed attempts; try again in \(Int(wait.rounded(.up))) s",
+                      to: client, close: true)
+            return
+        }
+
+        // Pairing happens on the local network only: remote access via SSH reuses an existing pairing, so a
+        // code that arrives through the SSH forward is never evaluated (no guessing through the relay host).
+        if client.connection.viaSSH, !tokenValid, hello.pairingCode != nil {
+            sendError(.pairingRequired, "pair on the local network first; remote access via SSH only reuses a pairing",
                       to: client, close: true)
             return
         }

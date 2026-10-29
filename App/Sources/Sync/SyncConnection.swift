@@ -1,3 +1,4 @@
+import CmdsCore
 import Foundation
 import os
 import Network
@@ -9,11 +10,13 @@ final class SyncConnection: @unchecked Sendable {
     static let maxPendingBytes = 8 * 1024 * 1024
 
     let id = UUID()
-    /// Remote IP (no port), or `bluetooth:<peer>` for a connection relayed from Bluetooth; used for rate
-    /// limiting and display.
+    /// Remote IP (no port), `bluetooth:<peer>` for a connection relayed from Bluetooth, or `ssh:<relay host>`
+    /// for one that came through remote access via SSH; used for rate limiting and display.
     let remoteHost: String
     /// Relayed from the Bluetooth fallback (slow link: screens are throttled).
     let viaBluetooth: Bool
+    /// Came through the SSH remote-access forward (pairing codes are refused).
+    let viaSSH: Bool
 
     private let connection: NWConnection
     private let queue: DispatchQueue
@@ -33,7 +36,8 @@ final class SyncConnection: @unchecked Sendable {
         self.onFrame = onFrame
         self.onClose = onClose
         remoteHost = relayedPeer ?? Self.host(of: connection.endpoint)
-        viaBluetooth = relayedPeer != nil
+        viaBluetooth = relayedPeer?.hasPrefix(SyncBluetooth.peerHostPrefix) ?? false
+        viaSSH = relayedPeer?.hasPrefix(SyncRemote.peerHostPrefix) ?? false
     }
 
     func start() {
