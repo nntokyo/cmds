@@ -1,7 +1,11 @@
 import CmdsCore
 import Foundation
+import os
 import Security
 import UIKit
+
+/// Pairing storage log (subsystem tokyo.n-n.cmds.companion). Never log tokens.
+let pairingLog = Logger(subsystem: "tokyo.n-n.cmds.companion", category: "pairing")
 
 /// What the phone keeps per Mac (`MacTarget.id`): the pinned certificate fingerprint and the token the
 /// Mac issued over a connection verified against it. Stored together as one Keychain item (this device
@@ -44,7 +48,12 @@ enum PairingStore {
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
-        SecItemAdd(add as CFDictionary, nil)
+        let status = SecItemAdd(add as CFDictionary, nil)
+        if status != errSecSuccess {
+            // Fails closed: without a saved pin the next connection asks to pair again. (Unsigned
+            // simulator builds have no keychain entitlement and always end up here, -34018.)
+            pairingLog.error("could not save the pairing: OSStatus \(status, privacy: .public)")
+        }
     }
 
     static func delete(for targetID: String) {
