@@ -235,15 +235,23 @@ final class SyncServer {
     }
 
     /// Replaces the sync identity with a new key and certificate and unpairs every device: phones pinned
-    /// the old certificate, so they must pair again (a phone that missed this sees "identity changed").
+    /// the old certificate, so they must pair again. Connected phones are told they were unpaired; a
+    /// phone that was away reports "identity changed" on its next connection.
     func resetIdentity() {
-        let wasRunning = listener != nil
         revokeAllDevices()
-        if wasRunning { stop() }
         identityStore.delete()
         identity = nil
         syncLog.notice("sync identity reset")
-        if wasRunning { start() } else { didChange() }
+        guard listener != nil else { return didChange() }
+        // Restart with a new identity once the "unpaired" errors had a moment to go out
+        // (stopping at once would cancel connections with those frames still queued).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.listener != nil, self.identity == nil else { return }
+                self.stop()
+                self.start()
+            }
+        }
     }
 
     /// Loads the identity, creating it on first use. A new identity unpairs every device: phones pinned
