@@ -38,6 +38,8 @@ final class CompanionClient {
     private(set) var status: ConnectionStatus = .idle
     private(set) var macName: String = ""
     private(set) var workspaces: [WorkspaceInfo] = []
+    /// Mac-wide CPU/memory from the latest `state` (nil for Macs that do not send it).
+    private(set) var systemStats: SystemStats?
     /// Bumped whenever any screen changes (cheap observation hook).
     private(set) var screens: [String: ScreenSnapshot] = [:]
     /// Panes that raised a `notification` and have not been viewed since.
@@ -79,6 +81,7 @@ final class CompanionClient {
     func connect(to target: MacTarget, pairingCode: String? = nil) {
         if self.target != target {
             workspaces = []
+            systemStats = nil
             screens = [:]
             mirror.removeAll()
             unreadPaneIDs = []
@@ -102,6 +105,7 @@ final class CompanionClient {
         target = nil
         status = .idle
         workspaces = []
+        systemStats = nil
         screens = [:]
         mirror.removeAll()
     }
@@ -223,7 +227,9 @@ final class CompanionClient {
             if info.code.isAuthFailure { teardown() }
 
         case .state(let state):
-            workspaces = state.workspaces
+            // Usage samples arrive every ~2 s; skip no-op assignments so unchanged parts do not re-render.
+            if workspaces != state.workspaces { workspaces = state.workspaces }
+            if systemStats != state.system { systemStats = state.system }
             let live = Set(state.workspaces.flatMap { $0.panes.map(\.id) })
             unreadPaneIDs.formIntersection(live)
             unreadWorkspaceIDs.formIntersection(Set(state.workspaces.map(\.id)))

@@ -59,7 +59,18 @@ final class AppController {
     /// Fires synchronously on the main actor after every state change.
     var changes: AnyPublisher<StateChange, Never> { subject.eraseToAnyPublisher() }
 
+    /// Fires on the main actor after each resource-usage sample (~every 2 s): per-workspace CPU/memory and
+    /// `systemStats`. Kept out of `changes` so usage never triggers full UI refreshes, session saves or
+    /// socket events.
+    var usageChanges: AnyPublisher<Void, Never> { usageSubject.eraseToAnyPublisher() }
+
+    /// Machine-wide usage from the latest sample; nil until two samples were taken (~1 s after launch).
+    private(set) var systemStats: SystemStats?
+    /// `systemStats` plus the memory breakdown (sidebar tooltip).
+    private(set) var systemSample: SystemSample?
+
     private let subject = PassthroughSubject<StateChange, Never>()
+    private let usageSubject = PassthroughSubject<Void, Never>()
     private var nextWorkspaceNumber = 1
     private var nextPaneNumber = 1
     private var saveWorkItem: DispatchWorkItem?
@@ -95,6 +106,13 @@ final class AppController {
     }
 
     func workspaceID(forPane paneID: String) -> String? { pane(id: paneID)?.workspaceID }
+
+    /// Result of the socket method `system.stats`.
+    func statsSnapshot() -> StatsSnapshot {
+        StatsSnapshot(system: systemStats, workspaces: workspaces.map {
+            WorkspaceStats(id: $0.id, cpuPercent: $0.cpuPercent, memoryBytes: $0.memoryBytes)
+        })
+    }
 
     // MARK: - Workspaces
 
@@ -370,6 +388,17 @@ final class AppController {
                 emit(.workspace(id: workspace.id))
             }
         }
+    }
+
+    /// Applies a resource-usage sample (from the same background scan). Workspaces missing from `usage`
+    /// had no live process. `system` is nil until the sampler has two readings.
+    func applyResourceUsage(_ usage: [String: ResourceUsage], system: SystemSample?) {
+        for workspace in workspaces { workspace.applyUsage(usage[workspace.id]) }
+        if let system {
+            systemSample = system
+            systemStats = system.stats
+        }
+        usageSubject.send()
     }
 
     // MARK: - Session

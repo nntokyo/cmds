@@ -53,17 +53,47 @@ public struct RPCEvent: Codable, Sendable {
     }
 }
 
-/// Environment variables injected into every terminal the app spawns.
+/// Environment variables injected into every terminal the app spawns, plus test-isolation switches.
 public enum CmdsEnv {
     public static let socketPath = "CMDS_SOCKET_PATH"
     public static let workspaceID = "CMDS_WORKSPACE_ID"
     public static let paneID = "CMDS_PANE_ID"
+    /// Isolated (test) instance: replaces `~/Library/Application Support/cmds` (session.json,
+    /// sync-devices.json, cmds.sock). Terminals of such an instance inherit it, so their CLI follows.
+    public static let supportDirectory = "CMDS_SUPPORT_DIR"
+    /// `1` = do not start the iOS sync server (no Bonjour advert, no port).
+    public static let syncDisabled = "CMDS_SYNC_DISABLED"
 
-    /// `~/Library/Application Support/cmds/cmds.sock`, overridable with `CMDS_SOCKET_PATH`.
-    public static func defaultSocketPath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
-        if let path = environment[socketPath], !path.isEmpty { return path }
-        let base = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+    /// `$CMDS_SUPPORT_DIR` if set, else `~/Library/Application Support/cmds`.
+    public static func supportDirectoryURL(environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
+        if let override = supportDirectoryOverride(environment: environment) {
+            return URL(fileURLWithPath: override, isDirectory: true)
+        }
+        return URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
             .appendingPathComponent("Library/Application Support/cmds", isDirectory: true)
-        return base.appendingPathComponent("cmds.sock").path
+    }
+
+    /// Absolute `$CMDS_SUPPORT_DIR` (tilde expanded), or nil when not running isolated.
+    public static func supportDirectoryOverride(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        guard let raw = environment[supportDirectory]?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return nil }
+        let expanded = (raw as NSString).expandingTildeInPath
+        let absolute = expanded.hasPrefix("/") ? expanded
+            : (FileManager.default.currentDirectoryPath as NSString).appendingPathComponent(expanded)
+        return (absolute as NSString).standardizingPath
+    }
+
+    public static func isSyncDisabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
+        guard let value = environment[syncDisabled]?.trimmingCharacters(in: .whitespaces).lowercased() else { return false }
+        return ["1", "true", "yes"].contains(value)
+    }
+
+    /// `$CMDS_SUPPORT_DIR/cmds.sock`, else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`.
+    /// `CMDS_SUPPORT_DIR` wins because `CMDS_SOCKET_PATH` is inherited inside every cmds terminal: a test
+    /// instance (or its CLI) started from a terminal of the live app must never use the live socket.
+    public static func defaultSocketPath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
+        if supportDirectoryOverride(environment: environment) == nil, let path = environment[socketPath], !path.isEmpty {
+            return path
+        }
+        return supportDirectoryURL(environment: environment).appendingPathComponent("cmds.sock").path
     }
 }

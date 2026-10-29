@@ -30,6 +30,8 @@ final class SyncServer {
     static let maxSubscribedPanes = 32
     static let screenInterval: TimeInterval = 0.1
     static let stateInterval: TimeInterval = 0.1
+    /// Minimum spacing of `state` pushes caused only by resource-usage samples.
+    static let usageStateInterval: TimeInterval = 2
 
     final class Client {
         let connection: SyncConnection
@@ -67,6 +69,8 @@ final class SyncServer {
     private var listener: NWListener?
     private var clients: [UUID: Client] = [:]
     private var changesCancellable: AnyCancellable?
+    private var usageCancellable: AnyCancellable?
+    private var usageStateScheduled = false
     private var codeTimer: Timer?
     private var codeFailures = 0
 
@@ -118,15 +122,25 @@ final class SyncServer {
 
     func start() {
         guard listener == nil else { return }
+        // Isolated test instances: no Bonjour advert, no port.
+        guard !CmdsEnv.isSyncDisabled() else {
+            statusText = "Disabled (\(CmdsEnv.syncDisabled))"
+            didChange()
+            return
+        }
         rotateCode()
         startListener(port: SyncProtocol.defaultPort)
         changesCancellable = AppController.shared.changes.sink { [weak self] change in
             self?.handle(change)
         }
+        usageCancellable = AppController.shared.usageChanges.sink { [weak self] in
+            self?.usageDidChange()
+        }
     }
 
     func stop() {
         changesCancellable = nil
+        usageCancellable = nil
         listener?.cancel()
         listener = nil
         port = nil
@@ -380,7 +394,7 @@ final class SyncServer {
             client.deviceName = name
             client.tokenHash = SyncDeviceStore.hash(plainToken)
             send(.welcome(.init(macName: macName, token: plainToken)), to: client)
-            send(.state(.init(workspaces: AppController.shared.listWorkspaces())), to: client)
+            send(.state(currentState()), to: client)
             // This client may now be ahead of the last broadcast; never skip the next one as a duplicate.
             lastStateData = nil
             didChange()
@@ -430,10 +444,29 @@ final class SyncServer {
     private func sendState() {
         stateScheduled = false
         lastStateSentAt = Date()
-        guard let data = try? codec.encode(.state(.init(workspaces: AppController.shared.listWorkspaces()))),
-              data != lastStateData else { return }
+        guard let data = try? codec.encode(.state(currentState())), data != lastStateData else { return }
         lastStateData = data
         for client in clients.values where client.authenticated { client.connection.send(data) }
+    }
+
+    private func currentState() -> ServerMessage.State {
+        ServerMessage.State(workspaces: AppController.shared.listWorkspaces(), system: AppController.shared.systemStats)
+    }
+
+    /// A usage sample changes CPU/memory figures in nearly every `state`; push them at most every
+    /// `usageStateInterval` (any other state push carries them too), and only while a phone is connected.
+    private func usageDidChange() {
+        guard !usageStateScheduled, clients.values.contains(where: \.authenticated) else { return }
+        usageStateScheduled = true
+        let delay = max(0, Self.usageStateInterval - Date().timeIntervalSince(lastStateSentAt))
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.usageStateScheduled = false
+                guard self.clients.values.contains(where: \.authenticated) else { return }
+                self.scheduleState()
+            }
+        }
     }
 
     // MARK: - Screens

@@ -95,6 +95,8 @@ final class APIServer {
                 "socketPath": .string(controller.socketPath),
                 "cliPath": BundledCLI.executablePath.map { .string($0) } ?? .null,
             ]
+        case "system.stats":
+            return try .from(controller.statsSnapshot())
 
         case "workspace.list":
             return try .from(controller.listWorkspaces())

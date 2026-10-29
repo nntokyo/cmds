@@ -1,4 +1,5 @@
 import AppKit
+import CmdsCore
 import Combine
 
 /// The single main window: sidebar (vertical tabs) + selected workspace's split tree.
@@ -9,6 +10,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     let content: WorkspaceContentViewController
     private let splitViewController = NSSplitViewController()
     private var subscription: AnyCancellable?
+    private var usageSubscription: AnyCancellable?
     private var mouseMonitor: Any?
 
     init(controller: AppController) {
@@ -24,7 +26,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         contentItem.minimumThickness = 300
         splitViewController.addSplitViewItem(sidebarItem)
         splitViewController.addSplitViewItem(contentItem)
-        splitViewController.splitView.autosaveName = "cmds.sidebar"
+        // Isolated test instances (CMDS_SUPPORT_DIR) share the defaults domain: keep the user's layout.
+        let isolated = CmdsEnv.supportDirectoryOverride() != nil
+        if !isolated { splitViewController.splitView.autosaveName = "cmds.sidebar" }
 
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1280, height: 800),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
@@ -38,12 +42,14 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         window.tabbingMode = .disallowed
         window.setContentSize(NSSize(width: 1280, height: 800))
         window.center()
-        window.setFrameAutosaveName("cmds.main")
+        if !isolated { window.setFrameAutosaveName("cmds.main") }
         super.init(window: window)
         window.delegate = self
         controller.window = window
 
         subscription = controller.changes.sink { [weak self] _ in self?.refresh() }
+        // Usage samples only touch the usage labels and the footer, never a full sidebar reload.
+        usageSubscription = controller.usageChanges.sink { [weak self] in self?.sidebar.updateUsage() }
         installMouseMonitor()
         refresh()
     }

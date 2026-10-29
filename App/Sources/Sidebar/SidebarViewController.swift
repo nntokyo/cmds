@@ -9,6 +9,7 @@ private extension NSPasteboard.PasteboardType {
 final class SidebarViewController: NSViewController {
     private let controller: AppController
     private let tableView = NSTableView()
+    private let usageFooter = SystemUsageView()
     private var rowIDs: [String] = []
     private var isSyncingSelection = false
     private var lastWidth: CGFloat = 0
@@ -50,18 +51,32 @@ final class SidebarViewController: NSViewController {
         addButton.toolTip = "New Workspace (⌘N)"
         addButton.translatesAutoresizingMaskIntoConstraints = false
 
+        let separator = NSBox()
+        separator.boxType = .separator
+        separator.translatesAutoresizingMaskIntoConstraints = false
+        usageFooter.translatesAutoresizingMaskIntoConstraints = false
+
         let view = NSView()
         view.addSubview(scrollView)
+        view.addSubview(separator)
+        view.addSubview(usageFooter)
         view.addSubview(addButton)
         NSLayoutConstraint.activate([
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 4),
-            scrollView.bottomAnchor.constraint(equalTo: addButton.topAnchor, constant: -6),
+            scrollView.bottomAnchor.constraint(equalTo: separator.topAnchor, constant: -4),
+            separator.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
+            separator.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            separator.bottomAnchor.constraint(equalTo: usageFooter.topAnchor, constant: -8),
+            usageFooter.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 14),
+            usageFooter.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -14),
+            usageFooter.bottomAnchor.constraint(equalTo: addButton.topAnchor, constant: -8),
             addButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
             addButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
         ])
         self.view = view
+        updateUsage()
     }
 
     override func viewDidLayout() {
@@ -94,6 +109,15 @@ final class SidebarViewController: NSViewController {
             tableView.deselectAll(nil)
         }
         isSyncingSelection = false
+    }
+
+    /// New resource-usage sample: refresh the usage line of visible rows and the footer. No reload, no
+    /// height changes (the usage line's visibility does not depend on the values), selection untouched.
+    func updateUsage() {
+        for (row, workspace) in controller.workspaces.enumerated() where rowIDs[safe: row] == workspace.id {
+            (tableView.view(atColumn: 0, row: row, makeIfNecessary: false) as? WorkspaceCellView)?.updateUsage(with: workspace)
+        }
+        usageFooter.update(sample: controller.systemSample)
     }
 
     // MARK: - Actions

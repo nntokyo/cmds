@@ -1,4 +1,5 @@
 import AppKit
+import CmdsCore
 import UserNotifications
 
 @MainActor
@@ -29,7 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         apiServer = APIServer(controller: controller)
         apiServer?.start()
         SyncServer.shared.startIfEnabled()
-        NSApp.activate()
+        // An isolated test instance (CMDS_SUPPORT_DIR) must not take keyboard focus from the app in use.
+        if CmdsEnv.supportDirectoryOverride() == nil { NSApp.activate() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

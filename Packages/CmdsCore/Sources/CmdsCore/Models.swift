@@ -55,10 +55,17 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
     public var attention: Bool
     public var panes: [PaneInfo]
     public var layout: LayoutNode?
+    /// CPU use of all processes in the workspace's terminals, Activity Monitor style
+    /// (100 = one core, so it can exceed 100). nil until sampled.
+    public var cpuPercent: Double?
+    /// Sum of the physical footprints ("Memory" in Activity Monitor) of those processes.
+    /// nil until sampled or when no process was found.
+    public var memoryBytes: UInt64?
 
     public init(id: String, title: String, selected: Bool, gitBranch: String? = nil, workingDirectory: String? = nil,
                 ports: [Int] = [], notificationText: String? = nil, attention: Bool = false,
-                panes: [PaneInfo] = [], layout: LayoutNode? = nil) {
+                panes: [PaneInfo] = [], layout: LayoutNode? = nil,
+                cpuPercent: Double? = nil, memoryBytes: UInt64? = nil) {
         self.id = id
         self.title = title
         self.selected = selected
@@ -69,5 +76,7 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.attention = attention
         self.panes = panes
         self.layout = layout
+        self.cpuPercent = cpuPercent
+        self.memoryBytes = memoryBytes
     }
 }

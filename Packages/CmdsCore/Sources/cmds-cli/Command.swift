@@ -14,7 +14,7 @@ struct Command {
     var help: String {
         var text = "usage: cmds \(usage)\n\n\(summary)\n"
         if !details.isEmpty { text += "\n\(details)\n" }
-        text += "\nGlobal options:\n  --json           print the raw JSON result\n  --socket PATH    socket to use (default: $CMDS_SOCKET_PATH or ~/Library/Application Support/cmds/cmds.sock)\n"
+        text += "\nGlobal options:\n  --json           print the raw JSON result\n  --socket PATH    socket to use (default: $CMDS_SUPPORT_DIR/cmds.sock, else $CMDS_SOCKET_PATH,\n                   else ~/Library/Application Support/cmds/cmds.sock)\n"
         return text
     }
 }

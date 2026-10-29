@@ -1,7 +1,7 @@
 import CmdsCore
 import Foundation
 
-/// Human-readable output for `cmds ls` / `cmds panes`.
+/// Human-readable output for `cmds ls` / `cmds panes` / `cmds stats`.
 enum Format {
     static func workspaces(_ workspaces: [WorkspaceInfo], currentPane: String?) -> String {
         guard !workspaces.isEmpty else { return "no workspaces\n" }
@@ -11,6 +11,9 @@ enum Format {
             if let branch = workspace.gitBranch { line += "  [\(branch)]" }
             if let cwd = workspace.workingDirectory { line += "  \(abbreviate(cwd))" }
             if !workspace.ports.isEmpty { line += "  " + workspace.ports.map { ":\($0)" }.joined(separator: " ") }
+            if workspace.cpuPercent != nil || workspace.memoryBytes != nil {
+                line += "  " + ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes)
+            }
             if workspace.attention { line += "  !" }
             if let text = workspace.notificationText { line += "  — \(oneLine(text))" }
             out += line + "\n"
@@ -22,6 +25,36 @@ enum Format {
             }
         }
         return out
+    }
+
+    /// `cmds stats`: one line for the Mac, then one per workspace (sidebar order).
+    static func stats(_ snapshot: StatsSnapshot, titles: [String: String], currentWorkspace: String?) -> String {
+        var out: String
+        if let system = snapshot.system {
+            out = "system  CPU \(leftPad(ResourceFormat.wholePercent(system.cpuPercent), 4))  "
+                + "memory \(ResourceFormat.memory(used: system.memoryUsedBytes, total: system.memoryTotalBytes))  "
+                + "pressure \(system.pressure.name)\n"
+        } else {
+            out = "system  (measuring, try again in a second)\n"
+        }
+        guard !snapshot.workspaces.isEmpty else { return out + "no workspaces\n" }
+        let idWidth = snapshot.workspaces.map(\.id.count).max() ?? 0
+        let names = snapshot.workspaces.map { oneLine(titles[$0.id] ?? "") }
+        let nameWidth = min(names.map(\.count).max() ?? 0, 30)
+        for (workspace, name) in zip(snapshot.workspaces, names) {
+            let marker = workspace.id == currentWorkspace ? ">" : " "
+            let cpu = workspace.cpuPercent.map(ResourceFormat.percent) ?? "–"
+            let memory = workspace.memoryBytes.map(ResourceFormat.bytes) ?? "–"
+            let title = name.count > nameWidth ? String(name.prefix(nameWidth - 1)) + "…" : name
+            out += "\(marker) \(workspace.id.padding(toLength: idWidth, withPad: " ", startingAt: 0))  "
+                + "\(title.padding(toLength: nameWidth, withPad: " ", startingAt: 0))  "
+                + "CPU \(leftPad(cpu, 5))  \(leftPad(memory, 8))\n"
+        }
+        return out
+    }
+
+    private static func leftPad(_ text: String, _ width: Int) -> String {
+        text.count >= width ? text : String(repeating: " ", count: width - text.count) + text
     }
 
     static func pane(_ pane: PaneInfo, currentPane: String?) -> String {

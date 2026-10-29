@@ -13,11 +13,15 @@ final class MockTransport: SyncTransport {
     private var shells: [String: FakeShell]
     private var tick = 0
     private var closed = false
+    private var system: SystemStats?
 
     init() {
         workspaces = MockData.workspaces
         shells = MockData.shells()
+        updateUsage()
     }
+
+    private var currentState: ServerMessage.State { .init(workspaces: workspaces, system: system) }
 
     func start() {
         deliver(after: 0.15, .connected)
@@ -28,7 +32,7 @@ final class MockTransport: SyncTransport {
         switch message {
         case .hello:
             deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token"))))
-            deliver(after: 0.1, .message(.state(.init(workspaces: workspaces))))
+            deliver(after: 0.1, .message(.state(currentState)))
             DispatchQueue.main.async { self.startTimer() }
         case .subscribe(let sub):
             let new = Set(sub.paneIDs)
@@ -48,14 +52,14 @@ final class MockTransport: SyncTransport {
             pushScreens()
         case .selectWorkspace(let sel):
             for i in workspaces.indices { workspaces[i].selected = workspaces[i].id == sel.id }
-            emit(.state(.init(workspaces: workspaces)))
+            emit(.state(currentState))
         case .focusPane(let focus):
             for w in workspaces.indices {
                 for p in workspaces[w].panes.indices {
                     workspaces[w].panes[p].focused = workspaces[w].panes[p].id == focus.id
                 }
             }
-            emit(.state(.init(workspaces: workspaces)))
+            emit(.state(currentState))
         case .ping(let ping):
             deliver(after: 0.02, .message(.pong(.init(nonce: ping.nonce))))
         }
@@ -77,17 +81,47 @@ final class MockTransport: SyncTransport {
         shells["p-top"]?.renderTop(tick: tick)
         if tick % 2 == 0 { shells["p-build"]?.appendBuildLine(tick: tick) }
         pushScreens()
+        if tick % 2 == 0 {
+            // Like the Mac: a usage sample every ~2 s.
+            updateUsage()
+            emit(.state(currentState))
+        }
         if tick == 6 || tick % 45 == 0 {
             if let w = workspaces.firstIndex(where: { $0.id == "w-api" }),
                let p = workspaces[w].panes.firstIndex(where: { $0.id == "p-agent" }) {
                 workspaces[w].attention = true
                 workspaces[w].panes[p].attention = true
                 workspaces[w].notificationText = "Claude is waiting for your input"
-                emit(.state(.init(workspaces: workspaces)))
+                emit(.state(currentState))
             }
             emit(.notification(.init(paneID: "p-agent", workspaceID: "w-api", title: "Claude Code",
                                      body: "Claude is waiting for your input")))
         }
+    }
+
+    /// Plausible, slowly drifting CPU/memory figures: a build in `cmds` (sometimes above one core), an idle-ish
+    /// API server, a quiet dotfiles shell; the Mac reports memory pressure "warning" for a while every 2 minutes.
+    private func updateUsage() {
+        let t = Double(tick)
+        let gib = 1024.0 * 1024 * 1024
+        func tenth(_ value: Double) -> Double { (value * 10).rounded() / 10 }
+        for i in workspaces.indices {
+            switch workspaces[i].id {
+            case "w-cmds":
+                workspaces[i].cpuPercent = tenth(82 + 38 * sin(t / 3))
+                workspaces[i].memoryBytes = UInt64((2.1 + 0.15 * sin(t / 7)) * gib)
+            case "w-api":
+                workspaces[i].cpuPercent = tenth(6 + 4 * sin(t / 2 + 1))
+                workspaces[i].memoryBytes = UInt64((0.83 + 0.03 * sin(t / 5)) * gib)
+            default:
+                workspaces[i].cpuPercent = tenth(0.3 + 0.2 * sin(t))
+                workspaces[i].memoryBytes = UInt64(46 * 1024 * 1024)
+            }
+        }
+        let warning = (tick / 30) % 4 == 3
+        system = SystemStats(cpuPercent: tenth(31 + 17 * sin(t / 4)),
+                             memoryUsedBytes: UInt64((warning ? 13.6 : 11.2 + 0.4 * sin(t / 9)) * gib),
+                             memoryTotalBytes: UInt64(16 * gib), memoryPressure: warning ? 2 : 1)
     }
 
     private func clearAttention(paneID: String) {
@@ -99,7 +133,7 @@ final class MockTransport: SyncTransport {
                 changed = true
             }
         }
-        if changed { emit(.state(.init(workspaces: workspaces))) }
+        if changed { emit(.state(currentState)) }
     }
 
     private func pushScreens() {

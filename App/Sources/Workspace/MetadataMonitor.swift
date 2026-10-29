@@ -1,6 +1,7 @@
 import Foundation
 import Darwin
 import CmdsCore
+import os
 
 struct WorkspaceMetadata: Sendable, Equatable {
     var workingDirectory: String?
@@ -8,26 +9,35 @@ struct WorkspaceMetadata: Sendable, Equatable {
     var ports: [Int]
 }
 
-/// Periodically refreshes git branches and listening ports for all workspaces on a background queue.
+private let metadataLog = Logger(subsystem: "tokyo.n-n.cmds", category: "metadata")
+
+/// Periodically refreshes git branches, listening ports and CPU/memory (per workspace and machine-wide)
+/// on a background queue. One process scan feeds both ports and usage.
 @MainActor
 final class MetadataMonitor {
     private let controller: AppController
-    private let scanner = PortScanner()
+    private let scanner: ProcessScanner
+    private let systemSampler = SystemSampler()
     private let queue = DispatchQueue(label: "cmds.metadata", qos: .utility)
     private var timer: Timer?
     private var scanning = false
 
     init(controller: AppController) {
         self.controller = controller
+        scanner = ProcessScanner(socketPath: controller.socketPath)
     }
 
-    func start(interval: TimeInterval = 3) {
+    func start(interval: TimeInterval = 2) {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.refresh() }
         }
         timer?.tolerance = 0.5
         refresh()
+        // CPU figures need two samples; take the second one soon rather than a full interval later.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+            MainActor.assumeIsolated { self?.refresh() }
+        }
     }
 
     func stop() {
@@ -37,46 +47,83 @@ final class MetadataMonitor {
 
     func refresh() {
         guard !scanning else { return }
+        // Runs without workspaces too: the sidebar footer shows machine-wide usage regardless.
         let directories = Dictionary(uniqueKeysWithValues: controller.workspaces.map { ($0.id, $0.workingDirectory) })
-        guard !directories.isEmpty else { return }
         scanning = true
         let scanner = scanner
+        let systemSampler = systemSampler
         queue.async { [weak self] in
-            let ports = scanner.listeningPorts()
+            let started = DispatchTime.now().uptimeNanoseconds
+            let scan = scanner.scan()
+            let system = systemSampler.sample()
+            let scanned = DispatchTime.now().uptimeNanoseconds
             var result: [String: WorkspaceMetadata] = [:]
             for (id, cwd) in directories {
                 result[id] = WorkspaceMetadata(workingDirectory: cwd, gitBranch: cwd.flatMap(GitInfo.branch(at:)),
-                                               ports: ports[id] ?? [])
+                                               ports: scan.ports[id] ?? [])
             }
+            let finished = DispatchTime.now().uptimeNanoseconds
+            metadataLog.debug("""
+                scan: \(scan.listedProcesses, privacy: .public) pids, \(scan.workspaceProcesses, privacy: .public) \
+                in workspaces, processes+system \(Double(scanned - started) / 1e6, format: .fixed(precision: 2), privacy: .public) ms, \
+                git \(Double(finished - scanned) / 1e6, format: .fixed(precision: 2), privacy: .public) ms
+                """)
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
                     self?.scanning = false
                     self?.controller.applyMetadata(result)
+                    self?.controller.applyResourceUsage(scan.usage, system: system)
                 }
             }
         }
     }
 }
 
-/// Finds TCP listening ports of processes launched from cmds terminals, keyed by `CMDS_WORKSPACE_ID`.
-/// Process environments are read via `KERN_PROCARGS2` and cached per (pid, start time), so each scan
-/// only inspects new processes; sockets come from `proc_pidfdinfo`. Not thread-safe: use one queue.
-final class PortScanner: @unchecked Sendable {
+/// One pass over the processes launched from cmds terminals.
+struct ProcessScan: Sendable {
+    /// Listening TCP ports per workspace.
+    var ports: [String: [Int]] = [:]
+    /// CPU/memory per workspace that has at least one live process.
+    var usage: [String: ResourceUsage] = [:]
+    var listedProcesses = 0
+    var workspaceProcesses = 0
+}
+
+/// Finds the processes launched from this app's terminals, keyed by `CMDS_WORKSPACE_ID`, and reports their TCP
+/// listening ports and CPU/memory. Process environments are read via `KERN_PROCARGS2` and cached per
+/// (pid, start time), so each scan only inspects new processes; sockets come from `proc_pidfdinfo`, usage
+/// from `proc_pid_rusage` (turned into percentages by `ProcessUsageAccountant`). Not thread-safe: use one queue.
+final class ProcessScanner: @unchecked Sendable {
     private struct ProcessKey: Hashable {
         var pid: pid_t
         var start: UInt64
     }
 
-    /// nil value = process has no CMDS_WORKSPACE_ID.
+    /// nil value = process has no CMDS_WORKSPACE_ID or belongs to another cmds instance.
     private var workspaceByProcess: [ProcessKey: String?] = [:]
     private var argumentBuffer = [UInt8]()
     private let uid = getuid()
     private let ownPID = getpid()
+    /// `CMDS_SOCKET_PATH` given to our terminals. Other instances (a dev build next to the installed app)
+    /// reuse the same workspace IDs, so processes carrying a different socket are not ours.
+    private let socketPath: String
 
-    func listeningPorts() -> [String: [Int]] {
+    init(socketPath: String) {
+        self.socketPath = socketPath
+    }
+    private var accountant = ProcessUsageAccountant(cpuCount: ProcessInfo.processInfo.activeProcessorCount)
+    private let timebase: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
+
+    func scan() -> ProcessScan {
         var seen = Set<ProcessKey>()
         var ports: [String: Set<Int>] = [:]
-        for pid in allPIDs() where pid != ownPID {
+        var samples: [ProcessUsageSample] = []
+        let pids = allPIDs()
+        for pid in pids where pid != ownPID {
             var info = proc_bsdinfo()
             let size = Int32(MemoryLayout<proc_bsdinfo>.size)
             guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size, info.pbi_uid == uid else { continue }
@@ -86,15 +133,43 @@ final class PortScanner: @unchecked Sendable {
             if let cached = workspaceByProcess[key] {
                 workspace = cached
             } else {
-                workspace = environmentValue(pid: pid, name: CmdsEnv.workspaceID)
+                let environment = environmentValues(pid: pid, names: [CmdsEnv.workspaceID, CmdsEnv.socketPath])
+                let foreign = environment[CmdsEnv.socketPath].map { $0 != socketPath } ?? false
+                workspace = foreign ? nil : environment[CmdsEnv.workspaceID]
                 workspaceByProcess[key] = .some(workspace)
             }
             guard let workspace else { continue }
+            if let sample = usageSample(pid: pid, parentPID: pid_t(bitPattern: info.pbi_ppid), workspace: workspace) {
+                samples.append(sample)
+            }
             let listening = listeningPorts(pid: pid)
             if !listening.isEmpty { ports[workspace, default: []].formUnion(listening) }
         }
         workspaceByProcess = workspaceByProcess.filter { seen.contains($0.key) }
-        return ports.mapValues { $0.sorted() }
+        // Listed after every sample was read: a sampled process missing here was reaped during the scan.
+        let alive = Set(allPIDs())
+        let usage = accountant.update(samples: samples, alivePIDs: alive, now: nanoseconds(mach_absolute_time()))
+        return ProcessScan(ports: ports.mapValues { $0.sorted() }, usage: usage,
+                           listedProcesses: pids.count, workspaceProcesses: samples.count)
+    }
+
+    private func usageSample(pid: pid_t, parentPID: pid_t, workspace: String) -> ProcessUsageSample? {
+        var usage = rusage_info_v4()
+        let result = withUnsafeMutablePointer(to: &usage) {
+            $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(pid, RUSAGE_INFO_V4, $0) }
+        }
+        guard result == 0 else { return nil }
+        // CPU times and the start stamp are mach absolute time (not ns on Apple Silicon).
+        return ProcessUsageSample(pid: pid, parentPID: parentPID,
+                                  startTime: nanoseconds(usage.ri_proc_start_abstime),
+                                  group: workspace,
+                                  cpuTime: nanoseconds(usage.ri_user_time &+ usage.ri_system_time),
+                                  childCPUTime: nanoseconds(usage.ri_child_user_time &+ usage.ri_child_system_time),
+                                  memoryBytes: usage.ri_phys_footprint)
+    }
+
+    private func nanoseconds(_ ticks: UInt64) -> UInt64 {
+        MachTime.nanoseconds(ticks, numer: timebase.numer, denom: timebase.denom)
     }
 
     private func allPIDs() -> [pid_t] {
@@ -105,7 +180,8 @@ final class PortScanner: @unchecked Sendable {
         return count > 0 ? Array(pids.prefix(Int(count))) : []
     }
 
-    private func environmentValue(pid: pid_t, name: String) -> String? {
+    /// Values of the given variables in the process's initial environment (missing ones are absent).
+    private func environmentValues(pid: pid_t, names: [String]) -> [String: String] {
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
         if argumentBuffer.isEmpty {
             var argMax: Int32 = 0
@@ -116,9 +192,10 @@ final class PortScanner: @unchecked Sendable {
         }
         var size = argumentBuffer.count
         let ok = argumentBuffer.withUnsafeMutableBytes { sysctl(&mib, 3, $0.baseAddress, &size, nil, 0) } == 0
-        guard ok, size > MemoryLayout<Int32>.size else { return nil }
+        guard ok, size > MemoryLayout<Int32>.size else { return [:] }
 
-        return argumentBuffer.withUnsafeBytes { raw -> String? in
+        let prefixes = names.map { (name: $0, bytes: Array(($0 + "=").utf8)) }
+        return argumentBuffer.withUnsafeBytes { raw -> [String: String] in
             let bytes = raw.bindMemory(to: UInt8.self)
             let argc = Int(raw.loadUnaligned(as: Int32.self))
             var index = MemoryLayout<Int32>.size
@@ -132,17 +209,18 @@ final class PortScanner: @unchecked Sendable {
                 index += 1
                 skipped += 1
             }
-            let prefix = Array((name + "=").utf8)
-            while index < size, bytes[index] != 0 {
+            var values: [String: String] = [:]
+            while index < size, bytes[index] != 0, values.count < prefixes.count {
                 let start = index
                 while index < size, bytes[index] != 0 { index += 1 }
-                if index - start > prefix.count,
-                   prefix.indices.allSatisfy({ bytes[start + $0] == prefix[$0] }) {
-                    return String(decoding: UnsafeBufferPointer(rebasing: bytes[(start + prefix.count)..<index]), as: UTF8.self)
+                for prefix in prefixes where values[prefix.name] == nil && index - start > prefix.bytes.count
+                    && prefix.bytes.indices.allSatisfy({ bytes[start + $0] == prefix.bytes[$0] }) {
+                    values[prefix.name] = String(decoding: UnsafeBufferPointer(rebasing: bytes[(start + prefix.bytes.count)..<index]),
+                                                 as: UTF8.self)
                 }
                 index += 1
             }
-            return nil
+            return values
         }
     }
 

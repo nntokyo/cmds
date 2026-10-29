@@ -3,7 +3,8 @@ import Foundation
 import os
 
 /// Paired iOS devices. Tokens are bearer secrets: only their SHA-256 (hex) is persisted, in
-/// `~/Library/Application Support/cmds/sync-devices.json` with mode 0600 (directory 0700).
+/// `~/Library/Application Support/cmds/sync-devices.json` (`$CMDS_SUPPORT_DIR` when set) with mode 0600
+/// (directory 0700).
 /// Never log tokens or their hashes.
 @MainActor
 final class SyncDeviceStore {

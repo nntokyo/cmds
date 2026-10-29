@@ -130,10 +130,17 @@ public enum ServerMessage: Equatable, Sendable {
         }
     }
 
-    /// Full workspace snapshot, sent after `welcome` and whenever anything in it changes.
+    /// Full workspace snapshot, sent after `welcome` and whenever anything in it changes
+    /// (resource-usage-only changes at most every ~2 s).
     public struct State: Codable, Equatable, Sendable {
         public var workspaces: [WorkspaceInfo]
-        public init(workspaces: [WorkspaceInfo]) { self.workspaces = workspaces }
+        /// Machine-wide CPU/memory. Optional so older Macs and phones interoperate.
+        public var system: SystemStats?
+
+        public init(workspaces: [WorkspaceInfo], system: SystemStats? = nil) {
+            self.workspaces = workspaces
+            self.system = system
+        }
     }
 
     /// Full screen of a pane. `seq` increases per pane for every screen/screenDiff sent.

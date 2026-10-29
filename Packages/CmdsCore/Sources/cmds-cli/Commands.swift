@@ -13,11 +13,55 @@ extension CLI {
             print("cmds \(result["version"]?.stringValue ?? "?")  pid \(result["pid"]?.intValue ?? 0)  \(result["socketPath"]?.stringValue ?? "")")
         },
         Command(name: "ls", usage: "ls", summary: "List workspaces and their panes.",
-                details: "Markers: * selected workspace, > focused pane, ! needs attention.") { ctx in
+                details: "Markers: * selected workspace, > focused pane, ! needs attention. "
+                    + "CPU/memory: see `cmds stats`.") { ctx in
             let result = try ctx.call("workspace.list")
             if ctx.json { return ctx.printJSON(result) }
             let workspaces = try perform { try result.decode([WorkspaceInfo].self) }
             print(Format.workspaces(workspaces, currentPane: ctx.envPane), terminator: "")
+        },
+        Command(name: "stats", usage: "stats [--watch [seconds]]",
+                summary: "Show CPU and memory use of the Mac and of each workspace's processes.",
+                details: """
+                    Workspace figures cover every process started in its terminals (shells, agents, dev servers…):
+                    CPU as in Activity Monitor (100% = one core, so it can exceed 100%), memory = physical footprint.
+                    The system line is the share of all cores, memory used / installed and the memory pressure
+                    (normal, warning, critical). Values are sampled every 2 s.
+                    --watch (-w) refreshes every 2 s, or the given seconds, until interrupted; with --json it prints
+                    one JSON object per line.
+                    """,
+                flags: ["watch"], aliases: ["w": "watch"]) { ctx in
+            let usage = "cmds stats [--watch [seconds]]"
+            try ctx.args.expectPositionals(0...(ctx.args.has("watch") ? 1 : 0), usage: usage)
+            var interval: TimeInterval?
+            if ctx.args.has("watch") {
+                interval = 2
+                if let raw = ctx.args.positionals.first {
+                    guard let seconds = TimeInterval(raw), seconds >= 0.5, seconds <= 3600 else {
+                        throw CLIError.usage("--watch expects seconds between 0.5 and 3600")
+                    }
+                    interval = seconds
+                }
+            }
+            let client = try ctx.connect()
+            defer { client.close() }
+            let terminal = isatty(STDOUT_FILENO) != 0
+            while true {
+                let result = try perform { try client.call("system.stats") }
+                if ctx.json {
+                    ctx.printJSON(result, compact: interval != nil)
+                } else {
+                    let snapshot = try perform { try result.decode(StatsSnapshot.self) }
+                    let list = try perform { try client.call("workspace.list").decode([WorkspaceInfo].self) }
+                    let titles = Dictionary(list.map { ($0.id, $0.title) }) { first, _ in first }
+                    let text = Format.stats(snapshot, titles: titles, currentWorkspace: ctx.envWorkspace)
+                    if interval != nil, terminal { print("\u{1B}[H\u{1B}[2J", terminator: "") } // clear screen
+                    print(text, terminator: "")
+                    if interval != nil, !terminal { print("") }
+                }
+                guard let interval else { return }
+                Thread.sleep(forTimeInterval: interval)
+            }
         },
         Command(name: "new", usage: "new [--title T] [--cwd DIR] [-- command…]",
                 summary: "Create a workspace (in the current directory by default) and select it.",

@@ -23,10 +23,8 @@ struct SessionState: Codable {
 }
 
 enum SessionStore {
-    static var directory: URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/cmds", isDirectory: true)
-    }
+    /// `~/Library/Application Support/cmds`, or `$CMDS_SUPPORT_DIR` for an isolated (test) instance.
+    static var directory: URL { CmdsEnv.supportDirectoryURL() }
 
     static var fileURL: URL { directory.appendingPathComponent("session.json") }
 

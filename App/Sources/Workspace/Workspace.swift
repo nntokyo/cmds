@@ -18,9 +18,26 @@ final class Workspace {
     var ports: [Int] = []
     var notificationText: String?
 
+    /// CPU of the processes in this workspace's terminals (100 = one core); nil until sampled.
+    private(set) var cpuPercent: Double?
+    /// Sum of their physical footprints; nil until sampled or when none was found.
+    private(set) var memoryBytes: UInt64?
+    private(set) var processCount = 0
+    /// Consecutive samples above one full core (the sidebar tints CPU once this is sustained).
+    private(set) var busySamples = 0
+
     init(id: String) {
         self.id = id
     }
+
+    func applyUsage(_ usage: ResourceUsage?) {
+        cpuPercent = usage?.cpuPercent.map { ($0 * 10).rounded() / 10 }
+        memoryBytes = usage?.memoryBytes
+        processCount = usage?.processCount ?? 0
+        busySamples = (cpuPercent ?? 0) > 100 ? busySamples + 1 : 0
+    }
+
+    var hasTerminal: Bool { panes.values.contains { $0.kind == .terminal } }
 
     var title: String {
         if let customTitle, !customTitle.isEmpty { return customTitle }
@@ -36,7 +53,8 @@ final class Workspace {
     func info(selected: Bool) -> WorkspaceInfo {
         WorkspaceInfo(id: id, title: title, selected: selected, gitBranch: gitBranch,
                       workingDirectory: workingDirectory, ports: ports, notificationText: notificationText,
-                      attention: attention, panes: paneInfos(), layout: root?.layoutNode)
+                      attention: attention, panes: paneInfos(), layout: root?.layoutNode,
+                      cpuPercent: cpuPercent, memoryBytes: memoryBytes)
     }
 
     func paneInfos() -> [PaneInfo] {

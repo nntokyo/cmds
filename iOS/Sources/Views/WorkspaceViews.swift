@@ -68,6 +68,13 @@ struct WorkspaceListView: View {
                 .padding()
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Older Macs do not send system stats; show nothing rather than placeholders.
+            if let stats = client.systemStats {
+                SystemStatsBar(stats: stats)
+                    .opacity(client.status.isLive ? 1 : 0.5)
+            }
+        }
         .navigationTitle(client.macName.isEmpty ? "cmds" : client.macName)
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -158,6 +165,9 @@ struct WorkspaceRow: View {
                         }
                     }
                 }
+                if workspace.cpuPercent != nil || workspace.memoryBytes != nil {
+                    WorkspaceUsageLine(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes)
+                }
                 if let note = workspace.notificationText, !note.isEmpty {
                     Text(note)
                         .font(.caption)
@@ -167,6 +177,104 @@ struct WorkspaceRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+/// `CPU 12% · 1.2 GB` for one workspace (CPU as in Activity Monitor: 100% = one core).
+struct WorkspaceUsageLine: View {
+    let cpuPercent: Double?
+    let memoryBytes: UInt64?
+
+    var body: some View {
+        let cpu = cpuPercent.map(ResourceFormat.percent) ?? "–"
+        let memory = memoryBytes.map(ResourceFormat.bytes) ?? "–"
+        HStack(spacing: 4) {
+            Text("CPU").foregroundStyle(.tertiary)
+            // Reserve the width of "100%" so the memory figure does not shift as CPU digits change.
+            Text("100%").hidden().overlay(alignment: .leading) {
+                Text(cpu).foregroundStyle((cpuPercent ?? 0) > 100 ? Color.orange : Color.secondary)
+            }
+            Text("·").foregroundStyle(.tertiary)
+            Text(memory).foregroundStyle(.secondary)
+        }
+        .font(.caption2.monospacedDigit())
+        .lineLimit(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("CPU \(cpu), memory \(memory)")
+    }
+}
+
+/// Mac-wide CPU and memory with thin meters; the memory meter follows the memory pressure.
+struct SystemStatsBar: View {
+    let stats: SystemStats
+
+    var body: some View {
+        let memory = ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)
+        let pressure = stats.pressure
+        HStack(spacing: 16) {
+            UsageGauge(title: "CPU", value: ResourceFormat.wholePercent(stats.cpuPercent),
+                       fraction: stats.cpuPercent / 100, tint: .accentColor)
+            UsageGauge(title: pressure == .normal || pressure == .unknown ? "Mem" : "Mem · \(pressure.name)",
+                       value: memory, fraction: stats.memoryFraction, tint: pressureColor,
+                       valueTint: pressure == .warning || pressure == .critical ? pressureColor : nil)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Mac CPU \(ResourceFormat.wholePercent(stats.cpuPercent)), memory \(memory), pressure \(pressure.name)")
+    }
+
+    private var pressureColor: Color {
+        switch stats.pressure {
+        case .normal: return .green
+        case .warning: return .yellow
+        case .critical: return .red
+        case .unknown: return .secondary
+        }
+    }
+}
+
+private struct UsageGauge: View {
+    let title: String
+    let value: String
+    let fraction: Double
+    let tint: Color
+    var valueTint: Color?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                Text(title).font(.caption2.weight(.medium)).foregroundStyle(.secondary)
+                Spacer(minLength: 4)
+                Text(value).font(.caption2.monospacedDigit()).foregroundStyle(valueTint ?? .primary)
+            }
+            UsageMeter(fraction: fraction, tint: tint)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+/// Thin capsule track with a proportional fill.
+private struct UsageMeter: View {
+    let fraction: Double
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let clamped = fraction.isFinite ? min(max(fraction, 0), 1) : 0
+            Capsule()
+                .fill(Color.secondary.opacity(0.2))
+                .overlay(alignment: .leading) {
+                    Capsule()
+                        .fill(tint.opacity(0.85))
+                        .frame(width: geo.size.width * clamped)
+                }
+                .animation(.easeOut(duration: 0.4), value: clamped)
+        }
+        .frame(height: 4)
     }
 }
 
