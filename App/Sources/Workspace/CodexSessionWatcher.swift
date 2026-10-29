@@ -74,6 +74,8 @@ final class CodexSessionWatcher: @unchecked Sendable {
         var birth: Date?
         /// Bytes consumed so far (a line boundary).
         var offset: UInt64 = 0
+        /// File size at the last read.
+        var readSize: UInt64 = 0
         var snapshot = CodexRollout.Snapshot()
         var meta: CodexRollout.SessionMeta?
         var metaRead = false
@@ -108,8 +110,9 @@ final class CodexSessionWatcher: @unchecked Sendable {
             guard var state = fileState(path: path) else { continue }
             if shared.contains(path) {
                 if !state.metaRead { readMeta(path, into: &state) }
-                // A daemon session in a directory no Codex pane is in: never read its contents.
-                if !directories.contains(where: { CodexSessionMatcher.sameDirectory($0, state.meta?.cwd) }) {
+                // A daemon session whose directory is unknown or has no Codex pane: never read its contents.
+                guard let cwd = state.meta?.cwd,
+                      directories.contains(where: { $0 != nil && CodexSessionMatcher.sameDirectory($0, cwd) }) else {
                     files[path] = state
                     continue
                 }
@@ -153,17 +156,25 @@ final class CodexSessionWatcher: @unchecked Sendable {
         return state
     }
 
+    /// Retried until the first line is complete (a just-created file may still be empty); a first line longer than
+    /// `metaBytes` is given up on (cwd stays unknown, so the file is never matched).
     private func readMeta(_ path: String, into state: inout FileState) {
-        state.metaRead = true
         guard let handle = FileHandle(forReadingAtPath: path) else { return }
         defer { try? handle.close() }
-        guard let head = try? handle.read(upToCount: Self.metaBytes), let newline = head.firstIndex(of: 0x0A) else { return }
+        guard let head = try? handle.read(upToCount: Self.metaBytes) else { return }
+        guard let newline = head.firstIndex(of: 0x0A) else {
+            if head.count >= Self.metaBytes { state.metaRead = true }
+            return
+        }
+        state.metaRead = true
         state.meta = CodexRollout.sessionMeta(firstLine: head[head.startIndex..<newline])
     }
 
     /// Parses what was appended since the last read (at most the last `tailBytes`).
     private func readAppended(_ path: String, into state: inout FileState) {
-        guard state.size > state.offset else { return }
+        // Unchanged since the last read (e.g. an unterminated line being written): nothing new to parse.
+        guard state.size > state.offset, state.size != state.readSize else { return }
+        state.readSize = state.size
         var start = state.offset
         var cut = false
         if state.size - start > Self.tailBytes {

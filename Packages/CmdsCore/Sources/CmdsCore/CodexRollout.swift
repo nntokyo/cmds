@@ -58,7 +58,7 @@ public enum CodexRollout {
             var usage = AgentUsage(agent: .codex, model: model, effort: effort, sessionID: sessionID,
                                    limits: limits, plan: plan, updatedAt: usageDate ?? fallbackDate)
             if let last {
-                let inContext = max(0, last.total - last.reasoning)
+                let inContext = max(0, last.total &- last.reasoning)
                 usage.contextTokens = inContext
                 if let window = contextWindow, window > 0 {
                     usage.contextWindow = window
@@ -184,7 +184,7 @@ public enum CodexRollout {
             tokens.cachedInput = cached_input_tokens ?? 0
             tokens.output = output_tokens ?? 0
             tokens.reasoning = reasoning_output_tokens ?? 0
-            tokens.total = total_tokens ?? (tokens.input + tokens.output)
+            tokens.total = total_tokens ?? (tokens.input &+ tokens.output)
             return tokens
         }
     }

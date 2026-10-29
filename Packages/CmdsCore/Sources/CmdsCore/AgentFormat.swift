@@ -38,7 +38,7 @@ public enum AgentFormat {
 
     /// `950`, `12k`, `527k`, `1M`, `1.5M`.
     public static func tokens(_ count: Int) -> String {
-        let count = max(0, count)
+        let count = min(max(0, count), 1 << 50)
         if count >= 999_500 {
             let tenths = (count + 50_000) / 100_000
             return tenths % 10 == 0 ? "\(tenths / 10)M" : "\(tenths / 10).\(tenths % 10)M"

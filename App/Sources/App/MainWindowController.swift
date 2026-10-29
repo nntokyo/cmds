@@ -83,7 +83,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         if sidebarItem.isCollapsed { sidebarItem.animator().isCollapsed = false }
         let isolated = CmdsEnv.supportDirectoryOverride() != nil
         if compact {
-            let width = sidebar.view.frame.width
+            // At launch (`persist == false`) the frame is not restored yet: use the width saved when compacting.
+            let width = persist ? sidebar.view.frame.width : 0
             if width >= Self.sidebarMinimum {
                 expandedSidebarWidth = width
                 if !isolated { UserDefaults.standard.set(Double(width), forKey: Self.expandedWidthDefaultsKey) }
@@ -97,8 +98,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
             splitViewController.splitView.setPosition(SidebarViewController.compactWidth, ofDividerAt: 0)
         } else {
             sidebar.isCompact = false
-            sidebarItem.minimumThickness = Self.sidebarMinimum
+            // Raise the maximum first so min never exceeds max.
             sidebarItem.maximumThickness = Self.sidebarMaximum
+            sidebarItem.minimumThickness = Self.sidebarMinimum
             splitViewController.splitView.setPosition(expandedSidebarWidth, ofDividerAt: 0)
         }
         if persist, !isolated {

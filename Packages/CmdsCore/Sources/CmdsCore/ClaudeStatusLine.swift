@@ -18,8 +18,8 @@ public enum ClaudeStatusLine {
         usage.sessionID = string(root["session_id"])
 
         let context = root["context_window"]
-        usage.contextWindow = int(context?["context_window_size"]).flatMap { $0 > 0 ? $0 : nil }
-        usage.contextUsedPercent = number(context?["used_percentage"])
+        usage.contextWindow = int(context?["context_window_size"]).flatMap { $0 > 0 && $0 < 1 << 40 ? $0 : nil }
+        usage.contextUsedPercent = number(context?["used_percentage"]).map { min(max($0, 0), 100) }
         var tokens = int(context?["total_input_tokens"])
         if (tokens ?? 0) == 0, let window = usage.contextWindow, let percent = usage.contextUsedPercent {
             tokens = Int(Double(window) * percent / 100)
