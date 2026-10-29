@@ -284,6 +284,61 @@ public enum SyncLoopback {
         deinit { close() }
     }
 
+    /// Listens on 127.0.0.1 (`port`, 0 = ephemeral) and hands out every accepted connection until closed.
+    /// Used as the target of the Mac's `ssh -R` forward (remote access).
+    public final class Server: @unchecked Sendable {
+        public let port: UInt16
+        private let fd: Int32
+        private let queue = DispatchQueue(label: "tokyo.n-n.cmds.sync-loopback-server")
+        private let lock = NSLock()
+        private var source: DispatchSourceRead?
+        private var closed = false
+
+        public init(port: UInt16 = 0, backlog: Int32 = 16) throws {
+            let fd = try makeSocket()
+            do {
+                var local = address(port: port)
+                try check("bind", withSockaddr(&local) { Darwin.bind(fd, $0, $1) })
+                try check("listen", Darwin.listen(fd, backlog))
+                self.port = try boundPort(fd)
+            } catch {
+                Darwin.close(fd)
+                throw error
+            }
+            self.fd = fd
+        }
+
+        /// Calls `handler` on a background queue with each accepted socket (the handler owns it).
+        public func start(_ handler: @escaping @Sendable (Int32) -> Void) {
+            let source = DispatchSource.makeReadSource(fileDescriptor: fd, queue: queue)
+            source.setEventHandler { [fd] in
+                let client = Darwin.accept(fd, nil, nil)
+                guard client >= 0 else { return }
+                var on: Int32 = 1
+                setsockopt(client, SOL_SOCKET, SO_NOSIGPIPE, &on, socklen_t(MemoryLayout<Int32>.size))
+                handler(client)
+            }
+            source.setCancelHandler { [fd] in Darwin.close(fd) }
+            lock.lock()
+            guard !closed, self.source == nil else { return lock.unlock() }
+            self.source = source
+            lock.unlock()
+            source.resume()
+        }
+
+        public func close() {
+            lock.lock()
+            let wasClosed = closed
+            closed = true
+            let source = self.source
+            lock.unlock()
+            guard !wasClosed else { return }
+            if let source { source.cancel() } else { Darwin.close(fd) }
+        }
+
+        deinit { close() }
+    }
+
     // MARK: - Helpers
 
     private static func makeSocket() throws -> Int32 {

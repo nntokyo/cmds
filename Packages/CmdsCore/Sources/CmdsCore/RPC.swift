@@ -70,6 +70,9 @@ public enum CmdsEnv {
     public static let syncNoBonjour = "CMDS_SYNC_NO_BONJOUR"
     /// `1` = no Bluetooth fallback (no advertising, no L2CAP channel), so no phone finds the instance over Bluetooth.
     public static let syncNoBluetooth = "CMDS_SYNC_NO_BLUETOOTH"
+    /// ssh config file for remote access via SSH (`ssh -F`); honoured only by isolated instances
+    /// (`CMDS_SUPPORT_DIR`), so tests point ssh at a throwaway relay and never read ~/.ssh/config.
+    public static let syncRemoteSSHConfig = "CMDS_SYNC_REMOTE_SSH_CONFIG"
 
     public enum SyncPortSetting: Equatable, Sendable {
         case unset
@@ -112,6 +115,13 @@ public enum CmdsEnv {
 
     public static func isBluetoothDisabled(environment: [String: String] = ProcessInfo.processInfo.environment) -> Bool {
         isSet(environment[syncNoBluetooth])
+    }
+
+    /// `CMDS_SYNC_REMOTE_SSH_CONFIG` when running isolated, else nil (ssh uses ~/.ssh/config).
+    public static func remoteSSHConfig(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        guard supportDirectoryOverride(environment: environment) != nil,
+              let raw = environment[syncRemoteSSHConfig]?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return nil }
+        return (raw as NSString).expandingTildeInPath
     }
 
     private static func isSet(_ flag: String?) -> Bool {
