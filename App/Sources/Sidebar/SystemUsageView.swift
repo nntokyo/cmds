@@ -24,6 +24,8 @@ final class SystemUsageView: NSView {
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
             cpuRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             memoryRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            // Same value column width in both rows, so the two meters line up and have equal length.
+            cpuRow.valueWidthAnchor.constraint(equalTo: memoryRow.valueWidthAnchor),
         ])
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
@@ -103,7 +105,8 @@ private final class MeterRow: NSView {
         valueLabel.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
         valueLabel.textColor = .secondaryLabelColor
         valueLabel.alignment = .right
-        valueLabel.setContentHuggingPriority(.required, for: .horizontal)
+        // Hugging below required lets the shared value-column width stretch the narrower label.
+        valueLabel.setContentHuggingPriority(.defaultHigh, for: .horizontal)
         valueLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
         meter.setContentHuggingPriority(.defaultLow, for: .horizontal)
         for view in [titleLabel, meter, valueLabel] as [NSView] {
@@ -127,6 +130,8 @@ private final class MeterRow: NSView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    var valueWidthAnchor: NSLayoutDimension { valueLabel.widthAnchor }
 
     func set(value: String, fraction: Double, color: NSColor, valueColor: NSColor? = nil) {
         if valueLabel.stringValue != value { valueLabel.stringValue = value }

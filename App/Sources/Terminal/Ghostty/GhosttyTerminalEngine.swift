@@ -64,6 +64,13 @@ final class GhosttyTerminalSurface: TerminalSurface {
         return (Int(size.rows), Int(size.columns))
     }
 
+    var foregroundProcessGroupID: pid_t? {
+        guard let surface = surfaceView.surface else { return nil }
+        let pgid = ghostty_surface_foreground_pid(surface) // tcgetpgrp of the pty, 0 when unknown
+        guard pgid > 0, pgid <= UInt64(Int32.max) else { return nil }
+        return pid_t(pgid)
+    }
+
     func focus() {
         guard let window = surfaceView.window else { return }
         window.makeFirstResponder(surfaceView)
@@ -259,5 +266,6 @@ private final class FallbackSurface: TerminalSurface {
     func scrollbackText(maxLines: Int) -> String { textView.string }
     var cursorPosition: (row: Int, col: Int)? { nil }
     var gridSize: (rows: Int, cols: Int)? { nil }
+    var foregroundProcessGroupID: pid_t? { nil }
     func close() { delegate?.terminalSurfaceDidClose(self) }
 }

@@ -10,7 +10,7 @@ Native macOS terminal multiplexer for coding agents. Swift + AppKit, terminal re
 | `Packages/CmdsCore` | SwiftPM package shared by macOS app, CLI and iOS: RPC wire types, snapshot models, sync protocol. Also the `cmds` CLI executable (`Sources/cmds-cli`). |
 | `App/Sources/Terminal` | `TerminalSurface.swift` (contract) + `Ghostty/` (libghostty implementation). |
 | `App/Sources/Workspace` | Workspace/pane model, split tree, `AppController` (single source of truth, main actor). |
-| `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, latest notification text, attention dot. |
+| `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, CPU/memory, latest notification text, attention dot. Footer: Mac-wide CPU and memory meters. |
 | `App/Sources/Panes` | Split container views, pane container with notification ring. |
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents. |
@@ -29,6 +29,18 @@ Project file is generated: `xcodegen generate` (do not commit `cmds.xcodeproj`).
   rings the bell, or `cmds notify` targets it — and the pane is not the focused pane of the key window.
   Focusing the pane clears it. The workspace row in the sidebar shows a dot + the latest notification text.
 - Every terminal gets env `CMDS_SOCKET_PATH`, `CMDS_WORKSPACE_ID`, `CMDS_PANE_ID` so the CLI targets its own pane by default.
+- **Resource usage** (`Workspace/MetadataMonitor.swift`, `SystemSampler.swift`; math in `CmdsCore/ResourceSampling.swift`,
+  `ProcessAttribution.swift`): every 2 s one background scan finds each workspace's processes and reads their
+  listening ports and `proc_pid_rusage`. A process belongs to a workspace by (1) `CMDS_WORKSPACE_ID` in its
+  environment with our `CMDS_SOCKET_PATH` — macOS hides the environment of Apple platform binaries (`/bin/zsh`,
+  `make`, `git`), so this only covers third-party ones (node, python…); (2) its controlling tty, found from each
+  pane's pty foreground process group (`TerminalSurface.foregroundProcessGroupID`); (3) its nearest attributed
+  ancestor (detached children). Workspace CPU = growth of own + reaped-children CPU time (catches processes that
+  start and exit between scans) over wall time, Activity Monitor style (100 % = one core, capped at all cores);
+  memory = sum of `ri_phys_footprint`. Mac-wide: `host_statistics` CPU ticks (0–100 % of all cores); memory used =
+  app (internal − purgeable) + wired + compressed pages (Activity Monitor's "Memory Used"); pressure =
+  `kern.memorystatus_vm_pressure_level` (1 normal, 2 warning, 4 critical). Updates go through
+  `AppController.usageChanges`, not `changes`: only the usage labels redraw (no reloads, session saves or socket events).
 
 ## Socket API (JSON lines, see `CmdsCore/RPC.swift`)
 
@@ -38,6 +50,7 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 |---|---|---|
 | `system.ping` | – | `{"pong": true}` |
 | `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
+| `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}]}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes) |
 | `workspace.list` | – | `[WorkspaceInfo]` |
 | `workspace.create` | `title?`, `cwd?`, `command?` | `WorkspaceInfo` |
 | `workspace.select` | `id` | – |
@@ -61,6 +74,9 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 `pane?` / `workspace?` default to `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` (sent by the CLI), else the focused one.
 `browser.*` without `pane` use the focused (else first) browser pane of `workspace?` (default: selected).
 Methods without a result return `{}`. CLI usage: [CLI.md](CLI.md).
+`WorkspaceInfo` (so also `workspace.list`, events and sync) has optional `cpuPercent` (100 = one core) and
+`memoryBytes` (physical footprint). `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`,
+`memoryTotalBytes`, `memoryPressure` (1/2/4, optional).
 
 ## Keyboard shortcuts (defaults)
 
@@ -79,6 +95,22 @@ Methods without a result return `{}`. CLI usage: [CLI.md](CLI.md).
 | Toggle sidebar | ⌘B |
 | Rename workspace | ⇧⌘R |
 | Zoom pane (toggle) | ⇧⌘↩ |
+
+## Testing with an isolated instance
+
+Never test against the instance you work in. Start a second one from your build:
+
+```sh
+CMDS_SUPPORT_DIR=/tmp/cmds-test CMDS_SYNC_DISABLED=1 build/dd/Build/Products/Debug/cmds.app/Contents/MacOS/cmds &
+cmds --socket /tmp/cmds-test/cmds.sock ls
+```
+
+- `CMDS_SUPPORT_DIR` replaces `~/Library/Application Support/cmds` (session.json, sync-devices.json, cmds.sock) and
+  wins over an inherited `CMDS_SOCKET_PATH`, so neither the instance nor a CLI given the variable can reach the
+  live app. Such an instance also leaves the saved window/sidebar frames alone and does not activate itself on
+  launch (it never takes keyboard focus from the app in use). Its terminals inherit the variable.
+- `CMDS_SYNC_DISABLED=1` skips the iOS sync server (no Bonjour advert, no port).
+- Launch the binary directly; `open` does not pass the environment reliably.
 
 ## iOS companion sync
 

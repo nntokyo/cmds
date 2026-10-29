@@ -10,7 +10,7 @@ final class WorkspaceCellView: NSTableCellView {
     private static let monoFont = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .regular)
     private static let usageFont = NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
     /// Memory starts at a fixed tab stop so changing CPU digits never shift it.
-    private static let usageTabStop: CGFloat = 60
+    private static let usageTabStop: CGFloat = 64
     private static let horizontalInset: CGFloat = 10
     private static let verticalInset: CGFloat = 6
     private static let spacing: CGFloat = 2

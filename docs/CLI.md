@@ -16,14 +16,16 @@ Inside a cmds terminal the CLI sends `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` as exp
 the focused pane of the selected workspace is used. Browser commands without `--pane` use the focused browser pane of
 the current workspace, else its first browser pane.
 
-The socket is `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `--socket PATH` overrides both.
+The socket is `$CMDS_SUPPORT_DIR/cmds.sock` (isolated test instances, see [ARCHITECTURE.md](ARCHITECTURE.md#testing-with-an-isolated-instance)),
+else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `--socket PATH` overrides all of them.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
 | `cmds ping` / `cmds identify` | Check the app is up / show version, pid, socket path |
-| `cmds ls` | Workspaces (branch, cwd, ports, `!` attention, sidebar text) with a tree of panes (`>` focused) |
+| `cmds ls` | Workspaces (branch, cwd, ports, `CPU 12% · 1.2 GB`, `!` attention, sidebar text) with a tree of panes (`>` focused) |
+| `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
 | `cmds new [--title T] [--cwd DIR] [-- cmd…]` | New workspace (default cwd: current directory); prints its id |
 | `cmds select <id\|index\|title>` | Select a workspace (index is 1-based like ⌘1…⌘9) |
 | `cmds close [ws]` / `cmds rename [ws] <title>` | Close / rename a workspace (default: current) |
@@ -56,6 +58,8 @@ cmds browser snapshot -o /tmp/page.png
 cmds send --pane p2 --enter 'make test'
 cmds read --pane p2 --scrollback 200 | tail -20
 long-task; cmds notify --title "long-task" "finished with $?"
+cmds stats --json | jq '.system.memoryPressure'   # 1 normal, 2 warning, 4 critical
+cmds stats --watch 5
 ```
 
 ## Claude Code hooks

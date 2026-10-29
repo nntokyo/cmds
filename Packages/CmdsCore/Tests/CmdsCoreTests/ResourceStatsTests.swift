@@ -296,6 +296,89 @@ final class ProcessUsageAccountantTests: XCTestCase {
     }
 }
 
+final class ProcessAttributorTests: XCTestCase {
+    // The app is pid 100; its panes run `login` (root) → zsh on ttys 5 and 7.
+    private let app = ProcessIdentity(pid: 100, parentPID: 1)
+
+    private func login(_ pid: Int32, tty: UInt32, foreground: Int32) -> ProcessIdentity {
+        ProcessIdentity(pid: pid, parentPID: 100, tty: tty, ttyForegroundGroup: foreground, isOwnUser: false)
+    }
+
+    private func proc(_ pid: Int32, parent: Int32, tty: UInt32? = nil, foreground: Int32? = nil,
+                      env: EnvironmentTag = .unknown) -> ProcessIdentity {
+        ProcessIdentity(pid: pid, parentPID: parent, tty: tty, ttyForegroundGroup: foreground ?? (tty == nil ? nil : 0),
+                        environment: env)
+    }
+
+    func testPaneForegroundGroupClaimsEverythingOnItsTTY() {
+        var attributor = ProcessAttributor(ownPID: 100)
+        let processes = [
+            app, login(200, tty: 5, foreground: 300),
+            proc(300, parent: 200, tty: 5, foreground: 300),          // zsh (environment hidden)
+            proc(301, parent: 300, tty: 5, foreground: 300),          // `yes &`
+            proc(400, parent: 1, tty: 9, foreground: 400),            // another terminal app
+        ]
+        let result = attributor.attribute(processes, foregroundGroups: [300: "w1"])
+        XCTAssertEqual(result, [300: "w1", 301: "w1"])
+    }
+
+    func testEnvironmentWinsAndTeachesTheTTY() {
+        var attributor = ProcessAttributor(ownPID: 100)
+        let processes = [
+            app, login(210, tty: 7, foreground: 320),
+            proc(310, parent: 210, tty: 7, foreground: 320),                    // zsh
+            proc(320, parent: 310, tty: 7, foreground: 320, env: .workspace("w2")), // node, env visible
+            proc(321, parent: 310, tty: 5, foreground: 330, env: .workspace("w9")), // odd, but env wins
+        ]
+        // No foreground info for tty 7 (e.g. surface not ready): node's environment maps the tty.
+        let result = attributor.attribute(processes, foregroundGroups: [:])
+        XCTAssertEqual(result[310], "w2")
+        XCTAssertEqual(result[320], "w2")
+        XCTAssertEqual(result[321], "w9")
+    }
+
+    func testDetachedChildrenFollowTheirAncestors() {
+        var attributor = ProcessAttributor(ownPID: 100)
+        let processes = [
+            app, login(200, tty: 5, foreground: 300),
+            proc(300, parent: 200, tty: 5, foreground: 300),
+            proc(301, parent: 300),              // setsid daemon, no tty
+            proc(302, parent: 301),              // its worker
+            proc(303, parent: 1),                // orphan reparented to launchd: unknown
+            proc(304, parent: 100),              // spawned by the app itself: not a workspace process
+        ]
+        let result = attributor.attribute(processes, foregroundGroups: [300: "w1"])
+        XCTAssertEqual(result, [300: "w1", 301: "w1", 302: "w1"])
+    }
+
+    func testOtherInstancesAreNeverClaimed() {
+        var attributor = ProcessAttributor(ownPID: 100)
+        let processes = [
+            app,
+            proc(500, parent: 1, env: .foreign),         // e.g. node from another cmds instance's w1
+            proc(501, parent: 500),                      // its platform-binary child
+            proc(502, parent: 1, tty: 11, foreground: 502, env: .foreign),
+            proc(503, parent: 502, tty: 11, foreground: 502),
+        ]
+        XCTAssertEqual(attributor.attribute(processes, foregroundGroups: [:]), [:])
+    }
+
+    func testTTYMappingSurvivesAForegroundChangeAndIsDroppedWithTheTTY() {
+        var attributor = ProcessAttributor(ownPID: 100)
+        var processes = [app, login(200, tty: 5, foreground: 300), proc(300, parent: 200, tty: 5, foreground: 300)]
+        XCTAssertEqual(attributor.attribute(processes, foregroundGroups: [300: "w1"]), [300: "w1"])
+        // A job started after the foreground group was read: nothing matches, the remembered tty still does.
+        processes = [app, login(200, tty: 5, foreground: 301), proc(300, parent: 200, tty: 5, foreground: 301),
+                     proc(301, parent: 300, tty: 5, foreground: 301)]
+        XCTAssertEqual(attributor.attribute(processes, foregroundGroups: [300: "w1"]), [300: "w1", 301: "w1"])
+        // The pane closed (tty gone), then a new pane of another workspace got the same tty.
+        _ = attributor.attribute([app], foregroundGroups: [:])
+        processes = [app, proc(600, parent: 1, tty: 5, foreground: 600)]
+        XCTAssertEqual(attributor.attribute(processes, foregroundGroups: [:]), [:])
+        XCTAssertEqual(attributor.attribute(processes, foregroundGroups: [600: "w3"]), [600: "w3"])
+    }
+}
+
 final class CmdsEnvTests: XCTestCase {
     func testSupportDirectoryOverridesSocketPath() {
         XCTAssertEqual(CmdsEnv.defaultSocketPath(environment: ["CMDS_SUPPORT_DIR": "/tmp/cmds-test"]), "/tmp/cmds-test/cmds.sock")

@@ -42,7 +42,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 |---|---|---|
 | `welcome` | `protocolVersion, macName, token` | Auth OK. Phone stores `token` in the Keychain per Mac. |
 | `error` | `code:SyncErrorCode, message` | Codes: `unsupportedVersion pairingRequired invalidPairingCode invalidToken rateLimited notAuthenticated badRequest notFound internal`. After auth errors (`isAuthFailure`) the Mac closes the socket. |
-| `state` | `workspaces:[WorkspaceInfo]` | Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change. |
+| `state` | `workspaces:[WorkspaceInfo], system?:SystemStats` | Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
 | `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?` | Full visible screen (no scrollback). Trailing spaces may be trimmed. Cursor nil = hidden. |
 | `screenDiff` | `paneID, seq, baseSeq, changes:[{row,text}], cursorRow?, cursorCol?` | Only when rows/cols unchanged. Applies to the screen with `seq == baseSeq`; cursor is absolute. |
 | `notification` | `paneID?, workspaceID, title, body` | Pane raised attention (agent waiting, OSC 9/777…). Phone posts a local notification. |

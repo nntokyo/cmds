@@ -49,12 +49,19 @@ final class MetadataMonitor {
         guard !scanning else { return }
         // Runs without workspaces too: the sidebar footer shows machine-wide usage regardless.
         let directories = Dictionary(uniqueKeysWithValues: controller.workspaces.map { ($0.id, $0.workingDirectory) })
+        // Each pane's pty foreground group identifies its tty, hence every process running in it.
+        var foregroundGroups: [pid_t: String] = [:]
+        for workspace in controller.workspaces {
+            for pane in workspace.panes.values {
+                if let group = pane.terminal?.foregroundProcessGroupID { foregroundGroups[group] = workspace.id }
+            }
+        }
         scanning = true
         let scanner = scanner
         let systemSampler = systemSampler
         queue.async { [weak self] in
             let started = DispatchTime.now().uptimeNanoseconds
-            let scan = scanner.scan()
+            let scan = scanner.scan(foregroundGroups: foregroundGroups)
             let system = systemSampler.sample()
             let scanned = DispatchTime.now().uptimeNanoseconds
             var result: [String: WorkspaceMetadata] = [:]
@@ -89,9 +96,10 @@ struct ProcessScan: Sendable {
     var workspaceProcesses = 0
 }
 
-/// Finds the processes launched from this app's terminals, keyed by `CMDS_WORKSPACE_ID`, and reports their TCP
-/// listening ports and CPU/memory. Process environments are read via `KERN_PROCARGS2` and cached per
-/// (pid, start time), so each scan only inspects new processes; sockets come from `proc_pidfdinfo`, usage
+/// Finds the processes running in this app's terminals and reports their TCP listening ports and CPU/memory
+/// per workspace. Attribution (`ProcessAttributor`): `CMDS_WORKSPACE_ID` from the environment where macOS
+/// shows it (`KERN_PROCARGS2`, cached per pid + start time), else the pane tty found through each pane's
+/// foreground process group, else the nearest attributed ancestor. Sockets come from `proc_pidfdinfo`, usage
 /// from `proc_pid_rusage` (turned into percentages by `ProcessUsageAccountant`). Not thread-safe: use one queue.
 final class ProcessScanner: @unchecked Sendable {
     private struct ProcessKey: Hashable {
@@ -99,18 +107,14 @@ final class ProcessScanner: @unchecked Sendable {
         var start: UInt64
     }
 
-    /// nil value = process has no CMDS_WORKSPACE_ID or belongs to another cmds instance.
-    private var workspaceByProcess: [ProcessKey: String?] = [:]
+    private var environmentByProcess: [ProcessKey: EnvironmentTag] = [:]
     private var argumentBuffer = [UInt8]()
     private let uid = getuid()
     private let ownPID = getpid()
     /// `CMDS_SOCKET_PATH` given to our terminals. Other instances (a dev build next to the installed app)
-    /// reuse the same workspace IDs, so processes carrying a different socket are not ours.
+    /// use their own socket, so processes carrying a different one are not ours.
     private let socketPath: String
-
-    init(socketPath: String) {
-        self.socketPath = socketPath
-    }
+    private var attributor = ProcessAttributor(ownPID: getpid())
     private var accountant = ProcessUsageAccountant(cpuCount: ProcessInfo.processInfo.activeProcessorCount)
     private let timebase: mach_timebase_info_data_t = {
         var info = mach_timebase_info_data_t()
@@ -118,39 +122,63 @@ final class ProcessScanner: @unchecked Sendable {
         return info
     }()
 
-    func scan() -> ProcessScan {
-        var seen = Set<ProcessKey>()
-        var ports: [String: Set<Int>] = [:]
-        var samples: [ProcessUsageSample] = []
+    init(socketPath: String) {
+        self.socketPath = socketPath
+    }
+
+    /// - Parameter foregroundGroups: foreground process group of each terminal pane's pty → workspace ID.
+    func scan(foregroundGroups: [pid_t: String]) -> ProcessScan {
         let pids = allPIDs()
-        for pid in pids where pid != ownPID {
+        var identities: [ProcessIdentity] = []
+        identities.reserveCapacity(pids.count)
+        var seen = Set<ProcessKey>()
+        for pid in pids {
             var info = proc_bsdinfo()
             let size = Int32(MemoryLayout<proc_bsdinfo>.size)
-            guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size, info.pbi_uid == uid else { continue }
-            let key = ProcessKey(pid: pid, start: info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec)
-            seen.insert(key)
-            let workspace: String?
-            if let cached = workspaceByProcess[key] {
-                workspace = cached
-            } else {
-                let environment = environmentValues(pid: pid, names: [CmdsEnv.workspaceID, CmdsEnv.socketPath])
-                let foreign = environment[CmdsEnv.socketPath].map { $0 != socketPath } ?? false
-                workspace = foreign ? nil : environment[CmdsEnv.workspaceID]
-                workspaceByProcess[key] = .some(workspace)
+            guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { continue }
+            let ownUser = info.pbi_uid == uid && pid != ownPID
+            var environment = EnvironmentTag.unknown
+            if ownUser {
+                let key = ProcessKey(pid: pid, start: info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec)
+                seen.insert(key)
+                if let cached = environmentByProcess[key] {
+                    environment = cached
+                } else {
+                    environment = environmentTag(pid: pid)
+                    environmentByProcess[key] = environment
+                }
             }
-            guard let workspace else { continue }
-            if let sample = usageSample(pid: pid, parentPID: pid_t(bitPattern: info.pbi_ppid), workspace: workspace) {
+            let hasTTY = info.e_tdev != UInt32.max && info.e_tdev != 0 // NODEV: no controlling terminal
+            identities.append(ProcessIdentity(pid: pid, parentPID: pid_t(bitPattern: info.pbi_ppid),
+                                              tty: hasTTY ? info.e_tdev : nil,
+                                              ttyForegroundGroup: hasTTY ? pid_t(bitPattern: info.e_tpgid) : nil,
+                                              isOwnUser: ownUser, environment: environment))
+        }
+        environmentByProcess = environmentByProcess.filter { seen.contains($0.key) }
+
+        let workspaces = attributor.attribute(identities, foregroundGroups: foregroundGroups)
+        var ports: [String: Set<Int>] = [:]
+        var samples: [ProcessUsageSample] = []
+        for identity in identities {
+            guard let workspace = workspaces[identity.pid] else { continue }
+            if let sample = usageSample(pid: identity.pid, parentPID: identity.parentPID, workspace: workspace) {
                 samples.append(sample)
             }
-            let listening = listeningPorts(pid: pid)
+            let listening = listeningPorts(pid: identity.pid)
             if !listening.isEmpty { ports[workspace, default: []].formUnion(listening) }
         }
-        workspaceByProcess = workspaceByProcess.filter { seen.contains($0.key) }
         // Listed after every sample was read: a sampled process missing here was reaped during the scan.
         let alive = Set(allPIDs())
         let usage = accountant.update(samples: samples, alivePIDs: alive, now: nanoseconds(mach_absolute_time()))
         return ProcessScan(ports: ports.mapValues { $0.sorted() }, usage: usage,
                            listedProcesses: pids.count, workspaceProcesses: samples.count)
+    }
+
+    private func environmentTag(pid: pid_t) -> EnvironmentTag {
+        let values = environmentValues(pid: pid, names: [CmdsEnv.workspaceID, CmdsEnv.socketPath])
+        if let socket = values[CmdsEnv.socketPath], socket != socketPath { return .foreign }
+        if let workspace = values[CmdsEnv.workspaceID], !workspace.isEmpty { return .workspace(workspace) }
+        return .unknown
     }
 
     private func usageSample(pid: pid_t, parentPID: pid_t, workspace: String) -> ProcessUsageSample? {

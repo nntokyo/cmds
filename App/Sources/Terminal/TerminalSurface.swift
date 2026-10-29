@@ -44,6 +44,10 @@ protocol TerminalSurface: AnyObject {
     var cursorPosition: (row: Int, col: Int)? { get }
     /// Terminal grid size in cells; nil if unknown.
     var gridSize: (rows: Int, cols: Int)? { get }
+    /// Foreground process group of the terminal's pty (the shell itself while idle); nil if unknown.
+    /// The app maps it to the pty's tty to find every process running in the pane (CPU/memory, ports):
+    /// macOS hides the environment of Apple platform binaries such as /bin/zsh, so CMDS_* is not enough.
+    var foregroundProcessGroupID: pid_t? { get }
     /// Plain text of scrollback + screen, capped to `maxLines` from the bottom.
     func scrollbackText(maxLines: Int) -> String
     func close()
