@@ -47,6 +47,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   [below](#sync-against-an-isolated-instance).
 - Settings that live in `UserDefaults` (language, keep-awake, resume mode, compact sidebar) are kept in memory only;
   `CMDS_AGENT_RESUME` and `CMDS_SIDEBAR_COMPACT` set their initial values. The lid-close item is disabled.
+- cmds › Settings… (terminal font, sidebar text size, zoom) uses its own `UserDefaults` suite
+  `tokyo.n-n.cmds.isolated.<first 16 hex digits of SHA-256 of the support directory path>`, read live, so a test can
+  change it from outside: `defaults write tokyo.n-n.cmds.isolated.<hash> TerminalFontSize -float 20` (keys:
+  `TerminalFontFamily`, `TerminalFontSize`, `SidebarTextSize` small/medium/large, `BrowserPageZoom`,
+  `PreviewPageZoom`). `defaults delete` the suite afterwards. DEBUG builds open the window with
+  `cmds rpc debug.show_settings` (→ `{"window"}`, its window number for `screencapture -l`).
 - Launch the binary directly; `open` does not pass the environment reliably.
 - A window that is not on screen (another Space, hidden) is not drawn, so `screencapture` shows nothing. DEBUG
   builds answer `debug.preview_snapshot {pane}` → `{"png_base64"}` with a picture of a preview pane drawn off screen

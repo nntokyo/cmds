@@ -45,6 +45,9 @@ First version, to be released as 0.1.0 (`MARKETING_VERSION` 0.1.0, build 1). Dev
 - Keep awake: idle-sleep assertion while cmds runs, optional display assertion, opt-in Keep Awake With Lid Closed
   (`pmset disablesleep` through the administrator dialog, restored on quit, recovery after a crash).
 - English and Japanese localization (String Catalogs), with a Language menu.
+- Settings window (⌘,): terminal font family and size layered over the Ghostty config and applied live, sidebar text
+  size (Small / Medium / Large), default browser and preview zoom; View › Bigger / Smaller / Actual Size (⌘+ / ⌘− /
+  ⌘0) for the focused pane. The companion's ⋯ › Settings… has Fit to width or a fixed terminal font size.
 - App icon for macOS and iOS.
 
 #### `cmds` CLI and socket API

@@ -55,6 +55,11 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   has esc, tab, a ctrl latch, arrows, home/end, ^C, ^D, delete and return. Two input modes: *Direct* sends every
   keystroke at once; *Line* lets you compose a line and send it with return. Long-press Send for **Send without Enter**. With a hardware keyboard (iPad), tap the screen and keys go
   straight to the pane. The toolbar has **Show Workspace on Mac** and **Focus Pane on Mac**.
+- **Text size**: ⋯ › **Settings…** on the workspace list. **Fit to width** (default) sizes the font so the whole
+  terminal width fits the screen; **Fixed size** uses a font size you pick (6–24 pt) and wide terminals scroll
+  sideways. Pinch zooms from there, double-tap resets. **Remember pinch zoom per pane** keeps each pane's zoom
+  (pane ids are reassigned when cmds restarts on the Mac). This only changes the phone's view, never the terminal
+  size on the Mac.
 - **Preview panes**: images (with zoom) and PDFs are fetched from the Mac (up to 10 MB); other files show their name
   and **Open on Mac**.
 - **Notifications**: every pane notification on the Mac (agent waiting, finished, OSC 9/777, bell, `cmds notify`) is

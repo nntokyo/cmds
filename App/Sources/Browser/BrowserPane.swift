@@ -16,6 +16,8 @@ final class BrowserPane: NSView {
     private let forwardButton = BrowserPane.toolbarButton("chevron.right", label: String(localized: "Forward"))
     private let reloadButton = BrowserPane.toolbarButton("arrow.clockwise", label: String(localized: "Reload"))
     private var observations: [NSKeyValueObservation] = []
+    /// Settings default the page zoom was last set to.
+    private var appliedDefaultZoom = AppSettings.shared.browserZoom
 
     var currentURL: URL? { webView.url }
     var pageTitle: String { webView.title ?? "" }
@@ -32,6 +34,7 @@ final class BrowserPane: NSView {
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         buildLayout()
         observe()
+        observeZoomSetting()
     }
 
     @available(*, unavailable)
@@ -247,4 +250,26 @@ private final class AddressField: NSTextField {
         if accepted { onFocus?() }
         return accepted
     }
+}
+
+// MARK: - Page zoom (cmds › Settings… default; View › Bigger / Smaller / Actual Size for this pane)
+
+extension BrowserPane: TextSizeActions {
+    /// Starts at the default zoom and follows changes of it.
+    func observeZoomSetting() {
+        webView.pageZoom = AppSettings.shared.browserZoom
+        NotificationCenter.default.addObserver(self, selector: #selector(zoomSettingChanged),
+                                               name: AppSettings.didChange, object: nil)
+    }
+
+    @objc private func zoomSettingChanged() {
+        let zoom = AppSettings.shared.browserZoom
+        guard zoom != appliedDefaultZoom else { return }
+        appliedDefaultZoom = zoom
+        webView.pageZoom = zoom
+    }
+
+    @objc func cmdsTextBigger(_ sender: Any?) { webView.pageZoom = PageZoomSteps.bigger(webView.pageZoom) }
+    @objc func cmdsTextSmaller(_ sender: Any?) { webView.pageZoom = PageZoomSteps.smaller(webView.pageZoom) }
+    @objc func cmdsTextActualSize(_ sender: Any?) { webView.pageZoom = AppSettings.shared.browserZoom }
 }

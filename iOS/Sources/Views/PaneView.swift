@@ -37,8 +37,10 @@ struct TerminalScreenView: View {
     let snapshot: ScreenSnapshot?
     let attention: Bool
 
-    /// Multiplier over fit-to-width.
+    /// Multiplier over the base size (fit-to-width or the fixed size from Settings).
     @State private var zoom: CGFloat = 1
+    @AppStorage(TerminalTextSettings.modeKey) private var textMode = TerminalTextSettings.Mode.fit
+    @AppStorage(TerminalTextSettings.fontSizeKey) private var fixedFontSize = 12.0
     @GestureState private var pinch: CGFloat = 1
     @FocusState private var keyboardFocused: Bool
 
@@ -61,8 +63,9 @@ struct TerminalScreenView: View {
         GeometryReader { geo in
             if let snapshot, snapshot.cols > 0 {
                 let available = geo.size.width - Self.padding * 2
-                let fit = available / (CGFloat(snapshot.cols) * Self.cellWidthPerPoint)
-                let fontSize = min(Self.maxFont, max(Self.minFont, fit * zoom * pinch))
+                let base = textMode == .fixed ? CGFloat(fixedFontSize)
+                    : available / (CGFloat(snapshot.cols) * Self.cellWidthPerPoint)
+                let fontSize = min(Self.maxFont, max(Self.minFont, base * zoom * pinch))
                 let cellW = fontSize * Self.cellWidthPerPoint
                 let lineH = (fontSize * Self.lineHeightPerPoint).rounded(.up)
                 let contentW = CGFloat(snapshot.cols) * cellW
@@ -102,9 +105,16 @@ struct TerminalScreenView: View {
         .gesture(
             MagnifyGesture()
                 .updating($pinch) { value, state, _ in state = value.magnification }
-                .onEnded { value in zoom = min(6, max(0.3, zoom * value.magnification)) }
+                .onEnded { value in
+                    zoom = min(6, max(0.3, zoom * value.magnification))
+                    TerminalTextSettings.saveZoom(zoom, paneID: paneID)
+                }
         )
-        .onTapGesture(count: 2) { withAnimation(.snappy) { zoom = 1 } }
+        .onTapGesture(count: 2) {
+            withAnimation(.snappy) { zoom = 1 }
+            TerminalTextSettings.saveZoom(1, paneID: paneID)
+        }
+        .onAppear { if let saved = TerminalTextSettings.savedZoom(paneID: paneID) { zoom = saved } }
         .onTapGesture { keyboardFocused = true }
         .focusable()
         .focused($keyboardFocused)

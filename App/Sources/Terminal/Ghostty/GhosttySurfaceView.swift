@@ -695,6 +695,11 @@ final class GhosttySurfaceView: NSView {
     @objc func pasteAsPlainText(_ sender: Any?) { _ = performBinding("paste_from_clipboard") }
     @objc override func selectAll(_ sender: Any?) { _ = performBinding("select_all") }
 
+    // View › Bigger / Smaller / Actual Size: this pane only (Settings sets the default size of all panes).
+    @objc func cmdsTextBigger(_ sender: Any?) { _ = performBinding("increase_font_size:1") }
+    @objc func cmdsTextSmaller(_ sender: Any?) { _ = performBinding("decrease_font_size:1") }
+    @objc func cmdsTextActualSize(_ sender: Any?) { _ = performBinding("reset_font_size") }
+
     // MARK: - Drag & drop (files/text → paste)
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { .copy }
@@ -852,3 +857,5 @@ extension GhosttySurfaceView: @preconcurrency NSTextInputClient {
     /// encoded by keyDown after interpretKeyEvents returns.
     override func doCommand(by selector: Selector) {}
 }
+
+extension GhosttySurfaceView: TextSizeActions {}

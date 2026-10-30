@@ -6,7 +6,10 @@ import CmdsCore
 /// limits (orange from 80 %, red from 95 %); a calm grey while an agent runs otherwise. The tooltip has the full row.
 final class CompactWorkspaceCellView: NSTableCellView {
     static let identifier = NSUserInterfaceItemIdentifier("CompactWorkspaceCell")
-    static let height: CGFloat = 34
+    /// Row height and number font follow the sidebar text size (cmds › Settings…).
+    static var height: CGFloat { (34 * SidebarTextSize.scale).rounded() }
+    private static var numberFont: NSFont { .monospacedDigitSystemFont(ofSize: SidebarTextSize.size(13), weight: .semibold) }
+    private var appliedScale = SidebarTextSize.scale
 
     private let numberLabel = NSTextField(labelWithString: "")
     private let dot = NSView()
@@ -17,7 +20,7 @@ final class CompactWorkspaceCellView: NSTableCellView {
     init() {
         super.init(frame: .zero)
         identifier = Self.identifier
-        numberLabel.font = .monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+        numberLabel.font = Self.numberFont
         numberLabel.alignment = .center
         numberLabel.lineBreakMode = .byClipping
         dot.wantsLayer = true
@@ -51,6 +54,10 @@ final class CompactWorkspaceCellView: NSTableCellView {
 
     @MainActor
     func configure(with workspace: Workspace, index: Int) {
+        if appliedScale != SidebarTextSize.scale {
+            appliedScale = SidebarTextSize.scale
+            numberLabel.font = Self.numberFont
+        }
         let number = "\(index + 1)"
         if numberLabel.stringValue != number { numberLabel.stringValue = number }
         // Same colours as the full row's dot: orange = attention / needs input, accent (pulsing) = working,

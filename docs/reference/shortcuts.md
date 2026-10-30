@@ -47,6 +47,15 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Focus address bar | ⌘L | View |
 | Reload (browser page; preview file; **reconnect** a disconnected SSH pane) | ⌘R | View › Reload Page |
 | Back / forward | ⌘[ / ⌘] | View |
+
+## Text size
+
+| Action | Key | Menu |
+|---|---|---|
+| Settings (default terminal font and size, sidebar text size, browser/preview zoom) | ⌘, | cmds › Settings… |
+| Bigger text in the focused pane (terminal font size; browser/preview page zoom) | ⌘+ (⌘=) | View › Bigger |
+| Smaller text in the focused pane | ⌘− | View › Smaller |
+| Back to the Settings size in the focused pane | ⌘0 | View › Actual Size |
 | Reconnect a disconnected SSH pane | Return (on the overlay) or ⌘R | – |
 
 ## Window and sidebar

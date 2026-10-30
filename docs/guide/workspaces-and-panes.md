@@ -1,7 +1,7 @@
 # Workspaces and panes
 
 > Everyday use of the Mac app: workspaces and the sidebar, splits, the tiled view, browser and preview panes, SSH workspaces,
-> session restore, keeping the Mac awake and the app's language.
+> session restore, keeping the Mac awake, settings (text size) and the app's language.
 
 All key equivalents: [reference/shortcuts.md](../reference/shortcuts.md). Everything here can also be scripted with
 the [`cmds` CLI](../reference/cli.md).
@@ -211,6 +211,24 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
 > battery.
 
 `cmds stats` shows the state on its `awake` line. Details: [internals/architecture.md](../internals/architecture.md#keeping-the-mac-awake).
+
+## Settings
+
+**cmds › Settings…** (⌘,) applies every change at once to all open panes and remembers it:
+
+- **Terminal font and size**: a font family (installed monospaced fonts) and a custom size in points. Both are
+  layered over your Ghostty config (`~/.config/ghostty/config`): left at **Ghostty Default** / unchecked, the config
+  (or Ghostty's default) decides. Changing them also re-reads that config.
+- **Bigger / Smaller / Actual Size** (View menu, ⌘+ / ⌘− / ⌘0) change only the focused pane: a terminal's font size
+  (Ghostty's own font-size keys), a browser or preview pane's page zoom. A terminal zoomed this way keeps its size
+  when you change the setting; ⌘0 returns it to the Settings size.
+- **Sidebar text size**: Small, Medium (default) or Large. Rows, footer and the compact rail scale together.
+- **Browser page zoom** and **Preview zoom**: the starting zoom of browser panes and of rendered previews
+  (Markdown, diffs, text).
+
+Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
+([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size
+setting ([iphone.md](iphone.md#what-the-companion-shows)).
 
 ## Language
 

@@ -90,6 +90,10 @@ final class APIServer {
                         ["png_base64": .string(try await preview.debugSnapshot().base64EncodedString())]
                     }
                 }
+            case "debug.show_settings":
+                // Tests only: opens cmds › Settings… (screenshots without UI scripting).
+                SettingsWindowController.shared.showSettings(nil)
+                connection.reply(id: id, result: ["window": .number(Double(SettingsWindowController.shared.window?.windowNumber ?? 0))])
             #endif
             case "events.subscribe":
                 subscribe(connection)

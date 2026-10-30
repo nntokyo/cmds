@@ -17,9 +17,26 @@ final class SystemUsageView: NSView {
 
     /// Title column: "CPU"/"Mem" alone, wide enough for "Claude"/"Codex" when agent rows show (meters stay aligned).
     /// Grows for longer translations ("メモリ").
-    static let titleWidth: CGFloat = max(26, MeterRow.measuredTitleWidth([String(localized: "CPU", comment: "sidebar meter title"),
-                                                                        String(localized: "Mem", comment: "sidebar meter title (memory)")]))
-    static let agentTitleWidth: CGFloat = max(34, titleWidth)
+    /// Both follow the sidebar text size (cmds › Settings…).
+    static var titleWidth: CGFloat {
+        max((26 * SidebarTextSize.scale).rounded(),
+            MeterRow.measuredTitleWidth([String(localized: "CPU", comment: "sidebar meter title"),
+                                         String(localized: "Mem", comment: "sidebar meter title (memory)")]))
+    }
+    static var agentTitleWidth: CGFloat { max((34 * SidebarTextSize.scale).rounded(), titleWidth) }
+
+    /// After the sidebar text size changed: new fonts for CPU/Mem and the awake button; agent rows are rebuilt by
+    /// the next `update(agentLimits:)` (which also sets the title column width).
+    func applyTextSize() {
+        for row in agentRows.values { agentStack.removeView(row) }
+        agentRows = [:]
+        cpuRow.applyTextSize()
+        memoryRow.applyTextSize()
+        KeepAwakeIndicator.applyTextSize(to: awakeButton)
+        let width = Self.titleWidth
+        cpuRow.titleWidth = width
+        memoryRow.titleWidth = width
+    }
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -149,6 +166,9 @@ final class CompactUsageView: NSView {
     private var awakeText: String?
     private let awakeButton = KeepAwakeIndicator.makeButton()
 
+    /// The rail's only text-sized element is the awake icon.
+    func applyTextSize() { KeepAwakeIndicator.applyTextSize(to: awakeButton) }
+
     override init(frame: NSRect) {
         super.init(frame: frame)
         stack.orientation = .vertical
@@ -242,14 +262,18 @@ enum KeepAwakeIndicator {
                               action: #selector(KeepAwakeManager.toggleLidClose(_:)))
         button.isBordered = false
         button.bezelStyle = .inline
-        button.font = .systemFont(ofSize: 10, weight: .medium)
         button.contentTintColor = .systemOrange
-        button.image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: 10, weight: .medium))
+        applyTextSize(to: button)
         button.imagePosition = .imageLeading
         button.imageHugsTitle = true
         button.isHidden = true
         return button
+    }
+
+    static func applyTextSize(to button: NSButton) {
+        button.font = .systemFont(ofSize: SidebarTextSize.size(10), weight: .medium)
+        button.image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: SidebarTextSize.size(10), weight: .medium))
     }
 
     static func apply(_ status: KeepAwakeStatus, to button: NSButton, compact: Bool) {
@@ -283,7 +307,12 @@ private final class MeterRow: NSView {
         set { if titleWidthConstraint.constant != newValue { titleWidthConstraint.constant = newValue } }
     }
 
-    static let titleFont = NSFont.systemFont(ofSize: 10, weight: .medium)
+    static var titleFont: NSFont { .systemFont(ofSize: SidebarTextSize.size(10), weight: .medium) }
+
+    func applyTextSize() {
+        titleLabel.font = Self.titleFont
+        valueLabel.font = .monospacedDigitSystemFont(ofSize: SidebarTextSize.size(10.5), weight: .regular)
+    }
 
     /// Width the title column needs for these titles.
     static func measuredTitleWidth(_ titles: [String]) -> CGFloat {
@@ -294,9 +323,8 @@ private final class MeterRow: NSView {
         titleLabel = NSTextField(labelWithString: title)
         super.init(frame: .zero)
         titleWidthConstraint = titleLabel.widthAnchor.constraint(equalToConstant: SystemUsageView.titleWidth)
-        titleLabel.font = .systemFont(ofSize: 10, weight: .medium)
+        applyTextSize()
         titleLabel.textColor = .tertiaryLabelColor
-        valueLabel.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
         valueLabel.textColor = .secondaryLabelColor
         valueLabel.alignment = .right
         // Hugging below required lets the shared value-column width stretch the narrower label.
@@ -346,7 +374,7 @@ private final class AgentLimitsRow: NSView {
     init(title: String) {
         titleLabel = NSTextField(labelWithString: title)
         super.init(frame: .zero)
-        titleLabel.font = .systemFont(ofSize: 10, weight: .medium)
+        titleLabel.font = .systemFont(ofSize: SidebarTextSize.size(10), weight: .medium)
         titleLabel.textColor = .tertiaryLabelColor
         titleLabel.lineBreakMode = .byClipping
         lines.orientation = .vertical
@@ -413,12 +441,12 @@ private final class LimitSegment: NSView {
 
     init() {
         super.init(frame: .zero)
-        label.font = .systemFont(ofSize: 10, weight: .medium)
+        label.font = .systemFont(ofSize: SidebarTextSize.size(10), weight: .medium)
         label.textColor = .tertiaryLabelColor
         label.lineBreakMode = .byClipping
         // Fixed label column so meters of all windows line up.
-        label.widthAnchor.constraint(equalToConstant: 16).isActive = true
-        value.font = .monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
+        label.widthAnchor.constraint(equalToConstant: (16 * SidebarTextSize.scale).rounded()).isActive = true
+        value.font = .monospacedDigitSystemFont(ofSize: SidebarTextSize.size(10.5), weight: .regular)
         value.alignment = .right
         value.setContentCompressionResistancePriority(.required, for: .horizontal)
         for view in [label, meter, value] as [NSView] {

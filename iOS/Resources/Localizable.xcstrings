@@ -934,12 +934,52 @@
         }
       }
     },
+    "Fit to width" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面の幅に合わせる"
+          }
+        }
+      }
+    },
+    "Fixed size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サイズを固定"
+          }
+        }
+      }
+    },
     "Focus Pane on Mac" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Macでペインにフォーカス"
+          }
+        }
+      }
+    },
+    "Font size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォントサイズ"
+          }
+        }
+      }
+    },
+    "Font size: %lld pt" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォントサイズ: %lld pt"
           }
         }
       }
@@ -1267,6 +1307,16 @@
         }
       }
     },
+    "Only changes how this device shows the terminal; the size on the Mac stays the same." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスでの表示だけが変わります。Mac 側のサイズは変わりません。"
+          }
+        }
+      }
+    },
     "Open in Safari" : {
       "localizations" : {
         "ja" : {
@@ -1488,6 +1538,16 @@
         }
       }
     },
+    "Remember pinch zoom per pane" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ピンチでの拡大をペインごとに記憶"
+          }
+        }
+      }
+    },
     "Remote Access via SSH" : {
       "localizations" : {
         "ja" : {
@@ -1659,6 +1719,26 @@
         }
       }
     },
+    "Settings" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
+        }
+      }
+    },
+    "Settings…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定…"
+          }
+        }
+      }
+    },
     "Show Workspace on Mac" : {
       "localizations" : {
         "ja" : {
@@ -1737,6 +1817,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ターミナル画面"
+          }
+        }
+      }
+    },
+    "Terminal text size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ターミナルの文字サイズ"
+          }
+        }
+      }
+    },
+    "Text size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "文字サイズ"
           }
         }
       }
@@ -1917,6 +2017,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "中継ホストの鍵がまだ確認されていません。"
+          }
+        }
+      }
+    },
+    "The whole terminal width fits the screen. Pinch to zoom, double-tap to reset." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ターミナルの幅全体が画面に収まります。ピンチで拡大、ダブルタップで元に戻ります。"
           }
         }
       }
@@ -2108,6 +2218,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%@”にWi‑FiやBluetoothで接続できないときに、お使いのSSHサーバ（中継ホスト）を経由して接続します。Macでも同じホストに対してcmds › 「SSH経由のリモートアクセス…」をオンにしてください。先にローカルネットワーク上でペアリングしておく必要があります。接続はエンドツーエンドで暗号化され、Macに固定（ピン留め）されたままです。"
+          }
+        }
+      }
+    },
+    "Wide terminals scroll sideways. Pinch to zoom, double-tap to reset." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "幅の広いターミナルは横にスクロールします。ピンチで拡大、ダブルタップで元に戻ります。"
           }
         }
       }

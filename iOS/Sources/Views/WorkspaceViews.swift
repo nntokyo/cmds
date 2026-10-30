@@ -44,6 +44,7 @@ struct WorkspaceListView: View {
     @Environment(CompanionClient.self) private var client
     @Binding var selection: String?
     @State private var showingRemoteAccess = false
+    @State private var showingSettings = false
 
     var body: some View {
         List(selection: $selection) {
@@ -105,6 +106,9 @@ struct WorkspaceListView: View {
                         Button("Unpair This Mac", role: .destructive) { client.unpair() }
                     }
                     Button("Switch Mac…") { client.disconnect() }
+                    Divider()
+                    Button("Settings…", systemImage: "textformat.size") { showingSettings = true }
+                        .accessibilityIdentifier("settingsMenuItem")
                     #if DEBUG
                     if client.target?.kind != .mock { TransportModeMenu() }
                     #endif
@@ -120,6 +124,7 @@ struct WorkspaceListView: View {
                 RemoteAccessView(targetID: target.id, macName: client.macName)
             }
         }
+        .sheet(isPresented: $showingSettings) { TerminalSettingsView() }
     }
 
     /// Debug builds connected to a real Mac show the connection diagnostics row.

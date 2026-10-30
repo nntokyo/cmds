@@ -30,6 +30,8 @@ enum MainMenu {
         let menu = NSMenu(title: "cmds")
         menu.addItem(item("About cmds", #selector(NSApplication.orderFrontStandardAboutPanel(_:)), "", target: NSApp))
         menu.addItem(.separator())
+        menu.addItem(item("Settings…", #selector(SettingsWindowController.showSettings(_:)), ",", target: SettingsWindowController.shared))
+        menu.addItem(.separator())
         menu.addItem(item("Install Command Line Tool…", #selector(CLIInstaller.installCommandLineTool(_:)), "", target: CLIInstaller.shared))
         menu.addItem(.separator())
         SyncMenuActions.items().forEach(menu.addItem)
@@ -91,6 +93,15 @@ enum MainMenu {
         menu.addItem(item("Tile All Workspaces", #selector(CommandRouter.toggleTileAll(_:)), "t", [.command, .control], target: router))
         menu.addItem(item("Tile Selected Workspaces", #selector(CommandRouter.tileSelected(_:)), "", target: router))
         menu.addItem(item("Show Single Workspace", #selector(CommandRouter.showSingleWorkspace(_:)), "", target: router))
+        menu.addItem(.separator())
+        // Text size of the focused pane (nil target: the first responder; see TextSizeActions).
+        menu.addItem(item("Bigger", #selector(TextSizeActions.cmdsTextBigger(_:)), "="))
+        let biggerPlus = item("Bigger", #selector(TextSizeActions.cmdsTextBigger(_:)), "+")
+        biggerPlus.isHidden = true
+        biggerPlus.allowsKeyEquivalentWhenHidden = true
+        menu.addItem(biggerPlus)
+        menu.addItem(item("Smaller", #selector(TextSizeActions.cmdsTextSmaller(_:)), "-"))
+        menu.addItem(item("Actual Size", #selector(TextSizeActions.cmdsTextActualSize(_:)), "0"))
         menu.addItem(.separator())
         let resumeMenu = NSMenu(title: String(localized: "Resume Agent Sessions on Launch"))
         let modes: [(String.LocalizationValue, AgentResumeMode)] = [("Ask", .ask), ("Always", .always), ("Never", .never)]

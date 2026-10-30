@@ -78,6 +78,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `browser.snapshot` | `pane` | `{"png_base64"}` |
 | `events.subscribe` | – | `{"subscribed": true}`, then events (below) on the same connection |
 | `debug.preview_snapshot` | `pane` (a preview pane) | `{"png_base64"}`; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
+| `debug.show_settings` | – | `{"window"}` (window number); opens cmds › Settings…; DEBUG builds only, for tests |
 
 ## Events
 

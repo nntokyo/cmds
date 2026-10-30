@@ -34,7 +34,7 @@ private final class GroupHeaderView: NSTableCellView {
     init() {
         super.init(frame: .zero)
         identifier = Self.identifier
-        label.font = .systemFont(ofSize: 11, weight: .semibold)
+        label.font = .systemFont(ofSize: SidebarTextSize.size(11), weight: .semibold)
         label.textColor = .secondaryLabelColor
         label.lineBreakMode = .byTruncatingMiddle
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -132,6 +132,8 @@ final class SidebarViewController: NSViewController {
     required init?(coder: NSCoder) { fatalError() }
 
     override func loadView() {
+        NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged),
+                                               name: AppSettings.didChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keepAwakeChanged),
                                                name: KeepAwakeManager.didChange, object: nil)
         let column = NSTableColumn(identifier: .init("workspace"))
@@ -258,6 +260,22 @@ final class SidebarViewController: NSViewController {
         syncSelection(scroll: false)
         updateUsage()
     }
+
+    /// Sidebar text size changed (cmds › Settings…): cells re-set their fonts on reload, heights are re-measured.
+    @objc private func settingsChanged() {
+        let scale = SidebarTextSize.scale
+        guard isViewLoaded, scale != appliedTextScale else { return }
+        appliedTextScale = scale
+        usageFooter.applyTextSize()
+        compactFooter.applyTextSize()
+        rowHeights = [:]
+        tableView.reloadData()
+        syncSelection(scroll: false)
+        updateUsage()
+    }
+
+    /// nil until the first settings change (the views were built for the size at launch).
+    private var appliedTextScale: CGFloat?
 
     @objc private func keepAwakeChanged() {
         guard isViewLoaded else { return }
@@ -575,7 +593,7 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
     }
 
     func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat {
-        if case .group? = rows[safe: row] { return 20 }
+        if case .group? = rows[safe: row] { return (20 * SidebarTextSize.scale).rounded() }
         if isCompact { return CompactWorkspaceCellView.height }
         guard let workspace = workspace(atRow: row) else { return 40 }
         let height = WorkspaceCellView.height(for: workspace, width: tableView.bounds.width)

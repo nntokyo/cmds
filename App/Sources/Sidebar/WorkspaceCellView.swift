@@ -6,18 +6,21 @@ import CmdsCore
 final class WorkspaceCellView: NSTableCellView {
     static let identifier = NSUserInterfaceItemIdentifier("WorkspaceCell")
 
-    private static let titleFont = NSFont.systemFont(ofSize: 13, weight: .semibold)
-    private static let detailFont = NSFont.systemFont(ofSize: 11)
-    private static let badgeFont = NSFont.systemFont(ofSize: 10, weight: .medium)
-    private static let monoFont = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .regular)
-    private static let usageFont = NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
+    // Fonts, line heights and the usage tab stop follow cmds › Settings… › Sidebar text size.
+    private static var titleFont: NSFont { .systemFont(ofSize: SidebarTextSize.size(13), weight: .semibold) }
+    private static var detailFont: NSFont { .systemFont(ofSize: SidebarTextSize.size(11)) }
+    private static var badgeFont: NSFont { .systemFont(ofSize: SidebarTextSize.size(10), weight: .medium) }
+    private static var monoFont: NSFont { .monospacedSystemFont(ofSize: SidebarTextSize.size(10.5), weight: .regular) }
+    private static var usageFont: NSFont { .monospacedDigitSystemFont(ofSize: SidebarTextSize.size(10.5), weight: .regular) }
     /// Memory starts at a fixed tab stop so changing CPU digits never shift it.
-    private static let usageTabStop: CGFloat = 64
+    private static var usageTabStop: CGFloat { (64 * SidebarTextSize.scale).rounded() }
     private static let horizontalInset: CGFloat = 10
     private static let verticalInset: CGFloat = 6
     private static let spacing: CGFloat = 2
-    private static let titleHeight: CGFloat = 17
-    private static let detailHeight: CGFloat = 14
+    private static var titleHeight: CGFloat { (17 * SidebarTextSize.scale).rounded() }
+    private static var detailHeight: CGFloat { (14 * SidebarTextSize.scale).rounded() }
+    /// Sidebar text size scale the label fonts were set for.
+    private var appliedScale: CGFloat = 0
 
     /// The row's × was clicked (the sidebar confirms and closes the workspace).
     var onClose: ((String) -> Void)?
@@ -70,13 +73,14 @@ final class WorkspaceCellView: NSTableCellView {
         }
         indicator.translatesAutoresizingMaskIntoConstraints = false
 
+        appliedScale = SidebarTextSize.scale
         titleLabel.font = Self.titleFont
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         stateLabel.font = Self.badgeFont
         stateLabel.setContentHuggingPriority(.required, for: .horizontal)
         stateLabel.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
-        shortcutLabel.font = .systemFont(ofSize: 10)
+        shortcutLabel.font = .systemFont(ofSize: SidebarTextSize.size(10))
         shortcutLabel.textColor = .tertiaryLabelColor
         shortcutLabel.alignment = .right
         shortcutLabel.setContentHuggingPriority(.required, for: .horizontal)
@@ -228,8 +232,25 @@ final class WorkspaceCellView: NSTableCellView {
 
     // MARK: Content
 
+    /// Re-sets the label fonts after the sidebar text size changed (init sets them for the size at creation).
+    @MainActor
+    private func applyTextSize() {
+        let scale = SidebarTextSize.scale
+        guard scale != appliedScale else { return }
+        appliedScale = scale
+        titleLabel.font = Self.titleFont
+        stateLabel.font = Self.badgeFont
+        shortcutLabel.font = .systemFont(ofSize: SidebarTextSize.size(10))
+        for label in [topicLabel, hostLabel, branchLabel, directoryLabel, notificationLabel] { label.font = Self.detailFont }
+        portsLabel.font = Self.monoFont
+        for label in [usageLabel, agentNameLabel, agentLabel] { label.font = Self.usageFont }
+        agentKey = nil
+        usageKey = nil
+    }
+
     @MainActor
     func configure(with workspace: Workspace, index: Int) {
+        applyTextSize()
         workspaceID = workspace.id
         titleLabel.stringValue = workspace.displayTitle
         shortcutLabel.stringValue = index < 9 ? "⌘\(index + 1)" : ""
@@ -388,7 +409,7 @@ final class WorkspaceCellView: NSTableCellView {
             switch part.style {
             case .name:
                 color = .labelColor.withAlphaComponent(0.85)
-                font = NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .medium)
+                font = NSFont.monospacedDigitSystemFont(ofSize: SidebarTextSize.size(10.5), weight: .medium)
             case .label, .separator: color = .tertiaryLabelColor
             case .value: color = .secondaryLabelColor
             }
@@ -466,7 +487,7 @@ final class WorkspaceCellView: NSTableCellView {
     private static func symbolText(_ symbol: String, _ text: String) -> NSAttributedString {
         let result = NSMutableAttributedString()
         if let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: 9, weight: .regular)) {
+            .withSymbolConfiguration(.init(pointSize: SidebarTextSize.size(9), weight: .regular)) {
             let attachment = NSTextAttachment()
             attachment.image = image
             result.append(NSAttributedString(attachment: attachment))

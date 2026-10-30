@@ -27,6 +27,10 @@ final class PreviewPane: NSView {
     private var content: NSView?
     private var quickLook: QLPreviewView?
     private var webView: WKWebView?
+    /// Page zoom of the rendered page (Settings default; View › Bigger / Smaller for this pane) and the default it
+    /// was last set from.
+    private var pageZoom = AppSettings.shared.previewZoom
+    private var appliedDefaultZoom = AppSettings.shared.previewZoom
     private var imageView: NSImageView?
     private var watcher: FileWatcher?
     private var reloadScheduled = false
@@ -42,6 +46,8 @@ final class PreviewPane: NSView {
         layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         buildLayout()
         load()
+        NotificationCenter.default.addObserver(self, selector: #selector(zoomSettingChanged),
+                                               name: AppSettings.didChange, object: nil)
     }
 
     @available(*, unavailable)
@@ -257,6 +263,7 @@ final class PreviewPane: NSView {
         let view = WKWebView(frame: bounds, configuration: configuration)
         view.allowsMagnification = true
         view.setValue(false, forKey: "drawsBackground")
+        view.pageZoom = pageZoom
         view.navigationDelegate = self
         webView = view
         return view
@@ -584,4 +591,24 @@ final class FileWatcher {
         retry = item
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
     }
+}
+
+// MARK: - Page zoom (cmds › Settings… default; View › Bigger / Smaller / Actual Size for this pane)
+
+extension PreviewPane: TextSizeActions {
+    @objc private func zoomSettingChanged() {
+        let zoom = AppSettings.shared.previewZoom
+        guard zoom != appliedDefaultZoom else { return }
+        appliedDefaultZoom = zoom
+        setPageZoom(zoom)
+    }
+
+    private func setPageZoom(_ zoom: Double) {
+        pageZoom = zoom
+        webView?.pageZoom = zoom
+    }
+
+    @objc func cmdsTextBigger(_ sender: Any?) { setPageZoom(PageZoomSteps.bigger(pageZoom)) }
+    @objc func cmdsTextSmaller(_ sender: Any?) { setPageZoom(PageZoomSteps.smaller(pageZoom)) }
+    @objc func cmdsTextActualSize(_ sender: Any?) { setPageZoom(AppSettings.shared.previewZoom) }
 }

@@ -37,22 +37,13 @@ final class GhosttyRuntime {
             return
         }
 
-        guard let cfg = ghostty_config_new() else {
+        let overrides = AppSettings.shared.ghosttyOverrides
+        guard let cfg = Self.makeConfig(overrides: overrides) else {
             ghosttyLog.critical("ghostty_config_new failed")
             return
         }
-        // Default config + the user's ghostty config files (and their config-file includes).
-        ghostty_config_load_default_files(cfg)
-        ghostty_config_load_recursive_files(cfg)
-        ghostty_config_finalize(cfg)
-        let diagCount = ghostty_config_diagnostics_count(cfg)
-        for i in 0..<diagCount {
-            let diag = ghostty_config_get_diagnostic(cfg, i)
-            if let msg = diag.message {
-                ghosttyLog.warning("ghostty config: \(String(cString: msg), privacy: .public)")
-            }
-        }
         config = cfg
+        appliedOverrides = overrides
 
         var runtime = ghostty_runtime_config_s(
             userdata: nil,
@@ -82,6 +73,9 @@ final class GhosttyRuntime {
         ghostty_app_set_focus(app, NSApp?.isActive ?? false)
 
         let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: AppSettings.didChange, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { GhosttyRuntime.shared.applySettings() }
+        })
         observers.append(center.addObserver(
             forName: NSTextInputContext.keyboardSelectionDidChangeNotification, object: nil, queue: .main
         ) { _ in
@@ -103,6 +97,67 @@ final class GhosttyRuntime {
                 if let app = GhosttyRuntime.shared.app { ghostty_app_set_focus(app, false) }
             }
         })
+    }
+
+    // MARK: - Config
+
+    /// The `AppSettings.ghosttyOverrides` the current config was built with.
+    private var appliedOverrides = ""
+
+    /// Default config + the user's ghostty config files (and their config-file includes), then the overrides from
+    /// cmds › Settings… (font family/size) on top. libghostty loads config only from files, so the overrides go
+    /// through a temporary file that is removed right after loading.
+    private static func makeConfig(overrides: String) -> ghostty_config_t? {
+        guard let cfg = ghostty_config_new() else { return nil }
+        ghostty_config_load_default_files(cfg)
+        ghostty_config_load_recursive_files(cfg)
+        if !overrides.isEmpty {
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("cmds-ghostty-overrides-\(getpid())-\(UUID().uuidString).conf")
+            do {
+                try Data(overrides.utf8).write(to: url, options: [.atomic])
+                url.path.withCString { ghostty_config_load_file(cfg, $0) }
+                try? FileManager.default.removeItem(at: url)
+            } catch {
+                ghosttyLog.error("ghostty overrides: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        ghostty_config_finalize(cfg)
+        let diagCount = ghostty_config_diagnostics_count(cfg)
+        for i in 0..<diagCount {
+            let diag = ghostty_config_get_diagnostic(cfg, i)
+            if let msg = diag.message {
+                ghosttyLog.warning("ghostty config: \(String(cString: msg), privacy: .public)")
+            }
+        }
+        return cfg
+    }
+
+    /// Rebuilds the config when the terminal settings changed and hands it to libghostty, which updates every
+    /// surface. Panes zoomed with ⌘+/⌘− keep their size; ⌘0 then returns to the new size.
+    func applySettings() {
+        let overrides = AppSettings.shared.ghosttyOverrides
+        guard let app, overrides != appliedOverrides, let cfg = Self.makeConfig(overrides: overrides) else { return }
+        appliedOverrides = overrides
+        ghostty_app_update_config(app, cfg) // libghostty clones what it keeps
+        if let old = config { ghostty_config_free(old) }
+        config = cfg
+    }
+
+    private var cachedDefaultFontSize: Double?
+
+    /// Font size of the user's Ghostty config without cmds' override (Settings shows it as the default).
+    var defaultFontSize: Double {
+        if let cachedDefaultFontSize { return cachedDefaultFontSize }
+        var size: Float = 0
+        if let cfg = Self.makeConfig(overrides: "") {
+            let key = "font-size"
+            _ = ghostty_config_get(cfg, &size, key, UInt(key.utf8.count))
+            ghostty_config_free(cfg)
+        }
+        let value = size > 0 ? Double(size) : 13
+        cachedDefaultFontSize = value
+        return value
     }
 
     func tick() {
