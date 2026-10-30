@@ -222,7 +222,7 @@ final class CodexSessionMatcherTests: XCTestCase {
 
 final class AgentProcessTests: XCTestCase {
     func testClassifier() {
-        XCTAssertEqual(AgentProcessClassifier.agent(executablePath: "/Users/r/.local/share/claude/versions/2.1.312",
+        XCTAssertEqual(AgentProcessClassifier.agent(executablePath: "/Users/me/.local/share/claude/versions/2.1.312",
                                                     arguments: ["claude"]), .claude)
         XCTAssertEqual(AgentProcessClassifier.agent(executablePath: "/opt/homebrew/bin/node",
                                                     arguments: ["node", "/opt/homebrew/bin/claude"]), .claude)

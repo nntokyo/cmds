@@ -20,7 +20,7 @@ Each row shows:
   closes the workspace (it asks first while an agent is running there);
 - the [agent state](#agent-state) and the agent's task — Claude Code's terminal title without its spinner glyph, e.g.
   `Working  自走型売上基盤の対応` — or else the working directory. Long paths keep their last components
-  (`…/NN/自社/jav-a`); the full directory is in the tooltip;
+  (`…/projects/my-app`); the full directory is in the tooltip;
 - the git branch and listening ports of the workspace's processes;
 - the coding agent of its focused pane: model, context and cost of that session
   ([ai-agents.md](ai-agents.md#usage-and-limits)); the account limits are the same for every row and live in the footer;

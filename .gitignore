@@ -14,3 +14,4 @@ site/public/download/*.dmg
 site/public/download/SHA256SUMS
 site/public/download/latest.json
 site/.firebase/
+__pycache__/

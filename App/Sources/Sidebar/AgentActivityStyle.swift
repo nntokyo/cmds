@@ -50,7 +50,7 @@ enum AgentActivityStyle {
     }
 }
 
-/// A path label that drops leading components rather than cutting a name in the middle: `…/NN/自社/jav-a`.
+/// A path label that drops leading components rather than cutting a name in the middle: `…/projects/my-app`.
 final class PathLabel: NSTextField {
     var path = "" {
         didSet { if path != oldValue { fit() } }
