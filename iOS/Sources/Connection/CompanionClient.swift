@@ -2,52 +2,6 @@ import CmdsCore
 import Foundation
 import Observation
 
-enum ConnectionStatus: Equatable {
-    case idle
-    case connecting
-    case authenticating
-    case connected
-    case reconnecting(in: TimeInterval, reason: String?)
-    /// Not paired with this Mac (or it asked for a new pairing): scan its QR code or pair manually.
-    case pairingRequired(message: String?)
-    /// Manual pairing: reading the identity the Mac presents. Nothing is sent to it.
-    case checkingIdentity
-    /// Manual pairing: the user compares this with the identity shown in the Mac's pairing window.
-    case confirmIdentity(SyncFingerprint)
-    /// The Mac's identity is pinned for this pairing; the 6-digit code is needed (or was wrong).
-    case enterCode(message: String?)
-    /// The Mac presented a certificate other than the pinned one. Nothing was sent; never retried
-    /// automatically and never falls back to anything weaker.
-    case identityMismatch(message: String)
-    /// Gave up (protocol mismatch, rate limited...). User must act.
-    case failed(message: String)
-
-    var label: String {
-        switch self {
-        case .idle: return String(localized: "Not connected")
-        case .connecting: return String(localized: "Connecting…")
-        case .authenticating: return String(localized: "Authenticating…")
-        case .connected: return String(localized: "Connected")
-        case .reconnecting(let s, _):
-            let seconds = Int(s.rounded(.up))
-            return String(localized: "Reconnecting in \(seconds)s")
-        case .pairingRequired, .checkingIdentity, .confirmIdentity, .enterCode: return String(localized: "Pairing required")
-        case .identityMismatch: return String(localized: "Mac identity changed")
-        case .failed: return String(localized: "Disconnected")
-        }
-    }
-
-    var isLive: Bool { self == .connected }
-
-    /// States in which the pairing sheet is shown.
-    var needsPairing: Bool {
-        switch self {
-        case .pairingRequired, .checkingIdentity, .confirmIdentity, .enterCode, .identityMismatch: return true
-        default: return false
-        }
-    }
-}
-
 /// One connection to one Mac: authentication, reconnects, mirrored workspace state and pane screens.
 /// Views observe it; all methods must be called on the main thread.
 ///
@@ -76,8 +30,6 @@ final class CompanionClient {
     /// Panes that raised a `notification` and have not been viewed since.
     private(set) var unreadPaneIDs: Set<String> = []
     private(set) var unreadWorkspaceIDs: Set<String> = []
-    private(set) var lastNotification: ServerMessage.Notification?
-    private(set) var roundTripTime: TimeInterval?
     /// How the live connection reaches the Mac (Wi‑Fi or the Bluetooth fallback); nil when not connected.
     private(set) var linkPath: SyncLinkPath?
     /// Fingerprint pinned for the pairing in progress (from the QR code, or confirmed by the user).
@@ -105,10 +57,17 @@ final class CompanionClient {
     /// (NWConnection can sit in "preparing" indefinitely, e.g. while the Mac's firewall drops packets).
     /// Leaves room for the Bluetooth fallback (scan, connect, L2CAP, TLS) after the network attempt.
     private static let connectTimeout: Duration = .seconds(20)
+    /// Interval of the keep-alive `ping` while connected.
+    private static let pingInterval: Duration = .seconds(10)
+    /// A connection with nothing received for this long is dropped and reconnected.
+    private static let inboundTimeout: TimeInterval = 30
+    /// Back in the foreground, a connection with nothing received for this long is reopened at once.
+    private static let resumeStaleAfter: TimeInterval = 20
+    /// The Mac takes at most this much UTF-8 text per `input` message.
+    private static let maxInputBytes = 16 * 1024
     private var pendingPairingCode: String?
     private var subscribedPaneIDs: [String] = []
     private var pingNonce = 0
-    private var pingSentAt: [Int: Date] = [:]
     private var lastInbound = Date()
     /// Shown once when protocol v1 pairings were dropped at launch.
     private var upgradeNotice: String?
@@ -162,8 +121,7 @@ final class CompanionClient {
     /// (not even `hello`) is sent; the result is `.confirmIdentity`.
     func checkIdentity() {
         guard let target, target.kind != .mock else { return }
-        pairingPin = nil
-        pendingPairingCode = nil
+        forgetPairingInProgress()
         openTransport(policy: .probe)
     }
 
@@ -194,13 +152,8 @@ final class CompanionClient {
         teardown()
         target = nil
         status = .idle
-        pairingPin = nil
-        pendingPairingCode = nil
-        workspaces = []
-        systemStats = nil
-        agentLimits = []
-        screens = [:]
-        mirror.removeAll()
+        forgetPairingInProgress()
+        clearMirroredState()
     }
 
     /// Forget the saved pairing (pin and token) for the current Mac and start pairing again.
@@ -208,8 +161,7 @@ final class CompanionClient {
         guard let target else { return }
         PairingStore.delete(for: target.id)
         teardown()
-        pairingPin = nil
-        pendingPairingCode = nil
+        forgetPairingInProgress()
         status = .pairingRequired(message: nil)
     }
 
@@ -221,7 +173,7 @@ final class CompanionClient {
             backoff.reset()
             openTransport()
         case .connected:
-            if Date().timeIntervalSince(lastInbound) > 20 { openTransport() }
+            if Date().timeIntervalSince(lastInbound) > Self.resumeStaleAfter { openTransport() }
         default:
             break
         }
@@ -229,18 +181,28 @@ final class CompanionClient {
 
     private func select(_ target: MacTarget) {
         if self.target != target {
-            workspaces = []
-            systemStats = nil
-            agentLimits = []
-            screens = [:]
-            mirror.removeAll()
+            clearMirroredState()
             unreadPaneIDs = []
             unreadWorkspaceIDs = []
             macName = target.displayName
         }
         self.target = target
+        forgetPairingInProgress()
+    }
+
+    /// Drops the pin and code of a pairing in progress (the saved pairing is untouched).
+    private func forgetPairingInProgress() {
         pairingPin = nil
         pendingPairingCode = nil
+    }
+
+    /// Drops everything mirrored from the Mac (workspaces, stats, screens).
+    private func clearMirroredState() {
+        workspaces = []
+        systemStats = nil
+        agentLimits = []
+        screens = [:]
+        mirror.removeAll()
     }
 
     /// Opens a connection. Pinned to the pairing in progress, else to the saved pairing; `.probe` only for
@@ -318,8 +280,7 @@ final class CompanionClient {
         case .identityMismatch:
             teardown()
             let duringPairing = pairingPin != nil
-            pairingPin = nil
-            pendingPairingCode = nil
+            forgetPairingInProgress()
             status = .identityMismatch(message: duringPairing
                 ? String(localized: "The Mac that answered does not have the identity from the pairing code, so the code was not sent. Make sure you scanned this Mac's code and are on the same network.")
                 : String(localized: "“\(macName)” presented a different identity than when you paired, so nothing was sent. If you reset its sync identity, pair again. Otherwise something else may be answering for it."))
@@ -344,19 +305,25 @@ final class CompanionClient {
     private func sendHello() {
         guard let target else { return }
         if target.kind == .mock {
-            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, features: Self.features)))
+            send(Self.hello())
             return
         }
         guard case .pinned(let pin) = transportPolicy else { return dropTransport() }
         if let code = pendingPairingCode, let pairingPin, pairingPin.matches(pin) {
-            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, features: Self.features, pairingCode: code)))
+            send(Self.hello(pairingCode: code))
         } else if pendingPairingCode == nil, let saved = PairingStore.pairing(for: target.id), saved.fingerprint.matches(pin) {
-            send(.hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, features: Self.features, token: saved.token)))
+            send(Self.hello(token: saved.token))
         } else {
             // The pin changed under this connection; send nothing and start over.
             teardown()
             status = .pairingRequired(message: nil)
         }
+    }
+
+    /// `hello` for this device with at most one credential: the pairing code or the saved token.
+    private static func hello(pairingCode: String? = nil, token: String? = nil) -> ClientMessage {
+        .hello(.init(deviceName: DeviceIdentity.name, deviceID: DeviceIdentity.id, features: features,
+                     pairingCode: pairingCode, token: token))
     }
 
     private func scheduleReconnect(reason: String?) {
@@ -380,8 +347,7 @@ final class CompanionClient {
                 named.displayName = welcome.macName
                 RecentMacs.remember(named)
             }
-            pairingPin = nil
-            pendingPairingCode = nil
+            forgetPairingInProgress()
             status = .connected
             diagnostics.connected(linkPath)
             backoff.reset()
@@ -397,8 +363,7 @@ final class CompanionClient {
             case .pairingRequired, .invalidToken:
                 // The token is gone on the Mac (revoked, replaced): drop it together with its pin.
                 if let target, !isPairing { PairingStore.delete(for: target.id) }
-                pairingPin = nil
-                pendingPairingCode = nil
+                forgetPairingInProgress()
                 status = .pairingRequired(message: info.code == .invalidToken ? info.localizedMessage : nil)
             case .invalidPairingCode:
                 // The identity stays pinned for this pairing; only the code has to be entered again.
@@ -436,7 +401,6 @@ final class CompanionClient {
             apply(mirror.apply(diff))
 
         case .notification(let note):
-            lastNotification = note
             if let paneID = note.paneID, paneID == viewedPaneID, isAppActive {
                 return // user is looking at it
             }
@@ -448,10 +412,8 @@ final class CompanionClient {
         case .file(let piece):
             previewFiles.receive(piece)
 
-        case .pong(let pong):
-            if let nonce = pong.nonce, let sent = pingSentAt.removeValue(forKey: nonce) {
-                roundTripTime = Date().timeIntervalSince(sent)
-            }
+        case .pong:
+            break // `lastInbound` was updated on arrival; that is all a pong is for
         }
     }
 
@@ -470,9 +432,9 @@ final class CompanionClient {
         pingTask?.cancel()
         pingTask = Task { [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(10))
+                try? await Task.sleep(for: Self.pingInterval)
                 guard let self, !Task.isCancelled else { return }
-                if Date().timeIntervalSince(self.lastInbound) > 30 {
+                if Date().timeIntervalSince(self.lastInbound) > Self.inboundTimeout {
                     self.scheduleReconnect(reason: String(localized: "The Mac stopped responding."))
                     self.transport?.onEvent = nil
                     self.transport?.close()
@@ -480,7 +442,6 @@ final class CompanionClient {
                     return
                 }
                 self.pingNonce += 1
-                self.pingSentAt = [self.pingNonce: Date()]
                 self.send(.ping(.init(nonce: self.pingNonce)))
             }
         }
@@ -510,12 +471,11 @@ final class CompanionClient {
 
     func sendText(_ text: String, to paneID: String) {
         guard !text.isEmpty else { return }
-        // The Mac takes at most 16 KiB of text per `input` message.
         var chunk = ""
         var chunkBytes = 0
         for character in text {
             let size = character.utf8.count
-            if chunkBytes + size > 16 * 1024 {
+            if chunkBytes + size > Self.maxInputBytes {
                 send(.input(.init(paneID: paneID, text: chunk)))
                 chunk = ""
                 chunkBytes = 0

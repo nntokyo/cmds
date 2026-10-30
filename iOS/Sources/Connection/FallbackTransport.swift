@@ -75,13 +75,19 @@ final class FallbackTransport: SyncTransport {
         network.start()
         guard mode == .auto, canUseBluetooth else { return }
         let nearby = NetworkPathMonitor.shared.hasLocalNetwork
-        let timer = DispatchWorkItem { [weak self] in self?.startBluetooth() }
-        fallbackTimer = timer
-        DispatchQueue.main.asyncAfter(deadline: .now() + (nearby ? Self.fallbackDelay : 0), execute: timer)
+        fallbackTimer = schedule(after: nearby ? Self.fallbackDelay : 0) { $0.startBluetooth() }
         guard canUseSSH else { return }
-        let sshTimer = DispatchWorkItem { [weak self] in self?.startSSH() }
-        self.sshTimer = sshTimer
-        DispatchQueue.main.asyncAfter(deadline: .now() + (nearby ? Self.sshDelay : 0), execute: sshTimer)
+        sshTimer = schedule(after: nearby ? Self.sshDelay : 0) { $0.startSSH() }
+    }
+
+    /// Runs `action` on the main queue after `delay` unless the returned item is cancelled first.
+    private func schedule(after delay: TimeInterval, _ action: @escaping (FallbackTransport) -> Void) -> DispatchWorkItem {
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            action(self)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+        return item
     }
 
     func send(_ message: ClientMessage) {

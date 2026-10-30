@@ -9,15 +9,6 @@ enum TransportMode: String, CaseIterable {
 
     static let defaultsKey = "cmdsTransport"
 
-    var label: String {
-        switch self {
-        case .auto: return "Automatic"
-        case .network: return "Wi‑Fi only"
-        case .bluetooth: return "Bluetooth only"
-        case .ssh: return "SSH only"
-        }
-    }
-
     /// The mode in effect. Debug builds: the debug menu's choice in this run, else the launch argument
     /// `-cmdsTransport <mode>` (argument domain of `UserDefaults`), else the menu's stored choice.
     /// Release builds: always `.auto` (the argument is ignored).
