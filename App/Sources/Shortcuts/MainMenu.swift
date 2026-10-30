@@ -34,9 +34,11 @@ enum MainMenu {
         menu.addItem(.separator())
         SyncMenuActions.items().forEach(menu.addItem)
         menu.addItem(.separator())
-        let services = NSMenu(title: "Services")
+        menu.addItem(submenu(AppLanguage.menu()))
+        menu.addItem(.separator())
+        let services = NSMenu(title: String(localized: "Services"))
         NSApp.servicesMenu = services
-        let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")
+        let servicesItem = NSMenuItem(title: String(localized: "Services"), action: nil, keyEquivalent: "")
         servicesItem.submenu = services
         menu.addItem(servicesItem)
         menu.addItem(.separator())
@@ -49,7 +51,7 @@ enum MainMenu {
     }
 
     private static func fileMenu(_ router: CommandRouter) -> NSMenu {
-        let menu = NSMenu(title: "File")
+        let menu = NSMenu(title: String(localized: "File"))
         menu.addItem(item("New Workspace", #selector(CommandRouter.newWorkspace(_:)), "n", target: router))
         menu.addItem(item("New SSH Workspace…", #selector(CommandRouter.newSSHWorkspace(_:)), "n", [.command, .shift], target: router))
         menu.addItem(item("Open Browser Split", #selector(CommandRouter.openBrowser(_:)), "b", [.command, .shift], target: router))
@@ -61,7 +63,7 @@ enum MainMenu {
     }
 
     private static func editMenu() -> NSMenu {
-        let menu = NSMenu(title: "Edit")
+        let menu = NSMenu(title: String(localized: "Edit"))
         menu.addItem(item("Undo", Selector(("undo:")), "z"))
         menu.addItem(item("Redo", Selector(("redo:")), "z", [.command, .shift]))
         menu.addItem(.separator())
@@ -73,13 +75,14 @@ enum MainMenu {
     }
 
     private static func viewMenu(_ router: CommandRouter) -> NSMenu {
-        let menu = NSMenu(title: "View")
+        let menu = NSMenu(title: String(localized: "View"))
         menu.addItem(item("Toggle Sidebar", #selector(CommandRouter.toggleSidebar(_:)), "b", target: router))
         menu.addItem(item("Compact Sidebar", #selector(CommandRouter.toggleCompactSidebar(_:)), "s", [.command, .control], target: router))
         menu.addItem(item("Zoom Pane", #selector(CommandRouter.toggleZoom(_:)), "\r", [.command, .shift], target: router))
         menu.addItem(.separator())
-        let resumeMenu = NSMenu(title: "Resume Agent Sessions on Launch")
-        for (title, mode) in [("Ask", AgentResumeMode.ask), ("Always", .always), ("Never", .never)] {
+        let resumeMenu = NSMenu(title: String(localized: "Resume Agent Sessions on Launch"))
+        let modes: [(String.LocalizationValue, AgentResumeMode)] = [("Ask", .ask), ("Always", .always), ("Never", .never)]
+        for (title, mode) in modes {
             let entry = item(title, #selector(CommandRouter.setAgentResumeMode(_:)), "", target: router)
             entry.representedObject = mode.rawValue
             resumeMenu.addItem(entry)
@@ -96,11 +99,11 @@ enum MainMenu {
     }
 
     private static func paneMenu(_ router: CommandRouter) -> NSMenu {
-        let menu = NSMenu(title: "Pane")
+        let menu = NSMenu(title: String(localized: "Pane"))
         menu.addItem(item("Split Right", #selector(CommandRouter.splitRight(_:)), "d", target: router))
         menu.addItem(item("Split Down", #selector(CommandRouter.splitDown(_:)), "d", [.command, .shift], target: router))
         menu.addItem(.separator())
-        let arrows: [(String, Int, Selector)] = [
+        let arrows: [(String.LocalizationValue, Int, Selector)] = [
             ("Focus Left", NSLeftArrowFunctionKey, #selector(CommandRouter.focusLeft(_:))),
             ("Focus Right", NSRightArrowFunctionKey, #selector(CommandRouter.focusRight(_:))),
             ("Focus Up", NSUpArrowFunctionKey, #selector(CommandRouter.focusUp(_:))),
@@ -120,7 +123,7 @@ enum MainMenu {
     }
 
     private static func workspaceMenu(_ router: CommandRouter) -> NSMenu {
-        let menu = NSMenu(title: "Workspace")
+        let menu = NSMenu(title: String(localized: "Workspace"))
         menu.addItem(item("Rename Workspace…", #selector(CommandRouter.renameWorkspace(_:)), "r", [.command, .shift], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Next Workspace", #selector(CommandRouter.nextWorkspace(_:)), "}", target: router))
@@ -143,7 +146,7 @@ enum MainMenu {
     }
 
     private static func windowMenu() -> NSMenu {
-        let menu = NSMenu(title: "Window")
+        let menu = NSMenu(title: String(localized: "Window"))
         menu.addItem(item("Minimize", #selector(NSWindow.performMiniaturize(_:)), "m"))
         menu.addItem(item("Zoom", #selector(NSWindow.performZoom(_:)), ""))
         menu.addItem(.separator())
@@ -152,14 +155,14 @@ enum MainMenu {
     }
 
     private static func helpMenu(_ router: CommandRouter) -> NSMenu {
-        let menu = NSMenu(title: "Help")
+        let menu = NSMenu(title: String(localized: "Help"))
         menu.addItem(item("Keyboard Shortcuts", #selector(CommandRouter.showShortcuts(_:)), "?", target: router))
         return menu
     }
 
     #if DEBUG
     private static func debugMenu(_ router: CommandRouter) -> NSMenu {
-        let menu = NSMenu(title: "Debug")
+        let menu = NSMenu(title: String(localized: "Debug"))
         menu.addItem(item("Notify Another Pane", #selector(CommandRouter.debugNotifyOtherPane(_:)), "", target: router))
         menu.addItem(item("Notify Focused Pane in 3 s", #selector(CommandRouter.debugNotifyFocusedPaneLater(_:)), "", target: router))
         menu.addItem(item("Set Sidebar Status", #selector(CommandRouter.debugSetStatus(_:)), "", target: router))
@@ -175,9 +178,10 @@ enum MainMenu {
         return item
     }
 
-    private static func item(_ title: String, _ action: Selector, _ key: String,
+    /// `title` is looked up in Localizable.xcstrings (literals at the call sites are extracted).
+    private static func item(_ title: String.LocalizationValue, _ action: Selector, _ key: String,
                              _ modifiers: NSEvent.ModifierFlags = .command, target: AnyObject? = nil) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
+        let item = NSMenuItem(title: String(localized: title), action: action, keyEquivalent: key)
         item.keyEquivalentModifierMask = modifiers
         item.target = target
         return item

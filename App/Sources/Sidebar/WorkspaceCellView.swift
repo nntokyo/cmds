@@ -199,11 +199,11 @@ final class WorkspaceCellView: NSTableCellView {
         let now = Date()
         var blocks = workspace.agentPanes.compactMap { pane -> String? in
             guard let usage = pane.agentUsage else { return nil }
-            return (AgentFormat.detailLines(usage, now: now) + ["Pane \(pane.id)\(pane.id == primary.pane.id ? " (shown)" : "")"])
+            return (AgentFormat.detailLines(usage, now: now) + [pane.id == primary.pane.id ? String(localized: "Pane \(pane.id) (shown)") : String(localized: "Pane \(pane.id)")])
                 .joined(separator: "\n")
         }
         if let limits = AppController.shared.agentLimitsByKind[usage.agent]?.active(at: now) {
-            blocks.append((["\(usage.agent.displayName) account"] + AgentFormat.limitLines(limits.limits, now: now))
+            blocks.append(([String(localized: "\(usage.agent.displayName) account")] + AgentFormat.limitLines(limits.limits, now: now))
                           .joined(separator: "\n"))
         }
         let tooltip = blocks.joined(separator: "\n\n")
@@ -256,13 +256,14 @@ final class WorkspaceCellView: NSTableCellView {
         usageKey = key
         usageLabel.attributedStringValue = Self.usageText(cpu: cpu, memory: memory, busy: busy)
         if workspace.memoryBytes == nil {
-            usageLabel.toolTip = "CPU and memory of the processes in this workspace's terminals (measuring…)"
+            usageLabel.toolTip = String(localized: "CPU and memory of the processes in this workspace's terminals (measuring…)")
         } else {
             let count = workspace.processCount
             let precise = workspace.cpuPercent.map { String(format: "%.1f%%", $0) } ?? "–"
-            usageLabel.toolTip = "CPU \(precise) (100% = one core)\nMemory \(memory) (physical footprint)\n"
-                + "\(count) process\(count == 1 ? "" : "es") in this workspace's terminals"
-                + (workspace.sshPanes.isEmpty ? "" : "\nSSH panes count only the local ssh client, not the server")
+            usageLabel.toolTip = String(localized: "CPU \(precise) (100% = one core)") + "\n"
+                + String(localized: "Memory \(memory) (physical footprint)") + "\n"
+                + String(localized: "\(count) processes in this workspace's terminals")
+                + (workspace.sshPanes.isEmpty ? "" : "\n" + String(localized: "SSH panes count only the local ssh client, not the server"))
         }
     }
 
@@ -292,7 +293,7 @@ final class WorkspaceCellView: NSTableCellView {
         let otherHosts = Set(panes.compactMap { $0.ssh?.launch.host }).subtracting([ssh.launch.host]).count
         let text = symbolText("network", ssh.launch.label + (otherHosts > 0 ? "  +\(otherHosts)" : "")).mutableCopy() as! NSMutableAttributedString
         if !ssh.connected {
-            text.append(NSAttributedString(string: " · disconnected", attributes: [
+            text.append(NSAttributedString(string: String(localized: " · disconnected"), attributes: [
                 .font: detailFont, .foregroundColor: NSColor.systemOrange]))
         }
         return text

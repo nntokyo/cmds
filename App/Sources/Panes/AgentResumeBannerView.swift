@@ -42,14 +42,14 @@ final class AgentResumeBannerView: NSVisualEffectView {
         stack.addArrangedSubview(label)
         switch state {
         case .offered(let summary, let command, let others):
-            label.stringValue = "Resume \(summary)"
-            toolTip = "Types into this pane's shell:\n\(command)"
-            stack.addArrangedSubview(button("Resume", #selector(resumeClicked), primary: true))
-            if others > 0 { stack.addArrangedSubview(button("Resume All (\(others + 1))", #selector(resumeAllClicked))) }
-            stack.addArrangedSubview(button("Dismiss", #selector(dismissClicked)))
+            label.stringValue = String(localized: "Resume \(summary)")
+            toolTip = String(localized: "Types into this pane's shell:\n\(command)")
+            stack.addArrangedSubview(button(String(localized: "Resume"), #selector(resumeClicked), primary: true))
+            if others > 0 { stack.addArrangedSubview(button(String(localized: "Resume All (\(others + 1))"), #selector(resumeAllClicked))) }
+            stack.addArrangedSubview(button(String(localized: "Dismiss"), #selector(dismissClicked)))
         case .waiting(let summary):
-            label.stringValue = "Resuming \(summary) — waiting for the shell prompt…"
-            stack.addArrangedSubview(button("Cancel", #selector(dismissClicked)))
+            label.stringValue = String(localized: "Resuming \(summary) — waiting for the shell prompt…")
+            stack.addArrangedSubview(button(String(localized: "Cancel"), #selector(dismissClicked)))
         }
         addSubview(stack)
         NSLayoutConstraint.activate([

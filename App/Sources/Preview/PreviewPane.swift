@@ -21,8 +21,8 @@ final class PreviewPane: NSView {
     private let iconView = NSImageView()
     private let nameLabel = NSTextField(labelWithString: "")
     private let pathButton = NSButton(title: "", target: nil, action: nil)
-    private let openButton = PreviewPane.headerButton("arrow.up.forward.app", label: "Open in Default App")
-    private let reloadButton = PreviewPane.headerButton("arrow.clockwise", label: "Reload")
+    private let openButton = PreviewPane.headerButton("arrow.up.forward.app", label: String(localized: "Open in Default App"))
+    private let reloadButton = PreviewPane.headerButton("arrow.clockwise", label: String(localized: "Reload"))
     private let contentHost = NSView()
     private var content: NSView?
     private var quickLook: QLPreviewView?
@@ -117,7 +117,7 @@ final class PreviewPane: NSView {
         updateHeader()
         watch()
         guard fileExists else {
-            show(placeholder: isDirectory.boolValue ? "\(fileName) is a folder" : "File not found",
+            show(placeholder: isDirectory.boolValue ? String(localized: "\(fileName) is a folder") : String(localized: "File not found"),
                  detail: path.abbreviatingHome)
             if existed { onStateChange?() }
             return
@@ -180,7 +180,7 @@ final class PreviewPane: NSView {
                                     body: "<pre><code>" + PreviewHTML.escape(source.text) + "</code></pre>")
         }
         let notice = source.truncated
-            ? "<p style=\"padding:8px 16px;color:var(--muted)\">Showing the first \(PreviewFormat.maxRenderedBytes / 1024 / 1024) MB.</p>"
+            ? "<p style=\"padding:8px 16px;color:var(--muted)\">\(String(localized: "Showing the first \(PreviewFormat.maxRenderedBytes / 1024 / 1024) MB."))</p>"
             : ""
         let page = notice.isEmpty ? html : html.replacingOccurrences(of: "</body>", with: notice + "</body>")
         let base = PreviewSchemeHandler.baseURL(forDocumentAt: path)
@@ -347,7 +347,7 @@ final class PreviewPane: NSView {
         pathButton.contentTintColor = .secondaryLabelColor
         pathButton.lineBreakMode = .byTruncatingHead
         pathButton.alignment = .left
-        pathButton.toolTip = "Reveal in Finder"
+        pathButton.toolTip = String(localized: "Reveal in Finder")
         pathButton.target = self
         pathButton.action = #selector(revealInFinder)
         pathButton.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -391,7 +391,7 @@ final class PreviewPane: NSView {
         nameLabel.stringValue = fileName
         let directory = (path as NSString).deletingLastPathComponent.abbreviatingHome
         pathButton.title = directory
-        pathButton.toolTip = "Reveal in Finder — \(path)"
+        pathButton.toolTip = String(localized: "Reveal in Finder — \(path)")
         iconView.image = NSWorkspace.shared.icon(forFile: path)
         openButton.isEnabled = fileExists
         pathButton.isEnabled = true

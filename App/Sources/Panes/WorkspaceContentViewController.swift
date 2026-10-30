@@ -142,10 +142,10 @@ private final class EmptyStateView: NSView {
     init(action: @escaping () -> Void) {
         self.action = action
         super.init(frame: .zero)
-        let title = NSTextField(labelWithString: "No workspaces")
+        let title = NSTextField(labelWithString: String(localized: "No workspaces"))
         title.font = .systemFont(ofSize: 18, weight: .semibold)
         title.textColor = .secondaryLabelColor
-        let button = NSButton(title: "New Workspace  ⌘N", target: self, action: #selector(create))
+        let button = NSButton(title: String(localized: "New Workspace  ⌘N"), target: self, action: #selector(create))
         button.bezelStyle = .rounded
         let stack = NSStackView(views: [title, button])
         stack.orientation = .vertical

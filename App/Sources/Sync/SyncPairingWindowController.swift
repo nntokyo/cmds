@@ -12,15 +12,15 @@ final class SyncPairingWindowController: NSWindowController {
     private static let qrSide: CGFloat = 176
 
     private let server = SyncServer.shared
-    private let enableCheckbox = NSButton(checkboxWithTitle: "Enable iOS Sync", target: nil, action: nil)
+    private let enableCheckbox = NSButton(checkboxWithTitle: String(localized: "Enable iOS Sync"), target: nil, action: nil)
     private let qrView = NSImageView()
     private let codeLabel = NSTextField(labelWithString: "")
     private let identityLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(wrappingLabelWithString: "")
     private let devicesLabel = NSTextField(wrappingLabelWithString: "")
-    private let newCodeButton = NSButton(title: "New Code", target: nil, action: nil)
-    private let revokeButton = NSButton(title: "Revoke All Devices…", target: nil, action: nil)
-    private let resetIdentityButton = NSButton(title: "Reset Sync Identity…", target: nil, action: nil)
+    private let newCodeButton = NSButton(title: String(localized: "New Code"), target: nil, action: nil)
+    private let revokeButton = NSButton(title: String(localized: "Revoke All Devices…"), target: nil, action: nil)
+    private let resetIdentityButton = NSButton(title: String(localized: "Reset Sync Identity…"), target: nil, action: nil)
     private var countdown: Timer?
     /// Payload the QR image was rendered for.
     private var qrPayload: String?
@@ -28,7 +28,7 @@ final class SyncPairingWindowController: NSWindowController {
     private init() {
         let window = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: 560),
                              styleMask: [.titled, .closable, .utilityWindow], backing: .buffered, defer: true)
-        window.title = "Pair iPhone/iPad"
+        window.title = String(localized: "Pair iPhone/iPad")
         window.isReleasedWhenClosed = false
         window.hidesOnDeactivate = false
         super.init(window: window)
@@ -53,16 +53,15 @@ final class SyncPairingWindowController: NSWindowController {
     }
 
     private func buildContent() {
-        let title = NSTextField(labelWithString:
-            "In cmds on your iPhone or iPad, tap Scan Pairing Code and point it at this QR code. "
-            + "Without a camera: pick this Mac, check that the identity matches, and enter the code.")
+        let title = NSTextField(labelWithString: String(localized:
+            "In cmds on your iPhone or iPad, tap Scan Pairing Code and point it at this QR code. Without a camera: pick this Mac, check that the identity matches, and enter the code."))
         title.lineBreakMode = .byWordWrapping
         title.maximumNumberOfLines = 0
         title.preferredMaxLayoutWidth = 340
 
         // Rendered at whole pixels per module; scaling it again would blur the modules.
         qrView.imageScaling = .scaleNone
-        qrView.setAccessibilityLabel("Pairing QR code")
+        qrView.setAccessibilityLabel(String(localized: "Pairing QR code"))
         qrView.translatesAutoresizingMaskIntoConstraints = false
 
         codeLabel.font = .monospacedDigitSystemFont(ofSize: 34, weight: .semibold)
@@ -89,7 +88,7 @@ final class SyncPairingWindowController: NSWindowController {
 
         let buttons = NSStackView(views: [newCodeButton, revokeButton])
         buttons.orientation = .horizontal
-        let devicesHeader = NSTextField(labelWithString: "Devices")
+        let devicesHeader = NSTextField(labelWithString: String(localized: "Devices"))
         devicesHeader.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
 
         let stack = NSStackView(views: [enableCheckbox, title, qrView, codeLabel, identityLabel, detailLabel,
@@ -133,10 +132,10 @@ final class SyncPairingWindowController: NSWindowController {
         let payload = enabled ? server.pairingPayload : nil
         updateQRCode(payload?.uri)
         if let fingerprint = server.identity?.fingerprint {
-            identityLabel.stringValue = "Mac identity: \(fingerprint.short)"
+            identityLabel.stringValue = String(localized: "Mac identity: \(fingerprint.short)")
             identityLabel.toolTip = "SHA-256 \(fingerprint.hex)"
         } else {
-            identityLabel.stringValue = "Mac identity: –"
+            identityLabel.stringValue = String(localized: "Mac identity: \("–")")
             identityLabel.toolTip = nil
         }
 
@@ -146,27 +145,28 @@ final class SyncPairingWindowController: NSWindowController {
             codeLabel.textColor = .labelColor
             let remaining = max(0, Int(server.codeExpiresAt.timeIntervalSinceNow))
             let address = payload.map { "\($0.host):\($0.port)" } ?? "–"
-            detailLabel.stringValue = """
-            Mac: \(server.macName)   •   \(server.statusText)   •   \(address)
-            The code is valid only while this window is open; it changes in \(remaining / 60):\(String(format: "%02d", remaining % 60)) and after each pairing.
-            Encrypted (TLS 1.3). Your iPhone or iPad trusts only this Mac's identity.
-            Remote access via SSH: \(SyncRemoteAccess.shared.statusText)
-            """
+            let countdown = "\(remaining / 60):\(String(format: "%02d", remaining % 60))"
+            detailLabel.stringValue = [
+                "Mac: \(server.macName)   •   \(server.status.localized)   •   \(address)",
+                String(localized: "The code is valid only while this window is open; it changes in \(countdown) and after each pairing."),
+                String(localized: "Encrypted (TLS 1.3). Your iPhone or iPad trusts only this Mac's identity."),
+                String(localized: "Remote access via SSH: \(SyncRemoteAccess.shared.status.localized)"),
+            ].joined(separator: "\n")
         } else {
             codeLabel.stringValue = "––– –––"
             codeLabel.textColor = .tertiaryLabelColor
-            detailLabel.stringValue = "Mac: \(server.macName)   •   iOS Sync is off"
+            detailLabel.stringValue = "Mac: \(server.macName)   •   " + String(localized: "iOS Sync is off")
         }
 
         let connected = server.connectedDevices
         var lines: [String] = server.store.devices.map { device in
             let hosts = connected.filter { SyncDeviceStore.digestsEqual($0.tokenHash, device.tokenHash) }.map(\.host)
             let state = hosts.isEmpty
-                ? (device.lastSeen.map { "last seen " + Self.relative($0) } ?? "not connected")
-                : "connected (\(Set(hosts).sorted().joined(separator: ", ")))"
+                ? (device.lastSeen.map { String(localized: "last seen \(Self.relative($0))") } ?? String(localized: "not connected"))
+                : String(localized: "connected (\(Set(hosts).sorted().joined(separator: ", ")))")
             return "• \(device.name) — \(state)"
         }
-        if lines.isEmpty { lines = ["No paired devices."] }
+        if lines.isEmpty { lines = [String(localized: "No paired devices.")] }
         devicesLabel.stringValue = lines.joined(separator: "\n")
     }
 
@@ -229,10 +229,10 @@ final class SyncPairingWindowController: NSWindowController {
 
     @objc private func revokeAll(_ sender: Any?) {
         let alert = NSAlert()
-        alert.messageText = "Revoke all paired devices?"
-        alert.informativeText = "Every iPhone and iPad will be disconnected and must be paired again with a new code."
-        alert.addButton(withTitle: "Revoke All")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "Revoke all paired devices?")
+        alert.informativeText = String(localized: "Every iPhone and iPad will be disconnected and must be paired again with a new code.")
+        alert.addButton(withTitle: String(localized: "Revoke All"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         alert.buttons.first?.hasDestructiveAction = true
         guard let window else { return }
         alert.beginSheetModal(for: window) { [weak self] response in
@@ -246,13 +246,13 @@ final class SyncPairingWindowController: NSWindowController {
 
     @objc private func resetIdentity(_ sender: Any?) {
         let alert = NSAlert()
-        alert.messageText = "Reset this Mac's sync identity?"
-        alert.informativeText = """
+        alert.messageText = String(localized: "Reset this Mac's sync identity?")
+        alert.informativeText = String(localized: """
         cmds creates a new key and certificate for iOS Sync and unpairs every iPhone and iPad. \
         Each one must be paired again; until then they report that this Mac's identity changed.
-        """
-        alert.addButton(withTitle: "Reset Identity")
-        alert.addButton(withTitle: "Cancel")
+        """)
+        alert.addButton(withTitle: String(localized: "Reset Identity"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         alert.buttons.first?.hasDestructiveAction = true
         guard let window else { return }
         alert.beginSheetModal(for: window) { [weak self] response in
@@ -279,12 +279,12 @@ final class SyncMenuActions: NSObject, NSMenuItemValidation {
     static let shared = SyncMenuActions()
 
     static func items() -> [NSMenuItem] {
-        let pair = NSMenuItem(title: "Pair iPhone/iPad…", action: #selector(showPairing(_:)), keyEquivalent: "")
-        let toggle = NSMenuItem(title: "Enable iOS Sync", action: #selector(toggleSync(_:)), keyEquivalent: "")
-        let bluetooth = NSMenuItem(title: "Allow Bluetooth Sync", action: #selector(toggleBluetooth(_:)), keyEquivalent: "")
-        bluetooth.toolTip = "Lets the iPhone/iPad connect over Bluetooth when Wi‑Fi is off. The connection stays encrypted and pinned to this Mac's identity."
-        let remote = NSMenuItem(title: "Remote Access via SSH…", action: #selector(showRemoteAccess(_:)), keyEquivalent: "")
-        remote.toolTip = "Lets a paired iPhone/iPad reach this Mac away from home through an SSH server you use. The connection stays encrypted end to end."
+        let pair = NSMenuItem(title: String(localized: "Pair iPhone/iPad…"), action: #selector(showPairing(_:)), keyEquivalent: "")
+        let toggle = NSMenuItem(title: String(localized: "Enable iOS Sync"), action: #selector(toggleSync(_:)), keyEquivalent: "")
+        let bluetooth = NSMenuItem(title: String(localized: "Allow Bluetooth Sync"), action: #selector(toggleBluetooth(_:)), keyEquivalent: "")
+        bluetooth.toolTip = String(localized: "Lets the iPhone/iPad connect over Bluetooth when Wi‑Fi is off. The connection stays encrypted and pinned to this Mac's identity.")
+        let remote = NSMenuItem(title: String(localized: "Remote Access via SSH…"), action: #selector(showRemoteAccess(_:)), keyEquivalent: "")
+        remote.toolTip = String(localized: "Lets a paired iPhone/iPad reach this Mac away from home through an SSH server you use. The connection stays encrypted end to end.")
         for item in [pair, toggle, bluetooth, remote] { item.target = shared }
         return [pair, toggle, bluetooth, remote]
     }

@@ -30,7 +30,9 @@ final class SyncRemoteAccess {
     static let sshPath = "/usr/bin/ssh"
 
     private(set) var settings: SyncRemote.Settings
-    private(set) var statusText = "Off"
+    private(set) var status = LocalizedStatus("Off")
+    /// English, for the API and CLI; the UI shows `status.localized`.
+    var statusText: String { status.english }
     /// The forward is believed to be up (ssh running past `settleTime`).
     private(set) var isForwarding = false
 
@@ -83,7 +85,7 @@ final class SyncRemoteAccess {
 
     /// Stops ssh and every relay (app quit).
     func shutdown() {
-        stop(status: "Off")
+        stop(status: LocalizedStatus("Off"))
     }
 
     // MARK: - Lifecycle
@@ -97,9 +99,9 @@ final class SyncRemoteAccess {
     private func reconcile() {
         guard let wanted else {
             if process != nil || ingress != nil || restartTimer != nil {
-                stop(status: settings.enabled ? "Waiting for iOS Sync" : "Off")
+                stop(status: settings.enabled ? LocalizedStatus("Waiting for iOS Sync") : LocalizedStatus("Off"))
             } else {
-                statusText = settings.enabled ? (settings.isActive ? "Waiting for iOS Sync" : "Choose a relay host") : "Off"
+                status = settings.enabled ? (settings.isActive ? LocalizedStatus("Waiting for iOS Sync") : LocalizedStatus("Choose a relay host")) : LocalizedStatus("Off")
                 didChange()
             }
             return
@@ -108,7 +110,7 @@ final class SyncRemoteAccess {
            process != nil || restartTimer != nil {
             return
         }
-        stop(status: "Starting…")
+        stop(status: LocalizedStatus("Starting…"))
         start(wanted.settings, syncPort: wanted.syncPort)
     }
 
@@ -176,13 +178,13 @@ final class SyncRemoteAccess {
         }
         self.process = process
         try? "\(process.processIdentifier)\n".write(to: pidURL, atomically: true, encoding: .utf8)
-        statusText = "Connecting to \(running.settings.host)…"
+        status = LocalizedStatus("Connecting to \(running.settings.host)…")
         isForwarding = false
         syncLog.notice("remote: ssh started for \(running.settings.host, privacy: .public), relay port \(running.settings.relayPort, privacy: .public)")
         let settle = DispatchWorkItem { [weak self] in
             guard let self, self.process === process, process.isRunning else { return }
             self.isForwarding = true
-            self.statusText = "Forwarding via \(running.settings.host) (relay 127.0.0.1:\(running.settings.relayPort))"
+            self.status = LocalizedStatus("Forwarding via \(running.settings.host) (relay 127.0.0.1:\(running.settings.relayPort))")
             self.didChange()
         }
         settleTimer = settle
@@ -200,16 +202,16 @@ final class SyncRemoteAccess {
         failures = wasUp ? 0 : failures + 1
         let detail = stderrTail.split(whereSeparator: \.isNewline).last.map(String.init) ?? "exit \(status)"
         syncLog.notice("remote: ssh exited (\(status, privacy: .public)): \(detail, privacy: .public)")
-        guard wanted != nil else { return stop(status: "Off") }
+        guard wanted != nil else { return stop(status: LocalizedStatus("Off")) }
         let delay = SyncRemote.restartDelay(failures: wasUp ? 0 : failures - 1)
-        statusText = "Disconnected (\(detail)); retrying in \(Int(delay)) s"
+        self.status = LocalizedStatus("Disconnected (\(detail)); retrying in \(Int(delay)) s")
         let timer = DispatchWorkItem { [weak self] in self?.launchSSH() }
         restartTimer = timer
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: timer)
         didChange()
     }
 
-    private func stop(status: String) {
+    private func stop(status: LocalizedStatus) {
         restartTimer?.cancel()
         restartTimer = nil
         settleTimer?.cancel()
@@ -226,13 +228,13 @@ final class SyncRemoteAccess {
         ingress = nil
         for relay in relays.values { relay.close() }
         relays.removeAll()
-        statusText = status
+        self.status = status
         didChange()
     }
 
     private func fail(_ reason: String) {
         syncLog.error("remote: \(reason, privacy: .public)")
-        stop(status: "Failed: \(reason)")
+        stop(status: LocalizedStatus("Failed: \(reason)"))
     }
 
     // MARK: - Relays

@@ -63,10 +63,10 @@ final class SidebarViewController: NSViewController {
         scrollView.drawsBackground = false
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
-        let addButton = NSButton(image: NSImage(systemSymbolName: "plus", accessibilityDescription: "New Workspace")!,
+        let addButton = NSButton(image: NSImage(systemSymbolName: "plus", accessibilityDescription: String(localized: "New Workspace"))!,
                                  target: self, action: #selector(addClicked))
         addButton.isBordered = false
-        addButton.toolTip = "New Workspace (⌘N)"
+        addButton.toolTip = String(localized: "New Workspace (⌘N)")
         addButton.translatesAutoresizingMaskIntoConstraints = false
 
         let separator = NSBox()
@@ -127,8 +127,8 @@ final class SidebarViewController: NSViewController {
         let symbol = isCompact ? "sidebar.right" : "sidebar.leading"
         compactButton.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: 11, weight: .regular))
-        compactButton.toolTip = isCompact ? "Expand Sidebar (⌃⌘S)" : "Compact Sidebar (⌃⌘S)"
-        compactButton.setAccessibilityLabel(isCompact ? "Expand Sidebar" : "Compact Sidebar")
+        compactButton.toolTip = isCompact ? String(localized: "Expand Sidebar (⌃⌘S)") : String(localized: "Compact Sidebar (⌃⌘S)")
+        compactButton.setAccessibilityLabel(isCompact ? String(localized: "Expand Sidebar") : String(localized: "Compact Sidebar"))
         tableView.intercellSpacing = NSSize(width: 0, height: isCompact ? 2 : 4)
         rowIDs = controller.workspaces.map(\.id)
         tableView.reloadData()
@@ -222,10 +222,10 @@ final class SidebarViewController: NSViewController {
         guard let window = view.window,
               let workspace = (workspaceID ?? controller.selectedWorkspaceID).flatMap(controller.workspace(id:)) else { return }
         let alert = NSAlert()
-        alert.messageText = "Rename Workspace"
-        alert.informativeText = "Leave empty to use the directory name."
-        alert.addButton(withTitle: "Rename")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "Rename Workspace")
+        alert.informativeText = String(localized: "Leave empty to use the directory name.")
+        alert.addButton(withTitle: String(localized: "Rename"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
         field.stringValue = workspace.customTitle ?? workspace.title
         alert.accessoryView = field
@@ -293,10 +293,10 @@ extension SidebarViewController: NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         guard let id = rowIDs[safe: tableView.clickedRow] else { return }
-        let rename = NSMenuItem(title: "Rename…", action: #selector(renameMenuClicked(_:)), keyEquivalent: "")
+        let rename = NSMenuItem(title: String(localized: "Rename…"), action: #selector(renameMenuClicked(_:)), keyEquivalent: "")
         rename.target = self
         rename.representedObject = id
-        let close = NSMenuItem(title: "Close Workspace", action: #selector(closeClicked(_:)), keyEquivalent: "")
+        let close = NSMenuItem(title: String(localized: "Close Workspace"), action: #selector(closeClicked(_:)), keyEquivalent: "")
         close.target = self
         close.representedObject = id
         menu.items = [rename, .separator(), close]

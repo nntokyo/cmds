@@ -42,7 +42,7 @@ final class SystemUsageView: NSView {
         ])
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel("System usage")
+        setAccessibilityLabel(String(localized: "System usage"))
         update(sample: nil)
     }
 
@@ -79,7 +79,7 @@ final class SystemUsageView: NSView {
         guard let sample else {
             cpuRow.set(value: "–", fraction: 0, color: Self.cpuColor)
             memoryRow.set(value: "–", fraction: 0, color: Self.color(for: .unknown))
-            setTooltip("Measuring CPU and memory…")
+            setTooltip(String(localized: "Measuring CPU and memory…"))
             return
         }
         let stats = sample.stats
@@ -89,9 +89,8 @@ final class SystemUsageView: NSView {
         memoryRow.set(value: ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes),
                       fraction: stats.memoryFraction, color: Self.color(for: pressure),
                       valueColor: pressure == .warning || pressure == .critical ? Self.color(for: pressure) : nil)
-        setAccessibilityValue("CPU \(ResourceFormat.wholePercent(stats.cpuPercent)), memory "
-                              + "\(ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)), "
-                              + "pressure \(pressure.name)")
+        let memory = ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)
+        setAccessibilityValue(String(localized: "CPU \(ResourceFormat.wholePercent(stats.cpuPercent)), memory \(memory), pressure \(pressure.localizedName)"))
         setTooltip(Self.tooltip(for: sample))
     }
 
@@ -118,14 +117,14 @@ final class SystemUsageView: NSView {
         let stats = sample.stats
         let bytes = ResourceFormat.bytes
         var lines = [
-            "CPU \(String(format: "%.1f", stats.cpuPercent))% of all \(sample.cpuCount) cores",
-            "Memory used \(bytes(stats.memoryUsedBytes)) of \(bytes(stats.memoryTotalBytes))",
-            "   App \(bytes(sample.appMemoryBytes)) · Wired \(bytes(sample.wiredBytes)) · Compressed \(bytes(sample.compressedBytes))",
+            String(localized: "CPU \(String(format: "%.1f", stats.cpuPercent))% of all \(sample.cpuCount) cores"),
+            String(localized: "Memory used \(bytes(stats.memoryUsedBytes)) of \(bytes(stats.memoryTotalBytes))"),
+            "   " + String(localized: "App \(bytes(sample.appMemoryBytes)) · Wired \(bytes(sample.wiredBytes)) · Compressed \(bytes(sample.compressedBytes))"),
         ]
         if let used = sample.swapUsedBytes, let total = sample.swapTotalBytes, total > 0 {
-            lines.append("Swap used \(bytes(used)) of \(bytes(total))")
+            lines.append(String(localized: "Swap used \(bytes(used)) of \(bytes(total))"))
         }
-        lines.append("Memory pressure: \(stats.pressure.name)")
+        lines.append(String(localized: "Memory pressure: \(stats.pressure.localizedName)"))
         return lines.joined(separator: "\n")
     }
 }
@@ -138,7 +137,7 @@ final class CompactUsageView: NSView {
     private let cpuMeter = MeterView()
     private let memoryMeter = MeterView()
     private var agentText: [String] = []
-    private var systemText = "Measuring CPU and memory…"
+    private var systemText = String(localized: "Measuring CPU and memory…")
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -156,7 +155,7 @@ final class CompactUsageView: NSView {
         for meter in [cpuMeter, memoryMeter] { add(meter) }
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
-        setAccessibilityLabel("Usage")
+        setAccessibilityLabel(String(localized: "Usage"))
     }
 
     @available(*, unavailable)
@@ -177,8 +176,8 @@ final class CompactUsageView: NSView {
             let pressure = stats.pressure
             memoryMeter.set(fraction: stats.memoryFraction, color: pressure == .critical ? .systemRed
                             : pressure == .warning ? .systemYellow : .systemGreen)
-            systemText = "CPU \(ResourceFormat.wholePercent(stats.cpuPercent)) · Mem "
-                + "\(ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)) (\(pressure.name))"
+            let memory = ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)
+            systemText = String(localized: "CPU \(ResourceFormat.wholePercent(stats.cpuPercent)) · Mem \(memory) (\(pressure.localizedName))")
         }
         updateTooltip()
     }
@@ -317,9 +316,10 @@ private final class AgentLimitsRow: NSView {
         // Old figures (no agent ran for a while) are dimmed.
         let old = now.timeIntervalSince(limits.updatedAt) > 3600
         alphaValue = old ? 0.6 : 1
-        var tooltip = ["\(limits.agent.displayName) account limits" + (limits.plan.map { " (\($0))" } ?? "")]
+        var tooltip = [limits.plan.map { String(localized: "\(limits.agent.displayName) account limits (\($0))") }
+                       ?? String(localized: "\(limits.agent.displayName) account limits")]
         tooltip += AgentFormat.limitLines(windows, now: now)
-        tooltip.append("Updated \(AgentFormat.age(limits.updatedAt, now: now))")
+        tooltip.append(String(localized: "Updated \(AgentFormat.age(limits.updatedAt, now: now))"))
         let text = tooltip.joined(separator: "\n")
         if text != tooltipText {
             tooltipText = text
@@ -446,5 +446,17 @@ private final class MeterView: NSView {
 
     private var fillFrame: CGRect {
         CGRect(x: 0, y: 0, width: (bounds.width * fraction).rounded(), height: bounds.height)
+    }
+}
+
+extension MemoryPressure {
+    /// `name` stays English for the API and CLI; this is for the UI.
+    var localizedName: String {
+        switch self {
+        case .normal: return String(localized: "normal", comment: "memory pressure")
+        case .warning: return String(localized: "warning", comment: "memory pressure")
+        case .critical: return String(localized: "critical", comment: "memory pressure")
+        case .unknown: return String(localized: "unknown", comment: "memory pressure")
+        }
     }
 }

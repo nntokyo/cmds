@@ -58,8 +58,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
-        panel.message = "Choose a file to preview"
-        panel.prompt = "Preview"
+        panel.message = String(localized: "Choose a file to preview")
+        panel.prompt = String(localized: "Preview")
         if let directory = controller.selectedWorkspace?.workingDirectory, controller.selectedWorkspace?.isRemote == false {
             panel.directoryURL = URL(fileURLWithPath: directory, isDirectory: true)
         }
@@ -120,8 +120,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     @objc func showShortcuts(_ sender: Any?) {
         let alert = NSAlert()
-        alert.messageText = "Keyboard Shortcuts"
-        alert.informativeText = """
+        alert.messageText = String(localized: "Keyboard Shortcuts")
+        alert.informativeText = String(localized: """
             New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W
             Workspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[
             Split right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩
@@ -129,7 +129,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             Browser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]
             Open in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it
             Toggle sidebar ⌘B · Rename workspace ⇧⌘R
-            """
+            """)
         if let window = windowController?.window { alert.beginSheetModal(for: window) } else { alert.runModal() }
     }
 
@@ -163,14 +163,14 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         switch menuItem.action {
         case #selector(browserReload(_:)):
             if controller.focusedDisconnectedSSHPane != nil {
-                menuItem.title = "Reconnect SSH"
+                menuItem.title = String(localized: "Reconnect SSH")
                 return true
             }
             if controller.focusedPane?.preview != nil {
-                menuItem.title = "Reload Preview"
+                menuItem.title = String(localized: "Reload Preview")
                 return true
             }
-            menuItem.title = "Reload Page"
+            menuItem.title = String(localized: "Reload Page")
             return focusedBrowser != nil
         case #selector(resumeAgentSession(_:)):
             return controller.focusedPane?.resumeOffer != nil

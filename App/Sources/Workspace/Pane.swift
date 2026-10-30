@@ -212,7 +212,7 @@ extension Pane: TerminalSurfaceDelegate {
     }
 
     func terminalSurfaceDidRingBell(_ surface: TerminalSurface) {
-        controller?.raiseAttention(pane: self, title: nil, body: "Bell")
+        controller?.raiseAttention(pane: self, title: nil, body: String(localized: "Bell"))
     }
 
     func terminalSurface(_ surface: TerminalSurface, didPostNotification title: String, body: String) {

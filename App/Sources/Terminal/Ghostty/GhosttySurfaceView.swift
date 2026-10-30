@@ -415,10 +415,10 @@ final class GhosttySurfaceView: NSView {
 
     override func menu(for event: NSEvent) -> NSMenu? {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Copy", action: #selector(copy(_:)), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "Paste", action: #selector(paste(_:)), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Copy"), action: #selector(copy(_:)), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Paste"), action: #selector(paste(_:)), keyEquivalent: "").target = self
         menu.addItem(.separator())
-        menu.addItem(withTitle: "Select All", action: #selector(selectAll(_:)), keyEquivalent: "").target = self
+        menu.addItem(withTitle: String(localized: "Select All"), action: #selector(selectAll(_:)), keyEquivalent: "").target = self
         return menu
     }
 
@@ -719,8 +719,8 @@ final class GhosttySurfaceView: NSView {
         let alert = NSAlert()
         alert.messageText = message
         alert.informativeText = String(detail.prefix(2000))
-        alert.addButton(withTitle: "Allow")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Allow"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         let finish: (NSApplication.ModalResponse) -> Void = { [weak self] resp in
             MainActor.assumeIsolated {
                 self?.alertShowing = false

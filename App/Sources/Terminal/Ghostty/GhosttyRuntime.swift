@@ -370,14 +370,14 @@ final class GhosttyRuntime {
             }
             let preview = items.first(where: { $0.mime.hasPrefix("text/plain") })
                 .flatMap { String(data: $0.data, encoding: .utf8) }
-                ?? items.map { "\($0.mime) (\($0.data.count) bytes)" }.joined(separator: "\n")
+                ?? items.map { String(localized: "\($0.mime) (\($0.data.count) bytes)") }.joined(separator: "\n")
 
             let message: String
             switch request {
             case GHOSTTY_CLIPBOARD_REQUEST_PASTE:
-                message = "The text you are pasting may run commands (it contains newlines or control characters). Paste anyway?"
+                message = String(localized: "The text you are pasting may run commands (it contains newlines or control characters). Paste anyway?")
             default:
-                message = "A program in this terminal wants to read the clipboard. Allow it?"
+                message = String(localized: "A program in this terminal wants to read the clipboard. Allow it?")
             }
             view.presentConfirmation(message: message, detail: preview) { [weak view] ok in
                 guard let surface = view?.surface else { return }

@@ -12,9 +12,9 @@ final class BrowserPane: NSView {
 
     let webView: WKWebView
     private let addressField = AddressField()
-    private let backButton = BrowserPane.toolbarButton("chevron.left", label: "Back")
-    private let forwardButton = BrowserPane.toolbarButton("chevron.right", label: "Forward")
-    private let reloadButton = BrowserPane.toolbarButton("arrow.clockwise", label: "Reload")
+    private let backButton = BrowserPane.toolbarButton("chevron.left", label: String(localized: "Back"))
+    private let forwardButton = BrowserPane.toolbarButton("chevron.right", label: String(localized: "Forward"))
+    private let reloadButton = BrowserPane.toolbarButton("arrow.clockwise", label: String(localized: "Reload"))
     private var observations: [NSKeyValueObservation] = []
 
     var currentURL: URL? { webView.url }
@@ -49,7 +49,7 @@ final class BrowserPane: NSView {
     func showStartPage() {
         webView.loadHTMLString("""
             <html><body style="background:#1c1c1e;color:#8e8e93;font:14px -apple-system;display:flex;\
-            align-items:center;justify-content:center;height:90vh">Type a URL or search term (⌘L)</body></html>
+            align-items:center;justify-content:center;height:90vh">\(String(localized: "Type a URL or search term (⌘L)"))</body></html>
             """, baseURL: nil)
         addressField.stringValue = ""
     }
@@ -161,7 +161,7 @@ final class BrowserPane: NSView {
         reloadButton.target = self
         reloadButton.action = #selector(reloadClicked)
 
-        addressField.placeholderString = "Search or enter address"
+        addressField.placeholderString = String(localized: "Search or enter address")
         addressField.font = .systemFont(ofSize: 12)
         addressField.bezelStyle = .roundedBezel
         addressField.controlSize = .small

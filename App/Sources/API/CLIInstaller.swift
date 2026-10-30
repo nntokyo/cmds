@@ -28,24 +28,24 @@ final class CLIInstaller: NSObject {
 
     @objc func installCommandLineTool(_ sender: Any?) {
         guard let target = BundledCLI.executablePath else {
-            return show("The command line tool is missing from this build of cmds.", style: .warning)
+            return show(String(localized: "The command line tool is missing from this build of cmds."), style: .warning)
         }
         let fileManager = FileManager.default
         let existing = try? fileManager.destinationOfSymbolicLink(atPath: Self.linkPath)
         if existing == target {
-            return show("The command line tool is already installed at \(Self.linkPath).", style: .informational)
+            return show(String(localized: "The command line tool is already installed at \(Self.linkPath)."), style: .informational)
         }
 
         let alert = NSAlert()
-        alert.messageText = "Install the cmds command line tool?"
-        var info = "This creates a symbolic link\n\(Self.linkPath) → \(target)\n\nso `cmds` works in any terminal. "
+        alert.messageText = String(localized: "Install the cmds command line tool?")
+        var info = String(localized: "This creates a symbolic link\n\(Self.linkPath) → \(target)\n\nso `cmds` works in any terminal.")
         if fileManager.fileExists(atPath: Self.linkPath) || existing != nil {
-            info += "The existing \(Self.linkPath) will be replaced. "
+            info += " " + String(localized: "The existing \(Self.linkPath) will be replaced.")
         }
-        info += "You may be asked for an administrator password."
+        info += " " + String(localized: "You may be asked for an administrator password.")
         alert.informativeText = info
-        alert.addButton(withTitle: "Install")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Install"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else { return }
 
         do {
@@ -53,7 +53,7 @@ final class CLIInstaller: NSObject {
         } catch {
             guard installWithAdministratorPrivileges(target: target) else { return }
         }
-        show("Installed. Run `cmds --help` in a new terminal.", style: .informational)
+        show(String(localized: "Installed. Run `cmds --help` in a new terminal."), style: .informational)
     }
 
     private func installDirectly(target: String) throws {
@@ -79,7 +79,7 @@ final class CLIInstaller: NSObject {
         NSAppleScript(source: source)?.executeAndReturnError(&error)
         guard let error else { return true }
         if (error[NSAppleScript.errorNumber] as? Int) == -128 { return false } // user cancelled
-        show("Could not install the command line tool: \(error[NSAppleScript.errorMessage] as? String ?? "unknown error")", style: .warning)
+        show(String(localized: "Could not install the command line tool: \(error[NSAppleScript.errorMessage] as? String ?? String(localized: "unknown error"))"), style: .warning)
         return false
     }
 

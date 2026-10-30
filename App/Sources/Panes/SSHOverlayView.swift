@@ -14,8 +14,8 @@ final class SSHOverlayView: NSView {
 
     private let titleLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(wrappingLabelWithString: "")
-    private let reconnectButton = NSButton(title: "Reconnect (⌘R)", target: nil, action: nil)
-    private let closeButton = NSButton(title: "Close Pane", target: nil, action: nil)
+    private let reconnectButton = NSButton(title: String(localized: "Reconnect (⌘R)"), target: nil, action: nil)
+    private let closeButton = NSButton(title: String(localized: "Close Pane"), target: nil, action: nil)
 
     init(host: String, state: State) {
         super.init(frame: .zero)
@@ -33,12 +33,12 @@ final class SSHOverlayView: NSView {
         detailLabel.preferredMaxLayoutWidth = 360
         switch state {
         case .notConnected:
-            titleLabel.stringValue = "Not connected — ssh \(host)"
-            detailLabel.stringValue = "SSH panes from the last session connect only when you ask."
-            reconnectButton.title = "Connect (⌘R)"
+            titleLabel.stringValue = String(localized: "Not connected — ssh \(host)")
+            detailLabel.stringValue = String(localized: "SSH panes from the last session connect only when you ask.")
+            reconnectButton.title = String(localized: "Connect (⌘R)")
         case .disconnected:
-            titleLabel.stringValue = "Disconnected — ssh \(host)"
-            detailLabel.stringValue = "The ssh process exited. Reconnect runs the same command again."
+            titleLabel.stringValue = String(localized: "Disconnected — ssh \(host)")
+            detailLabel.stringValue = String(localized: "The ssh process exited. Reconnect runs the same command again.")
         }
         reconnectButton.bezelStyle = .rounded
         reconnectButton.target = self

@@ -8,27 +8,26 @@ enum SSHConnectSheet {
 
     static func present(in window: NSWindow?, controller: AppController) {
         let alert = NSAlert()
-        alert.messageText = "New SSH Workspace"
-        alert.informativeText = "Runs your ssh (with ~/.ssh/config) and forwards this pane's cmds socket to the server, "
-            + "so cmds-remote.sh there can notify and report agent usage. Nothing is installed on the server."
-        alert.addButton(withTitle: "Connect")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = String(localized: "New SSH Workspace")
+        alert.informativeText = String(localized: "Runs your ssh (with ~/.ssh/config) and forwards this pane's cmds socket to the server, so cmds-remote.sh there can notify and report agent usage. Nothing is installed on the server.")
+        alert.addButton(withTitle: String(localized: "Connect"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
 
         let host = NSComboBox()
         host.completes = true
         host.usesDataSource = false
         host.addItems(withObjectValues: SSHConfigHosts.load())
-        host.placeholderString = "host, user@host or ~/.ssh/config alias"
+        host.placeholderString = String(localized: "host, user@host or ~/.ssh/config alias")
         host.stringValue = UserDefaults.standard.string(forKey: lastHostKey) ?? ""
         let directory = NSTextField()
-        directory.placeholderString = "remote directory (optional, e.g. ~/src/app)"
+        directory.placeholderString = String(localized: "remote directory (optional, e.g. ~/src/app)")
         let title = NSTextField()
-        title.placeholderString = "workspace title (optional)"
+        title.placeholderString = String(localized: "workspace title (optional)")
 
         let grid = NSGridView(views: [
-            [NSTextField(labelWithString: "Host:"), host],
-            [NSTextField(labelWithString: "Directory:"), directory],
-            [NSTextField(labelWithString: "Title:"), title],
+            [NSTextField(labelWithString: String(localized: "Host:")), host],
+            [NSTextField(labelWithString: String(localized: "Directory:")), directory],
+            [NSTextField(labelWithString: String(localized: "Title:")), title],
         ])
         grid.rowSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
@@ -48,7 +47,7 @@ enum SSHConnectSheet {
                 try controller.createSSHWorkspace(launch, title: name.isEmpty ? nil : name)
             } catch {
                 let failure = NSAlert()
-                failure.messageText = "Cannot open the SSH workspace"
+                failure.messageText = String(localized: "Cannot open the SSH workspace")
                 failure.informativeText = (error as? SSHLaunch.InvalidInput)?.description
                     ?? (error as? RPCError)?.message ?? error.localizedDescription
                 failure.runModal()
@@ -66,16 +65,16 @@ enum RemoteHelperInstaller {
     static func confirmAndInstall(pane: Pane, window: NSWindow?) {
         guard let ssh = pane.ssh, ssh.connected, let terminal = pane.terminal else { return }
         let alert = NSAlert()
-        alert.messageText = "Install the remote helper on \(ssh.launch.host)?"
-        alert.informativeText = """
+        alert.messageText = String(localized: "Install the remote helper on \(ssh.launch.host)?")
+        alert.informativeText = String(localized: """
             cmds will type one command into this pane's remote shell. It writes ~/.local/bin/cmds-remote.sh \
             (a small sh script; needs python3, socat or nc there) and, if the server has no `cmds` command, \
             ~/.local/bin/cmds linking to it. Nothing else changes.
 
             Make sure the pane shows a shell prompt (no program running) before you continue.
-            """
-        alert.addButton(withTitle: "Install")
-        alert.addButton(withTitle: "Cancel")
+            """)
+        alert.addButton(withTitle: String(localized: "Install"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         let handle: (NSApplication.ModalResponse) -> Void = { response in
             guard response == .alertFirstButtonReturn, ssh.connected, pane.terminal === terminal else { return }
             terminal.sendText(RemoteHelperScript.installCommand() + "\n")

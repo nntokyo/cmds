@@ -92,7 +92,9 @@ final class SyncServer {
     private(set) var pairingCode: String = PairingToken.generateCode()
     private(set) var codeExpiresAt = Date()
     private(set) var port: UInt16?
-    private(set) var statusText = "Stopped"
+    private(set) var status = LocalizedStatus("Stopped")
+    /// English, for the API and CLI; the UI shows `status.localized`.
+    var statusText: String { status.english }
 
     private let queue = DispatchQueue(label: "tokyo.n-n.cmds.sync", qos: .userInitiated)
     private let codec = SyncCodec()
@@ -171,7 +173,7 @@ final class SyncServer {
         guard listener == nil else { return }
         // Isolated test instances: no Bonjour advert, no port.
         guard !CmdsEnv.isSyncDisabled() else {
-            statusText = "Disabled (\(CmdsEnv.syncDisabled))"
+            status = LocalizedStatus("Disabled (\(CmdsEnv.syncDisabled))")
             didChange()
             return
         }
@@ -213,7 +215,7 @@ final class SyncServer {
         clients.removeAll()
         stopScreenTimer()
         lastStateData = nil
-        statusText = "Stopped"
+        status = LocalizedStatus("Stopped")
         didChange()
     }
 
@@ -301,7 +303,7 @@ final class SyncServer {
     }
 
     private func fail(_ reason: String) {
-        statusText = "Failed: \(reason)"
+        status = LocalizedStatus("Failed: \(reason)")
         syncLog.error("sync not started: \(reason, privacy: .public)")
         didChange()
     }
@@ -337,7 +339,7 @@ final class SyncServer {
             #endif
         } catch {
             if requested != nil, !portIsFixed { return startListener(port: nil) }
-            statusText = "Failed: \(error.localizedDescription)"
+            status = LocalizedStatus("Failed: \(error.localizedDescription)")
             syncLog.error("listener failed: \(error.localizedDescription, privacy: .public)")
             didChange()
             return
@@ -376,7 +378,7 @@ final class SyncServer {
             }
         }
         self.listener = listener
-        statusText = "Starting…"
+        status = LocalizedStatus("Starting…")
         listener.start(queue: queue)
     }
 
@@ -384,7 +386,7 @@ final class SyncServer {
         switch state {
         case .ready:
             port = listener.port?.rawValue
-            statusText = "Listening on port \(port.map(String.init) ?? "?")"
+            status = LocalizedStatus("Listening on port \(port.map(String.init) ?? "?")")
             syncLog.notice("listening on port \(self.port ?? 0, privacy: .public)")
         case .failed(let error):
             listener.cancel()
@@ -395,10 +397,10 @@ final class SyncServer {
                 startListener(port: nil)
                 return
             }
-            statusText = "Failed: \(error.localizedDescription)"
+            status = LocalizedStatus("Failed: \(error.localizedDescription)")
             syncLog.error("listener failed: \(error.localizedDescription, privacy: .public)")
         case .waiting(let error):
-            statusText = "Waiting: \(error.localizedDescription)"
+            status = LocalizedStatus("Waiting: \(error.localizedDescription)")
         default:
             break
         }

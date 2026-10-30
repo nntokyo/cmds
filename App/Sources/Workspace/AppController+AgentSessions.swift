@@ -210,12 +210,26 @@ extension AppController {
         workspace(id: pane.workspaceID)?.panes.values.filter { $0 !== pane && $0.resumeOffer != nil }.forEach(updateResumeBanner)
     }
 
+    /// The banner's `Claude Code session “Fix login” (Opus, 3 hours ago)`; `AgentSession.summary()` is the CLI's English one.
+    static func localizedSummary(_ session: AgentSession, now: Date = Date()) -> String {
+        let name = AgentResume.displayName(session.agent)
+        var details: [String] = []
+        if let model = session.model, !model.isEmpty { details.append(model) }
+        details.append(now.timeIntervalSince(session.lastSeen) < 60 ? String(localized: "just now")
+                       : RelativeDateTimeFormatter().localizedString(for: session.lastSeen, relativeTo: now))
+        let detail = details.joined(separator: String(localized: ", ", comment: "list separator"))
+        if let title = AgentResume.cleanTitle(session.title) {
+            return String(localized: "\(name) session “\(title)” (\(detail))")
+        }
+        return String(localized: "\(name) session (\(detail))")
+    }
+
     func updateResumeBanner(_ pane: Pane) {
         guard let offer = pane.resumeOffer, let command = AgentResume.command(for: offer) else {
             pane.container.setBanner(nil)
             return
         }
-        let summary = offer.summary()
+        let summary = Self.localizedSummary(offer)
         let banner: AgentResumeBannerView
         if pane.resumeRequestedAt != nil {
             banner = AgentResumeBannerView(state: .waiting(summary: summary))

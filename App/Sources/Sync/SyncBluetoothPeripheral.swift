@@ -22,7 +22,9 @@ final class SyncBluetoothPeripheral: NSObject {
     /// Local ports of relay connections → `bluetooth:<peer>`; read by the sync server on accept.
     nonisolated static var peers: SyncLoopbackPeers { SyncServer.relayedPeers }
 
-    private(set) var statusText = "Off"
+    private(set) var status = LocalizedStatus("Off")
+    /// English, for the API and CLI; the UI shows `status.localized`.
+    var statusText: String { status.english }
 
     private var manager: CBPeripheralManager?
     private var psm: CBL2CAPPSM?
@@ -104,7 +106,7 @@ final class SyncBluetoothPeripheral: NSObject {
             return
         }
         guard let manager else {
-            statusText = "Starting…"
+            status = LocalizedStatus("Starting…")
             // Creating the manager asks for Bluetooth permission the first time.
             manager = CBPeripheralManager(delegate: self, queue: .main,
                                           options: [CBPeripheralManagerOptionShowPowerAlertKey: false])
@@ -130,7 +132,7 @@ final class SyncBluetoothPeripheral: NSObject {
         // Relays still being set up see `manager == nil` and close themselves.
         for relay in relays.values { relay.close() }
         relays.removeAll()
-        statusText = "Off"
+        status = LocalizedStatus("Off")
     }
 
     private func publishService() {
@@ -209,7 +211,7 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
             guard peripheral === manager else { return }
             switch peripheral.state {
             case .poweredOn:
-                statusText = "Starting…"
+                status = LocalizedStatus("Starting…")
                 if psm == nil {
                     // No link encryption: an encrypted channel needs a Bluetooth bond, whose pairing prompt fails
                     // silently on the phone ("Unknown error" from openL2CAPChannel, seen on a real iPhone). The
@@ -219,11 +221,11 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
                     publishService()
                 }
             case .unauthorized:
-                statusText = "Not allowed (System Settings › Privacy & Security › Bluetooth)"
+                status = LocalizedStatus("Not allowed (System Settings › Privacy & Security › Bluetooth)")
             case .unsupported:
-                statusText = "Not supported on this Mac"
+                status = LocalizedStatus("Not supported on this Mac")
             case .poweredOff:
-                statusText = "Bluetooth is off"
+                status = LocalizedStatus("Bluetooth is off")
                 // L2CAP channel, services and relays are gone; start over when it comes back.
                 psm = nil
                 service = nil
@@ -231,7 +233,7 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
                 for relay in relays.values { relay.close() }
                 relays.removeAll()
             default:
-                statusText = "Unavailable"
+                status = LocalizedStatus("Unavailable")
             }
         }
     }
@@ -240,7 +242,7 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
         MainActor.assumeIsolated {
             guard peripheral === manager else { return }
             if let error {
-                statusText = "Failed: \(error.localizedDescription)"
+                status = LocalizedStatus("Failed: \(error.localizedDescription)")
                 syncLog.error("bluetooth: L2CAP publish failed: \(error.localizedDescription, privacy: .public)")
                 return
             }
@@ -253,7 +255,7 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
         MainActor.assumeIsolated {
             guard peripheral === manager, service === self.service else { return }
             if let error {
-                statusText = "Failed: \(error.localizedDescription)"
+                status = LocalizedStatus("Failed: \(error.localizedDescription)")
                 syncLog.error("bluetooth: adding the service failed: \(error.localizedDescription, privacy: .public)")
                 return
             }
@@ -266,10 +268,10 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
         MainActor.assumeIsolated {
             guard peripheral === manager else { return }
             if let error {
-                statusText = "Failed: \(error.localizedDescription)"
+                status = LocalizedStatus("Failed: \(error.localizedDescription)")
                 syncLog.error("bluetooth: advertising failed: \(error.localizedDescription, privacy: .public)")
             } else {
-                statusText = "Advertising (PSM \(psm.map(String.init) ?? "?"))"
+                status = LocalizedStatus("Advertising (PSM \(psm.map(String.init) ?? "?"))")
                 syncLog.notice("bluetooth: advertising, PSM \(self.psm ?? 0, privacy: .public)")
             }
         }

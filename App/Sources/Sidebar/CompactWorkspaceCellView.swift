@@ -103,7 +103,7 @@ final class CompactWorkspaceCellView: NSTableCellView {
         if !workspace.ports.isEmpty { lines.append(workspace.ports.map { ":\($0)" }.joined(separator: "  ")) }
         if let agent = workspace.primaryAgent?.usage {
             let limits = AppController.shared.agentLimitsByKind[agent.agent]?.active(at: Date())?.limits
-            lines.append(AgentFormat.summary(agent, limits: limits) + (agent.isStale ? " (idle)" : ""))
+            lines.append(AgentFormat.summary(agent, limits: limits) + (agent.isStale ? String(localized: " (idle)") : ""))
         }
         if workspace.hasTerminal {
             lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))
