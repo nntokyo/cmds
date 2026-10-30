@@ -10,7 +10,7 @@ import Foundation
 ///
 /// Only for pinned connections (manual pairing's identity probe needs the Mac's address).
 /// Main thread only (`@unchecked Sendable` so the loopback accept can hop back to main).
-final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
+final class BluetoothTransport: NSObject, RelayTransport, @unchecked Sendable {
     var onEvent: ((TransportEvent) -> Void)?
     var linkPath: SyncLinkPath { .bluetooth }
 
@@ -29,8 +29,8 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
     private var candidateTimer: DispatchWorkItem?
     private var listener: SyncLoopback.Listener?
     private var relay: SyncStreamRelay?
-    private var inner: WebSocketTransport?
-    private var finished = false
+    var inner: WebSocketTransport?
+    var finished = false
 
     /// Progress for `ConnectionDiagnostics` (no identifiers or secrets).
     private func stage(_ text: String) {
@@ -56,18 +56,7 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
         central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionShowPowerAlertKey: false])
     }
 
-    func send(_ message: ClientMessage) {
-        inner?.send(message)
-    }
-
-    func close() {
-        guard !finished else { return }
-        finished = true
-        onEvent = nil
-        teardown()
-    }
-
-    private func teardown() {
+    func teardown() {
         candidateTimer?.cancel()
         candidateTimer = nil
         inner?.onEvent = nil
@@ -84,15 +73,6 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
         }
         central = nil
         peripheral = nil
-    }
-
-    private func fail(_ reason: String) {
-        guard !finished else { return }
-        finished = true
-        let handler = onEvent
-        onEvent = nil
-        teardown()
-        handler?(.disconnected(reason: reason))
     }
 
     // MARK: - Discovery
@@ -141,26 +121,7 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
                 self.relay = relay
             }
         }
-        let inner = WebSocketTransport(target: MacTarget(kind: .manual(host: "127.0.0.1", port: listener.port),
-                                                         displayName: "Bluetooth"),
-                                       policy: policy)
-        self.inner = inner
-        inner.onEvent = { [weak self] event in self?.forward(event) }
-        inner.start()
-    }
-
-    private func forward(_ event: TransportEvent) {
-        guard !finished else { return }
-        switch event {
-        case .connected, .message:
-            onEvent?(event)
-        case .identityPresented, .identityMismatch, .disconnected:
-            finished = true
-            let handler = onEvent
-            onEvent = nil
-            teardown()
-            handler?(event)
-        }
+        startInner(port: listener.port, displayName: "Bluetooth", policy: policy)
     }
 }
 
