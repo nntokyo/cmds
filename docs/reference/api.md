@@ -59,6 +59,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `workspace.create` | `title?`, `cwd?`, `command?` or `ssh` (host), `remoteCwd?` | `WorkspaceInfo` |
 | `workspace.select` | `id` | – |
 | `workspace.close` | `id` | – |
+| `view.tile` | one of `off: true`, `all: true`, `workspaces` ([id], at least two); `active?` (workspace to give the keyboard); `zoom?` (bool: show the active tile alone); no params = query | `TileStatus` `{"mode": "off"/"all"/"selected", "workspaces": [id] (display order), "active"?, "zoomed"?, "hidden"}` (`hidden` = left out beyond 9). [Tiled view](../guide/workspaces-and-panes.md#tiled-view); local socket only |
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
 | `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?` | `PaneInfo` |

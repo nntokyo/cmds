@@ -157,6 +157,9 @@ final class GhosttySurfaceView: NSView {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         removeWindowObservers()
+        // AppKit does not call resignFirstResponder when the first responder leaves the window: a surface moved
+        // back in (workspace switch, tiled view) must not believe it still has the keyboard and steal the focus.
+        isFirstResponderFlag = window != nil && window?.firstResponder === self
         guard let window else {
             if let surface { ghostty_surface_set_occlusion(surface, false) }
             updateFocus()

@@ -1,6 +1,6 @@
 # Workspaces and panes
 
-> Everyday use of the Mac app: workspaces and the sidebar, splits, browser and preview panes, SSH workspaces,
+> Everyday use of the Mac app: workspaces and the sidebar, splits, the tiled view, browser and preview panes, SSH workspaces,
 > session restore, keeping the Mac awake and the app's language.
 
 All key equivalents: [reference/shortcuts.md](../reference/shortcuts.md). Everything here can also be scripted with
@@ -68,6 +68,28 @@ pane: Needs Input, then Working, Idle, Stopped. Plain shells get no state.
   directory. Drag the divider to resize.
 - ⌥⌘ + arrow keys move the focus; **View › Zoom Pane** (⇧⌘↩) shows one pane alone until toggled back.
 - ⌘W closes the focused pane, ⇧⌘W the workspace.
+
+## Tiled view
+
+Shows several workspaces side by side, each as a live tile you can type in — e.g. five Claude Code sessions at once.
+
+- **Select several workspaces in the sidebar**: ⌘-click adds or removes one, ⇧-click a range. The content area
+  tiles them right away; selecting a single workspace again goes back to the normal view.
+- **View › Tile All Workspaces** (⌃⌘T) tiles every workspace the sidebar shows (a filter applies; new workspaces
+  join), and ⌃⌘T again shows one workspace. **View › Tile Selected Workspaces** brings back the last ⌘-click
+  selection; **View › Show Single Workspace** (or Esc while the sidebar has the keyboard) leaves the tiled view.
+- Layout follows the count and the window shape: 2 side by side (stacked in a tall window), 3 in a row when the
+  window is wide, else 2 + 1, 4 as 2 × 2, 5 as 3 + 2, 6 as 3 × 2, up to 9 in three rows. More than 9 are not shown
+  (a note says how many; the workspace you select always gets a tile). Drag the gaps between tiles to resize, double-click a gap to even it out; positions are
+  remembered per set of workspaces and kept in the session.
+- Each tile keeps its own splits and has a header: state dot, title, agent state (Working, Needs Input, Done…) and
+  the agent's task. A tile that needs you gets the orange ring.
+- The tile with the keyboard has a blue header and is the selected workspace (window title, ⌘W, ⌘D… act on it).
+  Click into a tile, its header or its sidebar row to switch; ⌥⌘ + arrow keys move across tiles too.
+- **⇧⌘↩** (View › Zoom Tile), the header's button or a double-click on the header shows the active tile alone, and
+  back.
+- Terminals keep running: tiling moves the existing views, nothing restarts. Scripts can do the same with
+  [`cmds tile`](../reference/cli.md).
 
 ### The attention ring
 

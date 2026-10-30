@@ -31,8 +31,26 @@ struct SessionState: Codable {
         var session: AgentSession
     }
 
+    /// The tiled view (several workspaces side by side). Added later: older sessions lack it, older versions ignore it.
+    struct TilingState: Codable {
+        /// Tiling every workspace the sidebar shows; else `workspaceIndices`.
+        var all: Bool
+        var workspaceIndices: [Int]?
+        /// The tile shown alone (⇧⌘↩).
+        var zoomedIndex: Int?
+    }
+
+    /// Divider positions remembered for one tiling set (indices into `workspaces`) and grid shape.
+    struct TileLayoutState: Codable {
+        var workspaceIndices: [Int]
+        var shape: [Int]
+        var ratios: TileRatios
+    }
+
     var workspaces: [WorkspaceState]
     var selectedIndex: Int?
+    var tiling: TilingState? = nil
+    var tileLayouts: [TileLayoutState]? = nil
 }
 
 enum SessionStore {

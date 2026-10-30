@@ -88,6 +88,10 @@ enum MainMenu {
         menu.addItem(item("Show CPU and Memory per Workspace", #selector(CommandRouter.toggleWorkspaceUsage(_:)), "", target: router))
         menu.addItem(item("Zoom Pane", #selector(CommandRouter.toggleZoom(_:)), "\r", [.command, .shift], target: router))
         menu.addItem(.separator())
+        menu.addItem(item("Tile All Workspaces", #selector(CommandRouter.toggleTileAll(_:)), "t", [.command, .control], target: router))
+        menu.addItem(item("Tile Selected Workspaces", #selector(CommandRouter.tileSelected(_:)), "", target: router))
+        menu.addItem(item("Show Single Workspace", #selector(CommandRouter.showSingleWorkspace(_:)), "", target: router))
+        menu.addItem(.separator())
         let resumeMenu = NSMenu(title: String(localized: "Resume Agent Sessions on Launch"))
         let modes: [(String.LocalizationValue, AgentResumeMode)] = [("Ask", .ask), ("Always", .always), ("Never", .never)]
         for (title, mode) in modes {

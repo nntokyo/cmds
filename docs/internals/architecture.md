@@ -55,6 +55,12 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
 - **SSH pane** ([ssh.md](ssh.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
   forwarded to the server (`ssh -R`); `PaneInfo.remote` = `{host, connected, branch?}`, `WorkspaceInfo.remoteHost`
   while the focused pane is one (its cwd/branch are then remote). Survives `ssh` exiting (Reconnect overlay).
+- **Tiled view** (`Workspace/AppController+Tiling.swift`, `Panes/TileViews.swift`, grid math in
+  `CmdsCore/TileLayout.swift`): `tileMode` (off / all visible sidebar rows / a chosen set) decides which workspaces
+  `WorkspaceContentViewController` shows as `WorkspaceTileView`s in a `TileGridView`; the selected workspace is the
+  active tile. Pane containers are re-parented, never recreated; `GhosttySurfaceView.viewDidMoveToWindow` re-reads
+  size, scale, occlusion and whether it really is first responder. Divider ratios are kept per tiling set and grid
+  shape; `session.json` stores `tiling` and `tileLayouts` (optional, by workspace index).
 - **Attention / notification ring**: a pane lights up (colored ring border) when its program sends OSC 9/777,
   rings the bell, or `cmds notify` targets it — and the pane is not the focused pane of the key window.
   Focusing the pane clears it. The workspace row in the sidebar shows a dot + the latest notification text.

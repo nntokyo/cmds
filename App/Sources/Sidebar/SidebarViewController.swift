@@ -8,6 +8,12 @@ private extension NSPasteboard.PasteboardType {
 /// The table of the sidebar: ⌘F while it has the keyboard opens the filter.
 private final class SidebarTableView: NSTableView {
     var onFind: (() -> Void)?
+    /// Esc with the sidebar focused (leaves the tiled view).
+    var onCancel: (() -> Void)?
+
+    override func cancelOperation(_ sender: Any?) {
+        if let onCancel { onCancel() } else { super.cancelOperation(sender) }
+    }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if window?.firstResponder === self,
@@ -85,6 +91,14 @@ final class SidebarViewController: NSViewController {
     static let groupDefaultsKey = "SidebarGroupByProject"
     /// The toggle button at the top of the sidebar was clicked (the window controller resizes the split).
     var onToggleCompact: (() -> Void)?
+    /// The rows changed without a state change (filter, grouping): "tile all" follows the visible rows.
+    var onRowsChanged: (() -> Void)?
+
+    /// Workspace ids in row order (filter and grouping applied): the order of the tiled view.
+    var visibleWorkspaceIDs: [String] {
+        // Computed now, not from `rows`: a workspace created this moment is not in the table yet.
+        computeRows().compactMap(\.workspaceID)
+    }
 
     /// Compact rail: workspace numbers, state dots and status colours; tiny meters in the footer.
     var isCompact = false {
@@ -134,6 +148,12 @@ final class SidebarViewController: NSViewController {
         tableView.registerForDraggedTypes([.cmdsWorkspace])
         tableView.setDraggingSourceOperationMask(.move, forLocal: true)
         tableView.onFind = { [weak self] in self?.beginFilter() }
+        tableView.onCancel = { [weak self] in
+            guard let self, self.controller.isTiling else { return NSSound.beep() }
+            try? self.controller.setTiling(.off)
+        }
+        // ⌘-click / ⇧-click select several workspaces: they are shown side by side (tiled view).
+        tableView.allowsMultipleSelection = true
         let menu = NSMenu()
         menu.delegate = self
         tableView.menu = menu
@@ -322,9 +342,14 @@ final class SidebarViewController: NSViewController {
     func reload() {
         let newRows = computeRows()
         if newRows != rows {
+            let visibleChanged = newRows.compactMap(\.workspaceID) != rows.compactMap(\.workspaceID)
             rows = newRows
             rowHeights = [:]
             tableView.reloadData()
+            if visibleChanged, controller.tileMode != .off {
+                // After this reload: the controller's change re-enters reload().
+                DispatchQueue.main.async { [weak self] in self?.onRowsChanged?() }
+            }
         } else {
             var changed = IndexSet()
             for (row, item) in rows.enumerated() {
@@ -345,16 +370,25 @@ final class SidebarViewController: NSViewController {
     private func syncSelection(scroll: Bool) {
         isSyncingSelection = true
         defer { isSyncingSelection = false }
-        guard let selected = controller.selectedWorkspaceID,
-              let row = rows.firstIndex(of: .workspace(selected)) else {
+        // Tiled view: every tile's row is selected.
+        let ids = controller.isTiling ? controller.tiledWorkspaceIDs : controller.selectedWorkspaceID.map { [$0] } ?? []
+        let indexes = IndexSet(ids.compactMap { rows.firstIndex(of: .workspace($0)) })
+        guard !indexes.isEmpty else {
             tableView.deselectAll(nil)
             return
         }
-        if tableView.selectedRow != row {
-            tableView.selectRowIndexes([row], byExtendingSelection: false)
-            if scroll { tableView.scrollRowToVisible(row) }
+        if tableView.selectedRowIndexes != indexes {
+            tableView.selectRowIndexes(indexes, byExtendingSelection: false)
+        }
+        if scroll, let selected = controller.selectedWorkspaceID, let row = rows.firstIndex(of: .workspace(selected)),
+           selectedRowShown != selected {
+            selectedRowShown = selected
+            tableView.scrollRowToVisible(row)
         }
     }
+
+    /// The workspace last scrolled into view (scroll only when the selection moves).
+    private var selectedRowShown: String?
 
     /// New resource-usage sample: refresh the usage line of visible rows and the footer. No reload, no
     /// height changes (the usage line's visibility does not depend on the values), selection untouched.
@@ -549,9 +583,35 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
         return height
     }
 
+    /// A plain click on a tile's row while tiled keeps the tiles and gives that tile the keyboard (Esc in the
+    /// sidebar or ⌃⌘T shows one workspace again).
+    func tableView(_ tableView: NSTableView,
+                   selectionIndexesForProposedSelection proposed: IndexSet) -> IndexSet {
+        guard !isSyncingSelection, controller.isTiling, proposed.count == 1, let row = proposed.first,
+              let id = rows[safe: row]?.workspaceID, controller.tiledWorkspaceIDs.contains(id),
+              let event = NSApp.currentEvent, [.leftMouseDown, .leftMouseUp].contains(event.type),
+              event.modifierFlags.intersection([.command, .shift]).isEmpty else { return proposed }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let pane = self.controller.workspace(id: id)?.focusedPane else { return }
+            try? self.controller.focusPane(id: pane.id)
+        }
+        return tableView.selectedRowIndexes
+    }
+
     func tableViewSelectionDidChange(_ notification: Notification) {
-        guard !isSyncingSelection, let id = rows[safe: tableView.selectedRow]?.workspaceID else { return }
-        try? controller.selectWorkspace(id: id)
+        guard !isSyncingSelection else { return }
+        let ids = tableView.selectedRowIndexes.compactMap { rows[safe: $0]?.workspaceID }
+        guard !ids.isEmpty else { return }
+        if ids.count >= 2 {
+            // The clicked row gets the keyboard when it was just added; else the active tile keeps it.
+            let clicked = rows[safe: tableView.clickedRow]?.workspaceID
+            let active = clicked.flatMap { ids.contains($0) ? $0 : nil }
+            try? controller.setTiling(.selected(ids), active: active)
+        } else if controller.isTiling {
+            try? controller.setTiling(.off, active: ids[0])
+        } else {
+            try? controller.selectWorkspace(id: ids[0])
+        }
     }
 
     func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {

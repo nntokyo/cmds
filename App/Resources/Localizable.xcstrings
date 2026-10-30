@@ -1953,16 +1953,6 @@
         }
       }
     },
-    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nToggle sidebar ⌘B · Rename workspace ⇧⌘R": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R"
-          }
-        }
-      }
-    },
     "Next Workspace": {
       "localizations": {
         "ja": {
@@ -3482,6 +3472,93 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースごとの CPU・メモリを表示"
+          }
+        }
+      }
+    },
+    "Tile All Workspaces": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのワークスペースを並べて表示"
+          }
+        }
+      }
+    },
+    "Tile Selected Workspaces": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択したワークスペースを並べて表示"
+          }
+        }
+      }
+    },
+    "Show Single Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを1つだけ表示"
+          }
+        }
+      }
+    },
+    "Zoom Tile": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを拡大"
+          }
+        }
+      }
+    },
+    "Zoom Tile (⇧⌘↩)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを拡大（⇧⌘↩）"
+          }
+        }
+      }
+    },
+    "Show All Tiles (⇧⌘↩)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのタイルを表示（⇧⌘↩）"
+          }
+        }
+      }
+    },
+    "Showing %lld of %lld workspaces": {
+      "comment": "tiled view: more workspaces were selected than fit",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Showing %1$lld of %2$lld workspaces"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld 個中 %1$lld 個のワークスペースを表示しています"
+          }
+        }
+      }
+    },
+    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nToggle sidebar ⌘B · Rename workspace ⇧⌘R\nTile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R\n並べて表示：サイドバーで ⌘-クリック／⇧-クリック · すべてを並べて表示 ⌃⌘T · タイルを拡大 ⇧⌘↩"
           }
         }
       }

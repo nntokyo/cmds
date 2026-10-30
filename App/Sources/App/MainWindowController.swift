@@ -55,6 +55,9 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         usageSubscription = controller.usageChanges.sink { [weak self] in self?.sidebar.updateUsage() }
         installMouseMonitor()
         sidebar.onToggleCompact = { [weak self] in self?.toggleCompactSidebar() }
+        // The tiled view follows the sidebar's order and filter.
+        controller.visibleWorkspaceOrder = { [weak self] in self?.sidebar.visibleWorkspaceIDs ?? [] }
+        sidebar.onRowsChanged = { [weak self] in self?.controller.tileSourceDidChange() }
         refresh()
         if Self.storedCompact { setCompactSidebar(true, persist: false) }
     }

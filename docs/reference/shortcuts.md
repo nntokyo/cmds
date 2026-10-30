@@ -15,6 +15,17 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Next / previous workspace | ⇧⌘] / ⇧⌘[, also ⌃Tab / ⌃⇧Tab | Workspace |
 | Select workspace 1–9 | ⌘1 … ⌘9 | Workspace |
 
+## Tiled view
+
+| Action | Key | Menu |
+|---|---|---|
+| Tile several workspaces | ⌘-click / ⇧-click rows in the sidebar | – |
+| Tile all workspaces (toggle) | ⌃⌘T | View |
+| Tile the last selection again | – | View › Tile Selected Workspaces |
+| Show one workspace again | Esc (sidebar focused), ⌃⌘T | View › Show Single Workspace |
+| Zoom the active tile (toggle) | ⇧⌘↩ | View › Zoom Tile |
+| Move to the tile left / right / up / down | ⌥⌘← / ⌥⌘→ / ⌥⌘↑ / ⌥⌘↓ | Pane |
+
 ## Panes
 
 | Action | Key | Menu |
@@ -22,7 +33,7 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Split right | ⌘D | Pane |
 | Split down | ⇧⌘D | Pane |
 | Focus pane left / right / up / down | ⌥⌘← / ⌥⌘→ / ⌥⌘↑ / ⌥⌘↓ | Pane |
-| Zoom pane (toggle) | ⇧⌘↩ | View |
+| Zoom pane (toggle; zooms the tile in the tiled view) | ⇧⌘↩ | View |
 | Jump to latest attention pane | ⇧⌘U | Pane |
 | Close pane | ⌘W | File |
 | Open browser split | ⇧⌘B | File |

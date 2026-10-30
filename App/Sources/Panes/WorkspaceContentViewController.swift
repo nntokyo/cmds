@@ -35,11 +35,19 @@ final class WorkspaceContentViewController: NSViewController {
         self.view = view
     }
 
-    /// Rebuilds the view tree only when the workspace, structure or zoom changed; otherwise updates rings.
+    /// Tiles of the tiled view by workspace id (empty in the single view).
+    private var tileViews: [String: WorkspaceTileView] = [:]
+
+    /// Rebuilds the view tree only when the workspace(s), structure or zoom changed; otherwise updates rings.
     func render() {
+        if controller.isTiling {
+            renderTiles()
+            return
+        }
         guard let workspace = controller.selectedWorkspace, let root = workspace.root else {
             if renderedKey != "empty" {
                 renderedKey = "empty"
+                tileViews = [:]
                 install(emptyState)
             }
             return
@@ -47,27 +55,92 @@ final class WorkspaceContentViewController: NSViewController {
         let key = "\(workspace.id)|\(workspace.zoomedPaneID ?? "-")|\(root.structureKey)"
         if key != renderedKey {
             renderedKey = key
-            let isFirstResponderInside = (view.window?.firstResponder as? NSView)?.isDescendant(of: host) ?? false
-            if let zoomed = workspace.zoomedPaneID.flatMap({ workspace.panes[$0] }) {
-                install(zoomed.container)
-            } else {
-                install(makeView(for: root, in: workspace))
-            }
-            if isFirstResponderInside || view.window?.firstResponder === view.window {
-                workspace.focusedPane?.focus()
+            tileViews = [:]
+            rebuild { self.makeWorkspaceView(workspace, root: root) }
+        }
+        updateRings(of: workspace, active: true, tiled: false)
+    }
+
+    /// Tiled view: one `WorkspaceTileView` per tiled workspace in a `TileGridView`, or the zoomed tile alone.
+    /// Pane containers move into the tiles (terminal surfaces keep running; they get the new size on layout).
+    private func renderTiles() {
+        let tiles = controller.tiledWorkspaces
+        let zoomed = controller.tileZoomedWorkspaceID.flatMap(controller.workspace(id:))
+        let shown = zoomed.map { [$0] } ?? tiles
+        let structure = shown.map { "\($0.id)|\($0.zoomedPaneID ?? "-")|\($0.root?.structureKey ?? "")" }
+        let key = "tiles|\(zoomed?.id ?? "-")|\(controller.hiddenTileCount)|" + structure.joined(separator: ";")
+        if key != renderedKey {
+            renderedKey = key
+            rebuild {
+                var views: [String: WorkspaceTileView] = [:]
+                let tiles = shown.compactMap { workspace -> WorkspaceTileView? in
+                    guard let root = workspace.root else { return nil }
+                    let tile = WorkspaceTileView(workspaceID: workspace.id, content: self.makeWorkspaceView(workspace, root: root))
+                    let id = workspace.id
+                    tile.onActivate = { [weak self] in self?.activateTile(id) }
+                    tile.onToggleZoom = { [weak self] in
+                        self?.activateTile(id)
+                        self?.controller.toggleTileZoom()
+                    }
+                    views[id] = tile
+                    return tile
+                }
+                self.tileViews = views
+                if zoomed != nil, let only = tiles.first { return only }
+                return TileGridView(tiles: tiles, hidden: self.controller.hiddenTileCount,
+                                    loadRatios: { [weak self] ids, shape in self?.controller.tileRatios(for: ids, shape: shape) },
+                                    saveRatios: { [weak self] ratios, ids, shape in
+                                        self?.controller.setTileRatios(ratios, for: ids, shape: shape)
+                                    })
             }
         }
+        for workspace in shown {
+            let active = workspace.id == controller.selectedWorkspaceID
+            tileViews[workspace.id]?.update(with: workspace, active: active, zoomed: zoomed != nil)
+            updateRings(of: workspace, active: active, tiled: true)
+        }
+    }
+
+    /// Clicking a tile's header: its focused pane takes the keyboard.
+    private func activateTile(_ workspaceID: String) {
+        guard let workspace = controller.workspace(id: workspaceID),
+              let pane = workspace.focusedPane ?? workspace.orderedPanes.first else { return }
+        try? controller.focusPane(id: pane.id)
+    }
+
+    /// Replaces the hosted view; keeps the keyboard in the content area when it was there.
+    private func rebuild(_ make: () -> NSView) {
+        let isFirstResponderInside = (view.window?.firstResponder as? NSView)?.isDescendant(of: host) ?? false
+        install(make())
+        if isFirstResponderInside || view.window?.firstResponder === view.window {
+            controller.focusedPane?.focus()
+        }
+    }
+
+    private func makeWorkspaceView(_ workspace: Workspace, root: SplitNode) -> NSView {
+        if let zoomed = workspace.zoomedPaneID.flatMap({ workspace.panes[$0] }) { return zoomed.container }
+        return makeView(for: root, in: workspace)
+    }
+
+    /// Attention rings and the focus outline. In a tile the outline marks the focused pane of the active tile only;
+    /// a single-pane tile leaves attention to the tile's own ring.
+    private func updateRings(of workspace: Workspace, active: Bool, tiled: Bool) {
         let multiple = workspace.panes.count > 1 && workspace.zoomedPaneID == nil
         for pane in workspace.panes.values {
-            pane.container.attention = pane.attention
-            pane.container.showsFocus = multiple && pane.id == workspace.focusedPaneID
+            pane.container.attention = pane.attention && (!tiled || multiple)
+            pane.container.showsFocus = multiple && active && pane.id == workspace.focusedPaneID
         }
+    }
+
+    /// Panes on screen: the selected workspace's, or those of every tile.
+    private var visiblePanes: [Pane] {
+        let shown = controller.isTiling ? controller.tiledWorkspaces : controller.selectedWorkspace.map { [$0] } ?? []
+        return shown.flatMap { $0.panes.values }.filter { $0.container.window != nil }
     }
 
     /// Pane under a point in window coordinates.
     func paneID(atWindowPoint point: NSPoint) -> String? {
-        guard let workspace = controller.selectedWorkspace else { return nil }
-        for pane in workspace.panes.values where pane.container.window != nil {
+        for pane in visiblePanes {
             if pane.container.convert(pane.container.bounds, to: nil).contains(point) { return pane.id }
         }
         return nil
@@ -75,9 +148,8 @@ final class WorkspaceContentViewController: NSViewController {
 
     /// Nearest visible pane in `direction` from the focused pane.
     func neighbor(of paneID: String, direction: FocusDirection) -> String? {
-        guard let workspace = controller.selectedWorkspace else { return nil }
         var frames: [String: NSRect] = [:]
-        for pane in workspace.panes.values where pane.container.window != nil {
+        for pane in visiblePanes {
             frames[pane.id] = pane.container.convert(pane.container.bounds, to: nil)
         }
         guard let current = frames[paneID] else { return nil }

@@ -36,6 +36,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds reconnect [pane]` | Reconnect an SSH pane whose `ssh` exited |
 | `cmds remote-helper` | Print `cmds-remote.sh`, the sh client for servers reached through an SSH pane |
 | `cmds select <id\|index\|title>` | Select a workspace (index is 1-based like ⌘1…⌘9) |
+| `cmds tile [--all \| --off \| <ws>…]` | Tiled view: show the given workspaces (ids, indexes or titles; at least two) side by side, `--all` every workspace the sidebar shows (up to 9), `--off` one workspace again; without arguments prints what is tiled (`tiled (selected): *w2 w3`, `*` = active). See [Tiled view](../guide/workspaces-and-panes.md#tiled-view) |
 | `cmds close [ws]` / `cmds rename [ws] <title>` | Close / rename a workspace (default: current) |
 | `cmds split [right\|down] [--pane P] [--browser URL \| --ssh HOST [--remote-cwd DIR]] [--cwd DIR] [--no-focus] [-- cmd…]` | Split a pane; prints the new pane id (`--no-focus` keeps the keyboard where it is). Splitting an SSH pane without `--cwd`/command connects to the same host again |
 | `cmds panes [--workspace W]` | List panes |

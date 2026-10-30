@@ -93,10 +93,29 @@ final class AppController {
     /// Polls panes with a queued agent-session resume until their shell prompt is ready (AppController+AgentSessions).
     var resumeTimer: Timer?
 
+    // Tiled view (AppController+Tiling.swift).
+    var tileMode: TileMode = .off
+    /// The tile shown alone for now (⇧⌘↩ while tiled).
+    var tileZoomedWorkspaceID: String?
+    /// Divider positions per tiling set and grid shape (`tileRatiosKey`).
+    var tileRatios: [String: TileRatios] = [:]
+    /// The last chosen set (View › Tile Selected Workspaces brings it back).
+    var lastTileSelection: [String] = []
+    /// Workspace ids in sidebar order with its filter applied (set by the window); nil = all workspaces.
+    var visibleWorkspaceOrder: (() -> [String])?
+
     var selectedWorkspace: Workspace? { selectedWorkspaceID.flatMap(workspace(id:)) }
     var focusedPane: Pane? { selectedWorkspace?.focusedPane }
 
     func workspace(id: String) -> Workspace? { workspaces.first { $0.id == id } }
+
+    /// Every selection change goes through here: choosing a workspace outside the tiled set leaves the tiled view.
+    func setSelectedWorkspace(_ id: String?) {
+        if id != selectedWorkspaceID { tileZoomedWorkspaceID = nil }
+        // Any workspace of the set (also one beyond the 9-tile cap, which then takes the last tile) keeps tiling.
+        if let id, isTiling, !tileCandidates.contains(id) { tileMode = .off }
+        selectedWorkspaceID = id
+    }
 
     func pane(id: String) -> Pane? {
         for workspace in workspaces { if let pane = workspace.panes[id] { return pane } }
@@ -357,7 +376,7 @@ final class AppController {
         workspace.workingDirectory = directory
         workspace.gitBranch = GitInfo.branch(at: directory)
         workspaces.append(workspace)
-        selectedWorkspaceID = workspace.id
+        setSelectedWorkspace(workspace.id)
         emit(.workspaces)
         focusSelectedPaneView()
         return workspace.info(selected: true)
@@ -373,7 +392,7 @@ final class AppController {
         workspace.focusedPaneID = pane.id
         updateLocation(of: workspace, from: pane)
         workspaces.append(workspace)
-        selectedWorkspaceID = workspace.id
+        setSelectedWorkspace(workspace.id)
         try connectSSH(pane: pane, emitChange: false)
         emit(.workspaces)
         focusSelectedPaneView()
@@ -383,7 +402,7 @@ final class AppController {
     func selectWorkspace(id: String) throws {
         let workspace = try resolveWorkspace(id)
         guard workspace.id != selectedWorkspaceID else { return }
-        selectedWorkspaceID = workspace.id
+        setSelectedWorkspace(workspace.id)
         if isWindowKey, let pane = workspace.focusedPane { clearAttention(pane) }
         emit(.workspaces)
         focusSelectedPaneView()
@@ -394,9 +413,16 @@ final class AppController {
         guard let index = workspaces.firstIndex(where: { $0 === workspace }) else { return }
         workspace.panes.values.forEach { $0.tearDown() }
         workspace.panes.removeAll()
+        let tiled = tiledWorkspaceIDs
         workspaces.remove(at: index)
+        workspaceDidClose(workspace.id)
         if selectedWorkspaceID == workspace.id {
-            selectedWorkspaceID = workspaces.isEmpty ? nil : workspaces[min(index, workspaces.count - 1)].id
+            // Stay in the tiled view when another tile is left: the next tile takes the keyboard.
+            let remainingTiles = tiledWorkspaceIDs
+            let next = tiled.firstIndex(of: workspace.id).flatMap { position in
+                remainingTiles.isEmpty ? nil : remainingTiles[min(position, remainingTiles.count - 1)]
+            }
+            setSelectedWorkspace(next ?? (workspaces.isEmpty ? nil : workspaces[min(index, workspaces.count - 1)].id))
         }
         updateDockBadge()
         emit(.workspaces)
@@ -476,7 +502,7 @@ final class AppController {
         let pane = try resolvePane(id)
         guard let workspace = workspace(id: pane.workspaceID) else { return }
         let changedWorkspace = workspace.id != selectedWorkspaceID
-        selectedWorkspaceID = workspace.id
+        setSelectedWorkspace(workspace.id)
         applyFocus(pane, in: workspace)
         clearAttention(pane)
         emit(changedWorkspace ? .workspaces : .workspace(id: workspace.id))
@@ -651,7 +677,7 @@ final class AppController {
         guard let workspace = workspace(id: pane.workspaceID), !pane.isClosing else { return }
         guard workspace.focusedPaneID != pane.id || pane.attention || workspace.id != selectedWorkspaceID else { return }
         let changedWorkspace = workspace.id != selectedWorkspaceID
-        selectedWorkspaceID = workspace.id
+        setSelectedWorkspace(workspace.id)
         applyFocus(pane, in: workspace)
         clearAttention(pane)
         emit(changedWorkspace ? .workspaces : .workspace(id: workspace.id))
@@ -837,13 +863,16 @@ final class AppController {
                 focusedPaneIndex: workspace.focusedPaneID.flatMap { root.paneIDs.firstIndex(of: $0) },
                 agentSessions: agentSessions.isEmpty ? nil : agentSessions)
         }
-        return SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
+        var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
+        saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
+        return state
     }
 
     /// Recreates workspaces from a saved session (cwd + layout; running programs are not restored).
     func restore(_ state: SessionState) {
         let restored = restoreWorkspaces(state, resumeMode: AgentResumeSettings.mode)
         selectedWorkspaceID = restored[safe: state.selectedIndex ?? 0]?.id ?? workspaces.first?.id
+        restoreTiling(state, workspaces: restored)
         emit(.workspaces)
         focusSelectedPaneView()
     }

@@ -17,6 +17,9 @@ First version, to be released as 0.1.0 (`MARKETING_VERSION` 0.1.0, build 1). Dev
   terminfo and shell-integration resources bundled; `TERM=xterm-ghostty`.
 - Workspaces as vertical tabs (drag to reorder, rename, ⌘1…⌘9) with nested right/down splits, draggable dividers,
   pane zoom and directional focus.
+- Tiled view: several workspaces side by side as live tiles (sidebar ⌘-click / ⇧-click, View › Tile All
+  Workspaces ⌃⌘T, `cmds tile`, `view.tile`), automatic grid up to 9, draggable and remembered dividers, tile
+  headers with agent state and attention ring, tile zoom (⇧⌘↩); saved in the session.
 - Sidebar rows with git branch, directory, listening ports, CPU and memory per workspace (processes attributed by
   environment, pane tty and ancestry), latest notification text and attention dot; footer with Mac-wide CPU, memory
   and memory pressure; compact 52 pt rail (⌃⌘S).

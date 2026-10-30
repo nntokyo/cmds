@@ -179,7 +179,13 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func focusRight(_ sender: Any?) { windowController?.focusNeighbor(.right) }
     @objc func focusUp(_ sender: Any?) { windowController?.focusNeighbor(.up) }
     @objc func focusDown(_ sender: Any?) { windowController?.focusNeighbor(.down) }
-    @objc func toggleZoom(_ sender: Any?) { try? controller.toggleZoom() }
+    /// ⇧⌘↩: zooms the active tile in the tiled view, else the focused pane.
+    @objc func toggleZoom(_ sender: Any?) {
+        if controller.isTiling { controller.toggleTileZoom() } else { try? controller.toggleZoom() }
+    }
+    @objc func toggleTileAll(_ sender: Any?) { controller.toggleTileAll() }
+    @objc func tileSelected(_ sender: Any?) { controller.restoreTileSelection() }
+    @objc func showSingleWorkspace(_ sender: Any?) { try? controller.setTiling(.off) }
     @objc func jumpToAttention(_ sender: Any?) { controller.jumpToLatestAttention() }
 
     // MARK: Browser
@@ -223,6 +229,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             Browser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]
             Open in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it
             Toggle sidebar ⌘B · Rename workspace ⇧⌘R
+            Tile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩
             """)
         if let window = windowController?.window { alert.beginSheetModal(for: window) } else { alert.runModal() }
     }
@@ -292,8 +299,21 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             menuItem.state = windowController?.sidebar.groupsByProject == true ? .on : .off
             return true
         case #selector(toggleZoom(_:)):
+            if controller.isTiling {
+                menuItem.title = String(localized: "Zoom Tile")
+                menuItem.state = controller.tileZoomedWorkspaceID != nil ? .on : .off
+                return true
+            }
+            menuItem.title = String(localized: "Zoom Pane")
             menuItem.state = controller.selectedWorkspace?.zoomedPaneID != nil ? .on : .off
             return (controller.selectedWorkspace?.panes.count ?? 0) > 1
+        case #selector(toggleTileAll(_:)):
+            menuItem.state = controller.isTiling && controller.tileMode == .all ? .on : .off
+            return controller.isTiling || controller.workspaces.count >= 2
+        case #selector(tileSelected(_:)):
+            return controller.canRestoreTileSelection
+        case #selector(showSingleWorkspace(_:)):
+            return controller.isTiling
         case #selector(selectWorkspace(_:)):
             return controller.workspaces.indices.contains(menuItem.tag)
         case #selector(jumpToAttention(_:)):

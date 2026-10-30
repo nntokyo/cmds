@@ -190,6 +190,28 @@ final class APIServer {
         case "workspace.rename":
             try controller.renameWorkspace(id: try params.string("id"), title: try params.required("title"))
 
+        case "view.tile":
+            // No params: report only. `off`, `all` or `workspaces` (ids, ≥ 2) switch the tiled view.
+            let off = try params.bool("off") ?? false
+            let all = try params.bool("all") ?? false
+            let ids = try params.strings("workspaces")
+            if [off, all, ids != nil].filter({ $0 }).count > 1 {
+                throw RPCError.invalidParams("give one of off, all or workspaces")
+            }
+            if off {
+                try controller.setTiling(.off)
+            } else if all {
+                guard controller.workspaces.count >= 2 else { throw RPCError.invalidParams("tiling needs at least two workspaces") }
+                try controller.setTiling(.all, active: try params.string("active"))
+            } else if let ids {
+                guard Set(ids).count >= 2 else { throw RPCError.invalidParams("workspaces must name at least two workspaces") }
+                try controller.setTiling(.selected(ids), active: try params.string("active"))
+            }
+            if let zoom = try params.bool("zoom"), zoom != (controller.tileZoomedWorkspaceID != nil), controller.isTiling {
+                controller.toggleTileZoom()
+            }
+            return try .from(controller.tileStatus)
+
         case "pane.list":
             return try .from(controller.listPanes(workspaceID: try params.string("workspace")))
         case "pane.split":
@@ -345,6 +367,18 @@ private struct Params {
             }
             return parsed
         case let other?: return other
+        }
+    }
+
+    func strings(_ key: String) throws -> [String]? {
+        switch value?[key] {
+        case nil, .null?: return nil
+        case .array(let items)?:
+            return try items.map { item in
+                guard case .string(let string) = item else { throw RPCError.invalidParams("\(key) must be an array of strings") }
+                return string
+            }
+        default: throw RPCError.invalidParams("\(key) must be an array of strings")
         }
     }
 

@@ -163,6 +163,38 @@ extension CLI {
             let id = try resolveWorkspace(ctx, ctx.args.positionals[0])
             try ctx.call("workspace.select", ["id": .string(id)])
         },
+        Command(name: "tile", usage: "tile [--all | --off | <workspace>…]",
+                summary: "Show several workspaces side by side (tiled view), or one again.",
+                details: """
+                    Workspaces are ids, 1-based indexes or titles (as for `cmds select`); give at least two. --all tiles
+                    every workspace the sidebar shows (its filter applies, up to 9). --off shows only the active
+                    workspace again. Without arguments prints what is tiled. Same as ⌘-click in the sidebar and
+                    View › Tile All Workspaces (⌃⌘T).
+                    """,
+                flags: ["all", "off"]) { ctx in
+            let all = ctx.args.has("all")
+            let off = ctx.args.has("off")
+            let positionals = ctx.args.positionals
+            if [all, off, !positionals.isEmpty].filter({ $0 }).count > 1 {
+                throw CLIError.usage("give either --all, --off or workspaces")
+            }
+            var params: [String: JSONValue?] = [:]
+            if all { params["all"] = .bool(true) }
+            if off { params["off"] = .bool(true) }
+            if !positionals.isEmpty {
+                guard positionals.count >= 2 else { throw CLIError.usage("tiling needs at least two workspaces") }
+                params["workspaces"] = .array(try positionals.map { .string(try resolveWorkspace(ctx, $0)) })
+            }
+            let result = try ctx.call("view.tile", params)
+            if ctx.json { return ctx.printJSON(result) }
+            let status = try perform { try result.decode(TileStatus.self) }
+            guard status.mode != .off else { return print("not tiled") }
+            var line = "tiled (\(status.mode.rawValue)): " + status.workspaces.map { $0 == status.active ? "*\($0)" : $0 }
+                .joined(separator: " ")
+            if let zoomed = status.zoomed { line += "  zoomed \(zoomed)" }
+            if status.hidden > 0 { line += "  (\(status.hidden) more not shown)" }
+            print(line)
+        },
         Command(name: "close", usage: "close [workspace]", summary: "Close a workspace (default: the current one).") { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds close [workspace]")
             let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.envWorkspace
