@@ -56,7 +56,7 @@ final class MacBrowser {
 
     private static func describe(_ error: NWError) -> String {
         if case .dns(let code) = error, code == -65570 /* kDNSServiceErr_PolicyDenied */ {
-            return "Local network access is off. Enable it in Settings › Privacy › Local Network."
+            return String(localized: "Local network access is off. Enable it in Settings › Privacy & Security › Local Network.")
         }
         return error.localizedDescription
     }

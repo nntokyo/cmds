@@ -11,7 +11,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 sync() { # catalog, intermediates dir of the target
-    files=$(find "$2" -name '*.stringsdata' 2>/dev/null | sort)
+    files=$(find "$2" -path '*/arm64/*' -name '*.stringsdata' ! -name 'ExtractedAppShortcutsMetadata*' 2>/dev/null | sort)
     if [ -z "$files" ]; then
         echo "skip $1: no .stringsdata under $2 (build first)"
         return
@@ -21,5 +21,5 @@ sync() { # catalog, intermediates dir of the target
     echo "synced $1"
 }
 
-sync App/Resources/Localizable.xcstrings build/dd/Build/Intermediates.noindex/cmds.build
-sync iOS/Resources/Localizable.xcstrings build/dd-ios/Build/Intermediates.noindex/CmdsCompanion.build
+sync App/Resources/Localizable.xcstrings build/dd/Build/Intermediates.noindex/cmds.build/Debug/cmds.build
+sync iOS/Resources/Localizable.xcstrings build/dd-ios/Build/Intermediates.noindex/cmds.build/Debug-iphonesimulator/CmdsCompanion.build

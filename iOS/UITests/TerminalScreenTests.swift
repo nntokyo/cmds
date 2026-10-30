@@ -19,7 +19,7 @@ final class TerminalScreenTests: XCTestCase {
         let workspace = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "api-server")).firstMatch
         XCTAssertTrue(workspace.waitForExistence(timeout: 10))
         workspace.tap()
-        let screen = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Terminal screen")).firstMatch
+        let screen = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", "terminalScreen")).firstMatch
         XCTAssertTrue(screen.waitForExistence(timeout: 10))
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 5))
         Thread.sleep(forTimeInterval: 1.5)

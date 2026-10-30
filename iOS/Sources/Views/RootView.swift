@@ -55,7 +55,7 @@ struct ConnectView: View {
                     if browser.macs.isEmpty {
                         HStack(spacing: 10) {
                             if browser.isBrowsing { ProgressView() }
-                            Text(browser.error ?? "Looking for Macs running cmds…")
+                            Text(browser.error ?? String(localized: "Looking for Macs running cmds…"))
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -265,7 +265,7 @@ struct PairingSheet: View {
                     .font(.footnote)
                     .foregroundStyle(.green)
             }
-            TextField("000000", text: $code)
+            TextField("000000" as String, text: $code)
                 .accessibilityIdentifier("pairingCode")
                 .font(.system(size: 34, weight: .semibold, design: .monospaced))
                 .multilineTextAlignment(.center)
@@ -352,16 +352,17 @@ struct TransportModeMenu: View {
                     TransportMode.set(mode)
                     if let target = client.target { client.connect(to: target) }
                 } label: {
+                    // Debug only: not localized, and UI test drivers tap these labels.
                     if client.diagnostics.mode == mode {
-                        Label("Transport: \(mode.rawValue)", systemImage: "checkmark")
+                        Label { Text(verbatim: "Transport: \(mode.rawValue)") } icon: { Image(systemName: "checkmark") }
                     } else {
-                        Text("Transport: \(mode.rawValue)")
+                        Text(verbatim: "Transport: \(mode.rawValue)")
                     }
                 }
                 .accessibilityIdentifier("transport.\(mode.rawValue)")
             }
         } label: {
-            Label("Transport (Debug)", systemImage: "ladybug")
+            Label { Text(verbatim: "Transport (Debug)") } icon: { Image(systemName: "ladybug") }
         }
         .accessibilityIdentifier("debugTransport")
     }

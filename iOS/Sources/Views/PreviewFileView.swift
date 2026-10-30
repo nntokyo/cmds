@@ -10,7 +10,7 @@ struct PreviewFileView: View {
     let pane: PaneInfo
 
     private var name: String {
-        pane.file.map { ($0 as NSString).lastPathComponent } ?? (pane.title.isEmpty ? "File" : pane.title)
+        pane.file.map { ($0 as NSString).lastPathComponent } ?? (pane.title.isEmpty ? String(localized: "File") : pane.title)
     }
     private var mime: String { SyncFile.mimeType(forFileName: name) }
     private var viewable: Bool { PreviewFileStore.isViewable(mime: mime) }
@@ -49,7 +49,7 @@ struct PreviewFileView: View {
     @ViewBuilder
     private var content: some View {
         if !viewable {
-            unavailable("No preview on the phone", detail: "\(name) is shown on the Mac.")
+            unavailable(String(localized: "No preview on the phone"), detail: String(localized: "\(name) is shown on the Mac."))
         } else {
             switch client.previewFiles.entry(for: pane.id) {
             case .loaded(_, let mime, let data)?:
@@ -58,7 +58,7 @@ struct PreviewFileView: View {
                 } else if let image = UIImage(data: data) {
                     ZoomableImage(image: image)
                 } else {
-                    unavailable("Cannot show this image", detail: name)
+                    unavailable(String(localized: "Cannot show this image"), detail: name)
                 }
             case .loading(let received, let size)?:
                 VStack(spacing: 8) {
@@ -71,10 +71,11 @@ struct PreviewFileView: View {
                     }
                 }
             case .tooLarge?:
-                unavailable("Too large for the phone",
-                            detail: "Files over \(SyncFile.maxBytes / 1024 / 1024) MB are shown on the Mac only.")
+                let megabytes = SyncFile.maxBytes / 1024 / 1024
+                unavailable(String(localized: "Too large for the phone"),
+                            detail: String(localized: "Files over \(megabytes) MB are shown on the Mac only."))
             case .failed(let message)?:
-                unavailable("Could not load the file", detail: message)
+                unavailable(String(localized: "Could not load the file"), detail: message)
             case nil:
                 if client.status.isLive { ProgressView() } else { unavailable(name, detail: client.status.label) }
             }

@@ -13,7 +13,7 @@ struct PaneView: View {
                 PreviewFileView(pane: pane)
             } else if pane.kind == .browser {
                 ContentUnavailableView {
-                    Label(pane.title.isEmpty ? "Browser" : pane.title, systemImage: "globe")
+                    Label(pane.title.isEmpty ? String(localized: "Browser") : pane.title, systemImage: "globe")
                 } description: {
                     if let url = pane.url { Text(url) }
                 }
@@ -85,7 +85,7 @@ struct TerminalScreenView: View {
             } else {
                 VStack(spacing: 8) {
                     ProgressView()
-                    Text(client.status.isLive ? "Waiting for screen…" : client.status.label)
+                    Text(client.status.isLive ? String(localized: "Waiting for screen…") : client.status.label)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -111,6 +111,7 @@ struct TerminalScreenView: View {
         .onKeyPress(phases: [.down, .repeat], action: handleHardwareKey)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Terminal screen")
+        .accessibilityIdentifier("terminalScreen")
         .accessibilityValue(snapshot?.lines.joined(separator: "\n") ?? "")
     }
 
@@ -181,25 +182,28 @@ struct TerminalInputBar: View {
     @AppStorage("inputMode") private var lineMode = false
 
     private struct KeyButton: Identifiable {
+        /// Also the accessibility identifier (UI test drivers tap keys by it, e.g. `tap:left`).
         let id: String
         let label: String
+        /// What VoiceOver reads.
+        let spoken: String
         let key: SyncKey
         var systemImage: String?
     }
 
     private let keys: [KeyButton] = [
-        .init(id: "esc", label: "esc", key: .escape),
-        .init(id: "tab", label: "tab", key: .tab),
-        .init(id: "left", label: "←", key: .left, systemImage: "arrow.left"),
-        .init(id: "right", label: "→", key: .right, systemImage: "arrow.right"),
-        .init(id: "up", label: "↑", key: .up, systemImage: "arrow.up"),
-        .init(id: "down", label: "↓", key: .down, systemImage: "arrow.down"),
-        .init(id: "home", label: "home", key: .home),
-        .init(id: "end", label: "end", key: .end),
-        .init(id: "ctrlc", label: "^C", key: .ctrlC),
-        .init(id: "ctrld", label: "^D", key: .ctrlD),
-        .init(id: "bksp", label: "⌫", key: .backspace, systemImage: "delete.left"),
-        .init(id: "enter", label: "⏎", key: .enter, systemImage: "return"),
+        .init(id: "esc", label: "esc", spoken: String(localized: "Escape"), key: .escape),
+        .init(id: "tab", label: "tab", spoken: String(localized: "Tab"), key: .tab),
+        .init(id: "left", label: "←", spoken: String(localized: "Left"), key: .left, systemImage: "arrow.left"),
+        .init(id: "right", label: "→", spoken: String(localized: "Right"), key: .right, systemImage: "arrow.right"),
+        .init(id: "up", label: "↑", spoken: String(localized: "Up"), key: .up, systemImage: "arrow.up"),
+        .init(id: "down", label: "↓", spoken: String(localized: "Down"), key: .down, systemImage: "arrow.down"),
+        .init(id: "home", label: "home", spoken: String(localized: "Home"), key: .home),
+        .init(id: "end", label: "end", spoken: String(localized: "End"), key: .end),
+        .init(id: "ctrlc", label: "^C", spoken: String(localized: "Control-C"), key: .ctrlC),
+        .init(id: "ctrld", label: "^D", spoken: String(localized: "Control-D"), key: .ctrlD),
+        .init(id: "bksp", label: "⌫", spoken: String(localized: "Delete"), key: .backspace, systemImage: "delete.left"),
+        .init(id: "enter", label: "⏎", spoken: String(localized: "Return"), key: .enter, systemImage: "return"),
     ]
 
     var body: some View {
@@ -209,7 +213,7 @@ struct TerminalInputBar: View {
                     Button {
                         ctrlLatched.toggle()
                     } label: {
-                        Text("ctrl").font(.callout.monospaced())
+                        Text(verbatim: "ctrl").font(.callout.monospaced())
                             .frame(minWidth: 40, minHeight: 32)
                     }
                     .buttonStyle(.bordered)
@@ -229,7 +233,8 @@ struct TerminalInputBar: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(.secondary)
-                        .accessibilityLabel(k.id)
+                        .accessibilityLabel(k.spoken)
+                        .accessibilityIdentifier(k.id)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -253,7 +258,7 @@ struct TerminalInputBar: View {
                     lineField
                 } else {
                     DirectInputField(
-                        placeholder: ctrlLatched ? "ctrl + letter" : "Keys go straight to the terminal",
+                        placeholder: ctrlLatched ? String(localized: "ctrl + letter") : String(localized: "Keys go straight to the terminal"),
                         ctrlLatched: $ctrlLatched,
                         isFocused: $directFocused,
                         onText: { client.sendText($0, to: paneID) },

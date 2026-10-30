@@ -127,7 +127,8 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
         do {
             listener = try SyncLoopback.Listener()
         } catch {
-            return fail("Bluetooth relay: \(error)")
+            let detail = "\(error)"
+            return fail(String(localized: "Could not start the Bluetooth relay: \(detail)"))
         }
         self.listener = listener
         // The first local connection is ours (made right below); the listener then closes.

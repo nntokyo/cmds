@@ -24,14 +24,16 @@ enum ConnectionStatus: Equatable {
 
     var label: String {
         switch self {
-        case .idle: return "Not connected"
-        case .connecting: return "Connecting…"
-        case .authenticating: return "Authenticating…"
-        case .connected: return "Connected"
-        case .reconnecting(let s, _): return "Reconnecting in \(Int(s.rounded(.up)))s"
-        case .pairingRequired, .checkingIdentity, .confirmIdentity, .enterCode: return "Pairing required"
-        case .identityMismatch: return "Mac identity changed"
-        case .failed: return "Disconnected"
+        case .idle: return String(localized: "Not connected")
+        case .connecting: return String(localized: "Connecting…")
+        case .authenticating: return String(localized: "Authenticating…")
+        case .connected: return String(localized: "Connected")
+        case .reconnecting(let s, _):
+            let seconds = Int(s.rounded(.up))
+            return String(localized: "Reconnecting in \(seconds)s")
+        case .pairingRequired, .checkingIdentity, .confirmIdentity, .enterCode: return String(localized: "Pairing required")
+        case .identityMismatch: return String(localized: "Mac identity changed")
+        case .failed: return String(localized: "Disconnected")
         }
     }
 
@@ -471,7 +473,7 @@ final class CompanionClient {
                 try? await Task.sleep(for: .seconds(10))
                 guard let self, !Task.isCancelled else { return }
                 if Date().timeIntervalSince(self.lastInbound) > 30 {
-                    self.scheduleReconnect(reason: "Mac stopped responding")
+                    self.scheduleReconnect(reason: String(localized: "The Mac stopped responding."))
                     self.transport?.onEvent = nil
                     self.transport?.close()
                     self.transport = nil

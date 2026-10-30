@@ -50,7 +50,7 @@ final class DeviceDriverTests: XCTestCase {
                 Thread.sleep(forTimeInterval: Double(argument) ?? 1)
             case "pinch":
                 let element = app.descendants(matching: .any).matching(
-                    NSPredicate(format: "label == %@", "Terminal screen")).firstMatch
+                    NSPredicate(format: "identifier == %@", "terminalScreen")).firstMatch
                 XCTAssertTrue(element.waitForExistence(timeout: 5), "no terminal screen")
                 let scale = CGFloat(Double(argument) ?? 2)
                 element.pinch(withScale: scale, velocity: scale >= 1 ? 1 : -1)

@@ -1,0 +1,1540 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ is shown on the Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@はMacに表示されています。"
+          }
+        }
+      }
+    },
+    "%@ limits: %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ limits: %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@の利用上限：%2$@"
+          }
+        }
+      }
+    },
+    "%@ of %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ of %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "%@, idle" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@、アイドル"
+          }
+        }
+      }
+    },
+    "Active on Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macで使用中"
+          }
+        }
+      }
+    },
+    "Add this line to ~/.ssh/authorized_keys of that user on the relay host (replace an older cmds line for this device: it lists the relay ports of all your Macs). It only allows forwarding to those ports: no shell. The private key never leaves this device." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この行を中継ホストの該当ユーザの ~/.ssh/authorized_keys に追加してください（このデバイス用の古いcmdsの行があれば置き換えてください。この行にはすべてのMacの中継ポートが含まれます）。許可されるのはそれらのポートへの転送だけで、シェルは使えません。秘密鍵がこのデバイスの外に出ることはありません。"
+          }
+        }
+      }
+    },
+    "Allow camera access for cmds in Settings, or pair without the camera." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定でcmdsのカメラへのアクセスを許可するか、カメラを使わずにペアリングしてください。"
+          }
+        }
+      }
+    },
+    "Authenticating…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "認証中…"
+          }
+        }
+      }
+    },
+    "Bad message from the Mac: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macから不正なメッセージを受信しました：%@"
+          }
+        }
+      }
+    },
+    "Bluetooth" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetooth"
+          }
+        }
+      }
+    },
+    "Bluetooth access is off for cmds (Settings › Privacy & Security › Bluetooth)." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmdsのBluetoothへのアクセスがオフになっています（設定 › プライバシーとセキュリティ › Bluetooth）。"
+          }
+        }
+      }
+    },
+    "Bluetooth is not available on this device." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスではBluetoothを利用できません。"
+          }
+        }
+      }
+    },
+    "Bluetooth is off." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetoothがオフになっています。"
+          }
+        }
+      }
+    },
+    "Bluetooth needs a paired connection." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetoothを使うにはペアリング済みの接続が必要です。"
+          }
+        }
+      }
+    },
+    "Bluetooth: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetooth：%@"
+          }
+        }
+      }
+    },
+    "Browser" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ブラウザ"
+          }
+        }
+      }
+    },
+    "CPU" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CPU"
+          }
+        }
+      }
+    },
+    "CPU %@, memory %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "CPU %1$@, memory %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CPU %1$@、メモリ %2$@"
+          }
+        }
+      }
+    },
+    "Camera Access Is Off" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カメラへのアクセスがオフです"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセル"
+          }
+        }
+      }
+    },
+    "Cannot show this image" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この画像は表示できません"
+          }
+        }
+      }
+    },
+    "Check Connection" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続を確認"
+          }
+        }
+      }
+    },
+    "Compare with your Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macと照合"
+          }
+        }
+      }
+    },
+    "Connect" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続"
+          }
+        }
+      }
+    },
+    "Connect to Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macに接続"
+          }
+        }
+      }
+    },
+    "Connected" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続済み"
+          }
+        }
+      }
+    },
+    "Connecting…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接続中…"
+          }
+        }
+      }
+    },
+    "Control-C" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control-C"
+          }
+        }
+      }
+    },
+    "Control-D" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Control-D"
+          }
+        }
+      }
+    },
+    "Copy" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コピー"
+          }
+        }
+      }
+    },
+    "Could not load the file" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルを読み込めませんでした"
+          }
+        }
+      }
+    },
+    "Could not open the Bluetooth channel to the Mac (%@)." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacとのBluetoothチャネルを開けませんでした（%@）。"
+          }
+        }
+      }
+    },
+    "Could not read the Mac's identity: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macの識別情報を読み取れませんでした：%@"
+          }
+        }
+      }
+    },
+    "Could not start the Bluetooth relay: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bluetoothの中継を開始できませんでした：%@"
+          }
+        }
+      }
+    },
+    "Default port %@." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デフォルトのポートは%@です。"
+          }
+        }
+      }
+    },
+    "Delete" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "削除"
+          }
+        }
+      }
+    },
+    "Demo data" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デモデータ"
+          }
+        }
+      }
+    },
+    "Direct mode" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダイレクトモード"
+          }
+        }
+      }
+    },
+    "Disconnected" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "切断されました"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了"
+          }
+        }
+      }
+    },
+    "Down" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下"
+          }
+        }
+      }
+    },
+    "Enable iOS Sync in cmds on your Mac. The first connection to a Mac needs its pairing code." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macのcmdsで「iOS同期」を有効にしてください。Macに初めて接続するときはペアリングコードが必要です。"
+          }
+        }
+      }
+    },
+    "End" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エンド"
+          }
+        }
+      }
+    },
+    "Enter the 6-digit code shown in cmds on “%@”." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”のcmdsに表示されている6桁のコードを入力してください。"
+          }
+        }
+      }
+    },
+    "Escape" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エスケープ"
+          }
+        }
+      }
+    },
+    "File" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル"
+          }
+        }
+      }
+    },
+    "Files over %lld MB are shown on the Mac only." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld MBを超えるファイルはMacでのみ表示されます。"
+          }
+        }
+      }
+    },
+    "First connection to %@. Compare this fingerprint with the relay host's key (on the relay: ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub)." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@への初めての接続です。このフィンガープリントを中継ホストの鍵と照合してください（中継ホストで ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub を実行）。"
+          }
+        }
+      }
+    },
+    "Focus Pane on Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macでペインにフォーカス"
+          }
+        }
+      }
+    },
+    "Forget Host Key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホスト鍵を削除"
+          }
+        }
+      }
+    },
+    "Home" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホーム"
+          }
+        }
+      }
+    },
+    "Host key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホスト鍵"
+          }
+        }
+      }
+    },
+    "Host name or address" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホスト名またはアドレス"
+          }
+        }
+      }
+    },
+    "Image" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像"
+          }
+        }
+      }
+    },
+    "It Doesn't Match" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一致していない"
+          }
+        }
+      }
+    },
+    "It Matches" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一致している"
+          }
+        }
+      }
+    },
+    "It Matches — Trust This Host" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一致している — このホストを信頼"
+          }
+        }
+      }
+    },
+    "Keys go straight to the terminal" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キー入力はそのままターミナルに送られます"
+          }
+        }
+      }
+    },
+    "Left" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "左"
+          }
+        }
+      }
+    },
+    "Line mode" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "行モード"
+          }
+        }
+      }
+    },
+    "Local network" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ローカルネットワーク"
+          }
+        }
+      }
+    },
+    "Local network access is off. Enable it in Settings › Privacy & Security › Local Network." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ローカルネットワークへのアクセスがオフになっています。設定 › プライバシーとセキュリティ › ローカルネットワークでオンにしてください。"
+          }
+        }
+      }
+    },
+    "Looking for Macs running cmds…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmdsが動作しているMacを探しています…"
+          }
+        }
+      }
+    },
+    "Mac CPU %@, memory %@, pressure %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Mac CPU %1$@, memory %2$@, pressure %3$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacのCPU %1$@、メモリ %2$@、メモリプレッシャー %3$@"
+          }
+        }
+      }
+    },
+    "Mac identity %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macの識別情報 %@"
+          }
+        }
+      }
+    },
+    "Mac identity changed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macの識別情報が変更されました"
+          }
+        }
+      }
+    },
+    "Manual" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "手動"
+          }
+        }
+      }
+    },
+    "Mem" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリ"
+          }
+        }
+      }
+    },
+    "Mem · %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メモリ · %@"
+          }
+        }
+      }
+    },
+    "More" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他"
+          }
+        }
+      }
+    },
+    "Needs attention" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要確認"
+          }
+        }
+      }
+    },
+    "No Camera" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カメラがありません"
+          }
+        }
+      }
+    },
+    "No panes" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインがありません"
+          }
+        }
+      }
+    },
+    "No preview on the phone" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスではプレビューできません"
+          }
+        }
+      }
+    },
+    "No workspaces" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースがありません"
+          }
+        }
+      }
+    },
+    "Not connected" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未接続"
+          }
+        }
+      }
+    },
+    "On the Mac, choose cmds › Pair iPhone/iPad… and scan the QR code it shows." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macでcmds › 「iPhone/iPadとペアリング…」を選び、表示されたQRコードをスキャンしてください。"
+          }
+        }
+      }
+    },
+    "On the Mac, choose cmds › Pair iPhone/iPad…, then scan the QR code it shows." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macでcmds › 「iPhone/iPadとペアリング…」を選び、表示されたQRコードをスキャンしてください。"
+          }
+        }
+      }
+    },
+    "On this network" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このネットワーク上"
+          }
+        }
+      }
+    },
+    "Open in Safari" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Safariで開く"
+          }
+        }
+      }
+    },
+    "Open on Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macで開く"
+          }
+        }
+      }
+    },
+    "Pair" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリング"
+          }
+        }
+      }
+    },
+    "Pair Without Camera" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カメラを使わずにペアリング"
+          }
+        }
+      }
+    },
+    "Pair with Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macとペアリング"
+          }
+        }
+      }
+    },
+    "Pair with “%@”" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”とペアリング"
+          }
+        }
+      }
+    },
+    "Pair without the camera: pick the Mac and compare its identity." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カメラを使わずにペアリングします：Macを選んで識別情報を照合してください。"
+          }
+        }
+      }
+    },
+    "Paired" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリング済み"
+          }
+        }
+      }
+    },
+    "Pairing required" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングが必要です"
+          }
+        }
+      }
+    },
+    "Pairing with “%@”…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”とペアリング中…"
+          }
+        }
+      }
+    },
+    "Pane %lld" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペイン%lld"
+          }
+        }
+      }
+    },
+    "Point the camera at the QR code in cmds › Pair iPhone/iPad… on your Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macのcmds › 「iPhone/iPadとペアリング…」に表示されたQRコードにカメラを向けてください。"
+          }
+        }
+      }
+    },
+    "Re-pair" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングし直す"
+          }
+        }
+      }
+    },
+    "Reading the Mac's identity…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macの識別情報を読み取っています…"
+          }
+        }
+      }
+    },
+    "Recent" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近使った項目"
+          }
+        }
+      }
+    },
+    "Reconnecting in %llds" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld秒後に再接続"
+          }
+        }
+      }
+    },
+    "Relay Host" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホスト"
+          }
+        }
+      }
+    },
+    "Relay Host Key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストの鍵"
+          }
+        }
+      }
+    },
+    "Relay port" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ポート"
+          }
+        }
+      }
+    },
+    "Reload" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再読み込み"
+          }
+        }
+      }
+    },
+    "Remote Access via SSH" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH経由のリモートアクセス"
+          }
+        }
+      }
+    },
+    "Remote Access via SSH…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH経由のリモートアクセス…"
+          }
+        }
+      }
+    },
+    "Remote access is not set up completely (the relay host key or this device's key is missing)." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リモートアクセスの設定が完了していません（中継ホストの鍵またはこのデバイスの鍵がありません）。"
+          }
+        }
+      }
+    },
+    "Remote access is used only after the host key is confirmed. A different key later is refused." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リモートアクセスはホスト鍵を確認してから使われます。後で異なる鍵が提示された場合は拒否されます。"
+          }
+        }
+      }
+    },
+    "Retry" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再試行"
+          }
+        }
+      }
+    },
+    "Return" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "改行"
+          }
+        }
+      }
+    },
+    "Right" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "右"
+          }
+        }
+      }
+    },
+    "SSH" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH"
+          }
+        }
+      }
+    },
+    "SSH port" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSHポート"
+          }
+        }
+      }
+    },
+    "SSH: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH：%@"
+          }
+        }
+      }
+    },
+    "Scan Pairing Code" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングコードをスキャン"
+          }
+        }
+      }
+    },
+    "Scan QR Code" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRコードをスキャン"
+          }
+        }
+      }
+    },
+    "Scanning the QR code is safer: it checks the Mac's full identity." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QRコードをスキャンする方が安全です。Macの識別情報全体を確認できます。"
+          }
+        }
+      }
+    },
+    "Select a workspace" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを選択"
+          }
+        }
+      }
+    },
+    "Send" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信"
+          }
+        }
+      }
+    },
+    "Send without Enter" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enterなしで送信"
+          }
+        }
+      }
+    },
+    "Show Workspace on Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースをMacで表示"
+          }
+        }
+      }
+    },
+    "Show on Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macで表示"
+          }
+        }
+      }
+    },
+    "Switch Mac…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macを切り替える…"
+          }
+        }
+      }
+    },
+    "Switches between sending each key immediately and sending a whole line" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーを1つずつすぐに送信するか、1行まとめて送信するかを切り替えます"
+          }
+        }
+      }
+    },
+    "Tab" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タブ"
+          }
+        }
+      }
+    },
+    "Terminal screen" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ターミナル画面"
+          }
+        }
+      }
+    },
+    "That is not a cmds pairing code." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmdsのペアリングコードではありません。"
+          }
+        }
+      }
+    },
+    "The Bluetooth channel to the Mac has no streams." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacとのBluetoothチャネルにストリームがありません。"
+          }
+        }
+      }
+    },
+    "The Bluetooth connection to the Mac was lost." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MacとのBluetooth接続が切断されました。"
+          }
+        }
+      }
+    },
+    "The Mac did not answer. Check that cmds is running and allowed in the Mac's firewall." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macから応答がありません。Macでcmdsが起動していて、ファイアウォールで許可されているか確認してください。"
+          }
+        }
+      }
+    },
+    "The Mac did not present a certificate." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macが証明書を提示しませんでした。"
+          }
+        }
+      }
+    },
+    "The Mac stopped responding." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macが応答しなくなりました。"
+          }
+        }
+      }
+    },
+    "The Mac that answered does not have the identity from the pairing code, so the code was not sent. Make sure you scanned this Mac's code and are on the same network." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "応答したMacの識別情報がペアリングコードのものと一致しないため、コードは送信していません。このMacのコードをスキャンしたこと、同じネットワークに接続していることを確認してください。"
+          }
+        }
+      }
+    },
+    "The SSH connection to the relay host closed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストへのSSH接続が切断されました。"
+          }
+        }
+      }
+    },
+    "The identities did not match, so nothing was sent. Something else may be answering for this Mac. Scan the QR code in the Mac's pairing window instead." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "識別情報が一致しなかったため、何も送信していません。別の機器がこのMacになりすまして応答している可能性があります。代わりにMacのペアリングウインドウに表示されたQRコードをスキャンしてください。"
+          }
+        }
+      }
+    },
+    "The pairing window on “%@” shows “Mac identity”. It must read exactly:" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”のペアリングウインドウに「Macの識別情報」が表示されています。次の内容と完全に一致する必要があります："
+          }
+        }
+      }
+    },
+    "The relay host accepted this device and the Mac's forwarded port answers." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストがこのデバイスを受け入れ、Macの転送ポートが応答しました。"
+          }
+        }
+      }
+    },
+    "This Device's Key" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスの鍵"
+          }
+        }
+      }
+    },
+    "This Mac's identity changed — re-pair" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacの識別情報が変更されました — ペアリングし直してください"
+          }
+        }
+      }
+    },
+    "This device's SSH key could not be stored in the Keychain." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスのSSH鍵をキーチェーンに保存できませんでした。"
+          }
+        }
+      }
+    },
+    "This pairing code could not be read." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このペアリングコードを読み取れませんでした。"
+          }
+        }
+      }
+    },
+    "This pairing code is from another version of cmds. Update cmds on the Mac and on this device." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このペアリングコードは別のバージョンのcmdsのものです。Macとこのデバイスのcmdsをアップデートしてください。"
+          }
+        }
+      }
+    },
+    "Too large for the phone" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスで表示するには大きすぎます"
+          }
+        }
+      }
+    },
+    "Try with demo data" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デモデータで試す"
+          }
+        }
+      }
+    },
+    "Type a line" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1行入力"
+          }
+        }
+      }
+    },
+    "Unpair This Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacとのペアリングを解除"
+          }
+        }
+      }
+    },
+    "Up" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上"
+          }
+        }
+      }
+    },
+    "Use Remote Access" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リモートアクセスを使用"
+          }
+        }
+      }
+    },
+    "User" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ユーザ"
+          }
+        }
+      }
+    },
+    "Waiting for screen…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画面を待っています…"
+          }
+        }
+      }
+    },
+    "When “%@” cannot be reached over Wi‑Fi or Bluetooth, connect through an SSH server you use (the relay host). On the Mac, turn on cmds › Remote Access via SSH… for the same host. Pair on the local network first; the connection stays encrypted end to end and pinned to the Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”にWi‑FiやBluetoothで接続できないときに、お使いのSSHサーバ（中継ホスト）を経由して接続します。Macでも同じホストに対してcmds › 「SSH経由のリモートアクセス…」をオンにしてください。先にローカルネットワーク上でペアリングしておく必要があります。接続はエンドツーエンドで暗号化され、Macに固定（ピン留め）されたままです。"
+          }
+        }
+      }
+    },
+    "Wi‑Fi" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wi‑Fi"
+          }
+        }
+      }
+    },
+    "cmds now encrypts the connection to your Mac and checks its identity. Pair again once: open Pair iPhone/iPad… in cmds on the Mac and scan the code." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmdsはMacとの接続を暗号化し、Macの識別情報を確認するようになりました。一度だけペアリングし直してください：Macのcmdsで「iPhone/iPadとペアリング…」を開き、コードをスキャンします。"
+          }
+        }
+      }
+    },
+    "ctrl + letter" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ctrl + 文字"
+          }
+        }
+      }
+    },
+    "host or host:port" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホスト または ホスト:ポート"
+          }
+        }
+      }
+    },
+    "“%@” presented a different identity than when you paired, so nothing was sent. If you reset its sync identity, pair again. Otherwise something else may be answering for it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“%@”がペアリング時と異なる識別情報を提示したため、何も送信していません。同期用の識別情報をリセットした場合は、ペアリングし直してください。そうでない場合は、別の機器がなりすまして応答している可能性があります。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

@@ -40,7 +40,7 @@ struct RemoteAccessView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     LabeledContent("SSH port") {
-                        TextField("22", text: $portText).keyboardType(.numberPad).multilineTextAlignment(.trailing)
+                        TextField("22" as String, text: $portText).keyboardType(.numberPad).multilineTextAlignment(.trailing)
                     }
                     LabeledContent("Relay port") {
                         TextField(String(SyncRemote.defaultRelayPort), text: $relayPortText)

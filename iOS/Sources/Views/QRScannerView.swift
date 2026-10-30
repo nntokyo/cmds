@@ -35,7 +35,7 @@ struct PairingCodeScanner: View {
                 QRScannerView(onCode: handle)
                     .ignoresSafeArea(edges: .bottom)
                     .overlay(alignment: .bottom) {
-                        Text(message ?? "Point the camera at the QR code in cmds › Pair iPhone/iPad… on your Mac.")
+                        Text(message ?? String(localized: "Point the camera at the QR code in cmds › Pair iPhone/iPad… on your Mac."))
                             .font(.callout)
                             .multilineTextAlignment(.center)
                             .padding(12)

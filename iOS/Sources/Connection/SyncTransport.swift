@@ -23,9 +23,9 @@ struct MacTarget: Codable, Hashable, Identifiable {
 
     var subtitle: String {
         switch kind {
-        case .bonjour: return "Local network"
+        case .bonjour: return String(localized: "Local network")
         case .manual(let host, let port): return "\(host):\(port)"
-        case .mock: return "Demo data"
+        case .mock: return String(localized: "Demo data")
         }
     }
 
@@ -239,7 +239,8 @@ final class WebSocketTransport: SyncTransport {
                 } catch is UnknownSyncMessageType {
                     // Newer Mac; ignore messages we don't understand.
                 } catch {
-                    self.finish(reason: "bad message from Mac: \(error)")
+                    let detail = "\(error)"
+                    self.finish(reason: String(localized: "Bad message from the Mac: \(detail)"))
                     return
                 }
             }

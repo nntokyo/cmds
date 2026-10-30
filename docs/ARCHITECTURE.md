@@ -233,8 +233,12 @@ Catalogs: `App/Resources/Localizable.xcstrings` + `InfoPlist.xcstrings` (Mac) an
   a `LocalizedStatus`: `.localized` for the UI, `.english` for `sync.status`. Default pane/workspace titles
   ("Terminal", "Browser") and text from `CmdsCore` formatters (agent usage lines, `AgentSession.summary`, error
   descriptions) are shared with the CLI and stay English; the banner builds its own localized summary.
-- **Japanese style**: Apple's current terms (設定, ウインドウ, しまう, 取り消す/やり直す, すべてを選択), full-width
-  （）and ：in prose, keyboard shortcuts unchanged, product/protocol names (cmds, SSH, Wi‑Fi, Bluetooth, TLS) as is.
+- **Japanese style**: Apple's current terms (設定, ウインドウ, しまう, 取り消す/やり直す, すべてを選択), no space
+  between Japanese and Latin text (`cmdsを終了`), full-width （）and ：in prose, the same terms on Mac and iPhone
+  (ペアリング, 識別情報, 中継ホスト, iPhone/iPad), keyboard shortcuts unchanged, product/protocol names (cmds, SSH,
+  Wi‑Fi, Bluetooth, TLS) as is.
+- iOS: the companion follows the device language; Settings › cmds › Language picks a per-app language (shown once
+  the app has more than one localization, which it now has). Nothing to configure in the app.
 - **UI tests** find elements by accessibility identifier, never by visible (localized) text.
 
 ## iOS companion sync

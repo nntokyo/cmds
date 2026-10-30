@@ -17,7 +17,7 @@ struct MainView: View {
                     .id(workspace.id)
             } else {
                 ContentUnavailableView {
-                    Label(client.workspaces.isEmpty ? client.status.label : "Select a workspace",
+                    Label(client.workspaces.isEmpty ? client.status.label : String(localized: "Select a workspace"),
                           systemImage: "terminal")
                 } description: {
                     if case .reconnecting(_, let reason?) = client.status { Text(reason) }
@@ -140,7 +140,7 @@ struct WorkspaceListView: View {
         switch client.status {
         case .failed(let message): return message
         case .reconnecting(_, let reason): return [client.status.label, reason].compactMap { $0 }.joined(separator: "\n")
-        case .connected: return "No workspaces"
+        case .connected: return String(localized: "No workspaces")
         default: return client.status.label
         }
     }
@@ -158,7 +158,7 @@ struct WorkspaceRow: View {
                 .overlay(Circle().stroke(attention ? Color.clear : Color.secondary.opacity(0.3), lineWidth: 1))
                 .frame(width: 9, height: 9)
                 .padding(.top, 6)
-                .accessibilityLabel(attention ? "Needs attention" : "")
+                .accessibilityLabel(attention ? String(localized: "Needs attention") : "")
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
                     Text(workspace.title).font(.headline).lineLimit(1)
@@ -170,7 +170,7 @@ struct WorkspaceRow: View {
                     }
                     Spacer()
                     if workspace.panes.count > 1 {
-                        Text("\(workspace.panes.count)")
+                        Text(verbatim: "\(workspace.panes.count)")
                             .font(.caption2.monospacedDigit())
                             .foregroundStyle(.secondary)
                     }
@@ -193,7 +193,7 @@ struct WorkspaceRow: View {
                 if !workspace.ports.isEmpty {
                     HStack(spacing: 4) {
                         ForEach(workspace.ports, id: \.self) { port in
-                            Text(":\(String(port))")
+                            Text(verbatim: ":\(port)")
                                 .font(.caption2.monospaced())
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 1)
@@ -230,10 +230,10 @@ struct WorkspaceUsageLine: View {
         HStack(spacing: 4) {
             Text("CPU").foregroundStyle(.tertiary)
             // Reserve the width of "100%" so the memory figure does not shift as CPU digits change.
-            Text("100%").hidden().overlay(alignment: .leading) {
+            Text(verbatim: "100%").hidden().overlay(alignment: .leading) {
                 Text(cpu).foregroundStyle((cpuPercent ?? 0) > 100 ? Color.orange : Color.secondary)
             }
-            Text("·").foregroundStyle(.tertiary)
+            Text(verbatim: "·").foregroundStyle(.tertiary)
             Text(memory).foregroundStyle(.secondary)
         }
         .font(.caption2.monospacedDigit())
@@ -263,7 +263,7 @@ struct AgentLimitsBar: View {
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(limits.agent.displayName) limits: " + AgentFormat.limitLines(windows).joined(separator: ", "))
+        .accessibilityLabel(String(localized: "\(limits.agent.displayName) limits: \(AgentFormat.limitLines(windows).joined(separator: ", "))"))
     }
 }
 
@@ -274,7 +274,7 @@ struct AgentSummaryLine: View {
 
     var body: some View {
         let parts = AgentFormat.summaryParts(usage, limits: limits)
-        parts.reduce(Text("")) { text, part in
+        parts.reduce(Text(verbatim: "")) { text, part in
             var piece = Text(part.text)
             switch part.style {
             case .name: piece = piece.fontWeight(.medium).foregroundColor(.primary.opacity(0.85))
@@ -286,7 +286,8 @@ struct AgentSummaryLine: View {
         .font(.caption2.monospacedDigit())
         .lineLimit(1)
         .opacity(usage.isStale ? 0.6 : 1)
-        .accessibilityLabel(AgentFormat.summary(usage, limits: limits) + (usage.isStale ? ", idle" : ""))
+        .accessibilityLabel(usage.isStale ? String(localized: "\(AgentFormat.summary(usage, limits: limits)), idle")
+                                              : AgentFormat.summary(usage, limits: limits))
     }
 }
 
@@ -310,7 +311,8 @@ struct SystemStatsBar: View {
         HStack(spacing: 16) {
             UsageGauge(title: "CPU", value: ResourceFormat.wholePercent(stats.cpuPercent),
                        fraction: stats.cpuPercent / 100, tint: .accentColor)
-            UsageGauge(title: pressure == .normal || pressure == .unknown ? "Mem" : "Mem · \(pressure.name)",
+            UsageGauge(title: pressure == .normal || pressure == .unknown ? String(localized: "Mem")
+                                                                       : String(localized: "Mem · \(pressure.name)"),
                        value: memory, fraction: stats.memoryFraction, tint: pressureColor,
                        valueTint: pressure == .warning || pressure == .critical ? pressureColor : nil)
         }
@@ -462,7 +464,7 @@ struct PaneSelectorBar: View {
                                 }
                                 Image(systemName: pane.kind == .browser ? "globe" : pane.kind == .preview ? "doc.richtext" : "terminal")
                                     .font(.caption2)
-                                Text(pane.title.isEmpty ? "Pane \(index + 1)" : pane.title)
+                                Text(pane.title.isEmpty ? String(localized: "Pane \(index + 1)") : pane.title)
                                     .font(.subheadline)
                                     .lineLimit(1)
                             }

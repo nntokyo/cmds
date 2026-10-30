@@ -124,7 +124,7 @@ final class FallbackTransport: SyncTransport {
         guard !finished, winner == nil, !bluetoothStarted, canUseBluetooth else { return }
         bluetoothStarted = true
         guard let bluetooth = BluetoothTransport(policy: policy) else {
-            bluetoothFailure = "Bluetooth needs a pinned connection"
+            bluetoothFailure = String(localized: "Bluetooth needs a paired connection.")
             diagnostics.failed(.bluetooth, bluetoothFailure ?? "")
             return
         }
@@ -137,7 +137,7 @@ final class FallbackTransport: SyncTransport {
         guard !finished, winner == nil, !sshStarted, canUseSSH else { return }
         sshStarted = true
         guard let ssh = SSHTransport(targetID: target.id, policy: policy) else {
-            sshFailure = "remote access is not set up completely (relay host key or phone key missing)"
+            sshFailure = String(localized: "Remote access is not set up completely (the relay host key or this device's key is missing).")
             diagnostics.failed(.ssh, sshFailure ?? "")
             return
         }
