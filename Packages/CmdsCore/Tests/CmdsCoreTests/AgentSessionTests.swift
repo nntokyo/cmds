@@ -55,6 +55,13 @@ final class AgentSessionTests: XCTestCase {
         XCTAssertEqual(AgentSession(agent: .codex, sessionID: uuid, lastSeen: now).summary(now: now), "Codex session (just now)")
     }
 
+    func testCleanTitle() {
+        XCTAssertEqual(AgentResume.cleanTitle("✳ Fix login"), "Fix login")
+        for noise in [nil, "", "zsh", "Terminal", "/tmp/x", "~/src", "me@host:~/src", "claude", "✳ Claude Code"] {
+            XCTAssertNil(AgentResume.cleanTitle(noise), noise ?? "nil")
+        }
+    }
+
     func testLooksLikePrompt() {
         XCTAssertTrue(AgentResume.looksLikePrompt(screen: "Last login: Mon\nme@host:~/src$ "))
         XCTAssertTrue(AgentResume.looksLikePrompt(screen: "~/src main ❯\n\n"))

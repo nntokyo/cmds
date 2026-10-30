@@ -50,6 +50,35 @@ Claude's spend limit; orange from 80 %, red from 95 %, reset times in the toolti
 
 Data older than 3 minutes is dimmed (idle agent); it disappears when the agent exits.
 
+## Resuming sessions
+
+When cmds restarts (update, crash, reboot) the workspaces and panes come back, but the agents running in them are
+gone. cmds remembers per terminal pane the agent session that ran there and offers to resume it.
+
+- **What is remembered** (in `session.json`, `agentSessions` per workspace): agent (Claude Code / Codex), session id,
+  the pane's directory when the session first appeared, the SSH host for SSH panes, pane title, model and last seen.
+  Claude Code's id comes from its status line (`cmds hook claude-status`, so that must be set up); Codex's from its
+  session file. A session is forgotten when its agent is seen to exit (or on Dismiss), not when cmds quits.
+- **On launch** (View › Resume Agent Sessions on Launch):
+  - *Ask* (default): a bar at the top of the pane — "Resume Claude Code session “topic” (model, 2 h ago)" with
+    **Resume**, **Resume All (n)** (every offered pane of the workspace) and **Dismiss** (forget it). Also
+    Pane › Resume Agent Session / Resume All Agent Sessions.
+  - *Always*: resumes every remembered session by itself once the pane's shell prompt is ready.
+  - *Never*: forgets them.
+- **What is typed**, into the pane's own shell and only once: `cd '<dir>' && claude --resume <id>` or
+  `cd '<dir>' && codex resume <id>` (Return included). Only ids made of letters, digits, `-`, `_`, `.` are accepted;
+  a directory that cannot be quoted the same way in sh/zsh/fish/tcsh is left out of the command.
+- **When**: the shell must be the pane's foreground process and its screen settled. A pane that runs Claude Code or
+  Codex (any such process on its terminal, or one reporting usage) is never typed into; its offer is dropped.
+- **SSH panes**: the session belongs to the server. Resume connects the pane if needed (never on launch, also not
+  in *Always* mode) and types on the remote shell once it reported its prompt (`cmds-remote.sh prompt`) or the screen
+  settled on a line ending in a prompt character (never at a password / passphrase / host-key question). When an
+  SSH connection drops while an agent ran, the pane offers to resume it after reconnecting.
+- **CLI/API**: `cmds sessions` lists remembered sessions (`agent.sessions`); `cmds resume [--pane P | --all]` queues
+  resumes (`agent.resume`). From a server, `cmds-remote` sockets only reach their own pane (`--all` is refused).
+
+Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting from `CMDS_AGENT_RESUME=ask|always|never`.
+
 ## Agents on a server (SSH panes)
 
 Open the server with **File → New SSH Workspace…** or `cmds new --ssh HOST` ([SSH.md](SSH.md)). The pane forwards a

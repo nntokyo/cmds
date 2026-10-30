@@ -102,8 +102,9 @@ extension AppController {
             pane.agentSessionSavedAt = entry.session.lastSeen
             pane.resumeOffer = entry.session
             if mode == .always { pane.resumeRequestedAt = Date() }
-            updateResumeBanner(pane)
         }
+        // After all offers exist, so each banner counts the others (Resume All).
+        panes.filter { $0.resumeOffer != nil }.forEach(updateResumeBanner)
         startResumeTimerIfNeeded()
     }
 
@@ -125,7 +126,7 @@ extension AppController {
                     state = pane.resumeRequestedAt == nil ? .offered : .waiting
                     session = offer
                 } else if let current = pane.agentSession {
-                    state = pane.agentUsage != nil ? .running : .resumed
+                    state = pane.agentUsage != nil ? .running : (pane.resumedSessionID == current.sessionID ? .resumed : .remembered)
                     session = current
                 } else {
                     continue
@@ -316,6 +317,7 @@ extension AppController {
         // Consumed before typing: whatever happens next, this offer is never typed again.
         clearResumeOffer(pane)
         pane.agentSession = offer
+        pane.resumedSessionID = offer.sessionID
         terminal.typeText(command + "\r")
         scheduleSave()
     }

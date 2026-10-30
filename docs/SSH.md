@@ -48,7 +48,7 @@ ssh -t -o StreamLocalBindUnlink=yes -R /tmp/cmds-<96 random bits>.sock:<local pa
 | Allowed | Scope |
 |---|---|
 | `system.ping`, `system.identify` | identify returns only `version`, `build` |
-| `notify`, `agent.report`, `agent.claude_hook`, `agent.claude_status`, `remote.location`, `pane.read_text`, `pane.send_text` | `pane` forced to the SSH pane; another pane → 403 |
+| `notify`, `agent.report`, `agent.claude_hook`, `agent.claude_status`, `agent.sessions`, `agent.resume`, `remote.location`, `pane.read_text`, `pane.send_text` | `pane` forced to the SSH pane; another pane → 403 (`agent.resume` with `all: true` → 403) |
 | `sidebar.set_status`, `pane.list`, `workspace.list` | `workspace` forced to the pane's workspace; results only contain that workspace and that pane (no layout) |
 
 Everything else is refused with 403: other panes and workspaces, `workspace.create/close/select/rename`,

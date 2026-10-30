@@ -33,6 +33,8 @@ final class Pane {
     var resumeOffer: AgentSession?
     /// Resume was requested (button, `agent.resume`, mode Always): typed once the shell prompt is ready.
     var resumeRequestedAt: Date?
+    /// Session typed into this pane in this run (never typed twice).
+    var resumedSessionID: String?
     /// Readiness check: the screen text and since when it has not changed.
     var resumeScreen: String?
     var resumeScreenSince: Date?

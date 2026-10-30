@@ -95,6 +95,8 @@ public enum AgentSessionState: String, Codable, Sendable {
     case running
     /// Resumed earlier in this run.
     case resumed
+    /// Seen earlier in this run; not running now and not offered (e.g. skipped because an agent was running).
+    case remembered
 }
 
 /// One pane's remembered session (`agent.sessions`).
@@ -210,12 +212,15 @@ public enum AgentResume {
     }
 
     /// Terminal titles are often decorated (`✳ Fix login`, spinner glyphs); returns the readable part, nil when empty
-    /// or just the default title.
+    /// or just a default title (a path or `user@host:path` set by the shell, a shell or agent name).
     public static func cleanTitle(_ title: String?) -> String? {
         guard let title else { return nil }
         let trimmed = title.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines
             .union(CharacterSet(charactersIn: "✳✻✽✶✢·*⠁⠂⠄⡀⢀⠠⠐⠈⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏")))
-        guard !trimmed.isEmpty, trimmed != "Terminal", trimmed.lowercased() != "claude code" else { return nil }
+        let lower = trimmed.lowercased()
+        guard !trimmed.isEmpty, trimmed != "Terminal", !["claude", "claude code", "codex"].contains(lower),
+              !AgentProcessClassifier.shells.contains(lower), !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~"),
+              trimmed.range(of: #"^[^\s]+@[^\s]+:"#, options: .regularExpression) == nil else { return nil }
         return String(trimmed.prefix(80))
     }
 
