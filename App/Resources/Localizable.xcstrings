@@ -535,6 +535,16 @@
         }
       }
     },
+    "A coding agent is running in this workspace. Closing it ends the agent and its terminals." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このワークスペースではコーディングエージェントが動いています。閉じるとエージェントとターミナルが終了します。"
+          }
+        }
+      }
+    },
     "A program in this terminal wants to read the clipboard. Allow it?" : {
       "localizations" : {
         "ja" : {
@@ -911,6 +921,16 @@
         }
       }
     },
+    "Clear Notification" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知を消去"
+          }
+        }
+      }
+    },
     "Close Pane" : {
       "localizations" : {
         "ja" : {
@@ -927,6 +947,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ワークスペースを閉じる"
+          }
+        }
+      }
+    },
+    "Close “%@”?" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」を閉じますか？"
           }
         }
       }
@@ -1140,6 +1170,17 @@
         }
       }
     },
+    "Done" : {
+      "comment" : "sidebar agent state: finished, not seen yet",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完了"
+          }
+        }
+      }
+    },
     "Edit" : {
       "localizations" : {
         "ja" : {
@@ -1270,6 +1311,26 @@
         }
       }
     },
+    "Filter Workspaces" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを絞り込む"
+          }
+        }
+      }
+    },
+    "Filter Workspaces…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを絞り込む…"
+          }
+        }
+      }
+    },
     "Focus Address Bar" : {
       "localizations" : {
         "ja" : {
@@ -1346,6 +1407,26 @@
         }
       }
     },
+    "Group Workspaces by Project" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースをプロジェクトでまとめる"
+          }
+        }
+      }
+    },
+    "Group by Project" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロジェクトでまとめる"
+          }
+        }
+      }
+    },
     "Help" : {
       "localizations" : {
         "ja" : {
@@ -1392,6 +1473,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ホスト："
+          }
+        }
+      }
+    },
+    "Idle" : {
+      "comment" : "sidebar agent state: waiting for the next prompt",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待機"
           }
         }
       }
@@ -1780,6 +1872,17 @@
         }
       }
     },
+    "Needs Input" : {
+      "comment" : "sidebar agent state: waiting for the user's answer or permission",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力待ち"
+          }
+        }
+      }
+    },
     "Never" : {
       "localizations" : {
         "ja" : {
@@ -1986,6 +2089,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "プレビューで開く…"
+          }
+        }
+      }
+    },
+    "Other" : {
+      "comment" : "sidebar group of workspaces without a directory",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "その他"
           }
         }
       }
@@ -2644,6 +2758,7 @@
       }
     },
     "Stopped" : {
+      "comment" : "sidebar agent state: the agent exited",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -3063,6 +3178,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ウインドウ"
+          }
+        }
+      }
+    },
+    "Working" : {
+      "comment" : "sidebar agent state: the agent is busy",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作業中"
           }
         }
       }

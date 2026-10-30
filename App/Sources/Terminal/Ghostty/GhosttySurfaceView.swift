@@ -457,7 +457,11 @@ final class GhosttySurfaceView: NSView {
 
         let action = event.isARepeat ? GHOSTTY_ACTION_REPEAT : GHOSTTY_ACTION_PRESS
         keyTextAccumulator = []
-        defer { keyTextAccumulator = nil }
+        defer {
+            keyTextAccumulator = nil
+            // After libghostty has the key: the app only clears a stale notification (cheap when there is none).
+            owner?.handleKeyInput()
+        }
 
         let markedTextBefore = markedText.length > 0
         let layoutBefore: String? = markedTextBefore ? nil : GhosttyInput.keyboardLayoutID

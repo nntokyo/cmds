@@ -17,6 +17,10 @@ final class Workspace {
     var gitBranch: String?
     var ports: [Int] = []
     var notificationText: String?
+    /// The pane whose notification `notificationText` is (nil for `sidebar.set_status` text) and when it came: typing
+    /// in that pane or its agent working again clears it.
+    var notificationPaneID: String?
+    var notificationDate: Date?
 
     /// CPU of the processes in this workspace's terminals (100 = one core); nil until sampled.
     private(set) var cpuPercent: Double?
@@ -55,6 +59,19 @@ final class Workspace {
     var primaryAgent: (pane: Pane, usage: AgentUsage)? {
         AgentUsage.primary(agentPanes.compactMap { pane in pane.agentUsage.map { (pane, pane.id == focusedPaneID, $0) } })
             .map { (pane: $0.0, usage: $0.1) }
+    }
+
+    /// The most pressing agent state of the panes (needs input > busy > idle > none).
+    var agentActivity: AgentActivity { panes.values.map(\.agentActivity).max() ?? .none }
+
+    /// An agent ran here in this run (the sidebar then shows "Stopped" once it is gone).
+    var hadAgent: Bool { panes.values.contains { $0.agentEverSeen } }
+
+    /// The agent's task (its terminal title without the spinner glyph): the focused pane's, else the most pressing one's.
+    var agentTopic: String? {
+        if let pane = focusedPane, pane.agentActivity != .none, let topic = pane.agentTopic { return topic }
+        return orderedPanes.filter { $0.agentTopic != nil && $0.agentActivity != .none }
+            .max { $0.agentActivity < $1.agentActivity }?.agentTopic
     }
 
     var title: String {

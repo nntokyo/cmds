@@ -24,14 +24,22 @@ notification is shown as well.
 
 ### Notifications (hooks)
 
-`cmds hook claude` reads the hook JSON from stdin and calls `notify` for the pane Claude Code runs in:
+`cmds hook claude` reads the hook JSON from stdin and tells cmds about the pane Claude Code runs in
+(`agent.claude_hook`):
 
-- `Notification` (permission prompts, waiting for input) → `Claude Code: <message>`
-- `Stop` → `Claude Code: <first line of Claude's last reply>` (`last_assistant_message`, else the transcript), or
-  `Finished`
+- `Notification` (permission prompts, waiting for input) → notifies `Claude Code: <message>`; the sidebar shows
+  **Needs Input**.
+- `Stop` → notifies `Claude Code: <first line of Claude's last reply>` (`last_assistant_message`, else the
+  transcript), or `Finished`; the sidebar shows **Done** / **Idle**.
+- `UserPromptSubmit` → you answered: the sidebar shows **Working** and the stale "waiting for your input" text and
+  ring are cleared (no notification).
+- `PreToolUse` / `PostToolUse` (optional, same effect as `UserPromptSubmit`) and `SessionEnd` (optional: Claude
+  exited, the row shows **Stopped**) are understood too.
 
-Other events and `Stop` re-entries (`stop_hook_active`) are ignored. It always exits 0 and does nothing outside cmds,
-so it never blocks Claude Code. Add to `~/.claude/settings.json` (or a project's `.claude/settings.json`):
+Other events and `Stop` re-entries (`stop_hook_active`) are ignored. The local `cmds` sends only the event name and
+the notification text to the app, never your prompt (`cmds-remote.sh` on a server forwards the payload as is; the app
+uses the same fields and keeps nothing else). It always exits 0 and does nothing outside cmds, so it never blocks Claude Code. Add to
+`~/.claude/settings.json` (or a project's `.claude/settings.json`):
 
 ```json
 {
@@ -41,13 +49,18 @@ so it never blocks Claude Code. Add to `~/.claude/settings.json` (or a project's
     ],
     "Stop": [
       { "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook claude || true" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook claude || true" }] }
     ]
   }
 }
 ```
 
 (`command -v` keeps the hook quiet in terminals where `cmds` is not on `PATH`.) The ring lights only when the pane
-is not the focused pane of the key window; the sidebar text always updates.
+is not the focused pane of the key window; the sidebar text always updates. Without `UserPromptSubmit` the stale text
+still goes when you type in the pane or when Claude visibly works again (status-line figures move, or its title
+spinner turns); see [Agent state](workspaces-and-panes.md#agent-state).
 
 ### Usage and limits (status line)
 

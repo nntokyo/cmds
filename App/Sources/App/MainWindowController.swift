@@ -116,7 +116,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         content.render()
         if let workspace = controller.selectedWorkspace {
             window?.title = workspace.displayTitle
-            window?.subtitle = workspace.focusedPane.map { DefaultTitle.localized($0.title) } ?? ""
+            // An agent's title without its spinner glyph (glyph-only title changes are not emitted).
+            window?.subtitle = workspace.focusedPane.map { $0.agentTopic ?? DefaultTitle.localized($0.title) } ?? ""
         } else {
             window?.title = "cmds"
             window?.subtitle = ""
@@ -125,6 +126,12 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
 
     func toggleSidebar() {
         splitViewController.toggleSidebar(nil)
+    }
+
+    /// ⌥⌘F: shows the sidebar (expanded) with its filter field focused.
+    func showSidebarFilter() {
+        if sidebarItem.isCollapsed { sidebarItem.isCollapsed = false }
+        sidebar.beginFilter()
     }
 
     func focusNeighbor(_ direction: FocusDirection) {

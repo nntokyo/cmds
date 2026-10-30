@@ -20,6 +20,27 @@ enum GitInfo {
         }
     }
 
+    /// The project a directory belongs to: the repository's top level (a linked worktree counts as its main
+    /// repository), or nil outside a repository. Reads only `.git` entries (sidebar grouping).
+    static func projectRoot(at path: String) -> String? {
+        let fileManager = FileManager.default
+        var directory = URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
+        while true {
+            let dotGit = directory.appendingPathComponent(".git")
+            var isDirectory: ObjCBool = false
+            if fileManager.fileExists(atPath: dotGit.path, isDirectory: &isDirectory) {
+                if !isDirectory.boolValue, let gitDir = resolveGitFile(dotGit, base: directory),
+                   let range = gitDir.path.range(of: "/.git/worktrees/") {
+                    return String(gitDir.path[..<range.lowerBound])
+                }
+                return directory.path
+            }
+            let parent = directory.deletingLastPathComponent()
+            if parent.path == directory.path { return nil }
+            directory = parent
+        }
+    }
+
     private static func resolveGitFile(_ file: URL, base: URL) -> URL? {
         guard let contents = try? String(contentsOf: file, encoding: .utf8) else { return nil }
         for line in contents.split(whereSeparator: \.isNewline) where line.hasPrefix("gitdir:") {

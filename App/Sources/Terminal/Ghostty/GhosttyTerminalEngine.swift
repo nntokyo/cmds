@@ -234,6 +234,12 @@ final class GhosttyTerminalSurface: TerminalSurface {
         delegate?.terminalSurfaceDidBecomeFocused(self)
     }
 
+    /// A key press from the user (called from `keyDown`, after it was handed to libghostty).
+    func handleKeyInput() {
+        guard !closed else { return }
+        delegate?.terminalSurfaceDidReceiveKeyInput(self)
+    }
+
     /// The command exited on a surface launched with `waitAfterCommand` (it stays open).
     func handleChildExited() {
         DispatchQueue.main.async { [weak self] in

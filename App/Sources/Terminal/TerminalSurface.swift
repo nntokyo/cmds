@@ -30,10 +30,13 @@ protocol TerminalSurfaceDelegate: AnyObject {
     /// already resolved against the shell's directory when the file exists). Return true when handled; false lets
     /// the engine open it with the default app.
     func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool
+    /// The user pressed a key that went to the terminal (not for text sent through the API).
+    func terminalSurfaceDidReceiveKeyInput(_ surface: TerminalSurface)
 }
 
 extension TerminalSurfaceDelegate {
     func terminalSurfaceChildDidExit(_ surface: TerminalSurface) {}
+    func terminalSurfaceDidReceiveKeyInput(_ surface: TerminalSurface) {}
     func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool { false }
 }
 

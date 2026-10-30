@@ -20,6 +20,11 @@ First version, to be released as 0.1.0 (`MARKETING_VERSION` 0.1.0, build 1). Dev
 - Sidebar rows with git branch, directory, listening ports, CPU and memory per workspace (processes attributed by
   environment, pane tty and ancestry), latest notification text and attention dot; footer with Mac-wide CPU, memory
   and memory pressure; compact 52 pt rail (⌃⌘S).
+- Sidebar agent state per workspace (Working / Needs Input / Done / Idle / Stopped, from Claude Code hooks, the
+  terminal-title spinner and status-line reports), the agent's task as the row's second line, session-only figures per
+  row (account limits in the footer), paths shortened by leading components, hover × and Clear Notification,
+  filter (⌥⌘F) and Group by Project; stale notifications clear when you type in the pane or the agent works again
+  (`UserPromptSubmit` hook).
 - Attention ring on OSC 9/777 notifications, the bell and `cmds notify`, with macOS notifications in the background
   and Jump to Latest Attention (⇧⌘U).
 - Browser panes (WKWebView) with address bar, reload, back/forward and scripting.

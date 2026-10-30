@@ -1,12 +1,14 @@
 import AppKit
 import CmdsCore
 
-/// Sidebar row: attention dot + title + ⌘N hint, branch, cwd, ports, CPU/memory, latest notification (≤ 2 lines).
+/// Sidebar row: state dot/spinner + title + agent state + ⌘N hint (× on hover), the agent's task (else the cwd), branch,
+/// ports, agent figures, CPU/memory, latest notification (≤ 2 lines).
 final class WorkspaceCellView: NSTableCellView {
     static let identifier = NSUserInterfaceItemIdentifier("WorkspaceCell")
 
     private static let titleFont = NSFont.systemFont(ofSize: 13, weight: .semibold)
     private static let detailFont = NSFont.systemFont(ofSize: 11)
+    private static let badgeFont = NSFont.systemFont(ofSize: 10, weight: .medium)
     private static let monoFont = NSFont.monospacedSystemFont(ofSize: 10.5, weight: .regular)
     private static let usageFont = NSFont.monospacedDigitSystemFont(ofSize: 10.5, weight: .regular)
     /// Memory starts at a fixed tab stop so changing CPU digits never shift it.
@@ -17,16 +19,31 @@ final class WorkspaceCellView: NSTableCellView {
     private static let titleHeight: CGFloat = 17
     private static let detailHeight: CGFloat = 14
 
+    /// The row's × was clicked (the sidebar confirms and closes the workspace).
+    var onClose: ((String) -> Void)?
+    private var workspaceID: String?
+
+    /// Holds the state dot or, while the agent works, a small spinner (the slot keeps its width so the title never moves).
+    private let indicator = NSView()
     private let dot = NSView()
+    private let spinner = NSProgressIndicator()
     private let titleLabel = NSTextField(labelWithString: "")
+    /// `Working` / `Needs Input` / `Done` / `Idle` / `Stopped`.
+    private let stateLabel = NSTextField(labelWithString: "")
     private let shortcutLabel = NSTextField(labelWithString: "")
+    private let closeButton = NSButton()
+    private var hovering = false
+    private var trackingArea: NSTrackingArea?
+    /// The agent's task (its terminal title); replaces the cwd line, which moves to the tooltip.
+    private let topicLabel = NSTextField(labelWithString: "")
+    private let statusRow = NSStackView()
     /// `ssh home` (hosts of the workspace's SSH panes; "disconnected" while one is down).
     private let hostLabel = NSTextField(labelWithString: "")
     private let branchLabel = NSTextField(labelWithString: "")
-    private let directoryLabel = NSTextField(labelWithString: "")
+    private let directoryLabel = PathLabel(labelWithString: "")
     private let portsLabel = NSTextField(labelWithString: "")
     private let usageLabel = NSTextField(labelWithString: "")
-    /// The workspace's agent pane: `Claude Opus 4.5` over `ctx 53% · $117.99 · 5h 40%`.
+    /// The workspace's agent pane: `Claude Opus 4.5` over `ctx 53% · $117.99` (account limits are in the footer).
     private let agentNameLabel = NSTextField(labelWithString: "")
     private let agentLabel = NSTextField(labelWithString: "")
     private var agentKey: String?
@@ -43,22 +60,49 @@ final class WorkspaceCellView: NSTableCellView {
         dot.wantsLayer = true
         dot.layer?.cornerRadius = 4
         dot.layer?.backgroundColor = NSColor.systemOrange.cgColor
-        dot.translatesAutoresizingMaskIntoConstraints = false
+        spinner.style = .spinning
+        spinner.controlSize = .mini
+        spinner.isIndeterminate = true
+        spinner.isDisplayedWhenStopped = false
+        for view in [dot, spinner] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            indicator.addSubview(view)
+        }
+        indicator.translatesAutoresizingMaskIntoConstraints = false
 
         titleLabel.font = Self.titleFont
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        stateLabel.font = Self.badgeFont
+        stateLabel.setContentHuggingPriority(.required, for: .horizontal)
+        stateLabel.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
         shortcutLabel.font = .systemFont(ofSize: 10)
         shortcutLabel.textColor = .tertiaryLabelColor
+        shortcutLabel.alignment = .right
         shortcutLabel.setContentHuggingPriority(.required, for: .horizontal)
         shortcutLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+        closeButton.image = NSImage(systemSymbolName: "xmark", accessibilityDescription: String(localized: "Close Workspace"))?
+            .withSymbolConfiguration(.init(pointSize: 9, weight: .semibold))
+        closeButton.isBordered = false
+        closeButton.imagePosition = .imageOnly
+        closeButton.contentTintColor = .secondaryLabelColor
+        closeButton.toolTip = String(localized: "Close Workspace")
+        closeButton.target = self
+        closeButton.action = #selector(closeClicked)
+        closeButton.isHidden = true
+        closeButton.translatesAutoresizingMaskIntoConstraints = false
 
+        topicLabel.font = Self.detailFont
+        topicLabel.textColor = .labelColor.withAlphaComponent(0.85)
+        topicLabel.lineBreakMode = .byTruncatingMiddle
+        topicLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         for label in [hostLabel, branchLabel, directoryLabel, portsLabel] {
             label.font = Self.detailFont
             label.textColor = .secondaryLabelColor
             label.lineBreakMode = .byTruncatingMiddle
             label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         }
+        directoryLabel.lineBreakMode = .byTruncatingHead
         portsLabel.font = Self.monoFont
         portsLabel.textColor = .systemGreen
         usageLabel.font = Self.usageFont
@@ -77,30 +121,55 @@ final class WorkspaceCellView: NSTableCellView {
         notificationLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         notificationLabel.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
 
-        let titleRow = NSStackView(views: [dot, titleLabel, shortcutLabel])
+        let titleRow = NSStackView(views: [indicator, titleLabel, shortcutLabel])
         titleRow.orientation = .horizontal
         titleRow.spacing = 6
         titleRow.alignment = .centerY
+        // Second line: `Working  <task>` (the task replaces the cwd line).
+        statusRow.setViews([stateLabel, topicLabel, directoryLabel], in: .leading)
+        for label in [topicLabel, directoryLabel] {
+            label.setContentHuggingPriority(.init(1), for: .horizontal)
+        }
+        statusRow.orientation = .horizontal
+        statusRow.spacing = 5
+        statusRow.alignment = .firstBaseline
+        statusRow.detachesHiddenViews = true
         NSLayoutConstraint.activate([
+            indicator.widthAnchor.constraint(equalToConstant: 10),
+            indicator.heightAnchor.constraint(equalToConstant: 10),
             dot.widthAnchor.constraint(equalToConstant: 8),
             dot.heightAnchor.constraint(equalToConstant: 8),
+            dot.centerXAnchor.constraint(equalTo: indicator.centerXAnchor),
+            dot.centerYAnchor.constraint(equalTo: indicator.centerYAnchor),
+            spinner.centerXAnchor.constraint(equalTo: indicator.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: indicator.centerYAnchor),
+            spinner.widthAnchor.constraint(equalToConstant: 10),
+            spinner.heightAnchor.constraint(equalToConstant: 10),
+            shortcutLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 16),
         ])
 
-        stack.setViews([titleRow, hostLabel, branchLabel, directoryLabel, portsLabel, agentNameLabel, agentLabel, usageLabel, notificationLabel], in: .top)
+        stack.setViews([titleRow, statusRow, hostLabel, branchLabel, portsLabel, agentNameLabel, agentLabel, usageLabel, notificationLabel], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = Self.spacing
         stack.detachesHiddenViews = true
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
+        // The × sits over the ⌘N hint (shown instead of it while hovering), so nothing moves.
+        addSubview(closeButton)
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
             stack.topAnchor.constraint(equalTo: topAnchor, constant: Self.verticalInset),
             titleRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            statusRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             notificationLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
             agentLabel.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
             agentNameLabel.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
+            closeButton.centerYAnchor.constraint(equalTo: shortcutLabel.centerYAnchor),
+            closeButton.trailingAnchor.constraint(equalTo: shortcutLabel.trailingAnchor, constant: 2),
+            closeButton.widthAnchor.constraint(equalToConstant: 16),
+            closeButton.heightAnchor.constraint(equalToConstant: 16),
         ])
     }
 
@@ -121,19 +190,66 @@ final class WorkspaceCellView: NSTableCellView {
         usageKey = nil
     }
 
+    // MARK: Hover
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let trackingArea { removeTrackingArea(trackingArea) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        setHovering(true)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        setHovering(false)
+    }
+
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        setHovering(false)
+    }
+
+    private func setHovering(_ hovering: Bool) {
+        guard hovering != self.hovering else { return }
+        self.hovering = hovering
+        closeButton.isHidden = !hovering
+        shortcutLabel.alphaValue = hovering ? 0 : 1
+    }
+
+    @objc private func closeClicked() {
+        guard let workspaceID else { return }
+        onClose?(workspaceID)
+    }
+
+    // MARK: Content
+
     @MainActor
     func configure(with workspace: Workspace, index: Int) {
+        workspaceID = workspace.id
         titleLabel.stringValue = workspace.displayTitle
         shortcutLabel.stringValue = index < 9 ? "⌘\(index + 1)" : ""
-        dot.isHidden = !workspace.attention
+        applyState(workspace)
 
+        let directory = (workspace.isRemote ? workspace.workingDirectory : workspace.workingDirectory?.abbreviatingHome)
+        let topic = workspace.agentTopic
+        topicLabel.isHidden = topic == nil
+        topicLabel.stringValue = topic ?? ""
+        topicLabel.toolTip = [topic, directory].compactMap { $0 }.joined(separator: "\n")
         hostLabel.isHidden = workspace.sshPanes.isEmpty
         hostLabel.attributedStringValue = Self.hostText(workspace)
         branchLabel.isHidden = workspace.gitBranch == nil
         branchLabel.attributedStringValue = Self.symbolText("arrow.triangle.branch", workspace.gitBranch ?? "")
-        // A remote path is shown as is (`~` abbreviation is for this Mac's home).
-        directoryLabel.stringValue = (workspace.isRemote ? workspace.workingDirectory : workspace.workingDirectory?.abbreviatingHome) ?? ""
-        directoryLabel.isHidden = workspace.workingDirectory == nil
+        // A remote path is shown as is (`~` abbreviation is for this Mac's home). The agent's task takes its place
+        // (the cwd is then in the task's tooltip).
+        directoryLabel.path = directory ?? ""
+        directoryLabel.toolTip = directory
+        directoryLabel.isHidden = directory == nil || topic != nil
+        statusRow.isHidden = !Self.showsStatusRow(workspace)
         portsLabel.isHidden = workspace.ports.isEmpty
         portsLabel.stringValue = workspace.ports.map { ":\($0)" }.joined(separator: "  ")
         usageLabel.isHidden = !Self.showsUsage(workspace)
@@ -146,12 +262,50 @@ final class WorkspaceCellView: NSTableCellView {
         notificationLabel.textColor = workspace.attention ? .labelColor : .secondaryLabelColor
     }
 
+    /// Dot / spinner and the state text. The spinner runs only while the agent works.
+    @MainActor
+    private func applyState(_ workspace: Workspace) {
+        let busy = workspace.agentActivity == .busy && !workspace.attention
+        if busy {
+            dot.isHidden = true
+            spinner.startAnimation(nil)
+        } else {
+            spinner.stopAnimation(nil)
+            let color = AgentActivityStyle.dotColor(for: workspace)
+            dot.isHidden = color == nil
+            effectiveAppearance.performAsCurrentDrawingAppearance {
+                dot.layer?.backgroundColor = color?.cgColor
+            }
+        }
+        let badge = AgentActivityStyle.badge(for: workspace)
+        self.badge = badge
+        stateLabel.isHidden = badge == nil
+        if let badge {
+            if stateLabel.stringValue != badge.text { stateLabel.stringValue = badge.text }
+            applyBadgeColor()
+        }
+        indicator.setAccessibilityElement(badge != nil || workspace.attention)
+        indicator.setAccessibilityLabel(badge?.text)
+    }
+
+    private var badge: AgentActivityStyle.Badge?
+
+    /// On an emphasized (accent) selection the state colours would vanish: use the label colour there.
+    override var backgroundStyle: NSView.BackgroundStyle {
+        didSet { applyBadgeColor() }
+    }
+
+    private func applyBadgeColor() {
+        guard let badge else { return }
+        stateLabel.textColor = backgroundStyle == .emphasized ? .alternateSelectedControlTextColor : badge.color
+    }
+
     @MainActor
     static func height(for workspace: Workspace, width: CGFloat) -> CGFloat {
         var lines: [CGFloat] = [titleHeight]
+        if showsStatusRow(workspace) { lines.append(detailHeight) }
         if !workspace.sshPanes.isEmpty { lines.append(detailHeight) }
         if workspace.gitBranch != nil { lines.append(detailHeight) }
-        if workspace.workingDirectory != nil { lines.append(detailHeight) }
         if !workspace.ports.isEmpty { lines.append(detailHeight) }
         if showsUsage(workspace) { lines.append(detailHeight) }
         if showsAgent(workspace) { lines += [detailHeight, detailHeight] }
@@ -165,6 +319,12 @@ final class WorkspaceCellView: NSTableCellView {
         return lines.reduce(0, +) + CGFloat(lines.count - 1) * spacing + 2 * verticalInset
     }
 
+    /// Second line: agent state + task, else the cwd.
+    @MainActor
+    private static func showsStatusRow(_ workspace: Workspace) -> Bool {
+        AgentActivityStyle.badge(for: workspace) != nil || workspace.agentTopic != nil || workspace.workingDirectory != nil
+    }
+
     /// The usage line depends only on structure (a terminal exists), never on sampled values, so new
     /// samples never change row heights.
     @MainActor
@@ -174,7 +334,7 @@ final class WorkspaceCellView: NSTableCellView {
     @MainActor
     private static func showsAgent(_ workspace: Workspace) -> Bool { !workspace.agentPanes.isEmpty }
 
-    /// Agent line: the focused (else latest) agent pane's model, context, cost and 5-hour limit; account limits
+    /// Agent line: the focused (else latest) agent pane's model, context and cost; account limits (tooltip only)
     /// come from the newest report of that agent kind. Touches the label only when its text or colours change.
     @MainActor
     private func updateAgent(with workspace: Workspace) {
@@ -183,8 +343,8 @@ final class WorkspaceCellView: NSTableCellView {
             return
         }
         let usage = primary.usage
-        let limits = AppController.shared.agentLimitsByKind[usage.agent]?.active(at: Date())?.limits
-        let parts = AgentFormat.summaryParts(usage, limits: limits, strings: .localized)
+        // Session figures only: the account limits (5h/7d) are the same for every row and shown in the footer.
+        let parts = AgentFormat.summaryParts(usage, limits: [], strings: .localized)
         let others = workspace.agentPanes.count - 1
         let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)"
         if key != agentKey {

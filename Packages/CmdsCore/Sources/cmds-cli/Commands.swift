@@ -381,17 +381,24 @@ extension CLI {
             AgentHook.claudeStatus(ctx)
         },
         Command(name: "hook claude", usage: "hook claude",
-                summary: "Claude Code hook: read the hook JSON on stdin and notify (Notification / Stop events).",
+                summary: "Claude Code hook: read the hook JSON on stdin; notify (Notification / Stop) and track the agent's state (UserPromptSubmit).",
                 details: "Always exits 0 so a missing app never blocks Claude Code. See docs/guide/ai-agents.md for the settings.json snippet.") { ctx in
             let input = FileHandle.standardInput.readDataToEndOfFile()
-            guard let note = ClaudeHook.notification(fromHookInput: input) else { return }
+            guard let event = ClaudeHook.event(fromHookInput: input) else { return }
             guard ctx.envPane != nil || ctx.args[option: "socket"] != nil || ctx.environment[CmdsEnv.socketPath] != nil else {
                 return // not running inside cmds
             }
+            let forwarded = ClaudeHook.forwardedInput(fromHookInput: input, event: event)
             do {
-                try ctx.call("notify", ["pane": ctx.envPane.json, "title": note.title.json, "body": .string(note.body)], timeout: 5)
-            } catch let error as CLIError {
-                printError(error.message)
+                try ctx.call("agent.claude_hook", ["pane": ctx.envPane.json, "input": forwarded], timeout: 5)
+            } catch {
+                // An older app without `agent.claude_hook`: plain notification.
+                guard let note = event.notification else { return }
+                do {
+                    try ctx.call("notify", ["pane": ctx.envPane.json, "title": note.title.json, "body": .string(note.body)], timeout: 5)
+                } catch let error as CLIError {
+                    printError(error.message)
+                }
             }
         },
     ]

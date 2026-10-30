@@ -15,14 +15,51 @@ double-click (or ⇧⌘R, or the row's context menu) to rename.
 
 Each row shows:
 
-- the title, git branch, working directory and listening ports of the workspace's processes;
+- the title with a state dot (or a small spinner while an agent works) and the ⌘N hint; hovering shows a × that
+  closes the workspace (it asks first while an agent is running there);
+- the [agent state](#agent-state) and the agent's task — Claude Code's terminal title without its spinner glyph, e.g.
+  `Working  自走型売上基盤の対応` — or else the working directory. Long paths keep their last components
+  (`…/NN/自社/jav-a`); the full directory is in the tooltip;
+- the git branch and listening ports of the workspace's processes;
+- the coding agent of its focused pane: model, context and cost of that session
+  ([ai-agents.md](ai-agents.md#usage-and-limits)); the account limits are the same for every row and live in the footer;
 - CPU and memory of its processes (100 % CPU = one core, like Activity Monitor);
-- the coding agent of its focused pane (model, context, cost, 5-hour limit; [ai-agents.md](ai-agents.md#usage-and-limits));
-- the latest notification text and an attention dot.
+- the latest notification text.
 
-The footer shows each agent's account limits (5-hour / 7-day windows, Claude's spend limit) and Mac-wide CPU and
-memory meters (with memory pressure). ⌘B hides the sidebar; ⌃⌘S (or the button at the top) switches to a compact
-52 pt rail with workspace numbers, the attention dot, a status colour and tiny meters.
+The footer shows each agent's account limits (Claude's 5-hour / 7-day windows and spend limit, Codex's windows, as
+far as they are known) and Mac-wide CPU and memory meters (with memory pressure). ⌘B hides the sidebar; ⌃⌘S (or the
+button at the top) switches to a compact 52 pt rail with workspace numbers, state dots in the same colours (working
+pulses), a status colour and tiny meters. The sidebar width and the compact state are kept across launches.
+
+With many workspaces:
+
+- **View › Filter Workspaces** (⌥⌘F, or ⌘F while the sidebar has the keyboard) shows a filter field above the rows. It
+  matches titles, tasks, directories, branches, notification text and state names; Return goes to the first match,
+  Esc closes the filter and shows all rows again.
+- **View › Group Workspaces by Project** (also in the sidebar's context menu) puts rows under a header per project:
+  the git repository (a linked worktree counts as its main repository), else the directory; SSH workspaces by host and
+  directory. Rows cannot be dragged while filtered or grouped.
+- The Dock icon shows the number of panes with unseen attention.
+
+The row's context menu also has **Clear Notification** (drops the text and the attention of all its panes).
+
+### Agent state
+
+Rows of workspaces where a coding agent runs show its state:
+
+| State | Shown | Means |
+| --- | --- | --- |
+| **Working** (作業中) | blue text, spinner (pulsing dot in the rail) | the agent is busy |
+| **Needs Input** (入力待ち) | orange | Claude Code asked for permission or input (`Notification` hook) |
+| **Done** (完了) / **Idle** (待機) | green / grey | the turn ended (`Stop`); Done until you have seen the pane |
+| **Stopped** (停止) | grey | the agent that ran here exited |
+
+The state comes from, newest first: the [Claude Code hooks](ai-agents.md#notifications-hooks) (`Notification`, `Stop`,
+`UserPromptSubmit`, optionally `PreToolUse`/`PostToolUse`/`SessionEnd`), the spinner glyph agents put in front of the
+terminal title (Claude Code: `✳ task` when idle, an animated glyph while working), and status-line reports whose
+figures (cost, tokens, context) moved. Working without any new sign for 10 minutes (90 seconds when only status-line
+reports said so) falls back to Idle, since an interrupted turn sends no `Stop`. A workspace shows its most pressing
+pane: Needs Input, then Working, Idle, Stopped. Plain shells get no state.
 
 ## Splitting and focusing panes
 
@@ -36,7 +73,8 @@ memory meters (with memory pressure). ⌘B hides the sidebar; ⌃⌘S (or the bu
 A pane lights up with an orange ring when its program sends a desktop notification (OSC 9 / OSC 777), rings the bell,
 or `cmds notify` targets it — unless it is the pane you are looking at. The sidebar row shows a dot and the
 notification text; a macOS notification appears when cmds is in the background, and a connected iPhone gets one too.
-Focusing the pane clears it; **Pane › Jump to Latest Attention** (⇧⌘U) goes to the most recent one. Setting this up
+Focusing the pane clears the ring; typing in the pane, or its agent working again (see [Agent state](#agent-state)),
+also clears the notification text. **Pane › Jump to Latest Attention** (⇧⌘U) goes to the most recent one. Setting this up
 for coding agents: [ai-agents.md](ai-agents.md#attention-how-a-pane-lights-up).
 
 ## Browser panes

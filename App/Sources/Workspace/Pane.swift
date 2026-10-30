@@ -25,6 +25,14 @@ final class Pane {
     /// Usage of the coding agent running here (Claude Code via `agent.report`, Codex from its session file).
     var agentUsage: AgentUsage?
     var agentSource: AgentSource?
+    /// Hook events, title glyphs and reports of the agent here; `agentActivity` is derived from them
+    /// (`AppController.updateAgentActivity`).
+    var agentSignals = AgentSignals()
+    var agentActivity: AgentActivity = .none
+    /// An agent was seen here in this run.
+    var agentEverSeen = false
+    /// The agent's task: its terminal title without the status glyph (Claude Code: `✳ <topic>`).
+    private(set) var agentTopic: String?
 
     // Resuming agent sessions (AppController+AgentSessions.swift, docs/guide/ai-agents.md "Resuming sessions").
     /// The resumable agent session that ran here last (Claude Code / Codex with a session id). Saved in the session.
@@ -199,8 +207,38 @@ final class Pane {
 extension Pane: TerminalSurfaceDelegate {
     func terminalSurface(_ surface: TerminalSurface, didChangeTitle title: String) {
         guard surface === terminal, !title.isEmpty, title != self.title else { return }
+        let parsed = AgentTitle.parse(title)
+        let previous = AgentTitle.parse(self.title)
         self.title = title
+        let now = Date()
+        if parsed.glyph != nil {
+            let lastChange = agentSignals.titleChangedAt
+            agentSignals.titleGlyph = parsed.glyph
+            agentSignals.titleChangedAt = now
+            if previous.glyph != nil, previous.topic == parsed.topic {
+                // Only the glyph changed: the spinner animates (its frames may include the idle glyph, so a quick
+                // change counts too). No pane change (that would rebuild the sidebar for every frame); the activity
+                // is re-derived instead.
+                if parsed.glyph == .busy || lastChange.map({ now.timeIntervalSince($0) < 1.5 }) == true {
+                    agentSignals.titleAnimatedAt = now
+                }
+                controller?.updateAgentActivity(self, now: now)
+                return
+            }
+        } else if agentSignals.titleGlyph != nil {
+            // The agent's title is gone: the shell took the terminal back, the agent exited.
+            agentSignals.titleGlyph = nil
+            agentSignals.titleChangedAt = nil
+            if agentUsage == nil { agentSignals.endedAt = now }
+        }
+        agentTopic = parsed.topic
+        controller?.updateAgentActivity(self, now: now, emitChange: false)
         controller?.paneDidChange(self)
+    }
+
+    func terminalSurfaceDidReceiveKeyInput(_ surface: TerminalSurface) {
+        guard surface === terminal else { return }
+        controller?.paneDidReceiveKeyInput(self)
     }
 
     func terminalSurface(_ surface: TerminalSurface, didChangeWorkingDirectory path: String) {

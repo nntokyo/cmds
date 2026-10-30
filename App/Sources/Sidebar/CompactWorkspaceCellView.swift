@@ -53,9 +53,29 @@ final class CompactWorkspaceCellView: NSTableCellView {
     func configure(with workspace: Workspace, index: Int) {
         let number = "\(index + 1)"
         if numberLabel.stringValue != number { numberLabel.stringValue = number }
-        dot.isHidden = !workspace.attention
-        numberLabel.textColor = workspace.attention ? .labelColor : .secondaryLabelColor
+        // Same colours as the full row's dot: orange = attention / needs input, accent (pulsing) = working,
+        // green = idle.
+        let color = AgentActivityStyle.dotColor(for: workspace)
+        dot.isHidden = color == nil
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            dot.layer?.backgroundColor = color?.cgColor
+        }
+        let pulsing = workspace.agentActivity == .busy && !workspace.attention
+        if pulsing, dot.layer?.animation(forKey: "pulse") == nil {
+            let pulse = CABasicAnimation(keyPath: "opacity")
+            pulse.fromValue = 1
+            pulse.toValue = 0.25
+            pulse.duration = 0.9
+            pulse.autoreverses = true
+            pulse.repeatCount = .infinity
+            dot.layer?.add(pulse, forKey: "pulse")
+        } else if !pulsing {
+            dot.layer?.removeAnimation(forKey: "pulse")
+        }
+        let needsLook = workspace.attention || workspace.agentActivity == .needsInput
+        numberLabel.textColor = needsLook ? .labelColor : .secondaryLabelColor
         statusKey = nil
+        tooltipText = nil
         updateUsage(with: workspace)
     }
 
@@ -96,14 +116,15 @@ final class CompactWorkspaceCellView: NSTableCellView {
     /// Everything the full row shows.
     @MainActor
     private static func tooltip(_ workspace: Workspace, index: Int) -> String {
-        var lines = [workspace.displayTitle + (index < 9 ? "  ⌘\(index + 1)" : "")]
+        var lines = [workspace.displayTitle + (index < 9 ? "  ⌘\(index + 1)" : "")
+                     + (AgentActivityStyle.badge(for: workspace).map { "  (\($0.text))" } ?? "")]
+        if let topic = workspace.agentTopic { lines.append(topic) }
         if let host = workspace.remoteHost ?? workspace.sshPanes.first?.ssh?.launch.host { lines.append("ssh \(host)") }
         if let branch = workspace.gitBranch { lines.append("⎇ \(branch)") }
         if let cwd = workspace.workingDirectory { lines.append(cwd.abbreviatingHome) }
         if !workspace.ports.isEmpty { lines.append(workspace.ports.map { ":\($0)" }.joined(separator: "  ")) }
         if let agent = workspace.primaryAgent?.usage {
-            let limits = AppController.shared.agentLimitsByKind[agent.agent]?.active(at: Date())?.limits
-            lines.append(AgentFormat.summary(agent, limits: limits, strings: .localized) + (agent.isStale ? String(localized: " (idle)") : ""))
+            lines.append(AgentFormat.summary(agent, limits: [], strings: .localized) + (agent.isStale ? String(localized: " (idle)") : ""))
         }
         if workspace.hasTerminal {
             lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))

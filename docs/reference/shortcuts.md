@@ -44,6 +44,8 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 |---|---|---|
 | Toggle sidebar | ⌘B | View |
 | Compact sidebar (52 pt rail; also the button at the top of the sidebar) | ⌃⌘S | View |
+| Filter workspaces (⌘F while the sidebar has the keyboard; Esc closes) | ⌥⌘F | View |
+| Group workspaces by project | – | View |
 | Enter full screen | ⌃⌘F | View |
 | Minimize | ⌘M | Window |
 | Keyboard shortcuts | ⌘? | Help |

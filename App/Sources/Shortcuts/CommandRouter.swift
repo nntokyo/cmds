@@ -202,6 +202,11 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     @objc func toggleSidebar(_ sender: Any?) { windowController?.toggleSidebar() }
     @objc func toggleCompactSidebar(_ sender: Any?) { windowController?.toggleCompactSidebar() }
+    @objc func filterWorkspaces(_ sender: Any?) { windowController?.showSidebarFilter() }
+    @objc func toggleGroupByProject(_ sender: Any?) {
+        guard let sidebar = windowController?.sidebar else { return }
+        sidebar.setGroupsByProject(!sidebar.groupsByProject)
+    }
 
     @objc func showShortcuts(_ sender: Any?) {
         let alert = NSAlert()
@@ -275,6 +280,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             return controller.focusedPane != nil
         case #selector(toggleCompactSidebar(_:)):
             menuItem.state = windowController?.sidebar.isCompact == true ? .on : .off
+            return true
+        case #selector(toggleGroupByProject(_:)):
+            menuItem.state = windowController?.sidebar.groupsByProject == true ? .on : .off
             return true
         case #selector(toggleZoom(_:)):
             menuItem.state = controller.selectedWorkspace?.zoomedPaneID != nil ? .on : .off

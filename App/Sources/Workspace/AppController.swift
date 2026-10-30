@@ -168,20 +168,102 @@ final class AppController {
             else { process = AgentProcessRef(pid: pid) }
         }
         let appeared = pane.agentUsage?.agent != usage.agent
+        if let previous = pane.agentUsage, Self.reportShowsWork(previous, usage) { pane.agentSignals.reportChangedAt = now }
         pane.agentUsage = usage
         pane.agentSource = .report(process: process)
+        pane.agentSignals.hasUsage = true
         rememberAgentSession(pane, usage: usage)
+        updateAgentActivity(pane, now: now, emitChange: !appeared)
         if appeared { emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id)) }
         scheduleAgentRefresh()
     }
 
-    /// `agent.claude_hook`: a Claude Code hook payload forwarded as is (`cmds-remote.sh hook claude` on a server).
-    /// The transcript is never read (it is a path on another machine); `Stop` uses `last_assistant_message`.
+    /// The figures moved between two status-line reports: the agent called the model (reports are also sent when
+    /// nothing happens, e.g. on a refresh interval).
+    static func reportShowsWork(_ old: AgentUsage, _ new: AgentUsage) -> Bool {
+        old.costUSD != new.costUSD || old.contextTokens != new.contextTokens || old.outputTokens != new.outputTokens
+            || old.contextUsedPercent != new.contextUsedPercent || old.apiDurationMs != new.apiDurationMs
+    }
+
+    /// `agent.claude_hook`: a Claude Code hook payload (`cmds hook claude`, or `cmds-remote.sh hook claude` on a
+    /// server, forwarded as is). The transcript is never read (it may be a path on another machine); `Stop` uses
+    /// `last_assistant_message`. Notification / Stop notify; every event updates the pane's agent state.
     func claudeHook(paneID: String?, input: JSONValue) throws {
         let pane = try resolvePane(paneID)
         let data = try JSONEncoder().encode(input)
-        guard let notification = ClaudeHook.notification(fromHookInput: data, readTranscript: false) else { return }
-        raiseAttention(pane: pane, title: notification.title, body: notification.body)
+        guard let event = ClaudeHook.event(fromHookInput: data, readTranscript: false) else { return }
+        let now = Date()
+        switch event {
+        case .needsInput: pane.agentSignals.hook = .needsInput
+        case .finished: pane.agentSignals.hook = .finished
+        case .working: pane.agentSignals.hook = .busy
+        case .ended:
+            pane.agentSignals.hook = nil
+            pane.agentSignals.endedAt = now
+            // Claude Code exited: its status-line usage goes with it (like a watched process exiting).
+            if pane.agentUsage?.agent == .claude {
+                pane.agentUsage = nil
+                pane.agentSource = nil
+                pane.agentSignals.hasUsage = false
+                forgetAgentSession(pane)
+                scheduleAgentRefresh()
+            }
+        }
+        pane.agentSignals.hookAt = now
+        if case .working = event { clearNotification(of: pane, before: now) }
+        if let notification = event.notification {
+            updateAgentActivity(pane, now: now, emitChange: false)
+            raiseAttention(pane: pane, title: notification.title, body: notification.body)
+        } else {
+            updateAgentActivity(pane, now: now)
+        }
+    }
+
+    /// Re-derives the pane's agent state from its signals. Working again after a notification clears that
+    /// notification (attention and sidebar text). Emits a pane change only when the state changed.
+    func updateAgentActivity(_ pane: Pane, now: Date = Date(), emitChange: Bool = true) {
+        let activity = pane.agentSignals.activity(at: now)
+        if activity == .busy, let busyAt = pane.agentSignals.lastBusyAt {
+            // Evidence from right after the notification still belongs to the turn that raised it.
+            clearNotification(of: pane, before: busyAt.addingTimeInterval(-AgentSignals.reportGrace))
+        }
+        guard activity != pane.agentActivity else { return }
+        pane.agentActivity = activity
+        if activity != .none { pane.agentEverSeen = true }
+        if emitChange { emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id)) }
+    }
+
+    /// The user typed in the pane: its notification has been seen (attention is already cleared by focusing).
+    func paneDidReceiveKeyInput(_ pane: Pane) {
+        // Not one that arrived while typing (the user may not have read it yet).
+        clearNotification(of: pane, before: Date().addingTimeInterval(-1))
+    }
+
+    /// Clears the pane's attention and the workspace's notification text when they came from this pane before `date`.
+    private func clearNotification(of pane: Pane, before date: Date) {
+        guard let workspace = workspace(id: pane.workspaceID) else { return }
+        var changed = false
+        if pane.attention, (pane.attentionDate ?? .distantPast) < date {
+            clearAttention(pane)
+            changed = true
+        }
+        if workspace.notificationPaneID == pane.id, (workspace.notificationDate ?? .distantPast) < date {
+            workspace.notificationText = nil
+            workspace.notificationPaneID = nil
+            workspace.notificationDate = nil
+            changed = true
+        }
+        if changed { emit(.workspace(id: workspace.id)) }
+    }
+
+    /// Sidebar "Clear Notification": drops the workspace's notification text and the attention of all its panes.
+    func clearNotification(workspaceID: String?) throws {
+        let workspace = try resolveWorkspace(workspaceID)
+        for pane in workspace.panes.values where pane.attention { clearAttention(pane) }
+        workspace.notificationText = nil
+        workspace.notificationPaneID = nil
+        workspace.notificationDate = nil
+        emit(.workspace(id: workspace.id))
     }
 
     /// `agent.claude_status`: Claude Code's status-line JSON forwarded as is (`cmds-remote.sh hook claude-status`).
@@ -211,11 +293,15 @@ final class AppController {
                     let gone = exited || (process == nil && now.timeIntervalSince(usage?.updatedAt ?? now) > Self.unwatchedAgentTimeout)
                     if gone { (usage, source) = (nil, nil) }
                     // Only a process seen exiting ends the session; an idle remote agent may still be running.
-                    if exited { forgetAgentSession(pane) }
+                    if exited {
+                        forgetAgentSession(pane)
+                        pane.agentSignals.endedAt = now
+                    }
                 case .codexSession?:
                     if !codex.panes.contains(pane.id) {
                         (usage, source) = (nil, nil)
                         forgetAgentSession(pane)
+                        pane.agentSignals.endedAt = now
                     }
                 case nil:
                     break
@@ -223,7 +309,11 @@ final class AppController {
                 if source == nil || source == .codexSession, let fresh = codex.usage[pane.id] {
                     usage = fresh
                     source = .codexSession
-                    if fresh != pane.agentUsage { rememberAgentSession(pane, usage: fresh) }
+                    if fresh != pane.agentUsage {
+                        rememberAgentSession(pane, usage: fresh)
+                        // Codex wrote to its session file: it is working.
+                        if let old = pane.agentUsage, fresh.updatedAt > old.updatedAt { pane.agentSignals.reportChangedAt = fresh.updatedAt }
+                    }
                 }
                 if var current = usage {
                     current.stale = now.timeIntervalSince(current.updatedAt) > Self.agentStaleAfter ? true : nil
@@ -231,6 +321,9 @@ final class AppController {
                 }
                 let appearedOrGone = (usage?.agent) != (pane.agentUsage?.agent)
                 pane.agentSource = source
+                pane.agentSignals.hasUsage = usage != nil
+                // Also on every scan: spinners stop, busy times out.
+                updateAgentActivity(pane, now: now, emitChange: !appearedOrGone)
                 guard usage != pane.agentUsage else { continue }
                 pane.agentUsage = usage
                 if appearedOrGone { emit(.pane(workspaceID: workspace.id, paneID: pane.id)) }
@@ -330,6 +423,8 @@ final class AppController {
     func setStatus(workspaceID: String?, text: String) throws {
         let workspace = try resolveWorkspace(workspaceID)
         workspace.notificationText = text.isEmpty ? nil : text
+        workspace.notificationPaneID = nil
+        workspace.notificationDate = nil
         emit(.workspace(id: workspace.id))
     }
 
@@ -668,6 +763,8 @@ final class AppController {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
         let text = [title, body].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ": ")
         workspace.notificationText = text.isEmpty ? nil : text
+        workspace.notificationPaneID = text.isEmpty ? nil : pane.id
+        workspace.notificationDate = Date()
         emit(.notification(workspaceID: workspace.id, paneID: pane.id, title: title, body: body))
         if !isVisiblyFocused(pane) {
             pane.setAttention(true)

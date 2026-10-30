@@ -11,15 +11,39 @@ public enum ClaudeHook {
     /// Maximum length of the body shown in the sidebar / notification.
     public static let maxBodyLength = 200
 
+    /// What a hook event means for the pane's agent.
+    public enum Event: Equatable, Sendable {
+        /// `Notification`: permission prompt or waiting for input (notifies).
+        case needsInput(Notification)
+        /// `Stop`: the turn ended (notifies with the first line of the reply).
+        case finished(Notification)
+        /// `UserPromptSubmit`, `PreToolUse`, `PostToolUse`: the agent is working again (clears a stale notification).
+        case working
+        /// `SessionEnd`: Claude Code exits.
+        case ended
+
+        public var notification: Notification? {
+            switch self {
+            case .needsInput(let note), .finished(let note): return note
+            case .working, .ended: return nil
+            }
+        }
+    }
+
     /// Returns nil for events that should not notify (anything but `Notification` / `Stop`, or `Stop` re-entries).
     public static func notification(fromHookInput data: Data, readTranscript: Bool = true) -> Notification? {
+        event(fromHookInput: data, readTranscript: readTranscript)?.notification
+    }
+
+    /// The event of a hook payload; nil for unknown events, invalid JSON and `Stop` re-entries (`stop_hook_active`).
+    public static func event(fromHookInput data: Data, readTranscript: Bool = true) -> Event? {
         guard let input = try? JSONDecoder().decode(JSONValue.self, from: data), case .object = input else { return nil }
         let event = input["hook_event_name"]?.stringValue ?? ""
         let title = input["title"]?.stringValue.flatMap { $0.isEmpty ? nil : $0 } ?? "Claude Code"
         switch event {
         case "Notification":
             let message = input["message"]?.stringValue ?? "Claude Code needs your attention"
-            return Notification(title: title, body: truncate(message))
+            return .needsInput(Notification(title: title, body: truncate(message)))
         case "Stop":
             if input["stop_hook_active"]?.boolValue == true { return nil }
             var summary = input["last_assistant_message"]?.stringValue
@@ -27,10 +51,33 @@ public enum ClaudeHook {
                 summary = lastAssistantText(transcriptPath: (path as NSString).expandingTildeInPath)
             }
             let body = summary.map(firstLine).flatMap { $0.isEmpty ? nil : $0 } ?? "Finished"
-            return Notification(title: title, body: truncate(body))
+            return .finished(Notification(title: title, body: truncate(body)))
+        case "UserPromptSubmit", "PreToolUse", "PostToolUse":
+            return .working
+        case "SessionEnd":
+            return .ended
         default:
             return nil
         }
+    }
+
+    /// The payload the CLI sends to the app (`agent.claude_hook`): only the fields the app uses, with `Stop`'s summary
+    /// already taken from the transcript (the app never reads files named in a payload).
+    public static func forwardedInput(fromHookInput data: Data, event: Event) -> JSONValue {
+        let input = (try? JSONDecoder().decode(JSONValue.self, from: data)) ?? .object([:])
+        var object: [String: JSONValue] = [:]
+        if let name = input["hook_event_name"]?.stringValue { object["hook_event_name"] = .string(name) }
+        switch event {
+        case .needsInput(let note):
+            if let title = note.title { object["title"] = .string(title) }
+            object["message"] = .string(note.body)
+        case .finished(let note):
+            if let title = note.title { object["title"] = .string(title) }
+            object["last_assistant_message"] = .string(note.body)
+        case .working, .ended:
+            break
+        }
+        return .object(object)
     }
 
     /// Text of the last assistant message in a Claude Code JSONL transcript (reads only the file's tail).
