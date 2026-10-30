@@ -1,4 +1,5 @@
 import AppKit
+import UniformTypeIdentifiers
 import CmdsCore
 
 /// Target of all app-specific menu items. Menu items have explicit targets so key equivalents work
@@ -73,6 +74,90 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             }
         }
         if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: open) } else { open(panel.runModal()) }
+    }
+
+    // MARK: Export / import (AppController+Transfer.swift)
+
+    @objc func exportWorkspaces(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        let bundle: WorkspaceBundle
+        do {
+            bundle = try controller.exportBundle()
+        } catch {
+            return showTransferError(String(localized: "Cannot export workspaces"), error)
+        }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "cmds-workspaces.json"
+        panel.allowedContentTypes = [.json]
+        panel.message = String(localized: "Workspaces and their agent sessions, to import into another cmds")
+        let save: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard response == .OK, let url = panel.url else { return }
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+                try encoder.encode(bundle).write(to: url, options: .atomic)
+                try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+            } catch {
+                self?.showTransferError(String(localized: "Cannot export workspaces"), error)
+            }
+        }
+        if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: save) } else { save(panel.runModal()) }
+    }
+
+    @objc func importWorkspaces(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.json]
+        panel.message = String(localized: "Choose a workspace file exported from cmds")
+        panel.prompt = String(localized: "Import")
+        let open: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard let self, response == .OK, let url = panel.url else { return }
+            let bundle: WorkspaceBundle
+            do {
+                let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+                guard size <= WorkspaceBundle.maxBytes else { throw TransferError("bundle is too large (max \(WorkspaceBundle.maxBytes) bytes)") }
+                bundle = try WorkspaceBundle.read(try Data(contentsOf: url))
+            } catch {
+                return self.showTransferError(String(localized: "Cannot import workspaces"), error)
+            }
+            DispatchQueue.main.async { self.confirmImport(bundle) }
+        }
+        if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: open) } else { open(panel.runModal()) }
+    }
+
+    /// With workspaces open: add the imported ones after them, or replace them.
+    private func confirmImport(_ bundle: WorkspaceBundle) {
+        guard !controller.workspaces.isEmpty else {
+            controller.importBundle(bundle)
+            return
+        }
+        let alert = NSAlert()
+        let count = bundle.workspaces.count
+        let sessions = bundle.agentSessionCount
+        alert.messageText = String(localized: "Import Workspaces")
+        alert.informativeText = String(localized: "Workspaces: \(count), agent sessions: \(sessions). Add keeps the open workspaces; Replace closes them.")
+        alert.addButton(withTitle: String(localized: "Add"))
+        alert.addButton(withTitle: String(localized: "Replace"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        let handle: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            switch response {
+            case .alertFirstButtonReturn: self?.controller.importBundle(bundle, mode: .append)
+            case .alertSecondButtonReturn: self?.controller.importBundle(bundle, mode: .replace)
+            default: break
+            }
+        }
+        if let window = windowController?.window { alert.beginSheetModal(for: window, completionHandler: handle) } else { handle(alert.runModal()) }
+    }
+
+    private func showTransferError(_ title: String, _ error: Error) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = title
+        alert.informativeText = (error as? TransferError)?.message ?? (error as? RPCError)?.message ?? error.localizedDescription
+        if let window = windowController?.window { alert.beginSheetModal(for: window) } else { alert.runModal() }
     }
 
     // MARK: Agent sessions

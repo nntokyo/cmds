@@ -59,6 +59,9 @@ enum MainMenu {
         menu.addItem(item("Open Browser Split", #selector(CommandRouter.openBrowser(_:)), "b", [.command, .shift], target: router))
         menu.addItem(item("Open in Preview…", #selector(CommandRouter.openInPreview(_:)), "o", [.command, .shift], target: router))
         menu.addItem(.separator())
+        menu.addItem(item("Export Workspaces…", #selector(CommandRouter.exportWorkspaces(_:)), "", target: router))
+        menu.addItem(item("Import Workspaces…", #selector(CommandRouter.importWorkspaces(_:)), "", target: router))
+        menu.addItem(.separator())
         menu.addItem(item("Close Pane", #selector(CommandRouter.closePane(_:)), "w", target: router))
         menu.addItem(item("Close Workspace", #selector(CommandRouter.closeWorkspace(_:)), "w", [.command, .shift], target: router))
         return menu

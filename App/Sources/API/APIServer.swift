@@ -151,6 +151,25 @@ final class APIServer {
             let pane = try params.string("pane")
             if all, pane != nil { throw RPCError.invalidParams("give either pane or all, not both") }
             return try .from(controller.resumeAgentSessions(paneID: pane, all: all))
+        case "state.export":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods), like state.import.
+            return try .from(controller.exportBundle())
+        case "state.import":
+            let bundle: WorkspaceBundle
+            do {
+                bundle = try WorkspaceBundle.read(try params.json("bundle"))
+            } catch let error as TransferError {
+                throw RPCError.invalidParams(error.message)
+            }
+            let mode = try params.string("mode").map { raw -> ImportMode in
+                guard let mode = ImportMode(rawValue: raw) else { throw RPCError.invalidParams("mode must be append or replace") }
+                return mode
+            } ?? .append
+            let resume = try params.string("resume").map { raw -> AgentResumeMode in
+                guard let mode = AgentResumeMode(rawValue: raw) else { throw RPCError.invalidParams("resume must be ask, always or never") }
+                return mode
+            }
+            return try .from(controller.importBundle(bundle, mode: mode, resume: resume))
         case "remote.location":
             try controller.setRemoteLocation(paneID: try params.string("pane"), cwd: try params.string("cwd"),
                                              branch: try params.string("branch"))

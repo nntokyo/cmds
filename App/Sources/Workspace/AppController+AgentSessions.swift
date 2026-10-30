@@ -90,9 +90,10 @@ extension AppController {
     }
 
     /// Session restore: applies the saved sessions of a workspace (pane indexes in reading order).
-    func restoreAgentSessions(_ saved: [SessionState.PaneAgentSession]?, in workspace: Workspace) {
+    func restoreAgentSessions(_ saved: [SessionState.PaneAgentSession]?, in workspace: Workspace,
+                              mode: AgentResumeMode? = nil) {
         guard let saved, !saved.isEmpty else { return }
-        let mode = AgentResumeSettings.mode
+        let mode = mode ?? AgentResumeSettings.mode
         let panes = workspace.orderedPanes
         for entry in saved {
             guard let pane = panes[safe: entry.paneIndex], pane.kind == .terminal, pane.preview == nil,

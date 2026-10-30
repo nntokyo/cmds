@@ -139,6 +139,24 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
 
 Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting from `CMDS_AGENT_RESUME=ask|always|never`.
 
+## Moving to a new version
+
+To move workspaces with their agent sessions from a running cmds to a newly started one (an update that is not
+a plain relaunch, a second build, another Mac):
+
+1. In the old instance: `cmds export -o ~/cmds-workspaces.json` (or File › Export Workspaces…). Use the CLI of the
+   new build if the old one has no `export`: it falls back to the old APIs (`cmds export --legacy`).
+2. Quit the old instance (its agents end; their sessions stay resumable).
+3. Start the new one.
+4. `cmds import ~/cmds-workspaces.json` (or File › Import Workspaces…). The workspaces come back with their
+   layout and directories; each terminal pane that had a Claude Code / Codex session gets it as resume offer, as
+   after a relaunch: *Ask* shows the banner (`cmds resume --all` resumes all), `--resume always` resumes once each
+   prompt is ready, `--resume never` skips them. `--replace` closes the workspaces that were open.
+
+The session ids and directories must exist where the agent runs: on another Mac copy the agent's own session
+files too (`~/.claude/projects`, `~/.codex/sessions`); SSH panes resume on their server as before. Bundle format
+and checks: [reference/cli.md](../reference/cli.md#moving-workspaces-to-another-cmds).
+
 ## Agents on a server (SSH panes)
 
 Open the server with **File › New SSH Workspace…** or `cmds new --ssh HOST`
