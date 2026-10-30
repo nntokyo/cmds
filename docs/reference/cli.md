@@ -1,14 +1,15 @@
-# cmds command line tool
+# `cmds` command line tool
 
-`cmds` controls the running app over its Unix socket (JSON lines, see [ARCHITECTURE.md](ARCHITECTURE.md#socket-api-json-lines-see-cmdscorerpcswift)).
+> Reference for every `cmds` command, its targeting rules, output and exit codes.
 
-Output and error messages are always English, whatever the app's language: scripts and agents parse them
-(see [ARCHITECTURE.md](ARCHITECTURE.md#localization)).
+`cmds` controls the running app over its Unix socket ([api.md](api.md)). Output and error messages are always
+English, whatever the app's language: scripts and agents parse them
+([internals/localization.md](../internals/localization.md#what-stays-english)).
 
 ## Getting it
 
-- Every terminal opened by cmds has the bundled CLI (`cmds.app/Contents/Resources/bin/cmds`) first on its `PATH`.
-- For other terminals: menu **cmds → Install Command Line Tool…** symlinks `/usr/local/bin/cmds` to the bundled binary
+- Every terminal opened by cmds has the bundled CLI (`cmds.app/Contents/Resources/bin/cmds`) on its `PATH`.
+- For other terminals: **cmds › Install Command Line Tool…** symlinks `/usr/local/bin/cmds` to the bundled binary
   (asks for an administrator password if `/usr/local/bin` is not writable).
 - From source: `swift build --package-path Packages/CmdsCore --product cmds`.
 
@@ -19,7 +20,7 @@ Inside a cmds terminal the CLI sends `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` as exp
 the focused pane of the selected workspace is used. Browser commands without `--pane` use the focused browser pane of
 the current workspace, else its first browser pane.
 
-The socket is `$CMDS_SUPPORT_DIR/cmds.sock` (isolated test instances, see [ARCHITECTURE.md](ARCHITECTURE.md#testing-with-an-isolated-instance)),
+The socket is `$CMDS_SUPPORT_DIR/cmds.sock` (isolated test instances, see [internals/testing.md](../internals/testing.md#isolated-instances)),
 else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `--socket PATH` overrides all of them.
 
 ## Commands
@@ -28,10 +29,10 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 |---|---|
 | `cmds ping` / `cmds identify` | Check the app is up / show version, pid, socket path |
 | `cmds ls` | Workspaces (branch, cwd, ports, `CPU 12% · 1.2 GB`, `!` attention, sidebar text) with a tree of panes (`>` focused) |
-| `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core), plus an `awake` line (idle-sleep assertion, whether closing the lid sleeps the Mac; JSON `keepAwake`, see [ARCHITECTURE.md](ARCHITECTURE.md#keeping-the-mac-awake)). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
-| `cmds sync` | iOS sync status (read-only): listener port, Bonjour, Bluetooth (permission `authorization`, peripheral state, advertising, PSM), SSH remote access, and each connection (device, authenticated, peer `ip` / `bluetooth:…` / `ssh:…`, panes, bytes, connected for). `--json` for the full report; see [SYNC.md](SYNC.md#testing-on-a-device) |
+| `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core), plus an `awake` line (idle-sleep assertion, whether closing the lid sleeps the Mac; JSON `keepAwake`, see [Keeping the Mac awake](../guide/workspaces-and-panes.md#keeping-the-mac-awake)). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
+| `cmds sync` | iOS sync status (read-only): listener port, Bonjour, Bluetooth (permission `authorization`, peripheral state, advertising, PSM), SSH remote access, and each connection (device, authenticated, peer `ip` / `bluetooth:…` / `ssh:…`, panes, bytes, connected for). `--json` for the full report; see [Testing sync on a device](../internals/testing.md#testing-sync-on-a-device) |
 | `cmds new [--title T] [--cwd DIR] [-- cmd…]` | New workspace (default cwd: current directory); prints its id |
-| `cmds new --ssh HOST [--remote-cwd DIR] [--title T]` | New SSH workspace ([SSH.md](SSH.md)) |
+| `cmds new --ssh HOST [--remote-cwd DIR] [--title T]` | New SSH workspace ([SSH workspaces](../guide/workspaces-and-panes.md#ssh-workspaces)) |
 | `cmds reconnect [pane]` | Reconnect an SSH pane whose `ssh` exited |
 | `cmds remote-helper` | Print `cmds-remote.sh`, the sh client for servers reached through an SSH pane |
 | `cmds select <id\|index\|title>` | Select a workspace (index is 1-based like ⌘1…⌘9) |
@@ -52,10 +53,10 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds events` | Stream `notification`, `workspace.changed`, `pane.changed`, `workspaces.changed` events as JSON lines |
 | `cmds rpc <method> [json-params\|-]` | Raw API call, e.g. `cmds rpc pane.split '{"direction":"down"}'` |
 | `cmds agents` | Coding agents in cmds panes: per pane the figures of Claude Code's status line (`ctx 53% 527k/1M │ $117.99 ($34.53/h) │ ⏱ 3h25m api 3h40m(107%) │ +17642 -330 │ cache ●98%`) or Codex context/tokens, then account limits per agent (5h / 7d / spend, reset times). `cmds ls` shows a short agent summary per pane, `cmds stats` the limits |
-| `cmds sessions [--pane P]` | Agent sessions remembered per pane (state `offered` / `waiting` / `running` / `resumed` / `remembered`, id, directory, host, the resume command) and the launch setting ([AGENTS.md](AGENTS.md#resuming-sessions)) |
+| `cmds sessions [--pane P]` | Agent sessions remembered per pane (state `offered` / `waiting` / `running` / `resumed` / `remembered`, id, directory, host, the resume command) and the launch setting ([Resuming sessions](../guide/ai-agents.md#resuming-sessions)) |
 | `cmds resume [--pane P \| --all]` | Resume the session offered in a pane after a restart (default: the current pane) or in all panes: types `claude --resume <id>` / `codex resume <id>` into the pane's shell once its prompt is ready |
-| `cmds hook claude` | Claude Code hook (below) |
-| `cmds hook claude-status` | Claude Code status-line reporter (below) |
+| `cmds hook claude` | Claude Code `Notification` / `Stop` hook ([setup](../guide/ai-agents.md#claude-code)) |
+| `cmds hook claude-status` | Claude Code status-line reporter ([setup](../guide/ai-agents.md#claude-code)) |
 
 Every command accepts `--json` (print the raw result) and `--help`. Exit codes: `0` ok, `1` the request failed
 (e.g. unknown pane), `2` usage error, `3` the app is not reachable.
@@ -76,49 +77,13 @@ cmds stats --json | jq '.system.memoryPressure'   # 1 normal, 2 warning, 4 criti
 cmds stats --watch 5
 ```
 
-## Claude Code hooks
+## Hooks for coding agents
 
-`cmds hook claude` reads the hook JSON from stdin and calls `notify` for the pane Claude Code runs in:
+`cmds hook claude` and `cmds hook claude-status` are meant to be called by Claude Code; the `settings.json` and
+status-line snippets are in [guide/ai-agents.md](../guide/ai-agents.md#claude-code). Both always exit 0, print nothing
+and do nothing outside cmds, so they never block the agent.
 
-- `Notification` (permission prompts, waiting for input) → `Claude Code: <message>`
-- `Stop` → `Claude Code: <first line of Claude's last reply>` (from the transcript), or `Finished`
+## Raw calls
 
-Other events and `Stop` re-entries (`stop_hook_active`) are ignored. It always exits 0 and does nothing outside cmds,
-so it never blocks Claude Code. Add to `~/.claude/settings.json` (or a project's `.claude/settings.json`):
-
-```json
-{
-  "hooks": {
-    "Notification": [
-      { "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook claude || true" }] }
-    ],
-    "Stop": [
-      { "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook claude || true" }] }
-    ]
-  }
-}
-```
-
-(`command -v` keeps the hook quiet in terminals where `cmds` is not on `PATH`.) The ring lights only when the pane
-is not the focused pane of the key window; the sidebar text always updates.
-
-## Claude Code usage and limits (status line)
-
-`cmds hook claude-status` reads the JSON Claude Code passes to its status-line command and reports model, effort,
-context, cost, durations, lines, prompt cache and the account limits (`rate_limits`: 5-hour, 7-day, spend limit) for
-`$CMDS_PANE_ID` (`agent.report`). It prints nothing, exits 0, reads stdin for at most 150 ms, does not wait for the app
-and is a no-op outside cmds — safe to call from a status-line script. Add one line after the script reads its input
-(`input=$(cat)`):
-
-```sh
-[ -n "$CMDS_PANE_ID" ] && command -v cmds >/dev/null 2>&1 && printf '%s' "$input" | cmds hook claude-status >/dev/null 2>&1
-```
-
-Run it in the foreground (not `&`): the hook finds the Claude process among its ancestors so the pane's usage
-disappears when Claude exits. Without a status-line script, `"statusLine": {"type": "command", "command": "cmds hook
-claude-status"}` in `~/.claude/settings.json` also works (the status line then stays empty).
-
-## Raw protocol
-
-`{"id":1,"method":"workspace.list"}` → `{"id":1,"result":[…]}`. One JSON object per line; responses carry the request `id` (`result` or `error {code, message}`); malformed lines get
-`id: 0` with code `-32700`/`-32600`. Lines are capped at 8 MB. Only processes of the same user may connect.
+`cmds rpc <method> [json-params|-]` sends any API method and prints the result; see [api.md](api.md) for the wire
+format, methods and events.
