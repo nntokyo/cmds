@@ -88,6 +88,13 @@ notifications. Check them on the signed build before publishing it.
 
 ### Mac app
 
+> Without a `cmds-notary` profile (0.1.0 was cut this way), notarize through the Xcode account instead:
+> `xcodebuild archive -scheme CmdsApp -configuration Release -archivePath build/release/cmds.xcarchive`, then
+> `xcodebuild -exportArchive` with ExportOptions `method=developer-id`, `destination=upload`, `teamID=LY354RVYHA`,
+> then repeat `xcodebuild -exportNotarizedApp -archivePath … -exportPath build/release/notarized` until it succeeds
+> (stapled app). Build the DMG from that app as `build-dmg.sh` does and sign it with the Developer ID SHA-1 that does
+> not prompt for keychain access; the app inside is notarized and stapled, the DMG itself is signed only.
+
 1. Start from a clean, up-to-date `master` with the submodule at the committed revision
    (`git submodule update --init`); rebuild GhosttyKit if the submodule moved.
 2. Bump `MARKETING_VERSION` (and `CURRENT_PROJECT_VERSION`) in `project.yml`, move the `Unreleased` entries in
@@ -128,6 +135,9 @@ Static files in `site/public` (no build step), Firebase Hosting in project `star
   so **give a changed file a new name** (`site-2.css`, new image name) instead of overwriting it. DMGs are versioned
   and immutable; `latest.json` / `SHA256SUMS` are cached 5 minutes.
 - The DMG, `SHA256SUMS` and `latest.json` in `site/public/download/` are not committed (`.gitignore`).
+- Firebase Hosting on the Spark plan refuses executable files such as `.dmg` ("Executable files are forbidden"), so
+  the DMG is served from the GitHub release (`https://github.com/nntokyo/cmds/releases/download/vX.Y.Z/cmds-X.Y.Z.dmg`)
+  and the site links there; remove the DMG from `site/public/download/` before deploying.
 - Screenshots come from an isolated demo instance (`CMDS_SUPPORT_DIR`, sync off, a fake home with demo repos,
   synthetic agent reports through `cmds hook claude-status` / `cmds hook claude`) and the companion with `-mock` in
   the simulator, converted to WebP (1600/800 px). Never use screenshots of a real working instance.
