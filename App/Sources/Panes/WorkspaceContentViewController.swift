@@ -1,7 +1,30 @@
 import AppKit
+import CmdsCore
+import Combine
 
 enum FocusDirection {
     case left, right, up, down
+}
+
+/// Root view of the content area: takes workspace drags (sidebar rows, tile headers) for the tiled view and hosts
+/// the drop highlight. Flipped, like the drop-zone math (origin top-left).
+@MainActor
+private final class ContentDropView: NSView {
+    var onUpdate: ((NSDraggingInfo) -> NSDragOperation)?
+    var onExit: (() -> Void)?
+    var onPerform: ((NSDraggingInfo) -> Bool)?
+
+    override var isFlipped: Bool { true }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation { onUpdate?(sender) ?? [] }
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation { onUpdate?(sender) ?? [] }
+    override func draggingExited(_ sender: NSDraggingInfo?) { onExit?() }
+    override func draggingEnded(_ sender: NSDraggingInfo) { onExit?() }
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool { true }
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        defer { onExit?() }
+        return onPerform?(sender) ?? false
+    }
 }
 
 /// Right-hand side of the window: the selected workspace's split tree, or an empty state.
@@ -11,6 +34,12 @@ final class WorkspaceContentViewController: NSViewController {
     private let host = NSView()
     private lazy var emptyState = EmptyStateView { [weak self] in self?.controller.createWorkspace() }
     private var renderedKey: String?
+    private let dropHighlight = TileDropHighlightView()
+    /// The grid on screen (tiled view), for the shape of the automatic layout.
+    private weak var grid: TileGridView?
+
+    /// Tiles per row of the grid on screen (empty when not tiled or zoomed).
+    var tileGridShape: [Int] { grid?.shape ?? [] }
 
     init(controller: AppController) {
         self.controller = controller
@@ -21,18 +50,100 @@ final class WorkspaceContentViewController: NSViewController {
     required init?(coder: NSCoder) { fatalError() }
 
     override func loadView() {
-        let view = NSView()
+        let view = ContentDropView()
+        view.registerForDraggedTypes([.cmdsWorkspace])
+        view.onUpdate = { [weak self] info in self?.dragUpdated(info) ?? [] }
+        view.onExit = { [weak self] in self?.dropHighlight.show(nil) }
+        view.onPerform = { [weak self] info in self?.performDrop(info) ?? false }
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor(calibratedWhite: 0.09, alpha: 1).cgColor
         host.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(host)
+        singleSubagentStrip.translatesAutoresizingMaskIntoConstraints = false
+        singleSubagentStrip.isHidden = true
+        view.addSubview(singleSubagentStrip)
+        singleSubagentStripHeight = singleSubagentStrip.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
             host.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            host.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            host.bottomAnchor.constraint(equalTo: singleSubagentStrip.topAnchor),
+            singleSubagentStrip.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            singleSubagentStrip.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            singleSubagentStrip.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            singleSubagentStripHeight,
         ])
+        view.addSubview(dropHighlight)
         self.view = view
+        subagentObservers = [
+            controller.subagentChanges.sink { [weak self] in self?.updateSubagents() },
+            NotificationCenter.default.publisher(for: AppSettings.didChange)
+                .sink { [weak self] _ in MainActor.assumeIsolated { self?.updateSubagents() } },
+        ]
+    }
+
+    // MARK: - Subagents (Settings › Agents › Show subagents)
+
+    /// Under the single workspace (Show subagents: Everywhere).
+    private let singleSubagentStrip = SubagentStripView()
+    private var singleSubagentStripHeight: NSLayoutConstraint!
+    private var subagentObservers: [AnyCancellable] = []
+
+    /// Subagent cards of every tile, or of the single workspace; cheap enough for the 1 s activity ticks.
+    func updateSubagents() {
+        guard isViewLoaded else { return }
+        let display = AppSettings.shared.showSubagents
+        let tiling = controller.isTiling && !tileViews.isEmpty
+        if tiling {
+            for (id, tile) in tileViews {
+                tile.updateSubagents(controller.workspace(id: id)?.subagents ?? [], shown: display != .off)
+            }
+        }
+        let single = !tiling && display == .everywhere ? controller.selectedWorkspace?.subagents ?? [] : []
+        singleSubagentStrip.isHidden = single.isEmpty
+        singleSubagentStripHeight.constant = single.isEmpty ? 0 : SubagentStripView.height
+        singleSubagentStrip.update(single)
+    }
+
+    // MARK: - Dropping workspaces (tiled view by drag)
+
+    /// Tile under the drag, its drop zone and the highlight; nil when the drop would change nothing.
+    private func dropTarget(for info: NSDraggingInfo) -> (moving: [String], target: String, zone: TileDropZone, highlight: NSRect)? {
+        let moving = info.cmdsWorkspaceIDs
+        guard !moving.isEmpty, let arrangement = controller.displayedTileArrangement else { return nil }
+        let point = view.convert(info.draggingLocation, from: nil)
+        var frames: [String: NSRect] = [:]
+        if controller.isTiling {
+            for (id, tile) in tileViews where tile.window != nil { frames[id] = tile.convert(tile.bounds, to: view) }
+        } else if let id = controller.selectedWorkspaceID, controller.selectedWorkspace?.root != nil {
+            frames[id] = host.convert(host.bounds, to: view)
+        }
+        guard let (target, frame) = frames.first(where: { $0.value.contains(point) }) else { return nil }
+        let zone = TileDropZone.zone(at: point, in: frame)
+        guard arrangement.dropping(moving, on: target, zone: zone) != nil else { return nil }
+        let row = arrangement.position(of: target).map { arrangement.rows[$0.row] } ?? [target]
+        let rowFrame = row.compactMap { frames[$0] }.reduce(frame) { $0.union($1) }
+        return (moving, target, zone, zone.highlight(tile: frame, row: rowFrame))
+    }
+
+    private func dragUpdated(_ info: NSDraggingInfo) -> NSDragOperation {
+        guard let drop = dropTarget(for: info) else {
+            dropHighlight.show(nil)
+            return []
+        }
+        dropHighlight.show(drop.highlight)
+        return info.cmdsDropOperation
+    }
+
+    private func performDrop(_ info: NSDraggingInfo) -> Bool {
+        guard let drop = dropTarget(for: info) else { return false }
+        dropHighlight.show(nil)
+        // After the drag session: the drop rebuilds the tiles, the header that started a tile drag included.
+        let (moving, target, zone) = (drop.moving, drop.target, drop.zone)
+        DispatchQueue.main.async { [weak self] in
+            self?.controller.dropOnTile(moving, target: target, zone: zone)
+        }
+        return true
     }
 
     /// Tiles of the tiled view by workspace id (empty in the single view).
@@ -40,6 +151,7 @@ final class WorkspaceContentViewController: NSViewController {
 
     /// Rebuilds the view tree only when the workspace(s), structure or zoom changed; otherwise updates rings.
     func render() {
+        defer { updateSubagents() }
         if controller.isTiling {
             renderTiles()
             return
@@ -68,7 +180,8 @@ final class WorkspaceContentViewController: NSViewController {
         let zoomed = controller.tileZoomedWorkspaceID.flatMap(controller.workspace(id:))
         let shown = zoomed.map { [$0] } ?? tiles
         let structure = shown.map { "\($0.id)|\($0.zoomedPaneID ?? "-")|\($0.root?.structureKey ?? "")" }
-        let key = "tiles|\(zoomed?.id ?? "-")|\(controller.hiddenTileCount)|" + structure.joined(separator: ";")
+        let shape = controller.tileArrangement.map { $0.shape.map(String.init).joined(separator: ",") } ?? "auto"
+        let key = "tiles|\(zoomed?.id ?? "-")|\(controller.hiddenTileCount)|\(shape)|" + structure.joined(separator: ";")
         if key != renderedKey {
             renderedKey = key
             rebuild {
@@ -82,16 +195,23 @@ final class WorkspaceContentViewController: NSViewController {
                         self?.activateTile(id)
                         self?.controller.toggleTileZoom()
                     }
+                    tile.onDraggedOut = { [weak self] in self?.controller.removeFromTiles(id) }
                     views[id] = tile
                     return tile
                 }
                 self.tileViews = views
-                if zoomed != nil, let only = tiles.first { return only }
-                return TileGridView(tiles: tiles, hidden: self.controller.hiddenTileCount,
+                if zoomed != nil, let only = tiles.first {
+                    self.grid = nil
+                    return only
+                }
+                let grid = TileGridView(tiles: tiles, hidden: self.controller.hiddenTileCount,
+                                    fixedShape: self.controller.tileArrangement?.shape,
                                     loadRatios: { [weak self] ids, shape in self?.controller.tileRatios(for: ids, shape: shape) },
                                     saveRatios: { [weak self] ratios, ids, shape in
                                         self?.controller.setTileRatios(ratios, for: ids, shape: shape)
                                     })
+                self.grid = grid
+                return grid
             }
         }
         for workspace in shown {

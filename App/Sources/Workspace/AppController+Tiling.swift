@@ -23,6 +23,8 @@ extension AppController {
         case .all:
             return visible
         case .selected(let ids):
+            // A dragged arrangement has its own order.
+            if let tileArrangement { return tileArrangement.ids.filter(known.contains) }
             let chosen = Set(ids)
             // Sidebar order; members hidden by the filter keep their place after the visible ones.
             let order = visible + workspaces.map(\.id).filter { !visible.contains($0) }
@@ -59,12 +61,14 @@ extension AppController {
         case .off: mode = .off
         }
         return TileStatus(mode: mode, workspaces: ids, active: selectedWorkspaceID,
-                          zoomed: ids.isEmpty ? nil : tileZoomedWorkspaceID, hidden: hiddenTileCount)
+                          zoomed: ids.isEmpty ? nil : tileZoomedWorkspaceID, hidden: hiddenTileCount,
+                          rows: ids.isEmpty ? nil : tileArrangement?.rows)
     }
 
     /// Switches the tiled view. `active` (else the selected workspace if tiled, else the first tile) gets the keyboard.
-    /// A set of fewer than two workspaces turns tiling off.
-    func setTiling(_ mode: TileMode, active: String? = nil) throws {
+    /// A set of fewer than two workspaces turns tiling off. A dragged arrangement adapts to a changed set (kept rows,
+    /// new tiles at the end) unless `keepArrangement` is false (`cmds tile` with workspaces: automatic grid again).
+    func setTiling(_ mode: TileMode, active: String? = nil, keepArrangement: Bool = true) throws {
         if case .selected(let ids) = mode {
             for id in ids where workspace(id: id) == nil { throw RPCError.notFound("workspace not found: \(id)") }
         }
@@ -75,7 +79,12 @@ extension AppController {
             mode = unique.count >= 2 ? .selected(unique) : .off
             if unique.count >= 2 { lastTileSelection = unique }
         }
+        let arrangement: TileArrangement? = {
+            guard keepArrangement, case .selected(let ids) = mode, let tileArrangement else { return nil }
+            return tileArrangement.reconciled(with: ids)
+        }()
         tileMode = mode
+        tileArrangement = arrangement
         if !isTiling { tileZoomedWorkspaceID = nil }
         let tiles = tiledWorkspaceIDs
         if let zoomed = tileZoomedWorkspaceID, !tiles.contains(zoomed) { tileZoomedWorkspaceID = nil }
@@ -138,8 +147,69 @@ extension AppController {
         if tileZoomedWorkspaceID == id { tileZoomedWorkspaceID = nil }
         if case .selected(let ids) = tileMode {
             let remaining = ids.filter { $0 != id }
+            let arrangement = tileArrangement?.removing([id])
             tileMode = remaining.count >= 2 ? .selected(remaining) : .off
+            if remaining.count >= 2 { tileArrangement = arrangement }
         }
+    }
+
+    // MARK: - Arranging by drag and ⌃⇧⌘ + arrow
+
+    /// What the content area shows as rows: the tiles (dragged arrangement, else the automatic grid on screen), or
+    /// the selected workspace alone.
+    var displayedTileArrangement: TileArrangement? {
+        guard isTiling else { return selectedWorkspaceID.map { TileArrangement(rows: [[$0]]) } }
+        if let tileArrangement { return tileArrangement }
+        let ids = tiledWorkspaceIDs
+        let shape = currentTileShape?() ?? []
+        return TileArrangement.auto(ids: ids, shape: shape.reduce(0, +) == ids.count ? shape : TileLayout.shape(count: ids.count, aspect: 1.6))
+    }
+
+    /// Shows `arrangement` (from now on the grid keeps its rows); `active` gets the keyboard. One workspace left: the
+    /// normal view of it.
+    func applyTileArrangement(_ arrangement: TileArrangement, active: String?) {
+        let ids = arrangement.ids.filter { workspace(id: $0) != nil }
+        guard ids.count >= 2 else {
+            try? setTiling(.off, active: ids.first ?? active)
+            return
+        }
+        tileZoomedWorkspaceID = nil
+        tileMode = .selected(ids)
+        tileArrangement = arrangement.removing(arrangement.ids.filter { workspace(id: $0) == nil })
+        lastTileSelection = ids
+        let target = active.flatMap { ids.contains($0) ? $0 : nil }
+            ?? selectedWorkspaceID.flatMap { ids.contains($0) ? $0 : nil } ?? ids[0]
+        if target != selectedWorkspaceID { try? selectWorkspace(id: target) }
+        emit(.workspaces)
+        focusedPane?.focus()
+    }
+
+    /// Workspaces (sidebar rows or a tile header) dropped on `zone` of the tile `target` (or of the single workspace
+    /// shown). false when the drop would change nothing.
+    @discardableResult
+    func dropOnTile(_ moving: [String], target: String, zone: TileDropZone) -> Bool {
+        guard moving.allSatisfy({ workspace(id: $0) != nil }),
+              let result = displayedTileArrangement?.dropping(moving, on: target, zone: zone) else { return false }
+        applyTileArrangement(result, active: moving.first)
+        return true
+    }
+
+    /// A tile dragged back onto the sidebar (or out of the window with ⌥): leaves the tiled view.
+    func removeFromTiles(_ id: String) {
+        guard isTiling, let arrangement = displayedTileArrangement, arrangement.ids.contains(id) else { return }
+        let rest = arrangement.removing([id])
+        let active = selectedWorkspaceID == id ? rest.ids.first : selectedWorkspaceID
+        applyTileArrangement(rest, active: active)
+    }
+
+    var canMoveActiveTile: Bool { isTiling && tileZoomedWorkspaceID == nil }
+
+    /// View › Move Tile Left/Right/Up/Down (⌃⇧⌘ + arrow) for the active tile. Beeps when it cannot move that way.
+    func moveActiveTile(_ direction: TileArrangement.Direction) -> Bool {
+        guard canMoveActiveTile, let id = selectedWorkspaceID,
+              let result = displayedTileArrangement?.moving(id, direction) else { return false }
+        applyTileArrangement(result, active: id)
+        return true
     }
 
     // MARK: - Divider positions
@@ -172,8 +242,9 @@ extension AppController {
         case .selected(let ids):
             let indices = ids.compactMap { index[$0] }
             if indices.count >= 2 {
+                let rows = tileArrangement.map { $0.rows.map { $0.compactMap { index[$0] } }.filter { !$0.isEmpty } }
                 state.tiling = .init(all: false, workspaceIndices: indices,
-                                     zoomedIndex: tileZoomedWorkspaceID.flatMap { index[$0] })
+                                     zoomedIndex: tileZoomedWorkspaceID.flatMap { index[$0] }, rows: rows)
             }
         }
         let layouts = tileRatios.compactMap { key, ratios -> SessionState.TileLayoutState? in
@@ -205,6 +276,11 @@ extension AppController {
             guard members.count >= 2 else { return }
             tileMode = .selected(members)
             lastTileSelection = members
+            if let rows = tiling.rows {
+                let arrangement = TileArrangement(rows: rows.map(ids))
+                // Only when it still holds exactly the set (else the automatic grid).
+                if Set(arrangement.ids) == Set(members) { tileArrangement = arrangement }
+            }
         }
         let tiles = tiledWorkspaceIDs
         if let selected = selectedWorkspaceID, !tiles.contains(selected), let first = tiles.first {

@@ -28,6 +28,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | Command | What it does |
 |---|---|
 | `cmds ping` / `cmds identify` | Check the app is up / show version, pid, socket path |
+| `cmds quit` | Quit the app without the "agents are running" confirmation (scripted updates: `cmds export` → `cmds quit` → start the new build → `cmds import`) |
 | `cmds ls` | Workspaces (branch, cwd, ports, `CPU 12% · 1.2 GB`, `!` attention, sidebar text) with a tree of panes (`>` focused) |
 | `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core), plus an `awake` line (idle-sleep assertion, whether closing the lid sleeps the Mac; JSON `keepAwake`, see [Keeping the Mac awake](../guide/workspaces-and-panes.md#keeping-the-mac-awake)). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
 | `cmds sync` | iOS sync status (read-only): listener port, Bonjour, Bluetooth (permission `authorization`, peripheral state, advertising, PSM), SSH remote access, and each connection (device, authenticated, peer `ip` / `bluetooth:…` / `ssh:…`, panes, bytes, connected for). `--json` for the full report; see [Testing sync on a device](../internals/testing.md#testing-sync-on-a-device) |
@@ -36,7 +37,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds reconnect [pane]` | Reconnect an SSH pane whose `ssh` exited |
 | `cmds remote-helper` | Print `cmds-remote.sh`, the sh client for servers reached through an SSH pane |
 | `cmds select <id\|index\|title>` | Select a workspace (index is 1-based like ⌘1…⌘9) |
-| `cmds tile [--all \| --off \| <ws>…]` | Tiled view: show the given workspaces (ids, indexes or titles; at least two) side by side, `--all` every workspace the sidebar shows (up to 9), `--off` one workspace again; without arguments prints what is tiled (`tiled (selected): *w2 w3`, `*` = active). See [Tiled view](../guide/workspaces-and-panes.md#tiled-view) |
+| `cmds tile [--all \| --off \| <ws>…]` | Tiled view: show the given workspaces (ids, indexes or titles; at least two) side by side, `--all` every workspace the sidebar shows (up to 9), `--off` one workspace again; without arguments prints what is tiled (`tiled (selected): *w2 w3`, `*` = active; rows of a dragged arrangement are separated by ` / `, e.g. `w1 / *w2 w3`). Workspaces given here get the automatic layout. See [Tiled view](../guide/workspaces-and-panes.md#tiled-view) |
 | `cmds close [ws]` / `cmds rename [ws] <title>` | Close / rename a workspace (default: current) |
 | `cmds split [right\|down] [--pane P] [--browser URL \| --ssh HOST [--remote-cwd DIR]] [--cwd DIR] [--no-focus] [-- cmd…]` | Split a pane; prints the new pane id (`--no-focus` keeps the keyboard where it is). Splitting an SSH pane without `--cwd`/command connects to the same host again |
 | `cmds panes [--workspace W]` | List panes |
@@ -54,6 +55,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds events` | Stream `notification`, `workspace.changed`, `pane.changed`, `workspaces.changed` events as JSON lines |
 | `cmds rpc <method> [json-params\|-]` | Raw API call, e.g. `cmds rpc pane.split '{"direction":"down"}'` |
 | `cmds agents` | Coding agents in cmds panes: per pane the figures of Claude Code's status line (`ctx 53% 527k/1M │ $117.99 ($34.53/h) │ ⏱ 3h25m api 3h40m(107%) │ +17642 -330 │ cache ●98%`) or Codex context/tokens, then account limits per agent (5h / 7d / spend, reset times). `cmds ls` shows a short agent summary per pane, `cmds stats` the limits |
+| `cmds agents --subagents [--pane P]` | Claude Code subagents (running and just finished): pane, state, elapsed time, type · description, current action, tokens ([ai-agents.md](../guide/ai-agents.md#subagents)) |
 | `cmds sessions [--pane P]` | Agent sessions remembered per pane (state `offered` / `waiting` / `running` / `resumed` / `remembered`, id, directory, host, the resume command) and the launch setting ([Resuming sessions](../guide/ai-agents.md#resuming-sessions)) |
 | `cmds resume [--pane P \| --all]` | Resume the session offered in a pane after a restart (default: the current pane) or in all panes: types `claude --resume <id>` / `codex resume <id>` into the pane's shell once its prompt is ready |
 | `cmds export [-o file] [--legacy]` | Workspaces and their agent sessions as a JSON bundle (stdout, or `-o` file created mode 600); for `cmds import` in another (newer) cmds. Falls back to a legacy export from `workspace.list` / `agent.list` when the app has no `state.export` ([below](#moving-workspaces-to-another-cmds)) |

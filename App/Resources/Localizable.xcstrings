@@ -364,6 +364,16 @@
         }
       }
     },
+    "%@ tokens": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ トークン"
+          }
+        }
+      }
+    },
     "%lld d ago": {
       "comment": "age of agent figures",
       "localizations": {
@@ -421,6 +431,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このワークスペースのターミナルのプロセス%lld個"
+          }
+        }
+      }
+    },
+    "%lld subagents running": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個のサブエージェントが実行中"
           }
         }
       }
@@ -591,6 +611,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アドバタイズ中（PSM %@）"
+          }
+        }
+      }
+    },
+    "Agents": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェント"
           }
         }
       }
@@ -961,12 +991,42 @@
         }
       }
     },
+    "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code のサブエージェントを、各ワークスペースの下にカードで表示します（現在の操作つき）。SubagentStart / SubagentStop フックが必要です。"
+          }
+        }
+      }
+    },
     "Clear Notification": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "通知を消去"
+          }
+        }
+      }
+    },
+    "Clear the filter and turn off Group by Project to reorder workspaces.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを並べ替えるには、絞り込みを解除して「プロジェクトでまとめる」をオフにしてください。"
+          }
+        }
+      }
+    },
+    "Clear the filter to reorder workspaces.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを並べ替えるには、絞り込みを解除してください。"
           }
         }
       }
@@ -1301,6 +1361,17 @@
         }
       }
     },
+    "Everywhere": {
+      "comment": "show subagents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常に表示"
+          }
+        }
+      }
+    },
     "Expand Sidebar": {
       "localizations": {
         "ja": {
@@ -1594,6 +1665,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースを読み込む…"
+          }
+        }
+      }
+    },
+    "In Tiled View Only": {
+      "comment": "show subagents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイル表示のときだけ"
           }
         }
       }
@@ -1980,6 +2062,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "しまう"
+          }
+        }
+      }
+    },
+    "Move Tile Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを下へ移動"
+          }
+        }
+      }
+    },
+    "Move Tile Left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを左へ移動"
+          }
+        }
+      }
+    },
+    "Move Tile Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを右へ移動"
+          }
+        }
+      }
+    },
+    "Move Tile Up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを上へ移動"
           }
         }
       }
@@ -2838,6 +2960,26 @@
         }
       }
     },
+    "Show Subagents": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェントを表示"
+          }
+        }
+      }
+    },
+    "Show subagents:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェントの表示:"
+          }
+        }
+      }
+    },
     "Showing %lld of %lld workspaces": {
       "comment": "tiled view: more workspaces were selected than fit",
       "localizations": {
@@ -3014,6 +3156,37 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止"
+          }
+        }
+      }
+    },
+    "Sub %lld": {
+      "comment": "sidebar: running subagents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブ %lld"
+          }
+        }
+      }
+    },
+    "Subagent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェント"
+          }
+        }
+      }
+    },
+    "Subagents": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェント"
           }
         }
       }
@@ -3302,6 +3475,16 @@
         }
       }
     },
+    "Turn off Group by Project to reorder workspaces.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを並べ替えるには、「プロジェクトでまとめる」をオフにしてください。"
+          }
+        }
+      }
+    },
     "Turn off Keep Awake With Lid Closed?": {
       "localizations": {
         "ja": {
@@ -3469,6 +3652,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "作業中"
+          }
+        }
+      }
+    },
+    "Working…": {
+      "comment": "subagent without a current tool call",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中…"
           }
         }
       }
@@ -3783,6 +3977,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースのタイトル（省略可）"
+          }
+        }
+      }
+    },
+    "Quit cmds?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds を終了しますか？"
+          }
+        }
+      }
+    },
+    "%lld AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds の中で AI エージェントのセッションが %lld 件動いています。終了すると中断されます（保存されたセッションから後で再開できます）。"
+          }
+        }
+      }
+    },
+    "Quit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了"
           }
         }
       }

@@ -104,6 +104,24 @@ enum Format {
         return out
     }
 
+    /// `cmds agents --subagents`: `> p3  running  1m05s  Explore · Find the hook code  Read Sources/main.swift  12k tokens`.
+    static func subagents(_ list: SubagentList, currentPane: String?) -> String {
+        guard !list.subagents.isEmpty else { return "no subagents\n" }
+        let paneWidth = list.subagents.map(\.pane.count).max() ?? 0
+        var out = ""
+        for agent in list.subagents {
+            let marker = agent.pane == currentPane ? ">" : " "
+            var line = "\(marker) \(agent.pane.padding(toLength: paneWidth, withPad: " ", startingAt: 0))  "
+                + agent.state.rawValue.padding(toLength: 7, withPad: " ", startingAt: 0) + "  "
+                + duration(agent.elapsedSeconds).padding(toLength: 6, withPad: " ", startingAt: 0) + "  "
+                + oneLine(agent.title.isEmpty ? agent.id : agent.title)
+            if let action = agent.action { line += "  " + oneLine(action) }
+            if let tokens = agent.tokens { line += "  \(AgentFormat.tokens(tokens)) tokens" }
+            out += line + "\n"
+        }
+        return out
+    }
+
     /// `> p3  offered  Claude Code session “Fix login” (Opus, 2 h ago)` + id, directory and resume command.
     static func agentSessions(_ list: AgentSessionList, currentPane: String?, now: Date = Date()) -> String {
         var out = "resume on launch: \(list.mode.rawValue)\n"

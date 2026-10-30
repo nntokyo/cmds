@@ -7,6 +7,9 @@ extension CLI {
             let result = try ctx.call("system.ping")
             ctx.json ? ctx.printJSON(result) : print("pong")
         },
+        Command(name: "quit", usage: "quit", summary: "Quit the app without the running-agents confirmation (for scripted updates).") { ctx in
+            try ctx.call("app.quit")
+        },
         Command(name: "identify", usage: "identify", summary: "Show app version, pid and socket path.") { ctx in
             let result = try ctx.call("system.identify")
             if ctx.json { return ctx.printJSON(result) }
@@ -20,13 +23,24 @@ extension CLI {
             let workspaces = try perform { try result.decode([WorkspaceInfo].self) }
             print(Format.workspaces(workspaces, currentPane: ctx.envPane), terminator: "")
         },
-        Command(name: "agents", usage: "agents",
+        Command(name: "agents", usage: "agents [--subagents [--pane P]]",
                 summary: "Show usage of the AI coding agents in cmds panes (Claude Code, Codex) and account limits.",
                 details: """
                     One line per pane running an agent: context, cost ($/h), session and API time, lines changed, cache
                     (Claude Code, via `cmds hook claude-status` in its status line) or context and tokens (Codex, read
                     from its session file). Then the latest account limits per agent (5-hour / 7-day windows, spend limit).
-                    """) { ctx in
+                    --subagents lists Claude Code subagents instead (running and just finished; SubagentStart /
+                    SubagentStop hooks): pane, state, elapsed time, type and description, current action, tokens.
+                    """,
+                options: ["pane"], flags: ["subagents"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds agents [--subagents [--pane P]]")
+            if ctx.args.has("subagents") {
+                let result = try ctx.call("agent.subagents", ["pane": ctx.args[option: "pane"].json])
+                if ctx.json { return ctx.printJSON(result) }
+                let list = try perform { try result.decode(SubagentList.self) }
+                return print(Format.subagents(list, currentPane: ctx.envPane), terminator: "")
+            }
+            if ctx.args[option: "pane"] != nil { throw CLIError.usage("--pane goes with --subagents") }
             let result = try ctx.call("agent.list")
             if ctx.json { return ctx.printJSON(result) }
             let list = try perform { try result.decode(AgentList.self) }
@@ -168,8 +182,9 @@ extension CLI {
                 details: """
                     Workspaces are ids, 1-based indexes or titles (as for `cmds select`); give at least two. --all tiles
                     every workspace the sidebar shows (its filter applies, up to 9). --off shows only the active
-                    workspace again. Without arguments prints what is tiled. Same as ⌘-click in the sidebar and
-                    View › Tile All Workspaces (⌃⌘T).
+                    workspace again. Without arguments prints what is tiled, in display order (rows the user
+                    arranged by dragging are separated by " / "). Workspaces given here get the automatic layout.
+                    Same as ⌘-click in the sidebar and View › Tile All Workspaces (⌃⌘T).
                     """,
                 flags: ["all", "off"]) { ctx in
             let all = ctx.args.has("all")
@@ -189,8 +204,10 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             let status = try perform { try result.decode(TileStatus.self) }
             guard status.mode != .off else { return print("not tiled") }
-            var line = "tiled (\(status.mode.rawValue)): " + status.workspaces.map { $0 == status.active ? "*\($0)" : $0 }
-                .joined(separator: " ")
+            func names(_ ids: [String]) -> String { ids.map { $0 == status.active ? "*\($0)" : $0 }.joined(separator: " ") }
+            // A user-made arrangement prints its rows, top to bottom, separated by " / ".
+            var line = "tiled (\(status.mode.rawValue)): "
+                + (status.rows.map { $0.map(names).joined(separator: " / ") } ?? names(status.workspaces))
             if let zoomed = status.zoomed { line += "  zoomed \(zoomed)" }
             if status.hidden > 0 { line += "  (\(status.hidden) more not shown)" }
             print(line)
@@ -413,7 +430,7 @@ extension CLI {
             AgentHook.claudeStatus(ctx)
         },
         Command(name: "hook claude", usage: "hook claude",
-                summary: "Claude Code hook: read the hook JSON on stdin; notify (Notification / Stop) and track the agent's state (UserPromptSubmit).",
+                summary: "Claude Code hook: read the hook JSON on stdin; notify (Notification / Stop), track the agent's state (UserPromptSubmit) and its subagents (SubagentStart / SubagentStop).",
                 details: "Always exits 0 so a missing app never blocks Claude Code. See docs/guide/ai-agents.md for the settings.json snippet.") { ctx in
             let input = FileHandle.standardInput.readDataToEndOfFile()
             guard let event = ClaudeHook.event(fromHookInput: input) else { return }

@@ -175,6 +175,12 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         AgentResumeSettings.mode = mode
     }
 
+    /// View › Show Subagents (same setting as Settings › Agents).
+    @objc func setSubagentDisplay(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let display = SubagentDisplay(rawValue: raw) else { return }
+        AppSettings.shared.showSubagents = display
+    }
+
     @objc func focusLeft(_ sender: Any?) { windowController?.focusNeighbor(.left) }
     @objc func focusRight(_ sender: Any?) { windowController?.focusNeighbor(.right) }
     @objc func focusUp(_ sender: Any?) { windowController?.focusNeighbor(.up) }
@@ -187,6 +193,14 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func tileSelected(_ sender: Any?) { controller.restoreTileSelection() }
     @objc func showSingleWorkspace(_ sender: Any?) { try? controller.setTiling(.off) }
     @objc func jumpToAttention(_ sender: Any?) { controller.jumpToLatestAttention() }
+    /// ⌃⇧⌘ + arrow: moves the active tile (beeps at the edge).
+    @objc func moveTileLeft(_ sender: Any?) { moveTile(.left) }
+    @objc func moveTileRight(_ sender: Any?) { moveTile(.right) }
+    @objc func moveTileUp(_ sender: Any?) { moveTile(.up) }
+    @objc func moveTileDown(_ sender: Any?) { moveTile(.down) }
+    private func moveTile(_ direction: TileArrangement.Direction) {
+        if !controller.moveActiveTile(direction) { NSSound.beep() }
+    }
 
     // MARK: Browser
 
@@ -280,6 +294,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(setAgentResumeMode(_:)):
             menuItem.state = (menuItem.representedObject as? String) == AgentResumeSettings.mode.rawValue ? .on : .off
             return true
+        case #selector(setSubagentDisplay(_:)):
+            menuItem.state = (menuItem.representedObject as? String) == AppSettings.shared.showSubagents.rawValue ? .on : .off
+            return true
         case #selector(installRemoteHelper(_:)):
             return controller.focusedPane?.ssh?.connected == true
         case #selector(browserFocusAddress(_:)),
@@ -314,6 +331,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             return controller.canRestoreTileSelection
         case #selector(showSingleWorkspace(_:)):
             return controller.isTiling
+        case #selector(moveTileLeft(_:)), #selector(moveTileRight(_:)), #selector(moveTileUp(_:)),
+             #selector(moveTileDown(_:)):
+            return controller.canMoveActiveTile
         case #selector(selectWorkspace(_:)):
             return controller.workspaces.indices.contains(menuItem.tag)
         case #selector(jumpToAttention(_:)):

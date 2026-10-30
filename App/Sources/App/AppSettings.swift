@@ -37,7 +37,9 @@ final class AppSettings: NSObject {
     static let sidebarTextSizeKey = "SidebarTextSize"
     static let browserZoomKey = "BrowserPageZoom"
     static let previewZoomKey = "PreviewPageZoom"
-    private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey]
+    static let showSubagentsKey = "ShowSubagents"
+    private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
+                               showSubagentsKey]
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
     static let zoomRange: ClosedRange<Double> = 0.5...3
@@ -116,6 +118,12 @@ final class AppSettings: NSObject {
     var previewZoom: Double {
         get { zoom(forKey: Self.previewZoomKey) }
         set { set(newValue == 1 ? nil : newValue, forKey: Self.previewZoomKey) }
+    }
+
+    /// Where Claude Code subagents are shown as cards (Settings › Agents, View › Show Subagents).
+    var showSubagents: SubagentDisplay {
+        get { defaults.string(forKey: Self.showSubagentsKey).flatMap(SubagentDisplay.init(rawValue:)) ?? .tiled }
+        set { set(newValue == .tiled ? nil : newValue.rawValue, forKey: Self.showSubagentsKey) }
     }
 
     private func zoom(forKey key: String) -> Double {

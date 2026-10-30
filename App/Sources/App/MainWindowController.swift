@@ -58,6 +58,7 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         // The tiled view follows the sidebar's order and filter.
         controller.visibleWorkspaceOrder = { [weak self] in self?.sidebar.visibleWorkspaceIDs ?? [] }
         sidebar.onRowsChanged = { [weak self] in self?.controller.tileSourceDidChange() }
+        controller.currentTileShape = { [weak self] in self?.content.tileGridShape ?? [] }
         refresh()
         if Self.storedCompact { setCompactSidebar(true, persist: false) }
     }

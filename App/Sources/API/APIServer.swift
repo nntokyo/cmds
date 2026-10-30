@@ -119,6 +119,11 @@ final class APIServer {
         switch method {
         case "system.ping":
             return ["pong": true]
+        case "app.quit":
+            // Scripted quit (update with export/import): no confirmation; reply first, then quit.
+            AppDelegate.quitWithoutConfirmation = true
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+            return [:]
         case "system.identify":
             let info = Bundle.main.infoDictionary ?? [:]
             return [
@@ -136,6 +141,10 @@ final class APIServer {
 
         case "agent.list":
             return try .from(controller.agentList())
+        case "agent.subagents":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods).
+            return try .from(controller.subagentList(paneID: try params.string("pane"),
+                                                     workspaceID: try params.string("workspace")))
         case "agent.report":
             guard let raw = params.value?["usage"], case .object = raw,
                   let usage = try? raw.decode(AgentUsage.self) else {
@@ -209,7 +218,8 @@ final class APIServer {
                 try controller.setTiling(.all, active: try params.string("active"))
             } else if let ids {
                 guard Set(ids).count >= 2 else { throw RPCError.invalidParams("workspaces must name at least two workspaces") }
-                try controller.setTiling(.selected(ids), active: try params.string("active"))
+                // An explicit set from a script: the automatic grid (a dragged arrangement is dropped).
+                try controller.setTiling(.selected(ids), active: try params.string("active"), keepArrangement: false)
             }
             if let zoom = try params.bool("zoom"), zoom != (controller.tileZoomedWorkspaceID != nil), controller.isTiling {
                 controller.toggleTileZoom()

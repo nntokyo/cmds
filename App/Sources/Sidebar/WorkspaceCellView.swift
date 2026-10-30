@@ -33,6 +33,8 @@ final class WorkspaceCellView: NSTableCellView {
     private let titleLabel = NSTextField(labelWithString: "")
     /// `Working` / `Needs Input` / `Done` / `Idle` / `Stopped`.
     private let stateLabel = NSTextField(labelWithString: "")
+    /// `Sub 3`: running Claude Code subagents (hidden with Show Subagents off).
+    private let subagentLabel = NSTextField(labelWithString: "")
     private let shortcutLabel = NSTextField(labelWithString: "")
     private let closeButton = NSButton()
     private var hovering = false
@@ -130,7 +132,12 @@ final class WorkspaceCellView: NSTableCellView {
         titleRow.spacing = 6
         titleRow.alignment = .centerY
         // Second line: `Working  <task>` (the task replaces the cwd line).
-        statusRow.setViews([stateLabel, topicLabel, directoryLabel], in: .leading)
+        subagentLabel.font = Self.badgeFont
+        subagentLabel.textColor = .systemPurple
+        subagentLabel.setContentHuggingPriority(.required, for: .horizontal)
+        subagentLabel.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        subagentLabel.isHidden = true
+        statusRow.setViews([stateLabel, subagentLabel, topicLabel, directoryLabel], in: .leading)
         for label in [topicLabel, directoryLabel] {
             label.setContentHuggingPriority(.init(1), for: .horizontal)
         }
@@ -240,6 +247,7 @@ final class WorkspaceCellView: NSTableCellView {
         appliedScale = scale
         titleLabel.font = Self.titleFont
         stateLabel.font = Self.badgeFont
+        subagentLabel.font = Self.badgeFont
         shortcutLabel.font = .systemFont(ofSize: SidebarTextSize.size(10))
         for label in [topicLabel, hostLabel, branchLabel, directoryLabel, notificationLabel] { label.font = Self.detailFont }
         portsLabel.font = Self.monoFont
@@ -307,6 +315,16 @@ final class WorkspaceCellView: NSTableCellView {
         }
         indicator.setAccessibilityElement(badge != nil || workspace.attention)
         indicator.setAccessibilityLabel(badge?.text)
+        let subagents = Self.subagentCount(workspace)
+        subagentLabel.isHidden = subagents == 0
+        subagentLabel.stringValue = subagents == 0 ? "" : String(localized: "Sub \(subagents)", comment: "sidebar: running subagents")
+        subagentLabel.toolTip = subagents == 0 ? nil : String(localized: "\(subagents) subagents running")
+    }
+
+    /// Running subagents, 0 with Show Subagents off.
+    @MainActor
+    private static func subagentCount(_ workspace: Workspace) -> Int {
+        AppSettings.shared.showSubagents == .off ? 0 : workspace.runningSubagentCount
     }
 
     private var badge: AgentActivityStyle.Badge?
@@ -344,6 +362,7 @@ final class WorkspaceCellView: NSTableCellView {
     @MainActor
     private static func showsStatusRow(_ workspace: Workspace) -> Bool {
         AgentActivityStyle.badge(for: workspace) != nil || workspace.agentTopic != nil || workspace.workingDirectory != nil
+            || subagentCount(workspace) > 0
     }
 
     /// The usage line depends only on structure (a terminal exists), never on sampled values, so new

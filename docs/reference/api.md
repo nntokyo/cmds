@@ -50,6 +50,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `agent.claude_hook` | `pane?`, `input` (Claude Code hook JSON, object or JSON text) | – (notifies and updates the agent state like `cmds hook claude`; never reads the transcript) |
 | `agent.claude_status` | `pane?`, `input` (status-line JSON) | – (like `cmds hook claude-status`, without a pid) |
 | `agent.list` | – | `{"panes": [{"workspace", "pane", "usage": AgentUsage}], "limits": [AgentLimits]}` |
+| `agent.subagents` | `pane?`, `workspace?` (default: all) | `SubagentList` `{"subagents": [{"id", "workspace", "pane", "agentType"?, "description"?, "state": "running"/"done", "startedAt", "endedAt"?, "action"?, "tokens"?, "elapsedSeconds"}]}`: Claude Code subagents from the `SubagentStart`/`SubagentStop` hooks (dates in seconds since 2001); local socket only |
 | `agent.sessions` | `pane?` (default: all panes) | `AgentSessionList` `{"mode": "ask"/"always"/"never", "sessions": [{"workspace", "pane", "state", "session": AgentSession, "command"?}]}` |
 | `agent.resume` | `pane?` or `all: true` | `{"queued": [pane], "skipped": [{"pane", "reason"}]}` (types the resume command once the pane's prompt is ready; [Resuming sessions](../guide/ai-agents.md#resuming-sessions)) |
 | `state.export` | – | `WorkspaceBundle` (workspaces, layout, per-pane agent sessions; [bundle format](cli.md#moving-workspaces-to-another-cmds)); local socket only |
@@ -59,7 +60,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `workspace.create` | `title?`, `cwd?`, `command?` or `ssh` (host), `remoteCwd?` | `WorkspaceInfo` |
 | `workspace.select` | `id` | – |
 | `workspace.close` | `id` | – |
-| `view.tile` | one of `off: true`, `all: true`, `workspaces` ([id], at least two); `active?` (workspace to give the keyboard); `zoom?` (bool: show the active tile alone); no params = query | `TileStatus` `{"mode": "off"/"all"/"selected", "workspaces": [id] (display order), "active"?, "zoomed"?, "hidden"}` (`hidden` = left out beyond 9). [Tiled view](../guide/workspaces-and-panes.md#tiled-view); local socket only |
+| `view.tile` | one of `off: true`, `all: true`, `workspaces` ([id], at least two); `active?` (workspace to give the keyboard); `zoom?` (bool: show the active tile alone); no params = query | `TileStatus` `{"mode": "off"/"all"/"selected", "workspaces": [id] (display order), "active"?, "zoomed"?, "hidden"}` (`hidden` = left out beyond 9), `"rows"?` ([[id]], top to bottom: only while the user's dragged arrangement is shown; `workspaces` lists the same ids in reading order). Calling with `workspaces` resets to the automatic layout. [Tiled view](../guide/workspaces-and-panes.md#tiled-view); local socket only |
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
 | `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?` | `PaneInfo` |

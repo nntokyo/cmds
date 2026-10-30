@@ -1,29 +1,66 @@
 import AppKit
 import CmdsCore
 
+extension NSPasteboard.PasteboardType {
+    /// A workspace id: dragged from a sidebar row or a tile header (reorder, tile by drag).
+    static let cmdsWorkspace = NSPasteboard.PasteboardType("tokyo.n-n.cmds.workspace")
+    /// Also set when the drag started at a tile header (dropping it on the sidebar takes it out of the tiled view).
+    static let cmdsTile = NSPasteboard.PasteboardType("tokyo.n-n.cmds.tile")
+}
+
+extension NSDraggingInfo {
+    /// Workspace ids on the dragging pasteboard, in item order.
+    var cmdsWorkspaceIDs: [String] {
+        (draggingPasteboard.pasteboardItems ?? []).compactMap { $0.string(forType: .cmdsWorkspace) }
+    }
+
+    var isCmdsTileDrag: Bool { draggingPasteboard.availableType(from: [.cmdsTile]) != nil }
+
+    /// The operation to answer for an accepted cmds drag: move, or copy while ⌥ narrows the source's mask.
+    var cmdsDropOperation: NSDragOperation {
+        let mask = draggingSourceOperationMask
+        if mask.contains(.move) { return .move }
+        if mask.contains(.copy) { return .copy }
+        return mask.contains(.generic) ? .generic : []
+    }
+}
+
 /// One workspace in the tiled view: a slim header (state dot, title, agent state, task, zoom button) above the
 /// workspace's split tree. The ring lights when the workspace needs the user.
 @MainActor
-final class WorkspaceTileView: NSView {
+final class WorkspaceTileView: NSView, NSDraggingSource {
     static let headerHeight: CGFloat = 24
 
     let workspaceID: String
     private let header = TileHeaderView()
     private let body = NSView()
     private let ring = AttentionRingView()
+    /// Cards of the workspace's subagents under the terminal (collapsed when there are none or they are off).
+    private let subagentStrip = SubagentStripView()
+    private var subagentStripHeight: NSLayoutConstraint!
     /// Header click: give this tile the keyboard. Double-click / zoom button: show it alone (or back).
     var onActivate: (() -> Void)?
     var onToggleZoom: (() -> Void)?
+    /// The header was dragged out of the window with ⌥ held (and dropped nowhere): leave the tiled view.
+    var onDraggedOut: (() -> Void)?
 
     init(workspaceID: String, content: NSView) {
         self.workspaceID = workspaceID
         super.init(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         wantsLayer = true
         layer?.backgroundColor = NSColor(calibratedWhite: 0.09, alpha: 1).cgColor
-        for view in [header, body] as [NSView] {
+        for view in [header, body, subagentStrip] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
+        subagentStrip.isHidden = true
+        subagentStripHeight = subagentStrip.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            subagentStrip.leadingAnchor.constraint(equalTo: leadingAnchor),
+            subagentStrip.trailingAnchor.constraint(equalTo: trailingAnchor),
+            subagentStrip.bottomAnchor.constraint(equalTo: bottomAnchor),
+            subagentStripHeight,
+        ])
         NSLayoutConstraint.activate([
             header.leadingAnchor.constraint(equalTo: leadingAnchor),
             header.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -32,7 +69,7 @@ final class WorkspaceTileView: NSView {
             body.leadingAnchor.constraint(equalTo: leadingAnchor),
             body.trailingAnchor.constraint(equalTo: trailingAnchor),
             body.topAnchor.constraint(equalTo: header.bottomAnchor),
-            body.bottomAnchor.constraint(equalTo: bottomAnchor),
+            body.bottomAnchor.constraint(equalTo: subagentStrip.topAnchor),
         ])
         content.translatesAutoresizingMaskIntoConstraints = true
         content.frame = body.bounds
@@ -43,6 +80,7 @@ final class WorkspaceTileView: NSView {
         addSubview(ring)
         header.onClick = { [weak self] in self?.onActivate?() }
         header.onDoubleClick = { [weak self] in self?.onToggleZoom?() }
+        header.onBeginDrag = { [weak self] event in self?.beginHeaderDrag(with: event) }
         header.zoomButton.target = self
         header.zoomButton.action = #selector(zoomClicked)
     }
@@ -52,11 +90,57 @@ final class WorkspaceTileView: NSView {
 
     @objc private func zoomClicked() { onToggleZoom?() }
 
+    // MARK: Dragging the header (reorder tiles, drop on the sidebar to remove)
+
+    private func beginHeaderDrag(with event: NSEvent) {
+        let item = NSPasteboardItem()
+        item.setString(workspaceID, forType: .cmdsWorkspace)
+        item.setString(workspaceID, forType: .cmdsTile)
+        let dragItem = NSDraggingItem(pasteboardWriter: item)
+        // The header strip as the drag image (terminal surfaces draw with Metal and do not snapshot).
+        var frame = header.frame
+        frame.size.width = min(frame.width, 360)
+        let local = convert(event.locationInWindow, from: nil)
+        frame.origin.x = max(header.frame.minX, min(local.x - 40, header.frame.maxX - frame.width))
+        let image = NSImage(size: frame.size)
+        if let rep = header.bitmapImageRepForCachingDisplay(in: header.bounds) {
+            header.cacheDisplay(in: header.bounds, to: rep)
+            let full = NSImage(size: header.bounds.size)
+            full.addRepresentation(rep)
+            image.lockFocus()
+            full.draw(in: NSRect(origin: .zero, size: frame.size),
+                      from: NSRect(x: frame.minX - header.frame.minX, y: 0, width: frame.width, height: frame.height),
+                      operation: .copy, fraction: 0.9)
+            image.unlockFocus()
+        }
+        dragItem.setDraggingFrame(frame, contents: image)
+        beginDraggingSession(with: [dragItem], event: event, source: self)
+    }
+
+    func draggingSession(_ session: NSDraggingSession,
+                         sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+        context == .withinApplication ? [.move, .copy, .generic] : []
+    }
+
+    func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+        guard operation.isEmpty, NSEvent.modifierFlags.union(NSApp.currentEvent?.modifierFlags ?? []).contains(.option), let window,
+              !window.frame.contains(screenPoint) else { return }
+        onDraggedOut?()
+    }
+
     /// Header text and colours, ring state. `active` = the tile with the keyboard.
     func update(with workspace: Workspace, active: Bool, zoomed: Bool) {
         header.update(with: workspace, active: active, zoomed: zoomed)
         let needsUser = workspace.attention || workspace.agentActivity == .needsInput
         ring.state = needsUser ? .attention : .off
+    }
+
+    /// Subagent cards (empty list or `shown == false` collapses the strip).
+    func updateSubagents(_ agents: [SubagentInfo], shown: Bool) {
+        let visible = shown && !agents.isEmpty
+        subagentStrip.isHidden = !visible
+        subagentStripHeight.constant = visible ? SubagentStripView.height : 0
+        subagentStrip.update(visible ? agents : [])
     }
 }
 
@@ -70,6 +154,9 @@ private final class TileHeaderView: NSView {
     let zoomButton = NSButton()
     var onClick: (() -> Void)?
     var onDoubleClick: (() -> Void)?
+    /// The mouse moved a few points with the button down: start dragging the tile.
+    var onBeginDrag: ((NSEvent) -> Void)?
+    private var mouseDownPoint: NSPoint?
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -149,7 +236,61 @@ private final class TileHeaderView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        mouseDownPoint = event.clickCount == 1 ? event.locationInWindow : nil
         if event.clickCount == 2 { onDoubleClick?() } else { onClick?() }
+    }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let start = mouseDownPoint,
+              hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) >= 4 else { return }
+        mouseDownPoint = nil
+        onBeginDrag?(event)
+    }
+
+    override func mouseUp(with event: NSEvent) { mouseDownPoint = nil }
+}
+
+/// The translucent area shown while dragging a workspace over the content area: where the tile will go
+/// (like window snapping). Never takes clicks.
+@MainActor
+final class TileDropHighlightView: NSView {
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.cornerRadius = 8
+        layer?.borderWidth = 2
+        isHidden = true
+        setAccessibilityElement(false)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func updateLayer() {
+        layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.22).cgColor
+        layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.85).cgColor
+    }
+
+    override var wantsUpdateLayer: Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    /// Shows the highlight at `rect` (slides from the previous one), or hides it for nil.
+    func show(_ rect: NSRect?) {
+        guard let rect else {
+            isHidden = true
+            return
+        }
+        let target = rect.insetBy(dx: 3, dy: 3)
+        if isHidden {
+            frame = target
+            isHidden = false
+        } else if frame != target {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = 0.12
+                animator().frame = target
+            }
+        }
     }
 }
 
@@ -167,15 +308,18 @@ final class TileGridView: NSView {
     private var ratios = TileRatios(rows: [], columns: [])
     private let loadRatios: ([String], [Int]) -> TileRatios?
     private let saveRatios: (TileRatios, [String], [Int]) -> Void
+    /// Rows of a dragged arrangement; nil = `TileLayout.shape` for the area's aspect.
+    private let fixedShape: [Int]?
 
     /// `hidden` > 0 shows a note that more workspaces were left out.
-    init(tiles: [WorkspaceTileView], hidden: Int,
+    init(tiles: [WorkspaceTileView], hidden: Int, fixedShape: [Int]? = nil,
          loadRatios: @escaping ([String], [Int]) -> TileRatios?,
          saveRatios: @escaping (TileRatios, [String], [Int]) -> Void) {
         self.tiles = tiles
         ids = tiles.map(\.workspaceID)
         self.loadRatios = loadRatios
         self.saveRatios = saveRatios
+        self.fixedShape = fixedShape.flatMap { $0.reduce(0, +) == tiles.count ? $0 : nil }
         if hidden > 0 {
             let label = NSTextField(labelWithString: String(localized: "Showing \(tiles.count) of \(tiles.count + hidden) workspaces"))
             label.font = .systemFont(ofSize: 11)
@@ -209,7 +353,7 @@ final class TileGridView: NSView {
     override func layout() {
         super.layout()
         guard bounds.width > 0, gridHeight > 0 else { return }
-        let newShape = TileLayout.shape(count: tiles.count, aspect: Double(bounds.width / gridHeight))
+        let newShape = fixedShape ?? TileLayout.shape(count: tiles.count, aspect: Double(bounds.width / gridHeight))
         if newShape != shape {
             shape = newShape
             ratios = loadRatios(ids, shape) ?? TileRatios.even(shape: shape)

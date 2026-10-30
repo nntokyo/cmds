@@ -35,6 +35,8 @@ notification is shown as well.
   ring are cleared (no notification).
 - `PreToolUse` / `PostToolUse` (optional, same effect as `UserPromptSubmit`) and `SessionEnd` (optional: Claude
   exited, the row shows **Stopped**) are understood too.
+- `SubagentStart` / `SubagentStop` → a subagent of this pane's Claude Code started / finished
+  ([Subagents](#subagents)); the pane's own state is left alone.
 
 Other events and `Stop` re-entries (`stop_hook_active`) are ignored. The local `cmds` sends only the event name and
 the notification text to the app, never your prompt (`cmds-remote.sh` on a server forwards the payload as is; the app
@@ -52,6 +54,12 @@ uses the same fields and keeps nothing else). It always exits 0 and does nothing
     ],
     "UserPromptSubmit": [
       { "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook claude || true" }] }
+    ],
+    "SubagentStart": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook claude || true" }] }
+    ],
+    "SubagentStop": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook claude || true" }] }
     ]
   }
 }
@@ -61,6 +69,29 @@ uses the same fields and keeps nothing else). It always exits 0 and does nothing
 is not the focused pane of the key window; the sidebar text always updates. Without `UserPromptSubmit` the stale text
 still goes when you type in the pane or when Claude visibly works again (status-line figures move, or its title
 spinner turns); see [Agent state](workspaces-and-panes.md#agent-state).
+
+### Subagents
+
+Subagents (the Task / Agent tool) run inside Claude Code and have no terminal of their own. With the
+`SubagentStart` / `SubagentStop` hooks above, cmds lists them per pane and shows them as cards under the tiles of
+the [tiled view](workspaces-and-panes.md#tiled-view) (Settings › Agents › Show subagents: Off / In Tiled View Only /
+Everywhere), with a **Sub n** count in the sidebar row.
+
+- **What the hook sends**: `agent_id`, `agent_type` and the subagent's transcript path
+  (`agent_transcript_path` on `SubagentStop`; on `SubagentStart`, which has none, `<dir>/<session_id>/subagents/agent-<agent_id>.jsonl`
+  next to the session's `transcript_path`). Never the prompt or `last_assistant_message`.
+- **Live activity** (local panes only): once a second, while the transcript grows, the app reads its last 64 KB and
+  keeps only the last tool call — tool name and a short target (`Read Sources/main.swift`, `Bash: swift test` with
+  token/password-looking values masked, `Grep <pattern>`, `WebFetch <host>`, the bare name for MCP and other tools) —
+  and the context tokens of the last model call. The description comes from `agent-<id>.meta.json` next to it
+  (`agentType`, `description` only). Only paths shaped `…/projects/<project>/<session>/subagents/agent-<id>.jsonl`
+  are read. Nothing is saved.
+- **SSH panes**: the transcript is on the server, so the cards show type, state and elapsed time only.
+- A finished subagent stays dimmed for 20 s; running ones go when the agent ends (`SessionEnd`, its process exits) or
+  after 15 minutes without transcript growth or hooks.
+- `cmds agents --subagents [--pane P]` lists them (`agent.subagents`, local socket only, [api.md](../reference/api.md)).
+
+Codex has no subagents in its session files (checked with codex-cli 0.165), so this is Claude Code only.
 
 ### Usage and limits (status line)
 
