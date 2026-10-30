@@ -92,6 +92,12 @@ final class AppController {
     private var saveWorkItem: DispatchWorkItem?
     /// Polls panes with a queued agent-session resume until their shell prompt is ready (AppController+AgentSessions).
     var resumeTimer: Timer?
+    /// Follows subagent transcripts while any subagent is listed (AppController+Subagents).
+    var subagentTimer: Timer?
+    let subagentSubject = PassthroughSubject<Void, Never>()
+    /// Fires on the main actor when subagent cards changed (current action, tokens, elapsed time). Adding or
+    /// dropping a subagent is a pane change in `changes` instead.
+    var subagentChanges: AnyPublisher<Void, Never> { subagentSubject.eraseToAnyPublisher() }
 
     // Tiled view (AppController+Tiling.swift).
     var tileMode: TileMode = .off
@@ -212,6 +218,12 @@ final class AppController {
         let data = try JSONEncoder().encode(input)
         guard let event = ClaudeHook.event(fromHookInput: data, readTranscript: false) else { return }
         let now = Date()
+        if case .subagent(let agent) = event {
+            // Subagents (AppController+Subagents): a local pane's transcript is followed, only if it has the shape of
+            // a Claude Code subagent transcript; the pane's own state is left alone.
+            handleSubagentHook(pane: pane, agent: agent, now: now)
+            return
+        }
         switch event {
         case .needsInput: pane.agentSignals.hook = .needsInput
         case .finished: pane.agentSignals.hook = .finished
@@ -227,6 +239,9 @@ final class AppController {
                 forgetAgentSession(pane)
                 scheduleAgentRefresh()
             }
+            dropSubagents(of: pane)
+        case .subagent:
+            return // handled above
         }
         pane.agentSignals.hookAt = now
         if case .working = event { clearNotification(of: pane, before: now) }
@@ -315,6 +330,7 @@ final class AppController {
                     if exited {
                         forgetAgentSession(pane)
                         pane.agentSignals.endedAt = now
+                        dropSubagents(of: pane)
                     }
                 case .codexSession?:
                     if !codex.panes.contains(pane.id) {

@@ -175,6 +175,12 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         AgentResumeSettings.mode = mode
     }
 
+    /// View › Show Subagents (same setting as Settings › Agents).
+    @objc func setSubagentDisplay(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let display = SubagentDisplay(rawValue: raw) else { return }
+        AppSettings.shared.showSubagents = display
+    }
+
     @objc func focusLeft(_ sender: Any?) { windowController?.focusNeighbor(.left) }
     @objc func focusRight(_ sender: Any?) { windowController?.focusNeighbor(.right) }
     @objc func focusUp(_ sender: Any?) { windowController?.focusNeighbor(.up) }
@@ -279,6 +285,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             return controller.pendingResumeCount > 0
         case #selector(setAgentResumeMode(_:)):
             menuItem.state = (menuItem.representedObject as? String) == AgentResumeSettings.mode.rawValue ? .on : .off
+            return true
+        case #selector(setSubagentDisplay(_:)):
+            menuItem.state = (menuItem.representedObject as? String) == AppSettings.shared.showSubagents.rawValue ? .on : .off
             return true
         case #selector(installRemoteHelper(_:)):
             return controller.focusedPane?.ssh?.connected == true

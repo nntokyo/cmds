@@ -1,4 +1,6 @@
 import AppKit
+import CmdsCore
+import Combine
 
 enum FocusDirection {
     case left, right, up, down
@@ -26,13 +28,49 @@ final class WorkspaceContentViewController: NSViewController {
         view.layer?.backgroundColor = NSColor(calibratedWhite: 0.09, alpha: 1).cgColor
         host.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(host)
+        singleSubagentStrip.translatesAutoresizingMaskIntoConstraints = false
+        singleSubagentStrip.isHidden = true
+        view.addSubview(singleSubagentStrip)
+        singleSubagentStripHeight = singleSubagentStrip.heightAnchor.constraint(equalToConstant: 0)
         NSLayoutConstraint.activate([
             host.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             host.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             host.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            host.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            host.bottomAnchor.constraint(equalTo: singleSubagentStrip.topAnchor),
+            singleSubagentStrip.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            singleSubagentStrip.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            singleSubagentStrip.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            singleSubagentStripHeight,
         ])
         self.view = view
+        subagentObservers = [
+            controller.subagentChanges.sink { [weak self] in self?.updateSubagents() },
+            NotificationCenter.default.publisher(for: AppSettings.didChange)
+                .sink { [weak self] _ in MainActor.assumeIsolated { self?.updateSubagents() } },
+        ]
+    }
+
+    // MARK: - Subagents (Settings › Agents › Show subagents)
+
+    /// Under the single workspace (Show subagents: Everywhere).
+    private let singleSubagentStrip = SubagentStripView()
+    private var singleSubagentStripHeight: NSLayoutConstraint!
+    private var subagentObservers: [AnyCancellable] = []
+
+    /// Subagent cards of every tile, or of the single workspace; cheap enough for the 1 s activity ticks.
+    func updateSubagents() {
+        guard isViewLoaded else { return }
+        let display = AppSettings.shared.showSubagents
+        let tiling = controller.isTiling && !tileViews.isEmpty
+        if tiling {
+            for (id, tile) in tileViews {
+                tile.updateSubagents(controller.workspace(id: id)?.subagents ?? [], shown: display != .off)
+            }
+        }
+        let single = !tiling && display == .everywhere ? controller.selectedWorkspace?.subagents ?? [] : []
+        singleSubagentStrip.isHidden = single.isEmpty
+        singleSubagentStripHeight.constant = single.isEmpty ? 0 : SubagentStripView.height
+        singleSubagentStrip.update(single)
     }
 
     /// Tiles of the tiled view by workspace id (empty in the single view).
@@ -40,6 +78,7 @@ final class WorkspaceContentViewController: NSViewController {
 
     /// Rebuilds the view tree only when the workspace(s), structure or zoom changed; otherwise updates rings.
     func render() {
+        defer { updateSubagents() }
         if controller.isTiling {
             renderTiles()
             return

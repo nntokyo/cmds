@@ -21,13 +21,27 @@ public enum ClaudeHook {
         case working
         /// `SessionEnd`: Claude Code exits.
         case ended
+        /// `SubagentStart` / `SubagentStop`: a subagent (Agent tool call) of this pane's agent started or finished.
+        /// Does not change the pane's own state (a background subagent may outlive the turn).
+        case subagent(Subagent)
 
         public var notification: Notification? {
             switch self {
             case .needsInput(let note), .finished(let note): return note
-            case .working, .ended: return nil
+            case .working, .ended, .subagent: return nil
             }
         }
+    }
+
+    /// A `SubagentStart` / `SubagentStop` payload (`agent_id` is required; the rest degrades to nil).
+    public struct Subagent: Equatable, Sendable {
+        public var started: Bool
+        public var agentID: String
+        public var agentType: String?
+        /// The subagent's transcript: `agent_transcript_path` (SubagentStop), else derived from the parent's
+        /// `transcript_path` and `session_id` (SubagentStart has no path of its own). Shape-checked only
+        /// (`SubagentTranscript.validatedPath`).
+        public var transcriptPath: String?
     }
 
     /// Returns nil for events that should not notify (anything but `Notification` / `Stop`, or `Stop` re-entries).
@@ -56,6 +70,17 @@ public enum ClaudeHook {
             return .working
         case "SessionEnd":
             return .ended
+        case "SubagentStart", "SubagentStop":
+            guard let id = input["agent_id"]?.stringValue, SubagentTranscript.isValidID(id) else { return nil }
+            let type = input["agent_type"]?.stringValue.map { SubagentTranscript.truncate(SubagentTranscript.oneLine($0), 60) }
+            var path = input["agent_transcript_path"]?.stringValue
+                .flatMap { $0.isEmpty ? nil : ($0 as NSString).expandingTildeInPath }
+            if path == nil, let parent = input["transcript_path"]?.stringValue, let session = input["session_id"]?.stringValue {
+                path = SubagentTranscript.path(parentTranscript: parent, sessionID: session, agentID: id)
+            }
+            return .subagent(Subagent(started: event == "SubagentStart", agentID: id,
+                                      agentType: type?.isEmpty == false ? type : nil,
+                                      transcriptPath: path.flatMap { SubagentTranscript.validatedPath($0, agentID: id) }))
         default:
             return nil
         }
@@ -74,6 +99,11 @@ public enum ClaudeHook {
         case .finished(let note):
             if let title = note.title { object["title"] = .string(title) }
             object["last_assistant_message"] = .string(note.body)
+        case .subagent(let agent):
+            // Ids, type and transcript path only: never the subagent's prompt or its last message.
+            object["agent_id"] = .string(agent.agentID)
+            if let type = agent.agentType { object["agent_type"] = .string(type) }
+            if let path = agent.transcriptPath { object["agent_transcript_path"] = .string(path) }
         case .working, .ended:
             break
         }

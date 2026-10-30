@@ -1,7 +1,7 @@
 import AppKit
 import CmdsCore
 
-/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom. Every control applies
+/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards. Every control applies
 /// immediately (`AppSettings`); there is no OK button.
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
@@ -16,6 +16,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let sidebarControl = NSSegmentedControl()
     private let browserZoomPopup = NSPopUpButton()
     private let previewZoomPopup = NSPopUpButton()
+    private let subagentsPopup = NSPopUpButton()
     private var observer: NSObjectProtocol?
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
@@ -91,6 +92,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         browserZoomPopup.action = #selector(browserZoomChanged)
         previewZoomPopup.action = #selector(previewZoomChanged)
 
+        for display in SubagentDisplay.allCases {
+            subagentsPopup.addItem(withTitle: display.title)
+            subagentsPopup.lastItem?.representedObject = display.rawValue
+        }
+        subagentsPopup.target = self
+        subagentsPopup.action = #selector(subagentsChanged)
+
         let grid = NSGridView(views: [
             [Self.header(String(localized: "Terminal")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Font:")), fontPopup],
@@ -101,12 +109,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.header(String(localized: "Browser and Preview")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Browser page zoom:")), browserZoomPopup],
             [Self.label(String(localized: "Preview zoom:")), previewZoomPopup],
+            [Self.header(String(localized: "Agents")), NSGridCell.emptyContentView],
+            [Self.label(String(localized: "Show subagents:")), subagentsPopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
         ])
         grid.rowSpacing = 8
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        for row in [0, 4, 6] {
+        for row in [0, 4, 6, 9] {
             grid.row(at: row).mergeCells(in: NSRange(location: 0, length: 2))
             grid.row(at: row).topPadding = row == 0 ? 0 : 10
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
@@ -185,6 +196,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         sidebarControl.selectedSegment = SidebarTextSize.allCases.firstIndex(of: settings.sidebarTextSize) ?? 1
         select(settings.browserZoom, in: browserZoomPopup)
         select(settings.previewZoom, in: previewZoomPopup)
+        subagentsPopup.selectItem(at: subagentsPopup.indexOfItem(withRepresentedObject: settings.showSubagents.rawValue))
     }
 
     private func select(_ zoom: Double, in popup: NSPopUpButton) {
@@ -222,6 +234,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func browserZoomChanged() {
         settings.browserZoom = browserZoomPopup.selectedItem?.representedObject as? Double ?? 1
+    }
+
+    @objc private func subagentsChanged() {
+        let raw = subagentsPopup.selectedItem?.representedObject as? String
+        settings.showSubagents = raw.flatMap(SubagentDisplay.init(rawValue:)) ?? .tiled
     }
 
     @objc private func previewZoomChanged() {

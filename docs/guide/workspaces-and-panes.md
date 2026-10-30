@@ -84,6 +84,12 @@ Shows several workspaces side by side, each as a live tile you can type in — e
   remembered per set of workspaces and kept in the session.
 - Each tile keeps its own splits and has a header: state dot, title, agent state (Working, Needs Input, Done…) and
   the agent's task. A tile that needs you gets the orange ring.
+- **Subagents**: under its terminal a tile shows one card per Claude Code subagent (Task / Agent tool) of its panes:
+  type and description, current action (`Read Sources/main.swift`, `Bash: swift test`), elapsed time, tokens and a spinner.
+  A finished one is dimmed with a check mark and fades out after 20 seconds. The sidebar row shows **Sub 3** while
+  three run. Settings › Agents › **Show subagents** (also View › Show Subagents): *Off*, *In Tiled View Only*
+  (default) or *Everywhere* (also a strip under the single workspace). Needs the subagent hooks
+  ([ai-agents.md](ai-agents.md#subagents)).
 - The tile with the keyboard has a blue header and is the selected workspace (window title, ⌘W, ⌘D… act on it).
   Click into a tile, its header or its sidebar row to switch; ⌥⌘ + arrow keys move across tiles too.
 - **⇧⌘↩** (View › Zoom Tile), the header's button or a double-click on the header shows the active tile alone, and
@@ -225,6 +231,8 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
 - **Sidebar text size**: Small, Medium (default) or Large. Rows, footer and the compact rail scale together.
 - **Browser page zoom** and **Preview zoom**: the starting zoom of browser panes and of rendered previews
   (Markdown, diffs, text).
+- **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
+  Everywhere ([Tiled view](#tiled-view)).
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size
