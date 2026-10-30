@@ -86,8 +86,9 @@ TCP streams on its loopback. Code: `CmdsCore/Sync/SyncRemote.swift`, `App/Source
   (`SyncRemote.sshArguments`). ssh uses the user's config, keys, agent and known_hosts and never prompts;
   a host it does not know yet fails (connect once in Terminal first). It is restarted when it exits (2 s
   doubling to 60 s; `ExitOnForwardFailure` makes it exit while the relay still holds the port of a dead
-  session). The status shows in that window and in the pairing window. The pid is kept in
-  `sync-remote-ssh.pid` so an ssh orphaned by a crash is ended at the next launch.
+  session). The status shows in that window and in the pairing window. The pid and the process start time
+  are kept in `sync-remote-ssh.pid` so an ssh orphaned by a crash is ended at the next launch (only if pid,
+  start time and `/usr/bin/ssh` still match and it has no parent, so a reused pid is never killed).
 - **Ingress (Mac).** The forward does not end at the sync listener: it ends at a loopback listener of cmds
   ("ingress", ephemeral port), which relays each connection (at most 16) to the sync listener from a socket
   registered as peer `ssh:<relay host>` (`SyncServer.relayedPeers`, the mechanism of the Bluetooth relay).

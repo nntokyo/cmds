@@ -37,6 +37,8 @@ final class SyncRemoteAccess {
     var statusText: String { status.english }
     /// The forward is believed to be up (ssh running past `settleTime`).
     private(set) var isForwarding = false
+    /// Why the last settings change could not be written to disk (it still applies until quit), or nil.
+    private(set) var saveError: String?
 
     private var ingress: SyncLoopback.Server?
     private var relays: [UUID: SyncStreamRelay] = [:]
@@ -101,10 +103,15 @@ final class SyncRemoteAccess {
 
     private func reconcile() {
         guard let wanted else {
+            let idle = switch SyncRemote.idleState(settings) {
+            case .off: LocalizedStatus("Off")
+            case .chooseHost: LocalizedStatus("Choose a relay host")
+            case .waitingForSync: LocalizedStatus("Waiting for iOS Sync")
+            }
             if process != nil || ingress != nil || restartTimer != nil {
-                stop(status: settings.enabled ? LocalizedStatus("Waiting for iOS Sync") : LocalizedStatus("Off"))
+                stop(status: idle)
             } else {
-                status = settings.enabled ? (settings.isActive ? LocalizedStatus("Waiting for iOS Sync") : LocalizedStatus("Choose a relay host")) : LocalizedStatus("Off")
+                status = idle
                 didChange()
             }
             return
@@ -180,14 +187,18 @@ final class SyncRemoteAccess {
             return fail("cannot run ssh: \(error.localizedDescription)")
         }
         self.process = process
-        try? "\(process.processIdentifier)\n".write(to: pidURL, atomically: true, encoding: .utf8)
+        if let info = bsdInfo(process.processIdentifier) {
+            let record = SyncRemote.SSHRecord(pid: process.processIdentifier, startSeconds: info.pbi_start_tvsec,
+                                              startMicroseconds: info.pbi_start_tvusec)
+            try? record.fileText.write(to: pidURL, atomically: true, encoding: .utf8)
+        }
         status = LocalizedStatus("Connecting to \(running.settings.host)…")
         isForwarding = false
         syncLog.notice("remote: ssh started for \(running.settings.host, privacy: .public), relay port \(running.settings.relayPort, privacy: .public)")
         let settle = DispatchWorkItem { [weak self] in
             guard let self, self.process === process, process.isRunning else { return }
             self.isForwarding = true
-            self.status = LocalizedStatus("Forwarding via \(running.settings.host) (relay 127.0.0.1:\(running.settings.relayPort))")
+            self.status = LocalizedStatus("Forwarding via \(running.settings.host) (relay 127.0.0.1:\(String(running.settings.relayPort)))")
             self.didChange()
         }
         settleTimer = settle
@@ -282,21 +293,30 @@ final class SyncRemoteAccess {
     // MARK: - Persistence
 
     private func save() {
-        guard let data = try? JSONEncoder().encode(settings) else { return }
-        try? FileManager.default.createDirectory(at: settingsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: settingsURL, options: .atomic)
-        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: settingsURL.path)
+        do {
+            let data = try JSONEncoder().encode(settings)
+            try FileManager.default.createDirectory(at: settingsURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: settingsURL, options: .atomic)
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: settingsURL.path)
+            saveError = nil
+        } catch {
+            syncLog.error("remote: could not save settings: \(error.localizedDescription, privacy: .public)")
+            saveError = error.localizedDescription
+        }
     }
 
-    /// An ssh left over from a crash would hold the relay port; end it if it is still our ssh.
+    /// An ssh left over from a crash would hold the relay port; end it if it is still our ssh (same pid and
+    /// start time, orphaned, running ssh), never an unrelated ssh that reused the pid.
     private func killStaleSSH() {
-        guard let text = try? String(contentsOf: pidURL, encoding: .utf8),
-              let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1 else { return }
+        guard let text = try? String(contentsOf: pidURL, encoding: .utf8) else { return }
         try? FileManager.default.removeItem(at: pidURL)
+        guard let record = SyncRemote.SSHRecord(fileText: text) else { return }
         var buffer = [CChar](repeating: 0, count: procPathMaxSize)
-        guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0,
-              String(cString: buffer) == Self.sshPath, getppid_of(pid) == 1 else { return }
-        kill(pid, SIGTERM)
+        guard proc_pidpath(record.pid, &buffer, UInt32(buffer.count)) > 0,
+              String(cString: buffer) == Self.sshPath, let info = bsdInfo(record.pid), info.pbi_ppid == 1,
+              info.pbi_start_tvsec == record.startSeconds, info.pbi_start_tvusec == record.startMicroseconds else { return }
+        syncLog.notice("remote: ending ssh \(record.pid, privacy: .public) left over from a previous run")
+        kill(record.pid, SIGTERM)
     }
 
     private func didChange() {
@@ -307,11 +327,10 @@ final class SyncRemoteAccess {
 /// `PROC_PIDPATHINFO_MAXSIZE` (4 * MAXPATHLEN; the macro is not imported into Swift).
 private let procPathMaxSize = 4 * Int(MAXPATHLEN)
 
-/// Parent pid of `pid` (1 once its parent died), or -1.
-
-private func getppid_of(_ pid: pid_t) -> pid_t {
+/// BSD info of `pid` (parent pid, which is 1 once its parent died, and start time), or nil.
+private func bsdInfo(_ pid: pid_t) -> proc_bsdinfo? {
     var info = proc_bsdinfo()
     let size = Int32(MemoryLayout<proc_bsdinfo>.size)
-    guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return -1 }
-    return pid_t(info.pbi_ppid)
+    guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
+    return info
 }
