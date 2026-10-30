@@ -13,7 +13,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wi‑Fi がオフのとき、iOS コンパニオンが Bluetooth で接続できるようにします。接続はエンドツーエンドで暗号化されたままです。"
+            "value" : "Wi‑Fiがオフのとき、iOSコンパニオンがBluetoothで接続できるようにします。接続はエンドツーエンドで暗号化されたままです。"
           }
         }
       }
@@ -30,7 +30,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds はローカルネットワーク経由で iOS コンパニオンとターミナルを同期します。"
+            "value" : "cmdsはローカルネットワーク経由でiOSコンパニオンとターミナルを同期します。"
           }
         }
       }

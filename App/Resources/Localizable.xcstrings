@@ -32,7 +32,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@（%2$lld バイト）"
+            "value" : "%1$@（%2$lldバイト）"
           }
         }
       }
@@ -42,7 +42,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ アカウント"
+            "value" : "%@アカウント"
           }
         }
       }
@@ -52,7 +52,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ アカウントの上限"
+            "value" : "%@アカウントの上限"
           }
         }
       }
@@ -68,7 +68,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ アカウントの上限（%2$@）"
+            "value" : "%1$@アカウントの上限（%2$@）"
           }
         }
       }
@@ -78,7 +78,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ はフォルダです"
+            "value" : "%@はフォルダです"
           }
         }
       }
@@ -94,7 +94,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ セッション（%2$@）"
+            "value" : "%1$@セッション（%2$@）"
           }
         }
       }
@@ -110,7 +110,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ セッション「%2$@」（%3$@）"
+            "value" : "%1$@セッション「%2$@」（%3$@）"
           }
         }
       }
@@ -120,7 +120,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このワークスペースのターミナルのプロセス %lld 個"
+            "value" : "このワークスペースのターミナルのプロセス%lld個"
           }
         },
         "en" : {
@@ -148,7 +148,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "（iOS 同期はオフ）"
+            "value" : "（iOS同期はオフ）"
           }
         }
       }
@@ -179,7 +179,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds について"
+            "value" : "cmdsについて"
           }
         }
       }
@@ -199,7 +199,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "蓋を閉じてもエージェントは動き続けます。cmds はシステム全体の電源設定（pmset -a disablesleep 1）を変更し、この設定をオフにするか cmds を終了すると元に戻します。macOS はそのたびに管理者パスワードを求めます。cmds がパスワードを見ることはありません。"
+            "value" : "蓋を閉じてもエージェントは動き続けます。cmdsはシステム全体の電源設定（pmset -a disablesleep 1）を変更し、この設定をオフにするかcmdsを終了すると元に戻します。macOSはそのたびに管理者パスワードを求めます。cmdsがパスワードを見ることはありません。"
           }
         }
       }
@@ -219,7 +219,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bluetooth 同期を許可"
+            "value" : "Bluetooth同期を許可"
           }
         }
       }
@@ -229,7 +229,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SSH 経由のリモートアクセスを許可"
+            "value" : "SSH経由のリモートアクセスを許可"
           }
         }
       }
@@ -255,7 +255,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "App %1$@ · 確保 %2$@ · 圧縮 %3$@"
+            "value" : "App %1$@ · 確保%2$@ · 圧縮%3$@"
           }
         }
       }
@@ -295,7 +295,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スリープしない（蓋を閉じても可）：cmds がスリープをオフにしました（pmset disablesleep 1）。オフにするか cmds を終了するまで、蓋を閉じてもこの Mac はスリープしません。クリックするとオフにします。"
+            "value" : "スリープしない（蓋を閉じても可）：cmdsがスリープをオフにしました（pmset disablesleep 1）。オフにするかcmdsを終了するまで、蓋を閉じてもこのMacはスリープしません。クリックするとオフにします。"
           }
         }
       }
@@ -305,7 +305,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スリープしない（蓋を閉じても可）：cmds 以外によってシステム全体でスリープが無効になっています（SleepDisabled = 1）。元に戻すには：%@"
+            "value" : "スリープしない（蓋を閉じても可）：cmds以外によってシステム全体でスリープが無効になっています（SleepDisabled = 1）。元に戻すには：%@"
           }
         }
       }
@@ -335,7 +335,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bluetooth はオフです"
+            "value" : "Bluetoothはオフです"
           }
         }
       }
@@ -355,7 +355,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "CPU %@（100%% = 1 コア）"
+            "value" : "CPU %@（100%% = 1コア）"
           }
         }
       }
@@ -371,7 +371,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "CPU %1$@ · メモリ %2$@（%3$@）"
+            "value" : "CPU %1$@ · メモリ%2$@（%3$@）"
           }
         }
       }
@@ -387,7 +387,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "CPU %1$@%%（全 %2$lld コア中）"
+            "value" : "CPU %1$@%%（全%2$lldコア中）"
           }
         }
       }
@@ -403,7 +403,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "CPU %1$@、メモリ %2$@、メモリプレッシャー %3$@"
+            "value" : "CPU %1$@、メモリ%2$@、メモリプレッシャー%3$@"
           }
         }
       }
@@ -413,7 +413,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このワークスペースのターミナルで動くプロセスの CPU とメモリ（計測中…）"
+            "value" : "このワークスペースのターミナルで動くプロセスのCPUとメモリ（計測中…）"
           }
         }
       }
@@ -433,7 +433,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SSH ワークスペースを開けません"
+            "value" : "SSHワークスペースを開けません"
           }
         }
       }
@@ -443,7 +443,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "注意：スリープしない Mac は蓋を閉じてバッグに入れても動き続け、過熱やバッテリー消耗の原因になります。Mac がバッテリー駆動に切り替わると、cmds はこの設定をオフにするよう求めます。cmds がクラッシュしたり強制終了されたりした場合、cmds を再度起動する（元に戻すよう提案します）か %@ を実行するまでスリープは無効のままです。"
+            "value" : "注意：スリープしないMacは蓋を閉じてバッグに入れても動き続け、過熱やバッテリー消耗の原因になります。Macがバッテリー駆動に切り替わると、cmdsはこの設定をオフにするよう求めます。cmdsがクラッシュしたり強制終了されたりした場合、cmdsを再度起動する（元に戻すよう提案します）か%@を実行するまでスリープは無効のままです。"
           }
         }
       }
@@ -493,7 +493,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac はすでに蓋を閉じてもスリープしない設定ですが、cmds が行った設定ではないため変更しません。通常のスリープに戻すには、次を実行してください：\n%@"
+            "value" : "このMacはすでに蓋を閉じてもスリープしない設定ですが、cmdsが行った設定ではないため変更しません。通常のスリープに戻すには、次を実行してください：\n%@"
           }
         }
       }
@@ -543,7 +543,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ に接続中…"
+            "value" : "%@に接続中…"
           }
         }
       }
@@ -639,7 +639,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "切断（%1$@）。%2$lld 秒後に再試行します"
+            "value" : "切断（%1$@）。%2$lld秒後に再試行します"
           }
         }
       }
@@ -679,7 +679,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS 同期を有効にする"
+            "value" : "iOS同期を有効にする"
           }
         }
       }
@@ -689,7 +689,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "暗号化（TLS 1.3）。iPhone・iPad はこの Mac の ID だけを信頼します。"
+            "value" : "暗号化（TLS 1.3）。iPhone/iPadはこのMacの識別情報だけを信頼します。"
           }
         }
       }
@@ -709,7 +709,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "~/.ssh/config のホスト別名（または user@host）を入力してください。"
+            "value" : "~/.ssh/configのホスト別名（またはuser@host）を入力してください。"
           }
         }
       }
@@ -719,7 +719,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "すべての iPhone・iPad が切断され、新しいコードで再度ペアリングが必要になります。"
+            "value" : "すべてのiPhone/iPadが切断され、新しいコードで再度ペアリングが必要になります。"
           }
         }
       }
@@ -845,7 +845,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@ 経由で転送中（中継 127.0.0.1:%2$u）"
+            "value" : "%1$@経由で転送中（中継127.0.0.1:%2$u）"
           }
         }
       }
@@ -875,7 +875,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds を非表示"
+            "value" : "cmdsを非表示"
           }
         }
       }
@@ -885,7 +885,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "~/.ssh/config のホスト"
+            "value" : "~/.ssh/configのホスト"
           }
         }
       }
@@ -905,7 +905,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone・iPad の cmds で「ペアリングコードをスキャン」をタップし、この QR コードに向けてください。カメラがない場合は、この Mac を選び、ID が一致することを確認してからコードを入力します。"
+            "value" : "iPhone/iPadのcmdsで「ペアリングコードをスキャン」をタップし、このQRコードに向けてください。カメラがない場合は、このMacを選び、識別情報が一致することを確認してからコードを入力します。"
           }
         }
       }
@@ -945,7 +945,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds コマンドラインツールをインストールしますか？"
+            "value" : "cmdsコマンドラインツールをインストールしますか？"
           }
         }
       }
@@ -955,7 +955,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ にリモートヘルパーをインストールしますか？"
+            "value" : "%@にリモートヘルパーをインストールしますか？"
           }
         }
       }
@@ -965,7 +965,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "インストールしました。新しいターミナルで `cmds --help` を実行してください。"
+            "value" : "インストールしました。新しいターミナルで`cmds --help`を実行してください。"
           }
         }
       }
@@ -1015,7 +1015,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "蓋を閉じてもスリープしない（cmds 以外で設定）"
+            "value" : "蓋を閉じてもスリープしない（cmds以外で設定）"
           }
         }
       }
@@ -1065,7 +1065,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "蓋を閉じてもこの Mac をスリープしないようにしますか？"
+            "value" : "蓋を閉じてもこのMacをスリープしないようにしますか？"
           }
         }
       }
@@ -1115,7 +1115,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペアリング済みの iPhone・iPad から、普段使っている SSH サーバー経由で外出先からこの Mac に接続できるようにします。接続はエンドツーエンドで暗号化されたままです。"
+            "value" : "ペアリング済みのiPhone/iPadから、普段使っているSSHサーバー経由で外出先からこのMacに接続できるようにします。接続はエンドツーエンドで暗号化されたままです。"
           }
         }
       }
@@ -1125,7 +1125,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wi‑Fi がオフのとき、iPhone・iPad が Bluetooth で接続できるようにします。接続は暗号化され、この Mac の ID に固定されたままです。"
+            "value" : "Wi‑Fiがオフのとき、iPhone/iPadがBluetoothで接続できるようにします。接続は暗号化され、このMacの識別情報に固定されたままです。"
           }
         }
       }
@@ -1135,7 +1135,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペアリング済みの iPhone・iPad から、すでに使っている SSH サーバー（中継ホスト）経由で外出先からこの Mac に接続できるようにします。cmds は中継ホストへの「ssh -R」を維持し、転送ポートは中継ホストのループバックでのみ待ち受けます。iPhone は自分の鍵で中継ホストにログインして転送ポートを開きます。その中のセッションはこの Mac に固定されたエンドツーエンドの TLS のままなので、中継ホストには暗号文しか見えません。先にローカルネットワークでペアリングしてください。SSH 経由ではペアリングコードを受け付けません。"
+            "value" : "ペアリング済みのiPhone/iPadから、すでに使っているSSHサーバー（中継ホスト）経由で外出先からこのMacに接続できるようにします。cmdsは中継ホストへの「ssh -R」を維持し、転送ポートは中継ホストのループバックでのみ待ち受けます。iPhoneは自分の鍵で中継ホストにログインして転送ポートを開きます。その中のセッションはこのMacに固定されたエンドツーエンドのTLSのままなので、中継ホストには暗号文しか見えません。先にローカルネットワークでペアリングしてください。SSH経由ではペアリングコードを受け付けません。"
           }
         }
       }
@@ -1145,7 +1145,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ポート %@ で待ち受け中"
+            "value" : "ポート%@で待ち受け中"
           }
         }
       }
@@ -1155,7 +1155,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac の ID：%@"
+            "value" : "Macの識別情報：%@"
           }
         }
       }
@@ -1165,7 +1165,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mac がバッテリー駆動です"
+            "value" : "Macがバッテリー駆動です"
           }
         }
       }
@@ -1175,7 +1175,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "CPU とメモリを計測中…"
+            "value" : "CPUとメモリを計測中…"
           }
         }
       }
@@ -1185,7 +1185,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "メモリ %@（物理フットプリント）"
+            "value" : "メモリ%@（物理フットプリント）"
           }
         }
       }
@@ -1211,7 +1211,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用メモリ %1$@ / %2$@"
+            "value" : "使用メモリ%1$@ / %2$@"
           }
         }
       }
@@ -1251,7 +1251,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新規 SSH ワークスペース"
+            "value" : "新規SSHワークスペース"
           }
         }
       }
@@ -1261,7 +1261,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新規 SSH ワークスペース…"
+            "value" : "新規SSHワークスペース…"
           }
         }
       }
@@ -1301,7 +1301,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース 1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R"
+            "value" : "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R"
           }
         }
       }
@@ -1361,7 +1361,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac では使用できません"
+            "value" : "このMacでは使用できません"
           }
         }
       }
@@ -1381,7 +1381,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3 秒後にフォーカス中のペインに通知"
+            "value" : "3秒後にフォーカス中のペインに通知"
           }
         }
       }
@@ -1431,7 +1431,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone・iPad とペアリング"
+            "value" : "iPhone/iPadとペアリング"
           }
         }
       }
@@ -1441,7 +1441,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iPhone・iPad とペアリング…"
+            "value" : "iPhone/iPadとペアリング…"
           }
         }
       }
@@ -1451,7 +1451,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペアリング用 QR コード"
+            "value" : "ペアリング用QRコード"
           }
         }
       }
@@ -1471,7 +1471,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペイン %@"
+            "value" : "ペイン%@"
           }
         }
       }
@@ -1481,7 +1481,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ペイン %@（表示中）"
+            "value" : "ペイン%@（表示中）"
           }
         }
       }
@@ -1541,7 +1541,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds を終了"
+            "value" : "cmdsを終了"
           }
         }
       }
@@ -1561,7 +1561,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SSH に再接続"
+            "value" : "SSHに再接続"
           }
         }
       }
@@ -1591,7 +1591,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "言語を変更するために cmds を再起動しますか？"
+            "value" : "言語を変更するためにcmdsを再起動しますか？"
           }
         }
       }
@@ -1651,7 +1651,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SSH 経由のリモートアクセス"
+            "value" : "SSH経由のリモートアクセス"
           }
         }
       }
@@ -1661,7 +1661,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SSH 経由のリモートアクセス…"
+            "value" : "SSH経由のリモートアクセス…"
           }
         }
       }
@@ -1671,7 +1671,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SSH 経由のリモートアクセス：%@"
+            "value" : "SSH経由のリモートアクセス：%@"
           }
         }
       }
@@ -1721,7 +1721,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ID をリセット"
+            "value" : "識別情報をリセット"
           }
         }
       }
@@ -1731,7 +1731,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同期 ID をリセット…"
+            "value" : "同期の識別情報をリセット…"
           }
         }
       }
@@ -1741,7 +1741,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac の同期 ID をリセットしますか？"
+            "value" : "このMacの同期の識別情報をリセットしますか？"
           }
         }
       }
@@ -1771,7 +1771,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ を再開"
+            "value" : "%@を再開"
           }
         }
       }
@@ -1821,7 +1821,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ を再開中 — シェルのプロンプトを待っています…"
+            "value" : "%@を再開中 — シェルのプロンプトを待っています…"
           }
         }
       }
@@ -1831,7 +1831,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finder に表示"
+            "value" : "Finderに表示"
           }
         }
       }
@@ -1841,7 +1841,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Finder に表示 — %@"
+            "value" : "Finderに表示 — %@"
           }
         }
       }
@@ -1881,7 +1881,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "お使いの ssh（~/.ssh/config を使用）を実行し、このペインの cmds ソケットをサーバーに転送します。サーバー上の cmds-remote.sh から通知やエージェントの使用状況を送れるようになります。サーバーには何もインストールしません。"
+            "value" : "お使いのssh（~/.ssh/configを使用）を実行し、このペインのcmdsソケットをサーバーに転送します。サーバー上のcmds-remote.shから通知やエージェントの使用状況を送れるようになります。サーバーには何もインストールしません。"
           }
         }
       }
@@ -1891,7 +1891,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "SSH ペインはローカルの ssh クライアントのみを数え、サーバー側は含みません"
+            "value" : "SSHペインはローカルのsshクライアントのみを数え、サーバー側は含みません"
           }
         }
       }
@@ -1901,7 +1901,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "前回のセッションの SSH ペインは、指示したときにだけ接続します。"
+            "value" : "前回のセッションのSSHペインは、指示したときにだけ接続します。"
           }
         }
       }
@@ -1961,7 +1961,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最初の %lld MB を表示しています。"
+            "value" : "最初の%lld MBを表示しています。"
           }
         }
       }
@@ -1971,7 +1971,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac ではすでにスリープが無効です"
+            "value" : "このMacではすでにスリープが無効です"
           }
         }
       }
@@ -1981,7 +1981,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "以前の cmds セッションでスリープが無効にされたままです"
+            "value" : "以前のcmdsセッションでスリープが無効にされたままです"
           }
         }
       }
@@ -2047,7 +2047,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用スワップ %1$@ / %2$@"
+            "value" : "使用スワップ%1$@ / %2$@"
           }
         }
       }
@@ -2077,7 +2077,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "コードはこのウインドウを開いている間だけ有効です。%@ 後と、ペアリングのたびに変わります。"
+            "value" : "コードはこのウインドウを開いている間だけ有効です。%@後と、ペアリングのたびに変わります。"
           }
         }
       }
@@ -2087,7 +2087,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "コマンドラインツールはすでに %@ にインストールされています。"
+            "value" : "コマンドラインツールはすでに%@にインストールされています。"
           }
         }
       }
@@ -2097,7 +2097,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この cmds のビルドにはコマンドラインツールが含まれていません。"
+            "value" : "このcmdsのビルドにはコマンドラインツールが含まれていません。"
           }
         }
       }
@@ -2107,7 +2107,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "既存の %@ は置き換えられます。"
+            "value" : "既存の%@は置き換えられます。"
           }
         }
       }
@@ -2117,7 +2117,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ssh プロセスが終了しました。再接続すると同じコマンドをもう一度実行します。"
+            "value" : "sshプロセスが終了しました。再接続すると同じコマンドをもう一度実行します。"
           }
         }
       }
@@ -2137,7 +2137,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac は現在バッテリーで駆動しています。"
+            "value" : "このMacは現在バッテリーで駆動しています。"
           }
         }
       }
@@ -2147,7 +2147,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この Mac がバッテリー駆動に切り替わりました。この設定がオンの間は蓋を閉じてもスリープしないため、バッグの中でも動き続け、バッテリーを消耗し、熱くなることがあります。オフにするには macOS が管理者パスワードを求めます。"
+            "value" : "このMacがバッテリー駆動に切り替わりました。この設定がオンの間は蓋を閉じてもスリープしないため、バッグの中でも動き続け、バッテリーを消耗し、熱くなることがあります。オフにするにはmacOSが管理者パスワードを求めます。"
           }
         }
       }
@@ -2163,7 +2163,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "シンボリックリンク\n%1$@ → %2$@\nを作成し、どのターミナルでも `cmds` を使えるようにします。"
+            "value" : "シンボリックリンク\n%1$@ → %2$@\nを作成し、どのターミナルでも`cmds`を使えるようにします。"
           }
         }
       }
@@ -2223,7 +2223,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この設定をオフにするか cmds を終了するまで、システムのスリープをオフにします（pmset disablesleep 1。管理者パスワードが必要です）。"
+            "value" : "この設定をオフにするかcmdsを終了するまで、システムのスリープをオフにします（pmset disablesleep 1。管理者パスワードが必要です）。"
           }
         }
       }
@@ -2233,7 +2233,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "URL または検索語を入力（⌘L）"
+            "value" : "URLまたは検索語を入力（⌘L）"
           }
         }
       }
@@ -2293,7 +2293,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "中継ポートは 1024〜65535 の範囲で指定してください。"
+            "value" : "中継ポートは1024〜65535の範囲で指定してください。"
           }
         }
       }
@@ -2303,7 +2303,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "システム設定 › 一般 › 言語と地域 で設定した言語を使います。"
+            "value" : "システム設定 › 一般 › 言語と地域で設定した言語を使います。"
           }
         }
       }
@@ -2323,7 +2323,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS 同期を待機中"
+            "value" : "iOS同期を待機中"
           }
         }
       }
@@ -2343,7 +2343,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds の実行中は、アイドル時に Mac がスリープしません（ディスプレイはオフになることがあります）。蓋を閉じるとスリープします。"
+            "value" : "cmdsの実行中は、アイドル時にMacがスリープしません（ディスプレイはオフになることがあります）。蓋を閉じるとスリープします。"
           }
         }
       }
@@ -2353,7 +2353,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds の実行中は、アイドル時にディスプレイがオフになりません。"
+            "value" : "cmdsの実行中は、アイドル時にディスプレイがオフになりません。"
           }
         }
       }
@@ -2383,7 +2383,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ワークスペース %lld"
+            "value" : "ワークスペース%lld"
           }
         }
       }
@@ -2433,7 +2433,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds は iOS 同期用の新しい鍵と証明書を作成し、すべての iPhone・iPad のペアリングを解除します。それぞれ再度ペアリングが必要で、それまではこの Mac の ID が変わったと表示されます。"
+            "value" : "cmdsはiOS同期用の新しい鍵と証明書を作成し、すべてのiPhone/iPadのペアリングを解除します。それぞれ再度ペアリングが必要で、それまではこのMacの識別情報が変わったと表示されます。"
           }
         }
       }
@@ -2443,7 +2443,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds は蓋を閉じてもスリープしないようにしています。スリープしない Mac を閉じたままにすると、バッテリーを消耗し、バッグの中で過熱することがあります。"
+            "value" : "cmdsは蓋を閉じてもスリープしないようにしています。スリープしないMacを閉じたままにすると、バッテリーを消耗し、バッグの中で過熱することがあります。"
           }
         }
       }
@@ -2453,7 +2453,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "以前 cmds が「蓋を閉じてもスリープしない」をオンにしたまま、オフにできませんでした（予期せず終了したか、パスワードのダイアログがキャンセルされました）。現在、この Mac は蓋を閉じてもスリープしません。今すぐ通常のスリープに戻しますか？ macOS が管理者パスワードを求めます。"
+            "value" : "以前cmdsが「蓋を閉じてもスリープしない」をオンにしたまま、オフにできませんでした（予期せず終了したか、パスワードのダイアログがキャンセルされました）。現在、このMacは蓋を閉じてもスリープしません。今すぐ通常のスリープに戻しますか？ macOSが管理者パスワードを求めます。"
           }
         }
       }
@@ -2463,7 +2463,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmds はこのペインのリモートシェルにコマンドを 1 つ入力します。~/.local/bin/cmds-remote.sh（小さな sh スクリプト。サーバーに python3、socat、nc のいずれかが必要）を書き込み、サーバーに `cmds` コマンドがなければそれへのリンク ~/.local/bin/cmds も作成します。ほかには何も変更しません。\n\n続ける前に、ペインにシェルのプロンプトが表示されている（プログラムが実行中でない）ことを確認してください。"
+            "value" : "cmdsはこのペインのリモートシェルにコマンドを1つ入力します。~/.local/bin/cmds-remote.sh（小さなshスクリプト。サーバーにpython3、socat、ncのいずれかが必要）を書き込み、サーバーに`cmds`コマンドがなければそれへのリンク~/.local/bin/cmdsも作成します。ほかには何も変更しません。\n\n続ける前に、ペインにシェルのプロンプトが表示されている（プログラムが実行中でない）ことを確認してください。"
           }
         }
       }
@@ -2494,7 +2494,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ホスト、user@host、または ~/.ssh/config の別名"
+            "value" : "ホスト、user@host、または~/.ssh/configの別名"
           }
         }
       }
@@ -2504,7 +2504,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "iOS 同期はオフです"
+            "value" : "iOS同期はオフです"
           }
         }
       }
@@ -2524,7 +2524,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "最終接続 %@"
+            "value" : "最終接続%@"
           }
         }
       }
@@ -2565,7 +2565,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ssh はこのホストの ~/.ssh/config、鍵、known_hosts を使い、入力を求めません（BatchMode）。iPhone では 設定 › リモートアクセス で、同じホスト、そのホストでのユーザー名、この中継ポートを指定します。"
+            "value" : "sshはこのホストの~/.ssh/config、鍵、known_hostsを使い、入力を求めません（BatchMode）。iPhoneでは「SSH経由のリモートアクセス…」で、同じホスト、そのホストでのユーザー名、この中継ポートを指定します。"
           }
         }
       }
