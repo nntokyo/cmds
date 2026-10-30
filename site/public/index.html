@@ -50,8 +50,7 @@
       <h1>AIエージェントを、<br><span class="accent">並べて走らせる</span>ターミナル。</h1>
       <p class="lead">cmds は Claude Code や Codex を何本も同時に動かすための、macOS ネイティブのターミナルワークスペースです。どのエージェントが作業中で、どれがあなたの入力を待っているかがサイドバーで分かり、待っているペインはオレンジのリングで光ります。</p>
       <div class="cta">
-        <!-- TODO(release): DMG を site/public/download/ に置いたら有効化（scripts/release/build-dmg.sh） -->
-        <a class="btn btn-primary" href="#download">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
+        <a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
         <a class="btn" href="/guide/">使い方を見る</a>
       </div>
       <p class="note">無料・オープンソース（GPL-3.0）。アカウント登録もテレメトリもありません。</p>
@@ -175,17 +174,14 @@
       <p class="eyebrow">Download</p>
       <h2>ダウンロード</h2>
       <div class="download-box">
-        <!-- TODO(release): 公開時に以下を有効化し、バージョン・サイズ・SHA-256 を scripts/release/build-dmg.sh の出力（site/public/download/latest.json）で置き換える。
-        <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>cmds 0.1.0 をダウンロード（DMG）</a></p>
-        <p class="note">Apple による公証（notarization）済み、Developer ID（N.N. LLC.）で署名されています。</p>
-        -->
-        <p><strong>最初のリリース（0.1.0）とソースコードの公開を準備中です。</strong>公開後はここから DMG をダウンロードできます。使い方は<a href="/guide/">こちら</a>。</p>
+        <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>cmds 0.1.0 をダウンロード（DMG、11.9 MB）</a></p>
+        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.1.0">GitHub のリリース</a>を参照してください。</p>
         <dl>
-          <dt>ファイル</dt><dd><code>/download/cmds-&lt;version&gt;.dmg</code>（公開時に記載）</dd>
-          <dt>SHA-256</dt><dd><code>公開時に記載</code></dd>
+          <dt>ファイル</dt><dd><code>cmds-0.1.0.dmg</code>（11,878,298 バイト、2026-10-30）</dd>
+          <dt>SHA-256</dt><dd><code>cec7dea82ba0adf20f5d9e57f42017848dac7041cfefb7f3cab4bd6d5452a40c</code></dd>
           <dt>対応</dt><dd>Apple シリコン、macOS 14 以降</dd>
         </dl>
-        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-&lt;version&gt;.dmg</code> で SHA-256 を照合できます。</p>
+        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.1.0.dmg</code> で SHA-256 を照合できます。</p>
       </div>
     </div>
   </section>
@@ -195,8 +191,7 @@
       <p class="eyebrow">Open source</p>
       <h2>ソースコードとライセンス</h2>
       <p>cmds は <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3.0</a> のフリーソフトウェアです。ターミナル描画に <a href="https://github.com/ghostty-org/ghostty">Ghostty</a>（libghostty、MIT ライセンス）、iOS アプリの SSH に Apple の <a href="https://github.com/apple/swift-nio-ssh">SwiftNIO SSH</a>（Apache-2.0）を使っています。</p>
-      <!-- TODO(release): リポジトリ公開後に https://github.com/nntokyo/cmds へのリンクに差し替え -->
-      <p>ソースコードは GitHub で公開予定です。</p>
+      <p>ソースコードは <a href="https://github.com/nntokyo/cmds">GitHub（nntokyo/cmds）</a>で公開しています。</p>
     </div>
   </section>
 

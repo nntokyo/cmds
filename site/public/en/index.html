@@ -50,8 +50,7 @@
       <h1>The terminal for running<br><span class="accent">many AI agents at once.</span></h1>
       <p class="lead">cmds is a native macOS terminal workspace for running Claude Code, Codex and friends side by side. The sidebar shows which agent is working and which one is waiting for you, and the pane that needs you lights up with an orange ring.</p>
       <div class="cta">
-        <!-- TODO(release): point at the DMG once it is in site/public/download/ (scripts/release/build-dmg.sh) -->
-        <a class="btn btn-primary" href="#download">Download for Mac <small>macOS 14+, Apple silicon</small></a>
+        <a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>Download for Mac <small>macOS 14+, Apple silicon</small></a>
         <a class="btn" href="/en/guide/">How to use</a>
       </div>
       <p class="note">Free and open source (GPL-3.0). No account, no telemetry.</p>
@@ -175,17 +174,14 @@
       <p class="eyebrow">Download</p>
       <h2>Download</h2>
       <div class="download-box">
-        <!-- TODO(release): enable on release and fill in version, size and SHA-256 from scripts/release/build-dmg.sh (site/public/download/latest.json).
-        <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>Download cmds 0.1.0 (DMG)</a></p>
-        <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple.</p>
-        -->
-        <p><strong>The first release (0.1.0) and the source code are being prepared for publication.</strong> The DMG will be available here. See <a href="/en/guide/">how to use cmds</a>.</p>
+        <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>Download cmds 0.1.0 (DMG, 11.9 MB)</a></p>
+        <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple. See the <a href="https://github.com/nntokyo/cmds/releases/tag/v0.1.0">GitHub release</a> for the changes.</p>
         <dl>
-          <dt>File</dt><dd><code>/download/cmds-&lt;version&gt;.dmg</code> (on release)</dd>
-          <dt>SHA-256</dt><dd><code>on release</code></dd>
+          <dt>File</dt><dd><code>cmds-0.1.0.dmg</code> (11,878,298 bytes, 2026-10-30)</dd>
+          <dt>SHA-256</dt><dd><code>cec7dea82ba0adf20f5d9e57f42017848dac7041cfefb7f3cab4bd6d5452a40c</code></dd>
           <dt>Runs on</dt><dd>Apple silicon, macOS 14 or later</dd>
         </dl>
-        <p class="note">Check the download with <code>shasum -a 256 cmds-&lt;version&gt;.dmg</code>.</p>
+        <p class="note">Check the download with <code>shasum -a 256 cmds-0.1.0.dmg</code>.</p>
       </div>
     </div>
   </section>
@@ -195,8 +191,7 @@
       <p class="eyebrow">Open source</p>
       <h2>Source code and license</h2>
       <p>cmds is free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3.0</a>. Terminals are rendered by <a href="https://github.com/ghostty-org/ghostty">Ghostty</a> (libghostty, MIT license); the iOS app uses Apple's <a href="https://github.com/apple/swift-nio-ssh">SwiftNIO SSH</a> (Apache-2.0).</p>
-      <!-- TODO(release): link https://github.com/nntokyo/cmds once the repository is public -->
-      <p>The source code will be published on GitHub.</p>
+      <p>The source code is on <a href="https://github.com/nntokyo/cmds">GitHub (nntokyo/cmds)</a>.</p>
     </div>
   </section>
 
