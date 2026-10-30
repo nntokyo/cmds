@@ -85,6 +85,7 @@ enum MainMenu {
         menu.addItem(item("Compact Sidebar", #selector(CommandRouter.toggleCompactSidebar(_:)), "s", [.command, .control], target: router))
         menu.addItem(item("Filter Workspaces", #selector(CommandRouter.filterWorkspaces(_:)), "f", [.command, .option], target: router))
         menu.addItem(item("Group Workspaces by Project", #selector(CommandRouter.toggleGroupByProject(_:)), "", target: router))
+        menu.addItem(item("Show CPU and Memory per Workspace", #selector(CommandRouter.toggleWorkspaceUsage(_:)), "", target: router))
         menu.addItem(item("Zoom Pane", #selector(CommandRouter.toggleZoom(_:)), "\r", [.command, .shift], target: router))
         menu.addItem(.separator())
         let resumeMenu = NSMenu(title: String(localized: "Resume Agent Sessions on Launch"))

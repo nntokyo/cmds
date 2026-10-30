@@ -23,7 +23,8 @@ Each row shows:
 - the git branch and listening ports of the workspace's processes;
 - the coding agent of its focused pane: model, context and cost of that session
   ([ai-agents.md](ai-agents.md#usage-and-limits)); the account limits are the same for every row and live in the footer;
-- CPU and memory of its processes (100 % CPU = one core, like Activity Monitor);
+- optionally (View › Show CPU and Memory per Workspace, off by default) CPU and memory of its processes (100 % CPU =
+  one core, like Activity Monitor); never shown for SSH workspaces, whose processes run on the server;
 - the latest notification text.
 
 The footer shows each agent's account limits (Claude's 5-hour / 7-day windows and spend limit, Codex's windows, as

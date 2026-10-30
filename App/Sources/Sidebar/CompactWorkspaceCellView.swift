@@ -127,7 +127,9 @@ final class CompactWorkspaceCellView: NSTableCellView {
             lines.append(AgentFormat.summary(agent, limits: [], strings: .localized) + (agent.isStale ? String(localized: " (idle)") : ""))
         }
         if workspace.hasTerminal {
-            lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))
+            if SidebarPreferences.showsWorkspaceUsage, workspace.remoteHost == nil {
+                lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))
+            }
         }
         if let note = workspace.notificationText { lines.append(note) }
         return lines.joined(separator: "\n")

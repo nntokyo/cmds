@@ -1,3481 +1,3491 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    " %@ in" : {
-      "comment" : "after Tokens: input tokens",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " 入力%@"
+  "sourceLanguage": "en",
+  "strings": {
+    " %@ in": {
+      "comment": "after Tokens: input tokens",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " 入力%@"
           }
         }
       }
     },
-    " (%@ cached)" : {
-      "comment" : "after the input tokens",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（キャッシュ%@）"
+    " (%@ cached)": {
+      "comment": "after the input tokens",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（キャッシュ%@）"
           }
         }
       }
     },
-    " (%@ reasoning)" : {
-      "comment" : "after the output tokens",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（推論%@）"
+    " (%@ reasoning)": {
+      "comment": "after the output tokens",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（推論%@）"
           }
         }
       }
     },
-    " (%lld%% of wall time)" : {
-      "comment" : "after the API time",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（経過時間の%lld%%）"
+    " (%lld%% of wall time)": {
+      "comment": "after the API time",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（経過時間の%lld%%）"
           }
         }
       }
     },
-    " (idle)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（待機中）"
+    " (idle)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（待機中）"
           }
         }
       }
     },
-    " (in %@)" : {
-      "comment" : "after a limit's reset time: 15:30 (in 2h10m)",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（あと%@）"
+    " (in %@)": {
+      "comment": "after a limit's reset time: 15:30 (in 2h10m)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（あと%@）"
           }
         }
       }
     },
-    " daily" : {
-      "comment" : "after a spend limit: its period",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（日ごと）"
+    " daily": {
+      "comment": "after a spend limit: its period",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（日ごと）"
           }
         }
       }
     },
-    " monthly" : {
-      "comment" : "after a spend limit: its period",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（月ごと）"
+    " monthly": {
+      "comment": "after a spend limit: its period",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（月ごと）"
           }
         }
       }
     },
-    " weekly" : {
-      "comment" : "after a spend limit: its period",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（週ごと）"
+    " weekly": {
+      "comment": "after a spend limit: its period",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（週ごと）"
           }
         }
       }
     },
-    " · %@ of %@ tokens" : {
-      "comment" : "after Context 53%: 527k of 1M tokens",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : " · %1$@ of %2$@ tokens"
+    " · %@ of %@ tokens": {
+      "comment": "after Context 53%: 527k of 1M tokens",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": " · %1$@ of %2$@ tokens"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · %1$@ / %2$@トークン"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %1$@ / %2$@トークン"
           }
         }
       }
     },
-    " · %@ of the window elapsed" : {
-      "comment" : "after an agent usage limit",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · 期間の%@が経過"
+    " · %@ of the window elapsed": {
+      "comment": "after an agent usage limit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 期間の%@が経過"
           }
         }
       }
     },
-    " · %@ out" : {
-      "comment" : "after Tokens: output tokens",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · 出力%@"
+    " · %@ out": {
+      "comment": "after Tokens: output tokens",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 出力%@"
           }
         }
       }
     },
-    " · %@ tokens" : {
-      "comment" : "after Context 53%",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · %@トークン"
+    " · %@ tokens": {
+      "comment": "after Context 53%",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %@トークン"
           }
         }
       }
     },
-    " · %@/h" : {
-      "comment" : "after Cost: cost per hour",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · %@/時間"
+    " · %@/h": {
+      "comment": "after Cost: cost per hour",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · %@/時間"
           }
         }
       }
     },
-    " · API %@" : {
-      "comment" : "after Session: time in API calls",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · API %@"
+    " · API %@": {
+      "comment": "after Session: time in API calls",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · API %@"
           }
         }
       }
     },
-    " · cold" : {
-      "comment" : "prompt cache expired",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · 期限切れ"
+    " · cold": {
+      "comment": "prompt cache expired",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 期限切れ"
           }
         }
       }
     },
-    " · disconnected" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · 切断"
+    " · disconnected": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 切断"
           }
         }
       }
     },
-    " · over 200k" : {
-      "comment" : "after Context: more than 200k tokens",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · 200k超"
+    " · over 200k": {
+      "comment": "after Context: more than 200k tokens",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 200k超"
           }
         }
       }
     },
-    " · resets %@" : {
-      "comment" : "after an agent usage limit",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · リセット：%@"
+    " · resets %@": {
+      "comment": "after an agent usage limit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · リセット：%@"
           }
         }
       }
     },
-    " · warm" : {
-      "comment" : "prompt cache still alive",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : " · 有効"
+    " · warm": {
+      "comment": "prompt cache still alive",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " · 有効"
           }
         }
       }
     },
-    "%@ %@ of %@ (%@)" : {
-      "comment" : "Spend limit $12.00 of $50.00 (24%)",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ of %3$@ (%4$@)"
+    "%@ %@ of %@ (%@)": {
+      "comment": "Spend limit $12.00 of $50.00 (24%)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$@ of %3$@ (%4$@)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@：%3$@中%2$@（%4$@）"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：%3$@中%2$@（%4$@）"
           }
         }
       }
     },
-    "%@ %@ used" : {
-      "comment" : "agent usage limit: 5-hour limit 40% used",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ used"
+    "%@ %@ used": {
+      "comment": "agent usage limit: 5-hour limit 40% used",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ %2$@ used"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@：%2$@使用"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：%2$@使用"
           }
         }
       }
     },
-    "%@ (%lld bytes)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ (%2$lld bytes)"
+    "%@ (%lld bytes)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ (%2$lld bytes)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@（%2$lldバイト）"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@（%2$lldバイト）"
           }
         }
       }
     },
-    "%@ account" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@アカウント"
+    "%@ account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@アカウント"
           }
         }
       }
     },
-    "%@ account limits" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@アカウントの上限"
+    "%@ account limits": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@アカウントの上限"
           }
         }
       }
     },
-    "%@ account limits (%@)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ account limits (%2$@)"
+    "%@ account limits (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ account limits (%2$@)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@アカウントの上限（%2$@）"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@アカウントの上限（%2$@）"
           }
         }
       }
     },
-    "%@ is a folder" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@はフォルダです"
+    "%@ is a folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はフォルダです"
           }
         }
       }
     },
-    "%@ limit" : {
-      "comment" : "agent usage limit of a window (1h limit)",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@の上限"
+    "%@ limit": {
+      "comment": "agent usage limit of a window (1h limit)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@の上限"
           }
         }
       }
     },
-    "%@ session (%@)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ session (%2$@)"
+    "%@ session (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ session (%2$@)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@セッション（%2$@）"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@セッション（%2$@）"
           }
         }
       }
     },
-    "%@ session “%@” (%@)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ session “%2$@” (%3$@)"
+    "%@ session “%@” (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ session “%2$@” (%3$@)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@セッション「%2$@」（%3$@）"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@セッション「%2$@」（%3$@）"
           }
         }
       }
     },
-    "%lld d ago" : {
-      "comment" : "age of agent figures",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld日前"
+    "%lld d ago": {
+      "comment": "age of agent figures",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld日前"
           }
         }
       }
     },
-    "%lld h ago" : {
-      "comment" : "age of agent figures",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld時間前"
+    "%lld h ago": {
+      "comment": "age of agent figures",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld時間前"
           }
         }
       }
     },
-    "%lld min ago" : {
-      "comment" : "age of agent figures",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld分前"
+    "%lld min ago": {
+      "comment": "age of agent figures",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分前"
           }
         }
       }
     },
-    "%lld processes in this workspace's terminals" : {
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "plural" : {
-              "one" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld process in this workspace's terminals"
+    "%lld processes in this workspace's terminals": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld process in this workspace's terminals"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "%lld processes in this workspace's terminals"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld processes in this workspace's terminals"
                 }
               }
             }
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このワークスペースのターミナルのプロセス%lld個"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースのターミナルのプロセス%lld個"
           }
         }
       }
     },
-    "%lldd%lldh" : {
-      "comment" : "duration: days and hours (2d3h)",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lldd%2$lldh"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld日%2$lld時間"
-          }
-        }
-      }
-    },
-    "%lldh%lldm" : {
-      "comment" : "duration: hours and minutes (3h25m)",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$lldh%2$lldm"
+    "%lldd%lldh": {
+      "comment": "duration: days and hours (2d3h)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lldd%2$lldh"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$lld時間%2$lld分"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld日%2$lld時間"
           }
         }
       }
     },
-    "%lldm" : {
-      "comment" : "duration: minutes (48m)",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld分"
-          }
-        }
-      }
-    },
-    "%llds" : {
-      "comment" : "duration: seconds (42s)",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld秒"
-          }
-        }
-      }
-    },
-    "%llds ago" : {
-      "comment" : "age of agent figures",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%lld秒前"
-          }
-        }
-      }
-    },
-    "(iOS Sync is off)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "（iOS同期はオフ）"
-          }
-        }
-      }
-    },
-    ", " : {
-      "comment" : "list separator",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "、"
-          }
-        }
-      }
-    },
-    "5-hour limit" : {
-      "comment" : "agent usage limit",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "5時間の上限"
-          }
-        }
-      }
-    },
-    "7-day limit" : {
-      "comment" : "agent usage limit",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "7日間の上限"
-          }
-        }
-      }
-    },
-    "A coding agent is running in this workspace. Closing it ends the agent and its terminals." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このワークスペースではコーディングエージェントが動いています。閉じるとエージェントとターミナルが終了します。"
-          }
-        }
-      }
-    },
-    "A program in this terminal wants to read the clipboard. Allow it?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このターミナルのプログラムがクリップボードを読み取ろうとしています。許可しますか？"
-          }
-        }
-      }
-    },
-    "About cmds" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsについて"
-          }
-        }
-      }
-    },
-    "Add" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "追加"
-          }
-        }
-      }
-    },
-    "Advertising (PSM %@)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アドバタイズ中（PSM %@）"
-          }
-        }
-      }
-    },
-    "Agents keep running when you close the lid. cmds changes a system-wide power setting (pmset -a disablesleep 1) and changes it back when you turn this off or quit cmds. macOS asks for your administrator password each time; cmds never sees it." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "蓋を閉じてもエージェントは動き続けます。cmdsはシステム全体の電源設定（pmset -a disablesleep 1）を変更し、この設定をオフにするかcmdsを終了すると元に戻します。macOSはそのたびに管理者パスワードを求めます。cmdsがパスワードを見ることはありません。"
-          }
-        }
-      }
-    },
-    "Allow" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "許可"
-          }
-        }
-      }
-    },
-    "Allow Bluetooth Sync" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bluetooth同期を許可"
-          }
-        }
-      }
-    },
-    "Allow remote access via SSH" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SSH経由のリモートアクセスを許可"
-          }
-        }
-      }
-    },
-    "Always" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "常に再開"
-          }
-        }
-      }
-    },
-    "App %@ · Wired %@ · Compressed %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "App %1$@ · Wired %2$@ · Compressed %3$@"
+    "%lldh%lldm": {
+      "comment": "duration: hours and minutes (3h25m)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lldh%2$lldm"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "App %1$@ · 確保%2$@ · 圧縮%3$@"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld時間%2$lld分"
           }
         }
       }
     },
-    "Apply" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "適用"
+    "%lldm": {
+      "comment": "duration: minutes (48m)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分"
           }
         }
       }
     },
-    "Ask" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "確認する"
+    "%llds": {
+      "comment": "duration: seconds (42s)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld秒"
           }
         }
       }
     },
-    "Awake (lid closed OK)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スリープしない（蓋を閉じても可）"
+    "%llds ago": {
+      "comment": "age of agent figures",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld秒前"
           }
         }
       }
     },
-    "Awake (lid closed OK): cmds turned sleep off (pmset disablesleep 1). Closing the lid does not sleep this Mac until you turn it off or quit cmds. Click to turn it off." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スリープしない（蓋を閉じても可）：cmdsがスリープをオフにしました（pmset disablesleep 1）。オフにするかcmdsを終了するまで、蓋を閉じてもこのMacはスリープしません。クリックするとオフにします。"
+    "(iOS Sync is off)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（iOS同期はオフ）"
           }
         }
       }
     },
-    "Awake (lid closed OK): sleep is disabled system-wide, not by cmds (SleepDisabled = 1). Restore with: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スリープしない（蓋を閉じても可）：cmds以外によってシステム全体でスリープが無効になっています（SleepDisabled = 1）。元に戻すには：%@"
+    ", ": {
+      "comment": "list separator",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "、"
           }
         }
       }
     },
-    "Back" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "戻る"
+    "5-hour limit": {
+      "comment": "agent usage limit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5時間の上限"
           }
         }
       }
     },
-    "Bell" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ベル"
+    "7-day limit": {
+      "comment": "agent usage limit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7日間の上限"
           }
         }
       }
     },
-    "Bluetooth is off" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bluetoothはオフです"
+    "A coding agent is running in this workspace. Closing it ends the agent and its terminals.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースではコーディングエージェントが動いています。閉じるとエージェントとターミナルが終了します。"
           }
         }
       }
     },
-    "Bring All to Front" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべてを手前に移動"
+    "A program in this terminal wants to read the clipboard. Allow it?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このターミナルのプログラムがクリップボードを読み取ろうとしています。許可しますか？"
           }
         }
       }
     },
-    "Browser" : {
-      "comment" : "default pane title",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ブラウザ"
+    "About cmds": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsについて"
           }
         }
       }
     },
-    "CPU" : {
-      "comment" : "sidebar meter title",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CPU"
+    "Add": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
           }
         }
       }
     },
-    "CPU %@ (100%% = one core)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CPU %@（100%% = 1コア）"
+    "Advertising (PSM %@)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アドバタイズ中（PSM %@）"
           }
         }
       }
     },
-    "CPU %@ · Mem %@ (%@)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "CPU %1$@ · Mem %2$@ (%3$@)"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CPU %1$@ · メモリ%2$@（%3$@）"
+    "Agents keep running when you close the lid. cmds changes a system-wide power setting (pmset -a disablesleep 1) and changes it back when you turn this off or quit cmds. macOS asks for your administrator password each time; cmds never sees it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓋を閉じてもエージェントは動き続けます。cmdsはシステム全体の電源設定（pmset -a disablesleep 1）を変更し、この設定をオフにするかcmdsを終了すると元に戻します。macOSはそのたびに管理者パスワードを求めます。cmdsがパスワードを見ることはありません。"
           }
         }
       }
     },
-    "CPU %@%% of all %lld cores" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "CPU %1$@%% of all %2$lld cores"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CPU %1$@%%（全%2$lldコア中）"
+    "Allow": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可"
           }
         }
       }
     },
-    "CPU %@, memory %@, pressure %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "CPU %1$@, memory %2$@, pressure %3$@"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CPU %1$@、メモリ%2$@、メモリプレッシャー%3$@"
+    "Allow Bluetooth Sync": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetooth同期を許可"
           }
         }
       }
     },
-    "CPU and memory of the processes in this workspace's terminals (measuring…)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このワークスペースのターミナルで動くプロセスのCPUとメモリ（計測中…）"
+    "Allow remote access via SSH": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSH経由のリモートアクセスを許可"
           }
         }
       }
     },
-    "Cancel" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャンセル"
+    "Always": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常に再開"
           }
         }
       }
     },
-    "Cancelled." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャンセルしました。"
-          }
-        }
-      }
-    },
-    "Cannot export workspaces" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを書き出せません"
-          }
-        }
-      }
-    },
-    "Cannot import workspaces" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを読み込めません"
-          }
-        }
-      }
-    },
-    "Cannot open the SSH workspace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SSHワークスペースを開けません"
-          }
-        }
-      }
-    },
-    "Caution: a closed Mac that never sleeps keeps running in a bag — it can overheat and drain the battery. cmds asks you to turn this off when the Mac switches to battery. If cmds crashes or is force-quit, sleep stays disabled until cmds starts again (it then offers to restore it) or you run %@." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "注意：スリープしないMacは蓋を閉じてバッグに入れても動き続け、過熱やバッテリー消耗の原因になります。Macがバッテリー駆動に切り替わると、cmdsはこの設定をオフにするよう求めます。cmdsがクラッシュしたり強制終了されたりした場合、cmdsを再度起動する（元に戻すよう提案します）か%@を実行するまでスリープは無効のままです。"
-          }
-        }
-      }
-    },
-    "Choose a file to preview" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プレビューするファイルを選択"
-          }
-        }
-      }
-    },
-    "Choose a relay host" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中継ホストを選んでください"
-          }
-        }
-      }
-    },
-    "Choose a workspace file exported from cmds" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsから書き出したワークスペースのファイルを選択してください"
-          }
-        }
-      }
-    },
-    "Clear Notification" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通知を消去"
-          }
-        }
-      }
-    },
-    "Close Pane" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペインを閉じる"
-          }
-        }
-      }
-    },
-    "Close Workspace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを閉じる"
-          }
-        }
-      }
-    },
-    "Close “%@”?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「%@」を閉じますか？"
-          }
-        }
-      }
-    },
-    "Closing the lid already does not sleep this Mac, but the setting was not made by cmds, so cmds leaves it alone. To restore normal sleep, run:\n%@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このMacはすでに蓋を閉じてもスリープしない設定ですが、cmdsが行った設定ではないため変更しません。通常のスリープに戻すには、次を実行してください：\n%@"
-          }
-        }
-      }
-    },
-    "Compact Sidebar" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーをコンパクト表示"
-          }
-        }
-      }
-    },
-    "Compact Sidebar (⌃⌘S)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーをコンパクト表示（⌃⌘S）"
-          }
-        }
-      }
-    },
-    "Connect" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続"
-          }
-        }
-      }
-    },
-    "Connect (⌘R)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続（⌘R）"
-          }
-        }
-      }
-    },
-    "Connecting to %@…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@に接続中…"
-          }
-        }
-      }
-    },
-    "Context" : {
-      "comment" : "agent context window",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コンテキスト"
-          }
-        }
-      }
-    },
-    "Context %@" : {
-      "comment" : "agent context window: Context 53%",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コンテキスト%@"
-          }
-        }
-      }
-    },
-    "Copy" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コピー"
-          }
-        }
-      }
-    },
-    "Cost %@" : {
-      "comment" : "agent session cost",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コスト%@"
-          }
-        }
-      }
-    },
-    "Could not change the sleep setting" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スリープ設定を変更できませんでした"
-          }
-        }
-      }
-    },
-    "Could not install the command line tool: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コマンドラインツールをインストールできませんでした：%@"
-          }
-        }
-      }
-    },
-    "Cut" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カット"
-          }
-        }
-      }
-    },
-    "Debug" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "デバッグ"
-          }
-        }
-      }
-    },
-    "Devices" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "デバイス"
-          }
-        }
-      }
-    },
-    "Directory:" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ディレクトリ："
-          }
-        }
-      }
-    },
-    "Disabled (%@)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無効（%@）"
-          }
-        }
-      }
-    },
-    "Disconnected (%@); retrying in %lld s" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Disconnected (%1$@); retrying in %2$lld s"
+    "App %@ · Wired %@ · Compressed %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "App %1$@ · Wired %2$@ · Compressed %3$@"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切断（%1$@）。%2$lld秒後に再試行します"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App %1$@ · 確保%2$@ · 圧縮%3$@"
           }
         }
       }
     },
-    "Disconnected — ssh %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "切断されました — ssh %@"
+    "Apply": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適用"
           }
         }
       }
     },
-    "Dismiss" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "閉じる"
+    "Ask": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認する"
           }
         }
       }
     },
-    "Done" : {
-      "comment" : "sidebar agent state: finished, not seen yet",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完了"
+    "Awake (lid closed OK)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープしない（蓋を閉じても可）"
           }
         }
       }
     },
-    "Edit" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "編集"
+    "Awake (lid closed OK): cmds turned sleep off (pmset disablesleep 1). Closing the lid does not sleep this Mac until you turn it off or quit cmds. Click to turn it off.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープしない（蓋を閉じても可）：cmdsがスリープをオフにしました（pmset disablesleep 1）。オフにするかcmdsを終了するまで、蓋を閉じてもこのMacはスリープしません。クリックするとオフにします。"
           }
         }
       }
     },
-    "Enable iOS Sync" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS同期を有効にする"
+    "Awake (lid closed OK): sleep is disabled system-wide, not by cmds (SleepDisabled = 1). Restore with: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープしない（蓋を閉じても可）：cmds以外によってシステム全体でスリープが無効になっています（SleepDisabled = 1）。元に戻すには：%@"
           }
         }
       }
     },
-    "Encrypted (TLS 1.3). Your iPhone or iPad trusts only this Mac's identity." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暗号化（TLS 1.3）。iPhone/iPadはこのMacの識別情報だけを信頼します。"
+    "Back": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戻る"
           }
         }
       }
     },
-    "Enter Full Screen" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フルスクリーンにする"
+    "Bell": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ベル"
           }
         }
       }
     },
-    "Enter a host alias from ~/.ssh/config (or user@host)." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "~/.ssh/configのホスト別名（またはuser@host）を入力してください。"
+    "Bluetooth is off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bluetoothはオフです"
           }
         }
       }
     },
-    "Enter a host." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ホストを入力してください。"
+    "Bring All to Front": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを手前に移動"
           }
         }
       }
     },
-    "Every iPhone and iPad will be disconnected and must be paired again with a new code." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべてのiPhone/iPadが切断され、新しいコードで再度ペアリングが必要になります。"
+    "Browser": {
+      "comment": "default pane title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザ"
           }
         }
       }
     },
-    "Expand Sidebar" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーを広げる"
+    "CPU": {
+      "comment": "sidebar meter title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU"
           }
         }
       }
     },
-    "Expand Sidebar (⌃⌘S)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーを広げる（⌃⌘S）"
+    "CPU %@ (100%% = one core)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU %@（100%% = 1コア）"
           }
         }
       }
     },
-    "Export Workspaces…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを書き出す…"
-          }
-        }
-      }
-    },
-    "Failed: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "失敗：%@"
-          }
-        }
-      }
-    },
-    "File" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファイル"
-          }
-        }
-      }
-    },
-    "File not found" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファイルが見つかりません"
-          }
-        }
-      }
-    },
-    "Filter Workspaces" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを絞り込む"
-          }
-        }
-      }
-    },
-    "Filter Workspaces…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを絞り込む…"
-          }
-        }
-      }
-    },
-    "Focus Address Bar" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アドレスバーにフォーカス"
-          }
-        }
-      }
-    },
-    "Focus Down" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下のペインにフォーカス"
-          }
-        }
-      }
-    },
-    "Focus Left" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左のペインにフォーカス"
-          }
-        }
-      }
-    },
-    "Focus Right" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右のペインにフォーカス"
-          }
-        }
-      }
-    },
-    "Focus Up" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上のペインにフォーカス"
-          }
-        }
-      }
-    },
-    "Forward" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "進む"
-          }
-        }
-      }
-    },
-    "Forwarding via %@ (relay 127.0.0.1:%u)" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Forwarding via %1$@ (relay 127.0.0.1:%2$u)"
+    "CPU %@ · Mem %@ (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "CPU %1$@ · Mem %2$@ (%3$@)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@経由で転送中（中継127.0.0.1:%2$u）"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU %1$@ · メモリ%2$@（%3$@）"
           }
         }
       }
     },
-    "Group Workspaces by Project" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースをプロジェクトでまとめる"
-          }
-        }
-      }
-    },
-    "Group by Project" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロジェクトでまとめる"
-          }
-        }
-      }
-    },
-    "Help" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ヘルプ"
-          }
-        }
-      }
-    },
-    "Hide Others" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ほかを非表示"
-          }
-        }
-      }
-    },
-    "Hide cmds" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsを非表示"
-          }
-        }
-      }
-    },
-    "Host from ~/.ssh/config" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "~/.ssh/configのホスト"
-          }
-        }
-      }
-    },
-    "Host:" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ホスト："
-          }
-        }
-      }
-    },
-    "Idle" : {
-      "comment" : "sidebar agent state: waiting for the next prompt",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "待機"
-          }
-        }
-      }
-    },
-    "Import" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "読み込む"
-          }
-        }
-      }
-    },
-    "Import Workspaces" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを読み込む"
-          }
-        }
-      }
-    },
-    "Import Workspaces…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースを読み込む…"
-          }
-        }
-      }
-    },
-    "In cmds on your iPhone or iPad, tap Scan Pairing Code and point it at this QR code. Without a camera: pick this Mac, check that the identity matches, and enter the code." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhone/iPadのcmdsで「ペアリングコードをスキャン」をタップし、このQRコードに向けてください。カメラがない場合は、このMacを選び、識別情報が一致することを確認してからコードを入力します。"
-          }
-        }
-      }
-    },
-    "Install" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "インストール"
-          }
-        }
-      }
-    },
-    "Install Command Line Tool…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コマンドラインツールをインストール…"
-          }
-        }
-      }
-    },
-    "Install Remote Helper…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リモートヘルパーをインストール…"
-          }
-        }
-      }
-    },
-    "Install the cmds command line tool?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsコマンドラインツールをインストールしますか？"
-          }
-        }
-      }
-    },
-    "Install the remote helper on %@?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@にリモートヘルパーをインストールしますか？"
-          }
-        }
-      }
-    },
-    "Installed. Run `cmds --help` in a new terminal." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "インストールしました。新しいターミナルで`cmds --help`を実行してください。"
-          }
-        }
-      }
-    },
-    "Jump to Latest Attention" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最新の通知へ移動"
-          }
-        }
-      }
-    },
-    "Keep Awake" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スリープしない"
-          }
-        }
-      }
-    },
-    "Keep Awake With Lid Closed" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "蓋を閉じてもスリープしない"
-          }
-        }
-      }
-    },
-    "Keep Awake With Lid Closed (not in test instances)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "蓋を閉じてもスリープしない（テストインスタンスでは不可）"
-          }
-        }
-      }
-    },
-    "Keep Awake With Lid Closed (set outside cmds)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "蓋を閉じてもスリープしない（cmds以外で設定）"
-          }
-        }
-      }
-    },
-    "Keep Awake With Lid Closed…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "蓋を閉じてもスリープしない…"
-          }
-        }
-      }
-    },
-    "Keep Awake…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スリープしない…"
-          }
-        }
-      }
-    },
-    "Keep Display Awake" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ディスプレイをスリープしない"
-          }
-        }
-      }
-    },
-    "Keep It Disabled" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無効のままにする"
-          }
-        }
-      }
-    },
-    "Keep this Mac awake with the lid closed?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "蓋を閉じてもこのMacをスリープしないようにしますか？"
-          }
-        }
-      }
-    },
-    "Keyboard Shortcuts" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キーボードショートカット"
-          }
-        }
-      }
-    },
-    "Language" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "言語"
-          }
-        }
-      }
-    },
-    "Later" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "あとで"
-          }
-        }
-      }
-    },
-    "Leave empty to use the directory name." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "空欄にするとディレクトリ名を使います。"
-          }
-        }
-      }
-    },
-    "Lets a paired iPhone/iPad reach this Mac away from home through an SSH server you use. The connection stays encrypted end to end." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリング済みのiPhone/iPadから、普段使っているSSHサーバー経由で外出先からこのMacに接続できるようにします。接続はエンドツーエンドで暗号化されたままです。"
-          }
-        }
-      }
-    },
-    "Lets the iPhone/iPad connect over Bluetooth when Wi‑Fi is off. The connection stays encrypted and pinned to this Mac's identity." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wi‑Fiがオフのとき、iPhone/iPadがBluetoothで接続できるようにします。接続は暗号化され、このMacの識別情報に固定されたままです。"
-          }
-        }
-      }
-    },
-    "Lets your paired iPhone or iPad reach this Mac away from home through an SSH server you already use (the relay host). cmds keeps “ssh -R” open to it; the forwarded port listens only on the relay's loopback. The phone logs in to the relay with its own key and opens the forwarded port; the session inside stays end-to-end TLS pinned to this Mac, so the relay sees only ciphertext. Pair on the local network first: pairing codes are not accepted over SSH." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリング済みのiPhone/iPadから、すでに使っているSSHサーバー（中継ホスト）経由で外出先からこのMacに接続できるようにします。cmdsは中継ホストへの「ssh -R」を維持し、転送ポートは中継ホストのループバックでのみ待ち受けます。iPhoneは自分の鍵で中継ホストにログインして転送ポートを開きます。その中のセッションはこのMacに固定されたエンドツーエンドのTLSのままなので、中継ホストには暗号文しか見えません。先にローカルネットワークでペアリングしてください。SSH経由ではペアリングコードを受け付けません。"
-          }
-        }
-      }
-    },
-    "Lines +%lld −%lld" : {
-      "comment" : "lines changed by the agent",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Lines +%1$lld −%2$lld"
+    "CPU %@%% of all %lld cores": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "CPU %1$@%% of all %2$lld cores"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "変更行 +%1$lld −%2$lld"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU %1$@%%（全%2$lldコア中）"
           }
         }
       }
     },
-    "Listening on port %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ポート%@で待ち受け中"
-          }
-        }
-      }
-    },
-    "Mac identity: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Macの識別情報：%@"
-          }
-        }
-      }
-    },
-    "Mac is on battery" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Macがバッテリー駆動です"
-          }
-        }
-      }
-    },
-    "Measuring CPU and memory…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "CPUとメモリを計測中…"
-          }
-        }
-      }
-    },
-    "Mem" : {
-      "comment" : "sidebar meter title (memory)",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリ"
-          }
-        }
-      }
-    },
-    "Memory %@ (physical footprint)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリ%@（物理フットプリント）"
-          }
-        }
-      }
-    },
-    "Memory pressure: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メモリプレッシャー：%@"
-          }
-        }
-      }
-    },
-    "Memory used %@ of %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Memory used %1$@ of %2$@"
+    "CPU %@, memory %@, pressure %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "CPU %1$@, memory %2$@, pressure %3$@"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用メモリ%1$@ / %2$@"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU %1$@、メモリ%2$@、メモリプレッシャー%3$@"
           }
         }
       }
     },
-    "Minimize" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "しまう"
+    "CPU and memory of the processes in this workspace's terminals (measuring…)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースのターミナルで動くプロセスのCPUとメモリ（計測中…）"
           }
         }
       }
     },
-    "Needs Input" : {
-      "comment" : "sidebar agent state: waiting for the user's answer or permission",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "入力待ち"
+    "Cancel": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
           }
         }
       }
     },
-    "Never" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再開しない"
+    "Cancelled.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセルしました。"
           }
         }
       }
     },
-    "New Code" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新しいコード"
+    "Cannot export workspaces": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを書き出せません"
           }
         }
       }
     },
-    "New SSH Workspace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新規SSHワークスペース"
+    "Cannot import workspaces": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを読み込めません"
           }
         }
       }
     },
-    "New SSH Workspace…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新規SSHワークスペース…"
+    "Cannot open the SSH workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSHワークスペースを開けません"
           }
         }
       }
     },
-    "New Workspace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新規ワークスペース"
+    "Caution: a closed Mac that never sleeps keeps running in a bag — it can overheat and drain the battery. cmds asks you to turn this off when the Mac switches to battery. If cmds crashes or is force-quit, sleep stays disabled until cmds starts again (it then offers to restore it) or you run %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注意：スリープしないMacは蓋を閉じてバッグに入れても動き続け、過熱やバッテリー消耗の原因になります。Macがバッテリー駆動に切り替わると、cmdsはこの設定をオフにするよう求めます。cmdsがクラッシュしたり強制終了されたりした場合、cmdsを再度起動する（元に戻すよう提案します）か%@を実行するまでスリープは無効のままです。"
           }
         }
       }
     },
-    "New Workspace  ⌘N" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新規ワークスペース  ⌘N"
+    "Choose a file to preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューするファイルを選択"
           }
         }
       }
     },
-    "New Workspace (⌘N)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新規ワークスペース（⌘N）"
+    "Choose a relay host": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中継ホストを選んでください"
           }
         }
       }
     },
-    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nToggle sidebar ⌘B · Rename workspace ⇧⌘R" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R"
+    "Choose a workspace file exported from cmds": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsから書き出したワークスペースのファイルを選択してください"
           }
         }
       }
     },
-    "Next Workspace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "次のワークスペース"
+    "Clear Notification": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知を消去"
           }
         }
       }
     },
-    "No paired devices." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリング済みのデバイスはありません。"
+    "Close Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインを閉じる"
           }
         }
       }
     },
-    "No workspaces" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースがありません"
+    "Close Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを閉じる"
           }
         }
       }
     },
-    "Not allowed (System Settings › Privacy & Security › Bluetooth)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "許可されていません（システム設定 › プライバシーとセキュリティ › Bluetooth）"
+    "Close “%@”?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を閉じますか？"
           }
         }
       }
     },
-    "Not available in an isolated instance (CMDS_SUPPORT_DIR)." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "分離インスタンス（CMDS_SUPPORT_DIR）では使用できません。"
+    "Closing the lid already does not sleep this Mac, but the setting was not made by cmds, so cmds leaves it alone. To restore normal sleep, run:\n%@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacはすでに蓋を閉じてもスリープしない設定ですが、cmdsが行った設定ではないため変更しません。通常のスリープに戻すには、次を実行してください：\n%@"
           }
         }
       }
     },
-    "Not connected — ssh %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未接続 — ssh %@"
+    "Compact Sidebar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーをコンパクト表示"
           }
         }
       }
     },
-    "Not supported on this Mac" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このMacでは使用できません"
+    "Compact Sidebar (⌃⌘S)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーをコンパクト表示（⌃⌘S）"
           }
         }
       }
     },
-    "Notify Another Pane" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "別のペインに通知"
+    "Connect": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続"
           }
         }
       }
     },
-    "Notify Focused Pane in 3 s" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "3秒後にフォーカス中のペインに通知"
+    "Connect (⌘R)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続（⌘R）"
           }
         }
       }
     },
-    "Off" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オフ"
+    "Connecting to %@…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に接続中…"
           }
         }
       }
     },
-    "Open Browser Split" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ブラウザを分割して開く"
+    "Context": {
+      "comment": "agent context window",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンテキスト"
           }
         }
       }
     },
-    "Open in Default App" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "デフォルトのアプリケーションで開く"
+    "Context %@": {
+      "comment": "agent context window: Context 53%",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンテキスト%@"
           }
         }
       }
     },
-    "Open in Preview…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プレビューで開く…"
+    "Copy": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー"
           }
         }
       }
     },
-    "Other" : {
-      "comment" : "sidebar group of workspaces without a directory",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "その他"
+    "Cost %@": {
+      "comment": "agent session cost",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コスト%@"
           }
         }
       }
     },
-    "Pair iPhone/iPad" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhone/iPadとペアリング"
+    "Could not change the sleep setting": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープ設定を変更できませんでした"
           }
         }
       }
     },
-    "Pair iPhone/iPad…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iPhone/iPadとペアリング…"
+    "Could not install the command line tool: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドラインツールをインストールできませんでした：%@"
           }
         }
       }
     },
-    "Pairing QR code" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリング用QRコード"
+    "Cut": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カット"
           }
         }
       }
     },
-    "Pane" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペイン"
+    "Debug": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバッグ"
           }
         }
       }
     },
-    "Pane %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペイン%@"
+    "Devices": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス"
           }
         }
       }
     },
-    "Pane %@ (shown)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペイン%@（表示中）"
+    "Directory:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディレクトリ："
           }
         }
       }
     },
-    "Paste" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペースト"
+    "Disabled (%@)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無効（%@）"
           }
         }
       }
     },
-    "Prevent Idle Sleep" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アイドル時にスリープしない"
-          }
-        }
-      }
-    },
-    "Preview" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プレビュー"
-          }
-        }
-      }
-    },
-    "Previous Workspace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "前のワークスペース"
-          }
-        }
-      }
-    },
-    "Programs running in the terminals will end. Workspaces and panes are restored after the relaunch." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ターミナルで実行中のプログラムは終了します。ワークスペースとペインは再起動後に復元されます。"
-          }
-        }
-      }
-    },
-    "Prompt cache %@ hits" : {
-      "comment" : "prompt cache hit ratio",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プロンプトキャッシュのヒット率%@"
-          }
-        }
-      }
-    },
-    "Quit cmds" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsを終了"
-          }
-        }
-      }
-    },
-    "Reconnect (⌘R)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再接続（⌘R）"
-          }
-        }
-      }
-    },
-    "Reconnect SSH" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SSHに再接続"
-          }
-        }
-      }
-    },
-    "Redo" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "やり直す"
-          }
-        }
-      }
-    },
-    "Relaunch Now" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "今すぐ再起動"
-          }
-        }
-      }
-    },
-    "Relaunch cmds to change the language?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "言語を変更するためにcmdsを再起動しますか？"
-          }
-        }
-      }
-    },
-    "Relay host:" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中継ホスト："
-          }
-        }
-      }
-    },
-    "Relay port:" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中継ポート："
-          }
-        }
-      }
-    },
-    "Reload" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再読み込み"
-          }
-        }
-      }
-    },
-    "Reload Page" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ページを再読み込み"
-          }
-        }
-      }
-    },
-    "Reload Preview" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プレビューを再読み込み"
-          }
-        }
-      }
-    },
-    "Remote Access via SSH" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SSH経由のリモートアクセス"
-          }
-        }
-      }
-    },
-    "Remote Access via SSH…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SSH経由のリモートアクセス…"
-          }
-        }
-      }
-    },
-    "Remote access via SSH: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SSH経由のリモートアクセス：%@"
-          }
-        }
-      }
-    },
-    "Rename" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "名前を変更"
-          }
-        }
-      }
-    },
-    "Rename Workspace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペース名を変更"
-          }
-        }
-      }
-    },
-    "Rename Workspace…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペース名を変更…"
-          }
-        }
-      }
-    },
-    "Rename…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "名前を変更…"
-          }
-        }
-      }
-    },
-    "Replace" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "置き換える"
-          }
-        }
-      }
-    },
-    "Reset Identity" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "識別情報をリセット"
-          }
-        }
-      }
-    },
-    "Reset Sync Identity…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "同期の識別情報をリセット…"
-          }
-        }
-      }
-    },
-    "Reset this Mac's sync identity?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このMacの同期の識別情報をリセットしますか？"
-          }
-        }
-      }
-    },
-    "Restore Sleep" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スリープを元に戻す"
-          }
-        }
-      }
-    },
-    "Resume" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再開"
-          }
-        }
-      }
-    },
-    "Resume %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@を再開"
-          }
-        }
-      }
-    },
-    "Resume Agent Session" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "エージェントセッションを再開"
-          }
-        }
-      }
-    },
-    "Resume Agent Sessions on Launch" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "起動時にエージェントセッションを再開"
-          }
-        }
-      }
-    },
-    "Resume All (%lld)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべて再開（%lld）"
-          }
-        }
-      }
-    },
-    "Resume All Agent Sessions" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべてのエージェントセッションを再開"
-          }
-        }
-      }
-    },
-    "Resuming %@ — waiting for the shell prompt…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@を再開中 — シェルのプロンプトを待っています…"
-          }
-        }
-      }
-    },
-    "Reveal in Finder" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finderに表示"
-          }
-        }
-      }
-    },
-    "Reveal in Finder — %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finderに表示 — %@"
-          }
-        }
-      }
-    },
-    "Revoke All" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべて取り消す"
-          }
-        }
-      }
-    },
-    "Revoke All Devices…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべてのデバイスを取り消す…"
-          }
-        }
-      }
-    },
-    "Revoke all paired devices?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペアリング済みのデバイスをすべて取り消しますか？"
-          }
-        }
-      }
-    },
-    "Runs your ssh (with ~/.ssh/config) and forwards this pane's cmds socket to the server, so cmds-remote.sh there can notify and report agent usage. Nothing is installed on the server." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "お使いのssh（~/.ssh/configを使用）を実行し、このペインのcmdsソケットをサーバーに転送します。サーバー上のcmds-remote.shから通知やエージェントの使用状況を送れるようになります。サーバーには何もインストールしません。"
-          }
-        }
-      }
-    },
-    "SSH panes count only the local ssh client, not the server" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "SSHペインはローカルのsshクライアントのみを数え、サーバー側は含みません"
-          }
-        }
-      }
-    },
-    "SSH panes from the last session connect only when you ask." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "前回のセッションのSSHペインは、指示したときにだけ接続します。"
-          }
-        }
-      }
-    },
-    "Search or enter address" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "検索またはアドレスを入力"
-          }
-        }
-      }
-    },
-    "Select All" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべてを選択"
-          }
-        }
-      }
-    },
-    "Services" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サービス"
-          }
-        }
-      }
-    },
-    "Session %@" : {
-      "comment" : "agent session length",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "セッション%@"
-          }
-        }
-      }
-    },
-    "Set Sidebar Status" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーのステータスを設定"
-          }
-        }
-      }
-    },
-    "Show All" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "すべてを表示"
-          }
-        }
-      }
-    },
-    "Showing the first %lld MB." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最初の%lld MBを表示しています。"
-          }
-        }
-      }
-    },
-    "Sleep is already disabled on this Mac" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このMacではすでにスリープが無効です"
-          }
-        }
-      }
-    },
-    "Sleep is already disabled system-wide by something other than cmds." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmds以外によって、システム全体のスリープがすでに無効になっています。"
-          }
-        }
-      }
-    },
-    "Sleep is still disabled from an earlier cmds session" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以前のcmdsセッションでスリープが無効にされたままです"
-          }
-        }
-      }
-    },
-    "Spend limit" : {
-      "comment" : "agent usage limit",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "利用額の上限"
-          }
-        }
-      }
-    },
-    "Split Down" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下に分割"
-          }
-        }
-      }
-    },
-    "Split Right" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右に分割"
-          }
-        }
-      }
-    },
-    "Starting…" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "開始中…"
-          }
-        }
-      }
-    },
-    "Status: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "状態：%@"
-          }
-        }
-      }
-    },
-    "Stopped" : {
-      "comment" : "sidebar agent state: the agent exited",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "停止"
-          }
-        }
-      }
-    },
-    "Swap used %@ of %@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Swap used %1$@ of %2$@"
+    "Disconnected (%@); retrying in %lld s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Disconnected (%1$@); retrying in %2$lld s"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用スワップ%1$@ / %2$@"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切断（%1$@）。%2$lld秒後に再試行します"
           }
         }
       }
     },
-    "System" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "システム"
+    "Disconnected — ssh %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切断されました — ssh %@"
           }
         }
       }
     },
-    "System usage" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "システムの使用状況"
+    "Dismiss": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
           }
         }
       }
     },
-    "Terminal" : {
-      "comment" : "default pane title",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ターミナル"
+    "Done": {
+      "comment": "sidebar agent state: finished, not seen yet",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
           }
         }
       }
     },
-    "The code is valid only while this window is open; it changes in %@ and after each pairing." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コードはこのウインドウを開いている間だけ有効です。%@後と、ペアリングのたびに変わります。"
+    "Edit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集"
           }
         }
       }
     },
-    "The command line tool is already installed at %@." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コマンドラインツールはすでに%@にインストールされています。"
+    "Enable iOS Sync": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS同期を有効にする"
           }
         }
       }
     },
-    "The command line tool is missing from this build of cmds." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このcmdsのビルドにはコマンドラインツールが含まれていません。"
+    "Encrypted (TLS 1.3). Your iPhone or iPad trusts only this Mac's identity.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暗号化（TLS 1.3）。iPhone/iPadはこのMacの識別情報だけを信頼します。"
           }
         }
       }
     },
-    "The existing %@ will be replaced." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "既存の%@は置き換えられます。"
+    "Enter Full Screen": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フルスクリーンにする"
           }
         }
       }
     },
-    "The host is too long." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ホストが長すぎます。"
+    "Enter a host alias from ~/.ssh/config (or user@host).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "~/.ssh/configのホスト別名（またはuser@host）を入力してください。"
           }
         }
       }
     },
-    "The host may only contain letters, digits and %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ホストに使える文字は英数字と%@だけです"
+    "Enter a host.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホストを入力してください。"
           }
         }
       }
     },
-    "The host must not start with “-”." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ホストの先頭に「-」は使えません。"
+    "Every iPhone and iPad will be disconnected and must be paired again with a new code.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのiPhone/iPadが切断され、新しいコードで再度ペアリングが必要になります。"
           }
         }
       }
     },
-    "The remote directory is too long." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リモートディレクトリが長すぎます。"
+    "Expand Sidebar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーを広げる"
           }
         }
       }
     },
-    "The remote directory must be an absolute path or start with ~/." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リモートディレクトリは絶対パスか、~/で始まるパスにしてください。"
+    "Expand Sidebar (⌃⌘S)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーを広げる（⌃⌘S）"
           }
         }
       }
     },
-    "The remote directory must not contain quotes, backslashes or control characters." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リモートディレクトリに引用符、バックスラッシュ、制御文字は使えません。"
+    "Export Workspaces…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを書き出す…"
           }
         }
       }
     },
-    "The ssh process exited. Reconnect runs the same command again." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sshプロセスが終了しました。再接続すると同じコマンドをもう一度実行します。"
+    "Failed: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "失敗：%@"
           }
         }
       }
     },
-    "The text you are pasting may run commands (it contains newlines or control characters). Paste anyway?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペーストするテキストはコマンドを実行する可能性があります（改行または制御文字を含みます）。ペーストしますか？"
+    "File": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル"
           }
         }
       }
     },
-    "This Mac is on battery power right now." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このMacは現在バッテリーで駆動しています。"
+    "File not found": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルが見つかりません"
           }
         }
       }
     },
-    "This Mac switched to battery power. While the setting is on, closing the lid does not put it to sleep — in a bag it keeps running, drains the battery and can get hot. macOS will ask for your administrator password to turn it off." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このMacがバッテリー駆動に切り替わりました。この設定がオンの間は蓋を閉じてもスリープしないため、バッグの中でも動き続け、バッテリーを消耗し、熱くなることがあります。オフにするにはmacOSが管理者パスワードを求めます。"
+    "Filter Workspaces": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを絞り込む"
           }
         }
       }
     },
-    "This creates a symbolic link\n%@ → %@\n\nso `cmds` works in any terminal." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "This creates a symbolic link\n%1$@ → %2$@\n\nso `cmds` works in any terminal."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "シンボリックリンク\n%1$@ → %2$@\nを作成し、どのターミナルでも`cmds`を使えるようにします。"
+    "Filter Workspaces…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを絞り込む…"
           }
         }
       }
     },
-    "Title:" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "タイトル："
+    "Focus Address Bar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アドレスバーにフォーカス"
           }
         }
       }
     },
-    "To restore normal sleep by hand, run: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "手動で通常のスリープに戻すには、次を実行してください：%@"
+    "Focus Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下のペインにフォーカス"
           }
         }
       }
     },
-    "Toggle Sidebar" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "サイドバーを表示／隠す"
+    "Focus Left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左のペインにフォーカス"
           }
         }
       }
     },
-    "Tokens" : {
-      "comment" : "agent token totals",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "トークン"
+    "Focus Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右のペインにフォーカス"
           }
         }
       }
     },
-    "Turn Off" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オフにする"
+    "Focus Up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上のペインにフォーカス"
           }
         }
       }
     },
-    "Turn off Keep Awake With Lid Closed?" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "「蓋を閉じてもスリープしない」をオフにしますか？"
+    "Forward": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "進む"
           }
         }
       }
     },
-    "Turns system sleep off (pmset disablesleep 1, asks for your administrator password) until you turn this off or quit cmds." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この設定をオフにするかcmdsを終了するまで、システムのスリープをオフにします（pmset disablesleep 1。管理者パスワードが必要です）。"
-          }
-        }
-      }
-    },
-    "Type a URL or search term (⌘L)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "URLまたは検索語を入力（⌘L）"
-          }
-        }
-      }
-    },
-    "Types into this pane's shell:\n%@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このペインのシェルに入力します：\n%@"
-          }
-        }
-      }
-    },
-    "Unavailable" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用できません"
-          }
-        }
-      }
-    },
-    "Undo" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取り消す"
-          }
-        }
-      }
-    },
-    "Updated %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "更新：%@"
-          }
-        }
-      }
-    },
-    "Usage" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用状況"
-          }
-        }
-      }
-    },
-    "Use a relay port from 1024 to 65535." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "中継ポートは1024〜65535の範囲で指定してください。"
-          }
-        }
-      }
-    },
-    "Use the language set in System Settings › General › Language & Region." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "システム設定 › 一般 › 言語と地域で設定した言語を使います。"
-          }
-        }
-      }
-    },
-    "View" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "表示"
-          }
-        }
-      }
-    },
-    "Waiting for iOS Sync" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS同期を待機中"
-          }
-        }
-      }
-    },
-    "Waiting: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "待機中：%@"
-          }
-        }
-      }
-    },
-    "While cmds runs, the Mac does not go to sleep when idle (the display may still turn off). Closing the lid still sleeps it." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsの実行中は、アイドル時にMacがスリープしません（ディスプレイはオフになることがあります）。蓋を閉じるとスリープします。"
-          }
-        }
-      }
-    },
-    "While cmds runs, the display does not turn off when idle." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsの実行中は、アイドル時にディスプレイがオフになりません。"
-          }
-        }
-      }
-    },
-    "Window" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ウインドウ"
-          }
-        }
-      }
-    },
-    "Working" : {
-      "comment" : "sidebar agent state: the agent is busy",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "作業中"
-          }
-        }
-      }
-    },
-    "Workspace" : {
-      "comment" : "default workspace title",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペース"
-          }
-        }
-      }
-    },
-    "Workspace %lld" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペース%lld"
-          }
-        }
-      }
-    },
-    "Workspaces and their agent sessions, to import into another cmds" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースとエージェントのセッション（別のcmdsで読み込めます）"
-          }
-        }
-      }
-    },
-    "Workspaces: %lld, agent sessions: %lld. Add keeps the open workspaces; Replace closes them." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Workspaces: %1$lld, agent sessions: %2$lld. Add keeps the open workspaces; Replace closes them."
+    "Forwarding via %@ (relay 127.0.0.1:%u)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Forwarding via %1$@ (relay 127.0.0.1:%2$u)"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペース：%1$lld、エージェントのセッション：%2$lld。「追加」は開いているワークスペースを残し、「置き換える」はそれらを閉じます。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@経由で転送中（中継127.0.0.1:%2$u）"
           }
         }
       }
     },
-    "You can also run: %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "次のコマンドでも元に戻せます：%@"
+    "Group Workspaces by Project": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースをプロジェクトでまとめる"
           }
         }
       }
     },
-    "You may be asked for an administrator password." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "管理者パスワードを求められる場合があります。"
+    "Group by Project": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロジェクトでまとめる"
           }
         }
       }
     },
-    "Zoom" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拡大／縮小"
+    "Help": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ヘルプ"
           }
         }
       }
     },
-    "Zoom Pane" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ペインを拡大"
+    "Hide Others": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかを非表示"
           }
         }
       }
     },
-    "cmds creates a new key and certificate for iOS Sync and unpairs every iPhone and iPad. Each one must be paired again; until then they report that this Mac's identity changed." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsはiOS同期用の新しい鍵と証明書を作成し、すべてのiPhone/iPadのペアリングを解除します。それぞれ再度ペアリングが必要で、それまではこのMacの識別情報が変わったと表示されます。"
+    "Hide cmds": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsを非表示"
           }
         }
       }
     },
-    "cmds keeps it awake with the lid closed. A closed Mac that never sleeps drains the battery and can overheat in a bag." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsは蓋を閉じてもスリープしないようにしています。スリープしないMacを閉じたままにすると、バッテリーを消耗し、バッグの中で過熱することがあります。"
+    "Host from ~/.ssh/config": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "~/.ssh/configのホスト"
           }
         }
       }
     },
-    "cmds turned on “Keep Awake With Lid Closed” before and did not turn it off (it quit unexpectedly, or the password dialog was cancelled). Your Mac currently does not sleep when you close the lid. Restore normal sleep now? macOS will ask for your administrator password." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "以前cmdsが「蓋を閉じてもスリープしない」をオンにしたまま、オフにできませんでした（予期せず終了したか、パスワードのダイアログがキャンセルされました）。現在、このMacは蓋を閉じてもスリープしません。今すぐ通常のスリープに戻しますか？ macOSが管理者パスワードを求めます。"
+    "Host:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホスト："
           }
         }
       }
     },
-    "cmds will type one command into this pane's remote shell. It writes ~/.local/bin/cmds-remote.sh (a small sh script; needs python3, socat or nc there) and, if the server has no `cmds` command, ~/.local/bin/cmds linking to it. Nothing else changes.\n\nMake sure the pane shows a shell prompt (no program running) before you continue." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "cmdsはこのペインのリモートシェルにコマンドを1つ入力します。~/.local/bin/cmds-remote.sh（小さなshスクリプト。サーバーにpython3、socat、ncのいずれかが必要）を書き込み、サーバーに`cmds`コマンドがなければそれへのリンク~/.local/bin/cmdsも作成します。ほかには何も変更しません。\n\n続ける前に、ペインにシェルのプロンプトが表示されている（プログラムが実行中でない）ことを確認してください。"
+    "Idle": {
+      "comment": "sidebar agent state: waiting for the next prompt",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機"
           }
         }
       }
     },
-    "connected (%@)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "接続中（%@）"
+    "Import": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込む"
           }
         }
       }
     },
-    "critical" : {
-      "comment" : "memory pressure",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "危険"
+    "Import Workspaces": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを読み込む"
           }
         }
       }
     },
-    "host, user@host or ~/.ssh/config alias" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ホスト、user@host、または~/.ssh/configの別名"
+    "Import Workspaces…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを読み込む…"
           }
         }
       }
     },
-    "iOS Sync is off" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "iOS同期はオフです"
+    "In cmds on your iPhone or iPad, tap Scan Pairing Code and point it at this QR code. Without a camera: pick this Mac, check that the identity matches, and enter the code.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone/iPadのcmdsで「ペアリングコードをスキャン」をタップし、このQRコードに向けてください。カメラがない場合は、このMacを選び、識別情報が一致することを確認してからコードを入力します。"
           }
         }
       }
     },
-    "just now" : {
-      "comment" : "age of agent figures",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "たった今"
+    "Install": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストール"
           }
         }
       }
     },
-    "last seen %@" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最終接続%@"
+    "Install Command Line Tool…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドラインツールをインストール…"
           }
         }
       }
     },
-    "normal" : {
-      "comment" : "memory pressure",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正常"
+    "Install Remote Helper…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモートヘルパーをインストール…"
           }
         }
       }
     },
-    "not connected" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未接続"
+    "Install the cmds command line tool?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsコマンドラインツールをインストールしますか？"
           }
         }
       }
     },
-    "remote directory (optional, e.g. ~/src/app)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リモートのディレクトリ（省略可。例：~/src/app）"
+    "Install the remote helper on %@?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@にリモートヘルパーをインストールしますか？"
           }
         }
       }
     },
-    "spend" : {
-      "comment" : "short label of an agent's spend limit (spend $12/$50)",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "利用額"
+    "Installed. Run `cmds --help` in a new terminal.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストールしました。新しいターミナルで`cmds --help`を実行してください。"
           }
         }
       }
     },
-    "ssh uses your ~/.ssh/config, keys and known_hosts for this host and never prompts (BatchMode). On the phone: Settings › Remote Access, same host, your user name there and this relay port." : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "sshはこのホストの~/.ssh/config、鍵、known_hostsを使い、入力を求めません（BatchMode）。iPhoneでは「SSH経由のリモートアクセス…」で、同じホスト、そのホストでのユーザー名、この中継ポートを指定します。"
+    "Jump to Latest Attention": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新の通知へ移動"
           }
         }
       }
     },
-    "unknown" : {
-      "comment" : "memory pressure",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不明"
+    "Keep Awake": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープしない"
           }
         }
       }
     },
-    "unknown error" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不明なエラー"
+    "Keep Awake With Lid Closed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓋を閉じてもスリープしない"
           }
         }
       }
     },
-    "warning" : {
-      "comment" : "memory pressure",
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "警告"
+    "Keep Awake With Lid Closed (not in test instances)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓋を閉じてもスリープしない（テストインスタンスでは不可）"
           }
         }
       }
     },
-    "workspace title (optional)" : {
-      "localizations" : {
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ワークスペースのタイトル（省略可）"
+    "Keep Awake With Lid Closed (set outside cmds)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓋を閉じてもスリープしない（cmds以外で設定）"
+          }
+        }
+      }
+    },
+    "Keep Awake With Lid Closed…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓋を閉じてもスリープしない…"
+          }
+        }
+      }
+    },
+    "Keep Awake…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープしない…"
+          }
+        }
+      }
+    },
+    "Keep Display Awake": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスプレイをスリープしない"
+          }
+        }
+      }
+    },
+    "Keep It Disabled": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無効のままにする"
+          }
+        }
+      }
+    },
+    "Keep this Mac awake with the lid closed?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "蓋を閉じてもこのMacをスリープしないようにしますか？"
+          }
+        }
+      }
+    },
+    "Keyboard Shortcuts": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーボードショートカット"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語"
+          }
+        }
+      }
+    },
+    "Later": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あとで"
+          }
+        }
+      }
+    },
+    "Leave empty to use the directory name.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空欄にするとディレクトリ名を使います。"
+          }
+        }
+      }
+    },
+    "Lets a paired iPhone/iPad reach this Mac away from home through an SSH server you use. The connection stays encrypted end to end.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペアリング済みのiPhone/iPadから、普段使っているSSHサーバー経由で外出先からこのMacに接続できるようにします。接続はエンドツーエンドで暗号化されたままです。"
+          }
+        }
+      }
+    },
+    "Lets the iPhone/iPad connect over Bluetooth when Wi‑Fi is off. The connection stays encrypted and pinned to this Mac's identity.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi‑Fiがオフのとき、iPhone/iPadがBluetoothで接続できるようにします。接続は暗号化され、このMacの識別情報に固定されたままです。"
+          }
+        }
+      }
+    },
+    "Lets your paired iPhone or iPad reach this Mac away from home through an SSH server you already use (the relay host). cmds keeps “ssh -R” open to it; the forwarded port listens only on the relay's loopback. The phone logs in to the relay with its own key and opens the forwarded port; the session inside stays end-to-end TLS pinned to this Mac, so the relay sees only ciphertext. Pair on the local network first: pairing codes are not accepted over SSH.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペアリング済みのiPhone/iPadから、すでに使っているSSHサーバー（中継ホスト）経由で外出先からこのMacに接続できるようにします。cmdsは中継ホストへの「ssh -R」を維持し、転送ポートは中継ホストのループバックでのみ待ち受けます。iPhoneは自分の鍵で中継ホストにログインして転送ポートを開きます。その中のセッションはこのMacに固定されたエンドツーエンドのTLSのままなので、中継ホストには暗号文しか見えません。先にローカルネットワークでペアリングしてください。SSH経由ではペアリングコードを受け付けません。"
+          }
+        }
+      }
+    },
+    "Lines +%lld −%lld": {
+      "comment": "lines changed by the agent",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Lines +%1$lld −%2$lld"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更行 +%1$lld −%2$lld"
+          }
+        }
+      }
+    },
+    "Listening on port %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポート%@で待ち受け中"
+          }
+        }
+      }
+    },
+    "Mac identity: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macの識別情報：%@"
+          }
+        }
+      }
+    },
+    "Mac is on battery": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macがバッテリー駆動です"
+          }
+        }
+      }
+    },
+    "Measuring CPU and memory…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPUとメモリを計測中…"
+          }
+        }
+      }
+    },
+    "Mem": {
+      "comment": "sidebar meter title (memory)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリ"
+          }
+        }
+      }
+    },
+    "Memory %@ (physical footprint)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリ%@（物理フットプリント）"
+          }
+        }
+      }
+    },
+    "Memory pressure: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリプレッシャー：%@"
+          }
+        }
+      }
+    },
+    "Memory used %@ of %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Memory used %1$@ of %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用メモリ%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "Minimize": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しまう"
+          }
+        }
+      }
+    },
+    "Needs Input": {
+      "comment": "sidebar agent state: waiting for the user's answer or permission",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力待ち"
+          }
+        }
+      }
+    },
+    "Never": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再開しない"
+          }
+        }
+      }
+    },
+    "New Code": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいコード"
+          }
+        }
+      }
+    },
+    "New SSH Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規SSHワークスペース"
+          }
+        }
+      }
+    },
+    "New SSH Workspace…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規SSHワークスペース…"
+          }
+        }
+      }
+    },
+    "New Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークスペース"
+          }
+        }
+      }
+    },
+    "New Workspace  ⌘N": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークスペース  ⌘N"
+          }
+        }
+      }
+    },
+    "New Workspace (⌘N)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークスペース（⌘N）"
+          }
+        }
+      }
+    },
+    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nToggle sidebar ⌘B · Rename workspace ⇧⌘R": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R"
+          }
+        }
+      }
+    },
+    "Next Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のワークスペース"
+          }
+        }
+      }
+    },
+    "No paired devices.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペアリング済みのデバイスはありません。"
+          }
+        }
+      }
+    },
+    "No workspaces": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースがありません"
+          }
+        }
+      }
+    },
+    "Not allowed (System Settings › Privacy & Security › Bluetooth)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可されていません（システム設定 › プライバシーとセキュリティ › Bluetooth）"
+          }
+        }
+      }
+    },
+    "Not available in an isolated instance (CMDS_SUPPORT_DIR).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分離インスタンス（CMDS_SUPPORT_DIR）では使用できません。"
+          }
+        }
+      }
+    },
+    "Not connected — ssh %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続 — ssh %@"
+          }
+        }
+      }
+    },
+    "Not supported on this Mac": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacでは使用できません"
+          }
+        }
+      }
+    },
+    "Notify Another Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のペインに通知"
+          }
+        }
+      }
+    },
+    "Notify Focused Pane in 3 s": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3秒後にフォーカス中のペインに通知"
+          }
+        }
+      }
+    },
+    "Off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフ"
+          }
+        }
+      }
+    },
+    "Open Browser Split": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザを分割して開く"
+          }
+        }
+      }
+    },
+    "Open in Default App": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトのアプリケーションで開く"
+          }
+        }
+      }
+    },
+    "Open in Preview…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューで開く…"
+          }
+        }
+      }
+    },
+    "Other": {
+      "comment": "sidebar group of workspaces without a directory",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
+          }
+        }
+      }
+    },
+    "Pair iPhone/iPad": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone/iPadとペアリング"
+          }
+        }
+      }
+    },
+    "Pair iPhone/iPad…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone/iPadとペアリング…"
+          }
+        }
+      }
+    },
+    "Pairing QR code": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペアリング用QRコード"
+          }
+        }
+      }
+    },
+    "Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペイン"
+          }
+        }
+      }
+    },
+    "Pane %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペイン%@"
+          }
+        }
+      }
+    },
+    "Pane %@ (shown)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペイン%@（表示中）"
+          }
+        }
+      }
+    },
+    "Paste": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペースト"
+          }
+        }
+      }
+    },
+    "Prevent Idle Sleep": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイドル時にスリープしない"
+          }
+        }
+      }
+    },
+    "Preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビュー"
+          }
+        }
+      }
+    },
+    "Previous Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前のワークスペース"
+          }
+        }
+      }
+    },
+    "Programs running in the terminals will end. Workspaces and panes are restored after the relaunch.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルで実行中のプログラムは終了します。ワークスペースとペインは再起動後に復元されます。"
+          }
+        }
+      }
+    },
+    "Prompt cache %@ hits": {
+      "comment": "prompt cache hit ratio",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプトキャッシュのヒット率%@"
+          }
+        }
+      }
+    },
+    "Quit cmds": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsを終了"
+          }
+        }
+      }
+    },
+    "Reconnect (⌘R)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再接続（⌘R）"
+          }
+        }
+      }
+    },
+    "Reconnect SSH": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSHに再接続"
+          }
+        }
+      }
+    },
+    "Redo": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "やり直す"
+          }
+        }
+      }
+    },
+    "Relaunch Now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ再起動"
+          }
+        }
+      }
+    },
+    "Relaunch cmds to change the language?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "言語を変更するためにcmdsを再起動しますか？"
+          }
+        }
+      }
+    },
+    "Relay host:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中継ホスト："
+          }
+        }
+      }
+    },
+    "Relay port:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中継ポート："
+          }
+        }
+      }
+    },
+    "Reload": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再読み込み"
+          }
+        }
+      }
+    },
+    "Reload Page": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページを再読み込み"
+          }
+        }
+      }
+    },
+    "Reload Preview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューを再読み込み"
+          }
+        }
+      }
+    },
+    "Remote Access via SSH": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSH経由のリモートアクセス"
+          }
+        }
+      }
+    },
+    "Remote Access via SSH…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSH経由のリモートアクセス…"
+          }
+        }
+      }
+    },
+    "Remote access via SSH: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSH経由のリモートアクセス：%@"
+          }
+        }
+      }
+    },
+    "Rename": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を変更"
+          }
+        }
+      }
+    },
+    "Rename Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース名を変更"
+          }
+        }
+      }
+    },
+    "Rename Workspace…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース名を変更…"
+          }
+        }
+      }
+    },
+    "Rename…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を変更…"
+          }
+        }
+      }
+    },
+    "Replace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "置き換える"
+          }
+        }
+      }
+    },
+    "Reset Identity": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "識別情報をリセット"
+          }
+        }
+      }
+    },
+    "Reset Sync Identity…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期の識別情報をリセット…"
+          }
+        }
+      }
+    },
+    "Reset this Mac's sync identity?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacの同期の識別情報をリセットしますか？"
+          }
+        }
+      }
+    },
+    "Restore Sleep": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スリープを元に戻す"
+          }
+        }
+      }
+    },
+    "Resume": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再開"
+          }
+        }
+      }
+    },
+    "Resume %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を再開"
+          }
+        }
+      }
+    },
+    "Resume Agent Session": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントセッションを再開"
+          }
+        }
+      }
+    },
+    "Resume Agent Sessions on Launch": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動時にエージェントセッションを再開"
+          }
+        }
+      }
+    },
+    "Resume All (%lld)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて再開（%lld）"
+          }
+        }
+      }
+    },
+    "Resume All Agent Sessions": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのエージェントセッションを再開"
+          }
+        }
+      }
+    },
+    "Resuming %@ — waiting for the shell prompt…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を再開中 — シェルのプロンプトを待っています…"
+          }
+        }
+      }
+    },
+    "Reveal in Finder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finderに表示"
+          }
+        }
+      }
+    },
+    "Reveal in Finder — %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finderに表示 — %@"
+          }
+        }
+      }
+    },
+    "Revoke All": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて取り消す"
+          }
+        }
+      }
+    },
+    "Revoke All Devices…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのデバイスを取り消す…"
+          }
+        }
+      }
+    },
+    "Revoke all paired devices?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペアリング済みのデバイスをすべて取り消しますか？"
+          }
+        }
+      }
+    },
+    "Runs your ssh (with ~/.ssh/config) and forwards this pane's cmds socket to the server, so cmds-remote.sh there can notify and report agent usage. Nothing is installed on the server.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "お使いのssh（~/.ssh/configを使用）を実行し、このペインのcmdsソケットをサーバーに転送します。サーバー上のcmds-remote.shから通知やエージェントの使用状況を送れるようになります。サーバーには何もインストールしません。"
+          }
+        }
+      }
+    },
+    "SSH panes count only the local ssh client, not the server": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSHペインはローカルのsshクライアントのみを数え、サーバー側は含みません"
+          }
+        }
+      }
+    },
+    "SSH panes from the last session connect only when you ask.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回のセッションのSSHペインは、指示したときにだけ接続します。"
+          }
+        }
+      }
+    },
+    "Search or enter address": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索またはアドレスを入力"
+          }
+        }
+      }
+    },
+    "Select All": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを選択"
+          }
+        }
+      }
+    },
+    "Services": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サービス"
+          }
+        }
+      }
+    },
+    "Session %@": {
+      "comment": "agent session length",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション%@"
+          }
+        }
+      }
+    },
+    "Set Sidebar Status": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーのステータスを設定"
+          }
+        }
+      }
+    },
+    "Show All": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてを表示"
+          }
+        }
+      }
+    },
+    "Showing the first %lld MB.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初の%lld MBを表示しています。"
+          }
+        }
+      }
+    },
+    "Sleep is already disabled on this Mac": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacではすでにスリープが無効です"
+          }
+        }
+      }
+    },
+    "Sleep is already disabled system-wide by something other than cmds.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds以外によって、システム全体のスリープがすでに無効になっています。"
+          }
+        }
+      }
+    },
+    "Sleep is still disabled from an earlier cmds session": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以前のcmdsセッションでスリープが無効にされたままです"
+          }
+        }
+      }
+    },
+    "Spend limit": {
+      "comment": "agent usage limit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "利用額の上限"
+          }
+        }
+      }
+    },
+    "Split Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下に分割"
+          }
+        }
+      }
+    },
+    "Split Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右に分割"
+          }
+        }
+      }
+    },
+    "Starting…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始中…"
+          }
+        }
+      }
+    },
+    "Status: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状態：%@"
+          }
+        }
+      }
+    },
+    "Stopped": {
+      "comment": "sidebar agent state: the agent exited",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
+          }
+        }
+      }
+    },
+    "Swap used %@ of %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Swap used %1$@ of %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用スワップ%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "System": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム"
+          }
+        }
+      }
+    },
+    "System usage": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの使用状況"
+          }
+        }
+      }
+    },
+    "Terminal": {
+      "comment": "default pane title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナル"
+          }
+        }
+      }
+    },
+    "The code is valid only while this window is open; it changes in %@ and after each pairing.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コードはこのウインドウを開いている間だけ有効です。%@後と、ペアリングのたびに変わります。"
+          }
+        }
+      }
+    },
+    "The command line tool is already installed at %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドラインツールはすでに%@にインストールされています。"
+          }
+        }
+      }
+    },
+    "The command line tool is missing from this build of cmds.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このcmdsのビルドにはコマンドラインツールが含まれていません。"
+          }
+        }
+      }
+    },
+    "The existing %@ will be replaced.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既存の%@は置き換えられます。"
+          }
+        }
+      }
+    },
+    "The host is too long.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホストが長すぎます。"
+          }
+        }
+      }
+    },
+    "The host may only contain letters, digits and %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホストに使える文字は英数字と%@だけです"
+          }
+        }
+      }
+    },
+    "The host must not start with “-”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホストの先頭に「-」は使えません。"
+          }
+        }
+      }
+    },
+    "The remote directory is too long.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモートディレクトリが長すぎます。"
+          }
+        }
+      }
+    },
+    "The remote directory must be an absolute path or start with ~/.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモートディレクトリは絶対パスか、~/で始まるパスにしてください。"
+          }
+        }
+      }
+    },
+    "The remote directory must not contain quotes, backslashes or control characters.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモートディレクトリに引用符、バックスラッシュ、制御文字は使えません。"
+          }
+        }
+      }
+    },
+    "The ssh process exited. Reconnect runs the same command again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sshプロセスが終了しました。再接続すると同じコマンドをもう一度実行します。"
+          }
+        }
+      }
+    },
+    "The text you are pasting may run commands (it contains newlines or control characters). Paste anyway?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペーストするテキストはコマンドを実行する可能性があります（改行または制御文字を含みます）。ペーストしますか？"
+          }
+        }
+      }
+    },
+    "This Mac is on battery power right now.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacは現在バッテリーで駆動しています。"
+          }
+        }
+      }
+    },
+    "This Mac switched to battery power. While the setting is on, closing the lid does not put it to sleep — in a bag it keeps running, drains the battery and can get hot. macOS will ask for your administrator password to turn it off.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacがバッテリー駆動に切り替わりました。この設定がオンの間は蓋を閉じてもスリープしないため、バッグの中でも動き続け、バッテリーを消耗し、熱くなることがあります。オフにするにはmacOSが管理者パスワードを求めます。"
+          }
+        }
+      }
+    },
+    "This creates a symbolic link\n%@ → %@\n\nso `cmds` works in any terminal.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "This creates a symbolic link\n%1$@ → %2$@\n\nso `cmds` works in any terminal."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シンボリックリンク\n%1$@ → %2$@\nを作成し、どのターミナルでも`cmds`を使えるようにします。"
+          }
+        }
+      }
+    },
+    "Title:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトル："
+          }
+        }
+      }
+    },
+    "To restore normal sleep by hand, run: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手動で通常のスリープに戻すには、次を実行してください：%@"
+          }
+        }
+      }
+    },
+    "Toggle Sidebar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイドバーを表示／隠す"
+          }
+        }
+      }
+    },
+    "Tokens": {
+      "comment": "agent token totals",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "トークン"
+          }
+        }
+      }
+    },
+    "Turn Off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフにする"
+          }
+        }
+      }
+    },
+    "Turn off Keep Awake With Lid Closed?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「蓋を閉じてもスリープしない」をオフにしますか？"
+          }
+        }
+      }
+    },
+    "Turns system sleep off (pmset disablesleep 1, asks for your administrator password) until you turn this off or quit cmds.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この設定をオフにするかcmdsを終了するまで、システムのスリープをオフにします（pmset disablesleep 1。管理者パスワードが必要です）。"
+          }
+        }
+      }
+    },
+    "Type a URL or search term (⌘L)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URLまたは検索語を入力（⌘L）"
+          }
+        }
+      }
+    },
+    "Types into this pane's shell:\n%@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このペインのシェルに入力します：\n%@"
+          }
+        }
+      }
+    },
+    "Unavailable": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用できません"
+          }
+        }
+      }
+    },
+    "Undo": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消す"
+          }
+        }
+      }
+    },
+    "Updated %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新：%@"
+          }
+        }
+      }
+    },
+    "Usage": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用状況"
+          }
+        }
+      }
+    },
+    "Use a relay port from 1024 to 65535.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中継ポートは1024〜65535の範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "Use the language set in System Settings › General › Language & Region.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定 › 一般 › 言語と地域で設定した言語を使います。"
+          }
+        }
+      }
+    },
+    "View": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "表示"
+          }
+        }
+      }
+    },
+    "Waiting for iOS Sync": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS同期を待機中"
+          }
+        }
+      }
+    },
+    "Waiting: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中：%@"
+          }
+        }
+      }
+    },
+    "While cmds runs, the Mac does not go to sleep when idle (the display may still turn off). Closing the lid still sleeps it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsの実行中は、アイドル時にMacがスリープしません（ディスプレイはオフになることがあります）。蓋を閉じるとスリープします。"
+          }
+        }
+      }
+    },
+    "While cmds runs, the display does not turn off when idle.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsの実行中は、アイドル時にディスプレイがオフになりません。"
+          }
+        }
+      }
+    },
+    "Window": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウインドウ"
+          }
+        }
+      }
+    },
+    "Working": {
+      "comment": "sidebar agent state: the agent is busy",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中"
+          }
+        }
+      }
+    },
+    "Workspace": {
+      "comment": "default workspace title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース"
+          }
+        }
+      }
+    },
+    "Workspace %lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース%lld"
+          }
+        }
+      }
+    },
+    "Workspaces and their agent sessions, to import into another cmds": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースとエージェントのセッション（別のcmdsで読み込めます）"
+          }
+        }
+      }
+    },
+    "Workspaces: %lld, agent sessions: %lld. Add keeps the open workspaces; Replace closes them.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Workspaces: %1$lld, agent sessions: %2$lld. Add keeps the open workspaces; Replace closes them."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース：%1$lld、エージェントのセッション：%2$lld。「追加」は開いているワークスペースを残し、「置き換える」はそれらを閉じます。"
+          }
+        }
+      }
+    },
+    "You can also run: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のコマンドでも元に戻せます：%@"
+          }
+        }
+      }
+    },
+    "You may be asked for an administrator password.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理者パスワードを求められる場合があります。"
+          }
+        }
+      }
+    },
+    "Zoom": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拡大／縮小"
+          }
+        }
+      }
+    },
+    "Zoom Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインを拡大"
+          }
+        }
+      }
+    },
+    "cmds creates a new key and certificate for iOS Sync and unpairs every iPhone and iPad. Each one must be paired again; until then they report that this Mac's identity changed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsはiOS同期用の新しい鍵と証明書を作成し、すべてのiPhone/iPadのペアリングを解除します。それぞれ再度ペアリングが必要で、それまではこのMacの識別情報が変わったと表示されます。"
+          }
+        }
+      }
+    },
+    "cmds keeps it awake with the lid closed. A closed Mac that never sleeps drains the battery and can overheat in a bag.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsは蓋を閉じてもスリープしないようにしています。スリープしないMacを閉じたままにすると、バッテリーを消耗し、バッグの中で過熱することがあります。"
+          }
+        }
+      }
+    },
+    "cmds turned on “Keep Awake With Lid Closed” before and did not turn it off (it quit unexpectedly, or the password dialog was cancelled). Your Mac currently does not sleep when you close the lid. Restore normal sleep now? macOS will ask for your administrator password.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以前cmdsが「蓋を閉じてもスリープしない」をオンにしたまま、オフにできませんでした（予期せず終了したか、パスワードのダイアログがキャンセルされました）。現在、このMacは蓋を閉じてもスリープしません。今すぐ通常のスリープに戻しますか？ macOSが管理者パスワードを求めます。"
+          }
+        }
+      }
+    },
+    "cmds will type one command into this pane's remote shell. It writes ~/.local/bin/cmds-remote.sh (a small sh script; needs python3, socat or nc there) and, if the server has no `cmds` command, ~/.local/bin/cmds linking to it. Nothing else changes.\n\nMake sure the pane shows a shell prompt (no program running) before you continue.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsはこのペインのリモートシェルにコマンドを1つ入力します。~/.local/bin/cmds-remote.sh（小さなshスクリプト。サーバーにpython3、socat、ncのいずれかが必要）を書き込み、サーバーに`cmds`コマンドがなければそれへのリンク~/.local/bin/cmdsも作成します。ほかには何も変更しません。\n\n続ける前に、ペインにシェルのプロンプトが表示されている（プログラムが実行中でない）ことを確認してください。"
+          }
+        }
+      }
+    },
+    "connected (%@)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続中（%@）"
+          }
+        }
+      }
+    },
+    "critical": {
+      "comment": "memory pressure",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "危険"
+          }
+        }
+      }
+    },
+    "host, user@host or ~/.ssh/config alias": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホスト、user@host、または~/.ssh/configの別名"
+          }
+        }
+      }
+    },
+    "iOS Sync is off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS同期はオフです"
+          }
+        }
+      }
+    },
+    "just now": {
+      "comment": "age of agent figures",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "たった今"
+          }
+        }
+      }
+    },
+    "last seen %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最終接続%@"
+          }
+        }
+      }
+    },
+    "normal": {
+      "comment": "memory pressure",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        }
+      }
+    },
+    "not connected": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続"
+          }
+        }
+      }
+    },
+    "remote directory (optional, e.g. ~/src/app)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモートのディレクトリ（省略可。例：~/src/app）"
+          }
+        }
+      }
+    },
+    "spend": {
+      "comment": "short label of an agent's spend limit (spend $12/$50)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "利用額"
+          }
+        }
+      }
+    },
+    "ssh uses your ~/.ssh/config, keys and known_hosts for this host and never prompts (BatchMode). On the phone: Settings › Remote Access, same host, your user name there and this relay port.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "sshはこのホストの~/.ssh/config、鍵、known_hostsを使い、入力を求めません（BatchMode）。iPhoneでは「SSH経由のリモートアクセス…」で、同じホスト、そのホストでのユーザー名、この中継ポートを指定します。"
+          }
+        }
+      }
+    },
+    "unknown": {
+      "comment": "memory pressure",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不明"
+          }
+        }
+      }
+    },
+    "unknown error": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不明なエラー"
+          }
+        }
+      }
+    },
+    "warning": {
+      "comment": "memory pressure",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "警告"
+          }
+        }
+      }
+    },
+    "workspace title (optional)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースのタイトル（省略可）"
+          }
+        }
+      }
+    },
+    "Show CPU and Memory per Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースごとの CPU・メモリを表示"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

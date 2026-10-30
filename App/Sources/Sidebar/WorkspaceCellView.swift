@@ -328,7 +328,11 @@ final class WorkspaceCellView: NSTableCellView {
     /// The usage line depends only on structure (a terminal exists), never on sampled values, so new
     /// samples never change row heights.
     @MainActor
-    private static func showsUsage(_ workspace: Workspace) -> Bool { workspace.hasTerminal }
+    /// Per-workspace CPU/memory is off by default: everything runs on this Mac and the footer already shows the
+    /// Mac's totals. SSH workspaces never show it (the local numbers would only be the ssh client).
+    private static func showsUsage(_ workspace: Workspace) -> Bool {
+        workspace.hasTerminal && workspace.remoteHost == nil && SidebarPreferences.showsWorkspaceUsage
+    }
 
     /// The agent line appears/disappears only with structural changes (an agent pane appears or goes away).
     @MainActor
