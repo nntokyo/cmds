@@ -1,12 +1,271 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    " %@ in" : {
+      "comment" : "after Tokens: input tokens",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " 入力%@"
+          }
+        }
+      }
+    },
+    " (%@ cached)" : {
+      "comment" : "after the input tokens",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（キャッシュ%@）"
+          }
+        }
+      }
+    },
+    " (%@ reasoning)" : {
+      "comment" : "after the output tokens",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（推論%@）"
+          }
+        }
+      }
+    },
+    " (%lld%% of wall time)" : {
+      "comment" : "after the API time",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（経過時間の%lld%%）"
+          }
+        }
+      }
+    },
+    " (idle)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（待機中）"
+          }
+        }
+      }
+    },
+    " (in %@)" : {
+      "comment" : "after a limit's reset time: 15:30 (in 2h10m)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（あと%@）"
+          }
+        }
+      }
+    },
+    " daily" : {
+      "comment" : "after a spend limit: its period",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（日ごと）"
+          }
+        }
+      }
+    },
+    " monthly" : {
+      "comment" : "after a spend limit: its period",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（月ごと）"
+          }
+        }
+      }
+    },
+    " weekly" : {
+      "comment" : "after a spend limit: its period",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "（週ごと）"
+          }
+        }
+      }
+    },
+    " · %@ of %@ tokens" : {
+      "comment" : "after Context 53%: 527k of 1M tokens",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : " · %1$@ of %2$@ tokens"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · %1$@ / %2$@トークン"
+          }
+        }
+      }
+    },
+    " · %@ of the window elapsed" : {
+      "comment" : "after an agent usage limit",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · 期間の%@が経過"
+          }
+        }
+      }
+    },
+    " · %@ out" : {
+      "comment" : "after Tokens: output tokens",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · 出力%@"
+          }
+        }
+      }
+    },
+    " · %@ tokens" : {
+      "comment" : "after Context 53%",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · %@トークン"
+          }
+        }
+      }
+    },
+    " · %@/h" : {
+      "comment" : "after Cost: cost per hour",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · %@/時間"
+          }
+        }
+      }
+    },
+    " · API %@" : {
+      "comment" : "after Session: time in API calls",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · API %@"
+          }
+        }
+      }
+    },
+    " · cold" : {
+      "comment" : "prompt cache expired",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · 期限切れ"
+          }
+        }
+      }
+    },
+    " · over 200k" : {
+      "comment" : "after Context: more than 200k tokens",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · 200k超"
+          }
+        }
+      }
+    },
+    " · resets %@" : {
+      "comment" : "after an agent usage limit",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · リセット：%@"
+          }
+        }
+      }
+    },
+    " · warm" : {
+      "comment" : "prompt cache still alive",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : " · 有効"
+          }
+        }
+      }
+    },
+    "%@ %@ of %@ (%@)" : {
+      "comment" : "Spend limit $12.00 of $50.00 (24%)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ of %3$@ (%4$@)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%3$@中%2$@（%4$@）"
+          }
+        }
+      }
+    },
+    "%@ %@ used" : {
+      "comment" : "agent usage limit: 5-hour limit 40% used",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ used"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@：%2$@使用"
+          }
+        }
+      }
+    },
     "%@ is shown on the Mac." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@はMacに表示されています。"
+          }
+        }
+      }
+    },
+    "%@ limit" : {
+      "comment" : "agent usage limit of a window (1h limit)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@の上限"
           }
         }
       }
@@ -48,7 +307,129 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@、アイドル"
+            "value" : "%@、待機中"
+          }
+        }
+      }
+    },
+    "%lld d ago" : {
+      "comment" : "age of agent figures",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld日前"
+          }
+        }
+      }
+    },
+    "%lld h ago" : {
+      "comment" : "age of agent figures",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld時間前"
+          }
+        }
+      }
+    },
+    "%lld min ago" : {
+      "comment" : "age of agent figures",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld分前"
+          }
+        }
+      }
+    },
+    "%lldd%lldh" : {
+      "comment" : "duration: days and hours (2d3h)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldd%2$lldh"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld日%2$lld時間"
+          }
+        }
+      }
+    },
+    "%lldh%lldm" : {
+      "comment" : "duration: hours and minutes (3h25m)",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$lldh%2$lldm"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld時間%2$lld分"
+          }
+        }
+      }
+    },
+    "%lldm" : {
+      "comment" : "duration: minutes (48m)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld分"
+          }
+        }
+      }
+    },
+    "%llds" : {
+      "comment" : "duration: seconds (42s)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld秒"
+          }
+        }
+      }
+    },
+    "%llds ago" : {
+      "comment" : "age of agent figures",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld秒前"
+          }
+        }
+      }
+    },
+    "5-hour limit" : {
+      "comment" : "agent usage limit",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5時間の上限"
+          }
+        }
+      }
+    },
+    "7-day limit" : {
+      "comment" : "agent usage limit",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "7日間の上限"
           }
         }
       }
@@ -164,6 +545,7 @@
       }
     },
     "Browser" : {
+      "comment" : "default pane title",
       "localizations" : {
         "ja" : {
           "stringUnit" : {
@@ -194,7 +576,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "CPU %1$@、メモリ %2$@"
+            "value" : "CPU %1$@、メモリ%2$@"
           }
         }
       }
@@ -289,6 +671,28 @@
         }
       }
     },
+    "Context" : {
+      "comment" : "agent context window",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コンテキスト"
+          }
+        }
+      }
+    },
+    "Context %@" : {
+      "comment" : "agent context window: Context 53%",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コンテキスト%@"
+          }
+        }
+      }
+    },
     "Control-C" : {
       "localizations" : {
         "ja" : {
@@ -319,6 +723,17 @@
         }
       }
     },
+    "Cost %@" : {
+      "comment" : "agent session cost",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コスト%@"
+          }
+        }
+      }
+    },
     "Could not load the file" : {
       "localizations" : {
         "ja" : {
@@ -335,6 +750,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "MacとのBluetoothチャネルを開けませんでした（%@）。"
+          }
+        }
+      }
+    },
+    "Could not reach the relay host: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストに接続できません：%@"
           }
         }
       }
@@ -455,6 +880,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%@”のcmdsに表示されている6桁のコードを入力してください。"
+          }
+        }
+      }
+    },
+    "Enter the pairing code shown on the Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macに表示されているペアリングコードを入力してください。"
           }
         }
       }
@@ -619,6 +1054,23 @@
         }
       }
     },
+    "Lines +%lld −%lld" : {
+      "comment" : "lines changed by the agent",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Lines +%1$lld −%2$lld"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "変更行 +%1$lld −%2$lld"
+          }
+        }
+      }
+    },
     "Local network" : {
       "localizations" : {
         "ja" : {
@@ -660,7 +1112,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "MacのCPU %1$@、メモリ %2$@、メモリプレッシャー %3$@"
+            "value" : "MacのCPU %1$@、メモリ%2$@、メモリプレッシャー%3$@"
           }
         }
       }
@@ -855,6 +1307,16 @@
         }
       }
     },
+    "Pair on the local network first; remote access via SSH only reuses a pairing." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先にローカルネットワークでペアリングしてください。SSH経由のリモートアクセスは既存のペアリングを使います。"
+          }
+        }
+      }
+    },
     "Pair with Mac" : {
       "localizations" : {
         "ja" : {
@@ -931,6 +1393,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Macのcmds › 「iPhone/iPadとペアリング…」に表示されたQRコードにカメラを向けてください。"
+          }
+        }
+      }
+    },
+    "Prompt cache %@ hits" : {
+      "comment" : "prompt cache hit ratio",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロンプトキャッシュのヒット率%@"
           }
         }
       }
@@ -1175,6 +1648,17 @@
         }
       }
     },
+    "Session %@" : {
+      "comment" : "agent session length",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セッション%@"
+          }
+        }
+      }
+    },
     "Show Workspace on Mac" : {
       "localizations" : {
         "ja" : {
@@ -1191,6 +1675,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Macで表示"
+          }
+        }
+      }
+    },
+    "Spend limit" : {
+      "comment" : "agent usage limit",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用額の上限"
           }
         }
       }
@@ -1221,6 +1716,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "タブ"
+          }
+        }
+      }
+    },
+    "Terminal" : {
+      "comment" : "default pane title",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ターミナル"
           }
         }
       }
@@ -1285,6 +1791,16 @@
         }
       }
     },
+    "The Mac runs a cmds version that does not work with this app. Update both." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macのcmdsはこのアプリと互換性のないバージョンです。Macとこのデバイスのcmdsをアップデートしてください。"
+          }
+        }
+      }
+    },
     "The Mac stopped responding." : {
       "localizations" : {
         "ja" : {
@@ -1311,6 +1827,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "中継ホストへのSSH接続が切断されました。"
+          }
+        }
+      }
+    },
+    "The SSH connection was closed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SSH接続が切断されました。"
           }
         }
       }
@@ -1345,6 +1871,56 @@
         }
       }
     },
+    "The relay host could not reach the Mac's forwarded port. Is remote access on and the Mac online? (%@)" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストからMacの転送ポートに接続できません。リモートアクセスがオンで、Macがオンラインか確認してください（%@）。"
+          }
+        }
+      }
+    },
+    "The relay host did not accept this device's SSH key. Add it to authorized_keys." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストがこのデバイスのSSH鍵を受け入れませんでした。authorized_keysに追加してください。"
+          }
+        }
+      }
+    },
+    "The relay host did not answer in time." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストが時間内に応答しませんでした。"
+          }
+        }
+      }
+    },
+    "The relay host presented a different host key (%@). Nothing was sent." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストが別のホスト鍵（%@）を提示しました。何も送信していません。"
+          }
+        }
+      }
+    },
+    "The relay host's key is not confirmed yet." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中継ホストの鍵がまだ確認されていません。"
+          }
+        }
+      }
+    },
     "This Device's Key" : {
       "localizations" : {
         "ja" : {
@@ -1361,6 +1937,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このMacの識別情報が変更されました — ペアリングし直してください"
+          }
+        }
+      }
+    },
+    "This device is no longer paired. Enter a new pairing code." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスのペアリングは解除されています。新しいペアリングコードを入力してください。"
           }
         }
       }
@@ -1395,12 +1981,43 @@
         }
       }
     },
+    "Tokens" : {
+      "comment" : "agent token totals",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "トークン"
+          }
+        }
+      }
+    },
     "Too large for the phone" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "このデバイスで表示するには大きすぎます"
+          }
+        }
+      }
+    },
+    "Too many attempts. Try again in a moment." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "試行回数が多すぎます。しばらくしてからもう一度お試しください。"
+          }
+        }
+      }
+    },
+    "Too much input. Slow down." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力が多すぎます。少し間を空けてください。"
           }
         }
       }
@@ -1441,6 +2058,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "上"
+          }
+        }
+      }
+    },
+    "Updated %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更新：%@"
           }
         }
       }
@@ -1495,12 +2122,44 @@
         }
       }
     },
+    "Workspace" : {
+      "comment" : "default workspace title",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペース"
+          }
+        }
+      }
+    },
+    "Wrong or expired pairing code." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペアリングコードが違うか、期限切れです。"
+          }
+        }
+      }
+    },
     "cmds now encrypts the connection to your Mac and checks its identity. Pair again once: open Pair iPhone/iPad… in cmds on the Mac and scan the code." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "cmdsはMacとの接続を暗号化し、Macの識別情報を確認するようになりました。一度だけペアリングし直してください：Macのcmdsで「iPhone/iPadとペアリング…」を開き、コードをスキャンします。"
+          }
+        }
+      }
+    },
+    "critical" : {
+      "comment" : "memory pressure",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "危険"
           }
         }
       }
@@ -1521,6 +2180,61 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ホスト または ホスト:ポート"
+          }
+        }
+      }
+    },
+    "just now" : {
+      "comment" : "age of agent figures",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "たった今"
+          }
+        }
+      }
+    },
+    "normal" : {
+      "comment" : "memory pressure",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正常"
+          }
+        }
+      }
+    },
+    "spend" : {
+      "comment" : "short label of an agent's spend limit (spend $12/$50)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用額"
+          }
+        }
+      }
+    },
+    "unknown" : {
+      "comment" : "memory pressure",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不明"
+          }
+        }
+      }
+    },
+    "warning" : {
+      "comment" : "memory pressure",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "警告"
           }
         }
       }

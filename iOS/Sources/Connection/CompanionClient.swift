@@ -399,14 +399,14 @@ final class CompanionClient {
                 if let target, !isPairing { PairingStore.delete(for: target.id) }
                 pairingPin = nil
                 pendingPairingCode = nil
-                status = .pairingRequired(message: info.code == .invalidToken ? info.message : nil)
+                status = .pairingRequired(message: info.code == .invalidToken ? info.localizedMessage : nil)
             case .invalidPairingCode:
                 // The identity stays pinned for this pairing; only the code has to be entered again.
                 pendingPairingCode = nil
-                status = pairingPin != nil ? .enterCode(message: info.message) : .pairingRequired(message: info.message)
+                status = pairingPin != nil ? .enterCode(message: info.localizedMessage) : .pairingRequired(message: info.localizedMessage)
             case .unsupportedVersion, .rateLimited:
                 pendingPairingCode = nil
-                status = .failed(message: info.message)
+                status = .failed(message: info.localizedMessage)
             default:
                 previewFiles.requestFailed(info.message) // per-request error; connection stays up
             }

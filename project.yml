@@ -47,6 +47,8 @@ targets:
     platform: macOS
     sources:
       - App/Sources
+      # UI text for CmdsCore values, shared with the iOS app (docs/ARCHITECTURE.md "Localization").
+      - Shared/Sources
       - path: App/Resources
         optional: true
     dependencies:
@@ -129,6 +131,7 @@ targets:
     platform: iOS
     sources:
       - iOS/Sources
+      - Shared/Sources
       - iOS/Resources
     dependencies:
       - package: CmdsCore

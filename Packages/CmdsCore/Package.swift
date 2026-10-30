@@ -12,5 +12,7 @@ let package = Package(
         .target(name: "CmdsCore"),
         .executableTarget(name: "cmds-cli", dependencies: ["CmdsCore"]),
         .testTarget(name: "CmdsCoreTests", dependencies: ["CmdsCore"]),
+        // The CLI's text stays English whatever the language (docs/ARCHITECTURE.md "Localization").
+        .testTarget(name: "CmdsCLITests", dependencies: ["cmds-cli", "CmdsCore"]),
     ]
 )

@@ -247,7 +247,7 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
         } catch {
             let alert = NSAlert()
             alert.messageText = String(localized: "Could not change the sleep setting")
-            alert.informativeText = "\(error)\n\n" + String(localized: "To restore normal sleep by hand, run: \(SleepDisabledCommand.manualRestore)")
+            alert.informativeText = ((error as? LidSleepError)?.localizedText ?? "\(error)") + "\n\n" + String(localized: "To restore normal sleep by hand, run: \(SleepDisabledCommand.manualRestore)")
             present(alert) { _ in }
         }
     }

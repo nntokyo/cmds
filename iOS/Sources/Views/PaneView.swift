@@ -13,7 +13,7 @@ struct PaneView: View {
                 PreviewFileView(pane: pane)
             } else if pane.kind == .browser {
                 ContentUnavailableView {
-                    Label(pane.title.isEmpty ? String(localized: "Browser") : pane.title, systemImage: "globe")
+                    Label(pane.title.isEmpty ? String(localized: "Browser") : DefaultTitle.localized(pane.title), systemImage: "globe")
                 } description: {
                     if let url = pane.url { Text(url) }
                 }

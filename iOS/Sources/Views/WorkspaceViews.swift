@@ -161,7 +161,7 @@ struct WorkspaceRow: View {
                 .accessibilityLabel(attention ? String(localized: "Needs attention") : "")
             VStack(alignment: .leading, spacing: 3) {
                 HStack {
-                    Text(workspace.title).font(.headline).lineLimit(1)
+                    Text(DefaultTitle.localized(workspace.title)).font(.headline).lineLimit(1)
                     if workspace.selected {
                         Image(systemName: "desktopcomputer")
                             .font(.caption2)
@@ -256,14 +256,14 @@ struct AgentLimitsBar: View {
                 .frame(width: 44, alignment: .leading)
             ForEach(windows) { limit in
                 let level = UsageLevel(percent: limit.usedPercent)
-                UsageGauge(title: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit),
+                UsageGauge(title: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit, strings: .localized),
                            value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit) : AgentFormat.percent(limit.usedPercent),
                            fraction: limit.usedPercent / 100, tint: level.color,
                            valueTint: level == .normal ? nil : level.color)
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(String(localized: "\(limits.agent.displayName) limits: \(AgentFormat.limitLines(windows).joined(separator: ", "))"))
+        .accessibilityLabel(String(localized: "\(limits.agent.displayName) limits: \(AgentFormat.limitLines(windows, strings: .localized).joined(separator: ", "))"))
     }
 }
 
@@ -273,7 +273,7 @@ struct AgentSummaryLine: View {
     let limits: [UsageLimit]?
 
     var body: some View {
-        let parts = AgentFormat.summaryParts(usage, limits: limits)
+        let parts = AgentFormat.summaryParts(usage, limits: limits, strings: .localized)
         parts.reduce(Text(verbatim: "")) { text, part in
             var piece = Text(part.text)
             switch part.style {
@@ -286,8 +286,8 @@ struct AgentSummaryLine: View {
         .font(.caption2.monospacedDigit())
         .lineLimit(1)
         .opacity(usage.isStale ? 0.6 : 1)
-        .accessibilityLabel(usage.isStale ? String(localized: "\(AgentFormat.summary(usage, limits: limits)), idle")
-                                              : AgentFormat.summary(usage, limits: limits))
+        .accessibilityLabel(usage.isStale ? String(localized: "\(AgentFormat.summary(usage, limits: limits, strings: .localized)), idle")
+                                              : AgentFormat.summary(usage, limits: limits, strings: .localized))
     }
 }
 
@@ -312,12 +312,12 @@ struct SystemStatsBar: View {
             UsageGauge(title: "CPU", value: ResourceFormat.wholePercent(stats.cpuPercent),
                        fraction: stats.cpuPercent / 100, tint: .accentColor)
             UsageGauge(title: pressure == .normal || pressure == .unknown ? String(localized: "Mem")
-                                                                       : String(localized: "Mem · \(pressure.name)"),
+                                                                       : String(localized: "Mem · \(pressure.localizedName)"),
                        value: memory, fraction: stats.memoryFraction, tint: pressureColor,
                        valueTint: pressure == .warning || pressure == .critical ? pressureColor : nil)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Mac CPU \(ResourceFormat.wholePercent(stats.cpuPercent)), memory \(memory), pressure \(pressure.name)")
+        .accessibilityLabel("Mac CPU \(ResourceFormat.wholePercent(stats.cpuPercent)), memory \(memory), pressure \(pressure.localizedName)")
     }
 
     private var pressureColor: Color {
@@ -464,7 +464,7 @@ struct PaneSelectorBar: View {
                                 }
                                 Image(systemName: pane.kind == .browser ? "globe" : pane.kind == .preview ? "doc.richtext" : "terminal")
                                     .font(.caption2)
-                                Text(pane.title.isEmpty ? String(localized: "Pane \(index + 1)") : pane.title)
+                                Text(pane.title.isEmpty ? String(localized: "Pane \(index + 1)") : DefaultTitle.localized(pane.title))
                                     .font(.subheadline)
                                     .lineLimit(1)
                             }

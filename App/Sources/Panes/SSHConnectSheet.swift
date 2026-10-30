@@ -48,7 +48,7 @@ enum SSHConnectSheet {
             } catch {
                 let failure = NSAlert()
                 failure.messageText = String(localized: "Cannot open the SSH workspace")
-                failure.informativeText = (error as? SSHLaunch.InvalidInput)?.description
+                failure.informativeText = (error as? SSHLaunch.InvalidInput)?.localizedText
                     ?? (error as? RPCError)?.message ?? error.localizedDescription
                 failure.runModal()
             }

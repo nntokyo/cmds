@@ -64,7 +64,7 @@ final class SSHTransport: SyncTransport, @unchecked Sendable {
                 inner.onEvent = { [weak self] event in self?.forward(event) }
                 inner.start()
             } catch {
-                self?.fail((error as? SSHTunnelError)?.description ?? error.localizedDescription)
+                self?.fail((error as? SSHTunnelError)?.localizedText ?? error.localizedDescription)
             }
         }
     }

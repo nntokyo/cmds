@@ -191,7 +191,7 @@ struct RemoteAccessView: View {
             if applyFields(), config.hostKeyID == hostKeyID { presentedHostKey = (presented, hostKeyID) }
         } catch {
             checkOK = false
-            checkResult = (error as? SSHTunnelError)?.description ?? error.localizedDescription
+            checkResult = (error as? SSHTunnelError)?.localizedText ?? error.localizedDescription
         }
     }
 }

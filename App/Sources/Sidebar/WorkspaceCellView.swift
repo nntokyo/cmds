@@ -123,7 +123,7 @@ final class WorkspaceCellView: NSTableCellView {
 
     @MainActor
     func configure(with workspace: Workspace, index: Int) {
-        titleLabel.stringValue = workspace.title
+        titleLabel.stringValue = workspace.displayTitle
         shortcutLabel.stringValue = index < 9 ? "⌘\(index + 1)" : ""
         dot.isHidden = !workspace.attention
 
@@ -184,7 +184,7 @@ final class WorkspaceCellView: NSTableCellView {
         }
         let usage = primary.usage
         let limits = AppController.shared.agentLimitsByKind[usage.agent]?.active(at: Date())?.limits
-        let parts = AgentFormat.summaryParts(usage, limits: limits)
+        let parts = AgentFormat.summaryParts(usage, limits: limits, strings: .localized)
         let others = workspace.agentPanes.count - 1
         let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)"
         if key != agentKey {
@@ -199,11 +199,11 @@ final class WorkspaceCellView: NSTableCellView {
         let now = Date()
         var blocks = workspace.agentPanes.compactMap { pane -> String? in
             guard let usage = pane.agentUsage else { return nil }
-            return (AgentFormat.detailLines(usage, now: now) + [pane.id == primary.pane.id ? String(localized: "Pane \(pane.id) (shown)") : String(localized: "Pane \(pane.id)")])
+            return (AgentFormat.detailLines(usage, now: now, strings: .localized) + [pane.id == primary.pane.id ? String(localized: "Pane \(pane.id) (shown)") : String(localized: "Pane \(pane.id)")])
                 .joined(separator: "\n")
         }
         if let limits = AppController.shared.agentLimitsByKind[usage.agent]?.active(at: now) {
-            blocks.append(([String(localized: "\(usage.agent.displayName) account")] + AgentFormat.limitLines(limits.limits, now: now))
+            blocks.append(([String(localized: "\(usage.agent.displayName) account")] + AgentFormat.limitLines(limits.limits, now: now, strings: .localized))
                           .joined(separator: "\n"))
         }
         let tooltip = blocks.joined(separator: "\n\n")

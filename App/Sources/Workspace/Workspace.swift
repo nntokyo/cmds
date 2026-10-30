@@ -64,6 +64,9 @@ final class Workspace {
         return (workingDirectory as NSString).lastPathComponent
     }
 
+    /// `title` for the UI: the default "Workspace" translated (the API keeps `title`).
+    var displayTitle: String { DefaultTitle.localized(title) }
+
     var orderedPanes: [Pane] { (root?.paneIDs ?? []).compactMap { panes[$0] } }
     var focusedPane: Pane? { focusedPaneID.flatMap { panes[$0] } }
     var attention: Bool { panes.values.contains { $0.attention } }

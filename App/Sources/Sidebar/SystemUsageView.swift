@@ -5,8 +5,8 @@ import CmdsCore
 /// pressure (green normal, yellow warning, red critical); the tooltip has the breakdown.
 /// `update` only touches labels and meter fills whose value changed.
 final class SystemUsageView: NSView {
-    private let cpuRow = MeterRow(title: "CPU")
-    private let memoryRow = MeterRow(title: "Mem")
+    private let cpuRow = MeterRow(title: String(localized: "CPU", comment: "sidebar meter title"))
+    private let memoryRow = MeterRow(title: String(localized: "Mem", comment: "sidebar meter title (memory)"))
     private var tooltipText: String?
     /// Account limits of the coding agents, above CPU/memory; hidden while none is known.
     private let agentStack = NSStackView()
@@ -16,8 +16,10 @@ final class SystemUsageView: NSView {
     private let awakeButton = KeepAwakeIndicator.makeButton()
 
     /// Title column: "CPU"/"Mem" alone, wide enough for "Claude"/"Codex" when agent rows show (meters stay aligned).
-    static let titleWidth: CGFloat = 26
-    static let agentTitleWidth: CGFloat = 34
+    /// Grows for longer translations ("メモリ").
+    static let titleWidth: CGFloat = max(26, MeterRow.measuredTitleWidth([String(localized: "CPU", comment: "sidebar meter title"),
+                                                                        String(localized: "Mem", comment: "sidebar meter title (memory)")]))
+    static let agentTitleWidth: CGFloat = max(34, titleWidth)
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -217,7 +219,7 @@ final class CompactUsageView: NSView {
             let level = UsageLevel(percent: top?.usedPercent)
             meter.set(fraction: (top?.usedPercent ?? 0) / 100,
                       color: level == .critical ? .systemRed : level == .warning ? .systemOrange : .systemGreen)
-            agentText.append("\(limits.agent.displayName) \(AgentFormat.limitsSummary(limits.limits))")
+            agentText.append("\(limits.agent.displayName) \(AgentFormat.limitsSummary(limits.limits, strings: .localized))")
         }
         updateTooltip()
     }
@@ -279,6 +281,13 @@ private final class MeterRow: NSView {
     var titleWidth: CGFloat {
         get { titleWidthConstraint.constant }
         set { if titleWidthConstraint.constant != newValue { titleWidthConstraint.constant = newValue } }
+    }
+
+    static let titleFont = NSFont.systemFont(ofSize: 10, weight: .medium)
+
+    /// Width the title column needs for these titles.
+    static func measuredTitleWidth(_ titles: [String]) -> CGFloat {
+        titles.map { ceil(($0 as NSString).size(withAttributes: [.font: titleFont]).width) + 1 }.max() ?? 0
     }
 
     init(title: String) {
@@ -366,7 +375,7 @@ private final class AgentLimitsRow: NSView {
         if windows.count != segments.count { rebuild(count: windows.count) }
         for (segment, limit) in zip(segments, windows) {
             let level = UsageLevel(percent: limit.usedPercent)
-            segment.set(label: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit), value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit)
+            segment.set(label: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit, strings: .localized), value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit)
                         : AgentFormat.percent(limit.usedPercent), fraction: limit.usedPercent / 100, level: level)
         }
         // Old figures (no agent ran for a while) are dimmed.
@@ -374,8 +383,8 @@ private final class AgentLimitsRow: NSView {
         alphaValue = old ? 0.6 : 1
         var tooltip = [limits.plan.map { String(localized: "\(limits.agent.displayName) account limits (\($0))") }
                        ?? String(localized: "\(limits.agent.displayName) account limits")]
-        tooltip += AgentFormat.limitLines(windows, now: now)
-        tooltip.append(String(localized: "Updated \(AgentFormat.age(limits.updatedAt, now: now))"))
+        tooltip += AgentFormat.limitLines(windows, now: now, strings: .localized)
+        tooltip.append(String(localized: "Updated \(AgentFormat.age(limits.updatedAt, now: now, strings: .localized))"))
         let text = tooltip.joined(separator: "\n")
         if text != tooltipText {
             tooltipText = text
@@ -502,17 +511,5 @@ private final class MeterView: NSView {
 
     private var fillFrame: CGRect {
         CGRect(x: 0, y: 0, width: (bounds.width * fraction).rounded(), height: bounds.height)
-    }
-}
-
-extension MemoryPressure {
-    /// `name` stays English for the API and CLI; this is for the UI.
-    var localizedName: String {
-        switch self {
-        case .normal: return String(localized: "normal", comment: "memory pressure")
-        case .warning: return String(localized: "warning", comment: "memory pressure")
-        case .critical: return String(localized: "critical", comment: "memory pressure")
-        case .unknown: return String(localized: "unknown", comment: "memory pressure")
-        }
     }
 }
