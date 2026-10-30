@@ -74,4 +74,14 @@ First version, to be released as 0.1.0 (`MARKETING_VERSION` 0.1.0, build 1). Dev
   forwarding-only key and pinned host key).
 - Sync diagnostics: `cmds sync` / `sync.status`, forced transports and a device driver for testing.
 
+#### Distribution
+
+- Release builds of the Mac app and the CLI run under the hardened runtime with the entitlements a terminal needs
+  for the programs it runs (`App/cmds.entitlements`: Apple Events, microphone, camera, contacts, calendars, location,
+  photos) and matching usage strings in English and Japanese.
+- `scripts/release/build-dmg.sh`: Release build, Developer ID signing, DMG, notarization with a keychain profile,
+  stapling, SHA-256 and `site/public/download/` (docs/internals/release.md).
+- Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
+  Firebase Hosting configuration).
+
 [Unreleased]: https://github.com/nntokyo/cmds/commits/master

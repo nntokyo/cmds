@@ -133,3 +133,5 @@ th { color: var(--muted); font-weight: 600; }
 .site-footer a { color: var(--muted); }
 .site-footer a:hover { color: var(--text); }
 .sidebar-shot { max-height: 560px; width: auto; margin: 0 auto; }
+p code, li code, td code, dd code { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .btn { flex-direction: column; gap: 0; text-align: center; } }

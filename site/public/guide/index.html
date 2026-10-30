@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -21,7 +21,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/site-1.css">
 </head>
 <body>
 <a class="skip" href="#main">本文へ移動</a>
@@ -68,9 +68,10 @@
       <h2><span class="step-num">1</span>インストールと初回起動</h2>
       <ol>
         <!-- TODO(release): DMG 公開後は「DMG を開いて cmds を「アプリケーション」にドラッグ」を先頭に。 -->
-        <li><code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）に置いて開きます。最初のリリースまでは <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>でソースからビルドしてください（Xcode、XcodeGen、Zig が必要）。<!-- TODO(release): リポジトリ公開までこのリンクは非公開 --></li>
+        <li><code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）に置いて開きます。最初のリリースまでは README の手順でソースからビルドしてください（Xcode、XcodeGen、Zig が必要）。<!-- TODO(release): リポジトリ公開後に https://github.com/nntokyo/cmds#build-from-source へリンク --></li>
         <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
         <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
+        <li>ウィンドウを閉じても cmds とターミナル（エージェント）は動き続けます。Dock のアイコンか <kbd>⌘N</kbd> でウィンドウが戻ります。エージェントの実行中に終了しようとすると確認が出ます。</li>
         <li>任意：<strong>cmds › コマンドラインツールをインストール…</strong> で <code>/usr/local/bin/cmds</code> へのリンクを作ると、ほかのターミナルからも <code>cmds</code> を使えます（cmds の中のターミナルでは最初から使えます）。</li>
       </ol>
       <p>起動すると、ホームディレクトリのターミナルを 1 つ持つワークスペースが開きます。</p>
@@ -90,7 +91,7 @@
       <ul>
         <li><kbd>⌘N</kbd> で新しいワークスペース、<kbd>⌘1</kbd>…<kbd>⌘9</kbd> で切り替え、<kbd>⇧⌘R</kbd>（またはダブルクリック）で名前を変更。行はドラッグで並べ替えられます。</li>
         <li><kbd>⌘D</kbd> で右に、<kbd>⇧⌘D</kbd> で下に分割。<kbd>⌥⌘</kbd>＋矢印でペイン間を移動、<kbd>⇧⌘↩</kbd> でペインをズーム、<kbd>⌘W</kbd> で閉じます。</li>
-        <li>サイドバーの各行には、Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態とタスク、最新の通知が表示されます。<kbd>⌥⌘F</kbd> で絞り込み、表示 › プロジェクトごとにグループ化 も使えます。</li>
+        <li>サイドバーの各行には、Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態とタスク、最新の通知が表示されます。<kbd>⌥⌘F</kbd> で絞り込み、表示 › ワークスペースをプロジェクトでまとめる も使えます。</li>
         <li>見ていないペインのプログラムが通知（OSC 9/777、ベル、<code>cmds notify</code>）を出すと、そのペインが<strong>オレンジのリング</strong>で光ります。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。</li>
       </ul>
       <figure>
@@ -109,15 +110,17 @@
       <p>複数のワークスペースを、それぞれ入力もできるライブタイルとして並べます。</p>
       <ul>
         <li>サイドバーで <kbd>⌘</kbd>-クリック（追加・解除）や <kbd>⇧</kbd>-クリック（範囲）で選ぶと、すぐにタイルになります。</li>
-        <li>表示 › すべてのワークスペースをタイル表示（<kbd>⌃⌘T</kbd>）で全部を並べ、もう一度押すと 1 つに戻ります。最大 9 枚。</li>
+        <li>表示 › すべてのワークスペースを並べて表示（<kbd>⌃⌘T</kbd>）で全部を並べ、もう一度押すと 1 つに戻ります。最大 9 枚。</li>
+        <li>サイドバーの行をコンテンツ領域へドラッグしても並べられます（端に落とすと隣や上下へ、中央なら入れ替え）。タイルの見出しをドラッグして移動、サイドバーへ戻すと外れます。</li>
         <li>タイルの見出しに状態とタスクが出て、入力待ちのタイルはリングで光ります。<kbd>⇧⌘↩</kbd> で 1 枚を大きく表示。</li>
+        <li>Claude Code のサブエージェント（Task / Agent ツール）は、タイルの下にカードで表示されます。種類と説明、いま実行中の操作、経過時間、トークン数（<a href="#claude">サブエージェント用のフック</a>が必要）。</li>
       </ul>
       <figure>
         <picture>
           <source type="image/webp" srcset="/img/ja-tiled-800.webp 800w, /img/ja-tiled-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
-          <img src="/img/ja-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="4 つのワークスペースを 2×2 のタイルで表示。my-app は作業中、api-server は入力待ち、docs-site は完了、build-server は SSH の切断表示。">
+          <img src="/img/ja-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="4 つのワークスペースを 2×2 のタイルで表示。my-app は作業中で、下に Explore・general-purpose・code-reviewer の 3 つのサブエージェントのカード。api-server は入力待ち、docs-site は完了、build-server は SSH の切断表示。">
         </picture>
-        <figcaption>4 つのワークスペースを同時に表示。ターミナルは動いたまま並べ替わります。</figcaption>
+        <figcaption>4 つのワークスペースを同時に表示。my-app の下には 3 つのサブエージェントのカード。</figcaption>
       </figure>
     </div>
   </section>
@@ -153,7 +156,7 @@ make test; cmds notify "tests done: $?"   # 終わったらこのペインを光
 cmds stats                                # ワークスペースごとと Mac 全体の CPU・メモリ</code></pre>
       <p><code>cmds --help</code> と <code>cmds &lt;コマンド&gt; --help</code> で全コマンドを確認できます。すべて <code>--json</code> で JSON を出力します。</p>
       <figure>
-        <img src="/img/ja-cli-1000.webp" width="1000" height="374" loading="lazy" alt="ターミナルで git log と cmds ls を実行した画面。cmds ls がワークスペース my-app の分割の構成（ターミナル 2 つとブラウザ 1 つ）、ブランチ、ポート 5173、Claude の使用量を木構造で表示している。">
+        <img src="/img/ja-cli-1000.webp" width="1000" height="493" loading="lazy" alt="ターミナルで git log と cmds ls を実行した画面。cmds ls がワークスペース my-app の分割の構成（ターミナル 2 つとブラウザ 1 つ）、ブランチ、ポート 5173、Claude の使用量を木構造で表示している。">
         <figcaption><code>cmds ls</code> は分割の構成とエージェントの使用量も表示します。</figcaption>
       </figure>
     </div>
@@ -163,7 +166,7 @@ cmds stats                                # ワークスペースごとと Mac �
     <div class="wrap narrow">
       <h2><span class="step-num">6</span>Claude Code と Codex の設定</h2>
       <h3>通知と状態（フック）</h3>
-      <p><code>~/.claude/settings.json</code>（またはプロジェクトの <code>.claude/settings.json</code>）に追加します。許可や入力を求めると「入力待ち」になってリングが光り、ターンが終わると「完了」、入力すると「作業中」に戻ります。</p>
+      <p><code>~/.claude/settings.json</code>（またはプロジェクトの <code>.claude/settings.json</code>）に追加します。許可や入力を求めると「入力待ち」になってリングが光り、ターンが終わると「完了」、入力すると「作業中」に戻ります。<code>SubagentStart</code> / <code>SubagentStop</code> はサブエージェントのカードと、サイドバーの「サブ 3」のような数の表示に使います。</p>
 <pre><code>{
   "hooks": {
     "Notification": [
@@ -173,6 +176,12 @@ cmds stats                                # ワークスペースごとと Mac �
       { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
     ],
     "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "SubagentStart": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "SubagentStop": [
       { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
     ]
   }
@@ -191,7 +200,7 @@ cmds stats                                # ワークスペースごとと Mac �
           <h3>サイドバーの見方</h3>
           <ul>
             <li><strong>作業中</strong>（青）・<strong>入力待ち</strong>（オレンジ）・<strong>完了</strong>（緑）・<strong>待機</strong>・<strong>停止</strong>（グレー）</li>
-            <li>2 行目はエージェントのタスク（Claude Code のタイトル）</li>
+            <li>2 行目はエージェントのタスク（Claude Code のタイトル）。サブエージェントの実行中は「サブ 3」のように数が出ます</li>
             <li>モデル、コンテキストの使用率、そのセッションの料金</li>
             <li>最下部はアカウントの上限（5 時間・7 日間、Claude の利用上限額）と Mac 全体の CPU・メモリ。80% でオレンジ、95% で赤</li>
           </ul>
@@ -207,11 +216,11 @@ cmds stats                                # ワークスペースごとと Mac �
     <div class="wrap narrow">
       <h2><span class="step-num">7</span>iPhone/iPad のペアリング</h2>
       <ol>
-        <li>Mac で <strong>cmds › iPhone/iPad とペアリング…</strong> を選ぶと、QR コードと 6 桁のコードが表示されます（ウィンドウを開いている間だけ有効）。</li>
+        <li>Mac で <strong>cmds › iPhone/iPadとペアリング…</strong> を選ぶと、QR コードと 6 桁のコードが表示されます（ウィンドウを開いている間だけ有効）。</li>
         <li>iPhone/iPad のコンパニオンで<strong>「ペアリングコードをスキャン」</strong>をタップして QR コードを読み取ります。カメラを使わない場合は、Mac を選んで ID を照合し、6 桁のコードを入力します。</li>
         <li>接続すると、Mac のワークスペースの一覧が表示されます。ワークスペースを開くとターミナルの画面がライブで表示され、キーバーや入力欄から返答できます。</li>
       </ol>
-      <p>同じネットワークにいなくても、Wi‑Fi がなければ Bluetooth LE で、外出先では cmds › SSH 経由のリモートアクセス… で設定したあなたの SSH サーバーを中継して接続します。どの経路でも、Mac の証明書にピン留めした同じ TLS 接続です。</p>
+      <p>同じネットワークにいなくても、Wi‑Fi がなければ Bluetooth LE で、外出先では cmds › SSH経由のリモートアクセス… で設定したあなたの SSH サーバーを中継して接続します。どの経路でも、Mac の証明書にピン留めした同じ TLS 接続です。</p>
       <!-- TODO(release): App Store / TestFlight 公開後に入手方法を追記 -->
       <div class="phones">
         <figure>
@@ -234,7 +243,7 @@ cmds stats                                # ワークスペースごとと Mac �
     <div class="wrap narrow">
       <h2><span class="step-num">8</span>SSH ワークスペース</h2>
       <ul>
-        <li><kbd>⇧⌘N</kbd>（ファイル › 新規 SSH ワークスペース…）でホストを入力します。<code>~/.ssh/config</code> のホストが補完され、鍵やジャンプホストもいつも通り使われます。</li>
+        <li><kbd>⇧⌘N</kbd>（ファイル › 新規SSHワークスペース…）でホストを入力します。<code>~/.ssh/config</code> のホストが補完され、鍵やジャンプホストもいつも通り使われます。</li>
         <li>cmds は制限付きのソケットを同じ SSH 接続でサーバーへ転送します。<strong>ペイン › リモートヘルパーをインストール…</strong> を一度実行すると、サーバー上でも <code>cmds notify</code> や Claude Code のフックが動き、通知と使用量が手元のサイドバーに届きます。</li>
         <li>接続が切れるとペインに「切断されました」と表示され、<kbd>⌘R</kbd> か「再接続」で同じコマンドを再実行します。</li>
       </ul>
@@ -262,7 +271,7 @@ cmds stats                                # ワークスペースごとと Mac �
             <tr><td>右に分割 / 下に分割</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
             <tr><td>ペイン間の移動</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>ペイン（タイル）のズーム</td><td><kbd>⇧⌘↩</kbd></td></tr>
-            <tr><td>すべてのワークスペースをタイル表示</td><td><kbd>⌃⌘T</kbd></td></tr>
+            <tr><td>すべてのワークスペースを並べて表示</td><td><kbd>⌃⌘T</kbd></td></tr>
             <tr><td>最新の通知へジャンプ</td><td><kbd>⇧⌘U</kbd></td></tr>
             <tr><td>ブラウザで分割 / プレビューで開く</td><td><kbd>⇧⌘B</kbd> / <kbd>⇧⌘O</kbd></td></tr>
             <tr><td>アドレスバー / 再読み込み（SSH は再接続） / 戻る / 進む</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>

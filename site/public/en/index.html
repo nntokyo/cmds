@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -25,7 +25,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/site-1.css">
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -73,7 +73,7 @@
         <div class="card"><h3>Vertical tabs</h3><p>Every workspace shows its git branch, directory, listening ports, and the agent's state (Working, Needs Input, Done) and task. Filter them, or group them by project.</p></div>
         <div class="card"><h3>Notification ring</h3><p>When an agent asks for permission or input, its pane lights up orange and the sidebar shows the message. <kbd>⇧⌘U</kbd> jumps to the latest. Works with OSC 9/777, the bell and <code>cmds notify</code>.</p></div>
         <div class="card"><h3>In-app browser</h3><p>A WebKit browser next to your terminal for your dev server, scriptable by agents with <code>cmds browser eval</code> and <code>snapshot</code>.</p></div>
-        <div class="card"><h3>Splits and tiled view</h3><p>Nested right/down splits and pane zoom. Show up to nine workspaces as live tiles, e.g. five Claude Code sessions at once.</p></div>
+        <div class="card"><h3>Splits and tiled view</h3><p>Nested right/down splits and pane zoom. Show up to nine workspaces as live tiles, e.g. five Claude Code sessions at once; drag them in from the sidebar.</p></div>
         <div class="card"><h3>File preview</h3><p>Images, PDF, video and Office files (Quick Look), GitHub-style Markdown and coloured diffs, reloaded when the file changes. <kbd>⌘</kbd>-click a path in the terminal to open it.</p></div>
         <div class="card"><h3>CLI and socket API</h3><p>The bundled <code>cmds</code> command splits, types, reads screens, notifies, drives the browser and reports stats, with <code>--json</code> everywhere for scripts and agents.</p></div>
         <div class="card"><h3>GPU rendering by libghostty</h3><p>Terminals are drawn with Metal by Ghostty's engine (libghostty): true colour, with the <code>xterm-ghostty</code> terminfo and shell integration bundled.</p></div>
@@ -87,7 +87,7 @@
         <figure>
           <picture>
             <source type="image/webp" srcset="/img/en-tiled-800.webp 800w, /img/en-tiled-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 540px">
-            <img src="/img/en-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="Tiled view: four workspaces as live tiles in a 2 by 2 grid. Each tile header shows the agent's state and task; the tiles that need attention have an orange border.">
+            <img src="/img/en-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="Tiled view: four workspaces as live tiles in a 2 by 2 grid, with three subagent cards under my-app. Each tile header shows the agent's state and task; the tiles that need attention have an orange border.">
           </picture>
           <figcaption>Tiled view: work in several workspaces at once</figcaption>
         </figure>
@@ -113,6 +113,7 @@
             <li><strong>State</strong>: Working, Needs Input, Done, Idle or Stopped, from Claude Code's hooks and its terminal title.</li>
             <li><strong>Usage and limits</strong>: model, context, cost and the 5-hour / 7-day account limits from the status line (<code>cmds hook claude-status</code>); orange from 80 %, red from 95 %.</li>
             <li><strong>Codex</strong>: nothing to set up. cmds reads only the session id, directory, usage and model from its session files, never the conversation.</li>
+            <li><strong>Subagents</strong>: Claude Code subagents (Task / Agent tool) appear as cards under the tiles, with type, current action, elapsed time and tokens.</li>
             <li><strong>Session resume</strong>: after cmds restarts, the session that ran in each pane can be resumed with <code>claude --resume</code> / <code>codex resume</code> (Ask, Always or Never).</li>
             <li><strong>Claude Code skill</strong>: teaches Claude to open helper panes without stealing focus and to use dev servers, the browser and previews.</li>
           </ul>
@@ -140,7 +141,7 @@
             <li>No servers or accounts of ours involved.</li>
           </ul>
           <!-- TODO(release): link the App Store / TestFlight once available (needs an App Store Connect app record, not created yet). -->
-          <p class="note">iOS/iPadOS 17 or later. App Store distribution is in preparation; for now, build it from source.</p>
+          <p class="note">iOS/iPadOS 17 or later. App Store distribution is in preparation.</p>
         </div>
         <div class="phones">
           <figure>
@@ -178,7 +179,7 @@
         <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>Download cmds 0.1.0 (DMG)</a></p>
         <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple.</p>
         -->
-        <p><strong>The first release (0.1.0) is in preparation.</strong> Until then you can build cmds from source (<a href="/en/guide/#install">how</a>).</p>
+        <p><strong>The first release (0.1.0) and the source code are being prepared for publication.</strong> The DMG will be available here. See <a href="/en/guide/">how to use cmds</a>.</p>
         <dl>
           <dt>File</dt><dd><code>/download/cmds-&lt;version&gt;.dmg</code> (on release)</dd>
           <dt>SHA-256</dt><dd><code>on release</code></dd>

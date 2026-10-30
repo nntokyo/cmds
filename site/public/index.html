@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -25,7 +25,7 @@
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="/assets/site.css">
+<link rel="stylesheet" href="/assets/site-1.css">
 </head>
 <body>
 <a class="skip" href="#main">本文へ移動</a>
@@ -73,7 +73,7 @@
         <div class="card"><h3>縦タブのワークスペース</h3><p>ワークスペースごとに Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態（作業中・入力待ち・完了）とタスク名を表示。フィルタやプロジェクト別のグループ化も。</p></div>
         <div class="card"><h3>通知リング</h3><p>エージェントが許可や入力を求めると、そのペインがオレンジのリングで光り、サイドバーにメッセージが出ます。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。OSC 9/777・ベル・<code>cmds notify</code> に対応。</p></div>
         <div class="card"><h3>アプリ内ブラウザ</h3><p>WebKit のブラウザをターミナルの隣に。開発サーバーの画面を確認でき、<code>cmds browser eval</code> や <code>snapshot</code> でエージェントからも操作できます。</p></div>
-        <div class="card"><h3>分割とタイル表示</h3><p>右・下への入れ子の分割、ペインのズーム。複数のワークスペースを最大 9 枚のライブタイルとして並べ、5 つの Claude Code を同時に見ることもできます。</p></div>
+        <div class="card"><h3>分割とタイル表示</h3><p>右・下への入れ子の分割、ペインのズーム。複数のワークスペースを最大 9 枚のライブタイルとして並べ、5 つの Claude Code を同時に見ることも。サイドバーからドラッグして配置できます。</p></div>
         <div class="card"><h3>ファイルプレビュー</h3><p>画像、PDF、動画、Office（Quick Look）、GitHub 風の Markdown、色付きの diff。ファイルが変わると自動で再読み込み。ターミナル上のパスを <kbd>⌘</kbd>-クリックでも開けます。</p></div>
         <div class="card"><h3>CLI とソケット API</h3><p>同梱の <code>cmds</code> コマンドで分割、入力、画面の読み取り、通知、ブラウザ操作、統計を。すべて <code>--json</code> 対応で、スクリプトやエージェントから扱えます。</p></div>
         <div class="card"><h3>libghostty の GPU 描画</h3><p>ターミナルの描画は Ghostty のエンジン（libghostty）による Metal の GPU 描画。true color、<code>xterm-ghostty</code> の terminfo とシェル統合を同梱。</p></div>
@@ -87,7 +87,7 @@
         <figure>
           <picture>
             <source type="image/webp" srcset="/img/ja-tiled-800.webp 800w, /img/ja-tiled-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 540px">
-            <img src="/img/ja-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="タイル表示。4 つのワークスペースが 2×2 のライブタイルで並び、各タイルの見出しにエージェントの状態とタスク名、入力待ちのタイルはオレンジの枠。">
+            <img src="/img/ja-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="タイル表示。4 つのワークスペースが 2×2 のライブタイルで並び、my-app の下に 3 つのサブエージェントのカード。各タイルの見出しにエージェントの状態とタスク名、入力待ちのタイルはオレンジの枠。">
           </picture>
           <figcaption>タイル表示：複数のワークスペースを同時に操作</figcaption>
         </figure>
@@ -113,6 +113,7 @@
             <li><strong>状態</strong>：Claude Code のフックとタイトルから、作業中・入力待ち・完了・待機・停止を表示。</li>
             <li><strong>使用量と上限</strong>：ステータスライン（<code>cmds hook claude-status</code>）からモデル、コンテキスト、料金、5 時間・7 日間の利用上限を表示。80% でオレンジ、95% で赤。</li>
             <li><strong>Codex</strong>：設定不要。セッションファイルから ID・ディレクトリ・使用量・モデルだけを読み、会話内容は読みません。</li>
+            <li><strong>サブエージェント</strong>：Claude Code のサブエージェント（Task / Agent ツール）をタイルの下にカードで表示。種類、実行中の操作、経過時間、トークン数が分かります。</li>
             <li><strong>セッション再開</strong>：cmds を再起動すると、各ペインで動いていたセッションを <code>claude --resume</code> / <code>codex resume</code> で再開できます（確認・常に・しない を選択）。</li>
             <li><strong>Claude Code のスキル</strong>：フォーカスを奪わずに補助ペインを開き、開発サーバーやブラウザ、プレビューを使う方法を Claude に教えます。</li>
           </ul>
@@ -140,7 +141,7 @@
             <li>当社のサーバーやアカウントは使いません。</li>
           </ul>
           <!-- TODO(release): App Store / TestFlight 公開後にリンクを追加。現状はソースからビルド（App Store Connect のアプリ登録が未作成）。 -->
-          <p class="note">iOS/iPadOS 17 以降。App Store での配信は準備中です（現在はソースからビルドして利用できます）。</p>
+          <p class="note">iOS/iPadOS 17 以降。App Store での配信は準備中です。</p>
         </div>
         <div class="phones">
           <figure>
@@ -178,7 +179,7 @@
         <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>cmds 0.1.0 をダウンロード（DMG）</a></p>
         <p class="note">Apple による公証（notarization）済み、Developer ID（N.N. LLC.）で署名されています。</p>
         -->
-        <p><strong>最初のリリース（0.1.0）を準備中です。</strong>公開までは、ソースコードからビルドして使えます（<a href="/guide/#install">手順</a>）。</p>
+        <p><strong>最初のリリース（0.1.0）とソースコードの公開を準備中です。</strong>公開後はここから DMG をダウンロードできます。使い方は<a href="/guide/">こちら</a>。</p>
         <dl>
           <dt>ファイル</dt><dd><code>/download/cmds-&lt;version&gt;.dmg</code>（公開時に記載）</dd>
           <dt>SHA-256</dt><dd><code>公開時に記載</code></dd>

@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "startup-project-4f8f8"
+  },
+  "targets": {
+    "startup-project-4f8f8": {
+      "hosting": {
+        "cmds": [
+          "cmds-n-n-tokyo"
+        ]
+      }
+    }
+  }
+}

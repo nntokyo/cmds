@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to use — cmds</title>
+<meta name="description" content="How to use cmds: install and first launch, workspaces and splits, tiled view, browser and preview panes, the cmds command, Claude Code setup, pairing the iPhone, SSH workspaces and keyboard shortcuts.">
+<link rel="canonical" href="https://cmds.n-n.tokyo/en/guide/">
+<link rel="alternate" hreflang="ja" href="https://cmds.n-n.tokyo/guide/">
+<link rel="alternate" hreflang="en" href="https://cmds.n-n.tokyo/en/guide/">
+<link rel="alternate" hreflang="x-default" href="https://cmds.n-n.tokyo/en/guide/">
+<meta name="theme-color" content="#111317">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="cmds">
+<meta property="og:locale" content="en_US">
+<meta property="og:url" content="https://cmds.n-n.tokyo/en/guide/">
+<meta property="og:title" content="How to use cmds">
+<meta property="og:description" content="From installing to setting up Claude Code and pairing your iPhone, step by step with screenshots.">
+<meta property="og:image" content="https://cmds.n-n.tokyo/img/og-en.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site-1.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/en/"><img src="/img/icon-256.png" alt="" width="32" height="32">cmds</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="/en/#features">Features</a>
+      <a href="/en/#iphone">iPhone</a>
+      <a href="/en/guide/" aria-current="page">How to use</a>
+      <a href="/en/#download">Download</a>
+      <a class="lang" href="/guide/" hreflang="ja" lang="ja">日本語</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero">
+    <div class="wrap narrow">
+      <h1>How to use cmds</h1>
+      <p class="lead">From installing to keeping an eye on your agents and answering them from your phone. Every screenshot is the real app with demo data.</p>
+    </div>
+  </div>
+
+  <div class="wrap narrow">
+    <nav class="toc" aria-label="Contents">
+      <strong>Contents</strong>
+      <ol>
+        <li><a href="#install">Install and first launch</a></li>
+        <li><a href="#workspaces">Workspaces and splits</a></li>
+        <li><a href="#tiles">Tiled view</a></li>
+        <li><a href="#browser">Browser and preview</a></li>
+        <li><a href="#cli">The <code>cmds</code> command</a></li>
+        <li><a href="#claude">Setting up Claude Code and Codex</a></li>
+        <li><a href="#iphone">Pairing an iPhone/iPad</a></li>
+        <li><a href="#ssh">SSH workspaces</a></li>
+        <li><a href="#shortcuts">Keyboard shortcuts</a></li>
+      </ol>
+    </nav>
+  </div>
+
+  <section class="step" id="install">
+    <div class="wrap narrow">
+      <h2><span class="step-num">1</span>Install and first launch</h2>
+      <ol>
+        <!-- TODO(release): once the DMG is out, start with "Open the DMG and drag cmds to Applications". -->
+        <li>Put <code>cmds.app</code> in Applications (or <code>~/Applications</code>) and open it from there. Until the first release, build it from source as described in its README (needs Xcode, XcodeGen and Zig).<!-- TODO(release): link https://github.com/nntokyo/cmds#build-from-source once the repository is public --></li>
+        <li>If the macOS firewall is on, macOS asks about incoming connections. Choose <strong>Allow</strong> if you want to use the iPhone/iPad companion; the terminal works either way.</li>
+        <li>Allow notifications, so panes that need you can notify you while cmds is in the background.</li>
+        <li>Optional: <strong>cmds › Install Command Line Tool…</strong> links <code>/usr/local/bin/cmds</code>, so <code>cmds</code> also works in other terminals (terminals inside cmds have it already).</li>
+      </ol>
+      <p>cmds opens with one workspace: a terminal in your home directory.</p>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/en-main-800.webp 800w, /img/en-main-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/en-main-1600.webp" width="1600" height="1000" loading="lazy" alt="The cmds window: vertical workspace tabs on the left, split terminals and a browser on the right.">
+        </picture>
+        <figcaption>Each sidebar row is a workspace; the panes of the selected one are on the right.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="workspaces">
+    <div class="wrap narrow">
+      <h2><span class="step-num">2</span>Workspaces and splits</h2>
+      <ul>
+        <li><kbd>⌘N</kbd> opens a workspace, <kbd>⌘1</kbd>…<kbd>⌘9</kbd> switch, <kbd>⇧⌘R</kbd> (or a double-click) renames. Drag rows to reorder.</li>
+        <li><kbd>⌘D</kbd> splits right, <kbd>⇧⌘D</kbd> down. <kbd>⌥⌘</kbd> + arrows move between panes, <kbd>⇧⌘↩</kbd> zooms a pane, <kbd>⌘W</kbd> closes it.</li>
+        <li>Each sidebar row shows the git branch, directory, listening ports, the agent's state and task, and the latest notification. <kbd>⌥⌘F</kbd> filters; View › Group Workspaces by Project groups them.</li>
+        <li>When a program in a pane you are not looking at sends a notification (OSC 9/777, the bell, <code>cmds notify</code>), the pane lights up with an <strong>orange ring</strong>. <kbd>⇧⌘U</kbd> jumps to the latest.</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/en-ring-800.webp 800w, /img/en-ring-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/en-ring-1600.webp" width="1600" height="1000" loading="lazy" alt="The api-server workspace split left and right. The right pane waits for input and has an orange ring; its sidebar row says Needs Input with Claude's message.">
+        </picture>
+        <figcaption>Claude Code asks for permission in the right pane, so it lights up.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="tiles">
+    <div class="wrap narrow">
+      <h2><span class="step-num">3</span>Tiled view</h2>
+      <p>Show several workspaces side by side as live tiles you can type in.</p>
+      <ul>
+        <li><kbd>⌘</kbd>-click (add/remove) or <kbd>⇧</kbd>-click (range) rows in the sidebar, and the content area tiles them.</li>
+        <li>View › Tile All Workspaces (<kbd>⌃⌘T</kbd>) tiles everything, up to nine; press it again for one workspace.</li>
+        <li>You can also drag a sidebar row onto the content area (an edge puts it beside, above or below; the middle swaps). Drag a tile's header to move it, or onto the sidebar to remove it.</li>
+        <li>Tile headers show the state and task; a tile that needs you gets the ring. <kbd>⇧⌘↩</kbd> shows one tile alone.</li>
+        <li>Claude Code subagents (Task / Agent tool) appear as cards under the tile: type and description, current action, elapsed time and tokens (needs the <a href="#claude">subagent hooks</a>).</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/en-tiled-800.webp 800w, /img/en-tiled-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/en-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="Four workspaces as 2 by 2 tiles: my-app Working with three subagent cards (Explore, general-purpose, code-reviewer) below it, api-server Needs Input, docs-site Done, build-server showing the SSH disconnect overlay.">
+        </picture>
+        <figcaption>Four workspaces at once, with three subagent cards under my-app.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="browser">
+    <div class="wrap narrow">
+      <h2><span class="step-num">4</span>Browser and preview</h2>
+      <ul>
+        <li><kbd>⇧⌘B</kbd> opens a browser to the right of the terminal. <kbd>⌘L</kbd> address bar, <kbd>⌘R</kbd> reload, <kbd>⌘[</kbd> / <kbd>⌘]</kbd> back / forward.</li>
+        <li><kbd>⇧⌘O</kbd> (File › Open in Preview…) or <kbd>⌘</kbd>-click on a path printed in the terminal shows the file in a preview pane: images, PDF, video, Office and text through Quick Look, rendered Markdown, coloured diffs.</li>
+        <li>Previews reload when the file changes, so reports and images an agent writes show up right away.</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/en-preview-800.webp 800w, /img/en-preview-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/en-preview-1600.webp" width="1600" height="1000" loading="lazy" alt="A terminal at the top left, rendered Markdown release notes on the right and a coloured diff preview at the bottom left.">
+        </picture>
+        <figcaption>Markdown and diff previews. The browser pane is in the first screenshot.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="cli">
+    <div class="wrap narrow">
+      <h2><span class="step-num">5</span>The <code>cmds</code> command</h2>
+      <p>Every cmds terminal knows which pane it is (<code>CMDS_PANE_ID</code>), so <code>cmds</code> acts on the pane you run it in.</p>
+<pre><code>cmds ls                                   # workspaces and panes
+cmds split down -- npm run dev            # dev server in a new pane below
+cmds browser open http://localhost:3000   # open it in a browser pane
+cmds open README.md                       # preview a file
+git diff | cmds open --diff -             # coloured diff
+make test; cmds notify "tests done: $?"   # light this pane when finished
+cmds stats                                # CPU and memory per workspace and for the Mac</code></pre>
+      <p><code>cmds --help</code> and <code>cmds &lt;command&gt; --help</code> list everything; every command prints JSON with <code>--json</code>.</p>
+      <figure>
+        <img src="/img/en-cli-1000.webp" width="1000" height="493" loading="lazy" alt="A terminal after git log and cmds ls: cmds ls prints the my-app workspace's split tree (two terminals and a browser), its branch, port 5173 and the Claude usage of the pane.">
+        <figcaption><code>cmds ls</code> shows the split tree and agent usage too.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="claude">
+    <div class="wrap narrow">
+      <h2><span class="step-num">6</span>Setting up Claude Code and Codex</h2>
+      <h3>Notifications and state (hooks)</h3>
+      <p>Add to <code>~/.claude/settings.json</code> (or a project's <code>.claude/settings.json</code>). When Claude asks for permission or input, the row shows Needs Input and the pane lights up; when a turn ends it shows Done, and Working again once you answer. <code>SubagentStart</code> / <code>SubagentStop</code> feed the subagent cards and the “Sub 3” count in the sidebar.</p>
+<pre><code>{
+  "hooks": {
+    "Notification": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "SubagentStart": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "SubagentStop": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ]
+  }
+}</code></pre>
+      <h3>Usage and limits (status line)</h3>
+      <p>Add one line to your status-line script after it reads its input (<code>input=$(cat)</code>). The sidebar then shows model, context, cost and the 5-hour / 7-day limits. Session resume needs this too.</p>
+<pre><code>[ -n "$CMDS_PANE_ID" ] &amp;&amp; command -v cmds &gt;/dev/null 2&gt;&amp;1 &amp;&amp; printf '%s' "$input" | cmds hook claude-status &gt;/dev/null 2&gt;&amp;1</code></pre>
+      <p>Without a status-line script, <code>"statusLine": {"type": "command", "command": "cmds hook claude-status"}</code> works as well (the status line then stays empty).</p>
+      <h3>Skill and Codex</h3>
+      <ul>
+        <li>Claude Code skill: copy <code>integrations/claude/skills/cmds/SKILL.md</code> to <code>~/.claude/skills/cmds/</code>, and Claude uses helper panes, the browser and previews without stealing your focus.</li>
+        <li>Codex: usage needs no setup. For notifications set <code>notifications = true</code>, <code>notification_method = "osc9"</code> and <code>notification_condition = "always"</code> under <code>[tui]</code> in <code>~/.codex/config.toml</code>.</li>
+      </ul>
+      <div class="split">
+        <div>
+          <h3>Reading the sidebar</h3>
+          <ul>
+            <li><strong>Working</strong> (blue), <strong>Needs Input</strong> (orange), <strong>Done</strong> (green), <strong>Idle</strong> and <strong>Stopped</strong> (grey)</li>
+            <li>The second line is the agent's task (Claude Code's title), with “Sub 3” while subagents run</li>
+            <li>Model, context use and the session's cost</li>
+            <li>At the bottom: account limits (5-hour, 7-day, Claude's spend limit) and the Mac's CPU and memory; orange from 80 %, red from 95 %</li>
+          </ul>
+        </div>
+        <figure>
+          <img src="/img/en-sidebar.webp" width="374" height="1600" loading="lazy" class="sidebar-shot" alt="Close-up of the sidebar: workspaces that are Working, Needs Input and Done, each with Claude's model, context and cost; limit meters at the bottom.">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="iphone">
+    <div class="wrap narrow">
+      <h2><span class="step-num">7</span>Pairing an iPhone/iPad</h2>
+      <ol>
+        <li>On the Mac choose <strong>cmds › Pair iPhone/iPad…</strong>. The window shows a QR code and a 6-digit code (valid only while it is open).</li>
+        <li>In the companion tap <strong>Scan Pairing Code</strong> and scan the QR code. Without the camera, pick the Mac, compare its identity and enter the 6-digit code.</li>
+        <li>Once connected you see the Mac's workspaces. Open one to see its terminal live and answer with the key bar or the input field.</li>
+      </ol>
+      <p>Not on the same network? Without Wi‑Fi the phone uses Bluetooth LE, and away from home it goes through your own SSH server set up under cmds › Remote Access via SSH…. Every path carries the same TLS session pinned to your Mac's certificate.</p>
+      <!-- TODO(release): add how to get the app once it is on the App Store / TestFlight -->
+      <div class="phones">
+        <figure>
+          <img src="/img/en-ios-connect-600.webp" width="600" height="1304" loading="lazy" alt="The Connect to Mac screen on an iPhone: Scan Pairing Code, Macs on this network, a manual address field and Try with demo data.">
+          <figcaption>First screen</figcaption>
+        </figure>
+        <figure>
+          <img src="/img/en-ios-list-600.webp" width="600" height="1304" loading="lazy" alt="The workspace list on an iPhone (demo data).">
+          <figcaption>Workspace list</figcaption>
+        </figure>
+        <figure>
+          <img src="/img/en-ios-pane-600.webp" width="600" height="1304" loading="lazy" alt="A terminal open on the iPhone (demo data): Claude Code's question and the key bar.">
+          <figcaption>A pane</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="ssh">
+    <div class="wrap narrow">
+      <h2><span class="step-num">8</span>SSH workspaces</h2>
+      <ul>
+        <li><kbd>⇧⌘N</kbd> (File › New SSH Workspace…) asks for a host, completed from <code>~/.ssh/config</code>; your keys and jump hosts work as usual.</li>
+        <li>cmds forwards a restricted socket over the same SSH connection. Run <strong>Pane › Install Remote Helper…</strong> once, and <code>cmds notify</code> and the Claude Code hooks work on the server too: notifications and usage reach your sidebar.</li>
+        <li>When the connection drops the pane says “Disconnected”; <kbd>⌘R</kbd> or Reconnect runs the same command again.</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/en-ssh-800.webp 800w, /img/en-ssh-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/en-ssh-1600.webp" width="1600" height="1000" loading="lazy" alt="The SSH workspace build-server: “Disconnected — ssh build.example.invalid” in the middle of the pane with Close Pane and Reconnect (⌘R) buttons.">
+        </picture>
+        <figcaption>The disconnect overlay (the demo connects to a host that does not exist).</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="shortcuts">
+    <div class="wrap narrow">
+      <h2><span class="step-num">9</span>Keyboard shortcuts</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Action</th><th scope="col">Key</th></tr></thead>
+          <tbody>
+            <tr><td>New workspace / new SSH workspace</td><td><kbd>⌘N</kbd> / <kbd>⇧⌘N</kbd></td></tr>
+            <tr><td>Select workspace 1–9</td><td><kbd>⌘1</kbd> … <kbd>⌘9</kbd></td></tr>
+            <tr><td>Next / previous workspace</td><td><kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd>, <kbd>⌃Tab</kbd> / <kbd>⌃⇧Tab</kbd></td></tr>
+            <tr><td>Rename workspace</td><td><kbd>⇧⌘R</kbd></td></tr>
+            <tr><td>Split right / down</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
+            <tr><td>Move between panes</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
+            <tr><td>Zoom pane (tile)</td><td><kbd>⇧⌘↩</kbd></td></tr>
+            <tr><td>Tile all workspaces</td><td><kbd>⌃⌘T</kbd></td></tr>
+            <tr><td>Jump to latest attention</td><td><kbd>⇧⌘U</kbd></td></tr>
+            <tr><td>Browser split / open in preview</td><td><kbd>⇧⌘B</kbd> / <kbd>⇧⌘O</kbd></td></tr>
+            <tr><td>Address bar / reload (reconnect SSH) / back / forward</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>
+            <tr><td>Close pane / close workspace</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
+            <tr><td>Toggle sidebar / compact sidebar</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>
+            <tr><td>Filter workspaces</td><td><kbd>⌥⌘F</kbd></td></tr>
+            <tr><td>Bigger / smaller / actual size</td><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td></tr>
+            <tr><td>Settings</td><td><kbd>⌘,</kbd></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <p>Operated by N.N. LLC (合同会社N.N.)<br>Contact: <a href="mailto:info@n-n.tokyo">info@n-n.tokyo</a></p>
+      <p>© 2026 N.N. LLC. cmds is open source software under the GPL-3.0.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="/en/">Home</a>
+      <a href="/en/privacy/">Privacy policy</a>
+      <a href="/guide/" hreflang="ja" lang="ja">日本語</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>プライバシーポリシー — cmds</title>
+<meta name="description" content="cmds（Mac アプリ、iPhone/iPad アプリ）と本サイトのプライバシーポリシー。">
+<link rel="canonical" href="https://cmds.n-n.tokyo/privacy/">
+<link rel="alternate" hreflang="ja" href="https://cmds.n-n.tokyo/privacy/">
+<link rel="alternate" hreflang="en" href="https://cmds.n-n.tokyo/en/privacy/">
+<link rel="alternate" hreflang="x-default" href="https://cmds.n-n.tokyo/en/privacy/">
+<meta name="theme-color" content="#111317">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site-1.css">
+</head>
+<body>
+<a class="skip" href="#main">本文へ移動</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/img/icon-256.png" alt="" width="32" height="32">cmds</a>
+    <nav class="site-nav" aria-label="メインメニュー">
+      <a href="/#features">機能</a>
+      <a href="/guide/">使い方</a>
+      <a href="/#download">ダウンロード</a>
+      <a class="lang" href="/en/privacy/" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="wrap narrow prose">
+  <h1>プライバシーポリシー</h1>
+  <!-- TODO(release): 公開前に会長の確認を受ける（nn-public）。 -->
+  <p>合同会社N.N.（以下「当社」）は、cmds の Mac アプリ、iPhone/iPad アプリ（以下「本アプリ」）および本サイト（cmds.n-n.tokyo）における情報の取り扱いを次のとおり定めます。</p>
+
+  <h2>1. 本アプリが収集する情報</h2>
+  <p>本アプリは、当社またはその他の第三者に対して情報を送信しません。テレメトリ、利用状況の解析、クラッシュレポートの自動送信、広告、アカウント登録の仕組みはありません。</p>
+
+  <h2>2. お使いの端末に保存される情報</h2>
+  <ul>
+    <li>ワークスペースの構成、各ペインのディレクトリ・URL・プレビュー中のファイル・SSH ホスト、再開用のエージェントのセッション ID などは、Mac の <code>~/Library/Application Support/cmds/</code> に保存されます。</li>
+    <li>iPhone/iPad との同期用の鍵と証明書は Mac のキーチェーンに、ペアリングした端末の情報（トークンはハッシュのみ）は上記のフォルダに保存されます。</li>
+    <li>設定（言語、スリープ防止など）は macOS / iOS の標準の設定領域に保存されます。</li>
+  </ul>
+  <p>これらはアプリを削除し、上記のデータを消すことでいつでも削除できます。</p>
+
+  <h2>3. AI コーディングエージェントの情報</h2>
+  <p>本アプリは、Claude Code のフックとステータスラインから渡される情報（イベント名、通知の文、モデル、コンテキスト、料金、利用上限など）と、Codex のセッションファイルのうちセッション ID・ディレクトリ・使用量・モデルを Mac の中で読み取り、画面に表示します。プロンプトは読み取りません。会話の内容は、通知として表示する Claude の最後の返答の 1 行目を除いて扱いません。サブエージェントについては、その記録ファイルの末尾から直近のツール名と短い対象、トークン数だけを読み取ります。これらの情報は Mac の外へは、あなたがペアリングした iPhone/iPad への同期以外では送られません。</p>
+
+  <h2>4. iPhone/iPad との同期</h2>
+  <p>同期は、あなたの Mac とあなたがペアリングした iPhone/iPad の間で、Mac の証明書にピン留めした TLS 1.3 で暗号化された接続を通じて直接行われます。経路はローカルネットワーク、Bluetooth LE、またはあなたが設定した SSH サーバーのいずれかで、当社のサーバーは介在しません。SSH サーバーを中継に使う場合、そのサーバーは暗号化されたデータを中継するだけで内容を読むことはできません。</p>
+
+  <h2>5. アプリ内ブラウザ</h2>
+  <p>アプリ内ブラウザで開いたウェブサイトには、通常のブラウザと同様にあなたの IP アドレスなどが送信され、各サイトのポリシーが適用されます。アドレスバーに URL ではない語句を入力すると、Google 検索に送信されます。</p>
+
+  <h2>6. 本サイト</h2>
+  <p>本サイトは Google の Firebase Hosting で配信しています。配信のために、Google がアクセスの記録（IP アドレス、ユーザーエージェント、日時など）を処理することがあります。本サイトは Cookie、アクセス解析、広告を使用しません。</p>
+
+  <h2>7. お問い合わせ</h2>
+  <p>本ポリシーに関するお問い合わせは、合同会社N.N.（<a href="mailto:info@n-n.tokyo">info@n-n.tokyo</a>）までご連絡ください。</p>
+
+  <h2>8. 改定</h2>
+  <p>本ポリシーを改定する場合は、本ページで告知します。</p>
+  <p>制定日：2026 年 10 月 30 日</p>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <p>運営：合同会社N.N.（N.N. LLC.）<br>お問い合わせ：<a href="mailto:info@n-n.tokyo">info@n-n.tokyo</a></p>
+    </div>
+    <nav aria-label="フッター">
+      <a href="/">トップ</a>
+      <a href="/guide/">使い方</a>
+      <a href="/en/privacy/" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>
