@@ -2,6 +2,9 @@
 
 `cmds` controls the running app over its Unix socket (JSON lines, see [ARCHITECTURE.md](ARCHITECTURE.md#socket-api-json-lines-see-cmdscorerpcswift)).
 
+Output and error messages are always English, whatever the app's language: scripts and agents parse them
+(see [ARCHITECTURE.md](ARCHITECTURE.md#localization)).
+
 ## Getting it
 
 - Every terminal opened by cmds has the bundled CLI (`cmds.app/Contents/Resources/bin/cmds`) first on its `PATH`.

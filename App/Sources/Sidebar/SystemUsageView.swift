@@ -236,7 +236,7 @@ final class CompactUsageView: NSView {
 @MainActor
 enum KeepAwakeIndicator {
     static func makeButton() -> NSButton {
-        let button = NSButton(title: "Awake (lid closed OK)", target: KeepAwakeManager.shared,
+        let button = NSButton(title: String(localized: "Awake (lid closed OK)"), target: KeepAwakeManager.shared,
                               action: #selector(KeepAwakeManager.toggleLidClose(_:)))
         button.isBordered = false
         button.bezelStyle = .inline
@@ -254,16 +254,14 @@ enum KeepAwakeIndicator {
         let active = status.lidCloseDisabled == true
         if button.isHidden == active { button.isHidden = !active }
         guard active else { return }
-        let title = compact ? "" : "Awake (lid closed OK)"
+        let title = compact ? "" : String(localized: "Awake (lid closed OK)")
         if button.title != title {
             button.title = title
             button.imagePosition = compact ? .imageOnly : .imageLeading
         }
         let tip = status.lidCloseByCmds == true
-            ? "Awake (lid closed OK): cmds turned sleep off (pmset disablesleep 1). Closing the lid does not sleep this "
-                + "Mac until you turn it off or quit cmds. Click to turn it off."
-            : "Awake (lid closed OK): sleep is disabled system-wide, not by cmds (SleepDisabled = 1). "
-                + "Restore with: \(SleepDisabledCommand.manualRestore)"
+            ? String(localized: "Awake (lid closed OK): cmds turned sleep off (pmset disablesleep 1). Closing the lid does not sleep this Mac until you turn it off or quit cmds. Click to turn it off.")
+            : String(localized: "Awake (lid closed OK): sleep is disabled system-wide, not by cmds (SleepDisabled = 1). Restore with: \(SleepDisabledCommand.manualRestore)")
         if button.toolTip != tip {
             button.toolTip = tip
             button.setAccessibilityLabel(tip)

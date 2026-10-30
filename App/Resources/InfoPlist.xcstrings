@@ -1,0 +1,40 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "NSBluetoothAlwaysUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmds lets the iOS companion connect over Bluetooth when Wi‑Fi is off. The connection stays end-to-end encrypted."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wi‑Fi がオフのとき、iOS コンパニオンが Bluetooth で接続できるようにします。接続はエンドツーエンドで暗号化されたままです。"
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmds syncs terminals to the iOS companion over the local network."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmds はローカルネットワーク経由で iOS コンパニオンとターミナルを同期します。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

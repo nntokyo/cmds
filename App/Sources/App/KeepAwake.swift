@@ -167,16 +167,14 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
         if now != true { batteryAlertShown = false; return }
         guard lid.shouldOfferTurnOff(onBattery: true), !batteryAlertShown else { return }
         batteryAlertShown = true
-        postNotification(title: "Mac is on battery", body: "cmds keeps it awake with the lid closed. "
-                         + "A closed Mac that never sleeps drains the battery and can overheat in a bag.")
+        postNotification(title: String(localized: "Mac is on battery"),
+                         body: String(localized: "cmds keeps it awake with the lid closed. A closed Mac that never sleeps drains the battery and can overheat in a bag."))
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Turn off Keep Awake With Lid Closed?"
-        alert.informativeText = "This Mac switched to battery power. While the setting is on, closing the lid does not "
-            + "put it to sleep — in a bag it keeps running, drains the battery and can get hot. macOS will ask for "
-            + "your administrator password to turn it off."
-        alert.addButton(withTitle: "Turn Off")
-        alert.addButton(withTitle: "Keep Awake")
+        alert.messageText = String(localized: "Turn off Keep Awake With Lid Closed?")
+        alert.informativeText = String(localized: "This Mac switched to battery power. While the setting is on, closing the lid does not put it to sleep — in a bag it keeps running, drains the battery and can get hot. macOS will ask for your administrator password to turn it off.")
+        alert.addButton(withTitle: String(localized: "Turn Off"))
+        alert.addButton(withTitle: String(localized: "Keep Awake"))
         present(alert) { response in
             if response == .alertFirstButtonReturn { KeepAwakeManager.shared.disableLid() }
         }
@@ -187,13 +185,11 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
     private func offerRestoreFromEarlierRun() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Sleep is still disabled from an earlier cmds session"
-        alert.informativeText = "cmds turned on \"Keep Awake With Lid Closed\" before and did not turn it off (it quit "
-            + "unexpectedly, or the password dialog was cancelled). Your Mac currently does not sleep when you close the "
-            + "lid. Restore normal sleep now? macOS will ask for your administrator password.\n\n"
-            + "You can also run: \(SleepDisabledCommand.manualRestore)"
-        alert.addButton(withTitle: "Restore Sleep")
-        alert.addButton(withTitle: "Keep It Disabled")
+        alert.messageText = String(localized: "Sleep is still disabled from an earlier cmds session")
+        alert.informativeText = String(localized: "cmds turned on “Keep Awake With Lid Closed” before and did not turn it off (it quit unexpectedly, or the password dialog was cancelled). Your Mac currently does not sleep when you close the lid. Restore normal sleep now? macOS will ask for your administrator password.")
+            + "\n\n" + String(localized: "You can also run: \(SleepDisabledCommand.manualRestore)")
+        alert.addButton(withTitle: String(localized: "Restore Sleep"))
+        alert.addButton(withTitle: String(localized: "Keep It Disabled"))
         present(alert) { response in
             if response == .alertFirstButtonReturn { KeepAwakeManager.shared.disableLid() }
         }
@@ -206,9 +202,8 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
             disableLid()
         case .onOutsideCmds:
             let alert = NSAlert()
-            alert.messageText = "Sleep is already disabled on this Mac"
-            alert.informativeText = "Closing the lid already does not sleep this Mac, but the setting was not made by "
-                + "cmds, so cmds leaves it alone. To restore normal sleep, run:\n\(SleepDisabledCommand.manualRestore)"
+            alert.messageText = String(localized: "Sleep is already disabled on this Mac")
+            alert.informativeText = String(localized: "Closing the lid already does not sleep this Mac, but the setting was not made by cmds, so cmds leaves it alone. To restore normal sleep, run:\n\(SleepDisabledCommand.manualRestore)")
             present(alert) { _ in }
             changed()
         case .off, .unknown:
@@ -219,18 +214,14 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
     private func confirmEnable() {
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Keep this Mac awake with the lid closed?"
-        var text = "Agents keep running when you close the lid. cmds changes a system-wide power setting "
-            + "(pmset -a disablesleep 1) and changes it back when you turn this off or quit cmds. macOS asks for "
-            + "your administrator password each time; cmds never sees it.\n\n"
-            + "Caution: a closed Mac that never sleeps keeps running in a bag — it can overheat and drain the battery. "
-            + "cmds asks you to turn this off when the Mac switches to battery. If cmds crashes or is force-quit, sleep "
-            + "stays disabled until cmds starts again (it then offers to restore it) or you run "
-            + "\(SleepDisabledCommand.manualRestore)."
-        if onBattery == true { text += "\n\nThis Mac is on battery power right now." }
+        alert.messageText = String(localized: "Keep this Mac awake with the lid closed?")
+        var text = String(localized: "Agents keep running when you close the lid. cmds changes a system-wide power setting (pmset -a disablesleep 1) and changes it back when you turn this off or quit cmds. macOS asks for your administrator password each time; cmds never sees it.")
+            + "\n\n"
+            + String(localized: "Caution: a closed Mac that never sleeps keeps running in a bag — it can overheat and drain the battery. cmds asks you to turn this off when the Mac switches to battery. If cmds crashes or is force-quit, sleep stays disabled until cmds starts again (it then offers to restore it) or you run \(SleepDisabledCommand.manualRestore).")
+        if onBattery == true { text += "\n\n" + String(localized: "This Mac is on battery power right now.") }
         alert.informativeText = text
-        alert.addButton(withTitle: "Keep Awake…")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: String(localized: "Keep Awake…"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
         present(alert) { response in
             guard response == .alertFirstButtonReturn else { return }
             KeepAwakeManager.shared.run { try $0.enable() }
@@ -255,8 +246,8 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
             return
         } catch {
             let alert = NSAlert()
-            alert.messageText = "Could not change the sleep setting"
-            alert.informativeText = "\(error)\n\nTo restore normal sleep by hand, run: \(SleepDisabledCommand.manualRestore)"
+            alert.messageText = String(localized: "Could not change the sleep setting")
+            alert.informativeText = "\(error)\n\n" + String(localized: "To restore normal sleep by hand, run: \(SleepDisabledCommand.manualRestore)")
             present(alert) { _ in }
         }
     }
@@ -281,14 +272,12 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
     // MARK: Menu
 
     static func items() -> [NSMenuItem] {
-        let idle = NSMenuItem(title: "Prevent Idle Sleep", action: #selector(toggleIdle(_:)), keyEquivalent: "")
-        idle.toolTip = "While cmds runs, the Mac does not go to sleep when idle (the display may still turn off). "
-            + "Closing the lid still sleeps it."
-        let display = NSMenuItem(title: "Keep Display Awake", action: #selector(toggleDisplay(_:)), keyEquivalent: "")
-        display.toolTip = "While cmds runs, the display does not turn off when idle."
-        let lid = NSMenuItem(title: "Keep Awake With Lid Closed…", action: #selector(toggleLidClose(_:)), keyEquivalent: "")
-        lid.toolTip = "Turns system sleep off (pmset disablesleep 1, asks for your administrator password) until you "
-            + "turn this off or quit cmds."
+        let idle = NSMenuItem(title: String(localized: "Prevent Idle Sleep"), action: #selector(toggleIdle(_:)), keyEquivalent: "")
+        idle.toolTip = String(localized: "While cmds runs, the Mac does not go to sleep when idle (the display may still turn off). Closing the lid still sleeps it.")
+        let display = NSMenuItem(title: String(localized: "Keep Display Awake"), action: #selector(toggleDisplay(_:)), keyEquivalent: "")
+        display.toolTip = String(localized: "While cmds runs, the display does not turn off when idle.")
+        let lid = NSMenuItem(title: String(localized: "Keep Awake With Lid Closed…"), action: #selector(toggleLidClose(_:)), keyEquivalent: "")
+        lid.toolTip = String(localized: "Turns system sleep off (pmset disablesleep 1, asks for your administrator password) until you turn this off or quit cmds.")
         for item in [idle, display, lid] { item.target = shared }
         return [idle, display, lid]
     }
@@ -308,15 +297,15 @@ final class KeepAwakeManager: NSObject, NSMenuItemValidation {
             switch lid.state {
             case .onByCmds:
                 menuItem.state = .on
-                menuItem.title = "Keep Awake With Lid Closed"
+                menuItem.title = String(localized: "Keep Awake With Lid Closed")
             case .onOutsideCmds:
                 menuItem.state = .mixed
-                menuItem.title = "Keep Awake With Lid Closed (set outside cmds)"
+                menuItem.title = String(localized: "Keep Awake With Lid Closed (set outside cmds)")
             case .off, .unknown:
                 menuItem.state = .off
-                menuItem.title = "Keep Awake With Lid Closed…"
+                menuItem.title = String(localized: "Keep Awake With Lid Closed…")
             }
-            if !lid.isAvailable { menuItem.title = "Keep Awake With Lid Closed (not in test instances)" }
+            if !lid.isAvailable { menuItem.title = String(localized: "Keep Awake With Lid Closed (not in test instances)") }
             return lid.isAvailable && !busy
         default:
             return true

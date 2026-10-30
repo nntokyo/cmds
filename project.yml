@@ -8,6 +8,11 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
+    # Localization (docs/ARCHITECTURE.md "Localization"): English is the development language, plus Japanese.
+    # Strings live in each app's Localizable.xcstrings / InfoPlist.xcstrings.
+    SWIFT_EMIT_LOC_STRINGS: YES
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    DEVELOPMENT_LANGUAGE: en
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
     DEVELOPMENT_TEAM: ""
@@ -70,6 +75,8 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: cmds
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ja]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSMinimumSystemVersion: "14.0"
@@ -130,6 +137,8 @@ targets:
       path: iOS/Info.plist
       properties:
         CFBundleDisplayName: cmds
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ja]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}

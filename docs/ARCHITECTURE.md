@@ -210,6 +210,33 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   builds answer `debug.preview_snapshot {pane}` → `{"png_base64"}` with a picture of a preview pane drawn off screen
   (web content via WKWebView's snapshot; Quick Look's out-of-process view stays blank).
 
+## Localization
+
+English is the development language; Japanese (`ja`) is the other localization. Each app has its own String
+Catalogs: `App/Resources/Localizable.xcstrings` + `InfoPlist.xcstrings` (Mac) and the same in `iOS/Resources`
+(permission texts: local network, Bluetooth, camera). `CFBundleLocalizations` is `[en, ja]`.
+
+- **Language**: follows the system (macOS: System Settings › General › Language & Region, which also has per-app
+  languages; iOS: device language or Settings › cmds › Language). The Mac app also has cmds › Language › System /
+  日本語 / English (`AppLanguage`): it sets `AppleLanguages` in the app's own defaults domain (System removes it) and
+  offers to relaunch. An isolated instance never writes it; launch it with `-AppleLanguages '(ja)'` or `'(en)'`.
+- **Adding a string**: AppKit takes `String`, so write `String(localized: "Split Right")`; SwiftUI `Text("…")`,
+  `Button("…")`, `Label`, `navigationTitle` take `LocalizedStringKey` and need nothing. Interpolate instead of
+  concatenating (`String(localized: "Resume All (\(count))")` → key `Resume All (%lld)`; String → `%@`, Int → `%lld`);
+  translations reorder with `%1$@`/`%2$lld`. Format numbers to strings first (a `Double` becomes `%lf`). Helpers
+  that take `String.LocalizationValue` (`MainMenu.item`) are extracted at their call sites. Then build and run
+  `scripts/l10n-sync.sh` (or build in Xcode, which syncs the catalogs itself) and add the Japanese in Xcode's catalog
+  editor or the JSON. English plurals go in the catalog's plural variations (`%lld processes…`).
+- **Stays English**: the socket API, `cmds` CLI output and its error messages (scripts parse them; also what
+  `--json` and AGENTS.md document), sync protocol strings, identifiers, file names, commands and log lines. Status
+  texts that the UI shows and the API reports (`SyncServer`/`SyncBluetoothPeripheral`/`SyncRemoteAccess` status) are
+  a `LocalizedStatus`: `.localized` for the UI, `.english` for `sync.status`. Default pane/workspace titles
+  ("Terminal", "Browser") and text from `CmdsCore` formatters (agent usage lines, `AgentSession.summary`, error
+  descriptions) are shared with the CLI and stay English; the banner builds its own localized summary.
+- **Japanese style**: Apple's current terms (設定, ウインドウ, しまう, 取り消す/やり直す, すべてを選択), full-width
+  （）and ：in prose, keyboard shortcuts unchanged, product/protocol names (cmds, SSH, Wi‑Fi, Bluetooth, TLS) as is.
+- **UI tests** find elements by accessibility identifier, never by visible (localized) text.
+
 ## iOS companion sync
 
 Mac runs a WebSocket server over TLS 1.3 (Network.framework) advertised as `_cmds._tcp`, presenting its own
