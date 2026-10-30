@@ -34,6 +34,8 @@ enum MainMenu {
         menu.addItem(.separator())
         SyncMenuActions.items().forEach(menu.addItem)
         menu.addItem(.separator())
+        KeepAwakeManager.items().forEach(menu.addItem)
+        menu.addItem(.separator())
         let services = NSMenu(title: "Services")
         NSApp.servicesMenu = services
         let servicesItem = NSMenuItem(title: "Services", action: nil, keyEquivalent: "")

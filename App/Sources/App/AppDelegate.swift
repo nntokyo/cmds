@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SyncServer.shared.startIfEnabled()
         SyncBluetoothPeripheral.shared.activate()
         SyncRemoteAccess.shared.activate()
+        KeepAwakeManager.shared.start()
         // An isolated test instance (CMDS_SUPPORT_DIR) must not take keyboard focus from the app in use.
         if CmdsEnv.supportDirectoryOverride() == nil { NSApp.activate() }
     }
@@ -42,6 +43,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SyncRemoteAccess.shared.shutdown()
         SyncServer.shared.stop()
         controller.saveSession()
+        // Last: may show macOS's administrator dialog to restore lid-close sleep.
+        KeepAwakeManager.shared.stop()
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {

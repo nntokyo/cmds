@@ -12,6 +12,8 @@ final class SystemUsageView: NSView {
     private let agentStack = NSStackView()
     private var agentRows: [AgentKind: AgentLimitsRow] = [:]
     private let stack = NSStackView()
+    /// "Awake (lid closed OK)" while closing the lid does not sleep the Mac; click to turn it off.
+    private let awakeButton = KeepAwakeIndicator.makeButton()
 
     /// Title column: "CPU"/"Mem" alone, wide enough for "Claude"/"Codex" when agent rows show (meters stay aligned).
     static let titleWidth: CGFloat = 26
@@ -23,7 +25,7 @@ final class SystemUsageView: NSView {
         agentStack.alignment = .leading
         agentStack.spacing = 5
         agentStack.isHidden = true
-        stack.setViews([agentStack, cpuRow, memoryRow], in: .top)
+        stack.setViews([awakeButton, agentStack, cpuRow, memoryRow], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 5
@@ -73,6 +75,10 @@ final class SystemUsageView: NSView {
         let width = agentLimits.isEmpty ? Self.titleWidth : Self.agentTitleWidth
         cpuRow.titleWidth = width
         memoryRow.titleWidth = width
+    }
+
+    func update(keepAwake: KeepAwakeStatus) {
+        KeepAwakeIndicator.apply(keepAwake, to: awakeButton, compact: false)
     }
 
     func update(sample: SystemSample?) {
@@ -139,6 +145,8 @@ final class CompactUsageView: NSView {
     private let memoryMeter = MeterView()
     private var agentText: [String] = []
     private var systemText = "Measuring CPU and memory…"
+    private var awakeText: String?
+    private let awakeButton = KeepAwakeIndicator.makeButton()
 
     override init(frame: NSRect) {
         super.init(frame: frame)
@@ -153,6 +161,7 @@ final class CompactUsageView: NSView {
             stack.topAnchor.constraint(equalTo: topAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
+        stack.addView(awakeButton, in: .top)
         for meter in [cpuMeter, memoryMeter] { add(meter) }
         setAccessibilityElement(true)
         setAccessibilityRole(.group)
@@ -183,6 +192,14 @@ final class CompactUsageView: NSView {
         updateTooltip()
     }
 
+    func update(keepAwake: KeepAwakeStatus) {
+        KeepAwakeIndicator.apply(keepAwake, to: awakeButton, compact: true)
+        let text = awakeButton.isHidden ? nil : awakeButton.toolTip
+        guard text != awakeText else { return }
+        awakeText = text
+        updateTooltip()
+    }
+
     func update(agentLimits: [AgentLimits]) {
         let kinds = agentLimits.map(\.agent)
         for (kind, meter) in agentMeters where !kinds.contains(kind) {
@@ -207,10 +224,51 @@ final class CompactUsageView: NSView {
     }
 
     private func updateTooltip() {
-        let text = (agentText + [systemText]).joined(separator: "\n")
+        let text = ([awakeText].compactMap { $0 } + agentText + [systemText]).joined(separator: "\n")
         guard text != toolTip else { return }
         toolTip = text
         setAccessibilityValue(text)
+    }
+}
+
+/// Footer indicator while closing the lid does not sleep the Mac (`SleepDisabled`): moon icon + "Awake (lid closed OK)"
+/// (icon only in the compact rail). Orange because a closed Mac that never sleeps can overheat in a bag.
+/// Clicking it turns the option off (if cmds turned it on) or explains the setting.
+@MainActor
+enum KeepAwakeIndicator {
+    static func makeButton() -> NSButton {
+        let button = NSButton(title: "Awake (lid closed OK)", target: KeepAwakeManager.shared,
+                              action: #selector(KeepAwakeManager.toggleLidClose(_:)))
+        button.isBordered = false
+        button.bezelStyle = .inline
+        button.font = .systemFont(ofSize: 10, weight: .medium)
+        button.contentTintColor = .systemOrange
+        button.image = NSImage(systemSymbolName: "moon.zzz", accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: 10, weight: .medium))
+        button.imagePosition = .imageLeading
+        button.imageHugsTitle = true
+        button.isHidden = true
+        return button
+    }
+
+    static func apply(_ status: KeepAwakeStatus, to button: NSButton, compact: Bool) {
+        let active = status.lidCloseDisabled == true
+        if button.isHidden == active { button.isHidden = !active }
+        guard active else { return }
+        let title = compact ? "" : "Awake (lid closed OK)"
+        if button.title != title {
+            button.title = title
+            button.imagePosition = compact ? .imageOnly : .imageLeading
+        }
+        let tip = status.lidCloseByCmds == true
+            ? "Awake (lid closed OK): cmds turned sleep off (pmset disablesleep 1). Closing the lid does not sleep this "
+                + "Mac until you turn it off or quit cmds. Click to turn it off."
+            : "Awake (lid closed OK): sleep is disabled system-wide, not by cmds (SleepDisabled = 1). "
+                + "Restore with: \(SleepDisabledCommand.manualRestore)"
+        if button.toolTip != tip {
+            button.toolTip = tip
+            button.setAccessibilityLabel(tip)
+        }
     }
 }
 
