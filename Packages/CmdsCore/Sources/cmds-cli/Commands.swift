@@ -74,6 +74,8 @@ extension CLI {
                     CPU as in Activity Monitor (100% = one core, so it can exceed 100%), memory = physical footprint.
                     The system line is the share of all cores, memory used / installed and the memory pressure
                     (normal, warning, critical). Values are sampled every 2 s.
+                    The awake line shows whether cmds blocks idle sleep and whether closing the lid sleeps the Mac
+                    (cmds › Keep Awake With Lid Closed; JSON: keepAwake {idleAssertion, lidCloseDisabled, …}).
                     --watch (-w) refreshes every 2 s, or the given seconds, until interrupted; with --json it prints
                     one JSON object per line.
                     """,
