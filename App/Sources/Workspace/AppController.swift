@@ -90,6 +90,8 @@ final class AppController {
         set { UserDefaults.standard.set(newValue, forKey: "nextPaneNumber") }
     }
     private var saveWorkItem: DispatchWorkItem?
+    /// Polls panes with a queued agent-session resume until their shell prompt is ready (AppController+AgentSessions).
+    var resumeTimer: Timer?
 
     var selectedWorkspace: Workspace? { selectedWorkspaceID.flatMap(workspace(id:)) }
     var focusedPane: Pane? { selectedWorkspace?.focusedPane }
@@ -168,6 +170,7 @@ final class AppController {
         let appeared = pane.agentUsage?.agent != usage.agent
         pane.agentUsage = usage
         pane.agentSource = .report(process: process)
+        rememberAgentSession(pane, usage: usage)
         if appeared { emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id)) }
         scheduleAgentRefresh()
     }
@@ -204,17 +207,23 @@ final class AppController {
                 var source = pane.agentSource
                 switch source {
                 case .report(let process)?:
-                    let gone = process.map { !$0.isAlive }
-                        ?? (now.timeIntervalSince(usage?.updatedAt ?? now) > Self.unwatchedAgentTimeout)
+                    let exited = process.map { !$0.isAlive } ?? false
+                    let gone = exited || (process == nil && now.timeIntervalSince(usage?.updatedAt ?? now) > Self.unwatchedAgentTimeout)
                     if gone { (usage, source) = (nil, nil) }
+                    // Only a process seen exiting ends the session; an idle remote agent may still be running.
+                    if exited { forgetAgentSession(pane) }
                 case .codexSession?:
-                    if !codex.panes.contains(pane.id) { (usage, source) = (nil, nil) }
+                    if !codex.panes.contains(pane.id) {
+                        (usage, source) = (nil, nil)
+                        forgetAgentSession(pane)
+                    }
                 case nil:
                     break
                 }
                 if source == nil || source == .codexSession, let fresh = codex.usage[pane.id] {
                     usage = fresh
                     source = .codexSession
+                    if fresh != pane.agentUsage { rememberAgentSession(pane, usage: fresh) }
                 }
                 if var current = usage {
                     current.stale = now.timeIntervalSince(current.updatedAt) > Self.agentStaleAfter ? true : nil
@@ -230,7 +239,7 @@ final class AppController {
     }
 
     /// Reports arrive often; redraw usage labels (sidebar, phone) at most a few times a second.
-    private func scheduleAgentRefresh() {
+    func scheduleAgentRefresh() {
         guard !agentRefreshScheduled else { return }
         agentRefreshScheduled = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
@@ -572,6 +581,7 @@ final class AppController {
     func setRemoteLocation(paneID: String?, cwd: String?, branch: String?) throws {
         let pane = try resolvePane(paneID)
         guard let ssh = pane.ssh else { throw RPCError.invalidParams("pane \(pane.id) is not an SSH pane") }
+        pane.lastPromptReportAt = Date() // the remote shell is at its prompt (resume readiness)
         let cwd = cwd.flatMap { $0.isEmpty || $0.count > 4096 ? nil : $0 }
         let branch = branch.flatMap { $0.isEmpty || $0.count > 256 ? nil : $0 }
         guard cwd != nil && cwd != pane.workingDirectory || branch != ssh.remoteBranch else { return }
@@ -613,6 +623,8 @@ final class AppController {
         guard let ssh = pane.ssh, ssh.connected else { return }
         ssh.didDisconnect()
         if pane.agentUsage != nil {
+            // The agent on the server went with the connection: offer to resume it after reconnecting.
+            offerResumeAfterDisconnect(pane)
             pane.agentUsage = nil
             pane.agentSource = nil
             scheduleAgentRefresh()
@@ -718,10 +730,15 @@ final class AppController {
         }
         let states = workspaces.compactMap { workspace -> SessionState.WorkspaceState? in
             guard let root = workspace.root else { return nil }
+            let agentSessions = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneAgentSession? in
+                guard let pane = workspace.panes[id], let session = savedAgentSession(pane) else { return nil }
+                return SessionState.PaneAgentSession(paneIndex: index, session: session)
+            }
             return SessionState.WorkspaceState(
                 title: workspace.customTitle, workingDirectory: workspace.workingDirectory,
                 layout: node(root, in: workspace),
-                focusedPaneIndex: workspace.focusedPaneID.flatMap { root.paneIDs.firstIndex(of: $0) })
+                focusedPaneIndex: workspace.focusedPaneID.flatMap { root.paneIDs.firstIndex(of: $0) },
+                agentSessions: agentSessions.isEmpty ? nil : agentSessions)
         }
         return SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
     }
@@ -769,6 +786,7 @@ final class AppController {
                 workspace.gitBranch = workspace.workingDirectory.flatMap(GitInfo.branch(at:))
             }
             workspaces.append(workspace)
+            restoreAgentSessions(saved.agentSessions, in: workspace)
         }
         selectedWorkspaceID = workspaces[safe: state.selectedIndex ?? 0]?.id ?? workspaces.first?.id
         emit(.workspaces)
@@ -879,7 +897,7 @@ final class AppController {
         UNUserNotificationCenter.current().add(request)
     }
 
-    private func resolveWorkspace(_ id: String?) throws -> Workspace {
+    func resolveWorkspace(_ id: String?) throws -> Workspace {
         if let id {
             guard let workspace = workspace(id: id) else { throw RPCError.notFound("workspace not found: \(id)") }
             return workspace
@@ -888,7 +906,7 @@ final class AppController {
         return workspace
     }
 
-    private func resolvePane(_ id: String?) throws -> Pane {
+    func resolvePane(_ id: String?) throws -> Pane {
         if let id {
             guard let pane = pane(id: id) else { throw RPCError.notFound("pane not found: \(id)") }
             return pane
@@ -904,7 +922,7 @@ final class AppController {
         return terminal
     }
 
-    private func emit(_ change: StateChange) {
+    func emit(_ change: StateChange) {
         subject.send(change)
         var userInfo: [String: Any] = ["change": change]
         if let id = change.workspaceID { userInfo["workspaceID"] = id }
@@ -913,7 +931,7 @@ final class AppController {
         scheduleSave()
     }
 
-    private func scheduleSave() {
+    func scheduleSave() {
         guard saveWorkItem == nil else { return }
         let item = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated { self?.saveSession() }

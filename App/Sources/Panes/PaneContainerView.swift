@@ -37,14 +37,31 @@ final class PaneContainerView: NSView {
         guard view !== content else { return }
         content.removeFromSuperview()
         content = view
-        pin(view, below: overlay ?? ring)
+        pin(view, below: overlay ?? banner ?? ring)
     }
 
     func setOverlay(_ view: NSView?) {
         guard view !== overlay else { return }
         overlay?.removeFromSuperview()
         overlay = view
-        if let view { pin(view, below: ring) }
+        if let view { pin(view, below: banner ?? ring) }
+    }
+
+    /// Slim bar along the top edge (agent session resume offer); above content and overlay, below the ring.
+    private(set) var banner: NSView?
+
+    func setBanner(_ view: NSView?) {
+        guard view !== banner else { return }
+        banner?.removeFromSuperview()
+        banner = view
+        guard let view else { return }
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view, positioned: .below, relativeTo: ring)
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            view.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -8),
+            view.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+        ])
     }
 
     private func pin(_ view: NSView, below sibling: NSView? = nil) {

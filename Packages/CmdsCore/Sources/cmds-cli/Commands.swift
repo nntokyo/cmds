@@ -34,6 +34,39 @@ extension CLI {
             let titles = Dictionary(workspaces.map { ($0.id, $0.title) }) { first, _ in first }
             print(Format.agents(list, titles: titles, currentPane: ctx.envPane), terminator: "")
         },
+        Command(name: "sessions", usage: "sessions [--pane P]",
+                summary: "List the AI agent sessions remembered per pane (resumable after cmds restarts).",
+                details: """
+                    One line per terminal pane: state (offered = from before the restart, waiting = resume queued until
+                    the shell prompt is ready, running, resumed), agent, session id, directory (and SSH host) and the
+                    command `cmds resume` types into the pane. See docs/AGENTS.md "Resuming sessions".
+                    """,
+                options: ["pane"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds sessions [--pane P]")
+            let result = try ctx.call("agent.sessions", ["pane": ctx.args[option: "pane"].json])
+            if ctx.json { return ctx.printJSON(result) }
+            let list = try perform { try result.decode(AgentSessionList.self) }
+            print(Format.agentSessions(list, currentPane: ctx.envPane), terminator: "")
+        },
+        Command(name: "resume", usage: "resume [--pane P | --all]",
+                summary: "Resume the agent session offered in a pane after a restart (default: the current pane).",
+                details: """
+                    Types `claude --resume <id>` or `codex resume <id>` (after `cd` to its directory) into the pane's own
+                    shell as soon as its prompt is ready — so running it in the pane itself works. --all resumes every
+                    offered session. Panes without an offered session, or already running an agent, are skipped.
+                    """,
+                options: ["pane"], flags: ["all"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds resume [--pane P | --all]")
+            let all = ctx.args.has("all")
+            if all, ctx.args[option: "pane"] != nil { throw CLIError.usage("give either --pane or --all") }
+            let result = try ctx.call("agent.resume", all ? ["all": .bool(true)] : ["pane": ctx.pane.json])
+            if ctx.json { return ctx.printJSON(result) }
+            let outcome = try perform { try result.decode(AgentResumeResult.self) }
+            for pane in outcome.queued { print("\(pane): resuming") }
+            for skipped in outcome.skipped { print("\(skipped.pane): skipped — \(skipped.reason)") }
+            if outcome.queued.isEmpty, outcome.skipped.isEmpty { print("no offered sessions") }
+            if outcome.queued.isEmpty, !outcome.skipped.isEmpty { throw CLIError.failure("nothing to resume") }
+        },
         Command(name: "stats", usage: "stats [--watch [seconds]]",
                 summary: "Show CPU and memory use of the Mac and of each workspace's processes.",
                 details: """

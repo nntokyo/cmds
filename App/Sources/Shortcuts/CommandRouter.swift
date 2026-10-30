@@ -1,4 +1,5 @@
 import AppKit
+import CmdsCore
 
 /// Target of all app-specific menu items. Menu items have explicit targets so key equivalents work
 /// regardless of which view (terminal, web view) is first responder.
@@ -72,6 +73,21 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             }
         }
         if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: open) } else { open(panel.runModal()) }
+    }
+
+    // MARK: Agent sessions
+
+    @objc func resumeAgentSession(_ sender: Any?) {
+        guard let pane = controller.focusedPane, controller.requestResume(pane) == nil else { return NSSound.beep() }
+    }
+
+    @objc func resumeAllAgentSessions(_ sender: Any?) {
+        _ = try? controller.resumeAgentSessions(paneID: nil, all: true)
+    }
+
+    @objc func setAgentResumeMode(_ sender: NSMenuItem) {
+        guard let raw = sender.representedObject as? String, let mode = AgentResumeMode(rawValue: raw) else { return }
+        AgentResumeSettings.mode = mode
     }
 
     @objc func focusLeft(_ sender: Any?) { windowController?.focusNeighbor(.left) }
@@ -156,6 +172,13 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             }
             menuItem.title = "Reload Page"
             return focusedBrowser != nil
+        case #selector(resumeAgentSession(_:)):
+            return controller.focusedPane?.resumeOffer != nil
+        case #selector(resumeAllAgentSessions(_:)):
+            return controller.pendingResumeCount > 0
+        case #selector(setAgentResumeMode(_:)):
+            menuItem.state = (menuItem.representedObject as? String) == AgentResumeSettings.mode.rawValue ? .on : .off
+            return true
         case #selector(installRemoteHelper(_:)):
             return controller.focusedPane?.ssh?.connected == true
         case #selector(browserFocusAddress(_:)),

@@ -1,4 +1,5 @@
 import AppKit
+import CmdsCore
 
 /// Builds the main menu. Shortcuts follow docs/ARCHITECTURE.md.
 @MainActor
@@ -77,6 +78,14 @@ enum MainMenu {
         menu.addItem(item("Compact Sidebar", #selector(CommandRouter.toggleCompactSidebar(_:)), "s", [.command, .control], target: router))
         menu.addItem(item("Zoom Pane", #selector(CommandRouter.toggleZoom(_:)), "\r", [.command, .shift], target: router))
         menu.addItem(.separator())
+        let resumeMenu = NSMenu(title: "Resume Agent Sessions on Launch")
+        for (title, mode) in [("Ask", AgentResumeMode.ask), ("Always", .always), ("Never", .never)] {
+            let entry = item(title, #selector(CommandRouter.setAgentResumeMode(_:)), "", target: router)
+            entry.representedObject = mode.rawValue
+            resumeMenu.addItem(entry)
+        }
+        menu.addItem(submenu(resumeMenu))
+        menu.addItem(.separator())
         menu.addItem(item("Focus Address Bar", #selector(CommandRouter.browserFocusAddress(_:)), "l", target: router))
         menu.addItem(item("Reload Page", #selector(CommandRouter.browserReload(_:)), "r", target: router))
         menu.addItem(item("Back", #selector(CommandRouter.browserBack(_:)), "[", target: router))
@@ -102,6 +111,9 @@ enum MainMenu {
         }
         menu.addItem(.separator())
         menu.addItem(item("Jump to Latest Attention", #selector(CommandRouter.jumpToAttention(_:)), "u", [.command, .shift], target: router))
+        menu.addItem(.separator())
+        menu.addItem(item("Resume Agent Session", #selector(CommandRouter.resumeAgentSession(_:)), "", target: router))
+        menu.addItem(item("Resume All Agent Sessions", #selector(CommandRouter.resumeAllAgentSessions(_:)), "", target: router))
         menu.addItem(.separator())
         menu.addItem(item("Install Remote Helper…", #selector(CommandRouter.installRemoteHelper(_:)), "", target: router))
         return menu

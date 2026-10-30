@@ -144,6 +144,13 @@ final class APIServer {
             try controller.claudeHook(paneID: try params.string("pane"), input: try params.json("input"))
         case "agent.claude_status":
             try controller.claudeStatus(paneID: try params.string("pane"), input: try params.json("input"))
+        case "agent.sessions":
+            return try .from(controller.agentSessionList(paneID: try params.string("pane")))
+        case "agent.resume":
+            let all = try params.bool("all") ?? false
+            let pane = try params.string("pane")
+            if all, pane != nil { throw RPCError.invalidParams("give either pane or all, not both") }
+            return try .from(controller.resumeAgentSessions(paneID: pane, all: all))
         case "remote.location":
             try controller.setRemoteLocation(paneID: try params.string("pane"), cwd: try params.string("cwd"),
                                              branch: try params.string("branch"))

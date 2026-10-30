@@ -103,6 +103,29 @@ enum Format {
         return out
     }
 
+    /// `> p3  offered  Claude Code session “Fix login” (Opus, 2 h ago)` + id, directory and resume command.
+    static func agentSessions(_ list: AgentSessionList, currentPane: String?, now: Date = Date()) -> String {
+        var out = "resume on launch: \(list.mode.rawValue)\n"
+        guard !list.sessions.isEmpty else { return out + "no remembered agent sessions\n" }
+        let paneWidth = list.sessions.map(\.pane.count).max() ?? 0
+        let stateWidth = list.sessions.map(\.state.rawValue.count).max() ?? 0
+        for entry in list.sessions {
+            let marker = entry.pane == currentPane ? ">" : " "
+            out += "\(marker) \(entry.pane.padding(toLength: paneWidth, withPad: " ", startingAt: 0))  "
+                + "\(entry.state.rawValue.padding(toLength: stateWidth, withPad: " ", startingAt: 0))  "
+                + oneLine(entry.session.summary(now: now)) + "\n"
+            let indent = String(repeating: " ", count: paneWidth + 4)
+            var where_ = "id \(entry.session.sessionID)"
+            if let host = entry.session.host { where_ += "  on \(oneLine(host))" }
+            if let cwd = entry.session.cwd { where_ += "  in \(oneLine(cwd))" }
+            out += indent + where_ + "\n"
+            if let command = entry.command, entry.state == .offered || entry.state == .waiting {
+                out += indent + "$ \(command)\n"
+            }
+        }
+        return out
+    }
+
     /// `Claude  5h 40% (resets 15:30 (in 2h10m)) · 7d 12% (resets Fri 09:00)`.
     static func limits(_ limits: [AgentLimits], now: Date = Date()) -> String {
         guard !limits.isEmpty else { return "" }

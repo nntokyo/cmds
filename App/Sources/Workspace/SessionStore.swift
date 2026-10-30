@@ -20,6 +20,15 @@ struct SessionState: Codable {
         var layout: Node
         /// Index of the focused pane in reading order.
         var focusedPaneIndex: Int?
+        /// Agent sessions remembered per terminal pane (docs/AGENTS.md "Resuming sessions"). Added later: older
+        /// sessions lack it; records that cannot be decoded are dropped instead of failing the whole file.
+        var agentSessions: [PaneAgentSession]? = nil
+    }
+
+    /// The agent session of the pane at `paneIndex` (reading order of `layout`).
+    struct PaneAgentSession: Codable {
+        var paneIndex: Int
+        var session: AgentSession
     }
 
     var workspaces: [WorkspaceState]
@@ -47,4 +56,27 @@ enum SessionStore {
             NSLog("cmds: failed to save session: \(error)")
         }
     }
+}
+
+extension SessionState.WorkspaceState {
+    private enum CodingKeys: String, CodingKey {
+        case title, workingDirectory, layout, focusedPaneIndex, agentSessions
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        title = try c.decodeIfPresent(String.self, forKey: .title)
+        workingDirectory = try c.decodeIfPresent(String.self, forKey: .workingDirectory)
+        layout = try c.decode(SessionState.Node.self, forKey: .layout)
+        focusedPaneIndex = try c.decodeIfPresent(Int.self, forKey: .focusedPaneIndex)
+        let lossy = try? c.decodeIfPresent([Lossy<SessionState.PaneAgentSession>].self, forKey: .agentSessions)
+        let sessions = lossy?.compactMap(\.value) ?? []
+        agentSessions = sessions.isEmpty ? nil : sessions
+    }
+}
+
+/// Decodes an element or nil, so one bad element does not fail its array.
+private struct Lossy<Value: Decodable>: Decodable {
+    var value: Value?
+    init(from decoder: Decoder) throws { value = try? Value(from: decoder) }
 }

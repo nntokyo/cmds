@@ -26,6 +26,23 @@ final class Pane {
     var agentUsage: AgentUsage?
     var agentSource: AgentSource?
 
+    // Resuming agent sessions (AppController+AgentSessions.swift, docs/AGENTS.md "Resuming sessions").
+    /// The resumable agent session that ran here last (Claude Code / Codex with a session id). Saved in the session.
+    var agentSession: AgentSession?
+    /// A session from the previous run (or from before an SSH disconnect) offered for resuming.
+    var resumeOffer: AgentSession?
+    /// Resume was requested (button, `agent.resume`, mode Always): typed once the shell prompt is ready.
+    var resumeRequestedAt: Date?
+    /// Readiness check: the screen text and since when it has not changed.
+    var resumeScreen: String?
+    var resumeScreenSince: Date?
+    /// When the pane's terminal was created (the shell needs a moment to print its prompt).
+    var terminalStartedAt = Date()
+    /// Last `remote.location` from the remote shell's prompt hook (SSH panes).
+    var lastPromptReportAt: Date?
+    /// The lastSeen of `agentSession` as last saved, to save again only now and then.
+    var agentSessionSavedAt: Date?
+
     weak var controller: AppController?
 
     init(id: String, workspaceID: String, terminal: TerminalSurface, ssh: SSHSession? = nil) {
@@ -66,6 +83,9 @@ final class Pane {
             old.close()
         }
         terminal = newTerminal
+        terminalStartedAt = Date()
+        resumeScreen = nil
+        resumeScreenSince = nil
         newTerminal.delegate = self
         container.setContent(newTerminal.view)
     }
