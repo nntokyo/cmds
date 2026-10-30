@@ -123,6 +123,18 @@ final class ClientClaudeHookTests: XCTestCase {
         XCTAssertEqual(ClaudeHook.notification(fromHookInput: Data(input.utf8))?.body, "All tests pass.")
     }
 
+    func testLastAssistantTextDropsTheLineCutByTheTail() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-transcript-\(UUID().uuidString).jsonl")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let first = #"{"type":"assistant","message":{"content":"older reply"}}"#
+        let second = #"{"type":"assistant","message":{"content":[{"type":"text","text":" \n "},{"type":"tool_use"}]}}"#
+        try [first, second].joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        XCTAssertEqual(ClaudeHook.lastAssistantText(transcriptPath: url.path), "older reply")
+        // A tail that starts inside the first line drops it as cut mid-line: no text left.
+        XCTAssertNil(ClaudeHook.lastAssistantText(transcriptPath: url.path, tailBytes: second.utf8.count + 3))
+        XCTAssertNil(ClaudeHook.lastAssistantText(transcriptPath: "/nonexistent.jsonl"))
+    }
+
     func testStopWithoutTranscript() {
         let input = #"{"hook_event_name":"Stop","transcript_path":"/nonexistent.jsonl"}"#
         XCTAssertEqual(ClaudeHook.notification(fromHookInput: Data(input.utf8))?.body, "Finished")
