@@ -28,6 +28,8 @@ final class SyncRemoteAccess {
     /// ssh that stays up this long counts as forwarding (ExitOnForwardFailure exits sooner otherwise).
     static let settleTime: TimeInterval = 4
     static let sshPath = "/usr/bin/ssh"
+    /// Characters of ssh's stderr kept for the status line.
+    static let stderrTailLength = 600
 
     private(set) var settings: SyncRemote.Settings
     private(set) var status = LocalizedStatus("Off")
@@ -49,6 +51,7 @@ final class SyncRemoteAccess {
     private var observer: NSObjectProtocol?
 
     private let settingsURL = CmdsEnv.supportDirectoryURL().appendingPathComponent(SyncRemote.settingsFileName)
+    /// Pid of the running ssh, so the next launch can end one left over from a crash.
     private let pidURL = CmdsEnv.supportDirectoryURL().appendingPathComponent("sync-remote-ssh.pid")
 
     private init() {
@@ -158,7 +161,7 @@ final class SyncRemoteAccess {
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
                     guard let self else { return }
-                    self.stderrTail = String((self.stderrTail + text).suffix(600))
+                    self.stderrTail = String((self.stderrTail + text).suffix(Self.stderrTailLength))
                 }
             }
         }
@@ -290,7 +293,7 @@ final class SyncRemoteAccess {
         guard let text = try? String(contentsOf: pidURL, encoding: .utf8),
               let pid = pid_t(text.trimmingCharacters(in: .whitespacesAndNewlines)), pid > 1 else { return }
         try? FileManager.default.removeItem(at: pidURL)
-        var buffer = [CChar](repeating: 0, count: 4096)
+        var buffer = [CChar](repeating: 0, count: procPathMaxSize)
         guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0,
               String(cString: buffer) == Self.sshPath, getppid_of(pid) == 1 else { return }
         kill(pid, SIGTERM)
@@ -301,7 +304,11 @@ final class SyncRemoteAccess {
     }
 }
 
+/// `PROC_PIDPATHINFO_MAXSIZE` (4 * MAXPATHLEN; the macro is not imported into Swift).
+private let procPathMaxSize = 4 * Int(MAXPATHLEN)
+
 /// Parent pid of `pid` (1 once its parent died), or -1.
+
 private func getppid_of(_ pid: pid_t) -> pid_t {
     var info = proc_bsdinfo()
     let size = Int32(MemoryLayout<proc_bsdinfo>.size)
