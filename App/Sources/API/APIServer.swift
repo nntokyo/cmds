@@ -1,7 +1,6 @@
 import AppKit
 import Combine
 import CmdsCore
-import os
 
 /// Socket API (docs/reference/api.md): maps JSON-RPC methods onto `AppController`.
 /// Requests arrive on connection threads and are handled on the main actor in arrival order;
@@ -37,7 +36,7 @@ final class APIServer {
             try server.start()
             return true
         } catch {
-            Logger(subsystem: "tokyo.n-n.cmds", category: "api").error("socket API unavailable at \(self.server.path, privacy: .public): \(String(describing: error), privacy: .public)")
+            apiLog.error("socket API unavailable at \(self.server.path, privacy: .public): \(String(describing: error), privacy: .public)")
             return false
         }
     }
@@ -168,21 +167,7 @@ final class APIServer {
             // Local socket only (not in RemoteAPIPolicy.allowedMethods), like state.import.
             return try .from(controller.exportBundle())
         case "state.import":
-            let bundle: WorkspaceBundle
-            do {
-                bundle = try WorkspaceBundle.read(try params.json("bundle"))
-            } catch let error as TransferError {
-                throw RPCError.invalidParams(error.message)
-            }
-            let mode = try params.string("mode").map { raw -> ImportMode in
-                guard let mode = ImportMode(rawValue: raw) else { throw RPCError.invalidParams("mode must be append or replace") }
-                return mode
-            } ?? .append
-            let resume = try params.string("resume").map { raw -> AgentResumeMode in
-                guard let mode = AgentResumeMode(rawValue: raw) else { throw RPCError.invalidParams("resume must be ask, always or never") }
-                return mode
-            }
-            return try .from(controller.importBundle(bundle, mode: mode, resume: resume))
+            return try importState(params)
         case "remote.location":
             try controller.setRemoteLocation(paneID: try params.string("pane"), cwd: try params.string("cwd"),
                                              branch: try params.string("branch"))
@@ -204,35 +189,12 @@ final class APIServer {
             try controller.renameWorkspace(id: try params.string("id"), title: try params.required("title"))
 
         case "view.tile":
-            // No params: report only. `off`, `all` or `workspaces` (ids, ≥ 2) switch the tiled view.
-            let off = try params.bool("off") ?? false
-            let all = try params.bool("all") ?? false
-            let ids = try params.strings("workspaces")
-            if [off, all, ids != nil].filter({ $0 }).count > 1 {
-                throw RPCError.invalidParams("give one of off, all or workspaces")
-            }
-            if off {
-                try controller.setTiling(.off)
-            } else if all {
-                guard controller.workspaces.count >= 2 else { throw RPCError.invalidParams("tiling needs at least two workspaces") }
-                try controller.setTiling(.all, active: try params.string("active"))
-            } else if let ids {
-                guard Set(ids).count >= 2 else { throw RPCError.invalidParams("workspaces must name at least two workspaces") }
-                // An explicit set from a script: the automatic grid (a dragged arrangement is dropped).
-                try controller.setTiling(.selected(ids), active: try params.string("active"), keepArrangement: false)
-            }
-            if let zoom = try params.bool("zoom"), zoom != (controller.tileZoomedWorkspaceID != nil), controller.isTiling {
-                controller.toggleTileZoom()
-            }
-            return try .from(controller.tileStatus)
+            return try tile(params)
 
         case "pane.list":
             return try .from(controller.listPanes(workspaceID: try params.string("workspace")))
         case "pane.split":
-            let rawDirection = try params.string("direction") ?? "right"
-            guard let direction = SplitDirection(rawValue: rawDirection) else {
-                throw RPCError.invalidParams("direction must be \"right\" or \"down\"")
-            }
+            let direction = try splitDirection(params)
             let rawKind = try params.string("kind") ?? (try params.string("url") != nil ? "browser" : "terminal")
             guard let kind = PaneKind(rawValue: rawKind), kind != .preview else {
                 throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\" (files: pane.open_file)")
@@ -243,10 +205,7 @@ final class APIServer {
                                               command: try params.string("command"),
                                               focus: try params.bool("focus") ?? true, ssh: ssh))
         case "pane.open_file":
-            let rawDirection = try params.string("direction") ?? "right"
-            guard let direction = SplitDirection(rawValue: rawDirection) else {
-                throw RPCError.invalidParams("direction must be \"right\" or \"down\"")
-            }
+            let direction = try splitDirection(params)
             let format = try params.string("format").map { raw -> PreviewFormat in
                 guard let format = PreviewFormat(rawValue: raw == "quicklook" ? "quickLook" : raw) else {
                     throw RPCError.invalidParams("format must be \"markdown\", \"diff\" or \"quicklook\"")
@@ -285,6 +244,48 @@ final class APIServer {
             throw RPCError.methodNotFound(method)
         }
         return nil
+    }
+
+    /// `state.import`: a `WorkspaceBundle` (object or JSON text), `mode` (default append) and `resume`.
+    private func importState(_ params: Params) throws -> JSONValue {
+        let bundle: WorkspaceBundle
+        do {
+            bundle = try WorkspaceBundle.read(try params.json("bundle"))
+        } catch let error as TransferError {
+            throw RPCError.invalidParams(error.message)
+        }
+        let mode = try params.value("mode", as: ImportMode.self, invalid: "mode must be append or replace") ?? .append
+        let resume = try params.value("resume", as: AgentResumeMode.self, invalid: "resume must be ask, always or never")
+        return try .from(controller.importBundle(bundle, mode: mode, resume: resume))
+    }
+
+    /// `view.tile`. No params: report only. `off`, `all` or `workspaces` (ids, ≥ 2) switch the tiled view.
+    private func tile(_ params: Params) throws -> JSONValue {
+        let off = try params.bool("off") ?? false
+        let all = try params.bool("all") ?? false
+        let ids = try params.strings("workspaces")
+        if [off, all, ids != nil].filter({ $0 }).count > 1 {
+            throw RPCError.invalidParams("give one of off, all or workspaces")
+        }
+        if off {
+            try controller.setTiling(.off)
+        } else if all {
+            guard controller.workspaces.count >= 2 else { throw RPCError.invalidParams("tiling needs at least two workspaces") }
+            try controller.setTiling(.all, active: try params.string("active"))
+        } else if let ids {
+            guard Set(ids).count >= 2 else { throw RPCError.invalidParams("workspaces must name at least two workspaces") }
+            // An explicit set from a script: the automatic grid (a dragged arrangement is dropped).
+            try controller.setTiling(.selected(ids), active: try params.string("active"), keepArrangement: false)
+        }
+        if let zoom = try params.bool("zoom"), zoom != (controller.tileZoomedWorkspaceID != nil), controller.isTiling {
+            controller.toggleTileZoom()
+        }
+        return try .from(controller.tileStatus)
+    }
+
+    /// `direction` of `pane.split` / `pane.open_file` (default right).
+    private func splitDirection(_ params: Params) throws -> SplitDirection {
+        try params.value("direction", as: SplitDirection.self, invalid: "direction must be \"right\" or \"down\"") ?? .right
     }
 
     /// `pane` if given; otherwise the focused browser pane of `workspace` (default: selected), else its first browser pane.
@@ -342,13 +343,16 @@ final class APIServer {
         }
     }
 
+    /// Code of errors that are not `RPCError`s (controller failures, JavaScript exceptions).
+    private static let internalErrorCode = 500
+
     private static func rpcError(_ error: Error) -> RPCError {
         if let error = error as? RPCError { return error }
         let nsError = error as NSError
         if let message = nsError.userInfo["WKJavaScriptExceptionMessage"] as? String {
-            return RPCError(code: 500, message: "JavaScript exception: \(message)")
+            return RPCError(code: internalErrorCode, message: "JavaScript exception: \(message)")
         }
-        return RPCError(code: 500, message: nsError.localizedDescription)
+        return RPCError(code: internalErrorCode, message: nsError.localizedDescription)
     }
 }
 
@@ -366,7 +370,16 @@ private struct Params {
         }
     }
 
+    /// A string naming a case of `T`, or nil when absent; any other string is `invalidParams(message)`.
+    func value<T: RawRepresentable>(_ key: String, as type: T.Type, invalid message: String) throws -> T? where T.RawValue == String {
+        try string(key).map { raw in
+            guard let value = T(rawValue: raw) else { throw RPCError.invalidParams(message) }
+            return value
+        }
+    }
+
     func required(_ key: String) throws -> String {
+
         guard let string = try string(key) else { throw RPCError.invalidParams("missing param: \(key)") }
         return string
     }

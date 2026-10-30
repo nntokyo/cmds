@@ -35,6 +35,9 @@ final class SSHSession {
         localSocketPath = Self.localSocketPath(paneID: paneID)
     }
 
+    /// Longest local socket path used (bytes); `sockaddr_un.sun_path` holds 104 including the terminator.
+    static let maxSocketPathBytes = 100
+
     /// `<support dir>/ssh/<pane>.sock` (directory 0700), or under the per-user temporary directory when that path
     /// is too long for a Unix socket. The path must not contain `:` (it is part of the `-R` argument).
     static func localSocketPath(paneID: String) -> String {
@@ -43,7 +46,8 @@ final class SSHSession {
         let fallback = (NSTemporaryDirectory() as NSString).appendingPathComponent("cmds-ssh")
         for directory in [preferred, fallback] {
             let path = (directory as NSString).appendingPathComponent(name)
-            if path.utf8.count < 100, !path.contains(":") { return path }
+            if path.utf8.count < maxSocketPathBytes, !path.contains(":") { return path }
+
         }
         return "/tmp/cmds-ssh-\(getuid())-\(name)"
     }

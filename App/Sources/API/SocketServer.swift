@@ -2,7 +2,8 @@ import CmdsCore
 import Foundation
 import os
 
-private let log = Logger(subsystem: "tokyo.n-n.cmds", category: "api")
+/// Socket API log (subsystem tokyo.n-n.cmds, category api).
+let apiLog = Logger(subsystem: "tokyo.n-n.cmds", category: "api")
 
 /// Unix-domain stream socket speaking JSON lines (`CmdsCore/RPC.swift`).
 ///
@@ -12,6 +13,7 @@ private let log = Logger(subsystem: "tokyo.n-n.cmds", category: "api")
 final class SocketServer: @unchecked Sendable {
     /// Each client gets a reader thread; more connections than this are refused.
     static let maxConnections = 64
+    static let listenBacklog: Int32 = 32
     let path: String
     var onRequest: (@Sendable (RPCRequest, SocketConnection) -> Void)?
     var onClose: (@Sendable (SocketConnection) -> Void)?
@@ -36,7 +38,7 @@ final class SocketServer: @unchecked Sendable {
         try removeStaleSocket()
         let fd = try UnixSocket.makeStreamSocket()
         do {
-            try UnixSocket.bindAndListen(fd, path: path, backlog: 32)
+            try UnixSocket.bindAndListen(fd, path: path, backlog: Self.listenBacklog)
             guard chmod(path, 0o600) == 0 else { throw UnixSocket.Failure("chmod \(path)") }
         } catch {
             close(fd)
@@ -50,7 +52,7 @@ final class SocketServer: @unchecked Sendable {
         source.setCancelHandler { close(fd) }
         acceptSource = source
         source.resume()
-        log.info("listening on \(self.path, privacy: .public)")
+        apiLog.info("listening on \(self.path, privacy: .public)")
     }
 
     func stop() {
@@ -92,7 +94,7 @@ final class SocketServer: @unchecked Sendable {
             var uid: uid_t = 0
             var gid: gid_t = 0
             guard getpeereid(fd, &uid, &gid) == 0, uid == geteuid() else {
-                log.error("rejected connection from uid \(uid)")
+                apiLog.error("rejected connection from uid \(uid)")
                 close(fd)
                 continue
             }
@@ -104,7 +106,7 @@ final class SocketServer: @unchecked Sendable {
             lock.lock()
             guard connections.count < Self.maxConnections else {
                 lock.unlock()
-                log.error("rejected connection: \(Self.maxConnections) clients already connected")
+                apiLog.error("rejected connection: \(Self.maxConnections) clients already connected")
                 close(fd)
                 continue
             }
@@ -138,6 +140,10 @@ final class SocketConnection: @unchecked Sendable {
     static let maxPendingBytes = 32 * 1024 * 1024
     /// Requests a client may have in flight; further ones are answered with an error until some finish.
     static let maxOutstanding = 64
+    /// JSON-RPC error codes of requests that never reach the dispatcher.
+    private static let parseErrorCode = -32700
+    private static let invalidRequestCode = -32600
+    private static let tooManyRequestsCode = 429
 
     let id: Int
     private let fd: Int32
@@ -213,7 +219,7 @@ final class SocketConnection: @unchecked Sendable {
         let overflow = pendingBytes > Self.maxPendingBytes
         lock.unlock()
         if overflow {
-            log.error("connection \(self.id) is not reading; dropping it")
+            apiLog.error("connection \(self.id) is not reading; dropping it")
             shutdown()
             return
         }
@@ -251,7 +257,7 @@ final class SocketConnection: @unchecked Sendable {
             do {
                 lines = try buffer.append(chunk)
             } catch {
-                send(RPCResponse(id: 0, error: RPCError(code: -32600, message: "request too large (max \(JSONLineBuffer.defaultMaxLineLength) bytes)")))
+                send(RPCResponse(id: 0, error: RPCError(code: Self.invalidRequestCode, message: "request too large (max \(JSONLineBuffer.defaultMaxLineLength) bytes)")))
                 dropped = true
                 break reading
             }
@@ -262,7 +268,7 @@ final class SocketConnection: @unchecked Sendable {
                     if !busy { outstanding += 1 }
                     lock.unlock()
                     if busy {
-                        send(RPCResponse(id: request.id, error: RPCError(code: 429, message: "too many requests in flight (max \(Self.maxOutstanding))")))
+                        send(RPCResponse(id: request.id, error: RPCError(code: Self.tooManyRequestsCode, message: "too many requests in flight (max \(Self.maxOutstanding))")))
                     } else {
                         handle(request)
                     }
@@ -270,8 +276,9 @@ final class SocketConnection: @unchecked Sendable {
                     let value = try? JSONDecoder().decode(JSONValue.self, from: line)
                     let id = value?["id"]?.intValue ?? 0
                     send(RPCResponse(id: id, error: value == nil
-                          ? RPCError(code: -32700, message: "parse error: invalid JSON")
-                          : RPCError(code: -32600, message: "invalid request: expected {\"id\": Int, \"method\": String, \"params\"?: …}")))
+                          ? RPCError(code: Self.parseErrorCode, message: "parse error: invalid JSON")
+                          : RPCError(code: Self.invalidRequestCode, message:
+ "invalid request: expected {\"id\": Int, \"method\": String, \"params\"?: …}")))
                 }
             }
         }
