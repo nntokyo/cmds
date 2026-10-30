@@ -51,7 +51,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.windowDidBecomeKey()
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
+    /// Closing the window must not end the terminals (and the agents in them): cmds keeps running; the Dock icon
+    /// or ⌘N brings the window back.
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    /// Set by `app.quit` (scripted updates that move sessions with export/import) to skip the confirmation.
+    static var quitWithoutConfirmation = false
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let agents = controller.workspaces.reduce(0) { $0 + $1.agentPanes.count }
+        guard agents > 0, !Self.quitWithoutConfirmation else { return .terminateNow }
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Quit cmds?")
+        alert.informativeText = String(localized: "\(agents) AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.")
+        alert.addButton(withTitle: String(localized: "Quit"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        return alert.runModal() == .alertFirstButtonReturn ? .terminateNow : .terminateCancel
+    }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag { windowController.showWindow(nil) }

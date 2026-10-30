@@ -7,6 +7,9 @@ extension CLI {
             let result = try ctx.call("system.ping")
             ctx.json ? ctx.printJSON(result) : print("pong")
         },
+        Command(name: "quit", usage: "quit", summary: "Quit the app without the running-agents confirmation (for scripted updates).") { ctx in
+            try ctx.call("app.quit")
+        },
         Command(name: "identify", usage: "identify", summary: "Show app version, pid and socket path.") { ctx in
             let result = try ctx.call("system.identify")
             if ctx.json { return ctx.printJSON(result) }

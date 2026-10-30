@@ -119,6 +119,11 @@ final class APIServer {
         switch method {
         case "system.ping":
             return ["pong": true]
+        case "app.quit":
+            // Scripted quit (update with export/import): no confirmation; reply first, then quit.
+            AppDelegate.quitWithoutConfirmation = true
+            DispatchQueue.main.async { NSApp.terminate(nil) }
+            return [:]
         case "system.identify":
             let info = Bundle.main.infoDictionary ?? [:]
             return [

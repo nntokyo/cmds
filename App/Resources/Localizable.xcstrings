@@ -3980,6 +3980,36 @@
           }
         }
       }
+    },
+    "Quit cmds?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds を終了しますか？"
+          }
+        }
+      }
+    },
+    "%lld AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds の中で AI エージェントのセッションが %lld 件動いています。終了すると中断されます（保存されたセッションから後で再開できます）。"
+          }
+        }
+      }
+    },
+    "Quit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
