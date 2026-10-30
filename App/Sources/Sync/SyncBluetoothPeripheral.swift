@@ -152,14 +152,20 @@ final class SyncBluetoothPeripheral: NSObject {
     private func open(_ channel: CBL2CAPChannel) {
         guard relays.count + settingUp < Self.maxChannels, let port = SyncServer.shared.port else {
             syncLog.notice("bluetooth: refusing channel (\(self.relays.count, privacy: .public) open)")
-            channel.inputStream.close()
-            channel.outputStream.close()
+            channel.inputStream?.close()
+            channel.outputStream?.close()
+            return
+        }
+        guard let input = channel.inputStream, let output = channel.outputStream else {
+            syncLog.error("bluetooth: refusing channel without streams")
+            channel.inputStream?.close()
+            channel.outputStream?.close()
             return
         }
         let id = UUID()
         // Per-peer label for the sync server's limits; CBCentral identifiers are stable per phone.
         let peer = SyncBluetooth.peerHostPrefix + channel.peer.identifier.uuidString.prefix(8).lowercased()
-        let streams = (input: channel.inputStream!, output: channel.outputStream!)
+        let streams = (input: input, output: output)
         settingUp += 1
         // Connecting is blocking (loopback, immediate); keep it off the main thread anyway.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
