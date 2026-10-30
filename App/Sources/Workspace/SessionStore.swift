@@ -61,12 +61,29 @@ enum SessionStore {
 
     static var fileURL: URL { directory.appendingPathComponent("session.json") }
 
-    static func load() -> SessionState? {
-        guard let data = try? Data(contentsOf: fileURL) else { return nil }
-        return try? JSONDecoder().decode(SessionState.self, from: data)
+    /// Set when an unreadable session file could not be moved aside: saving would overwrite it (#3).
+    @MainActor private static var saveBlocked = false
+
+    /// The saved session, or nil if there is none. An unreadable file is moved to `session.json.corrupt-<date>`
+    /// (kept) and nil is returned, so the next save does not overwrite the user's workspaces (#3).
+    @MainActor static func load() -> SessionState? {
+        switch StoredFile.load(SessionState.self, from: fileURL) {
+        case .missing:
+            return nil
+        case .loaded(let state):
+            return state
+        case .unreadable(let error, .success(let backup)):
+            NSLog("cmds: could not read session (\(error)); moved it to \(backup.path)")
+            return nil
+        case .unreadable(let error, .failure(let moveError)):
+            NSLog("cmds: could not read session (\(error)) or move it aside (\(moveError)); not saving this run")
+            saveBlocked = true
+            return nil
+        }
     }
 
-    static func save(_ state: SessionState) {
+    @MainActor static func save(_ state: SessionState) {
+        guard !saveBlocked else { return }
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let encoder = JSONEncoder()
