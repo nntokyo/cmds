@@ -29,8 +29,6 @@ final class GhosttyRuntime {
         liveViews.remove(UInt(bitPattern: Unmanaged.passUnretained(view).toOpaque()))
     }
 
-    var isReady: Bool { app != nil }
-
     private init() {
         if ghostty_init(UInt(CommandLine.argc), CommandLine.unsafeArgv) != GHOSTTY_SUCCESS {
             ghosttyLog.critical("ghostty_init failed")
