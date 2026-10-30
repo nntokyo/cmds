@@ -45,7 +45,7 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             let list = try perform { try result.decode(AgentList.self) }
             let workspaces = (try? ctx.call("workspace.list").decode([WorkspaceInfo].self)) ?? []
-            let titles = Dictionary(workspaces.map { ($0.id, $0.title) }) { first, _ in first }
+            let titles = workspaceTitles(workspaces)
             print(Format.agents(list, titles: titles, currentPane: ctx.envPane), terminator: "")
         },
         Command(name: "sessions", usage: "sessions [--pane P]",
@@ -118,7 +118,7 @@ extension CLI {
                 } else {
                     let snapshot = try perform { try result.decode(StatsSnapshot.self) }
                     let list = try perform { try client.call("workspace.list").decode([WorkspaceInfo].self) }
-                    let titles = Dictionary(list.map { ($0.id, $0.title) }) { first, _ in first }
+                    let titles = workspaceTitles(list)
                     let text = Format.stats(snapshot, titles: titles, currentWorkspace: ctx.envWorkspace)
                     if interval != nil, terminal { print("\u{1B}[H\u{1B}[2J", terminator: "") } // clear screen
                     print(text, terminator: "")
@@ -159,8 +159,7 @@ extension CLI {
                     "remoteCwd": ctx.args[option: "remote-cwd"].json,
                     "title": ctx.args[option: "title"].json,
                 ])
-                if ctx.json { return ctx.printJSON(result) }
-                return print(result["id"]?.stringValue ?? "")
+                return ctx.printResult(result, field: "id")
             }
             let cwd = ctx.args[option: "cwd"] ?? FileManager.default.currentDirectoryPath
             let result = try ctx.call("workspace.create", [
@@ -168,8 +167,7 @@ extension CLI {
                 "cwd": .string(absolutePath(cwd)),
                 "command": shellCommand(ctx.args.rest ?? []).json,
             ])
-            if ctx.json { return ctx.printJSON(result) }
-            print(result["id"]?.stringValue ?? "")
+            ctx.printResult(result, field: "id")
         },
         Command(name: "select", usage: "select <workspace-id|index|title>",
                 summary: "Select a workspace (index is 1-based, as in ⌘1…⌘9).") { ctx in
@@ -247,8 +245,7 @@ extension CLI {
                 "ssh": ctx.args[option: "ssh"].json,
                 "remoteCwd": ctx.args[option: "remote-cwd"].json,
             ])
-            if ctx.json { return ctx.printJSON(result) }
-            print(result["id"]?.stringValue ?? "")
+            ctx.printResult(result, field: "id")
         },
         Command(name: "reconnect", usage: "reconnect [pane]",
                 summary: "Reconnect an SSH pane whose ssh exited (as ⌘R or its Reconnect button do).") { ctx in
@@ -342,8 +339,7 @@ extension CLI {
                 "focus": ctx.args.has("no-focus") ? false : nil,
                 "format": ctx.args.has("diff") ? "diff" : nil,
             ])
-            if ctx.json { return ctx.printJSON(result) }
-            print(result["id"]?.stringValue ?? "")
+            ctx.printResult(result, field: "id")
         },
         Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] <url>",
                 summary: "Open a browser split to the right of a pane (default: the current one).",
@@ -352,8 +348,7 @@ extension CLI {
             try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] [--no-focus] <url>")
             let result = try ctx.call("browser.open", ["pane": ctx.pane.json, "url": .string(ctx.args.positionals[0]),
                                                        "focus": ctx.args.has("no-focus") ? false : nil])
-            if ctx.json { return ctx.printJSON(result) }
-            print(result["id"]?.stringValue ?? "")
+            ctx.printResult(result, field: "id")
         },
         Command(name: "browser navigate", usage: "browser navigate [--pane P] <url>",
                 summary: "Load a URL in a browser pane.", details: browserPaneNote, options: ["pane"]) { ctx in

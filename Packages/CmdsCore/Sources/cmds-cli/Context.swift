@@ -38,6 +38,12 @@ struct Context {
         return try perform { try client.call(method, params: object(params)) }
     }
 
+    /// Prints `result` as JSON with --json, else its string field `key` ("" when missing).
+    func printResult(_ result: JSONValue, field key: String) {
+        if json { return printJSON(result) }
+        print(result[key]?.stringValue ?? "")
+    }
+
     /// Prints `value` as JSON (pretty unless `compact`).
     func printJSON(_ value: JSONValue, compact: Bool = false) {
         print(encodeJSON(value, pretty: !compact))
@@ -60,6 +66,11 @@ func perform<T>(_ body: () throws -> T) throws -> T {
 func object(_ pairs: [String: JSONValue?]) -> JSONValue? {
     let values = pairs.compactMapValues { $0 }
     return values.isEmpty ? nil : .object(values)
+}
+
+/// Workspace id → title (the first one wins for duplicate ids).
+func workspaceTitles(_ workspaces: [WorkspaceInfo]) -> [String: String] {
+    Dictionary(workspaces.map { ($0.id, $0.title) }) { first, _ in first }
 }
 
 func nonEmpty(_ value: String?) -> String? {
