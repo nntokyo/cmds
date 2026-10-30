@@ -745,6 +745,16 @@ final class AppController {
 
     /// Recreates workspaces from a saved session (cwd + layout; running programs are not restored).
     func restore(_ state: SessionState) {
+        let restored = restoreWorkspaces(state, resumeMode: AgentResumeSettings.mode)
+        selectedWorkspaceID = restored[safe: state.selectedIndex ?? 0]?.id ?? workspaces.first?.id
+        emit(.workspaces)
+        focusSelectedPaneView()
+    }
+
+    /// Appends the workspaces of `state` (after any existing ones) and applies their agent sessions with `resumeMode`.
+    /// Does not select, emit or focus; returns the new workspaces in order. Also used by `state.import`.
+    func restoreWorkspaces(_ state: SessionState, resumeMode: AgentResumeMode) -> [Workspace] {
+        var restored: [Workspace] = []
         let fileManager = FileManager.default
         func existing(_ path: String?) -> String {
             guard let path, fileManager.fileExists(atPath: path) else { return NSHomeDirectory() }
@@ -786,11 +796,10 @@ final class AppController {
                 workspace.gitBranch = workspace.workingDirectory.flatMap(GitInfo.branch(at:))
             }
             workspaces.append(workspace)
-            restoreAgentSessions(saved.agentSessions, in: workspace)
+            restored.append(workspace)
+            restoreAgentSessions(saved.agentSessions, in: workspace, mode: resumeMode)
         }
-        selectedWorkspaceID = workspaces[safe: state.selectedIndex ?? 0]?.id ?? workspaces.first?.id
-        emit(.workspaces)
-        focusSelectedPaneView()
+        return restored
     }
 
     func saveSession() {

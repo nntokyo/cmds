@@ -54,6 +54,8 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds agents` | Coding agents in cmds panes: per pane the figures of Claude Code's status line (`ctx 53% 527k/1M │ $117.99 ($34.53/h) │ ⏱ 3h25m api 3h40m(107%) │ +17642 -330 │ cache ●98%`) or Codex context/tokens, then account limits per agent (5h / 7d / spend, reset times). `cmds ls` shows a short agent summary per pane, `cmds stats` the limits |
 | `cmds sessions [--pane P]` | Agent sessions remembered per pane (state `offered` / `waiting` / `running` / `resumed` / `remembered`, id, directory, host, the resume command) and the launch setting ([AGENTS.md](AGENTS.md#resuming-sessions)) |
 | `cmds resume [--pane P \| --all]` | Resume the session offered in a pane after a restart (default: the current pane) or in all panes: types `claude --resume <id>` / `codex resume <id>` into the pane's shell once its prompt is ready |
+| `cmds export [-o file] [--legacy]` | Workspaces and their agent sessions as a JSON bundle (stdout, or `-o` file created mode 600); for `cmds import` in another (newer) cmds. Falls back to a legacy export from `workspace.list` / `agent.list` when the app has no `state.export` ([below](#moving-workspaces-to-another-cmds)) |
+| `cmds import <file\|-> [--append \| --replace] [--resume ask\|always\|never]` | Recreate a bundle's workspaces (after the open ones, or replacing them) and offer each pane's agent session for resuming (default: the app's resume setting) |
 | `cmds hook claude` | Claude Code hook (below) |
 | `cmds hook claude-status` | Claude Code status-line reporter (below) |
 
@@ -117,6 +119,44 @@ and is a no-op outside cmds — safe to call from a status-line script. Add one 
 Run it in the foreground (not `&`): the hook finds the Claude process among its ancestors so the pane's usage
 disappears when Claude exits. Without a status-line script, `"statusLine": {"type": "command", "command": "cmds hook
 claude-status"}` in `~/.claude/settings.json` also works (the status line then stays empty).
+
+## Moving workspaces to another cmds
+
+`cmds export` writes a bundle; `cmds import` recreates it in the running instance (steps for an update:
+[AGENTS.md](AGENTS.md#moving-to-a-new-version)).
+
+```sh
+cmds export -o ~/cmds-workspaces.json        # in the old instance
+cmds import ~/cmds-workspaces.json           # in the new one (--replace closes the open workspaces)
+cmds resume --all                            # with --resume ask (default): resume the offered sessions
+```
+
+Bundle (`state.export` result, JSON):
+
+```json
+{"format": "cmds.workspaces", "version": 1, "exportedAt": 1793343607.5,
+ "source": {"version": "0.1.0", "build": "1", "legacy": true?}, "selectedIndex": 1,
+ "workspaces": [{"title": "Main"?, "workingDirectory": "/Users/me/app"?, "focusedPaneIndex": 0?,
+   "layout": {"split": {"axis": "horizontal", "ratio": 0.5,
+     "first":  {"pane": {"kind": "terminal", "cwd": "/Users/me/app",
+                         "agentSession": {"agent": "claude", "sessionID": "…", "cwd": "/Users/me/app",
+                                          "host"?, "title"?, "model"?, "lastSeen": 1793343603.1}}},
+     "second": {"pane": {"kind": "terminal", "host": "home", "remoteCwd": "~/srv"}}}}}]}
+```
+
+Pane kinds: `terminal` (`cwd`, or `host` + `remoteCwd` for an SSH pane), `browser` (`url`), `preview` (`path`,
+`format`?). `focusedPaneIndex` and the agent sessions count panes in reading order. Import checks everything
+before creating anything: format and version (a newer version is refused), at most 4 MB, 100 workspaces, 500 panes
+and 24 split levels, absolute (or `~/`) paths without control characters, SSH hosts and remote directories as for
+`cmds new --ssh`, browser URLs http/https/file only, session ids of the plain form `cmds resume` types, sessions
+only on terminal panes and for the pane's own host. Directories missing on this Mac open the home directory;
+SSH panes stay disconnected until connected or resumed. `state.export` / `state.import` are local-socket only
+(refused from SSH panes).
+
+`--legacy` (automatic when the app answers `state.export` with "method not found") builds the bundle in the CLI
+from `workspace.list`, `agent.list` and, where the app has it, `agent.sessions`. It only knows the sessions of
+agents that are running (or remembered by `agent.sessions`), keeps a workspace title only when it differs from
+its directory name, and has no preview format. So a new `cmds` CLI can export from an old running app.
 
 ## Raw protocol
 

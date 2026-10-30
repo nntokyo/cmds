@@ -67,6 +67,8 @@ extension CLI {
             if outcome.queued.isEmpty, outcome.skipped.isEmpty { print("no offered sessions") }
             if outcome.queued.isEmpty, !outcome.skipped.isEmpty { throw CLIError.failure("nothing to resume") }
         },
+        exportCommand,  // TransferCommands.swift
+        importCommand,
         Command(name: "stats", usage: "stats [--watch [seconds]]",
                 summary: "Show CPU and memory use of the Mac and of each workspace's processes.",
                 details: """

@@ -184,6 +184,16 @@
         }
       }
     },
+    "Add" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加"
+          }
+        }
+      }
+    },
     "Advertising (PSM %@)" : {
       "localizations" : {
         "ja" : {
@@ -428,6 +438,26 @@
         }
       }
     },
+    "Cannot export workspaces" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを書き出せません"
+          }
+        }
+      }
+    },
+    "Cannot import workspaces" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを読み込めません"
+          }
+        }
+      }
+    },
     "Cannot open the SSH workspace" : {
       "localizations" : {
         "ja" : {
@@ -464,6 +494,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "中継ホストを選んでください"
+          }
+        }
+      }
+    },
+    "Choose a workspace file exported from cmds" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmdsから書き出したワークスペースのファイルを選択してください"
           }
         }
       }
@@ -744,6 +784,16 @@
         }
       }
     },
+    "Export Workspaces…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを書き出す…"
+          }
+        }
+      }
+    },
     "Failed: %@" : {
       "localizations" : {
         "ja" : {
@@ -896,6 +946,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ホスト："
+          }
+        }
+      }
+    },
+    "Import" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み込む"
+          }
+        }
+      }
+    },
+    "Import Workspaces" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを読み込む"
+          }
+        }
+      }
+    },
+    "Import Workspaces…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを読み込む…"
           }
         }
       }
@@ -1716,6 +1796,16 @@
         }
       }
     },
+    "Replace" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "置き換える"
+          }
+        }
+      }
+    },
     "Reset Identity" : {
       "localizations" : {
         "ja" : {
@@ -2384,6 +2474,32 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ワークスペース%lld"
+          }
+        }
+      }
+    },
+    "Workspaces and their agent sessions, to import into another cmds" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースとエージェントのセッション（別のcmdsで読み込めます）"
+          }
+        }
+      }
+    },
+    "Workspaces: %lld, agent sessions: %lld. Add keeps the open workspaces; Replace closes them." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Workspaces: %1$lld, agent sessions: %2$lld. Add keeps the open workspaces; Replace closes them."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペース：%1$lld、エージェントのセッション：%2$lld。「追加」は開いているワークスペースを残し、「置き換える」はそれらを閉じます。"
           }
         }
       }
