@@ -1532,18 +1532,18 @@
         }
       }
     },
-    "Forwarding via %@ (relay 127.0.0.1:%u)": {
+    "Forwarding via %@ (relay 127.0.0.1:%@)": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "new",
-            "value": "Forwarding via %1$@ (relay 127.0.0.1:%2$u)"
+            "value": "Forwarding via %1$@ (relay 127.0.0.1:%2$@)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@経由で転送中（中継127.0.0.1:%2$u）"
+            "value": "%1$@経由で転送中（中継127.0.0.1:%2$@）"
           }
         }
       }
@@ -2906,6 +2906,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定"
+          }
+        }
+      }
+    },
+    "Settings not saved: %@": {
+      "comment": "remote access window, under the status: the settings file could not be written",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定を保存できませんでした：%@"
           }
         }
       }

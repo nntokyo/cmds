@@ -108,7 +108,8 @@ final class SyncRemoteAccessWindowController: NSWindowController {
     @objc private func refresh() {
         guard window?.isVisible == true else { return }
         let sync = SyncServer.shared.isEnabled ? "" : "  " + String(localized: "(iOS Sync is off)")
-        statusLabel.stringValue = String(localized: "Status: \(access.status.localized)") + sync
+        let saveError = access.saveError.map { "\n" + String(localized: "Settings not saved: \($0)") } ?? ""
+        statusLabel.stringValue = String(localized: "Status: \(access.status.localized)") + sync + saveError
     }
 
     @objc private func apply(_ sender: Any?) {

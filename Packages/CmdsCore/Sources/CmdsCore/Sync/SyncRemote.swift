@@ -29,6 +29,41 @@ public enum SyncRemote {
         public var isActive: Bool { enabled && SyncRemote.isValidHost(host) && relayPort != 0 }
     }
 
+    /// What remote access shows while no ssh runs: off, no usable host yet, or waiting for the sync listener.
+    public enum IdleState: Equatable, Sendable {
+        case off, chooseHost, waitingForSync
+    }
+
+    public static func idleState(_ settings: Settings) -> IdleState {
+        guard settings.enabled else { return .off }
+        return settings.isActive ? .waitingForSync : .chooseHost
+    }
+
+    /// The ssh a running instance started, kept in the support directory so the next launch can end one left
+    /// over from a crash. The process start time is recorded with the pid, so a pid reused by an unrelated ssh
+    /// never matches.
+    public struct SSHRecord: Equatable, Sendable {
+        public var pid: Int32
+        public var startSeconds: UInt64
+        public var startMicroseconds: UInt64
+
+        public init(pid: Int32, startSeconds: UInt64, startMicroseconds: UInt64) {
+            self.pid = pid
+            self.startSeconds = startSeconds
+            self.startMicroseconds = startMicroseconds
+        }
+
+        /// `<pid> <start seconds> <start microseconds>`; anything else (including the older pid-only file) is nil.
+        public init?(fileText: String) {
+            let fields = fileText.split(whereSeparator: \.isWhitespace)
+            guard fields.count == 3, let pid = Int32(fields[0]), pid > 1,
+                  let seconds = UInt64(fields[1]), let microseconds = UInt64(fields[2]) else { return nil }
+            self.init(pid: pid, startSeconds: seconds, startMicroseconds: microseconds)
+        }
+
+        public var fileText: String { "\(pid) \(startSeconds) \(startMicroseconds)\n" }
+    }
+
     /// An ssh destination: `[user@]host` with only host-name characters, never an option (`-…`).
     public static func isValidHost(_ host: String) -> Bool {
         guard !host.isEmpty, host.utf8.count <= 255, !host.hasPrefix("-") else { return false }
