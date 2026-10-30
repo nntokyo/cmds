@@ -1,3 +1,4 @@
+import CmdsCore
 import CryptoKit
 import Foundation
 import os
@@ -79,14 +80,35 @@ final class SyncDeviceStore {
 
     // MARK: - Persistence
 
+    /// Set when an unreadable file could not be moved aside: saving would overwrite it.
+    private var saveBlocked = false
+
+    /// An unreadable file is moved to `sync-devices.json.corrupt-<date>` (kept) and the store starts empty, so the
+    /// next save does not delete the paired devices (#4).
     private func load() {
-        guard let data = try? Data(contentsOf: fileURL) else { return }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        devices = (try? decoder.decode([Device].self, from: data)) ?? []
+        switch StoredFile.load([Device].self, from: fileURL, decoder: decoder) {
+        case .missing:
+            break
+        case .loaded(let devices):
+            self.devices = devices
+        case .unreadable(let error, .success(let backup)):
+            syncLog.error("""
+                could not read paired devices (\(error.localizedDescription, privacy: .public)); \
+                moved the file to \(backup.lastPathComponent, privacy: .public)
+                """)
+        case .unreadable(let error, .failure(let moveError)):
+            syncLog.error("""
+                could not read paired devices (\(error.localizedDescription, privacy: .public)) or move the file \
+                aside (\(moveError.localizedDescription, privacy: .public)); not saving this run
+                """)
+            saveBlocked = true
+        }
     }
 
     private func save() {
+        guard !saveBlocked else { return }
         let fm = FileManager.default
         let directory = fileURL.deletingLastPathComponent()
         do {
@@ -102,6 +124,8 @@ final class SyncDeviceStore {
             guard fm.createFile(atPath: temp.path, contents: data, attributes: [.posixPermissions: 0o600]) else {
                 throw CocoaError(.fileWriteUnknown)
             }
+            // Removes the temp file when the replace/move fails (after success it no longer exists).
+            defer { try? fm.removeItem(at: temp) }
             if fm.fileExists(atPath: fileURL.path) {
                 _ = try fm.replaceItemAt(fileURL, withItemAt: temp)
             } else {
