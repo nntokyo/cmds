@@ -7,6 +7,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-31
+
+### Fixed
+
+- Remote access (iOS sync over SSH): a failure to save the settings is logged and shown in the window instead of
+  being ignored.
+- Remote access: the relay port is shown without a thousands separator ("62198", not "62,198").
+- Remote access: stopping with no relay host shows "Choose a relay host" instead of "Waiting for iOS Sync".
+- Remote access: an ssh left over from a previous run is only terminated when its pid, start time and path all match
+  the one cmds started, so a reused pid can no longer hit an unrelated ssh.
+- Bluetooth sync: a channel that opens without streams is refused instead of crashing the app.
+
 ## [0.1.0] - 2026-10-30
 
 First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-29.
@@ -86,5 +98,6 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.1.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.1.1...master
+[0.1.1]: https://github.com/nntokyo/cmds/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/nntokyo/cmds/releases/tag/v0.1.0
