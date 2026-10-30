@@ -1,7 +1,10 @@
 # iOS companion sync protocol (v2)
 
-The cmds Mac app streams workspaces and terminal screens to the iOS/iPadOS companion over the
-local network. Code: `Packages/CmdsCore/Sources/CmdsCore/Sync/` (shared by both sides).
+> The wire protocol between the Mac app and the iOS/iPadOS companion: transports (LAN, Bluetooth, SSH relay),
+> messages, pairing, the Mac's identity and the threat model.
+
+The cmds Mac app streams workspaces and terminal screens to the iOS/iPadOS companion over the local network.
+Setting it up as a user: [guide/iphone.md](../guide/iphone.md). Code: `Packages/CmdsCore/Sources/CmdsCore/Sync/` (shared by both sides).
 
 ## Transport
 
@@ -63,8 +66,8 @@ the network; only the bytes travel over an L2CAP channel. Code: `CmdsCore/Sync/S
   per-connection setting on the Mac, not a protocol change.
 - **Permissions.** Both apps declare `NSBluetoothAlwaysUsageDescription`; the phone asks for Bluetooth
   access the first time it needs the fallback. No background mode: the fallback runs while the app is in
-  the foreground. Opening the encrypted channel the first time triggers the system's Bluetooth pairing
-  (bonding) prompt on the phone.
+  the foreground. The L2CAP channel is opened without link encryption, so there is no Bluetooth pairing
+  (bonding) prompt; the pinned TLS session protects the data.
 
 ## Remote access via SSH
 
@@ -150,7 +153,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 |---|---|---|
 | `welcome` | `protocolVersion, macName, token` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. |
 | `error` | `code:SyncErrorCode, message` | Codes: `unsupportedVersion pairingRequired invalidPairingCode invalidToken rateLimited notAuthenticated badRequest notFound internal`. After auth errors (`isAuthFailure`) the Mac closes the socket. |
-| `state` | `workspaces:[WorkspaceInfo], system?:SystemStats, agentLimits?:[AgentLimits]` | `agentLimits` = latest account limits per coding agent (`{agent: claude/codex/other, limits:[{id: five_hour/seven_day/spend/…, usedPercent, resetsAt? (epoch s), windowMinutes?, usedUSD?, limitUSD?, period?}], plan?, updatedAt}`), omitted when none is known or by older Macs; panes running an agent carry `PaneInfo.agent?` (`AgentUsage`, see ARCHITECTURE.md). Agent figures alone change at the same ≤ 2 s cadence as CPU/memory. Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
+| `state` | `workspaces:[WorkspaceInfo], system?:SystemStats, agentLimits?:[AgentLimits]` | `agentLimits` = latest account limits per coding agent (`{agent: claude/codex/other, limits:[{id: five_hour/seven_day/spend/…, usedPercent, resetsAt? (epoch s), windowMinutes?, usedUSD?, limitUSD?, period?}], plan?, updatedAt}`), omitted when none is known or by older Macs; panes running an agent carry `PaneInfo.agent?` (`AgentUsage`, see [reference/api.md](../reference/api.md#types)). Agent figures alone change at the same ≤ 2 s cadence as CPU/memory. Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
 | `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?` | Full visible screen (no scrollback). Trailing spaces may be trimmed. Cursor nil = hidden. |
 | `screenDiff` | `paneID, seq, baseSeq, changes:[{row,text}], cursorRow?, cursorCol?` | Only when rows/cols unchanged. Applies to the screen with `seq == baseSeq`; cursor is absolute. |
 | `notification` | `paneID?, workspaceID, title, body` | Pane raised attention (agent waiting, OSC 9/777…). Phone posts a local notification. |
@@ -267,7 +270,7 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
 - `ScreenDiffer.diff(from:to:)` / `apply(_:to:)` for custom use.
 - `SyncKey.terminalBytes(applicationCursor:)` if writing keys straight to the pty.
 
-## Security
+## Security and threat model
 
 ### Protected
 
@@ -333,102 +336,12 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
   connection timing and sizes are visible on the network. Anyone on the network can connect and
   attempt handshakes (bounded by the connection limits) or disrupt the network.
 
-## Testing with an isolated instance
+## Testing
 
-Never test against the cmds instance in use or the user's phone. In addition to `CMDS_SUPPORT_DIR`
-(see ARCHITECTURE.md), which also selects separate keychain items for the sync identity:
-
-- `CMDS_SYNC_PORT=<port>`: listen on this port; unlike the default port it never falls back to another.
-- `CMDS_SYNC_NO_BONJOUR=1`: do not advertise, so no phone discovers the instance.
-- `CMDS_SYNC_NO_BLUETOOTH=1`: no Bluetooth peripheral (no advertising, no L2CAP channel). Use it for
-  every test instance that does not test Bluetooth.
-- Relay test against an isolated instance: `CMDS_RELAY_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
-  swift test --filter SyncRelayTests` (in `Packages/CmdsCore`) pins the instance's certificate and pairs
-  through two relays and a simulated L2CAP channel.
-- `CMDS_SYNC_REMOTE_SSH_CONFIG=<file>` (isolated instances only): remote access runs `ssh -F <file>`, so
-  a test never reads `~/.ssh`. Remote access E2E: `Packages/CmdsSSH/Scripts/test-relay-sshd.sh start <dir> <port>`
-  starts a throwaway sshd as the current user on 127.0.0.1 (temp host keys, `authorized_keys`, client
-  config with Host `cmds-test-relay` and its own known_hosts). Put `{"enabled":true,"host":"cmds-test-relay","relayPort":<relay port>}`
-  in `$CMDS_SUPPORT_DIR/sync-remote.json`, start the instance with `CMDS_SYNC_REMOTE_SSH_CONFIG=<dir>/ssh_config`
-  and the switches here, then in `Packages/CmdsSSH`: `CMDS_SSH_E2E_DIR=<dir> CMDS_SSH_E2E_PORT=<port>
-  CMDS_SSH_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt CMDS_SSH_E2E_RELAY_PORT=<relay port> swift test`
-  (host key TOFU/mismatch, unauthorized key, restricted key, pairing refused over SSH, token → welcome/state,
-  wrong certificate, phone-side and Mac-side tunnel drops). `test-relay-sshd.sh stop <dir>` afterwards.
-- `CMDS_SYNC_TEST_PAIRING=1` (DEBUG builds with `CMDS_SUPPORT_DIR` only): listen on 127.0.0.1 only,
-  keep pairing open without the window and write the current QR payload (host 127.0.0.1) to
-  `$CMDS_SUPPORT_DIR/sync-test-pairing.txt` (0600), so a local client can pair like the scanner does.
-
-## Testing on a device
-
-The sync paths can be checked end to end on a real iPhone without touching it: `xcrun devicectl` installs,
-launches and screenshots the app over Wi‑Fi, the `CmdsDeviceDriver` UI test target taps and reads it, and
-`cmds sync` shows the Mac's side. Wi‑Fi has to stay on for `devicectl`, so a debug build of the companion can
-be told to use only one path. Use a device and Mac instance meant for testing, never the ones in use.
-
-**Forcing a path (debug builds only).** Launch argument `-cmdsTransport <auto|network|bluetooth|ssh>`:
-`bluetooth` connects only through `BluetoothTransport` (no LAN/AWDL attempt even though Wi‑Fi works), `ssh`
-only through `SSHTransport` (remote access must be set up for that Mac), `network` never falls back. The same
-choice is in the ⋯ menu (`moreMenu`) › "Transport (Debug)" (`debugTransport`) › "Transport: bluetooth"
-(`transport.bluetooth`, …; the driver's `tap:` also matches the labels); it reconnects at once, wins over the launch argument for that run and is
-remembered for later launches without the argument. Every mode keeps the pinned TLS check; a path that
-cannot be used fails with a reason instead of falling back. Release builds ignore the argument and hide the
-menu.
-
-**Reading the phone's state.** The status badge (`connectionStatus`) carries, in debug builds, an
-accessibility value like
-`mode=bluetooth path=bluetooth | bluetooth: welcome` or
-`mode=bluetooth path=none | bluetooth: error: Bluetooth is off. | lastError: bluetooth: Bluetooth is off.`
-(release builds: the path, or the last error). Stages per path: network `connecting`; Bluetooth
-`waiting for Bluetooth`, `scanning`, `found peripheral, connecting`, `connected peripheral, reading service info`,
-`opening L2CAP (PSM n)`, `L2CAP open, TLS handshake`; SSH `connecting to the relay host`,
-`relay login ok, opening the forward`, `forward open, TLS handshake`; then `TLS ok, hello sent` and `welcome`,
-or `error: <reason>`. Debug builds also show it as a row at the bottom of the workspace list
-(`syncDiagnostics`). No tokens, keys or codes appear in it.
-
-**Mac side.** `cmds sync` (`--json` for everything; socket API `sync.status`, refused on SSH-pane sockets):
-
-```
-sync       enabled · Listening on port 47961 · identity 41F2-E114-519A · 1 paired
-bonjour    on · "Mac"
-bluetooth  allowed · authorization allowedAlways · manager poweredOn · advertising on · PSM 193 · 1 channel · Advertising (PSM 193)
-ssh relay  off · forwarding off · Off
-  ✓ iPhone  bluetooth:1a2b3c4d  bluetooth  2 panes  sent 1.2 MB  received 3.4 KB  for 1m05s
-```
-
-`authorization` is the Mac app's Bluetooth permission (`allowedAlways`, `denied`, `restricted`,
-`notDetermined`); `manager` is `off` while the peripheral is not running (sync off, "Allow Bluetooth Sync"
-off, `CMDS_SYNC_NO_BLUETOOTH`). A connection is `…` until its `hello` authenticated.
-
-**Commands** (`UDID` = the test device, `$SOCK` = the Mac instance's socket):
-
-```sh
-# Build and install the debug companion and the driver once.
-xcodebuild -scheme CmdsCompanion -destination id=$UDID -derivedDataPath build/dd-ios -allowProvisioningUpdates build
-xcrun devicectl device install app --device $UDID build/dd-ios/Build/Products/Debug-iphoneos/CmdsCompanion.app
-xcodebuild -scheme CmdsDeviceDriver -destination id=$UDID -derivedDataPath build/dd-driver -allowProvisioningUpdates build-for-testing
-
-# Launch forced to Bluetooth (the app reconnects to its most recent Mac).
-xcrun devicectl device process launch --device $UDID --terminate-existing tokyo.n-n.cmds.companion -cmdsTransport bluetooth
-
-# Wait until it is connected over Bluetooth, then print the diagnostics.
-TEST_RUNNER_CMDS_UI_SCRIPT='waitValue:connectionStatus~path=bluetooth~45;;value:syncDiagnostics' \
-  xcodebuild test-without-building -xctestrun build/dd-driver/Build/Products/CmdsDeviceDriver_*.xctestrun \
-  -destination id=$UDID | grep CMDS_UI_VALUE
-
-# Or switch the running app without relaunching it.
-TEST_RUNNER_CMDS_UI_SCRIPT='tap:moreMenu;;tap:debugTransport;;tap:transport.ssh;;waitValue:connectionStatus~path=ssh~45' \
-  xcodebuild test-without-building -xctestrun build/dd-driver/Build/Products/CmdsDeviceDriver_*.xctestrun -destination id=$UDID
-
-# The Mac's view of the same connection.
-cmds --socket $SOCK sync --json | jq '.bluetooth, [.clients[] | {deviceName, authenticated, peer, path}]'
-
-# Back to normal.
-xcrun devicectl device process launch --device $UDID --terminate-existing tokyo.n-n.cmds.companion -cmdsTransport auto
-```
-
-The phone must already be paired with the Mac instance under test (pairing over Bluetooth works with a
-scanned QR code; pairing codes are refused over SSH). For Bluetooth the instance must run without
-`CMDS_SYNC_NO_BLUETOOTH`, and `cmds sync` should show `authorization allowedAlways` and `advertising on`.
+Isolated instances for sync (`CMDS_SYNC_PORT`, `CMDS_SYNC_NO_BONJOUR`, `CMDS_SYNC_NO_BLUETOOTH`,
+`CMDS_SYNC_TEST_PAIRING`), the relay and SSH end-to-end tests, forcing a transport on a device, the phone's
+diagnostics and `cmds sync`: [testing.md](testing.md#sync-against-an-isolated-instance) and
+[testing.md](testing.md#testing-sync-on-a-device).
 
 ## Versioning
 

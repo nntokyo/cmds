@@ -1,6 +1,6 @@
 import Foundation
 
-// Resuming AI agent sessions after cmds restarts (docs/AGENTS.md "Resuming sessions").
+// Resuming AI agent sessions after cmds restarts (docs/guide/ai-agents.md "Resuming sessions").
 // The app remembers per terminal pane the agent session that ran there (`AgentSession`, saved in session.json),
 // offers it again after a relaunch and, when asked, types the resume command into the pane's own shell.
 

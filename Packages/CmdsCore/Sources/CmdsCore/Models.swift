@@ -49,7 +49,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
-/// An SSH pane (docs/SSH.md): the `ssh` destination it runs and whether the connection is up.
+/// An SSH pane (docs/internals/ssh.md): the `ssh` destination it runs and whether the connection is up.
 public struct RemoteInfo: Codable, Equatable, Sendable {
     /// As given by the user: `home`, `user@host`, an `~/.ssh/config` alias.
     public var host: String

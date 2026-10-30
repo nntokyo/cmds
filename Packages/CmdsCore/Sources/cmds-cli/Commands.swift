@@ -39,7 +39,7 @@ extension CLI {
                 details: """
                     One line per terminal pane: state (offered = from before the restart, waiting = resume queued until
                     the shell prompt is ready, running, resumed), agent, session id, directory (and SSH host) and the
-                    command `cmds resume` types into the pane. See docs/AGENTS.md "Resuming sessions".
+                    command `cmds resume` types into the pane. See docs/guide/ai-agents.md "Resuming sessions".
                     """,
                 options: ["pane"]) { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds sessions [--pane P]")
@@ -121,7 +121,7 @@ extension CLI {
                     restricted, notDetermined), the peripheral state, advertising and the L2CAP PSM. Each connection shows
                     its device name, whether it authenticated, its peer (IP, bluetooth:<peer> or ssh:<relay host>), path,
                     subscribed panes, bytes sent/received and how long it has been connected. Not available on the
-                    socket an SSH pane forwards to a server. See docs/SYNC.md "Testing on a device".
+                    socket an SSH pane forwards to a server. See docs/internals/testing.md "Testing sync on a device".
                     """) { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds sync")
             let result = try ctx.call("sync.status")
@@ -132,7 +132,7 @@ extension CLI {
                 summary: "Create a workspace (in the current directory by default) and select it.",
                 details: """
                     --ssh opens an SSH workspace: the pane runs your `ssh HOST` (respecting ~/.ssh/config) and forwards a
-                    restricted cmds socket to the server for cmds-remote.sh (docs/SSH.md). --remote-cwd is a directory on
+                    restricted cmds socket to the server for cmds-remote.sh (docs/internals/ssh.md). --remote-cwd is a directory on
                     the server (absolute or ~/…).
                     """,
                 options: ["title", "cwd", "ssh", "remote-cwd"]) { ctx in
@@ -178,7 +178,7 @@ extension CLI {
         Command(name: "split", usage: "split [right|down] [--pane P] [--browser URL | --ssh HOST [--remote-cwd DIR]] [--cwd DIR] [--no-focus] [-- command…]",
                 summary: "Split a pane (default: the current one, to the right) and focus the new pane.",
                 details: """
-                    --browser opens a browser pane instead of a terminal; --ssh an SSH pane (docs/SSH.md). Splitting an SSH
+                    --browser opens a browser pane instead of a terminal; --ssh an SSH pane (docs/internals/ssh.md). Splitting an SSH
                     pane without --cwd or a command opens another connection to the same host. --no-focus keeps the
                     keyboard in the current pane. Prints the new pane id.
                     """,
@@ -207,7 +207,7 @@ extension CLI {
             try ctx.call("pane.reconnect", ["pane": (ctx.args.positionals.first ?? ctx.envPane).json])
         },
         Command(name: "remote-helper", usage: "remote-helper",
-                summary: "Print cmds-remote.sh, the sh client for servers reached through an SSH pane (docs/SSH.md).",
+                summary: "Print cmds-remote.sh, the sh client for servers reached through an SSH pane (docs/internals/ssh.md).",
                 details: "E.g. `cmds remote-helper > cmds-remote.sh` to copy it yourself. In the app: Pane → Install Remote Helper….") { _ in
             print(RemoteHelperScript.source, terminator: "")
         },
@@ -377,12 +377,12 @@ extension CLI {
         },
         Command(name: "hook claude-status", usage: "hook claude-status",
                 summary: "Claude Code status line: read its JSON on stdin and report the session usage for this pane.",
-                details: "Prints nothing and always exits 0 within ~200 ms; a no-op outside cmds. See docs/CLI.md for the status-line snippet.") { ctx in
+                details: "Prints nothing and always exits 0 within ~200 ms; a no-op outside cmds. See docs/guide/ai-agents.md for the status-line snippet.") { ctx in
             AgentHook.claudeStatus(ctx)
         },
         Command(name: "hook claude", usage: "hook claude",
                 summary: "Claude Code hook: read the hook JSON on stdin and notify (Notification / Stop events).",
-                details: "Always exits 0 so a missing app never blocks Claude Code. See docs/CLI.md for the settings.json snippet.") { ctx in
+                details: "Always exits 0 so a missing app never blocks Claude Code. See docs/guide/ai-agents.md for the settings.json snippet.") { ctx in
             let input = FileHandle.standardInput.readDataToEndOfFile()
             guard let note = ClaudeHook.notification(fromHookInput: input) else { return }
             guard ctx.envPane != nil || ctx.args[option: "socket"] != nil || ctx.environment[CmdsEnv.socketPath] != nil else {

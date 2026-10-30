@@ -1,7 +1,7 @@
 import AppKit
 import CmdsCore
 
-/// cmds › Language: System / 日本語 / English (docs/ARCHITECTURE.md "Localization").
+/// cmds › Language: System / 日本語 / English (docs/internals/localization.md).
 ///
 /// The UI follows the system language (System Settings › General › Language & Region, which also has a per-app
 /// override). This menu sets `AppleLanguages` in the app's own defaults domain, which AppKit reads at launch, so it

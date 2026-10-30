@@ -1,7 +1,7 @@
 import Foundation
 
 // Wire messages for the iOS companion sync. Each message is one flat JSON object whose `type`
-// field selects the case, e.g. {"type":"input","paneID":"p1","text":"ls\n"}. See docs/SYNC.md.
+// field selects the case, e.g. {"type":"input","paneID":"p1","text":"ls\n"}. See docs/internals/sync-protocol.md.
 
 // MARK: - Phone → Mac
 

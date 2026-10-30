@@ -3,7 +3,7 @@ import CmdsCore
 import Foundation
 import Network
 
-/// Bluetooth fallback for the iOS companion (docs/SYNC.md "Bluetooth"): a CoreBluetooth peripheral that
+/// Bluetooth fallback for the iOS companion (docs/internals/sync-protocol.md "Bluetooth"): a CoreBluetooth peripheral that
 /// advertises `SyncBluetooth.serviceUUID`, publishes an encrypted L2CAP channel and relays every opened
 /// channel, byte for byte, to the sync listener on 127.0.0.1. The sync server therefore sees an ordinary
 /// TLS client and applies every check it applies to network clients; the phone authenticates the Mac by

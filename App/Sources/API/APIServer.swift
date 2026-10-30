@@ -3,7 +3,7 @@ import Combine
 import CmdsCore
 import os
 
-/// Socket API (docs/ARCHITECTURE.md, "Socket API"): maps JSON-RPC methods onto `AppController`.
+/// Socket API (docs/reference/api.md): maps JSON-RPC methods onto `AppController`.
 /// Requests arrive on connection threads and are handled on the main actor in arrival order;
 /// async methods (browser eval/snapshot) reply when done without blocking other requests.
 /// With a `scope` (the socket an SSH pane forwards to its server) every request first goes through

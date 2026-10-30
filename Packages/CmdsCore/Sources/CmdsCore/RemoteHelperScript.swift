@@ -1,7 +1,7 @@
 import Foundation
 
 /// `cmds-remote.sh`: a dependency-free POSIX sh client for the API socket an SSH pane forwards to the server
-/// (docs/SSH.md). The app installs it into `~/.local/bin` on the server only when the user asks ("Install Remote
+/// (docs/internals/ssh.md). The app installs it into `~/.local/bin` on the server only when the user asks ("Install Remote
 /// Helper…"); `cmds remote-helper` prints it for a manual install.
 public enum RemoteHelperScript {
     public static let fileName = "cmds-remote.sh"

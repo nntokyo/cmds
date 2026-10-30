@@ -1,7 +1,7 @@
 import Foundation
 
 /// Turns a Claude Code hook payload (JSON on stdin) into a cmds notification.
-/// Used by `cmds hook claude`; see docs/CLI.md for the hook configuration.
+/// Used by `cmds hook claude`; see docs/guide/ai-agents.md for the hook configuration.
 public enum ClaudeHook {
     public struct Notification: Equatable, Sendable {
         public var title: String?

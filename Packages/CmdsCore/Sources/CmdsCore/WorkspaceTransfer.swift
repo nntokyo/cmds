@@ -1,7 +1,7 @@
 import Foundation
 
-// Moving workspaces and their AI agent sessions to another cmds instance (docs/AGENTS.md "Moving to a new version",
-// docs/CLI.md `cmds export` / `cmds import`). `state.export` writes a `WorkspaceBundle`; `state.import` recreates
+// Moving workspaces and their AI agent sessions to another cmds instance (docs/guide/ai-agents.md "Moving to a new version",
+// docs/reference/cli.md `cmds export` / `cmds import`). `state.export` writes a `WorkspaceBundle`; `state.import` recreates
 // its workspaces and offers each pane's agent session for resuming, like a relaunch does.
 
 /// Versioned, self-contained description of workspaces: layout with each pane's kind and location, the agent

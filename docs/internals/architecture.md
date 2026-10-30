@@ -1,26 +1,38 @@
-# cmds architecture
+# Architecture
 
-Native macOS terminal multiplexer for coding agents. Swift + AppKit, terminal rendering via libghostty
-(GhosttyKit.xcframework built from `vendor/ghostty`). GPL-3.0.
+> How the code is organised: targets, packages, the main concepts and how the pieces fit together.
 
-## Layout
+cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, terminal rendering via libghostty
+(GhosttyKit.xcframework built from `vendor/ghostty`), an iOS/iPadOS companion in SwiftUI. GPL-3.0.
+
+## Repository layout
 
 | Path | Contents |
 |---|---|
-| `Packages/CmdsCore` | SwiftPM package shared by macOS app, CLI and iOS: RPC wire types, snapshot models, sync protocol. Also the `cmds` CLI executable (`Sources/cmds-cli`). |
-| `App/Sources/Terminal` | `TerminalSurface.swift` (contract) + `Ghostty/` (libghostty implementation). |
-| `App/Sources/Workspace` | Workspace/pane model, split tree, `AppController` (single source of truth, main actor). |
-| `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, coding agent (model, context, cost, 5-hour limit), CPU/memory, latest notification text, attention dot. Footer: account limits per agent (Claude, Codex) and Mac-wide CPU and memory meters. |
-| `App/Sources/Panes` | Split container views, pane container with notification ring. |
+| `Packages/CmdsCore` | SwiftPM package shared by the macOS app, the CLI and iOS: RPC wire types, snapshot models, sync protocol, agent usage parsing, preview renderers, keep-awake logic, workspace export bundles. Also the `cmds` CLI executable (`Sources/cmds-cli`) and the unit tests (`CmdsCoreTests`, `CmdsCLITests`). |
+| `Packages/CmdsSSH` | SSH client for the companion's remote access (swift-nio-ssh); only the iOS app links it, so the Mac app and CLI do not pull in SwiftNIO. `Scripts/test-relay-sshd.sh` runs a throwaway sshd for its tests. |
+| `App/Sources/App` | App delegate, main window, language menu (`AppLanguage`), keep-awake (`KeepAwake.swift`), localized texts for core errors. |
+| `App/Sources/Terminal` | `TerminalSurface.swift` (contract) + `Ghostty/` (libghostty implementation, plus a standalone debug harness). |
+| `App/Sources/Workspace` | Workspace/pane model, split tree, `AppController` (single source of truth, main actor), session store, export/import, SSH sessions, metadata/CPU sampling, Codex session watcher. |
+| `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, coding agent (model, context, cost, 5-hour limit), CPU/memory, latest notification text, attention dot. Footer: account limits per agent (Claude, Codex) and Mac-wide CPU and memory meters. Compact rail variant. |
+| `App/Sources/Panes` | Split container views, pane container with notification ring, SSH connect sheet and overlay, agent resume banner. |
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
-| `App/Sources/Shortcuts` | Main menu + key equivalents. |
-| `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`. |
-| `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay fallback) for the iOS app. |
-| `iOS/Sources` | SwiftUI iOS/iPadOS companion. |
-| `vendor/ghostty` | Ghostty source (git submodule). `vendor/GhosttyKit.xcframework` is a symlink/copy of `vendor/ghostty/macos/GhosttyKit.xcframework` (gitignored). Build: `cd vendor/ghostty && zig build -Demit-xcframework=true -Dxcframework-target=native -Demit-macos-app=false -Doptimize=ReleaseFast` |
+| `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
+| `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
+| `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
+| `App/Resources`, `iOS/Resources` | Asset catalogs (app icons) and String Catalogs (`Localizable.xcstrings`, `InfoPlist.xcstrings`). |
+| `Shared/Sources` | Localized UI text for CmdsCore values, compiled into both apps. |
+| `iOS/Sources` | SwiftUI iOS/iPadOS companion (`Connection/` transports and client, `Views/`, `Support/`). |
+| `iOS/UITests` | `CmdsDeviceDriver` UI test target: `DeviceDriverTests` (scripted driver) and `TerminalScreenTests`. |
+| `integrations/claude` | Claude Code skill for working inside cmds. |
+| `design/icon` | App icon artwork and the scripts that generate every icon size ([README](../../design/icon/README.md)). |
+| `scripts` | `l10n-sync.sh` (String Catalog sync), `check-links.py` (Markdown link check). |
+| `vendor/ghostty` | Ghostty source (submodule). `vendor/GhosttyKit.xcframework` is a symlink/copy of `vendor/ghostty/macos/GhosttyKit.xcframework` (ignored); build steps in the [README](../../README.md#build-from-source). |
 
-Project file is generated: `xcodegen generate` (do not commit `cmds.xcodeproj`).
+The Xcode project is generated from `project.yml` with `xcodegen generate` (do not commit `cmds.xcodeproj`).
+Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `cmds.app/Contents/Resources/bin/cmds`),
+`CmdsCompanion` (iOS app; scheme `CmdsCompanion`), `CmdsDeviceDriver` (iOS UI tests; scheme `CmdsDeviceDriver`).
 
 ## Key concepts
 
@@ -40,44 +52,67 @@ Project file is generated: `xcodegen generate` (do not commit `cmds.xcodeproj`).
   (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
   URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
   (the file is on the server). Session restore keeps preview panes (path, forced format).
-- **SSH pane** ([SSH.md](SSH.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
+- **SSH pane** ([ssh.md](ssh.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
   forwarded to the server (`ssh -R`); `PaneInfo.remote` = `{host, connected, branch?}`, `WorkspaceInfo.remoteHost`
   while the focused pane is one (its cwd/branch are then remote). Survives `ssh` exiting (Reconnect overlay).
 - **Attention / notification ring**: a pane lights up (colored ring border) when its program sends OSC 9/777,
   rings the bell, or `cmds notify` targets it — and the pane is not the focused pane of the key window.
   Focusing the pane clears it. The workspace row in the sidebar shows a dot + the latest notification text.
-- Every terminal gets env `CMDS_SOCKET_PATH`, `CMDS_WORKSPACE_ID`, `CMDS_PANE_ID` so the CLI targets its own pane by default.
-- **Resource usage** (`Workspace/MetadataMonitor.swift`, `SystemSampler.swift`; math in `CmdsCore/ResourceSampling.swift`,
-  `ProcessAttribution.swift`): every 2 s one background scan finds each workspace's processes and reads their
-  listening ports and `proc_pid_rusage`. A process belongs to a workspace by (1) `CMDS_WORKSPACE_ID` in its
-  environment with our `CMDS_SOCKET_PATH` — macOS hides the environment of Apple platform binaries (`/bin/zsh`,
-  `make`, `git`), so this only covers third-party ones (node, python…); (2) its controlling tty, found from each
-  pane's pty foreground process group (`TerminalSurface.foregroundProcessGroupID`); (3) its nearest attributed
-  ancestor (detached children). Workspace CPU = growth of own + reaped-children CPU time (catches processes that
-  start and exit between scans) over wall time, Activity Monitor style (100 % = one core, capped at all cores);
-  memory = sum of `ri_phys_footprint`. Mac-wide: `host_statistics` CPU ticks (0–100 % of all cores); memory used =
-  app (internal − purgeable) + wired + compressed pages (Activity Monitor's "Memory Used"); pressure =
-  `kern.memorystatus_vm_pressure_level` (1 normal, 2 warning, 4 critical). Updates go through
-  `AppController.usageChanges`, not `changes`: only the usage labels redraw (no reloads, session saves or socket events).
-- **Agent usage** (`CmdsCore/AgentUsage.swift`, `AgentFormat.swift`, `ClaudeStatusLine.swift`, `CodexRollout.swift`;
-  app: `Workspace/CodexSessionWatcher.swift`, `AppController` "Agents"): per terminal pane an optional `AgentUsage`
-  (`PaneInfo.agent`) plus the latest account limits per agent kind (`AgentLimits`).
-  - Claude Code: its status-line command runs `cmds hook claude-status`, which parses the status-line JSON and sends
-    `agent.report` with the Claude process id (nearest ancestor recognised as Claude, else the nearest non-shell).
-    The usage is dropped when that process exits (without a pid: after 30 min without updates).
-  - Codex: the metadata scan finds `codex` processes (exec path / argv; `app-server`/`exec-server`/`mcp-server` are
-    services, `login`/`features`… are ignored) and places sessions in panes by `CMDS_PANE_ID` (else pane tty). A
-    session process that holds its `rollout-*.jsonl` open owns it. Codex ≥ 0.16x TUIs run their sessions in the shared
-    app-server daemon, which holds the files instead; such a file is matched by `session_meta.cwd` and time
-    (`CodexSessionMatcher`: the most recently started Codex pane before the session was created, else before its last
-    write, for resumed sessions). Files are read only when size/mtime change, only the appended bytes (≤ 256 KB tail);
-    only lines mentioning `token_count`/`turn_context` are decoded, into types holding just the usage fields. Context
-    % uses Codex's own formula (12k baseline). Usage is dropped when the pane has no Codex process left.
-  - Usage without updates for 3 min is marked `stale` (idle agent, dimmed). Limits whose `resetsAt` passed are left
-    out. Report-driven updates go through `usageChanges` (coalesced to 4/s); only appearing/disappearing agents emit
-    `pane` changes (row height).
+- Every terminal gets env `CMDS_SOCKET_PATH`, `CMDS_WORKSPACE_ID`, `CMDS_PANE_ID` so the CLI targets its own pane by
+  default ([reference/environment.md](../reference/environment.md)).
+- **Session restore** (`Workspace/SessionStore.swift`): `session.json` in the support directory keeps the workspaces
+  with their split layout, per-pane cwd / URL / preview file / SSH host and remote cwd, the focused pane and the
+  remembered agent sessions. Pane and workspace ids are not persisted; they are reassigned on launch. Terminal
+  contents and running processes are not restored. **Export/import** (`AppController+Transfer.swift`,
+  `CmdsCore/WorkspaceTransfer.swift`) writes the same information as a portable bundle
+  ([reference/cli.md](../reference/cli.md#moving-workspaces-to-another-cmds)).
+
+### Resource usage
+
+Code: `Workspace/MetadataMonitor.swift`, `SystemSampler.swift`; math in `CmdsCore/ResourceSampling.swift`,
+`ProcessAttribution.swift`.
+
+- Every 2 s one background scan finds each workspace's processes and reads their listening ports and
+  `proc_pid_rusage`.
+- A process belongs to a workspace by (1) `CMDS_WORKSPACE_ID` in its environment with our `CMDS_SOCKET_PATH` — macOS
+  hides the environment of Apple platform binaries (`/bin/zsh`, `make`, `git`), so this only covers third-party ones
+  (node, python…); (2) its controlling tty, found from each pane's pty foreground process group
+  (`TerminalSurface.foregroundProcessGroupID`); (3) its nearest attributed ancestor (detached children).
+- Workspace CPU = growth of own + reaped-children CPU time (catches processes that start and exit between scans) over
+  wall time, Activity Monitor style (100 % = one core, capped at all cores); memory = sum of `ri_phys_footprint`.
+- Mac-wide: `host_statistics` CPU ticks (0–100 % of all cores); memory used = app (internal − purgeable) + wired +
+  compressed pages (Activity Monitor's "Memory Used"); pressure = `kern.memorystatus_vm_pressure_level` (1 normal,
+  2 warning, 4 critical).
+- Updates go through `AppController.usageChanges`, not `changes`: only the usage labels redraw (no reloads, session
+  saves or socket events).
+
+### Agent usage
+
+Code: `CmdsCore/AgentUsage.swift`, `AgentFormat.swift`, `ClaudeStatusLine.swift`, `CodexRollout.swift`; app:
+`Workspace/CodexSessionWatcher.swift`, `AppController` "Agents". Per terminal pane an optional `AgentUsage`
+(`PaneInfo.agent`) plus the latest account limits per agent kind (`AgentLimits`). Setup for users:
+[guide/ai-agents.md](../guide/ai-agents.md#usage-and-limits).
+
+- Claude Code: its status-line command runs `cmds hook claude-status`, which parses the status-line JSON and sends
+  `agent.report` with the Claude process id (nearest ancestor recognised as Claude, else the nearest non-shell).
+  The usage is dropped when that process exits (without a pid: after 30 min without updates).
+- Codex: the metadata scan finds `codex` processes (exec path / argv; `app-server`/`exec-server`/`mcp-server` are
+  services, `login`/`features`… are ignored) and places sessions in panes by `CMDS_PANE_ID` (else pane tty). A
+  session process that holds its `rollout-*.jsonl` open owns it. Codex ≥ 0.16x TUIs run their sessions in the shared
+  app-server daemon, which holds the files instead; such a file is matched by `session_meta.cwd` and time
+  (`CodexSessionMatcher`: the most recently started Codex pane before the session was created, else before its last
+  write, for resumed sessions). Files are read only when size/mtime change, only the appended bytes (≤ 256 KB tail);
+  only lines mentioning `token_count`/`turn_context` are decoded, into types holding just the usage fields. Context
+  % uses Codex's own formula (12k baseline). Usage is dropped when the pane has no Codex process left.
+- Usage without updates for 3 min is marked `stale` (idle agent, dimmed). Limits whose `resetsAt` passed are left
+  out. Report-driven updates go through `usageChanges` (coalesced to 4/s); only appearing/disappearing agents emit
+  `pane` changes (row height).
+- Session resume (`AppController+AgentSessions.swift`, `CmdsCore/AgentSession.swift`) remembers the session id per
+  pane in `session.json`; behaviour: [guide/ai-agents.md](../guide/ai-agents.md#resuming-sessions).
 
 ## Keeping the Mac awake
+
+What the user sees: [guide/workspaces-and-panes.md](../guide/workspaces-and-panes.md#keeping-the-mac-awake).
 
 `App/Sources/App/KeepAwake.swift` (`KeepAwakeManager`); command strings, `pmset -g` parsing and the lid state machine
 in `CmdsCore/KeepAwake.swift` (`SleepDisabledCommand`, `LidSleepController`, unit-tested with a fake `pmset`).
@@ -110,152 +145,26 @@ in `CmdsCore/KeepAwake.swift` (`SleepDisabledCommand`, `LidSleepController`, uni
   - Isolated instances (`CMDS_SUPPORT_DIR`) hold the idle assertion (settings in memory only) but never prompt or run
     `pmset` with privileges; the lid menu item is disabled.
 
-## Socket API (JSON lines, see `CmdsCore/RPC.swift`)
+## Socket API and CLI
 
-Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
-
-| Method | Params | Result |
-|---|---|---|
-| `system.ping` | – | `{"pong": true}` |
-| `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
-| `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits], "keepAwake": KeepAwakeStatus}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known; `keepAwake` = `idleAssertion`, `displayAssertion`, `lidCloseDisabled` (system `SleepDisabled`), `lidCloseByCmds`, `lidCloseAvailable`, `onBattery`, see [Keeping the Mac awake](#keeping-the-mac-awake)) |
-| `sync.status` | – | `SyncStatusReport` (iOS sync: `enabled`, `state`, `port`, `fingerprint`, `bonjour`, `pairingWindowOpen`, `pairedDevices`, `bluetooth` {`allowed`, `disabledByEnvironment`, `authorization`, `managerState`, `advertising`, `psm`, `channels`, `status`}, `remote` {`enabled`, `host`, `relayPort`, `forwarding`, `status`}, `clients` [{`deviceName`, `authenticated`, `peer`, `path`, `subscribedPanes`, `bytesSent`, `bytesReceived`, `connectedSince`, `connectedSeconds`}]); local socket only, see [SYNC.md](SYNC.md#testing-on-a-device) |
-| `agent.report` | `pane?`, `usage` (`AgentUsage`), `pid?` (agent process) | – (sets the pane's agent usage; its `limits` become that agent's account limits) |
-| `agent.claude_hook` | `pane?`, `input` (Claude Code hook JSON, object or JSON text) | – (notifies like `cmds hook claude`; never reads the transcript) |
-| `agent.claude_status` | `pane?`, `input` (status-line JSON) | – (like `cmds hook claude-status`, without a pid) |
-| `agent.sessions` | `pane?` (default: all panes) | `AgentSessionList` `{"mode": "ask"/"always"/"never", "sessions": [{"workspace", "pane", "state", "session": AgentSession, "command"?}]}` |
-| `agent.resume` | `pane?` or `all: true` | `{"queued": [pane], "skipped": [{"pane", "reason"}]}` (types the resume command once the pane's prompt is ready; [AGENTS.md](AGENTS.md#resuming-sessions)) |
-| `state.export` | – | `WorkspaceBundle` (workspaces, layout, per-pane agent sessions; [CLI.md](CLI.md#moving-workspaces-to-another-cmds)); local socket only |
-| `state.import` | `bundle` (object or JSON text), `mode?` (`append` default / `replace`), `resume?` (`ask`/`always`/`never`, default: the app setting) | `{"workspaces": [id], "panes", "closed", "resume", "offers": [{"workspace", "pane", "agent", "sessionID", "command"?}]}`; validates the bundle first; local socket only |
-| `remote.location` | `pane?`, `cwd?`, `branch?` | – (SSH panes: remote cwd/branch from `cmds-remote.sh prompt`) |
-| `agent.list` | – | `{"panes": [{"workspace", "pane", "usage": AgentUsage}], "limits": [AgentLimits]}` |
-| `workspace.list` | – | `[WorkspaceInfo]` |
-| `workspace.create` | `title?`, `cwd?`, `command?` or `ssh` (host), `remoteCwd?` | `WorkspaceInfo` |
-| `workspace.select` | `id` | – |
-| `workspace.close` | `id` | – |
-| `workspace.rename` | `id`, `title` | – |
-| `pane.list` | `workspace?` | `[PaneInfo]` |
-| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?` | `PaneInfo` |
-| `pane.open_file` | `path` (absolute, existing file), `pane?` (to split from; a preview pane shows the file itself instead), `direction?` (`right`/`down`), `focus?` (default true), `format?` (`markdown`/`diff`/`quicklook`) | `PaneInfo` (kind `preview`); refused (403) on SSH panes' sockets |
-| `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
-| `pane.focus` | `pane` | – |
-| `pane.close` | `pane` | – |
-| `pane.send_text` | `pane?`, `text` | – |
-| `pane.read_text` | `pane?`, `scrollback?` (lines) | `{"text": ...}` |
-| `notify` | `pane?`, `title?`, `body` | – |
-| `sidebar.set_status` | `workspace?`, `text` | – (sets notification text without ringing) |
-| `browser.open` | `pane?` (terminal to split from), `url`, `focus?` (default true) | `PaneInfo` |
-| `browser.navigate` | `pane`, `url` | – |
-| `browser.eval` | `pane`, `script` | `{"value": ...}` (JSON-serializable result) |
-| `browser.get_url` | `pane` | `{"url", "title"}` |
-| `browser.snapshot` | `pane` | `{"png_base64"}` |
-| `events.subscribe` | – | then server pushes `RPCEvent`s (`notification`, `workspace.changed`, `pane.changed`, `workspaces.changed`) |
-
-`pane?` / `workspace?` default to `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` (sent by the CLI), else the focused one.
-`browser.*` without `pane` use the focused (else first) browser pane of `workspace?` (default: selected).
-Methods without a result return `{}`. CLI usage: [CLI.md](CLI.md). The per-pane sockets of SSH panes accept only an
-allowlist of these, pinned to their pane/workspace ([SSH.md](SSH.md#what-the-server-may-do-enforced-in-the-app)).
-`WorkspaceInfo` (so also `workspace.list`, events and sync) has optional `cpuPercent` (100 = one core) and
-`memoryBytes` (physical footprint). `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`,
-`memoryTotalBytes`, `memoryPressure` (1/2/4, optional).
-`PaneInfo.agent?` = `AgentUsage`: `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`,
-`effort`, `sessionID`, `contextUsedPercent`, `contextTokens`, `contextWindow`, `contextOver200k`, `costUSD`,
-`sessionDurationMs`, `apiDurationMs`, `linesAdded`, `linesRemoved`, `cacheHitRatio` (0–1), `cacheWarm`,
-`inputTokens`, `cachedInputTokens`, `outputTokens`, `reasoningTokens`, `plan`, `stale` (only when true).
-`UsageLimit` = `id` (`five_hour`, `seven_day`, `spend`, …), `usedPercent`, optional `resetsAt`, `windowMinutes`,
-`usedUSD`, `limitUSD`, `period`. `AgentLimits` = `agent`, `limits`, `plan?`, `updatedAt`. Dates are Unix epoch
-seconds (decoding also takes milliseconds and ISO 8601); unknown agent names decode as `other`, malformed fields are
-dropped instead of failing.
-
-## Keyboard shortcuts (defaults)
-
-| Action | Key |
-|---|---|
-| New workspace | ⌘N |
-| New SSH workspace… | ⇧⌘N |
-| Reconnect SSH pane (when disconnected; otherwise browser / preview reload) | ⌘R |
-| Close pane | ⌘W |
-| Close workspace | ⇧⌘W |
-| Select workspace 1–9 | ⌘1 … ⌘9 |
-| Next / previous workspace | ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[ |
-| Split right / down | ⌘D / ⇧⌘D |
-| Focus pane left/right/up/down | ⌥⌘←/→/↑/↓ |
-| Open browser split | ⇧⌘B |
-| Open in Preview… (file picker) | ⇧⌘O |
-| Preview a file path in a terminal | ⌘-click |
-| Browser: focus address bar / reload / back / forward | ⌘L / ⌘R / ⌘[ / ⌘] |
-| Jump to latest attention pane | ⇧⌘U |
-| Toggle sidebar | ⌘B |
-| Compact sidebar (52 pt rail: workspace numbers, attention dot, status colour, tiny meters; also the button at the top of the sidebar; remembered in `UserDefaults` `SidebarCompact`, not by isolated instances, which start compact with `CMDS_SIDEBAR_COMPACT=1`) | ⌃⌘S |
-| Rename workspace | ⇧⌘R |
-| Zoom pane (toggle) | ⇧⌘↩ |
-
-## Testing with an isolated instance
-
-Never test against the instance you work in. Start a second one from your build:
-
-```sh
-CMDS_SUPPORT_DIR=/tmp/cmds-test CMDS_SYNC_DISABLED=1 build/dd/Build/Products/Debug/cmds.app/Contents/MacOS/cmds &
-cmds --socket /tmp/cmds-test/cmds.sock ls
-```
-
-- `CMDS_SUPPORT_DIR` replaces `~/Library/Application Support/cmds` (session.json, sync-devices.json, cmds.sock) and
-  wins over an inherited `CMDS_SOCKET_PATH`, so neither the instance nor a CLI given the variable can reach the
-  live app. Such an instance also leaves the saved window/sidebar frames alone and does not activate itself on
-  launch (it never takes keyboard focus from the app in use). Its terminals get the resolved absolute path.
-- `CMDS_SYNC_DISABLED=1` skips the iOS sync server (no Bonjour advert, no port). To test sync instead, give the
-  instance its own port and no advert: `CMDS_SYNC_PORT=47911 CMDS_SYNC_NO_BONJOUR=1` (DEBUG builds: add
-  `CMDS_SYNC_TEST_PAIRING=1` for loopback-only pairing without the window, see [SYNC.md](SYNC.md#testing-with-an-isolated-instance)).
-  The instance's sync identity lives in separate keychain items derived from `CMDS_SUPPORT_DIR`.
-- Launch the binary directly; `open` does not pass the environment reliably.
-- A window that is not on screen (another Space, hidden) is not drawn, so `screencapture` shows nothing. DEBUG
-  builds answer `debug.preview_snapshot {pane}` → `{"png_base64"}` with a picture of a preview pane drawn off screen
-  (web content via WKWebView's snapshot; Quick Look's out-of-process view stays blank).
-
-## Localization
-
-English is the development language; Japanese (`ja`) is the other localization. Each app has its own String
-Catalogs: `App/Resources/Localizable.xcstrings` + `InfoPlist.xcstrings` (Mac) and the same in `iOS/Resources`
-(permission texts: local network, Bluetooth, camera). `CFBundleLocalizations` is `[en, ja]`.
-
-- **Language**: follows the system (macOS: System Settings › General › Language & Region, which also has per-app
-  languages; iOS: device language or Settings › cmds › Language). The Mac app also has cmds › Language › System /
-  日本語 / English (`AppLanguage`): it sets `AppleLanguages` in the app's own defaults domain (System removes it) and
-  offers to relaunch. An isolated instance never writes it; launch it with `-AppleLanguages '(ja)'` or `'(en)'`.
-- **Adding a string**: AppKit takes `String`, so write `String(localized: "Split Right")`; SwiftUI `Text("…")`,
-  `Button("…")`, `Label`, `navigationTitle` take `LocalizedStringKey` and need nothing. Interpolate instead of
-  concatenating (`String(localized: "Resume All (\(count))")` → key `Resume All (%lld)`; String → `%@`, Int → `%lld`);
-  translations reorder with `%1$@`/`%2$lld`. Format numbers to strings first (a `Double` becomes `%lf`). Helpers
-  that take `String.LocalizationValue` (`MainMenu.item`) are extracted at their call sites. Then build and run
-  `scripts/l10n-sync.sh` (or build in Xcode, which syncs the catalogs itself) and add the Japanese in Xcode's catalog
-  editor or the JSON. English plurals go in the catalog's plural variations (`%lld processes…`).
-- **Stays English**: the socket API, `cmds` CLI output and its error messages (scripts parse them; also what
-  `--json` and AGENTS.md document), sync protocol strings, identifiers, file names, commands and log lines. Status
-  texts that the UI shows and the API reports (`SyncServer`/`SyncBluetoothPeripheral`/`SyncRemoteAccess` status) are
-  a `LocalizedStatus`: `.localized` for the UI, `.english` for `sync.status`.
-- **CmdsCore text in the UI**: `CmdsCore` (shared with the CLI) has no catalogs and stays English. Its `AgentFormat`
-  functions take `strings: AgentFormat.Strings` (default `.english`, what the CLI and tests use; `CmdsCLITests` pins
-  it); the apps pass `.localized`, defined in `Shared/Sources/SharedLocalization.swift`, which both app targets compile,
-  so its keys (`AgentFormat.Text.english` with `%@`/`%lld`) land in both catalogs. The same file has
-  `MemoryPressure.localizedName` and `DefaultTitle.localized` (the model, API and sync keep "Terminal", "Browser",
-  "Workspace"; the UI shows `displayTitle`). Errors whose `description` stays English get app-side text:
-  `SSHLaunch.InvalidInput.reason`, `LidSleepError` (Mac, `CoreErrorText.swift`), `SSHTunnelError` and the Mac's sync
-  error codes (iOS, `CoreErrorText.swift`). `AgentSession.summary` stays English; the banner builds its own.
-- **Units**: compact labels stay as they are in every language (`ctx`, `5h`, `7d`, `527k`, `%`, `$`, GB); sentences use
-  Japanese units (`5時間の上限`, `7日間の上限`, `3時間25分`, `3分前`, `/時間`). Only `spend` becomes `利用額`.
-- **Japanese style**: Apple's current terms (設定, ウインドウ, しまう, 取り消す/やり直す, すべてを選択), no space
-  between Japanese and Latin text (`cmdsを終了`), full-width （）and ：in prose, the same terms on Mac and iPhone
-  (ペアリング, 識別情報, 中継ホスト, iPhone/iPad), keyboard shortcuts unchanged, product/protocol names (cmds, SSH,
-  Wi‑Fi, Bluetooth, TLS) as is.
-- iOS: the companion follows the device language; Settings › cmds › Language picks a per-app language (shown once
-  the app has more than one localization, which it now has). Nothing to configure in the app.
-- **UI tests** find elements by accessibility identifier, never by visible (localized) text.
+`App/Sources/API/APIServer.swift` maps JSON-lines requests on `cmds.sock` onto `AppController`; the `cmds` CLI
+(`Packages/CmdsCore/Sources/cmds-cli`) is a thin client. Methods, events and types:
+[reference/api.md](../reference/api.md); commands: [reference/cli.md](../reference/cli.md). SSH panes get a
+restricted per-pane socket ([ssh.md](ssh.md)).
 
 ## iOS companion sync
 
-Mac runs a WebSocket server over TLS 1.3 (Network.framework) advertised as `_cmds._tcp`, presenting its own
+The Mac runs a WebSocket server over TLS 1.3 (Network.framework) advertised as `_cmds._tcp`, presenting its own
 self-signed certificate (ECDSA P-256 key in the login keychain). Pairing: "Pair iPhone/iPad…" shows a QR code with the
 certificate fingerprint and a 6-digit code; the phone pins the fingerprint (from the QR code, or after the user compared
 a short fingerprint) before it sends the code, and afterwards accepts only that certificate. Messages are JSON
 (`CmdsCore/Sync`). The Mac pushes workspace snapshots and per-pane screen text (only changed panes, ~10 Hz); the phone
-sends `input` (text/keys) and `select`/`focus` commands. Protocol, pairing and threat model: [SYNC.md](SYNC.md).
+sends `input` (text/keys) and `select`/`focus` commands. The same TLS session can also run over Bluetooth LE or
+through an SSH relay host. Protocol, pairing and threat model: [sync-protocol.md](sync-protocol.md).
+
+## See also
+
+- [ssh.md](ssh.md): SSH panes, the forwarded socket and its allowlist.
+- [localization.md](localization.md): String Catalogs, language selection, what stays English.
+- [testing.md](testing.md): unit tests, isolated instances, device tests.
+- [release.md](release.md): versioning, signing, building a release.

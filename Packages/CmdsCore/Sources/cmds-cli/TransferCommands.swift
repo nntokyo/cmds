@@ -2,7 +2,7 @@ import CmdsCore
 import Foundation
 
 // `cmds export` / `cmds import`: move workspaces and their agent sessions to another cmds instance
-// (docs/CLI.md, docs/AGENTS.md "Moving to a new version").
+// (docs/reference/cli.md, docs/guide/ai-agents.md "Moving to a new version").
 extension CLI {
     static let exportCommand = Command(
         name: "export", usage: "export [-o file] [--legacy]",

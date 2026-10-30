@@ -4,7 +4,7 @@ import Network
 import XCTest
 @testable import CmdsCore
 
-/// Bluetooth fallback relay (docs/SYNC.md "Bluetooth"). The L2CAP channel is simulated by two bound
+/// Bluetooth fallback relay (docs/internals/sync-protocol.md "Bluetooth"). The L2CAP channel is simulated by two bound
 /// stream pairs; everything else is the real path: phone WebSocket client → loopback listener → relay →
 /// "L2CAP" → relay → loopback TCP → TLS WebSocket server.
 final class SyncRelayTests: XCTestCase {
@@ -114,7 +114,7 @@ final class SyncRelayTests: XCTestCase {
         client.cancel()
     }
 
-    /// End to end against an isolated cmds instance (docs/SYNC.md "Testing with an isolated instance"):
+    /// End to end against an isolated cmds instance (docs/internals/testing.md "Sync against an isolated instance"):
     /// set `CMDS_RELAY_E2E_PAIRING` to its `sync-test-pairing.txt`. Pins the instance's real certificate,
     /// pairs with the code through the relay and expects `welcome` and `state`.
     func testRelayToIsolatedInstance() throws {

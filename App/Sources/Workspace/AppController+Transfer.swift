@@ -2,7 +2,7 @@ import AppKit
 import CmdsCore
 
 /// Moving workspaces and their agent sessions between cmds instances (`state.export` / `state.import`,
-/// File › Export Workspaces… / Import Workspaces…; docs/AGENTS.md "Moving to a new version").
+/// File › Export Workspaces… / Import Workspaces…; docs/guide/ai-agents.md "Moving to a new version").
 ///
 /// Export is the session state (`sessionState()`, the same data session.json keeps) as a `WorkspaceBundle`.
 /// Import validates the bundle, recreates its workspaces after the existing ones (or instead of them) the way a

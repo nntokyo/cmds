@@ -51,7 +51,7 @@ enum ConnectionStatus: Equatable {
 /// One connection to one Mac: authentication, reconnects, mirrored workspace state and pane screens.
 /// Views observe it; all methods must be called on the main thread.
 ///
-/// Trust (docs/SYNC.md): every connection is TLS pinned to the Mac certificate fingerprint saved at
+/// Trust (docs/internals/sync-protocol.md): every connection is TLS pinned to the Mac certificate fingerprint saved at
 /// pairing (`PairingStore`). Pairing pins the fingerprint first, from the Mac's QR code or after the user
 /// compared it with the Mac's pairing window, and only then sends the code. The token is only ever sent
 /// on a connection verified against the pin saved with it.
@@ -125,7 +125,7 @@ final class CompanionClient {
         return CompanionClient { target, policy in
             guard target.kind != .mock, let policy else { return MockTransport() }
             // Network first, Bluetooth when the Mac cannot be reached over IP (same pinned TLS either way).
-            // Debug builds may force one path (`-cmdsTransport`, docs/SYNC.md "Testing on a device").
+            // Debug builds may force one path (`-cmdsTransport`, docs/internals/testing.md "Testing sync on a device").
             return FallbackTransport(target: target, policy: policy, mode: TransportMode.current)
         }
     }

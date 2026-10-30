@@ -1,6 +1,6 @@
 import Foundation
 
-/// Remote access via SSH (docs/SYNC.md "Remote access via SSH"). The Mac keeps an outbound
+/// Remote access via SSH (docs/internals/sync-protocol.md "Remote access via SSH"). The Mac keeps an outbound
 /// `ssh -N -R 127.0.0.1:<relayPort>:127.0.0.1:<ingress port>` to a relay host the user already uses; the phone
 /// reaches `127.0.0.1:<relayPort>` on that host through its own SSH connection (`direct-tcpip`). The bytes are
 /// the same pinned TLS session as on the LAN: SSH is only a pipe and the relay host sees ciphertext.

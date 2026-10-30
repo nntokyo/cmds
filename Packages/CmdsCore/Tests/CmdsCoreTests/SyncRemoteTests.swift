@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import CmdsCore
 
-/// Remote access via SSH, Mac side (docs/SYNC.md "Remote access via SSH").
+/// Remote access via SSH, Mac side (docs/internals/sync-protocol.md "Remote access via SSH").
 final class SyncRemoteTests: XCTestCase {
     func testSSHArgumentsForwardLoopbackOnly() {
         let settings = SyncRemote.Settings(enabled: true, host: "home", relayPort: 47_824)

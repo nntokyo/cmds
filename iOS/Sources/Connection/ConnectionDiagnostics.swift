@@ -2,7 +2,7 @@ import Foundation
 import Observation
 
 /// Which paths `FallbackTransport` may use. Anything but `.auto` exists for testing on a device
-/// (docs/SYNC.md "Testing on a device"): e.g. `.bluetooth` tests the Bluetooth path while Wi‑Fi stays on for
+/// (docs/internals/testing.md "Testing sync on a device"): e.g. `.bluetooth` tests the Bluetooth path while Wi‑Fi stays on for
 /// `devicectl`. Every mode keeps the same pinned TLS check; forcing a path never relaxes it.
 enum TransportMode: String, CaseIterable {
     case auto, network, bluetooth, ssh

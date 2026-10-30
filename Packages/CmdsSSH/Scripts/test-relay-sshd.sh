@@ -1,5 +1,5 @@
 #!/bin/bash
-# Throwaway sshd on 127.0.0.1 for testing remote access via SSH (docs/SYNC.md "Remote access via SSH").
+# Throwaway sshd on 127.0.0.1 for testing remote access via SSH (docs/internals/sync-protocol.md "Remote access via SSH").
 # Runs as the current user, no root, nothing outside <dir>; never touches ~/.ssh.
 #
 #   test-relay-sshd.sh start <dir> <port>   # keys, configs, sshd in the background (pid in <dir>/sshd.pid)

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Constants for the iOS companion sync protocol. See docs/SYNC.md.
+/// Constants for the iOS companion sync protocol. See docs/internals/sync-protocol.md.
 ///
 /// Transport: WebSocket (text frames, one JSON object per frame) over TLS 1.3 (`SyncTLS`) on the local
 /// network. The Mac advertises itself with Bonjour; every frame is a `ClientMessage` (phone → Mac) or

@@ -11,7 +11,7 @@ public struct RemoteScope: Sendable, Equatable {
     }
 }
 
-/// Server-side allowlist for the per-pane sockets that SSH panes forward to the remote host (docs/SSH.md).
+/// Server-side allowlist for the per-pane sockets that SSH panes forward to the remote host (docs/internals/ssh.md).
 ///
 /// Anything on the server that can reach the forwarded socket (the remote user, root, or whoever compromised the
 /// server) gets exactly this: report about and read/type into its *own* pane, and set its own workspace's sidebar
@@ -113,7 +113,7 @@ public enum RemoteAPIPolicy {
     }
 }
 
-/// Builds the command an SSH pane runs (docs/SSH.md): the user's own `ssh` (so `~/.ssh/config`, agents, jump hosts
+/// Builds the command an SSH pane runs (docs/internals/ssh.md): the user's own `ssh` (so `~/.ssh/config`, agents, jump hosts
 /// and keys apply) with the pane's API socket forwarded to a fresh remote Unix socket, and a one-line bootstrap that
 /// exports `CMDS_SOCKET_PATH`/`CMDS_PANE_ID`/`CMDS_WORKSPACE_ID` before starting the remote login shell.
 ///

@@ -4,7 +4,7 @@ import IOKit.ps
 import IOKit.pwr_mgt
 import UserNotifications
 
-/// Keeps the Mac awake for long-running agent sessions (docs/ARCHITECTURE.md "Keeping the Mac awake").
+/// Keeps the Mac awake for long-running agent sessions (docs/internals/architecture.md "Keeping the Mac awake").
 ///
 /// - Always (no admin): while cmds runs it holds a `PreventUserIdleSystemSleep` assertion (cmds › Prevent Idle Sleep,
 ///   default on) and, optionally, `PreventUserIdleDisplaySleep` (cmds › Keep Display Awake, default off).

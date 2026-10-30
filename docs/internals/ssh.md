@@ -1,19 +1,14 @@
-# SSH workspaces
+# SSH panes (internals)
+
+> How SSH panes work: the `ssh` command line, the forwarded per-pane socket and what the server may do with it,
+> `cmds-remote.sh`, and server requirements.
+
+Using them (opening, reconnecting, the remote helper, cwd/branch reporting):
+[guide/workspaces-and-panes.md](../guide/workspaces-and-panes.md#ssh-workspaces).
 
 An SSH pane runs your own `ssh` (so `~/.ssh/config`, keys, agents, jump hosts and `ControlMaster` apply) and gives
 programs on the server a restricted way back to cmds: notifications, sidebar status, Claude Code usage, the pane's
 cwd and branch. Nothing is installed on the server unless you ask for it.
-
-## Opening one
-
-- Menu **File → New SSH Workspace…** (⇧⌘N): host (completes from the `Host` lines of `~/.ssh/config` and its
-  `Include`s, read only; patterns are skipped), optional remote directory and title.
-- `cmds new --ssh HOST [--remote-cwd DIR] [--title T]`, `cmds split [right|down] --ssh HOST [--remote-cwd DIR]`.
-- Splitting an SSH pane (⌘D, ⇧⌘D, `cmds split` without `--cwd`/command) opens another connection to the same host in
-  the pane's remote directory. Local terminals split from it (`--cwd`, a command) start in a local directory.
-
-`HOST` is a host, `user@host`, a config alias or an `ssh://user@host:port` URI; it may not start with `-`. The remote
-directory is absolute or `~/…`, without quotes, backslashes or control characters.
 
 ## How it works
 
@@ -72,36 +67,8 @@ pane), `prompt` (reports `$PWD` and the git branch), `ls`, `panes`, `send [--ent
 
 **Install Remote Helper…** (Pane menu, focused SSH pane, after a confirmation) types one line into the remote shell:
 `sh -c '…' <base64>` writing `~/.local/bin/cmds-remote.sh` and, if the server has no `cmds`, a `~/.local/bin/cmds`
-link to it — so the hook lines from [CLI.md](CLI.md) (`command -v cmds >/dev/null && cmds hook claude || true`) work
+link to it — so the hook lines from [guide/ai-agents.md](../guide/ai-agents.md#claude-code) (`command -v cmds >/dev/null && cmds hook claude || true`) work
 on the server unchanged. Make sure a shell prompt is showing first. It is never done automatically.
-
-## Remote cwd and branch
-
-libghostty ignores OSC 7 whose host is not this Mac (Ghostty's own shell integration on the server sends the server's
-hostname, so it does not reach cmds). Report the cwd as `localhost` instead; in an SSH pane the path is shown as a
-remote path. Add to the server's `~/.bashrc` / `~/.zshrc`:
-
-```sh
-# bash
-[ -n "$CMDS_PANE_ID" ] && PROMPT_COMMAND='printf "\033]7;file://localhost%s\007" "$PWD"; cmds-remote.sh prompt 2>/dev/null'"${PROMPT_COMMAND:+;$PROMPT_COMMAND}"
-# zsh
-_cmds_location() { printf '\033]7;file://localhost%s\007' "$PWD"; cmds-remote.sh prompt 2>/dev/null; }
-[ -n "$CMDS_PANE_ID" ] && precmd_functions+=(_cmds_location)
-```
-
-The `printf` alone gives the cwd (no process, no helper needed); `cmds-remote.sh prompt` adds the git branch (one
-`git` + one socket call per prompt; drop it if that is too slow). Local git is never consulted for remote paths.
-
-## Sidebar, usage, reconnect, restore
-
-- The row shows `ssh HOST` (`+N` for more hosts, orange "disconnected" while the shown pane is down); cwd/branch come
-  from the focused SSH pane's reports. CPU/memory count local processes only: for an SSH pane that is the `ssh` client
-  (attributed through the pane's tty as usual); ports are local listeners (e.g. `ssh -L`).
-- When `ssh` exits the pane stays with its last screen under an overlay: **Disconnected — Reconnect (⌘R)** (also
-  Return, the button, or `cmds reconnect [pane]`); Close Pane closes it. Reconnect runs the same command with a new
-  remote socket path.
-- Session restore keeps SSH panes (host + last remote cwd). On launch they show **Not connected — Connect (⌘R)** and
-  never connect by themselves.
 
 ## Server requirements
 

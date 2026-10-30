@@ -57,5 +57,5 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Hide cmds / hide others | ⌘H / ⌥⌘H |
 | Quit cmds | ⌘Q |
 
-Menu items without a shortcut (Pair iPhone/iPad…, Keep Awake With Lid Closed…, Language, Resume Agent Sessions on
-Launch, Install Remote Helper…, …) are described in the [guides](../README.md#user-guides).
+Menu items without a shortcut (Pair iPhone/iPad…, Keep Awake With Lid Closed…, Language, Export/Import Workspaces…,
+Resume Agent Sessions on Launch, Install Remote Helper…, …) are described in the [guides](../README.md#user-guides).

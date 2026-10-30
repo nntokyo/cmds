@@ -2,7 +2,7 @@ import CmdsCore
 import Foundation
 
 // UI text for CmdsCore errors whose `description` stays English for the socket API and the CLI
-// (docs/ARCHITECTURE.md "Localization").
+// (docs/internals/localization.md).
 
 extension SSHLaunch.InvalidInput {
     var localizedText: String {

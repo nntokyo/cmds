@@ -20,7 +20,7 @@ struct SessionState: Codable {
         var layout: Node
         /// Index of the focused pane in reading order.
         var focusedPaneIndex: Int?
-        /// Agent sessions remembered per terminal pane (docs/AGENTS.md "Resuming sessions"). Added later: older
+        /// Agent sessions remembered per terminal pane (docs/guide/ai-agents.md "Resuming sessions"). Added later: older
         /// sessions lack it; records that cannot be decoded are dropped instead of failing the whole file.
         var agentSessions: [PaneAgentSession]? = nil
     }

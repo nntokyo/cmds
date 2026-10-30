@@ -1,6 +1,6 @@
 import Foundation
 
-/// Bluetooth fallback (docs/SYNC.md "Bluetooth"). Bluetooth is only a byte pipe: an L2CAP channel that
+/// Bluetooth fallback (docs/internals/sync-protocol.md "Bluetooth"). Bluetooth is only a byte pipe: an L2CAP channel that
 /// carries the very same TLS 1.3 WebSocket session as the network path, so the phone still checks the
 /// Mac's pinned certificate end to end and Bluetooth link encryption is defence in depth only.
 ///

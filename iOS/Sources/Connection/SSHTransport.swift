@@ -3,7 +3,7 @@ import CmdsSSH
 import CryptoKit
 import Foundation
 
-/// Remote access via SSH (docs/SYNC.md "Remote access via SSH"): logs in to the relay host with the phone's
+/// Remote access via SSH (docs/internals/sync-protocol.md "Remote access via SSH"): logs in to the relay host with the phone's
 /// Ed25519 key (host key pinned), opens a `direct-tcpip` channel to the port the Mac forwards there and
 /// connects the usual `WebSocketTransport` through a loopback listener, pinned to the same Mac certificate.
 /// SSH is only the pipe: the relay host sees the TLS session's ciphertext, and nothing is sent to the Mac

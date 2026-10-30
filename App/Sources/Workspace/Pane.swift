@@ -12,7 +12,7 @@ final class Pane {
     let browser: BrowserPane?
     /// Set for preview panes (a local file).
     let preview: PreviewPane?
-    /// Set for SSH panes (docs/SSH.md); `workingDirectory` is then a path on the remote host.
+    /// Set for SSH panes (docs/internals/ssh.md); `workingDirectory` is then a path on the remote host.
     let ssh: SSHSession?
     let container: PaneContainerView
 
@@ -26,7 +26,7 @@ final class Pane {
     var agentUsage: AgentUsage?
     var agentSource: AgentSource?
 
-    // Resuming agent sessions (AppController+AgentSessions.swift, docs/AGENTS.md "Resuming sessions").
+    // Resuming agent sessions (AppController+AgentSessions.swift, docs/guide/ai-agents.md "Resuming sessions").
     /// The resumable agent session that ran here last (Claude Code / Codex with a session id). Saved in the session.
     var agentSession: AgentSession?
     /// A session from the previous run (or from before an SSH disconnect) offered for resuming.

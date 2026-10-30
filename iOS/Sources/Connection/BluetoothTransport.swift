@@ -2,7 +2,7 @@ import CmdsCore
 @preconcurrency import CoreBluetooth
 import Foundation
 
-/// Bluetooth fallback (docs/SYNC.md "Bluetooth"): finds the paired Mac's cmds peripheral, opens its L2CAP
+/// Bluetooth fallback (docs/internals/sync-protocol.md "Bluetooth"): finds the paired Mac's cmds peripheral, opens its L2CAP
 /// channel and relays a loopback TCP socket over it. The usual `WebSocketTransport` then connects to
 /// `wss://127.0.0.1:<loopback port>/` with the same pinned-certificate check, so the Mac is authenticated
 /// by TLS exactly as over Wi‑Fi and nothing is sent before the pin matched. Bluetooth itself is only a

@@ -2,7 +2,7 @@ import Crypto
 import Foundation
 import NIOSSH
 
-/// OpenSSH text formats for the phone's Ed25519 key and for host keys (docs/SYNC.md "Remote access via SSH").
+/// OpenSSH text formats for the phone's Ed25519 key and for host keys (docs/internals/sync-protocol.md "Remote access via SSH").
 public enum SSHKeys {
     /// `ssh-ed25519 AAAA… comment`: the line the user adds to the relay host's `authorized_keys`.
     public static func authorizedKeysLine(for key: Curve25519.Signing.PublicKey, comment: String) -> String {

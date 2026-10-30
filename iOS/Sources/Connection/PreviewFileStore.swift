@@ -2,7 +2,7 @@ import CmdsCore
 import Foundation
 import Observation
 
-/// Files of Mac preview panes on the phone (`requestFile` → `file` pieces, docs/SYNC.md). One request at a time;
+/// Files of Mac preview panes on the phone (`requestFile` → `file` pieces, docs/internals/sync-protocol.md). One request at a time;
 /// results are kept per pane and file path until the pane's file changes or the user reloads.
 @MainActor
 @Observable

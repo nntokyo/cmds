@@ -3,7 +3,7 @@ import Foundation
 import Network
 
 /// Prefers the network (Bonjour/address over Wi‑Fi, Ethernet or peer-to-peer Wi‑Fi), then Bluetooth
-/// (docs/SYNC.md "Bluetooth"), then remote access via SSH if it is set up for this Mac ("Remote access via
+/// (docs/internals/sync-protocol.md "Bluetooth"), then remote access via SSH if it is set up for this Mac ("Remote access via
 /// SSH"). The Bluetooth attempt starts when the network attempt has not connected after `fallbackDelay`,
 /// when it fails, or at once when the phone has no Wi‑Fi. The SSH attempt starts after `sshDelay`, when
 /// every nearby path has failed, or at once when the phone has no Wi‑Fi. The first attempt that completes

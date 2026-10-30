@@ -1,7 +1,7 @@
 import AppKit
 import CmdsCore
 
-/// Builds the main menu. Shortcuts follow docs/ARCHITECTURE.md.
+/// Builds the main menu. Shortcuts are listed in docs/reference/shortcuts.md.
 @MainActor
 enum MainMenu {
     static func build(router: CommandRouter) -> NSMenu {

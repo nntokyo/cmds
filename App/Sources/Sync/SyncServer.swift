@@ -13,7 +13,7 @@ extension Notification.Name {
     static let syncServerDidChange = Notification.Name("syncServerDidChange")
 }
 
-/// Serves the iOS companion (docs/SYNC.md): WebSocket over TLS 1.3 with the Mac's own certificate
+/// Serves the iOS companion (docs/internals/sync-protocol.md): WebSocket over TLS 1.3 with the Mac's own certificate
 /// (`SyncIdentity`, pinned by the phone at pairing), Bonjour, pairing, workspace state, screen streaming
 /// and input. Network I/O runs on `queue`; everything else on main.
 @MainActor
@@ -863,7 +863,7 @@ final class SyncServer {
 
     // MARK: - Pairing QR code
 
-    /// What the pairing window's QR code carries (docs/SYNC.md); nil until the listener is up.
+    /// What the pairing window's QR code carries (docs/internals/sync-protocol.md); nil until the listener is up.
     var pairingPayload: SyncPairingPayload? {
         guard let identity, let port, let host = Self.pairingHost() else { return nil }
         // Only an advertised name helps the phone, and a Bonjour name is at most 63 bytes.
@@ -911,7 +911,7 @@ final class SyncServer {
     /// DEBUG builds and isolated instances (`CMDS_SUPPORT_DIR`) only: `CMDS_SYNC_TEST_PAIRING=1` listens on
     /// 127.0.0.1 only, keeps pairing open without the window and writes the QR payload to
     /// `sync-test-pairing.txt` (0600) in the support directory whenever it changes, for end-to-end tests
-    /// (docs/SYNC.md).
+    /// (docs/internals/sync-protocol.md).
     static let testPairing = ProcessInfo.processInfo.environment["CMDS_SYNC_TEST_PAIRING"] == "1"
         && CmdsEnv.supportDirectoryOverride() != nil
 

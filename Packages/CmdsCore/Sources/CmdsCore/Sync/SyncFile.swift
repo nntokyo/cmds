@@ -1,7 +1,7 @@
 import Foundation
 import UniformTypeIdentifiers
 
-/// Optional protocol additions announced in `hello.features` (docs/SYNC.md).
+/// Optional protocol additions announced in `hello.features` (docs/internals/sync-protocol.md).
 public enum SyncFeature {
     /// The phone decodes `PaneKind.preview` and understands `requestFile` / `file`. Phones without it get preview
     /// panes as browser panes (`url` = `file://…`), because older builds fail on an unknown pane kind.

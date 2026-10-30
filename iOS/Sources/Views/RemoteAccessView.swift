@@ -3,7 +3,7 @@ import CmdsSSH
 import SwiftUI
 import UIKit
 
-/// Settings › Remote Access via SSH for the current Mac (docs/SYNC.md "Remote access via SSH"): the relay
+/// Settings › Remote Access via SSH for the current Mac (docs/internals/sync-protocol.md "Remote access via SSH"): the relay
 /// host the Mac forwards to, this phone's public key for the relay's authorized_keys, and the relay's host
 /// key (confirmed by fingerprint on first use, then pinned). The app never asks for a password.
 struct RemoteAccessView: View {

@@ -5,7 +5,7 @@ import NIOCore
 import NIOSSH
 import NIOTransportServices
 
-/// The SSH relay host as entered on the phone (docs/SYNC.md "Remote access via SSH").
+/// The SSH relay host as entered on the phone (docs/internals/sync-protocol.md "Remote access via SSH").
 public struct SSHRelayEndpoint: Codable, Hashable, Sendable {
     /// Hostname or address of the relay host.
     public var host: String

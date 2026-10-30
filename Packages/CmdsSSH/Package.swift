@@ -1,7 +1,7 @@
 // swift-tools-version: 5.10
 import PackageDescription
 
-// SSH tunnel for the iOS companion's remote access (docs/SYNC.md "Remote access via SSH"). Kept out of
+// SSH tunnel for the iOS companion's remote access (docs/internals/sync-protocol.md "Remote access via SSH"). Kept out of
 // CmdsCore so the Mac app and the `cmds` CLI do not link SwiftNIO; only the companion depends on it.
 let package = Package(
     name: "CmdsSSH",

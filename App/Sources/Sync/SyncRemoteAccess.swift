@@ -7,7 +7,7 @@ extension Notification.Name {
     static let syncRemoteAccessDidChange = Notification.Name("syncRemoteAccessDidChange")
 }
 
-/// Remote access via SSH (docs/SYNC.md "Remote access via SSH"). While enabled and the sync listener runs,
+/// Remote access via SSH (docs/internals/sync-protocol.md "Remote access via SSH"). While enabled and the sync listener runs,
 /// keeps an outbound `ssh -N -R 127.0.0.1:<relay port>:127.0.0.1:<ingress port> <host>` to a relay host from
 /// the user's ssh config, restarting it with backoff. Nothing is exposed publicly: the forward binds the
 /// relay's loopback only, and the phone reaches it through its own SSH login to the relay.

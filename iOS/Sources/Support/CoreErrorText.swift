@@ -3,7 +3,7 @@ import CmdsSSH
 import Foundation
 
 // UI text for errors whose `description`/`message` comes from CmdsCore/CmdsSSH or the Mac and stays English
-// (protocol, logs; docs/ARCHITECTURE.md "Localization").
+// (protocol, logs; docs/internals/localization.md).
 
 extension SSHTunnelError {
     var localizedText: String {

@@ -30,7 +30,7 @@ enum AgentResumeSettings {
     }
 }
 
-/// Resuming AI agent sessions after a restart (docs/AGENTS.md "Resuming sessions").
+/// Resuming AI agent sessions after a restart (docs/guide/ai-agents.md "Resuming sessions").
 ///
 /// - Remembering: whenever a pane's agent reports usage with a session id (Claude Code status line, Codex session
 ///   file), the pane's `agentSession` is updated (cwd = the pane's directory when the session first appeared, host

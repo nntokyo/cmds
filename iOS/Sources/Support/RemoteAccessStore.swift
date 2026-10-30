@@ -4,7 +4,7 @@ import Foundation
 import Security
 import UIKit
 
-/// Remote access via SSH for one Mac (docs/SYNC.md "Remote access via SSH"): the relay host the Mac
+/// Remote access via SSH for one Mac (docs/internals/sync-protocol.md "Remote access via SSH"): the relay host the Mac
 /// forwards its sync port to, and the relay's pinned host key. Nothing secret (the phone's key is in the
 /// Keychain, the Mac's token stays with its pairing), so it is kept in UserDefaults per `MacTarget.id`.
 struct RemoteAccessConfig: Codable, Equatable {

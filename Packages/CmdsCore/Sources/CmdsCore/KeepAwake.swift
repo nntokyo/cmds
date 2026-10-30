@@ -1,7 +1,7 @@
 import Foundation
 
 /// Read-only "keep the Mac awake" state, in `system.stats` (`keepAwake`) and `cmds stats`.
-/// See docs/ARCHITECTURE.md "Keeping the Mac awake".
+/// See docs/internals/architecture.md "Keeping the Mac awake".
 public struct KeepAwakeStatus: Codable, Equatable, Sendable {
     /// cmds holds a `PreventUserIdleSystemSleep` assertion (idle sleep is blocked while cmds runs).
     public var idleAssertion: Bool

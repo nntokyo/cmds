@@ -6,7 +6,7 @@ import NIOSSH
 import XCTest
 @testable import CmdsSSH
 
-/// Remote access via SSH (docs/SYNC.md). Unit tests always run; the end-to-end tests need a throwaway sshd
+/// Remote access via SSH (docs/internals/sync-protocol.md). Unit tests always run; the end-to-end tests need a throwaway sshd
 /// (`Scripts/test-relay-sshd.sh start <dir> <port>`) and, for the Mac tests, an isolated cmds instance with
 /// remote access to that sshd:
 ///

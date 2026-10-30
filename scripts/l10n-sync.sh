@@ -1,6 +1,6 @@
 #!/bin/sh
 # Adds new strings from the last build to the String Catalogs and marks removed ones stale
-# (docs/ARCHITECTURE.md "Localization"). Xcode does the same when you build in the IDE; this is for xcodebuild.
+# (docs/internals/localization.md). Xcode does the same when you build in the IDE; this is for xcodebuild.
 #
 #   xcodebuild ... -scheme CmdsApp -derivedDataPath build/dd build            # then:
 #   xcodebuild ... -scheme CmdsCompanion -derivedDataPath build/dd-ios build  # then:

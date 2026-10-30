@@ -15,7 +15,7 @@ extension SSHLaunch {
     }
 }
 
-/// State of an SSH pane (docs/SSH.md): what to run, its own restricted API socket, connection state and what the
+/// State of an SSH pane (docs/internals/ssh.md): what to run, its own restricted API socket, connection state and what the
 /// remote shell reported (branch). The pane's terminal surface is replaced on every (re)connect; this object and
 /// the local socket live as long as the pane.
 @MainActor

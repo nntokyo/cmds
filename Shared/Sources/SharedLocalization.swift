@@ -3,7 +3,7 @@ import Foundation
 
 // UI text for values that come from CmdsCore, compiled into both apps (Mac and iOS), so each app's
 // Localizable.xcstrings gets these keys. CmdsCore itself stays English for the CLI and the socket API
-// (docs/ARCHITECTURE.md "Localization").
+// (docs/internals/localization.md).
 
 extension AgentFormat.Strings {
     /// Agent usage text (sidebar, tooltips, phone) in the app's language. The keys are `AgentFormat.Text.english`.

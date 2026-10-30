@@ -3,8 +3,7 @@ import Foundation
 extension AgentFormat {
     /// The words and templates of `AgentFormat`'s text. `.english` (the default everywhere) is what the CLI, the
     /// socket API and the tests use, and must not change (scripts read it). The apps pass their own, built from
-    /// their String Catalogs (`AgentFormat.Strings.localized` in `Shared/Sources`; docs/ARCHITECTURE.md
-    /// "Localization").
+    /// their String Catalogs (`AgentFormat.Strings.localized` in `Shared/Sources`; docs/internals/localization.md).
     public struct Strings: Sendable {
         /// Locale of dates (`Fri 09:00`).
         public var locale: Locale

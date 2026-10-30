@@ -8,7 +8,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    # Localization (docs/ARCHITECTURE.md "Localization"): English is the development language, plus Japanese.
+    # Localization (docs/internals/localization.md): English is the development language, plus Japanese.
     # Strings live in each app's Localizable.xcstrings / InfoPlist.xcstrings.
     SWIFT_EMIT_LOC_STRINGS: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
@@ -47,7 +47,7 @@ targets:
     platform: macOS
     sources:
       - App/Sources
-      # UI text for CmdsCore values, shared with the iOS app (docs/ARCHITECTURE.md "Localization").
+      # UI text for CmdsCore values, shared with the iOS app (docs/internals/localization.md).
       - Shared/Sources
       - path: App/Resources
         optional: true

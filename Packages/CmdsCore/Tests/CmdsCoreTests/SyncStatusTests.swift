@@ -2,7 +2,7 @@ import Foundation
 import XCTest
 @testable import CmdsCore
 
-/// `sync.status` / `cmds sync` result (docs/SYNC.md "Testing on a device").
+/// `sync.status` / `cmds sync` result (docs/internals/testing.md "Testing sync on a device").
 final class SyncStatusTests: XCTestCase {
     func testPathFromPeerLabel() {
         XCTAssertEqual(SyncStatusReport.Client.path(forPeer: "192.168.1.20"), "network")
