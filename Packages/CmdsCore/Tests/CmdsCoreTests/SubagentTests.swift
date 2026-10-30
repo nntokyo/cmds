@@ -67,6 +67,10 @@ final class SubagentTests: XCTestCase {
         let activity = try XCTUnwrap(SubagentTranscript.activity(path: path.path))
         XCTAssertEqual(activity.action, "Bash: API_TOKEN=*** swift test")
         XCTAssertEqual(activity.tokens, 12100)
+        // A tail starting inside the earlier assistant line drops that line (cut mid-line): no tokens seen.
+        let tail = try XCTUnwrap(SubagentTranscript.activity(path: path.path, tailBytes: lines[3].utf8.count + 1 + 3))
+        XCTAssertEqual(tail.action, "Bash: API_TOKEN=*** swift test")
+        XCTAssertNil(tail.tokens)
         XCTAssertNil(SubagentTranscript.activity(path: dir.appendingPathComponent("missing.jsonl").path))
     }
 
