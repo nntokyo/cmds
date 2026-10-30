@@ -25,6 +25,10 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Show one workspace again | Esc (sidebar focused), ⌃⌘T | View › Show Single Workspace |
 | Zoom the active tile (toggle) | ⇧⌘↩ | View › Zoom Tile |
 | Move to the tile left / right / up / down | ⌥⌘← / ⌥⌘→ / ⌥⌘↑ / ⌥⌘↓ | Pane |
+| Move the active tile left / right / up / down | ⌃⇧⌘← / ⌃⇧⌘→ / ⌃⇧⌘↑ / ⌃⇧⌘↓ | View › Move Tile … |
+| Tile a workspace beside / above / below a tile, or in its place | drag its sidebar row onto the tile's edge or middle | – |
+| Move or swap tiles | drag a tile header onto another tile's edge or middle | – |
+| Take a tile out of the tiled view | drag its header onto the sidebar (or out of the window with ⌥) | – |
 
 ## Panes
 

@@ -38,6 +38,8 @@ struct SessionState: Codable {
         var workspaceIndices: [Int]?
         /// The tile shown alone (⇧⌘↩).
         var zoomedIndex: Int?
+        /// A dragged arrangement: rows of workspace indices, top to bottom. Added later; nil = automatic grid.
+        var rows: [[Int]]? = nil
     }
 
     /// Divider positions remembered for one tiling set (indices into `workspaces`) and grid shape.

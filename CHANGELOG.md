@@ -19,7 +19,10 @@ First version, to be released as 0.1.0 (`MARKETING_VERSION` 0.1.0, build 1). Dev
   pane zoom and directional focus.
 - Tiled view: several workspaces side by side as live tiles (sidebar ⌘-click / ⇧-click, View › Tile All
   Workspaces ⌃⌘T, `cmds tile`, `view.tile`), automatic grid up to 9, draggable and remembered dividers, tile
-  headers with agent state and attention ring, tile zoom (⇧⌘↩); saved in the session.
+  headers with agent state and attention ring, tile zoom (⇧⌘↩); saved in the session. Tiling by drag: sidebar rows
+  dropped on a tile's edge or middle (snap-style highlight), tile headers dragged to move or swap tiles or back onto
+  the sidebar to remove them, View › Move Tile … (⌃⇧⌘ + arrow); the arranged rows are kept in the session and
+  reported by `cmds tile` / `view.tile` (`rows`).
 - Sidebar rows with git branch, directory, listening ports, CPU and memory per workspace (processes attributed by
   environment, pane tty and ancestry), latest notification text and attention dot; footer with Mac-wide CPU, memory
   and memory pressure; compact 52 pt rail (⌃⌘S).

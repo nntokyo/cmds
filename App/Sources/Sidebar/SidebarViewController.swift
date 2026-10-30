@@ -1,15 +1,36 @@
 import AppKit
 import CmdsCore
 
-private extension NSPasteboard.PasteboardType {
-    static let cmdsWorkspace = NSPasteboard.PasteboardType("tokyo.n-n.cmds.workspace")
-}
-
 /// The table of the sidebar: ⌘F while it has the keyboard opens the filter.
 private final class SidebarTableView: NSTableView {
     var onFind: (() -> Void)?
     /// Esc with the sidebar focused (leaves the tiled view).
     var onCancel: (() -> Void)?
+    /// Row under the last mouse-down: the only row a drag carries.
+    private(set) var mouseDownRow = -1
+    /// The mouse-down's tracking ended: `wasClick` = released without starting a drag.
+    var onMouseDownEnded: ((_ wasClick: Bool) -> Void)?
+    /// A drag left the table or ended (hides the "cannot reorder" hint).
+    var onDragExit: (() -> Void)?
+    var didBeginDrag = false
+
+    override func mouseDown(with event: NSEvent) {
+        mouseDownRow = row(at: convert(event.locationInWindow, from: nil))
+        didBeginDrag = false
+        // NSTableView tracks the mouse until it is released or a drag starts.
+        super.mouseDown(with: event)
+        onMouseDownEnded?(!didBeginDrag && NSApp.currentEvent?.type == .leftMouseUp)
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        super.draggingExited(sender)
+        onDragExit?()
+    }
+
+    // NSTableView does not implement draggingEnded(_:): no super call (it would throw "unrecognized selector").
+    override func draggingEnded(_ sender: NSDraggingInfo) {
+        onDragExit?()
+    }
 
     override func cancelOperation(_ sender: Any?) {
         if let onCancel { onCancel() } else { super.cancelOperation(sender) }
@@ -71,6 +92,11 @@ final class SidebarViewController: NSViewController {
     private let usageFooter = SystemUsageView()
     private let compactFooter = CompactUsageView()
     private let compactButton = NSButton()
+    /// Shown while a row is dragged over the sidebar but reordering is off (filter or grouping).
+    private let reorderHint = NSTextField(wrappingLabelWithString: "")
+    /// A plain click on an unselected row selects on release, so the row can be dragged onto the content area
+    /// without switching to it first.
+    private var deferredClickRow: Int?
     private var rows: [Row] = []
     /// Last height given to the table per workspace; reloads re-measure and tell the table only about rows that changed.
     private var rowHeights: [String: CGFloat] = [:]
@@ -123,6 +149,26 @@ final class SidebarViewController: NSViewController {
     /// Drag-reordering maps rows 1:1 to workspaces: only without filter and grouping.
     private var canReorder: Bool { filterText.isEmpty && (!groupsByProject || isCompact) }
 
+    /// Why rows cannot be dragged to reorder right now (nil = they can).
+    private var reorderBlockedReason: String? {
+        let filtered = !filterText.isEmpty
+        let grouped = groupsByProject && !isCompact
+        switch (filtered, grouped) {
+        case (true, true): return String(localized: "Clear the filter and turn off Group by Project to reorder workspaces.")
+        case (true, false): return String(localized: "Clear the filter to reorder workspaces.")
+        case (false, true): return String(localized: "Turn off Group by Project to reorder workspaces.")
+        case (false, false): return nil
+        }
+    }
+
+    /// The deferred plain click (see `deferredClickRow`): select the row now unless the mouse-down became a drag.
+    private func mouseDownEnded(wasClick: Bool) {
+        guard let row = deferredClickRow else { return }
+        deferredClickRow = nil
+        guard wasClick, rows[safe: row]?.workspaceID != nil else { return }
+        tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+    }
+
     init(controller: AppController) {
         self.controller = controller
         super.init(nibName: nil, bundle: nil)
@@ -148,7 +194,10 @@ final class SidebarViewController: NSViewController {
         tableView.target = self
         tableView.doubleAction = #selector(renameClicked)
         tableView.registerForDraggedTypes([.cmdsWorkspace])
-        tableView.setDraggingSourceOperationMask(.move, forLocal: true)
+        // ⌥ narrows the mask to copy: keep drags working with it held.
+        tableView.setDraggingSourceOperationMask([.move, .copy, .generic], forLocal: true)
+        tableView.onMouseDownEnded = { [weak self] wasClick in self?.mouseDownEnded(wasClick: wasClick) }
+        tableView.onDragExit = { [weak self] in self?.reorderHint.isHidden = true }
         tableView.onFind = { [weak self] in self?.beginFilter() }
         tableView.onCancel = { [weak self] in
             guard let self, self.controller.isTiling else { return NSSound.beep() }
@@ -195,8 +244,18 @@ final class SidebarViewController: NSViewController {
         compactButton.action = #selector(compactClicked)
         compactButton.translatesAutoresizingMaskIntoConstraints = false
 
+        reorderHint.font = .systemFont(ofSize: 11)
+        reorderHint.textColor = .labelColor
+        reorderHint.alignment = .center
+        reorderHint.drawsBackground = true
+        reorderHint.backgroundColor = NSColor.windowBackgroundColor.withAlphaComponent(0.95)
+        reorderHint.isBezeled = false
+        reorderHint.isHidden = true
+        reorderHint.translatesAutoresizingMaskIntoConstraints = false
+
         let view = NSView()
-        for subview in [compactButton, filterField, scrollView, separator, usageFooter, compactFooter, addButton] as [NSView] {
+        for subview in [compactButton, filterField, scrollView, separator, usageFooter, compactFooter, addButton,
+                        reorderHint] as [NSView] {
             view.addSubview(subview)
         }
         NSLayoutConstraint.activate([
@@ -209,6 +268,9 @@ final class SidebarViewController: NSViewController {
             scrollView.bottomAnchor.constraint(equalTo: separator.topAnchor, constant: -4),
             separator.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 10),
             separator.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -10),
+            reorderHint.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 8),
+            reorderHint.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
+            reorderHint.bottomAnchor.constraint(equalTo: separator.topAnchor, constant: -8),
             addButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
         ])
         filterShownConstraints = [
@@ -605,6 +667,13 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
     /// sidebar or ⌃⌘T shows one workspace again).
     func tableView(_ tableView: NSTableView,
                    selectionIndexesForProposedSelection proposed: IndexSet) -> IndexSet {
+        // A plain mouse-down on another row: wait for the release (it may start a drag onto the content area).
+        if !isSyncingSelection, proposed.count == 1, let row = proposed.first, rows[safe: row]?.workspaceID != nil,
+           !tableView.selectedRowIndexes.contains(row), let event = NSApp.currentEvent, event.type == .leftMouseDown,
+           event.modifierFlags.intersection([.command, .shift]).isEmpty {
+            deferredClickRow = row
+            return tableView.selectedRowIndexes
+        }
         guard !isSyncingSelection, controller.isTiling, proposed.count == 1, let row = proposed.first,
               let id = rows[safe: row]?.workspaceID, controller.tiledWorkspaceIDs.contains(id),
               let event = NSApp.currentEvent, [.leftMouseDown, .leftMouseUp].contains(event.type),
@@ -632,28 +701,56 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
         }
     }
 
+    /// Drags carry the row under the mouse only (in the tiled view every tile's row is selected). Rows can always
+    /// be dragged onto the content area; reordering within the sidebar needs `canReorder`.
     func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {
-        guard canReorder, let id = rows[safe: row]?.workspaceID else { return nil }
+        guard row == self.tableView.mouseDownRow, let id = rows[safe: row]?.workspaceID else { return nil }
         let item = NSPasteboardItem()
         item.setString(id, forType: .cmdsWorkspace)
         return item
     }
 
+    func tableView(_ tableView: NSTableView, draggingSession session: NSDraggingSession,
+                   willBeginAt screenPoint: NSPoint, forRowIndexes rowIndexes: IndexSet) {
+        self.tableView.didBeginDrag = true
+        deferredClickRow = nil
+    }
+
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int,
                    proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
-        guard canReorder, info.draggingSource as? NSTableView === tableView,
-              info.draggingPasteboard.string(forType: .cmdsWorkspace) != nil else { return [] }
+        guard !info.cmdsWorkspaceIDs.isEmpty else { return [] }
+        if info.isCmdsTileDrag {
+            // A tile header dropped on the sidebar leaves the tiled view.
+            guard controller.isTiling else { return [] }
+            tableView.setDropRow(-1, dropOperation: .on)
+            return info.cmdsDropOperation
+        }
+        guard info.draggingSource as? NSTableView === tableView else { return [] }
+        guard canReorder else {
+            if let reason = reorderBlockedReason, reorderHint.stringValue != reason { reorderHint.stringValue = reason }
+            reorderHint.isHidden = false
+            return []
+        }
+        reorderHint.isHidden = true
         if dropOperation == .on { tableView.setDropRow(row, dropOperation: .above) }
-        return .move
+        return info.cmdsDropOperation
     }
 
     func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int,
                    dropOperation: NSTableView.DropOperation) -> Bool {
-        guard canReorder, let id = info.draggingPasteboard.string(forType: .cmdsWorkspace),
-              let from = controller.workspaces.firstIndex(where: { $0.id == id }) else { return false }
-        let target = from < row ? row - 1 : row
-        guard target != from else { return false }
-        try? controller.moveWorkspace(id: id, to: target)
+        reorderHint.isHidden = true
+        let ids = info.cmdsWorkspaceIDs
+        if info.isCmdsTileDrag {
+            guard let id = ids.first else { return false }
+            DispatchQueue.main.async { [weak self] in self?.controller.removeFromTiles(id) }
+            return true
+        }
+        // Rows map 1:1 to workspaces here (`canReorder`): the drop row is a gap index into the workspace order.
+        guard canReorder, let order = ReorderMath.reorder(controller.workspaces.map(\.id), moving: ids, toGap: row)
+        else { return false }
+        for (index, id) in order.enumerated() where ids.contains(id) {
+            try? controller.moveWorkspace(id: id, to: index)
+        }
         return true
     }
 }

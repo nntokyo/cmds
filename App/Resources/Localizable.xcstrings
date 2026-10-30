@@ -971,6 +971,26 @@
         }
       }
     },
+    "Clear the filter and turn off Group by Project to reorder workspaces.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを並べ替えるには、絞り込みを解除して「プロジェクトでまとめる」をオフにしてください。"
+          }
+        }
+      }
+    },
+    "Clear the filter to reorder workspaces.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを並べ替えるには、絞り込みを解除してください。"
+          }
+        }
+      }
+    },
     "Close Pane": {
       "localizations": {
         "ja": {
@@ -1980,6 +2000,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "しまう"
+          }
+        }
+      }
+    },
+    "Move Tile Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを下へ移動"
+          }
+        }
+      }
+    },
+    "Move Tile Left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを左へ移動"
+          }
+        }
+      }
+    },
+    "Move Tile Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを右へ移動"
+          }
+        }
+      }
+    },
+    "Move Tile Up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイルを上へ移動"
           }
         }
       }
@@ -3298,6 +3358,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "オフにする"
+          }
+        }
+      }
+    },
+    "Turn off Group by Project to reorder workspaces.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを並べ替えるには、「プロジェクトでまとめる」をオフにしてください。"
           }
         }
       }

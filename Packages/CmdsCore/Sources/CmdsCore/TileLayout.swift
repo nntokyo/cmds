@@ -131,12 +131,17 @@ public struct TileStatus: Codable, Equatable, Sendable {
     public var zoomed: String?
     /// Workspaces of the set left out beyond `TileLayout.maxTiles`.
     public var hidden: Int
+    /// The rows of a user-made arrangement (tiles dragged or moved with ⌃⇧⌘ + arrow), top to bottom; nil while the
+    /// grid follows the automatic layout. Added later: older apps and CLIs leave it out.
+    public var rows: [[String]]?
 
-    public init(mode: Mode, workspaces: [String], active: String?, zoomed: String?, hidden: Int) {
+    public init(mode: Mode, workspaces: [String], active: String?, zoomed: String?, hidden: Int,
+                rows: [[String]]? = nil) {
         self.mode = mode
         self.workspaces = workspaces
         self.active = active
         self.zoomed = zoomed
         self.hidden = hidden
+        self.rows = rows
     }
 }

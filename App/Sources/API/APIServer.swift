@@ -209,7 +209,8 @@ final class APIServer {
                 try controller.setTiling(.all, active: try params.string("active"))
             } else if let ids {
                 guard Set(ids).count >= 2 else { throw RPCError.invalidParams("workspaces must name at least two workspaces") }
-                try controller.setTiling(.selected(ids), active: try params.string("active"))
+                // An explicit set from a script: the automatic grid (a dragged arrangement is dropped).
+                try controller.setTiling(.selected(ids), active: try params.string("active"), keepArrangement: false)
             }
             if let zoom = try params.bool("zoom"), zoom != (controller.tileZoomedWorkspaceID != nil), controller.isTiling {
                 controller.toggleTileZoom()

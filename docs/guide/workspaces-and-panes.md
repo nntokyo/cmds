@@ -10,8 +10,9 @@ the [`cmds` CLI](../reference/cli.md).
 
 A **workspace** is one vertical tab in the sidebar. It holds a tree of split panes and has a primary working
 directory. **File › New Workspace** (⌘N) opens one with a terminal in your home directory; `cmds new [--cwd DIR]`
-uses the current (or given) directory. Switch with ⌘1…⌘9, ⇧⌘] / ⇧⌘[ or ⌃Tab / ⌃⇧Tab; drag rows to reorder;
-double-click (or ⇧⌘R, or the row's context menu) to rename.
+uses the current (or given) directory. Switch with ⌘1…⌘9, ⇧⌘] / ⇧⌘[ or ⌃Tab / ⌃⇧Tab; drag rows up or down to
+reorder (also in the compact rail; ⌘1…⌘9 follow the new order); double-click (or ⇧⌘R, or the row's context menu) to
+rename.
 
 Each row shows:
 
@@ -39,7 +40,8 @@ With many workspaces:
   Esc closes the filter and shows all rows again.
 - **View › Group Workspaces by Project** (also in the sidebar's context menu) puts rows under a header per project:
   the git repository (a linked worktree counts as its main repository), else the directory; SSH workspaces by host and
-  directory. Rows cannot be dragged while filtered or grouped.
+  directory. Rows cannot be reordered while filtered or grouped (dragging one says so at the bottom of the sidebar);
+  they can still be dragged onto the content area to [tile](#tiled-view) them.
 - The Dock icon shows the number of panes with unseen attention.
 
 The row's context menu also has **Clear Notification** (drops the text and the attention of all its panes).
@@ -82,6 +84,19 @@ Shows several workspaces side by side, each as a live tile you can type in — e
   window is wide, else 2 + 1, 4 as 2 × 2, 5 as 3 + 2, 6 as 3 × 2, up to 9 in three rows. More than 9 are not shown
   (a note says how many; the workspace you select always gets a tile). Drag the gaps between tiles to resize, double-click a gap to even it out; positions are
   remembered per set of workspaces and kept in the session.
+- **Drag a sidebar row onto the content area** to tile it, like window snapping: a translucent area shows where it
+  goes. Near the left or right edge of a tile (or of the single workspace shown) it goes beside that tile in its row;
+  near the top or bottom edge it gets a row of its own above or below that row (spanning the width); in the middle it
+  takes that tile's place (the tile leaves the tiled view; over the single workspace it simply shows the dragged
+  one). Dragging onto the single workspace makes a 2-tile view.
+- **Drag a tile's header** the same way to move it, or onto the middle of another tile to swap the two. Drop a
+  header on the sidebar (or drag it out of the window with ⌥ held) to take that workspace out of the tiled view; with
+  one left, the normal view returns. **View › Move Tile Left / Right / Up / Down** (⌃⇧⌘ + arrow) moves the active
+  tile from the keyboard: left/right swap it with its neighbour, up/down move it into the row above or below (or into
+  a row of its own from the top or bottom row).
+- After a drag or a move the grid keeps your rows instead of the automatic layout, also when you ⌘-click
+  workspaces in or out (new ones join the last row). It is saved in the session; ⌃⌘T, `cmds tile <ws>…` or leaving
+  the tiled view go back to the automatic layout.
 - Each tile keeps its own splits and has a header: state dot, title, agent state (Working, Needs Input, Done…) and
   the agent's task. A tile that needs you gets the orange ring.
 - The tile with the keyboard has a blue header and is the selected workspace (window title, ⌘W, ⌘D… act on it).

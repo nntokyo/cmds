@@ -94,7 +94,15 @@ final class AppController {
     var resumeTimer: Timer?
 
     // Tiled view (AppController+Tiling.swift).
-    var tileMode: TileMode = .off
+    var tileMode: TileMode = .off {
+        // An explicit arrangement belongs to a chosen set only.
+        didSet { if case .selected = tileMode {} else { tileArrangement = nil } }
+    }
+    /// Rows of tiles the user arranged by dragging (or ⌃⇧⌘ + arrow); nil = the automatic grid. Holds exactly the ids
+    /// of `tileMode`'s `.selected` set.
+    var tileArrangement: TileArrangement?
+    /// Tiles per row of the automatic grid on screen (set by the window; the grid depends on its aspect).
+    var currentTileShape: (() -> [Int])?
     /// The tile shown alone for now (⇧⌘↩ while tiled).
     var tileZoomedWorkspaceID: String?
     /// Divider positions per tiling set and grid shape (`tileRatiosKey`).

@@ -187,6 +187,14 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func tileSelected(_ sender: Any?) { controller.restoreTileSelection() }
     @objc func showSingleWorkspace(_ sender: Any?) { try? controller.setTiling(.off) }
     @objc func jumpToAttention(_ sender: Any?) { controller.jumpToLatestAttention() }
+    /// ⌃⇧⌘ + arrow: moves the active tile (beeps at the edge).
+    @objc func moveTileLeft(_ sender: Any?) { moveTile(.left) }
+    @objc func moveTileRight(_ sender: Any?) { moveTile(.right) }
+    @objc func moveTileUp(_ sender: Any?) { moveTile(.up) }
+    @objc func moveTileDown(_ sender: Any?) { moveTile(.down) }
+    private func moveTile(_ direction: TileArrangement.Direction) {
+        if !controller.moveActiveTile(direction) { NSSound.beep() }
+    }
 
     // MARK: Browser
 
@@ -314,6 +322,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             return controller.canRestoreTileSelection
         case #selector(showSingleWorkspace(_:)):
             return controller.isTiling
+        case #selector(moveTileLeft(_:)), #selector(moveTileRight(_:)), #selector(moveTileUp(_:)),
+             #selector(moveTileDown(_:)):
+            return controller.canMoveActiveTile
         case #selector(selectWorkspace(_:)):
             return controller.workspaces.indices.contains(menuItem.tag)
         case #selector(jumpToAttention(_:)):

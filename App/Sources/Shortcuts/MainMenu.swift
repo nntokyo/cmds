@@ -93,6 +93,17 @@ enum MainMenu {
         menu.addItem(item("Tile All Workspaces", #selector(CommandRouter.toggleTileAll(_:)), "t", [.command, .control], target: router))
         menu.addItem(item("Tile Selected Workspaces", #selector(CommandRouter.tileSelected(_:)), "", target: router))
         menu.addItem(item("Show Single Workspace", #selector(CommandRouter.showSingleWorkspace(_:)), "", target: router))
+        // Keyboard alternative to dragging tile headers. Not ⌃⌥⌘: window managers (Magnet) take ⌃⌥⌘←/→ for "move to display".
+        let tileMoves: [(String.LocalizationValue, Int, Selector)] = [
+            ("Move Tile Left", NSLeftArrowFunctionKey, #selector(CommandRouter.moveTileLeft(_:))),
+            ("Move Tile Right", NSRightArrowFunctionKey, #selector(CommandRouter.moveTileRight(_:))),
+            ("Move Tile Up", NSUpArrowFunctionKey, #selector(CommandRouter.moveTileUp(_:))),
+            ("Move Tile Down", NSDownArrowFunctionKey, #selector(CommandRouter.moveTileDown(_:))),
+        ]
+        for (title, key, action) in tileMoves {
+            menu.addItem(item(title, action, String(Character(UnicodeScalar(key)!)), [.control, .shift, .command],
+                              target: router))
+        }
         menu.addItem(.separator())
         // Text size of the focused pane (nil target: the first responder; see TextSizeActions).
         menu.addItem(item("Bigger", #selector(TextSizeActions.cmdsTextBigger(_:)), "="))

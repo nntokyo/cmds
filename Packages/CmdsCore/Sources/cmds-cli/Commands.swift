@@ -168,8 +168,9 @@ extension CLI {
                 details: """
                     Workspaces are ids, 1-based indexes or titles (as for `cmds select`); give at least two. --all tiles
                     every workspace the sidebar shows (its filter applies, up to 9). --off shows only the active
-                    workspace again. Without arguments prints what is tiled. Same as ⌘-click in the sidebar and
-                    View › Tile All Workspaces (⌃⌘T).
+                    workspace again. Without arguments prints what is tiled, in display order (rows the user
+                    arranged by dragging are separated by " / "). Workspaces given here get the automatic layout.
+                    Same as ⌘-click in the sidebar and View › Tile All Workspaces (⌃⌘T).
                     """,
                 flags: ["all", "off"]) { ctx in
             let all = ctx.args.has("all")
@@ -189,8 +190,10 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             let status = try perform { try result.decode(TileStatus.self) }
             guard status.mode != .off else { return print("not tiled") }
-            var line = "tiled (\(status.mode.rawValue)): " + status.workspaces.map { $0 == status.active ? "*\($0)" : $0 }
-                .joined(separator: " ")
+            func names(_ ids: [String]) -> String { ids.map { $0 == status.active ? "*\($0)" : $0 }.joined(separator: " ") }
+            // A user-made arrangement prints its rows, top to bottom, separated by " / ".
+            var line = "tiled (\(status.mode.rawValue)): "
+                + (status.rows.map { $0.map(names).joined(separator: " / ") } ?? names(status.workspaces))
             if let zoomed = status.zoomed { line += "  zoomed \(zoomed)" }
             if status.hidden > 0 { line += "  (\(status.hidden) more not shown)" }
             print(line)
