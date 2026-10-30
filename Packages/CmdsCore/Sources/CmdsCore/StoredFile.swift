@@ -8,8 +8,9 @@ public enum StoredFile {
         /// No file yet.
         case missing
         case loaded(Value)
-        /// The file exists but could not be read or decoded (`error`). `movedTo` is where it was moved, or the error
-        /// that prevented the move (then the file is still in place and must not be overwritten).
+        /// The file exists but could not be read or decoded (`error`). `movedTo` is where an undecodable file was
+        /// moved, or a failure when the file is still in place and must not be overwritten (it could not be read,
+        /// or the move failed).
         case unreadable(error: Error, movedTo: Result<URL, Error>)
     }
 
@@ -19,9 +20,11 @@ public enum StoredFile {
         let data: Data
         do {
             data = try Data(contentsOf: url)
+        } catch CocoaError.fileReadNoSuchFile {
+            return .missing
         } catch {
-            if !FileManager.default.fileExists(atPath: url.path) { return .missing }
-            return .unreadable(error: error, movedTo: Result { try moveAside(url, now: now) })
+            // A read failure (permissions, I/O) says nothing about the content, so the file stays where it is.
+            return .unreadable(error: error, movedTo: .failure(error))
         }
         do {
             return .loaded(try decoder.decode(type, from: data))

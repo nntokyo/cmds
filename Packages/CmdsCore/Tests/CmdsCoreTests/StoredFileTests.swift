@@ -80,4 +80,19 @@ final class StoredFileTests: XCTestCase {
         }
         XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
     }
+
+    func testUnreadableFileStaysInPlace() throws {
+        let url = directory.appendingPathComponent("store.json")
+        try JSONEncoder().encode([Item(name: "a")]).write(to: url)
+        // Not readable (e.g. permissions): the content may be fine, so it is neither moved nor reported missing.
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: url.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path) }
+
+        guard case .unreadable(_, .failure) = StoredFile.load([Item].self, from: url, now: now) else {
+            return XCTFail("expected .unreadable with the file kept in place")
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        let backups = try FileManager.default.contentsOfDirectory(atPath: directory.path).filter { $0.contains(".corrupt-") }
+        XCTAssertEqual(backups, [])
+    }
 }
