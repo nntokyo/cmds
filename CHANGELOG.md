@@ -7,7 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-First version, to be released as 0.1.0 (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-29.
+## [0.1.0] - 2026-10-30
+
+First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-29.
 
 ### Added
 
@@ -84,4 +86,5 @@ First version, to be released as 0.1.0 (`MARKETING_VERSION` 0.1.0, build 1). Dev
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/commits/master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.1.0...master
+[0.1.0]: https://github.com/nntokyo/cmds/releases/tag/v0.1.0
