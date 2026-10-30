@@ -19,6 +19,8 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
     static let maxPathLength = 1024
     static let maxURLLength = 8192
     static let maxTextLength = 200
+    /// Split ratios are clamped to this range.
+    static let splitRatioRange = 0.08...0.92
 
     /// Always `cmds.workspaces`.
     public var format: String
@@ -260,9 +262,13 @@ extension WorkspaceBundle {
             return .pane(try validate(pane, label))
         case .split(let axis, let ratio, let first, let second):
             guard ratio.isFinite else { throw TransferError("\(label): split ratio must be a number") }
-            return .split(axis: axis, ratio: min(max(ratio, 0.08), 0.92),
+            return .split(axis: axis, ratio: clampedRatio(ratio),
                           first: try validate(first, label), second: try validate(second, label))
         }
+    }
+
+    private static func clampedRatio(_ ratio: Double) -> Double {
+        min(max(ratio, splitRatioRange.lowerBound), splitRatioRange.upperBound)
     }
 
     private static func validate(_ pane: Pane, _ label: String) throws -> Pane {
@@ -463,7 +469,7 @@ extension WorkspaceBundle {
                 case .split(let axis, let ratio, let first, let second):
                     let a = convert(first), b = convert(second)
                     guard let a, let b else { return a ?? b }
-                    return .split(axis: axis, ratio: ratio.isFinite ? min(max(ratio, 0.08), 0.92) : 0.5, first: a, second: b)
+                    return .split(axis: axis, ratio: ratio.isFinite ? clampedRatio(ratio) : 0.5, first: a, second: b)
                 }
             }
             guard let layout = convert(tree) else { continue }
