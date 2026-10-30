@@ -364,6 +364,16 @@
         }
       }
     },
+    "%@ tokens": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ トークン"
+          }
+        }
+      }
+    },
     "%lld d ago": {
       "comment": "age of agent figures",
       "localizations": {
@@ -421,6 +431,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このワークスペースのターミナルのプロセス%lld個"
+          }
+        }
+      }
+    },
+    "%lld subagents running": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 個のサブエージェントが実行中"
           }
         }
       }
@@ -591,6 +611,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アドバタイズ中（PSM %@）"
+          }
+        }
+      }
+    },
+    "Agents": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェント"
           }
         }
       }
@@ -961,6 +991,16 @@
         }
       }
     },
+    "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code のサブエージェントを、各ワークスペースの下にカードで表示します（現在の操作つき）。SubagentStart / SubagentStop フックが必要です。"
+          }
+        }
+      }
+    },
     "Clear Notification": {
       "localizations": {
         "ja": {
@@ -1321,6 +1361,17 @@
         }
       }
     },
+    "Everywhere": {
+      "comment": "show subagents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常に表示"
+          }
+        }
+      }
+    },
     "Expand Sidebar": {
       "localizations": {
         "ja": {
@@ -1614,6 +1665,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースを読み込む…"
+          }
+        }
+      }
+    },
+    "In Tiled View Only": {
+      "comment": "show subagents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイル表示のときだけ"
           }
         }
       }
@@ -2898,6 +2960,26 @@
         }
       }
     },
+    "Show Subagents": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェントを表示"
+          }
+        }
+      }
+    },
+    "Show subagents:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェントの表示:"
+          }
+        }
+      }
+    },
     "Showing %lld of %lld workspaces": {
       "comment": "tiled view: more workspaces were selected than fit",
       "localizations": {
@@ -3074,6 +3156,37 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止"
+          }
+        }
+      }
+    },
+    "Sub %lld": {
+      "comment": "sidebar: running subagents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブ %lld"
+          }
+        }
+      }
+    },
+    "Subagent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェント"
+          }
+        }
+      }
+    },
+    "Subagents": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サブエージェント"
           }
         }
       }
@@ -3539,6 +3652,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "作業中"
+          }
+        }
+      }
+    },
+    "Working…": {
+      "comment": "subagent without a current tool call",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中…"
           }
         }
       }

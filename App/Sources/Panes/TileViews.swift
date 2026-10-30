@@ -35,6 +35,9 @@ final class WorkspaceTileView: NSView, NSDraggingSource {
     private let header = TileHeaderView()
     private let body = NSView()
     private let ring = AttentionRingView()
+    /// Cards of the workspace's subagents under the terminal (collapsed when there are none or they are off).
+    private let subagentStrip = SubagentStripView()
+    private var subagentStripHeight: NSLayoutConstraint!
     /// Header click: give this tile the keyboard. Double-click / zoom button: show it alone (or back).
     var onActivate: (() -> Void)?
     var onToggleZoom: (() -> Void)?
@@ -46,10 +49,18 @@ final class WorkspaceTileView: NSView, NSDraggingSource {
         super.init(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         wantsLayer = true
         layer?.backgroundColor = NSColor(calibratedWhite: 0.09, alpha: 1).cgColor
-        for view in [header, body] as [NSView] {
+        for view in [header, body, subagentStrip] as [NSView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
+        subagentStrip.isHidden = true
+        subagentStripHeight = subagentStrip.heightAnchor.constraint(equalToConstant: 0)
+        NSLayoutConstraint.activate([
+            subagentStrip.leadingAnchor.constraint(equalTo: leadingAnchor),
+            subagentStrip.trailingAnchor.constraint(equalTo: trailingAnchor),
+            subagentStrip.bottomAnchor.constraint(equalTo: bottomAnchor),
+            subagentStripHeight,
+        ])
         NSLayoutConstraint.activate([
             header.leadingAnchor.constraint(equalTo: leadingAnchor),
             header.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -58,7 +69,7 @@ final class WorkspaceTileView: NSView, NSDraggingSource {
             body.leadingAnchor.constraint(equalTo: leadingAnchor),
             body.trailingAnchor.constraint(equalTo: trailingAnchor),
             body.topAnchor.constraint(equalTo: header.bottomAnchor),
-            body.bottomAnchor.constraint(equalTo: bottomAnchor),
+            body.bottomAnchor.constraint(equalTo: subagentStrip.topAnchor),
         ])
         content.translatesAutoresizingMaskIntoConstraints = true
         content.frame = body.bounds
@@ -122,6 +133,14 @@ final class WorkspaceTileView: NSView, NSDraggingSource {
         header.update(with: workspace, active: active, zoomed: zoomed)
         let needsUser = workspace.attention || workspace.agentActivity == .needsInput
         ring.state = needsUser ? .attention : .off
+    }
+
+    /// Subagent cards (empty list or `shown == false` collapses the strip).
+    func updateSubagents(_ agents: [SubagentInfo], shown: Bool) {
+        let visible = shown && !agents.isEmpty
+        subagentStrip.isHidden = !visible
+        subagentStripHeight.constant = visible ? SubagentStripView.height : 0
+        subagentStrip.update(visible ? agents : [])
     }
 }
 

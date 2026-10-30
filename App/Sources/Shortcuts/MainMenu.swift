@@ -122,6 +122,14 @@ enum MainMenu {
             resumeMenu.addItem(entry)
         }
         menu.addItem(submenu(resumeMenu))
+        let subagentsMenu = NSMenu(title: String(localized: "Show Subagents"))
+        for display in SubagentDisplay.allCases {
+            let entry = NSMenuItem(title: display.title, action: #selector(CommandRouter.setSubagentDisplay(_:)), keyEquivalent: "")
+            entry.target = router
+            entry.representedObject = display.rawValue
+            subagentsMenu.addItem(entry)
+        }
+        menu.addItem(submenu(subagentsMenu))
         menu.addItem(.separator())
         menu.addItem(item("Focus Address Bar", #selector(CommandRouter.browserFocusAddress(_:)), "l", target: router))
         menu.addItem(item("Reload Page", #selector(CommandRouter.browserReload(_:)), "r", target: router))

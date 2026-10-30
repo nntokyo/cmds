@@ -325,6 +325,12 @@ final class SidebarViewController: NSViewController {
 
     /// Sidebar text size changed (cmds › Settings…): cells re-set their fonts on reload, heights are re-measured.
     @objc private func settingsChanged() {
+        // Show Subagents (Settings › Agents): the "Sub n" badges come and go.
+        let subagents = AppSettings.shared.showSubagents
+        if isViewLoaded, subagents != appliedSubagentDisplay {
+            appliedSubagentDisplay = subagents
+            if SidebarTextSize.scale == appliedTextScale || appliedTextScale == nil { reload() }
+        }
         let scale = SidebarTextSize.scale
         guard isViewLoaded, scale != appliedTextScale else { return }
         appliedTextScale = scale
@@ -338,6 +344,7 @@ final class SidebarViewController: NSViewController {
 
     /// nil until the first settings change (the views were built for the size at launch).
     private var appliedTextScale: CGFloat?
+    private var appliedSubagentDisplay = AppSettings.shared.showSubagents
 
     @objc private func keepAwakeChanged() {
         guard isViewLoaded else { return }

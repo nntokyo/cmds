@@ -31,6 +31,8 @@ final class Pane {
     var agentActivity: AgentActivity = .none
     /// An agent was seen here in this run.
     var agentEverSeen = false
+    /// Claude Code subagents of the agent here, by start (AppController+Subagents). Not saved.
+    var subagents: [SubagentTrack] = []
     /// The agent's task: its terminal title without the status glyph (Claude Code: `✳ <topic>`).
     private(set) var agentTopic: String?
 

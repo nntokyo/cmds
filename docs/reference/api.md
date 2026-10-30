@@ -50,6 +50,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `agent.claude_hook` | `pane?`, `input` (Claude Code hook JSON, object or JSON text) | – (notifies and updates the agent state like `cmds hook claude`; never reads the transcript) |
 | `agent.claude_status` | `pane?`, `input` (status-line JSON) | – (like `cmds hook claude-status`, without a pid) |
 | `agent.list` | – | `{"panes": [{"workspace", "pane", "usage": AgentUsage}], "limits": [AgentLimits]}` |
+| `agent.subagents` | `pane?`, `workspace?` (default: all) | `SubagentList` `{"subagents": [{"id", "workspace", "pane", "agentType"?, "description"?, "state": "running"/"done", "startedAt", "endedAt"?, "action"?, "tokens"?, "elapsedSeconds"}]}`: Claude Code subagents from the `SubagentStart`/`SubagentStop` hooks (dates in seconds since 2001); local socket only |
 | `agent.sessions` | `pane?` (default: all panes) | `AgentSessionList` `{"mode": "ask"/"always"/"never", "sessions": [{"workspace", "pane", "state", "session": AgentSession, "command"?}]}` |
 | `agent.resume` | `pane?` or `all: true` | `{"queued": [pane], "skipped": [{"pane", "reason"}]}` (types the resume command once the pane's prompt is ready; [Resuming sessions](../guide/ai-agents.md#resuming-sessions)) |
 | `state.export` | – | `WorkspaceBundle` (workspaces, layout, per-pane agent sessions; [bundle format](cli.md#moving-workspaces-to-another-cmds)); local socket only |

@@ -20,13 +20,24 @@ extension CLI {
             let workspaces = try perform { try result.decode([WorkspaceInfo].self) }
             print(Format.workspaces(workspaces, currentPane: ctx.envPane), terminator: "")
         },
-        Command(name: "agents", usage: "agents",
+        Command(name: "agents", usage: "agents [--subagents [--pane P]]",
                 summary: "Show usage of the AI coding agents in cmds panes (Claude Code, Codex) and account limits.",
                 details: """
                     One line per pane running an agent: context, cost ($/h), session and API time, lines changed, cache
                     (Claude Code, via `cmds hook claude-status` in its status line) or context and tokens (Codex, read
                     from its session file). Then the latest account limits per agent (5-hour / 7-day windows, spend limit).
-                    """) { ctx in
+                    --subagents lists Claude Code subagents instead (running and just finished; SubagentStart /
+                    SubagentStop hooks): pane, state, elapsed time, type and description, current action, tokens.
+                    """,
+                options: ["pane"], flags: ["subagents"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds agents [--subagents [--pane P]]")
+            if ctx.args.has("subagents") {
+                let result = try ctx.call("agent.subagents", ["pane": ctx.args[option: "pane"].json])
+                if ctx.json { return ctx.printJSON(result) }
+                let list = try perform { try result.decode(SubagentList.self) }
+                return print(Format.subagents(list, currentPane: ctx.envPane), terminator: "")
+            }
+            if ctx.args[option: "pane"] != nil { throw CLIError.usage("--pane goes with --subagents") }
             let result = try ctx.call("agent.list")
             if ctx.json { return ctx.printJSON(result) }
             let list = try perform { try result.decode(AgentList.self) }
@@ -416,7 +427,7 @@ extension CLI {
             AgentHook.claudeStatus(ctx)
         },
         Command(name: "hook claude", usage: "hook claude",
-                summary: "Claude Code hook: read the hook JSON on stdin; notify (Notification / Stop) and track the agent's state (UserPromptSubmit).",
+                summary: "Claude Code hook: read the hook JSON on stdin; notify (Notification / Stop), track the agent's state (UserPromptSubmit) and its subagents (SubagentStart / SubagentStop).",
                 details: "Always exits 0 so a missing app never blocks Claude Code. See docs/guide/ai-agents.md for the settings.json snippet.") { ctx in
             let input = FileHandle.standardInput.readDataToEndOfFile()
             guard let event = ClaudeHook.event(fromHookInput: input) else { return }

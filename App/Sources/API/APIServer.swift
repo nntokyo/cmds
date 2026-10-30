@@ -136,6 +136,10 @@ final class APIServer {
 
         case "agent.list":
             return try .from(controller.agentList())
+        case "agent.subagents":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods).
+            return try .from(controller.subagentList(paneID: try params.string("pane"),
+                                                     workspaceID: try params.string("workspace")))
         case "agent.report":
             guard let raw = params.value?["usage"], case .object = raw,
                   let usage = try? raw.decode(AgentUsage.self) else {
