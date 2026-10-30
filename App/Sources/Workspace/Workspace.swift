@@ -29,6 +29,9 @@ final class Workspace {
     private(set) var processCount = 0
     /// Consecutive samples above one full core (the sidebar tints CPU once this is sustained).
     private(set) var busySamples = 0
+    /// CPU stayed above one full core for `sustainedBusySamples` samples in a row.
+    var isCPUBusy: Bool { busySamples >= Self.sustainedBusySamples }
+    private static let sustainedBusySamples = 2
 
     init(id: String) {
         self.id = id
@@ -40,6 +43,16 @@ final class Workspace {
         processCount = usage?.processCount ?? 0
         busySamples = (cpuPercent ?? 0) > 100 ? busySamples + 1 : 0
     }
+
+    /// Drops the sidebar notification text and where it came from.
+    func clearNotificationText() {
+        notificationText = nil
+        notificationPaneID = nil
+        notificationDate = nil
+    }
+
+    /// `:3000  :5173` (sidebar row and rail tooltip).
+    var portsText: String { ports.map { ":\($0)" }.joined(separator: "  ") }
 
     var hasTerminal: Bool { panes.values.contains { $0.kind == .terminal } }
 
