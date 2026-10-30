@@ -38,6 +38,16 @@ enum AgentActivityStyle {
         }
     }
 
+    /// The agent works and nothing waits for the user: a spinner (full row) or a pulsing dot (rail) instead of a still dot.
+    static func isWorking(_ workspace: Workspace) -> Bool {
+        workspace.agentActivity == .busy && !workspace.attention
+    }
+
+    /// Unseen attention or an agent waiting for input.
+    static func needsUser(_ workspace: Workspace) -> Bool {
+        workspace.attention || workspace.agentActivity == .needsInput
+    }
+
     /// Colour of the dot in front of the title / next to the rail number: orange for unseen attention, else the state.
     static func dotColor(for workspace: Workspace) -> NSColor? {
         if workspace.attention { return .systemOrange }

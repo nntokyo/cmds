@@ -67,7 +67,7 @@ final class CompactWorkspaceCellView: NSTableCellView {
         effectiveAppearance.performAsCurrentDrawingAppearance {
             dot.layer?.backgroundColor = color?.cgColor
         }
-        let pulsing = workspace.agentActivity == .busy && !workspace.attention
+        let pulsing = AgentActivityStyle.isWorking(workspace)
         if pulsing, dot.layer?.animation(forKey: "pulse") == nil {
             let pulse = CABasicAnimation(keyPath: "opacity")
             pulse.fromValue = 1
@@ -79,8 +79,7 @@ final class CompactWorkspaceCellView: NSTableCellView {
         } else if !pulsing {
             dot.layer?.removeAnimation(forKey: "pulse")
         }
-        let needsLook = workspace.attention || workspace.agentActivity == .needsInput
-        numberLabel.textColor = needsLook ? .labelColor : .secondaryLabelColor
+        numberLabel.textColor = AgentActivityStyle.needsUser(workspace) ? .labelColor : .secondaryLabelColor
         statusKey = nil
         tooltipText = nil
         updateUsage(with: workspace)
@@ -91,7 +90,7 @@ final class CompactWorkspaceCellView: NSTableCellView {
     func updateUsage(with workspace: Workspace) {
         let agent = workspace.primaryAgent?.usage
         var level = UsageLevel.normal
-        if workspace.busySamples >= 2 { level = .warning }
+        if workspace.isCPUBusy { level = .warning }
         if let agent {
             level = max(level, UsageLevel(percent: agent.contextUsedPercent))
             if let limits = AppController.shared.agentLimitsByKind[agent.agent]?.active(at: Date()) {
@@ -129,14 +128,12 @@ final class CompactWorkspaceCellView: NSTableCellView {
         if let host = workspace.remoteHost ?? workspace.sshPanes.first?.ssh?.launch.host { lines.append("ssh \(host)") }
         if let branch = workspace.gitBranch { lines.append("⎇ \(branch)") }
         if let cwd = workspace.workingDirectory { lines.append(cwd.abbreviatingHome) }
-        if !workspace.ports.isEmpty { lines.append(workspace.ports.map { ":\($0)" }.joined(separator: "  ")) }
+        if !workspace.ports.isEmpty { lines.append(workspace.portsText) }
         if let agent = workspace.primaryAgent?.usage {
             lines.append(AgentFormat.summary(agent, limits: [], strings: .localized) + (agent.isStale ? String(localized: " (idle)") : ""))
         }
-        if workspace.hasTerminal {
-            if SidebarPreferences.showsWorkspaceUsage, workspace.remoteHost == nil {
-                lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))
-            }
+        if WorkspaceCellView.showsUsage(workspace) {
+            lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))
         }
         if let note = workspace.notificationText { lines.append(note) }
         return lines.joined(separator: "\n")
