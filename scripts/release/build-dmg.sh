@@ -82,7 +82,10 @@ fi
 if [ -z "$IDENTITY" ]; then
   # First valid identity with the exact Developer ID name, as its SHA-1 hash (unambiguous for codesign).
   IDENTITY="$(security find-identity -v -p codesigning | awk -v n="\"$IDENTITY_NAME\"" 'index($0, n) {print $2; exit}')"
-  [ -n "$IDENTITY" ] || die "no valid \"$IDENTITY_NAME\" signing identity in the keychain"
+  if [ -z "$IDENTITY" ]; then
+    need "no valid \"$IDENTITY_NAME\" signing identity in the keychain"
+    IDENTITY="<Developer ID SHA-1>"
+  fi
 fi
 echo "signing identity: $IDENTITY"
 
