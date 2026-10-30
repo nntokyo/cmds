@@ -211,6 +211,35 @@ public enum AgentResume {
         return "$#%>❯➜λ»".contains(last)
     }
 
+    /// The shell waits at an empty command line: the text left of the cursor on its row ends in a prompt character
+    /// (`looksLikePrompt`), so nothing has been typed after the prompt (a right-side prompt after the cursor is
+    /// fine). `screen` = rows joined by "\n" as in `TerminalSurface.visibleText()`; `cursor` = 0-based row and cell
+    /// column (wide characters take two cells).
+    public static func isAtEmptyPrompt(screen: String, cursor: (row: Int, col: Int)?) -> Bool {
+        guard let cursor else { return false }
+        let rows = screen.components(separatedBy: "\n")
+        guard rows.indices.contains(cursor.row) else { return false }
+        var prefix = ""
+        var cells = 0
+        for character in rows[cursor.row] {
+            guard cells < cursor.col else { break }
+            prefix.append(character)
+            cells += cellWidth(character)
+        }
+        return looksLikePrompt(screen: prefix)
+    }
+
+    private static func cellWidth(_ character: Character) -> Int {
+        guard let scalar = character.unicodeScalars.first else { return 1 }
+        switch scalar.value {
+        case 0x1100...0x115F, 0x2E80...0xA4CF, 0xAC00...0xD7A3, 0xF900...0xFAFF, 0xFE30...0xFE4F,
+             0xFF00...0xFF60, 0xFFE0...0xFFE6, 0x1F300...0x1F64F, 0x1F900...0x1FAFF, 0x20000...0x3FFFD:
+            return 2
+        default:
+            return 1
+        }
+    }
+
     /// Terminal titles are often decorated (`✳ Fix login`, spinner glyphs); returns the readable part, nil when empty
     /// or just a default title (a path or `user@host:path` set by the shell, a shell or agent name).
     public static func cleanTitle(_ title: String?) -> String? {

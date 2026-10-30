@@ -68,7 +68,9 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
 - **What is typed**, into the pane's own shell and only once: `cd '<dir>' && claude --resume <id>` or
   `cd '<dir>' && codex resume <id>` (Return included). Only ids made of letters, digits, `-`, `_`, `.` are accepted;
   a directory that cannot be quoted the same way in sh/zsh/fish/tcsh is left out of the command.
-- **When**: the shell must be the pane's foreground process and its screen settled. A pane that runs Claude Code or
+- **When**: the shell must be the pane's foreground process, its screen settled, and the cursor right after a prompt
+  ending in `$ # % > ❯ ➜ λ »` with nothing typed (a half-typed command line waits; a prompt ending in another
+  character never resumes by itself: Cancel and type the command shown by `cmds sessions`). A pane that runs Claude Code or
   Codex (any such process on its terminal, or one reporting usage) is never typed into; its offer is dropped.
 - **SSH panes**: the session belongs to the server. Resume connects the pane if needed (never on launch, also not
   in *Always* mode) and types on the remote shell once it reported its prompt (`cmds-remote.sh prompt`) or the screen

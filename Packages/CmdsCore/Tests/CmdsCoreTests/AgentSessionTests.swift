@@ -55,6 +55,22 @@ final class AgentSessionTests: XCTestCase {
         XCTAssertEqual(AgentSession(agent: .codex, sessionID: uuid, lastSeen: now).summary(now: now), "Codex session (just now)")
     }
 
+    func testEmptyPrompt() {
+        let screen = "Last login\n~/src % \n"
+        XCTAssertTrue(AgentResume.isAtEmptyPrompt(screen: screen, cursor: (1, 8)))
+        // Something typed after the prompt.
+        XCTAssertFalse(AgentResume.isAtEmptyPrompt(screen: "~/src % git sta", cursor: (0, 15)))
+        // A right prompt after the cursor does not matter.
+        XCTAssertTrue(AgentResume.isAtEmptyPrompt(screen: "❯                 main 12:00", cursor: (0, 2)))
+        // Wide characters take two cells.
+        XCTAssertTrue(AgentResume.isAtEmptyPrompt(screen: "~/日本 % ", cursor: (0, 9)))
+        XCTAssertFalse(AgentResume.isAtEmptyPrompt(screen: "~/日本 % x", cursor: (0, 10)))
+        // Editors, password prompts, unknown cursor.
+        XCTAssertFalse(AgentResume.isAtEmptyPrompt(screen: "Password: ", cursor: (0, 10)))
+        XCTAssertFalse(AgentResume.isAtEmptyPrompt(screen: "~ % ", cursor: nil))
+        XCTAssertFalse(AgentResume.isAtEmptyPrompt(screen: "~ % ", cursor: (3, 0)))
+    }
+
     func testCleanTitle() {
         XCTAssertEqual(AgentResume.cleanTitle("✳ Fix login"), "Fix login")
         for noise in [nil, "", "zsh", "Terminal", "/tmp/x", "~/src", "me@host:~/src", "claude", "✳ Claude Code"] {

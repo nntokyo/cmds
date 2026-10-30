@@ -296,10 +296,12 @@ extension AppController {
             return .wait
         }
         let stable = now.timeIntervalSince(pane.resumeScreenSince ?? now)
+        // Always: the cursor sits right after a prompt with nothing typed (never into an editor, a password
+        // question or a half-typed command). A remote prompt report only shortens the wait.
+        guard AgentResume.isAtEmptyPrompt(screen: screen, cursor: terminal.cursorPosition) else { return .wait }
         if isSSH {
             let prompted = (pane.lastPromptReportAt ?? .distantPast) > pane.terminalStartedAt
-            let ready = (prompted && stable >= 0.4) || (stable >= 1.5 && AgentResume.looksLikePrompt(screen: screen))
-            return ready ? .ready : .wait
+            return stable >= (prompted ? 0.4 : 1.5) ? .ready : .wait
         }
         return stable >= 0.4 ? .ready : .wait
     }
