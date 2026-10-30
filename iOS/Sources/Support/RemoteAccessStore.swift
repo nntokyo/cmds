@@ -63,15 +63,7 @@ enum PhoneSSHKey {
     private static let account = "ed25519"
 
     static func load() -> Curve25519.Signing.PrivateKey? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
+        guard let data = Keychain.read(service: service, account: account) else { return nil }
         return try? Curve25519.Signing.PrivateKey(rawRepresentation: data)
     }
 
@@ -79,14 +71,7 @@ enum PhoneSSHKey {
     static func loadOrCreate() -> Curve25519.Signing.PrivateKey? {
         if let existing = load() { return existing }
         let key = Curve25519.Signing.PrivateKey()
-        let add: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: key.rawRepresentation,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]
-        let status = SecItemAdd(add as CFDictionary, nil)
+        let status = Keychain.add(key.rawRepresentation, service: service, account: account)
         guard status == errSecSuccess else {
             pairingLog.error("could not save the SSH key: OSStatus \(status, privacy: .public)")
             return nil
@@ -96,12 +81,7 @@ enum PhoneSSHKey {
 
     /// Deletes the key; the next use creates a new one (which must be added to the relay again).
     static func reset() {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(query as CFDictionary)
+        Keychain.delete(service: service, account: account)
     }
 
     static var comment: String {

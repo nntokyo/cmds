@@ -22,15 +22,7 @@ enum PairingStore {
     private static let legacyService = "tokyo.n-n.cmds.companion.pairing"
 
     static func pairing(for targetID: String) -> MacPairing? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: targetID,
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
-        ]
-        var item: CFTypeRef?
-        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess, let data = item as? Data else { return nil }
+        guard let data = Keychain.read(service: service, account: targetID) else { return nil }
         return try? JSONDecoder().decode(MacPairing.self, from: data)
     }
 
@@ -41,14 +33,7 @@ enum PairingStore {
     static func save(_ pairing: MacPairing, for targetID: String) {
         guard let data = try? JSONEncoder().encode(pairing) else { return }
         delete(for: targetID)
-        let add: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: targetID,
-            kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-        ]
-        let status = SecItemAdd(add as CFDictionary, nil)
+        let status = Keychain.add(data, service: service, account: targetID)
         if status != errSecSuccess {
             // Fails closed: without a saved pin the next connection asks to pair again. (Unsigned
             // simulator builds have no keychain entitlement and always end up here, -34018.)
@@ -57,21 +42,12 @@ enum PairingStore {
     }
 
     static func delete(for targetID: String) {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: targetID,
-        ]
-        SecItemDelete(query as CFDictionary)
+        Keychain.delete(service: service, account: targetID)
     }
 
     /// Deletes every v1 token; true if there was one (the user has to pair again).
     static func removeLegacyTokens() -> Bool {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: legacyService,
-        ]
-        return SecItemDelete(query as CFDictionary) == errSecSuccess
+        Keychain.delete(service: legacyService, account: nil) == errSecSuccess
     }
 }
 
