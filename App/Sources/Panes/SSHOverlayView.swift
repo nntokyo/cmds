@@ -11,6 +11,7 @@ final class SSHOverlayView: NSView {
 
     var onReconnect: (() -> Void)?
     var onClose: (() -> Void)?
+    var onFocus: (() -> Void)?
 
     private let titleLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(wrappingLabelWithString: "")
@@ -76,8 +77,6 @@ final class SSHOverlayView: NSView {
         onFocus?()
     }
 
-    var onFocus: (() -> Void)?
-
     override func becomeFirstResponder() -> Bool {
         onFocus?()
         return true
@@ -85,11 +84,15 @@ final class SSHOverlayView: NSView {
 
     override func keyDown(with event: NSEvent) {
         switch event.keyCode {
-        case 36, 76: onReconnect?() // Return, keypad Enter
+        case Self.returnKeyCode, Self.keypadEnterKeyCode: onReconnect?()
         default: NSSound.beep()
         }
     }
 
+    private static let returnKeyCode: UInt16 = 36
+    private static let keypadEnterKeyCode: UInt16 = 76
+
     @objc private func reconnectClicked() { onReconnect?() }
+
     @objc private func closeClicked() { onClose?() }
 }

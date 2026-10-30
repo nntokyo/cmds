@@ -10,7 +10,7 @@ import Foundation
 ///
 /// Only for pinned connections (manual pairing's identity probe needs the Mac's address).
 /// Main thread only (`@unchecked Sendable` so the loopback accept can hop back to main).
-final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
+final class BluetoothTransport: NSObject, RelayTransport, @unchecked Sendable {
     var onEvent: ((TransportEvent) -> Void)?
     var linkPath: SyncLinkPath { .bluetooth }
 
@@ -26,11 +26,13 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
     /// CoreBluetooth never times out a connection: a candidate that does not get as far as the channel
     /// in this time is dropped and scanning resumes.
     private static let candidateTimeout: TimeInterval = 5
+    private static let serviceUUID = CBUUID(string: SyncBluetooth.serviceUUID)
+    private static let infoCharacteristicUUID = CBUUID(string: SyncBluetooth.infoCharacteristicUUID)
     private var candidateTimer: DispatchWorkItem?
     private var listener: SyncLoopback.Listener?
     private var relay: SyncStreamRelay?
-    private var inner: WebSocketTransport?
-    private var finished = false
+    var inner: WebSocketTransport?
+    var finished = false
 
     /// Progress for `ConnectionDiagnostics` (no identifiers or secrets).
     private func stage(_ text: String) {
@@ -56,18 +58,7 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
         central = CBCentralManager(delegate: self, queue: .main, options: [CBCentralManagerOptionShowPowerAlertKey: false])
     }
 
-    func send(_ message: ClientMessage) {
-        inner?.send(message)
-    }
-
-    func close() {
-        guard !finished else { return }
-        finished = true
-        onEvent = nil
-        teardown()
-    }
-
-    private func teardown() {
+    func teardown() {
         candidateTimer?.cancel()
         candidateTimer = nil
         inner?.onEvent = nil
@@ -86,21 +77,12 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
         peripheral = nil
     }
 
-    private func fail(_ reason: String) {
-        guard !finished else { return }
-        finished = true
-        let handler = onEvent
-        onEvent = nil
-        teardown()
-        handler?(.disconnected(reason: reason))
-    }
-
     // MARK: - Discovery
 
     private func scan() {
         guard let central, central.state == .poweredOn, peripheral == nil else { return }
         stage(rejected.isEmpty ? "scanning" : "scanning (\(rejected.count) candidate(s) were not the paired Mac)")
-        central.scanForPeripherals(withServices: [CBUUID(string: SyncBluetooth.serviceUUID)])
+        central.scanForPeripherals(withServices: [Self.serviceUUID])
     }
 
     /// Not the pinned Mac (or unusable): drop it and keep scanning.
@@ -141,26 +123,7 @@ final class BluetoothTransport: NSObject, SyncTransport, @unchecked Sendable {
                 self.relay = relay
             }
         }
-        let inner = WebSocketTransport(target: MacTarget(kind: .manual(host: "127.0.0.1", port: listener.port),
-                                                         displayName: "Bluetooth"),
-                                       policy: policy)
-        self.inner = inner
-        inner.onEvent = { [weak self] event in self?.forward(event) }
-        inner.start()
-    }
-
-    private func forward(_ event: TransportEvent) {
-        guard !finished else { return }
-        switch event {
-        case .connected, .message:
-            onEvent?(event)
-        case .identityPresented, .identityMismatch, .disconnected:
-            finished = true
-            let handler = onEvent
-            onEvent = nil
-            teardown()
-            handler?(event)
-        }
+        startInner(port: listener.port, displayName: "Bluetooth", policy: policy)
     }
 }
 
@@ -195,7 +158,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         guard peripheral === self.peripheral else { return }
         stage("connected peripheral, reading service info")
-        peripheral.discoverServices([CBUUID(string: SyncBluetooth.serviceUUID)])
+        peripheral.discoverServices([Self.serviceUUID])
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
@@ -216,12 +179,12 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
         guard peripheral === self.peripheral else { return }
-        let services = (peripheral.services ?? []).filter { $0.uuid == CBUUID(string: SyncBluetooth.serviceUUID) }
+        let services = (peripheral.services ?? []).filter { $0.uuid == Self.serviceUUID }
         guard error == nil, !services.isEmpty else { return reject(peripheral) }
         // A Mac running several cmds instances shows one service per instance.
         pendingServices = services.count
         for service in services {
-            peripheral.discoverCharacteristics([CBUUID(string: SyncBluetooth.infoCharacteristicUUID)], for: service)
+            peripheral.discoverCharacteristics([Self.infoCharacteristicUUID], for: service)
         }
     }
 
@@ -229,7 +192,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
         guard peripheral === self.peripheral else { return }
         pendingServices -= 1
         for characteristic in service.characteristics ?? []
-        where characteristic.uuid == CBUUID(string: SyncBluetooth.infoCharacteristicUUID) {
+        where characteristic.uuid == Self.infoCharacteristicUUID {
             pendingReads += 1
             peripheral.readValue(for: characteristic)
         }
@@ -237,7 +200,7 @@ extension BluetoothTransport: CBCentralManagerDelegate, CBPeripheralDelegate {
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard peripheral === self.peripheral, characteristic.uuid == CBUUID(string: SyncBluetooth.infoCharacteristicUUID) else { return }
+        guard peripheral === self.peripheral, characteristic.uuid == Self.infoCharacteristicUUID else { return }
         pendingReads -= 1
         if !channelRequested, error == nil, let value = characteristic.value,
            let info = SyncBluetooth.Info(encoded: value), info.matches(pin) {

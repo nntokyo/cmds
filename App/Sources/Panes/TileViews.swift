@@ -131,8 +131,7 @@ final class WorkspaceTileView: NSView, NSDraggingSource {
     /// Header text and colours, ring state. `active` = the tile with the keyboard.
     func update(with workspace: Workspace, active: Bool, zoomed: Bool) {
         header.update(with: workspace, active: active, zoomed: zoomed)
-        let needsUser = workspace.attention || workspace.agentActivity == .needsInput
-        ring.state = needsUser ? .attention : .off
+        ring.state = AgentActivityStyle.needsUser(workspace) ? .attention : .off
     }
 
     /// Subagent cards (empty list or `shown == false` collapses the strip).

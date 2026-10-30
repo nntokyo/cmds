@@ -75,6 +75,10 @@ public enum SubagentTranscript {
     /// Longest action / description shown.
     public static let maxActionLength = 80
     public static let maxDescriptionLength = 120
+    /// Maximum length of a subagent type (`agentType`).
+    static let maxAgentTypeLength = 60
+    /// Larger `agent-<id>.meta.json` files are not read.
+    static let maxMetaBytes = 256 * 1024
 
     /// `agent_id` / `session_id` as Claude Code makes them (hex, uuid); anything else is refused.
     public static func isValidID(_ id: String) -> Bool {
@@ -105,7 +109,7 @@ public enum SubagentTranscript {
 
     /// Last action and token count from the transcript's tail; nil when the file cannot be read.
     public static func activity(path: String, tailBytes: Int = 64 * 1024) -> Activity? {
-        guard let lines = tailLines(path: path, tailBytes: tailBytes) else { return nil }
+        guard let lines = TranscriptText.tailLines(path: path, tailBytes: tailBytes) else { return nil }
         var activity = Activity()
         var foundAction = false
         for line in lines.reversed() {
@@ -135,11 +139,11 @@ public enum SubagentTranscript {
         guard transcriptPath.hasSuffix(".jsonl") else { return nil }
         let metaPath = String(transcriptPath.dropLast(".jsonl".count)) + ".meta.json"
         guard let attributes = try? FileManager.default.attributesOfItem(atPath: metaPath),
-              (attributes[.size] as? NSNumber)?.intValue ?? .max < 256 * 1024,
+              (attributes[.size] as? NSNumber)?.intValue ?? .max < maxMetaBytes,
               let data = FileManager.default.contents(atPath: metaPath),
               let object = try? JSONDecoder().decode(JSONValue.self, from: data) else { return nil }
-        let type = object["agentType"]?.stringValue.map { truncate(oneLine($0), 60) }
-        let description = object["description"]?.stringValue.map { truncate(oneLine($0), maxDescriptionLength) }
+        let type = object["agentType"]?.stringValue.map { TranscriptText.firstLine($0, maxLength: maxAgentTypeLength) }
+        let description = object["description"]?.stringValue.map { TranscriptText.firstLine($0, maxLength: maxDescriptionLength) }
         return Meta(agentType: type?.isEmpty == false ? type : nil,
                     description: description?.isEmpty == false ? description : nil)
     }
@@ -152,7 +156,7 @@ public enum SubagentTranscript {
             }
             return (path as NSString).abbreviatingWithTildeInPath
         }
-        let string = { (key: String) in input?[key]?.stringValue.map(oneLine).flatMap { $0.isEmpty ? nil : $0 } }
+        let string = { (key: String) in input?[key]?.stringValue.map(TranscriptText.firstLine).flatMap { $0.isEmpty ? nil : $0 } }
         let text: String
         switch tool {
         case "Read", "Edit", "Write", "MultiEdit":
@@ -172,7 +176,7 @@ public enum SubagentTranscript {
         default:
             text = tool // MCP and other tools: the name only (their input may be anything)
         }
-        return truncate(text, maxActionLength)
+        return TranscriptText.truncate(text, maxActionLength)
     }
 
     /// Hides values of assignments and options that look like secrets (`TOKEN=…`, `--password …`).
@@ -190,26 +194,5 @@ public enum SubagentTranscript {
             result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: template)
         }
         return result
-    }
-
-    static func tailLines(path: String, tailBytes: Int) -> [Data.SubSequence]? {
-        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
-        defer { try? handle.close() }
-        guard let size = try? handle.seekToEnd() else { return nil }
-        let offset = size > UInt64(tailBytes) ? size - UInt64(tailBytes) : 0
-        try? handle.seek(toOffset: offset)
-        guard let data = try? handle.readToEnd() else { return nil }
-        var lines = data.split(separator: 0x0A)
-        if offset > 0, !lines.isEmpty { lines.removeFirst() } // probably cut mid-line
-        return lines
-    }
-
-    static func oneLine(_ text: String) -> String {
-        let line = text.split(whereSeparator: \.isNewline).first { !$0.trimmingCharacters(in: .whitespaces).isEmpty } ?? ""
-        return line.trimmingCharacters(in: .whitespaces)
-    }
-
-    static func truncate(_ text: String, _ length: Int) -> String {
-        text.count <= length ? text : String(text.prefix(length - 1)) + "…"
     }
 }

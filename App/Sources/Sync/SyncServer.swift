@@ -38,6 +38,21 @@ final class SyncServer {
     static let stateInterval: TimeInterval = 0.1
     /// Minimum spacing of `state` pushes caused only by resource-usage samples.
     static let usageStateInterval: TimeInterval = 2
+    /// Input budget charged for one `key` message.
+    static let keyInputCost = 8
+    /// Longest device name and device ID kept from `hello`.
+    static let maxDeviceNameLength = 64
+    static let maxDeviceIDLength = 128
+    /// Shown for a phone whose `hello.deviceName` is empty after sanitizing.
+    static let fallbackDeviceName = "iOS device"
+    /// Longest Bonjour service name (bytes) worth putting into the pairing payload.
+    static let maxServiceNameBytes = 63
+    /// TCP keepalive idle time of sync connections (seconds).
+    static let keepaliveIdle = 15
+    /// After `resetIdentity`, time for the "unpaired" errors to go out before the listener restarts.
+    static let identityResetRestartDelay: TimeInterval = 0.5
+    /// Retry interval while a `file` transfer waits for the connection's write queue to drain.
+    static let filePieceRetryInterval: TimeInterval = 0.05
 
     final class Client {
         let connection: SyncConnection
@@ -235,30 +250,33 @@ final class SyncServer {
         didChange()
     }
 
-    /// Forgets every paired device and disconnects them.
     /// Drops sessions authenticated with any of `tokenHashes`.
     private func deauthorize(tokenHashes: [String], reason: String) {
         guard !tokenHashes.isEmpty else { return }
         for client in clients.values where client.authenticated {
             guard let hash = client.tokenHash,
                   tokenHashes.contains(where: { SyncDeviceStore.digestsEqual($0, hash) }) else { continue }
-            client.authenticated = false
-            client.subscribed = []
-            sendError(.invalidToken, reason, to: client, close: true)
+            revokeSession(of: client, reason: reason)
         }
         pruneScreenCache()
     }
 
+    /// Forgets every paired device and disconnects them.
     func revokeAllDevices() {
         store.revokeAll()
         for client in clients.values where client.authenticated {
-            // Stop streaming to it at once; the error is the last frame it gets.
-            client.authenticated = false
-            client.subscribed = []
-            sendError(.invalidToken, "this device was unpaired on the Mac", to: client, close: true)
+            revokeSession(of: client, reason: "this device was unpaired on the Mac")
         }
         pruneScreenCache()
         rotateCode()
+    }
+
+    /// Stops streaming to an authenticated client at once; the `invalidToken` error is the last frame it gets.
+    /// Callers prune the screen cache afterwards.
+    private func revokeSession(of client: Client, reason: String) {
+        client.authenticated = false
+        client.subscribed = []
+        sendError(.invalidToken, reason, to: client, close: true)
     }
 
     /// Replaces the sync identity with a new key and certificate and unpairs every device: phones pinned
@@ -272,7 +290,7 @@ final class SyncServer {
         guard listener != nil else { return didChange() }
         // Restart with a new identity once the "unpaired" errors had a moment to go out
         // (stopping at once would cancel connections with those frames still queued).
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.identityResetRestartDelay) { [weak self] in
             MainActor.assumeIsolated {
                 guard let self, self.listener != nil, self.identity == nil else { return }
                 self.stop()
@@ -314,7 +332,7 @@ final class SyncServer {
         }
         let tcp = NWProtocolTCP.Options()
         tcp.enableKeepalive = true
-        tcp.keepaliveIdle = 15
+        tcp.keepaliveIdle = Self.keepaliveIdle
         let params = NWParameters(tls: tls, tcp: tcp)
         let ws = NWProtocolWebSocket.Options()
         ws.autoReplyPing = true
@@ -325,22 +343,10 @@ final class SyncServer {
         let nwPort = requested.flatMap { NWEndpoint.Port(rawValue: $0) } ?? .any
         let listener: NWListener
         do {
-            #if DEBUG
-            if Self.testPairing {
-                // End-to-end test mode: loopback only, so nothing on the network can reach the test
-                // instance and the firewall never asks about it.
-                params.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: nwPort)
-                listener = try NWListener(using: params)
-            } else {
-                listener = try NWListener(using: params, on: nwPort)
-            }
-            #else
-            listener = try NWListener(using: params, on: nwPort)
-            #endif
+            listener = try Self.makeListener(params: params, port: nwPort)
         } catch {
             if requested != nil, !portIsFixed { return startListener(port: nil) }
-            status = LocalizedStatus("Failed: \(error.localizedDescription)")
-            syncLog.error("listener failed: \(error.localizedDescription, privacy: .public)")
+            listenerFailed(error)
             didChange()
             return
         }
@@ -382,6 +388,23 @@ final class SyncServer {
         listener.start(queue: queue)
     }
 
+    private static func makeListener(params: NWParameters, port: NWEndpoint.Port) throws -> NWListener {
+        #if DEBUG
+        if testPairing {
+            // End-to-end test mode: loopback only, so nothing on the network can reach the test
+            // instance and the firewall never asks about it.
+            params.requiredLocalEndpoint = .hostPort(host: .ipv4(.loopback), port: port)
+            return try NWListener(using: params)
+        }
+        #endif
+        return try NWListener(using: params, on: port)
+    }
+
+    private func listenerFailed(_ error: Error) {
+        status = LocalizedStatus("Failed: \(error.localizedDescription)")
+        syncLog.error("listener failed: \(error.localizedDescription, privacy: .public)")
+    }
+
     private func listenerStateChanged(_ state: NWListener.State, listener: NWListener, requestedPort: UInt16?) {
         switch state {
         case .ready:
@@ -397,8 +420,7 @@ final class SyncServer {
                 startListener(port: nil)
                 return
             }
-            status = LocalizedStatus("Failed: \(error.localizedDescription)")
-            syncLog.error("listener failed: \(error.localizedDescription, privacy: .public)")
+            listenerFailed(error)
         case .waiting(let error):
             status = LocalizedStatus("Waiting: \(error.localizedDescription)")
         default:
@@ -426,6 +448,26 @@ final class SyncServer {
         guard loopback else { return nil }
         return relayedPeers.peer(forPort: port.rawValue)
     }
+
+    /// Opens a relay socket to the sync listener on 127.0.0.1:`port`, registered in `relayedPeers` as `peer`
+    /// before it connects. `release` unregisters it (call it once the relay is finished). Blocking (loopback);
+    /// call it off the main thread.
+    nonisolated static func connectRelay(port: UInt16, peer: String) throws -> (socket: Int32, release: @Sendable () -> Void) {
+        let peers = relayedPeers
+        var localPort: UInt16?
+        do {
+            let socket = try SyncLoopback.connect(port: port) { bound in
+                localPort = bound
+                peers.register(port: bound, peer: peer)
+            }
+            let registered = localPort
+            return (socket, { if let registered { peers.unregister(port: registered) } })
+        } catch {
+            if let localPort { peers.unregister(port: localPort) }
+            throw error
+        }
+    }
+
 
     private func accept(_ nwConnection: NWConnection) {
         guard clients.count < Self.maxConnections else {
@@ -494,41 +536,12 @@ final class SyncServer {
             send(.pong(.init(nonce: ping.nonce)), to: client)
         case .subscribe(let sub):
             subscribe(client, paneIDs: sub.paneIDs)
-        case .requestScreen(let req):
-            if let msg = client.streamer.fullScreen(paneID: req.paneID) {
-                send(msg, to: client)
-            } else if let snapshot = snapshot(paneID: req.paneID) {
-                if let msg = client.streamer.update(paneID: req.paneID, snapshot: snapshot) { send(msg, to: client) }
-            } else {
-                sendError(.notFound, "pane not found: \(req.paneID.prefix(64))", to: client)
-            }
+        case .requestScreen(let request):
+            sendScreen(paneID: request.paneID, to: client)
         case .input(let input):
-            let size = input.text.utf8.count
-            guard size <= Self.maxInputBytes else {
-                sendError(.badRequest, "input too large (max \(Self.maxInputBytes) bytes per message)", to: client)
-                return
-            }
-            guard client.spendInput(size) else {
-                sendError(.rateLimited, "too much input; slow down", to: client)
-                return
-            }
-            // Keystrokes from the phone are typed (no bracketed paste); multi-line text keeps the paste path.
-            if input.text.contains(where: \.isNewline) {
-                perform(client) { try AppController.shared.sendText(paneID: input.paneID, text: input.text) }
-            } else {
-                perform(client) { try AppController.shared.typeText(paneID: input.paneID, text: input.text) }
-            }
+            type(input, from: client)
         case .key(let key):
-            guard client.spendInput(8) else {
-                sendError(.rateLimited, "too much input; slow down", to: client)
-                return
-            }
-            guard let bytes = key.key.terminalBytes(applicationCursor: false) else {
-                sendError(.badRequest, "unknown key: \(key.key.rawValue.prefix(20))", to: client)
-                return
-            }
-            let text = String(decoding: bytes, as: UTF8.self)
-            perform(client) { try AppController.shared.sendText(paneID: key.paneID, text: text) }
+            press(key, from: client)
         case .selectWorkspace(let select):
             perform(client) { try AppController.shared.selectWorkspace(id: select.id) }
         case .focusPane(let focus):
@@ -538,15 +551,68 @@ final class SyncServer {
         }
     }
 
+    /// `requestScreen`: the whole screen if this client has seen the pane, else its first update.
+    private func sendScreen(paneID: String, to client: Client) {
+        if let msg = client.streamer.fullScreen(paneID: paneID) {
+            send(msg, to: client)
+        } else if let snapshot = snapshot(paneID: paneID) {
+            if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
+        } else {
+            sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
+        }
+    }
+
+    /// `input`: text typed into a pane, within the size and rate limits.
+    private func type(_ input: ClientMessage.Input, from client: Client) {
+        let size = input.text.utf8.count
+        guard size <= Self.maxInputBytes else {
+            sendError(.badRequest, "input too large (max \(Self.maxInputBytes) bytes per message)", to: client)
+            return
+        }
+        guard spendInput(size, from: client) else { return }
+        // Keystrokes from the phone are typed (no bracketed paste); multi-line text keeps the paste path.
+        if input.text.contains(where: \.isNewline) {
+            perform(client) { try AppController.shared.sendText(paneID: input.paneID, text: input.text) }
+        } else {
+            perform(client) { try AppController.shared.typeText(paneID: input.paneID, text: input.text) }
+        }
+    }
+
+    /// `key`: one special key, sent as its terminal bytes.
+    private func press(_ key: ClientMessage.Key, from client: Client) {
+        guard spendInput(Self.keyInputCost, from: client) else { return }
+        guard let bytes = key.key.terminalBytes(applicationCursor: false) else {
+            sendError(.badRequest, "unknown key: \(key.key.rawValue.prefix(20))", to: client)
+            return
+        }
+        let text = String(decoding: bytes, as: UTF8.self)
+        perform(client) { try AppController.shared.sendText(paneID: key.paneID, text: text) }
+    }
+
+    /// Charges input to the client's budget; over budget, answers `rateLimited` and returns false.
+    private func spendInput(_ bytes: Int, from client: Client) -> Bool {
+        guard client.spendInput(bytes) else {
+            sendError(.rateLimited, "too much input; slow down", to: client)
+            return false
+        }
+        return true
+    }
+
     /// Runs an AppController call; API errors become `error` messages. IDs are always passed
     /// non-nil, so the controller never falls back to the focused pane for remote requests.
     private func perform(_ client: Client, _ body: () throws -> Void) {
         do {
             try body()
-        } catch let error as RPCError {
-            let code: SyncErrorCode = error.code == 404 ? .notFound : .badRequest
-            sendError(code, error.message, to: client)
         } catch {
+            sendError(for: error, to: client)
+        }
+    }
+
+    /// An AppController error as an `error` message: 404 → `notFound`, other API errors → `badRequest`.
+    private func sendError(for error: Error, to client: Client) {
+        if let error = error as? RPCError {
+            sendError(error.code == 404 ? .notFound : .badRequest, error.message, to: client)
+        } else {
             sendError(.internalError, "\(error)", to: client)
         }
     }
@@ -583,7 +649,7 @@ final class SyncServer {
             let plainToken: String
             if isNewToken {
                 plainToken = token
-                let deviceID = hello.deviceID.map { String($0.prefix(128)) }
+                let deviceID = hello.deviceID.map { String($0.prefix(Self.maxDeviceIDLength)) }
                 // Re-pairing replaces the device's old token; sessions still using it must lose access too.
                 let replaced = deviceID.map { store.tokenHashes(deviceID: $0) } ?? []
                 store.add(token: token, deviceName: name, deviceID: deviceID)
@@ -621,7 +687,7 @@ final class SyncServer {
     private static func sanitize(_ name: String) -> String {
         let cleaned = String(name.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) }.map(Character.init))
             .trimmingCharacters(in: .whitespaces)
-        return cleaned.isEmpty ? "iOS device" : String(cleaned.prefix(64))
+        return cleaned.isEmpty ? fallbackDeviceName : String(cleaned.prefix(maxDeviceNameLength))
     }
 
     // MARK: - State
@@ -679,10 +745,8 @@ final class SyncServer {
         let path: String
         do {
             path = try AppController.shared.previewFile(paneID: paneID)
-        } catch let error as RPCError {
-            return sendError(error.code == 404 ? .notFound : .badRequest, error.message, to: client)
         } catch {
-            return sendError(.internalError, "\(error)", to: client)
+            return sendError(for: error, to: client)
         }
         client.sendingFile = true
         let name = (path as NSString).lastPathComponent
@@ -710,7 +774,7 @@ final class SyncServer {
             return
         }
         guard client.connection.queuedBytes <= SyncConnection.maxPendingBytes / 2 else {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.filePieceRetryInterval) { [weak self] in
                 MainActor.assumeIsolated {
                     guard let self else { return client.sendingFile = false }
                     self.sendFilePieces(pieces, to: client)
@@ -868,7 +932,8 @@ final class SyncServer {
         guard let identity, let port, let host = Self.pairingHost() else { return nil }
         // Only an advertised name helps the phone, and a Bonjour name is at most 63 bytes.
         let name = CmdsEnv.isBonjourDisabled() ? nil : (serviceName ?? macName)
-        return SyncPairingPayload(name: name.flatMap { $0.utf8.count <= 63 ? $0 : nil }, host: host, port: port,
+        return SyncPairingPayload(name: name.flatMap { $0.utf8.count <= Self.maxServiceNameBytes ? $0 : nil }, host: host, port: port,
+
                                   fingerprint: identity.fingerprint, code: pairingCode)
     }
 

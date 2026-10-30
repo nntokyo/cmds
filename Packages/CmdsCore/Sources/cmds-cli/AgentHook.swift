@@ -8,6 +8,12 @@ import Foundation
 enum AgentHook {
     static let stdinDeadline: TimeInterval = 0.15
     static let maxInput = 1024 * 1024
+    /// Send timeout of the socket write (the hook must not hold up Claude Code's status line).
+    static let sendTimeoutMicroseconds: Int32 = 200_000
+    /// How many ancestors `agentProcessID()` looks at.
+    static let maxAncestors = 8
+    /// Buffer for a process's `KERN_PROCARGS2` (larger argument lists are not read).
+    static let maxProcessArgumentBytes = 256 * 1024
 
     static func claudeStatus(_ ctx: Context) {
         guard let pane = ctx.envPane else { return } // not inside cmds
@@ -24,7 +30,7 @@ enum AgentHook {
     static func post(socketPath: String, method: String, params: JSONValue) {
         guard let fd = try? UnixSocket.makeStreamSocket() else { return }
         defer { close(fd) }
-        var timeout = timeval(tv_sec: 0, tv_usec: 200_000)
+        var timeout = timeval(tv_sec: 0, tv_usec: sendTimeoutMicroseconds)
         setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
         guard (try? UnixSocket.connect(fd, path: socketPath)) != nil,
               let line = try? JSONLineBuffer.encodeLine(RPCRequest(id: 1, method: method, params: params)) else { return }
@@ -56,7 +62,7 @@ enum AgentHook {
     static func agentProcessID() -> pid_t? {
         var pid = getppid()
         var fallback: pid_t?
-        for _ in 0..<8 {
+        for _ in 0..<maxAncestors {
             guard pid > 1, let info = processInfo(pid) else { break }
             if info.agent == .claude { return pid }
             if fallback == nil, !AgentProcessClassifier.shells.contains(info.name) { fallback = pid }
@@ -79,7 +85,7 @@ enum AgentHook {
 
     private static func processArguments(_ pid: pid_t) -> [String] {
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
-        var size = 256 * 1024
+        var size = maxProcessArgumentBytes
         var buffer = [UInt8](repeating: 0, count: size)
         guard sysctl(&mib, 3, &buffer, &size, nil, 0) == 0 else { return [] }
         return buffer.withUnsafeBytes { raw in

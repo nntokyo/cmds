@@ -280,7 +280,7 @@ final class WorkspaceCellView: NSTableCellView {
         directoryLabel.isHidden = directory == nil || topic != nil
         statusRow.isHidden = !Self.showsStatusRow(workspace)
         portsLabel.isHidden = workspace.ports.isEmpty
-        portsLabel.stringValue = workspace.ports.map { ":\($0)" }.joined(separator: "  ")
+        portsLabel.stringValue = workspace.portsText
         usageLabel.isHidden = !Self.showsUsage(workspace)
         agentLabel.isHidden = !Self.showsAgent(workspace)
         agentNameLabel.isHidden = agentLabel.isHidden
@@ -294,8 +294,7 @@ final class WorkspaceCellView: NSTableCellView {
     /// Dot / spinner and the state text. The spinner runs only while the agent works.
     @MainActor
     private func applyState(_ workspace: Workspace) {
-        let busy = workspace.agentActivity == .busy && !workspace.attention
-        if busy {
+        if AgentActivityStyle.isWorking(workspace) {
             dot.isHidden = true
             spinner.startAnimation(nil)
         } else {
@@ -367,10 +366,11 @@ final class WorkspaceCellView: NSTableCellView {
 
     /// The usage line depends only on structure (a terminal exists), never on sampled values, so new
     /// samples never change row heights.
-    @MainActor
     /// Per-workspace CPU/memory is off by default: everything runs on this Mac and the footer already shows the
     /// Mac's totals. SSH workspaces never show it (the local numbers would only be the ssh client).
-    private static func showsUsage(_ workspace: Workspace) -> Bool {
+    /// The rail's tooltip lists it under the same condition.
+    @MainActor
+    static func showsUsage(_ workspace: Workspace) -> Bool {
         workspace.hasTerminal && workspace.remoteHost == nil && SidebarPreferences.showsWorkspaceUsage
     }
 
@@ -454,7 +454,7 @@ final class WorkspaceCellView: NSTableCellView {
         updateAgent(with: workspace)
         let cpu = workspace.cpuPercent.map(ResourceFormat.percent) ?? "–"
         let memory = workspace.memoryBytes.map(ResourceFormat.bytes) ?? "–"
-        let busy = workspace.busySamples >= 2
+        let busy = workspace.isCPUBusy
         let key = "\(cpu)|\(memory)|\(busy)|\(workspace.processCount)"
         guard key != usageKey else { return }
         usageKey = key

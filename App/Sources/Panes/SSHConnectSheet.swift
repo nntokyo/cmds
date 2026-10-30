@@ -53,7 +53,7 @@ enum SSHConnectSheet {
                 failure.runModal()
             }
         }
-        if let window { alert.beginSheetModal(for: window, completionHandler: handle) } else { handle(alert.runModal()) }
+        alert.present(in: window, then: handle)
     }
 }
 
@@ -79,6 +79,14 @@ enum RemoteHelperInstaller {
             guard response == .alertFirstButtonReturn, ssh.connected, pane.terminal === terminal else { return }
             terminal.sendText(RemoteHelperScript.installCommand() + "\n")
         }
-        if let window { alert.beginSheetModal(for: window, completionHandler: handle) } else { handle(alert.runModal()) }
+        alert.present(in: window, then: handle)
     }
 }
+
+private extension NSAlert {
+    /// As a sheet on `window`, or app-modal without one; `handle` gets the response either way.
+    func present(in window: NSWindow?, then handle: @escaping (NSApplication.ModalResponse) -> Void) {
+        if let window { beginSheetModal(for: window, completionHandler: handle) } else { handle(runModal()) }
+    }
+}
+

@@ -11,7 +11,7 @@ import Foundation
 ///
 /// Only for pinned connections with a usable `RemoteAccessConfig`. Main thread only (`@unchecked Sendable`
 /// so the tunnel's close callback can hop back to main).
-final class SSHTransport: SyncTransport, @unchecked Sendable {
+final class SSHTransport: RelayTransport, @unchecked Sendable {
     var onEvent: ((TransportEvent) -> Void)?
     var linkPath: SyncLinkPath { .ssh }
 
@@ -21,8 +21,8 @@ final class SSHTransport: SyncTransport, @unchecked Sendable {
     private let policy: SyncTLS.PeerPolicy
     private var task: Task<Void, Never>?
     private var tunnel: SSHTunnel?
-    private var inner: WebSocketTransport?
-    private var finished = false
+    var inner: WebSocketTransport?
+    var finished = false
 
     /// Nil unless `policy` pins a certificate and remote access is set up for `targetID`.
     init?(targetID: String, policy: SyncTLS.PeerPolicy) {
@@ -57,30 +57,14 @@ final class SSHTransport: SyncTransport, @unchecked Sendable {
                         self?.fail(String(localized: "The SSH connection to the relay host closed."))
                     }
                 }
-                let inner = WebSocketTransport(target: MacTarget(kind: .manual(host: "127.0.0.1", port: port),
-                                                                 displayName: "SSH"),
-                                               policy: self.policy)
-                self.inner = inner
-                inner.onEvent = { [weak self] event in self?.forward(event) }
-                inner.start()
+                self.startInner(port: port, displayName: "SSH", policy: self.policy)
             } catch {
                 self?.fail((error as? SSHTunnelError)?.localizedText ?? error.localizedDescription)
             }
         }
     }
 
-    func send(_ message: ClientMessage) {
-        inner?.send(message)
-    }
-
-    func close() {
-        guard !finished else { return }
-        finished = true
-        onEvent = nil
-        teardown()
-    }
-
-    private func teardown() {
+    func teardown() {
         task?.cancel()
         task = nil
         inner?.onEvent = nil
@@ -88,28 +72,5 @@ final class SSHTransport: SyncTransport, @unchecked Sendable {
         inner = nil
         tunnel?.close()
         tunnel = nil
-    }
-
-    private func fail(_ reason: String) {
-        guard !finished else { return }
-        finished = true
-        let handler = onEvent
-        onEvent = nil
-        teardown()
-        handler?(.disconnected(reason: reason))
-    }
-
-    private func forward(_ event: TransportEvent) {
-        guard !finished else { return }
-        switch event {
-        case .connected, .message:
-            onEvent?(event)
-        case .identityPresented, .identityMismatch, .disconnected:
-            finished = true
-            let handler = onEvent
-            onEvent = nil
-            teardown()
-            handler?(event)
-        }
     }
 }
