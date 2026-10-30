@@ -5,10 +5,10 @@
 [English](README.md)
 
 cmdsは、AIコーディングエージェントを動かすためのmacOSネイティブのターミナルワークスペースです。ワークスペースは縦に並ぶサイドバーのタブで、
-その中をターミナル（[libghostty](https://github.com/ghostty-org/ghostty)で描画）、Webページ、ファイルのライブプレビューのペインに分割できます。
+その中をターミナル（[libghostty](https://github.com/ghostty-org/ghostty)で描画）、Webページ、ファイルのライブプレビューを表示するペインに分割できます。
 エージェントが入力を待つとペインが光り、サイドバーには各エージェントのコンテキスト、コスト、アカウントの利用上限が表示されます。
 `cmds`コマンドを使えば、エージェントやスクリプトからアプリを操作できます。iPhone/iPad用のコンパニオンアプリは、
-暗号化した接続でターミナルをミラーします。SwiftとAppKitで書かれています。ライセンスはGPL-3.0です。
+暗号化した接続でターミナルをミラーリングします。SwiftとAppKitで書かれています。ライセンスはGPL-3.0です。
 
 > ドキュメント（`docs/`）は英語です。
 
@@ -16,12 +16,12 @@ cmdsは、AIコーディングエージェントを動かすためのmacOSネイ
 
 - **ワークスペースと分割**：gitブランチ、ディレクトリ、待ち受けポート、CPU、メモリを表示する縦タブ。右・下への入れ子の分割、
   ペインのズーム、コンパクトなサイドバー。
-- **注目リング**：OSC 9/777の通知、ベル、`cmds notify`でペインが光ります。⇧⌘Uで最新のペインへ移動。
+- **注目リング**：OSC 9/777の通知、ベル、`cmds notify`でペインが光ります。⇧⌘Uで最新の通知へ移動。
 - **ブラウザペイン**：ターミナルの隣にWebKitのブラウザ。スクリプトから操作できます（`cmds browser eval`、`snapshot`）。
 - **プレビューペイン**：画像、PDF、動画、Officeファイル（Quick Look）、整形したMarkdown、色分けした差分を表示し、
   ファイルが変わると再読み込みします。ターミナルのパスを⌘クリックしても開けます。
 - **SSHワークスペース**：自分の`ssh`をそのまま使い、制限付きのソケットをサーバーへ転送するので、通知・ステータス・
-  エージェントの利用状況がリモートでも使えます。切断時は再接続の表示。
+  エージェントの利用状況がリモートでも使えます。切断時は再接続用の画面を表示。
 - **コーディングエージェント**：Claude Codeのフックとステータスライン連携、Codexはセッションファイルから利用状況を取得。
   ペインごとのモデル、コンテキスト、コスト、5時間・7日間・利用額の上限。Claude Code用のスキル付き。
 - **セッションの復元と再開**：再起動後にレイアウトとディレクトリが戻り、Claude Code／Codexのセッションの再開を提案します。
@@ -37,7 +37,8 @@ cmdsは、AIコーディングエージェントを動かすためのmacOSネイ
 - Appleシリコン搭載のMac、macOS 14 Sonoma以降（arm64専用のビルドです）。
 - コンパニオンを使う場合はiOS/iPadOS 17以降のiPhone/iPad（任意）。
 - ビルドには、Xcode（Swift 5.10のためXcode 15.3以降。開発はXcode 27）、[XcodeGen](https://github.com/yonaskolb/XcodeGen)、
-  GhosttyKitのビルド用に[Zig](https://ziglang.org) 0.17.0（固定しているGhosttyが要求するバージョン）が必要です。
+  GhosttyKitのビルド用に[Zig](https://ziglang.org) 0.17.0（固定しているGhosttyが要求するバージョン。`zig version`で確認し、
+  パッケージマネージャーのバージョンが違う場合はziglang.orgから入手）が必要です。
 
 ## ソースからのビルド
 
@@ -55,13 +56,14 @@ brew install xcodegen
 xcodegen generate
 
 # 3. Macアプリ（スキームCmdsApp）。Xcodeでcmds.xcodeprojを開いてもよい
-xcodebuild -scheme CmdsApp -derivedDataPath build/dd build
+#    メンテナー以外は自分のチームで署名する（下の「署名」を参照）
+xcodebuild -scheme CmdsApp -derivedDataPath build/dd DEVELOPMENT_TEAM=<your team id> build
 open build/dd/Build/Products/Debug/cmds.app
 ```
 
 - iOSコンパニオンは`CmdsCompanion`スキームです。Xcodeから実機で実行してください。
-- **署名**：`project.yml`はメンテナーのチーム（`DEVELOPMENT_TEAM: LY354RVYHA`）で署名します。自分のチームに書き換えるか
-  （`xcodebuild`に`DEVELOPMENT_TEAM=…`を渡してもよい）、変更後に`xcodegen generate`をもう一度実行してください。
+- **署名**：`project.yml`はメンテナーのチーム（`DEVELOPMENT_TEAM: LY354RVYHA`）で署名します。自分のチームに書き換えて
+  `xcodegen generate`をもう一度実行してください（`xcodebuild`に`DEVELOPMENT_TEAM=…`を渡す方法もあります）。
   詳細とリリースビルド：[docs/internals/release.md](docs/internals/release.md)。
 - CLIだけをビルドする場合：`swift build --package-path Packages/CmdsCore --product cmds`。ユニットテストは
   `Packages/CmdsCore`で`swift test`（[テスト](docs/internals/testing.md)）。
@@ -105,7 +107,7 @@ open build/dd/Build/Products/Debug/cmds.app
 | 右／下に分割 | ⌘D / ⇧⌘D |
 | 左／右／上／下のペインへ移動 | ⌥⌘← / → / ↑ / ↓ |
 | ペインをズーム | ⇧⌘↩ |
-| 最新の注目ペインへ移動 | ⇧⌘U |
+| 最新の通知へ移動 | ⇧⌘U |
 | ブラウザを分割表示／プレビューで開く | ⇧⌘B / ⇧⌘O |
 | アドレスバー／再読み込み（SSHは再接続）／戻る／進む | ⌘L / ⌘R / ⌘[ / ⌘] |
 | ペインを閉じる／ワークスペースを閉じる | ⌘W / ⇧⌘W |

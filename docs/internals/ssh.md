@@ -32,6 +32,7 @@ ssh -t -o StreamLocalBindUnlink=yes -R /tmp/cmds-<96 random bits>.sock:<local pa
   2. sets `TERM=xterm-256color` when the server has no `xterm-ghostty` terminfo;
   3. `cd`s to the remote directory (`~` expanded);
   4. runs `"$SHELL" -l`, then removes the socket file when the shell exits.
+- **Reconnect** runs the same command with a new random remote socket path.
 - **Local side**: each SSH pane has its own socket, `~/Library/Application Support/cmds/ssh/<pane>.sock` (directory
   0700, socket 0600, peer uid checked like the main socket), served by an `APIServer` with a `RemoteScope`. It exists
   while the pane exists and is reused across reconnects. Local env of the `ssh` process is the usual `CMDS_*` set.

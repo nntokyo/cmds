@@ -37,7 +37,7 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
 ## Key concepts
 
 - **Workspace** = one vertical tab. Holds a split tree of panes. Each workspace has a primary working directory.
-- **Pane** = terminal (`TerminalSurface`), browser (`WKWebView`) or preview (a local file). IDs are short stable strings (e.g. `p1`, `w1`).
+- **Pane** = terminal (`TerminalSurface`), browser (`WKWebView`) or preview (a local file). IDs are short strings (e.g. `p1`, `w1`), stable while the app runs and reassigned on launch.
 - **Preview pane** (`PaneKind.preview`, `PaneInfo.file` = absolute path): header (name, folder → Reveal in Finder,
   Open in Default App, Reload/⌘R). Images: `NSImageView`; Markdown (`.md`): `MarkdownHTML` (GitHub-flavoured subset,
   raw HTML escaped, only http(s)/mailto/file/relative links) and unified diffs (`.diff`/`.patch` or `format: diff`):

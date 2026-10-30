@@ -8,7 +8,7 @@ English, whatever the app's language: scripts and agents parse them
 
 ## Getting it
 
-- Every terminal opened by cmds has the bundled CLI (`cmds.app/Contents/Resources/bin/cmds`) on its `PATH`.
+- Every terminal opened by cmds has the bundled CLI (`cmds.app/Contents/Resources/bin/cmds`) first on its `PATH`.
 - For other terminals: **cmds › Install Command Line Tool…** symlinks `/usr/local/bin/cmds` to the bundled binary
   (asks for an administrator password if `/usr/local/bin` is not writable).
 - From source: `swift build --package-path Packages/CmdsCore --product cmds`.
@@ -41,7 +41,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds panes [--workspace W]` | List panes |
 | `cmds focus <pane>` / `cmds close-pane [pane]` | Focus / close a pane |
 | `cmds send [--pane P] [--enter] <text…\|->` | Type text into a terminal (`-` reads stdin; `--enter`/`-e` appends Return) |
-| `cmds read [--pane P] [--scrollback N]` | Print the screen, or the last N lines including scrollback |
+| `cmds read [--pane P] [--scrollback N \| -n N]` | Print the screen, or the last N lines including scrollback |
 | `cmds notify [--title T] [--pane P] <body…>` | Light the attention ring + sidebar text (+ macOS notification when cmds is in the background) |
 | `cmds status [--workspace W] <text…>` | Set the sidebar text without ringing (`""` clears) |
 | `cmds open [--pane P] [--down] [--no-focus] [--diff] <file\|->` | Show a local file in a preview pane split to the right (`--down`: below); prints the pane id. Images in an image view; PDF, video, Office, text/code in Quick Look; Markdown rendered (GitHub style, dark mode, local images); unified diffs (`.diff`/`.patch`, or any file with `--diff`) coloured with line numbers. Reloads when the file changes (atomic saves too); a deleted file shows a placeholder until it is back. Relative paths are resolved against the current directory; `-` saves stdin to a temporary file (`git diff \| cmds open --diff -`). `--pane` naming a preview pane replaces its file. Refused in SSH panes (the file is on the server). In the app: File › Open in Preview… (⇧⌘O), or ⌘-click a file path in a terminal |
@@ -60,7 +60,8 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds hook claude` | Claude Code `Notification` / `Stop` hook ([setup](../guide/ai-agents.md#claude-code)) |
 | `cmds hook claude-status` | Claude Code status-line reporter ([setup](../guide/ai-agents.md#claude-code)) |
 
-Every command accepts `--json` (print the raw result) and `--help`. Exit codes: `0` ok, `1` the request failed
+Every command accepts `--json` (print the raw result) and `--help` (also `cmds help <command>`); `cmds --version`
+prints the CLI version. Exit codes: `0` ok, `1` the request failed
 (e.g. unknown pane), `2` usage error, `3` the app is not reachable.
 
 Examples:

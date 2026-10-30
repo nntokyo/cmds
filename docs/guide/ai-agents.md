@@ -11,7 +11,7 @@ like Ghostty (Shift+Enter, true color).
 ## Attention: how a pane lights up
 
 Any of these lights the pane's ring (unless it is the pane you are looking at), sets the sidebar text and, with the
-iOS companion paired, notifies the phone:
+iOS companion connected, notifies the phone (unless that pane is open on the phone):
 
 - an OSC 9 / OSC 777 desktop notification from the program,
 - the terminal bell (sidebar text "Bell"),
@@ -27,7 +27,8 @@ notification is shown as well.
 `cmds hook claude` reads the hook JSON from stdin and calls `notify` for the pane Claude Code runs in:
 
 - `Notification` (permission prompts, waiting for input) → `Claude Code: <message>`
-- `Stop` → `Claude Code: <first line of Claude's last reply>` (from the transcript), or `Finished`
+- `Stop` → `Claude Code: <first line of Claude's last reply>` (`last_assistant_message`, else the transcript), or
+  `Finished`
 
 Other events and `Stop` re-entries (`stop_hook_active`) are ignored. It always exits 0 and does nothing outside cmds,
 so it never blocks Claude Code. Add to `~/.claude/settings.json` (or a project's `.claude/settings.json`):
@@ -93,7 +94,8 @@ The sidebar then shows Codex's last message when a turn ends or an approval is n
 alone; it may already be used by other tools.)
 
 Usage needs no setup: cmds finds the session file of each `codex` running in a pane (also when the shared app-server
-daemon writes it) and reads only its usage events (`token_count`) and model (`turn_context`) — never the conversation.
+daemon writes it) and reads only its session id and directory (`session_meta`), usage events (`token_count`) and model
+(`turn_context`) — never the conversation.
 
 ## Usage and limits
 
@@ -119,7 +121,7 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
   session file. A session is forgotten when its agent is seen to exit (or on Dismiss), not when cmds quits.
 - **On launch** (View › Resume Agent Sessions on Launch):
   - *Ask* (default): a bar at the top of the pane — "Resume Claude Code session “topic” (model, 2 h ago)" with
-    **Resume**, **Resume All (n)** (every offered pane of the workspace) and **Dismiss** (forget it). Also
+    **Resume**, **Resume All (n)** (every offered pane of the workspace; shown when there is more than one) and **Dismiss** (forget it). Also
     Pane › Resume Agent Session / Resume All Agent Sessions.
   - *Always*: resumes every remembered session by itself once the pane's shell prompt is ready.
   - *Never*: forgets them.

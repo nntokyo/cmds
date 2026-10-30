@@ -25,12 +25,14 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 SKIP_DIRS = {"vendor", "build", "DerivedData", "node_modules", "candidates"}
 SOURCE_EXTENSIONS = {".swift", ".sh", ".py", ".yml", ".yaml", ".plist", ".md"}
 
-INLINE_LINK = re.compile(r"!?\[(?:[^\[\]]|\[[^\]]*\])*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
-REFERENCE_DEF = re.compile(r"^\s{0,3}\[[^\]]+\]:\s*<?(\S+?)>?(?:\s+.*)?$")
+INLINE_LINK = re.compile(
+    r"!?\[(?:[^\[\]]|\[[^\]]*\])*\]\(\s*(?:<([^>\n]+)>|((?:[^()\s]|\([^()\s]*\))+))(?:\s+\"[^\"]*\")?\s*\)")
+REFERENCE_DEF = re.compile(r"^\s{0,3}\[(?!\^)[^\]]+\]:\s*<?(\S+?)>?(?:\s+.*)?$")
 HTML_LINK = re.compile(r"<(?:a|img)\b[^>]*?\b(?:href|src)\s*=\s*\"([^\"]+)\"", re.IGNORECASE)
 HTML_ANCHOR = re.compile(r"<a\b[^>]*?\b(?:id|name)\s*=\s*\"([^\"]+)\"", re.IGNORECASE)
 HEADING = re.compile(r"^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$")
-FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})")
+FENCE = re.compile(r"^\s{0,3}(`{3,}|~{3,})(.*)$")
+SETEXT = re.compile(r"^\s{0,3}(=+|-+)\s*$")
 DOC_PATH = re.compile(r"(?<![\w./-])((?:\.\./)*docs/[\w./-]+\.md)")
 
 
@@ -49,15 +51,16 @@ def strip_inline_code(line):
 def prose_lines(path):
     """(line number, text) of the lines outside fenced code blocks."""
     fence = None
-    with open(path, encoding="utf-8") as handle:
+    with open(path, encoding="utf-8", errors="replace") as handle:
         for number, line in enumerate(handle, 1):
             match = FENCE.match(line)
             if match:
-                marker = match.group(1)
+                marker, rest = match.group(1), match.group(2)
                 if fence is None:
-                    fence = marker[0] * len(marker)
+                    fence = marker
                     continue
-                if marker.startswith(fence):
+                # A closing fence: same character, at least as long, nothing after it.
+                if marker[0] == fence[0] and len(marker) >= len(fence) and not rest.strip():
                     fence = None
                     continue
             if fence is None:
@@ -78,13 +81,20 @@ _anchor_cache = {}
 def anchors(path):
     if path not in _anchor_cache:
         found, seen = set(), {}
+        previous = ""
         for _, line in prose_lines(path):
             for anchor in HTML_ANCHOR.findall(line):
                 found.add(anchor)
             match = HEADING.match(line)
-            if not match:
+            if match:
+                text = match.group(2)
+            elif SETEXT.match(line) and previous.strip() and not HEADING.match(previous):
+                text = previous.strip()
+            else:
+                previous = line
                 continue
-            base = slug(match.group(2))
+            previous = ""
+            base = slug(text)
             count = seen.get(base, 0)
             seen[base] = count + 1
             found.add(base if count == 0 else f"{base}-{count}")
@@ -103,7 +113,7 @@ def check_target(source, number, target, failures):
     path_part = urllib.parse.unquote(path_part.split("?", 1)[0])
     if path_part:
         resolved = os.path.normpath(os.path.join(os.path.dirname(source), path_part))
-        if not resolved.startswith(ROOT):
+        if os.path.commonpath([resolved, ROOT]) != ROOT:
             failures.append((source, number, f"link leaves the repository: {target}"))
             return
         if not os.path.exists(resolved):
@@ -128,7 +138,8 @@ def check_markdown(failures):
                 count += 1
                 continue
             text = strip_inline_code(line)
-            for target in INLINE_LINK.findall(text) + HTML_LINK.findall(text):
+            targets = [angle or bare for angle, bare in INLINE_LINK.findall(text)] + HTML_LINK.findall(text)
+            for target in targets:
                 check_target(path, number, target, failures)
                 count += 1
     return count

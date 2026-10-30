@@ -35,7 +35,8 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 - Mac with Apple silicon, macOS 14 Sonoma or later (the app is built for arm64 only).
 - iPhone/iPad with iOS/iPadOS 17 or later for the companion (optional).
 - To build: Xcode (Swift 5.10, so Xcode 15.3 or later; developed with Xcode 27), [XcodeGen](https://github.com/yonaskolb/XcodeGen),
-  and [Zig](https://ziglang.org) 0.17.0 (the version the pinned Ghostty requires) to build GhosttyKit.
+  and [Zig](https://ziglang.org) 0.17.0 (the version the pinned Ghostty requires; check with `zig version`, and get
+  that exact release from ziglang.org if your package manager has another) to build GhosttyKit.
 
 ## Build from source
 
@@ -52,8 +53,9 @@ ln -s "$PWD/vendor/ghostty/macos/GhosttyKit.xcframework" vendor/GhosttyKit.xcfra
 brew install xcodegen
 xcodegen generate
 
-# 3. Mac app (scheme CmdsApp); open cmds.xcodeproj in Xcode instead if you prefer
-xcodebuild -scheme CmdsApp -derivedDataPath build/dd build
+# 3. Mac app (scheme CmdsApp); open cmds.xcodeproj in Xcode instead if you prefer.
+#    Not the maintainer? Sign with your own team (see Signing below).
+xcodebuild -scheme CmdsApp -derivedDataPath build/dd DEVELOPMENT_TEAM=<your team id> build
 open build/dd/Build/Products/Debug/cmds.app
 ```
 

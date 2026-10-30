@@ -35,7 +35,7 @@ memory meters (with memory pressure). ⌘B hides the sidebar; ⌃⌘S (or the bu
 
 A pane lights up with an orange ring when its program sends a desktop notification (OSC 9 / OSC 777), rings the bell,
 or `cmds notify` targets it — unless it is the pane you are looking at. The sidebar row shows a dot and the
-notification text; a macOS notification appears when cmds is in the background, and a paired iPhone gets one too.
+notification text; a macOS notification appears when cmds is in the background, and a connected iPhone gets one too.
 Focusing the pane clears it; **Pane › Jump to Latest Attention** (⇧⌘U) goes to the most recent one. Setting this up
 for coding agents: [ai-agents.md](ai-agents.md#attention-how-a-pane-lights-up).
 
@@ -95,10 +95,11 @@ with default OpenSSH settings ([server requirements](../internals/ssh.md#server-
 - The sidebar row shows `ssh HOST` (`+N` for more hosts, orange "disconnected" while the shown pane is down);
   cwd/branch come from the focused SSH pane's reports. CPU/memory count local processes only: for an SSH pane that is
   the `ssh` client; ports are local listeners (e.g. `ssh -L`).
-- When `ssh` exits the pane stays with its last screen under an overlay: **Disconnected — Reconnect (⌘R)** (also
-  Return, the button, or `cmds reconnect [pane]`); Close Pane closes it.
-- Session restore keeps SSH panes (host + last remote cwd). On launch they show **Not connected — Connect (⌘R)** and
-  never connect by themselves.
+- When `ssh` exits the pane stays with its last screen under an overlay "Disconnected — ssh HOST" with
+  **Reconnect (⌘R)** (also Return or `cmds reconnect [pane]`) and **Close Pane**. Reconnecting runs the same command
+  with a new remote socket path.
+- Session restore keeps SSH panes (host + last remote cwd). On launch they show "Not connected — ssh HOST" with
+  **Connect (⌘R)** and never connect by themselves.
 
 ### Remote helper
 

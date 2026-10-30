@@ -12,7 +12,7 @@ Names are defined in `CmdsEnv` (`Packages/CmdsCore/Sources/CmdsCore/RPC.swift`) 
 | `CMDS_WORKSPACE_ID` | Id of the pane's workspace (`w1`, …). |
 | `CMDS_PANE_ID` | Id of the pane itself (`p1`, …). The CLI sends it so commands act on *this* pane even when another one is focused. Ids are reassigned when cmds restarts. |
 | `CMDS_SUPPORT_DIR` | Only in terminals of an isolated instance: the resolved absolute support directory, so the CLI there talks to that instance. |
-| `PATH` | The bundled CLI's directory (`cmds.app/Contents/Resources/bin`) is added, so `cmds` is on `PATH`. |
+| `PATH` | The bundled CLI's directory (`cmds.app/Contents/Resources/bin`) comes first, so `cmds` is on `PATH`. |
 | `TERM`, `TERM_PROGRAM` | `xterm-ghostty`, `ghostty` (set by libghostty): programs treat the pane like Ghostty. |
 
 ## Set on the server in SSH panes
@@ -49,7 +49,7 @@ environment reliably. How to use them together: [internals/testing.md](../intern
 | `CMDS_SYNC_NO_BLUETOOTH=1` | No Bluetooth peripheral (no advertising, no L2CAP channel). Use it for every test instance that does not test Bluetooth. |
 | `CMDS_SYNC_REMOTE_SSH_CONFIG=<file>` | Isolated instances only: remote access via SSH runs `ssh -F <file>`, so a test never reads `~/.ssh`. |
 | `CMDS_SYNC_TEST_PAIRING=1` | DEBUG builds with `CMDS_SUPPORT_DIR` only: listen on 127.0.0.1 only, keep pairing open without the window and write the pairing QR payload to `$CMDS_SUPPORT_DIR/sync-test-pairing.txt` (0600). |
-| `CMDS_SIDEBAR_COMPACT=1` | Isolated instances only (they never read the saved setting): start with the compact sidebar. |
+| `CMDS_SIDEBAR_COMPACT=1` | Isolated instances only (they never read the saved `UserDefaults` key `SidebarCompact`): start with the compact sidebar. |
 | `CMDS_AGENT_RESUME=ask\|always\|never` | Isolated instances only: initial "Resume Agent Sessions on Launch" mode (default `ask`). |
 
 Mac launch argument: `-AppleLanguages '(ja)'` or `'(en)'` starts the app in that language

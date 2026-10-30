@@ -14,7 +14,7 @@ cmds のターミナルでは `cmds` CLI が PATH にあり、`CMDS_PANE_ID` / `
   ペイン ID はアプリの再起動で振り直されるので決め打ちしない。`cmds split` / `cmds browser open` / `cmds open` が返した ID を使う。
 - 自分が作っていないペイン・ワークスペースを閉じない。`cmds read` で他のペインを読むのは、ユーザーに頼まれたときだけ。
 - ペインを開くときは `--no-focus` を付ける。付けないと、ユーザーが打っているキーボードの入力先が移ってしまう。
-- 終わったら、自分が起動したサーバーやウォッチャーを止め（`cmds send --pane <id> $'\x03'`）、ペインを閉じる（`cmds close-pane --pane <id>`）。
+- 終わったら、自分が起動したサーバーやウォッチャーを止め（`cmds send --pane <id> $'\x03'`）、ペインを閉じる（`cmds close-pane <id>`）。
 
 ## よく使う手順
 
