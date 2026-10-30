@@ -19,9 +19,6 @@ final class SyncBluetoothPeripheral: NSObject {
     /// Open channels at most (the sync server has its own, lower per-peer limits).
     static let maxChannels = 8
 
-    /// Local ports of relay connections → `bluetooth:<peer>`; read by the sync server on accept.
-    nonisolated static var peers: SyncLoopbackPeers { SyncServer.relayedPeers }
-
     private(set) var status = LocalizedStatus("Off")
     /// English, for the API and CLI; the UI shows `status.localized`.
     var statusText: String { status.english }
@@ -166,15 +163,11 @@ final class SyncBluetoothPeripheral: NSObject {
         settingUp += 1
         // Connecting is blocking (loopback, immediate); keep it off the main thread anyway.
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var localPort: UInt16?
             let socket: Int32
+            let release: @Sendable () -> Void
             do {
-                socket = try SyncLoopback.connect(port: port) { bound in
-                    localPort = bound
-                    Self.peers.register(port: bound, peer: peer)
-                }
+                (socket, release) = try SyncServer.connectRelay(port: port, peer: peer)
             } catch {
-                if let localPort { Self.peers.unregister(port: localPort) }
                 syncLog.error("bluetooth: cannot reach the sync listener: \(String(describing: error), privacy: .public)")
                 streams.input.close()
                 streams.output.close()
@@ -184,7 +177,8 @@ final class SyncBluetoothPeripheral: NSObject {
                 return
             }
             let relay = SyncStreamRelay(streams, SyncLoopback.streams(socket: socket), anchors: [channel]) {
-                if let localPort { Self.peers.unregister(port: localPort) }
+                release()
+
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated { _ = self?.relays.removeValue(forKey: id) }
                 }

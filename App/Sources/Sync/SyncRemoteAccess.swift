@@ -248,23 +248,19 @@ final class SyncRemoteAccess {
         }
         let id = UUID()
         settingUp += 1
-        let peers = SyncServer.relayedPeers
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var localPort: UInt16?
             let socket: Int32
+            let release: @Sendable () -> Void
             do {
-                socket = try SyncLoopback.connect(port: syncPort) { bound in
-                    localPort = bound
-                    peers.register(port: bound, peer: peer)
-                }
+                (socket, release) = try SyncServer.connectRelay(port: syncPort, peer: peer)
             } catch {
-                if let localPort { peers.unregister(port: localPort) }
                 Darwin.close(fd)
                 DispatchQueue.main.async { MainActor.assumeIsolated { self?.settingUp -= 1 } }
                 return
             }
             let relay = SyncStreamRelay(SyncLoopback.streams(socket: fd), SyncLoopback.streams(socket: socket)) {
-                if let localPort { peers.unregister(port: localPort) }
+                release()
+
                 DispatchQueue.main.async {
                     MainActor.assumeIsolated { _ = self?.relays.removeValue(forKey: id) }
                 }
