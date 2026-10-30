@@ -230,9 +230,17 @@ Catalogs: `App/Resources/Localizable.xcstrings` + `InfoPlist.xcstrings` (Mac) an
 - **Stays English**: the socket API, `cmds` CLI output and its error messages (scripts parse them; also what
   `--json` and AGENTS.md document), sync protocol strings, identifiers, file names, commands and log lines. Status
   texts that the UI shows and the API reports (`SyncServer`/`SyncBluetoothPeripheral`/`SyncRemoteAccess` status) are
-  a `LocalizedStatus`: `.localized` for the UI, `.english` for `sync.status`. Default pane/workspace titles
-  ("Terminal", "Browser") and text from `CmdsCore` formatters (agent usage lines, `AgentSession.summary`, error
-  descriptions) are shared with the CLI and stay English; the banner builds its own localized summary.
+  a `LocalizedStatus`: `.localized` for the UI, `.english` for `sync.status`.
+- **CmdsCore text in the UI**: `CmdsCore` (shared with the CLI) has no catalogs and stays English. Its `AgentFormat`
+  functions take `strings: AgentFormat.Strings` (default `.english`, what the CLI and tests use; `CmdsCLITests` pins
+  it); the apps pass `.localized`, defined in `Shared/Sources/SharedLocalization.swift`, which both app targets compile,
+  so its keys (`AgentFormat.Text.english` with `%@`/`%lld`) land in both catalogs. The same file has
+  `MemoryPressure.localizedName` and `DefaultTitle.localized` (the model, API and sync keep "Terminal", "Browser",
+  "Workspace"; the UI shows `displayTitle`). Errors whose `description` stays English get app-side text:
+  `SSHLaunch.InvalidInput.reason`, `LidSleepError` (Mac, `CoreErrorText.swift`), `SSHTunnelError` and the Mac's sync
+  error codes (iOS, `CoreErrorText.swift`). `AgentSession.summary` stays English; the banner builds its own.
+- **Units**: compact labels stay as they are in every language (`ctx`, `5h`, `7d`, `527k`, `%`, `$`, GB); sentences use
+  Japanese units (`5時間の上限`, `7日間の上限`, `3時間25分`, `3分前`, `/時間`). Only `spend` becomes `利用額`.
 - **Japanese style**: Apple's current terms (設定, ウインドウ, しまう, 取り消す/やり直す, すべてを選択), no space
   between Japanese and Latin text (`cmdsを終了`), full-width （）and ：in prose, the same terms on Mac and iPhone
   (ペアリング, 識別情報, 中継ホスト, iPhone/iPad), keyboard shortcuts unchanged, product/protocol names (cmds, SSH,

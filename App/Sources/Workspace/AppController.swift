@@ -888,8 +888,8 @@ final class AppController {
 
     private func postUserNotification(pane: Pane, workspace: Workspace, title: String?, body: String) {
         let content = UNMutableNotificationContent()
-        content.title = title ?? workspace.title
-        content.subtitle = title == nil ? "" : workspace.title
+        content.title = title ?? workspace.displayTitle
+        content.subtitle = title == nil ? "" : workspace.displayTitle
         content.body = body
         content.sound = .default
         content.userInfo = ["paneID": pane.id]

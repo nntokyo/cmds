@@ -129,19 +129,31 @@ public struct SSHLaunch: Sendable, Equatable, Codable {
         self.remoteCwd = try Self.validateRemoteCwd(remoteCwd)
     }
 
+    /// `description` is the English text (API, CLI); the app shows its own text for `reason`.
     public struct InvalidInput: Error, CustomStringConvertible, Equatable {
+        public enum Reason: Equatable, Sendable {
+            case hostEmpty, hostStartsWithDash, hostTooLong, hostCharacters
+            case directoryTooLong, directoryCharacters, directoryNotAbsolute
+        }
+
+        public var reason: Reason
         public var description: String
+
+        init(_ reason: Reason, _ description: String) {
+            self.reason = reason
+            self.description = description
+        }
     }
 
     /// `host`, `user@host`, an `~/.ssh/config` alias or an `ssh://user@host:port` URI. Never an option (`-…`).
     public static func validateHost(_ raw: String) throws -> String {
         let host = raw.trimmingCharacters(in: .whitespaces)
-        guard !host.isEmpty else { throw InvalidInput(description: "host is empty") }
-        guard !host.hasPrefix("-") else { throw InvalidInput(description: "host must not start with '-'") }
-        guard host.count <= 255 else { throw InvalidInput(description: "host is too long") }
+        guard !host.isEmpty else { throw InvalidInput(.hostEmpty, "host is empty") }
+        guard !host.hasPrefix("-") else { throw InvalidInput(.hostStartsWithDash, "host must not start with '-'") }
+        guard host.count <= 255 else { throw InvalidInput(.hostTooLong, "host is too long") }
         let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-@:[]%/+")
         guard host.unicodeScalars.allSatisfy(allowed.contains) else {
-            throw InvalidInput(description: "host may only contain letters, digits and . _ - @ : [ ] % / +")
+            throw InvalidInput(.hostCharacters, "host may only contain letters, digits and . _ - @ : [ ] % / +")
         }
         return host
     }
@@ -152,12 +164,12 @@ public struct SSHLaunch: Sendable, Equatable, Codable {
         guard let raw else { return nil }
         let path = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !path.isEmpty else { return nil }
-        guard path.count <= 1024 else { throw InvalidInput(description: "remote directory is too long") }
+        guard path.count <= 1024 else { throw InvalidInput(.directoryTooLong, "remote directory is too long") }
         guard !path.unicodeScalars.contains(where: { $0.value < 0x20 || $0.value == 0x7F || "'\\\"`".unicodeScalars.contains($0) }) else {
-            throw InvalidInput(description: "remote directory must not contain quotes, backslashes or control characters")
+            throw InvalidInput(.directoryCharacters, "remote directory must not contain quotes, backslashes or control characters")
         }
         guard path.hasPrefix("/") || path == "~" || path.hasPrefix("~/") else {
-            throw InvalidInput(description: "remote directory must be absolute or start with ~/")
+            throw InvalidInput(.directoryNotAbsolute, "remote directory must be absolute or start with ~/")
         }
         return path
     }

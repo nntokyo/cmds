@@ -17,7 +17,8 @@ public enum UsageLevel: Int, Comparable, Sendable {
     public static func < (lhs: UsageLevel, rhs: UsageLevel) -> Bool { lhs.rawValue < rhs.rawValue }
 }
 
-/// Text for agent usage, shared by the sidebar, the CLI and the phone. Mirrors the figures of Claude Code's
+/// Text for agent usage, shared by the sidebar, the CLI and the phone. English by default (CLI, API); the apps pass
+/// `strings:` for their language. Mirrors the figures of Claude Code's
 /// status line (`ctx 53% 527k/1M │ $117.99 ($34.44/h) │ ⏱ 3h25m api 3h40m(107%) │ +17642 -330 │ cache ●98%`).
 public enum AgentFormat {
     /// One run of `summaryParts`; `level` colours values (context, limits).
@@ -48,14 +49,14 @@ public enum AgentFormat {
     }
 
     /// `42s` under a minute, `48m`, `3h25m`, `2d3h`.
-    public static func duration(milliseconds: Int) -> String {
+    public static func duration(milliseconds: Int, strings: Strings = .english) -> String {
         let seconds = max(0, milliseconds / 1000)
-        if seconds < 60 { return "\(seconds)s" }
+        if seconds < 60 { return strings(.durationSeconds(seconds)) }
         let hours = seconds / 3600
         let minutes = (seconds % 3600) / 60
-        if hours >= 24 { return "\(hours / 24)d\(hours % 24)h" }
-        if hours > 0 { return "\(hours)h\(minutes)m" }
-        return "\(minutes)m"
+        if hours >= 24 { return strings(.durationDaysHours(hours / 24, hours % 24)) }
+        if hours > 0 { return strings(.durationHoursMinutes(hours, minutes)) }
+        return strings(.durationMinutes(minutes))
     }
 
     /// `$0.42`, `$117.99`, `$1234` (no cents from $1000).
@@ -87,11 +88,12 @@ public enum AgentFormat {
     }
 
     /// `5h`, `7d`, `spend`, or the window length (`1h`, `30m`).
-    public static func limitLabel(_ limit: UsageLimit) -> String {
+    /// `5h`/`7d` stay as they are in every language (short, like Claude's own usage screen); `spend` is translated.
+    public static func limitLabel(_ limit: UsageLimit, strings: Strings = .english) -> String {
         switch limit.id {
         case UsageLimit.fiveHour: return "5h"
         case UsageLimit.sevenDay: return "7d"
-        case UsageLimit.spend: return "spend"
+        case UsageLimit.spend: return strings(.spendLabel)
         default:
             if let minutes = limit.windowMinutes, minutes > 0 {
                 if minutes % 1440 == 0 { return "\(minutes / 1440)d" }
@@ -103,14 +105,14 @@ public enum AgentFormat {
     }
 
     /// `5-hour limit`, `7-day limit`, `Spend limit`.
-    public static func limitTitle(_ limit: UsageLimit) -> String {
+    public static func limitTitle(_ limit: UsageLimit, strings: Strings = .english) -> String {
         switch limit.id {
-        case UsageLimit.fiveHour: return "5-hour limit"
-        case UsageLimit.sevenDay: return "7-day limit"
-        case UsageLimit.spend: return "Spend limit"
+        case UsageLimit.fiveHour: return strings(.fiveHourLimit)
+        case UsageLimit.sevenDay: return strings(.sevenDayLimit)
+        case UsageLimit.spend: return strings(.spendLimit)
         default:
-            let label = limitLabel(limit)
-            return label.first?.isNumber == true ? "\(label) limit" : label.prefix(1).uppercased() + label.dropFirst()
+            let label = limitLabel(limit, strings: strings)
+            return label.first?.isNumber == true ? strings(.windowLimit(label)) : label.prefix(1).uppercased() + label.dropFirst()
         }
     }
 
@@ -126,7 +128,8 @@ public enum AgentFormat {
 
     /// `Claude Opus · ctx 53% · $117.99 · 5h 40%`: name, context, cost and the 5-hour (else first) window of `limits`
     /// (default: the session's own).
-    public static func summaryParts(_ usage: AgentUsage, limits: [UsageLimit]? = nil) -> [Part] {
+    /// `ctx` and the window labels stay short in every language (see `limitLabel`).
+    public static func summaryParts(_ usage: AgentUsage, limits: [UsageLimit]? = nil, strings: Strings = .english) -> [Part] {
         var parts = [Part(name(usage), .name)]
         func add(_ label: String?, _ value: String, level: UsageLevel = .normal) {
             parts.append(Part(" · ", .separator))
@@ -139,13 +142,13 @@ public enum AgentFormat {
         if let cost = usage.costUSD { add(nil, usd(cost)) }
         let windows = limits ?? usage.limits
         if let window = windows.first(where: { $0.id == UsageLimit.fiveHour }) ?? windows.first(where: { $0.id != UsageLimit.spend }) {
-            add(limitLabel(window), percent(window.usedPercent), level: UsageLevel(percent: window.usedPercent))
+            add(limitLabel(window, strings: strings), percent(window.usedPercent), level: UsageLevel(percent: window.usedPercent))
         }
         return parts
     }
 
-    public static func summary(_ usage: AgentUsage, limits: [UsageLimit]? = nil) -> String {
-        summaryParts(usage, limits: limits).map(\.text).joined()
+    public static func summary(_ usage: AgentUsage, limits: [UsageLimit]? = nil, strings: Strings = .english) -> String {
+        summaryParts(usage, limits: limits, strings: strings).map(\.text).joined()
     }
 
     /// The session figures in the order of Claude Code's status line (only those that are known).
@@ -197,84 +200,94 @@ public enum AgentFormat {
     }
 
     /// `5h 40% · 7d 12% · spend $12/$50`.
-    public static func limitsSummary(_ limits: [UsageLimit]) -> String {
+    public static func limitsSummary(_ limits: [UsageLimit], strings: Strings = .english) -> String {
         AgentLimits(agent: .other, limits: limits).ordered
-            .map { "\(limitLabel($0)) \(limitValue($0))" }.joined(separator: " · ")
+            .map { "\(limitLabel($0, strings: strings)) \(limitValue($0))" }.joined(separator: " · ")
     }
 
     // MARK: Tooltips
 
     /// Multi-line description of one pane's agent (sidebar tooltip, phone detail).
-    public static func detailLines(_ usage: AgentUsage, now: Date = Date()) -> [String] {
+    public static func detailLines(_ usage: AgentUsage, now: Date = Date(), strings: Strings = .english) -> [String] {
+        func duration(_ ms: Int) -> String { AgentFormat.duration(milliseconds: ms, strings: strings) }
         var lines: [String] = []
         var title = name(usage)
         if let effort = usage.effort { title += " (\(effort))" }
         lines.append(title)
         if usage.contextUsedPercent != nil || usage.contextTokens != nil {
-            var text = "Context"
-            if let context = usage.contextUsedPercent { text += " \(percent(context))" }
+            var text = usage.contextUsedPercent.map { strings(.contextPercent(percent($0))) } ?? strings(.context)
             if let used = usage.contextTokens {
-                text += " · \(tokens(used))"
-                if let window = usage.contextWindow, window > 0 { text += " of \(tokens(window))" }
-                text += " tokens"
+                if let window = usage.contextWindow, window > 0 {
+                    text += strings(.contextTokensOf(tokens(used), tokens(window)))
+                } else {
+                    text += strings(.contextTokens(tokens(used)))
+                }
             }
-            if usage.contextOver200k == true { text += " · over 200k" }
+            if usage.contextOver200k == true { text += strings(.contextOver200k) }
             lines.append(text)
         }
         if let cost = usage.costUSD {
-            var text = "Cost \(usd(cost))"
-            if let rate = hourlyRate(usage) { text += " · \(usd(rate))/h" }
+            var text = strings(.cost(usd(cost)))
+            if let rate = hourlyRate(usage) { text += strings(.costPerHour(usd(rate))) }
             lines.append(text)
         }
         if let ms = usage.sessionDurationMs {
-            var text = "Session \(duration(milliseconds: ms))"
+            var text = strings(.session(duration(ms)))
             if let api = usage.apiDurationMs, api > 0 {
-                text += " · API \(duration(milliseconds: api))"
-                if ms > 0 { text += " (\(Int((Double(api) * 100 / Double(ms)).rounded(.down)))% of wall time)" }
+                text += strings(.apiDuration(duration(api)))
+                if ms > 0 { text += strings(.apiShare(Int((Double(api) * 100 / Double(ms)).rounded(.down)))) }
             }
             lines.append(text)
         }
         if usage.linesAdded != nil || usage.linesRemoved != nil {
-            lines.append("Lines +\(usage.linesAdded ?? 0) −\(usage.linesRemoved ?? 0)")
+            lines.append(strings(.lines(added: usage.linesAdded ?? 0, removed: usage.linesRemoved ?? 0)))
         }
         if let ratio = usage.cacheHitRatio {
-            var text = "Prompt cache \(percent(ratio * 100)) hits"
-            if let warm = usage.cacheWarm { text += warm ? " · warm" : " · cold" }
+            var text = strings(.promptCache(percent(ratio * 100)))
+            if let warm = usage.cacheWarm { text += strings(warm ? .cacheWarm : .cacheCold) }
             lines.append(text)
         }
-        if let totals = tokenTotals(usage) {
-            var text = "T" + totals.dropFirst()
-            if let reasoning = usage.reasoningTokens, reasoning > 0 { text += " (\(tokens(reasoning)) reasoning)" }
+        if usage.inputTokens != nil || usage.outputTokens != nil {
+            var text = strings(.tokens)
+            if let input = usage.inputTokens {
+                text += strings(.tokensIn(tokens(input)))
+                if let cached = usage.cachedInputTokens, cached > 0 { text += strings(.tokensCached(tokens(cached))) }
+            }
+            if let output = usage.outputTokens { text += strings(.tokensOut(tokens(output))) }
+            if let reasoning = usage.reasoningTokens, reasoning > 0 { text += strings(.tokensReasoning(tokens(reasoning))) }
             lines.append(text)
         }
-        var updated = "Updated \(age(usage.updatedAt, now: now))"
-        if usage.isStale { updated += " (idle)" }
+        var updated = strings(.updated(age(usage.updatedAt, now: now, strings: strings)))
+        if usage.isStale { updated += strings(.idle) }
         lines.append(updated)
         return lines
     }
 
     /// One line per window: `5-hour limit 40% used · resets 15:30 (in 2h10m) · 62% of the window elapsed`.
-    public static func limitLines(_ limits: [UsageLimit], now: Date = Date()) -> [String] {
+    public static func limitLines(_ limits: [UsageLimit], now: Date = Date(), strings: Strings = .english) -> [String] {
         AgentLimits(agent: .other, limits: limits).ordered.map { limit in
-            var text = "\(limitTitle(limit)) "
+            let title = limitTitle(limit, strings: strings)
+            var text: String
             if limit.id == UsageLimit.spend, let used = limit.usedUSD, let cap = limit.limitUSD {
-                text += String(format: "$%.2f of $%.2f (%@)", used, cap, percent(limit.usedPercent))
-                if let period = limit.period { text += " \(period)" }
+                text = strings(.spendUsed(title: title, used: String(format: "$%.2f", used),
+                                          limit: String(format: "$%.2f", cap), percent: percent(limit.usedPercent)))
+                if let period = limit.period { text += strings(.spendPeriod(period)) }
             } else {
-                text += "\(percent(limit.usedPercent)) used"
+                text = strings(.limitUsed(title: title, percent: percent(limit.usedPercent)))
             }
-            if let resetsAt = limit.resetsAt { text += " · resets \(resetTime(resetsAt, now: now))" }
+            if let resetsAt = limit.resetsAt { text += strings(.resets(resetTime(resetsAt, now: now, strings: strings))) }
             if limit.id != UsageLimit.spend, let elapsed = limit.elapsedPercent(at: now) {
-                text += " · \(percent(elapsed)) of the window elapsed"
+                text += strings(.windowElapsed(percent(elapsed)))
             }
             return text
         }
     }
 
     /// `15:30 (in 2h10m)` today or within a day, `Fri 09:00` within a week, else `10/31 09:00`.
-    public static func resetTime(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+    public static func resetTime(_ date: Date, now: Date = Date(), calendar: Calendar = .current,
+                                 strings: Strings = .english) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.locale = strings.locale
         formatter.calendar = calendar
         formatter.timeZone = calendar.timeZone
         let interval = date.timeIntervalSince(now)
@@ -286,17 +299,19 @@ public enum AgentFormat {
             formatter.dateFormat = "M/d HH:mm"
         }
         var text = formatter.string(from: date)
-        if interval > 0 && interval < 86400 { text += " (in \(duration(milliseconds: Int(interval * 1000))))" }
+        if interval > 0 && interval < 86400 {
+            text += strings(.inDuration(duration(milliseconds: Int(interval * 1000), strings: strings)))
+        }
         return text
     }
 
     /// `just now`, `42s ago`, `3 min ago`, `2 h ago`, `3 d ago`.
-    public static func age(_ date: Date, now: Date = Date()) -> String {
+    public static func age(_ date: Date, now: Date = Date(), strings: Strings = .english) -> String {
         let seconds = Int(now.timeIntervalSince(date).rounded(.down))
-        if seconds < 5 { return "just now" }
-        if seconds < 60 { return "\(seconds)s ago" }
-        if seconds < 3600 { return "\(seconds / 60) min ago" }
-        if seconds < 86400 { return "\(seconds / 3600) h ago" }
-        return "\(seconds / 86400) d ago"
+        if seconds < 5 { return strings(.justNow) }
+        if seconds < 60 { return strings(.secondsAgo(seconds)) }
+        if seconds < 3600 { return strings(.minutesAgo(seconds / 60)) }
+        if seconds < 86400 { return strings(.hoursAgo(seconds / 3600)) }
+        return strings(.daysAgo(seconds / 86400))
     }
 }

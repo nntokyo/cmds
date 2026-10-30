@@ -96,14 +96,14 @@ final class CompactWorkspaceCellView: NSTableCellView {
     /// Everything the full row shows.
     @MainActor
     private static func tooltip(_ workspace: Workspace, index: Int) -> String {
-        var lines = [workspace.title + (index < 9 ? "  ⌘\(index + 1)" : "")]
+        var lines = [workspace.displayTitle + (index < 9 ? "  ⌘\(index + 1)" : "")]
         if let host = workspace.remoteHost ?? workspace.sshPanes.first?.ssh?.launch.host { lines.append("ssh \(host)") }
         if let branch = workspace.gitBranch { lines.append("⎇ \(branch)") }
         if let cwd = workspace.workingDirectory { lines.append(cwd.abbreviatingHome) }
         if !workspace.ports.isEmpty { lines.append(workspace.ports.map { ":\($0)" }.joined(separator: "  ")) }
         if let agent = workspace.primaryAgent?.usage {
             let limits = AppController.shared.agentLimitsByKind[agent.agent]?.active(at: Date())?.limits
-            lines.append(AgentFormat.summary(agent, limits: limits) + (agent.isStale ? String(localized: " (idle)") : ""))
+            lines.append(AgentFormat.summary(agent, limits: limits, strings: .localized) + (agent.isStale ? String(localized: " (idle)") : ""))
         }
         if workspace.hasTerminal {
             lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))

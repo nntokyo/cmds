@@ -115,8 +115,8 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
         sidebar.reload()
         content.render()
         if let workspace = controller.selectedWorkspace {
-            window?.title = workspace.title
-            window?.subtitle = workspace.focusedPane?.title ?? ""
+            window?.title = workspace.displayTitle
+            window?.subtitle = workspace.focusedPane.map { DefaultTitle.localized($0.title) } ?? ""
         } else {
             window?.title = "cmds"
             window?.subtitle = ""
