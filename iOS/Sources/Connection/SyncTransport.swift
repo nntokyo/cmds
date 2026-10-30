@@ -128,6 +128,11 @@ extension SyncTransport {
 final class WebSocketTransport: SyncTransport {
     var onEvent: ((TransportEvent) -> Void)?
 
+    /// TCP keep-alive probes start after this many idle seconds.
+    private static let keepaliveIdleSeconds = 10
+    /// TCP connect timeout in seconds; Bonjour resolution alone can take several seconds.
+    private static let connectionTimeoutSeconds = 15
+
     /// Written by the verify block, read by the state handler; both run on the main queue.
     private final class PeerCheckBox: @unchecked Sendable {
         var value: SyncTLS.PeerCheck?
@@ -146,9 +151,8 @@ final class WebSocketTransport: SyncTransport {
         ws.maximumMessageSize = SyncCodec.maxFrameBytes
         let tcp = NWProtocolTCP.Options()
         tcp.enableKeepalive = true
-        tcp.keepaliveIdle = 10
-        // Bonjour resolution alone can take several seconds.
-        tcp.connectionTimeout = 15
+        tcp.keepaliveIdle = Self.keepaliveIdleSeconds
+        tcp.connectionTimeout = Self.connectionTimeoutSeconds
         let peer = PeerCheckBox()
         self.peer = peer
         let tls = SyncTLS.clientOptions(policy: policy, queue: .main) { peer.value = $0 }
@@ -165,7 +169,8 @@ final class WebSocketTransport: SyncTransport {
                 endpoint = .url(url)
             } else {
                 // Unreachable for targets built by `MacTarget.manual`; connecting fails and is reported.
-                endpoint = .hostPort(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port) ?? 47_823)
+                endpoint = .hostPort(host: NWEndpoint.Host(host),
+                                     port: NWEndpoint.Port(rawValue: port) ?? NWEndpoint.Port(integerLiteral: SyncProtocol.defaultPort))
             }
         case .mock:
             preconditionFailure("mock target uses MockTransport")
