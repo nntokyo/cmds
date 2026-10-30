@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cmds — AIコーディングエージェントのための macOS ネイティブ ターミナル</title>
+<meta name="description" content="cmds は Claude Code や Codex などの AI コーディングエージェントを並べて動かすための macOS ネイティブのターミナルワークスペースです。縦タブ、通知リング、ブラウザ、プレビュー、iPhone/iPad コンパニオン。オープンソース（GPL-3.0）。">
+<link rel="canonical" href="https://cmds.n-n.tokyo/">
+<link rel="alternate" hreflang="ja" href="https://cmds.n-n.tokyo/">
+<link rel="alternate" hreflang="en" href="https://cmds.n-n.tokyo/en/">
+<link rel="alternate" hreflang="x-default" href="https://cmds.n-n.tokyo/en/">
+<meta name="theme-color" content="#111317">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="cmds">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:locale:alternate" content="en_US">
+<meta property="og:url" content="https://cmds.n-n.tokyo/">
+<meta property="og:title" content="cmds — AIコーディングエージェントのための macOS ネイティブ ターミナル">
+<meta property="og:description" content="エージェントの状態・使用量・上限が一目で分かる縦タブ、入力待ちを知らせる通知リング、ブラウザとプレビュー、iPhone/iPad コンパニオン。">
+<meta property="og:image" content="https://cmds.n-n.tokyo/img/og-ja.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="cmds のウィンドウ。サイドバーにワークスペースとエージェントの状態、右にターミナルとブラウザ。">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">本文へ移動</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/img/icon-256.png" alt="" width="32" height="32">cmds</a>
+    <nav class="site-nav" aria-label="メインメニュー">
+      <a href="#features">機能</a>
+      <a href="#iphone">iPhone</a>
+      <a href="#agents" class="opt">AIエージェント</a>
+      <a href="/guide/">使い方</a>
+      <a href="#download">ダウンロード</a>
+      <a class="lang" href="/en/" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero">
+    <div class="wrap">
+      <img class="hero-icon" src="/img/icon-256.png" alt="cmds のアプリアイコン" width="112" height="112">
+      <h1>AIエージェントを、<br><span class="accent">並べて走らせる</span>ターミナル。</h1>
+      <p class="lead">cmds は Claude Code や Codex を何本も同時に動かすための、macOS ネイティブのターミナルワークスペースです。どのエージェントが作業中で、どれがあなたの入力を待っているかがサイドバーで分かり、待っているペインはオレンジのリングで光ります。</p>
+      <div class="cta">
+        <!-- TODO(release): DMG を site/public/download/ に置いたら有効化（scripts/release/build-dmg.sh） -->
+        <a class="btn btn-primary" href="#download">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
+        <a class="btn" href="/guide/">使い方を見る</a>
+      </div>
+      <p class="note">無料・オープンソース（GPL-3.0）。アカウント登録もテレメトリもありません。</p>
+    </div>
+    <div class="shot">
+      <picture>
+        <source type="image/webp" srcset="/img/ja-main-800.webp 800w, /img/ja-main-1600.webp 1600w" sizes="(max-width: 1240px) 100vw, 1200px">
+        <img src="/img/ja-main-1600.webp" width="1600" height="1000" fetchpriority="high" alt="cmds のウィンドウ。左のサイドバーに 4 つのワークスペースが並び、それぞれに Git ブランチ、待ち受けポート、Claude のモデル・コンテキスト・料金、作業中や入力待ちの状態が表示されている。右側はターミナル 2 枚と、開発中のログイン画面を表示したブラウザペイン。">
+      </picture>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <p class="eyebrow">Features</p>
+      <h2>エージェント時代のための機能</h2>
+      <p class="lead">普段のシェルはそのままに、エージェントを見守るための情報と道具を Mac ネイティブの速さで。</p>
+      <div class="grid">
+        <div class="card"><h3>縦タブのワークスペース</h3><p>ワークスペースごとに Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態（作業中・入力待ち・完了）とタスク名を表示。フィルタやプロジェクト別のグループ化も。</p></div>
+        <div class="card"><h3>通知リング</h3><p>エージェントが許可や入力を求めると、そのペインがオレンジのリングで光り、サイドバーにメッセージが出ます。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。OSC 9/777・ベル・<code>cmds notify</code> に対応。</p></div>
+        <div class="card"><h3>アプリ内ブラウザ</h3><p>WebKit のブラウザをターミナルの隣に。開発サーバーの画面を確認でき、<code>cmds browser eval</code> や <code>snapshot</code> でエージェントからも操作できます。</p></div>
+        <div class="card"><h3>分割とタイル表示</h3><p>右・下への入れ子の分割、ペインのズーム。複数のワークスペースを最大 9 枚のライブタイルとして並べ、5 つの Claude Code を同時に見ることもできます。</p></div>
+        <div class="card"><h3>ファイルプレビュー</h3><p>画像、PDF、動画、Office（Quick Look）、GitHub 風の Markdown、色付きの diff。ファイルが変わると自動で再読み込み。ターミナル上のパスを <kbd>⌘</kbd>-クリックでも開けます。</p></div>
+        <div class="card"><h3>CLI とソケット API</h3><p>同梱の <code>cmds</code> コマンドで分割、入力、画面の読み取り、通知、ブラウザ操作、統計を。すべて <code>--json</code> 対応で、スクリプトやエージェントから扱えます。</p></div>
+        <div class="card"><h3>libghostty の GPU 描画</h3><p>ターミナルの描画は Ghostty のエンジン（libghostty）による Metal の GPU 描画。true color、<code>xterm-ghostty</code> の terminfo とシェル統合を同梱。</p></div>
+        <div class="card"><h3>Swift と AppKit でネイティブ</h3><p>Electron ではなく Swift と AppKit で書かれた Mac アプリ。メニュー、ショートカット、通知、Quick Look など macOS の作法に沿って動きます。</p></div>
+        <div class="card"><h3>SSH ワークスペース</h3><p>いつもの <code>ssh</code> と <code>~/.ssh/config</code> をそのまま使い、制限付きのソケットをサーバーへ転送。サーバー上のエージェントの通知や使用量も手元に届き、切断時は再接続ボタンが出ます。</p></div>
+        <div class="card"><h3>スリープさせない</h3><p>cmds の実行中は Mac のアイドルスリープを防止。長いエージェントの作業も止まりません。必要なら蓋を閉じても動かし続ける設定も（オプトイン）。</p></div>
+        <div class="card"><h3>セッションの復元</h3><p>再起動後もワークスペース、分割、ディレクトリ、URL が戻り、Claude Code / Codex のセッションの再開を提案します。書き出し・読み込みで別の Mac へも移せます。</p></div>
+        <div class="card"><h3>日本語と英語</h3><p>Mac アプリも iPhone/iPad アプリも日本語と英語の UI に対応。言語はメニューから切り替えられます。</p></div>
+      </div>
+      <div class="gallery">
+        <figure>
+          <picture>
+            <source type="image/webp" srcset="/img/ja-tiled-800.webp 800w, /img/ja-tiled-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 540px">
+            <img src="/img/ja-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="タイル表示。4 つのワークスペースが 2×2 のライブタイルで並び、各タイルの見出しにエージェントの状態とタスク名、入力待ちのタイルはオレンジの枠。">
+          </picture>
+          <figcaption>タイル表示：複数のワークスペースを同時に操作</figcaption>
+        </figure>
+        <figure>
+          <picture>
+            <source type="image/webp" srcset="/img/ja-preview-800.webp 800w, /img/ja-preview-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 540px">
+            <img src="/img/ja-preview-1600.webp" width="1600" height="1000" loading="lazy" alt="ターミナルの右に Markdown のリリースノートが整形されて表示され、下には追加・削除行が色分けされた diff のプレビューが表示されている。">
+          </picture>
+          <figcaption>プレビュー：Markdown と diff をターミナルの隣に</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="agents">
+    <div class="wrap">
+      <p class="eyebrow">For AI agents</p>
+      <h2>Claude Code と Codex のために</h2>
+      <div class="split">
+        <div>
+          <p>cmds はエージェントの「今」をサイドバーに集めます。</p>
+          <ul class="checks">
+            <li><strong>状態</strong>：Claude Code のフックとタイトルから、作業中・入力待ち・完了・待機・停止を表示。</li>
+            <li><strong>使用量と上限</strong>：ステータスライン（<code>cmds hook claude-status</code>）からモデル、コンテキスト、料金、5 時間・7 日間の利用上限を表示。80% でオレンジ、95% で赤。</li>
+            <li><strong>Codex</strong>：設定不要。セッションファイルから ID・ディレクトリ・使用量・モデルだけを読み、会話内容は読みません。</li>
+            <li><strong>セッション再開</strong>：cmds を再起動すると、各ペインで動いていたセッションを <code>claude --resume</code> / <code>codex resume</code> で再開できます（確認・常に・しない を選択）。</li>
+            <li><strong>Claude Code のスキル</strong>：フォーカスを奪わずに補助ペインを開き、開発サーバーやブラウザ、プレビューを使う方法を Claude に教えます。</li>
+          </ul>
+          <p><a href="/guide/#claude">設定方法を見る →</a></p>
+        </div>
+        <figure>
+          <img src="/img/ja-sidebar.webp" width="374" height="1600" loading="lazy" class="sidebar-shot" alt="サイドバーの拡大。my-app は作業中、api-server は入力待ちで「Claude needs your permission to use Bash」、docs-site は完了。各行に Claude のモデル、コンテキスト使用率、料金。下部に Claude の 5 時間 38%・7 日 21% の上限メーターと CPU・メモリ。">
+          <figcaption>サイドバー：状態、タスク、使用量、アカウントの上限</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="iphone">
+    <div class="wrap">
+      <p class="eyebrow">iPhone &amp; iPad</p>
+      <h2>離れていても、エージェントの呼びかけに応える</h2>
+      <div class="split rev">
+        <div>
+          <p>iPhone/iPad コンパニオンは Mac のワークスペースとターミナル画面をミラーし、入力待ちになったら通知します。キーバーやハードウェアキーボードからそのまま返答できます。</p>
+          <ul class="checks">
+            <li>QR コードでペアリング。通信は Mac 自身の証明書にピン留めした TLS 1.3。</li>
+            <li>同じネットワーク（ピアツーピア Wi‑Fi 含む）、Wi‑Fi がなければ Bluetooth LE、外出先ではあなたの SSH サーバー経由で接続。</li>
+            <li>CPU・メモリ、エージェントの使用量と上限、画像や PDF のプレビューも表示。</li>
+            <li>当社のサーバーやアカウントは使いません。</li>
+          </ul>
+          <!-- TODO(release): App Store / TestFlight 公開後にリンクを追加。現状はソースからビルド（App Store Connect のアプリ登録が未作成）。 -->
+          <p class="note">iOS/iPadOS 17 以降。App Store での配信は準備中です（現在はソースからビルドして利用できます）。</p>
+        </div>
+        <div class="phones">
+          <figure>
+            <img src="/img/ja-ios-list-600.webp" width="600" height="1304" loading="lazy" alt="iPhone のワークスペース一覧（デモデータ）。各ワークスペースのブランチ、ディレクトリ、ポート、Claude や Codex の使用量。下部に Claude と Codex の上限メーター、CPU とメモリ。">
+            <figcaption>ワークスペース一覧</figcaption>
+          </figure>
+          <figure>
+            <img src="/img/ja-ios-pane-600.webp" width="600" height="1304" loading="lazy" alt="iPhone でペインを開いた画面（デモデータ）。Claude Code が「Do you want me to run the full test suite? (y/n)」と尋ねており、下に ctrl・esc・tab・矢印のキーバーと入力欄。">
+            <figcaption>ターミナルに直接返答</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="requirements">
+    <div class="wrap">
+      <p class="eyebrow">Requirements</p>
+      <h2>動作環境</h2>
+      <div class="req">
+        <div><b>Mac</b><span>Apple シリコン（M1 以降）</span></div>
+        <div><b>macOS</b><span>macOS 14 Sonoma 以降</span></div>
+        <div><b>iPhone / iPad（任意）</b><span>iOS / iPadOS 17 以降</span></div>
+        <div><b>エージェント（任意）</b><span>Claude Code、Codex CLI ほか、ターミナルで動くもの</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <p class="eyebrow">Download</p>
+      <h2>ダウンロード</h2>
+      <div class="download-box">
+        <!-- TODO(release): 公開時に以下を有効化し、バージョン・サイズ・SHA-256 を scripts/release/build-dmg.sh の出力（site/public/download/latest.json）で置き換える。
+        <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>cmds 0.1.0 をダウンロード（DMG）</a></p>
+        <p class="note">Apple による公証（notarization）済み、Developer ID（N.N. LLC.）で署名されています。</p>
+        -->
+        <p><strong>最初のリリース（0.1.0）を準備中です。</strong>公開までは、ソースコードからビルドして使えます（<a href="/guide/#install">手順</a>）。</p>
+        <dl>
+          <dt>ファイル</dt><dd><code>/download/cmds-&lt;version&gt;.dmg</code>（公開時に記載）</dd>
+          <dt>SHA-256</dt><dd><code>公開時に記載</code></dd>
+          <dt>対応</dt><dd>Apple シリコン、macOS 14 以降</dd>
+        </dl>
+        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-&lt;version&gt;.dmg</code> で SHA-256 を照合できます。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="source">
+    <div class="wrap">
+      <p class="eyebrow">Open source</p>
+      <h2>ソースコードとライセンス</h2>
+      <p>cmds は <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3.0</a> のフリーソフトウェアです。ターミナル描画に <a href="https://github.com/ghostty-org/ghostty">Ghostty</a>（libghostty、MIT ライセンス）、iOS アプリの SSH に Apple の <a href="https://github.com/apple/swift-nio-ssh">SwiftNIO SSH</a>（Apache-2.0）を使っています。</p>
+      <!-- TODO(release): リポジトリ公開後に https://github.com/nntokyo/cmds へのリンクに差し替え -->
+      <p>ソースコードは GitHub で公開予定です。</p>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <p class="eyebrow">Privacy</p>
+      <h2>プライバシー</h2>
+      <ul class="checks">
+        <li>テレメトリ、解析、広告はありません。アカウントも不要です。</li>
+        <li>データはあなたの Mac に保存されます。iPhone/iPad との同期は、ローカルネットワーク、Bluetooth、またはあなた自身の SSH サーバーを通る暗号化された接続だけで行われます。</li>
+        <li>当社（合同会社N.N.）のサーバーには何も送られません。</li>
+      </ul>
+      <p><a href="/privacy/">プライバシーポリシー →</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <p>運営：合同会社N.N.（N.N. LLC.）<br>お問い合わせ：<a href="mailto:info@n-n.tokyo">info@n-n.tokyo</a></p>
+      <p>© 2026 N.N. LLC. cmds は GPL-3.0 のオープンソースソフトウェアです。</p>
+    </div>
+    <nav aria-label="フッター">
+      <a href="/guide/">使い方</a>
+      <a href="/privacy/">プライバシーポリシー</a>
+      <a href="#source">ライセンス</a>
+      <a href="/en/" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

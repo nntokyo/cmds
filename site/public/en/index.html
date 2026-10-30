@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cmds — the native macOS terminal workspace for AI coding agents</title>
+<meta name="description" content="cmds is a native macOS terminal workspace for running AI coding agents such as Claude Code and Codex side by side: vertical tabs with agent state, a notification ring, browser and preview panes, and an iPhone/iPad companion. Open source (GPL-3.0).">
+<link rel="canonical" href="https://cmds.n-n.tokyo/en/">
+<link rel="alternate" hreflang="ja" href="https://cmds.n-n.tokyo/">
+<link rel="alternate" hreflang="en" href="https://cmds.n-n.tokyo/en/">
+<link rel="alternate" hreflang="x-default" href="https://cmds.n-n.tokyo/en/">
+<meta name="theme-color" content="#111317">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="cmds">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ja_JP">
+<meta property="og:url" content="https://cmds.n-n.tokyo/en/">
+<meta property="og:title" content="cmds — the native macOS terminal workspace for AI coding agents">
+<meta property="og:description" content="See which agent is working and which one waits for you, with usage and limits in the sidebar, a ring on the pane that needs you, browser and preview panes, and an iPhone/iPad companion.">
+<meta property="og:image" content="https://cmds.n-n.tokyo/img/og-en.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The cmds window: workspaces with agent state in the sidebar, terminals and a browser on the right.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/en/"><img src="/img/icon-256.png" alt="" width="32" height="32">cmds</a>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#iphone">iPhone</a>
+      <a href="#agents" class="opt">AI agents</a>
+      <a href="/en/guide/">How to use</a>
+      <a href="#download">Download</a>
+      <a class="lang" href="/" hreflang="ja" lang="ja">日本語</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero">
+    <div class="wrap">
+      <img class="hero-icon" src="/img/icon-256.png" alt="cmds app icon" width="112" height="112">
+      <h1>The terminal for running<br><span class="accent">many AI agents at once.</span></h1>
+      <p class="lead">cmds is a native macOS terminal workspace for running Claude Code, Codex and friends side by side. The sidebar shows which agent is working and which one is waiting for you, and the pane that needs you lights up with an orange ring.</p>
+      <div class="cta">
+        <!-- TODO(release): point at the DMG once it is in site/public/download/ (scripts/release/build-dmg.sh) -->
+        <a class="btn btn-primary" href="#download">Download for Mac <small>macOS 14+, Apple silicon</small></a>
+        <a class="btn" href="/en/guide/">How to use</a>
+      </div>
+      <p class="note">Free and open source (GPL-3.0). No account, no telemetry.</p>
+    </div>
+    <div class="shot">
+      <picture>
+        <source type="image/webp" srcset="/img/en-main-800.webp 800w, /img/en-main-1600.webp 1600w" sizes="(max-width: 1240px) 100vw, 1200px">
+        <img src="/img/en-main-1600.webp" width="1600" height="1000" fetchpriority="high" alt="The cmds window. The sidebar lists four workspaces with their git branch, listening port, Claude model, context and cost, and states such as Working and Needs Input. On the right, two terminals and a browser pane showing the sign-in page of an app in development.">
+      </picture>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <p class="eyebrow">Features</p>
+      <h2>Built for working with agents</h2>
+      <p class="lead">Keep your shell as it is, and get what you need to keep an eye on your agents, at native Mac speed.</p>
+      <div class="grid">
+        <div class="card"><h3>Vertical tabs</h3><p>Every workspace shows its git branch, directory, listening ports, and the agent's state (Working, Needs Input, Done) and task. Filter them, or group them by project.</p></div>
+        <div class="card"><h3>Notification ring</h3><p>When an agent asks for permission or input, its pane lights up orange and the sidebar shows the message. <kbd>⇧⌘U</kbd> jumps to the latest. Works with OSC 9/777, the bell and <code>cmds notify</code>.</p></div>
+        <div class="card"><h3>In-app browser</h3><p>A WebKit browser next to your terminal for your dev server, scriptable by agents with <code>cmds browser eval</code> and <code>snapshot</code>.</p></div>
+        <div class="card"><h3>Splits and tiled view</h3><p>Nested right/down splits and pane zoom. Show up to nine workspaces as live tiles, e.g. five Claude Code sessions at once.</p></div>
+        <div class="card"><h3>File preview</h3><p>Images, PDF, video and Office files (Quick Look), GitHub-style Markdown and coloured diffs, reloaded when the file changes. <kbd>⌘</kbd>-click a path in the terminal to open it.</p></div>
+        <div class="card"><h3>CLI and socket API</h3><p>The bundled <code>cmds</code> command splits, types, reads screens, notifies, drives the browser and reports stats, with <code>--json</code> everywhere for scripts and agents.</p></div>
+        <div class="card"><h3>GPU rendering by libghostty</h3><p>Terminals are drawn with Metal by Ghostty's engine (libghostty): true colour, with the <code>xterm-ghostty</code> terminfo and shell integration bundled.</p></div>
+        <div class="card"><h3>Native Swift and AppKit</h3><p>A real Mac app, not Electron: menus, shortcuts, notifications and Quick Look behave the macOS way.</p></div>
+        <div class="card"><h3>SSH workspaces</h3><p>Your own <code>ssh</code> and <code>~/.ssh/config</code>, with a restricted socket forwarded to the server, so notifications and usage from agents on the server reach you. Reconnect with one click.</p></div>
+        <div class="card"><h3>Keep awake</h3><p>No idle sleep while cmds runs, so long agent runs keep going. Opt in to keep running with the lid closed.</p></div>
+        <div class="card"><h3>Session restore</h3><p>Workspaces, splits, directories and URLs come back after a restart, and Claude Code / Codex sessions are offered for resuming. Export and import move them to another Mac.</p></div>
+        <div class="card"><h3>English and Japanese</h3><p>Both the Mac app and the iPhone/iPad app are localized in English and Japanese, switchable from the menu.</p></div>
+      </div>
+      <div class="gallery">
+        <figure>
+          <picture>
+            <source type="image/webp" srcset="/img/en-tiled-800.webp 800w, /img/en-tiled-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 540px">
+            <img src="/img/en-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="Tiled view: four workspaces as live tiles in a 2 by 2 grid. Each tile header shows the agent's state and task; the tiles that need attention have an orange border.">
+          </picture>
+          <figcaption>Tiled view: work in several workspaces at once</figcaption>
+        </figure>
+        <figure>
+          <picture>
+            <source type="image/webp" srcset="/img/en-preview-800.webp 800w, /img/en-preview-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 540px">
+            <img src="/img/en-preview-1600.webp" width="1600" height="1000" loading="lazy" alt="A terminal with rendered Markdown release notes on the right and a diff preview below with added and removed lines coloured.">
+          </picture>
+          <figcaption>Preview: Markdown and diffs next to the terminal</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="agents">
+    <div class="wrap">
+      <p class="eyebrow">For AI agents</p>
+      <h2>Made for Claude Code and Codex</h2>
+      <div class="split">
+        <div>
+          <p>cmds brings what your agents are doing right now into the sidebar.</p>
+          <ul class="checks">
+            <li><strong>State</strong>: Working, Needs Input, Done, Idle or Stopped, from Claude Code's hooks and its terminal title.</li>
+            <li><strong>Usage and limits</strong>: model, context, cost and the 5-hour / 7-day account limits from the status line (<code>cmds hook claude-status</code>); orange from 80 %, red from 95 %.</li>
+            <li><strong>Codex</strong>: nothing to set up. cmds reads only the session id, directory, usage and model from its session files, never the conversation.</li>
+            <li><strong>Session resume</strong>: after cmds restarts, the session that ran in each pane can be resumed with <code>claude --resume</code> / <code>codex resume</code> (Ask, Always or Never).</li>
+            <li><strong>Claude Code skill</strong>: teaches Claude to open helper panes without stealing focus and to use dev servers, the browser and previews.</li>
+          </ul>
+          <p><a href="/en/guide/#claude">How to set it up →</a></p>
+        </div>
+        <figure>
+          <img src="/img/en-sidebar.webp" width="374" height="1600" loading="lazy" class="sidebar-shot" alt="Close-up of the sidebar: my-app is Working, api-server Needs Input with “Claude needs your permission to use Bash”, docs-site is Done. Each row shows the Claude model, context use and cost; at the bottom, Claude's 5-hour (38 %) and 7-day (21 %) limit meters, CPU and memory.">
+          <figcaption>Sidebar: state, task, usage and account limits</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="iphone">
+    <div class="wrap">
+      <p class="eyebrow">iPhone &amp; iPad</p>
+      <h2>Answer your agents from anywhere</h2>
+      <div class="split rev">
+        <div>
+          <p>The iPhone/iPad companion mirrors your Mac's workspaces and terminal screens and notifies you when a pane needs you. Reply right away with the key bar or a hardware keyboard.</p>
+          <ul class="checks">
+            <li>Pair with a QR code. Traffic is TLS 1.3, pinned to your Mac's own certificate.</li>
+            <li>Connects over the local network (including peer-to-peer Wi‑Fi), Bluetooth LE when there is no Wi‑Fi, or through your own SSH server when you are away.</li>
+            <li>Shows CPU, memory, agent usage and limits, and previews images and PDFs.</li>
+            <li>No servers or accounts of ours involved.</li>
+          </ul>
+          <!-- TODO(release): link the App Store / TestFlight once available (needs an App Store Connect app record, not created yet). -->
+          <p class="note">iOS/iPadOS 17 or later. App Store distribution is in preparation; for now, build it from source.</p>
+        </div>
+        <div class="phones">
+          <figure>
+            <img src="/img/en-ios-list-600.webp" width="600" height="1304" loading="lazy" alt="The workspace list on an iPhone (demo data): branch, directory, ports and Claude or Codex usage per workspace; Claude and Codex limit meters, CPU and memory at the bottom.">
+            <figcaption>Workspace list</figcaption>
+          </figure>
+          <figure>
+            <img src="/img/en-ios-pane-600.webp" width="600" height="1304" loading="lazy" alt="A pane open on the iPhone (demo data): Claude Code asks “Do you want me to run the full test suite? (y/n)”; below, a key bar with ctrl, esc, tab and arrows and an input field.">
+            <figcaption>Answer right in the terminal</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="requirements">
+    <div class="wrap">
+      <p class="eyebrow">Requirements</p>
+      <h2>Requirements</h2>
+      <div class="req">
+        <div><b>Mac</b><span>Apple silicon (M1 or later)</span></div>
+        <div><b>macOS</b><span>macOS 14 Sonoma or later</span></div>
+        <div><b>iPhone / iPad (optional)</b><span>iOS / iPadOS 17 or later</span></div>
+        <div><b>Agents (optional)</b><span>Claude Code, Codex CLI, or anything that runs in a terminal</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="download">
+    <div class="wrap">
+      <p class="eyebrow">Download</p>
+      <h2>Download</h2>
+      <div class="download-box">
+        <!-- TODO(release): enable on release and fill in version, size and SHA-256 from scripts/release/build-dmg.sh (site/public/download/latest.json).
+        <p><a class="btn btn-primary" href="/download/cmds-0.1.0.dmg" download>Download cmds 0.1.0 (DMG)</a></p>
+        <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple.</p>
+        -->
+        <p><strong>The first release (0.1.0) is in preparation.</strong> Until then you can build cmds from source (<a href="/en/guide/#install">how</a>).</p>
+        <dl>
+          <dt>File</dt><dd><code>/download/cmds-&lt;version&gt;.dmg</code> (on release)</dd>
+          <dt>SHA-256</dt><dd><code>on release</code></dd>
+          <dt>Runs on</dt><dd>Apple silicon, macOS 14 or later</dd>
+        </dl>
+        <p class="note">Check the download with <code>shasum -a 256 cmds-&lt;version&gt;.dmg</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="source">
+    <div class="wrap">
+      <p class="eyebrow">Open source</p>
+      <h2>Source code and license</h2>
+      <p>cmds is free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License v3.0</a>. Terminals are rendered by <a href="https://github.com/ghostty-org/ghostty">Ghostty</a> (libghostty, MIT license); the iOS app uses Apple's <a href="https://github.com/apple/swift-nio-ssh">SwiftNIO SSH</a> (Apache-2.0).</p>
+      <!-- TODO(release): link https://github.com/nntokyo/cmds once the repository is public -->
+      <p>The source code will be published on GitHub.</p>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <p class="eyebrow">Privacy</p>
+      <h2>Privacy</h2>
+      <ul class="checks">
+        <li>No telemetry, analytics or ads, and no account.</li>
+        <li>Your data stays on your Mac. Sync with your iPhone/iPad runs only over encrypted connections through your local network, Bluetooth, or your own SSH server.</li>
+        <li>Nothing is sent to us (N.N. LLC).</li>
+      </ul>
+      <p><a href="/en/privacy/">Privacy policy →</a></p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <p>Operated by N.N. LLC (合同会社N.N.)<br>Contact: <a href="mailto:info@n-n.tokyo">info@n-n.tokyo</a></p>
+      <p>© 2026 N.N. LLC. cmds is open source software under the GPL-3.0.</p>
+    </div>
+    <nav aria-label="Footer">
+      <a href="/en/guide/">How to use</a>
+      <a href="/en/privacy/">Privacy policy</a>
+      <a href="#source">License</a>
+      <a href="/" hreflang="ja" lang="ja">日本語</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

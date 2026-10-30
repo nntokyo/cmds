@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>使い方 — cmds</title>
+<meta name="description" content="cmds の使い方：インストールと初回起動、ワークスペースと分割、タイル表示、ブラウザとプレビュー、cmds コマンド、Claude Code の設定、iPhone のペアリング、SSH ワークスペース、キーボードショートカット。">
+<link rel="canonical" href="https://cmds.n-n.tokyo/guide/">
+<link rel="alternate" hreflang="ja" href="https://cmds.n-n.tokyo/guide/">
+<link rel="alternate" hreflang="en" href="https://cmds.n-n.tokyo/en/guide/">
+<link rel="alternate" hreflang="x-default" href="https://cmds.n-n.tokyo/en/guide/">
+<meta name="theme-color" content="#111317">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="cmds">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:url" content="https://cmds.n-n.tokyo/guide/">
+<meta property="og:title" content="cmds の使い方">
+<meta property="og:description" content="インストールから Claude Code の設定、iPhone のペアリングまで、スクリーンショット付きで手順を説明します。">
+<meta property="og:image" content="https://cmds.n-n.tokyo/img/og-ja.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip" href="#main">本文へ移動</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/"><img src="/img/icon-256.png" alt="" width="32" height="32">cmds</a>
+    <nav class="site-nav" aria-label="メインメニュー">
+      <a href="/#features">機能</a>
+      <a href="/#iphone">iPhone</a>
+      <a href="/guide/" aria-current="page">使い方</a>
+      <a href="/#download">ダウンロード</a>
+      <a class="lang" href="/en/guide/" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <div class="hero">
+    <div class="wrap narrow">
+      <h1>使い方</h1>
+      <p class="lead">インストールから、エージェントを見守る設定、iPhone からの返答まで。画面はすべて実際のアプリ（デモ用のデータ）です。</p>
+    </div>
+  </div>
+
+  <div class="wrap narrow">
+    <nav class="toc" aria-label="目次">
+      <strong>目次</strong>
+      <ol>
+        <li><a href="#install">インストールと初回起動</a></li>
+        <li><a href="#workspaces">ワークスペースと分割</a></li>
+        <li><a href="#tiles">タイル表示</a></li>
+        <li><a href="#browser">ブラウザとプレビュー</a></li>
+        <li><a href="#cli"><code>cmds</code> コマンド</a></li>
+        <li><a href="#claude">Claude Code と Codex の設定</a></li>
+        <li><a href="#iphone">iPhone/iPad のペアリング</a></li>
+        <li><a href="#ssh">SSH ワークスペース</a></li>
+        <li><a href="#shortcuts">キーボードショートカット</a></li>
+      </ol>
+    </nav>
+  </div>
+
+  <section class="step" id="install">
+    <div class="wrap narrow">
+      <h2><span class="step-num">1</span>インストールと初回起動</h2>
+      <ol>
+        <!-- TODO(release): DMG 公開後は「DMG を開いて cmds を「アプリケーション」にドラッグ」を先頭に。 -->
+        <li><code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）に置いて開きます。最初のリリースまでは <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>でソースからビルドしてください（Xcode、XcodeGen、Zig が必要）。<!-- TODO(release): リポジトリ公開までこのリンクは非公開 --></li>
+        <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
+        <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
+        <li>任意：<strong>cmds › コマンドラインツールをインストール…</strong> で <code>/usr/local/bin/cmds</code> へのリンクを作ると、ほかのターミナルからも <code>cmds</code> を使えます（cmds の中のターミナルでは最初から使えます）。</li>
+      </ol>
+      <p>起動すると、ホームディレクトリのターミナルを 1 つ持つワークスペースが開きます。</p>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/ja-main-800.webp 800w, /img/ja-main-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/ja-main-1600.webp" width="1600" height="1000" loading="lazy" alt="cmds のウィンドウ。左にワークスペースの縦タブ、右に分割されたターミナルとブラウザ。">
+        </picture>
+        <figcaption>サイドバーの各行がワークスペース。右側が分割されたペイン。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="workspaces">
+    <div class="wrap narrow">
+      <h2><span class="step-num">2</span>ワークスペースと分割</h2>
+      <ul>
+        <li><kbd>⌘N</kbd> で新しいワークスペース、<kbd>⌘1</kbd>…<kbd>⌘9</kbd> で切り替え、<kbd>⇧⌘R</kbd>（またはダブルクリック）で名前を変更。行はドラッグで並べ替えられます。</li>
+        <li><kbd>⌘D</kbd> で右に、<kbd>⇧⌘D</kbd> で下に分割。<kbd>⌥⌘</kbd>＋矢印でペイン間を移動、<kbd>⇧⌘↩</kbd> でペインをズーム、<kbd>⌘W</kbd> で閉じます。</li>
+        <li>サイドバーの各行には、Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態とタスク、最新の通知が表示されます。<kbd>⌥⌘F</kbd> で絞り込み、表示 › プロジェクトごとにグループ化 も使えます。</li>
+        <li>見ていないペインのプログラムが通知（OSC 9/777、ベル、<code>cmds notify</code>）を出すと、そのペインが<strong>オレンジのリング</strong>で光ります。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/ja-ring-800.webp 800w, /img/ja-ring-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/ja-ring-1600.webp" width="1600" height="1000" loading="lazy" alt="左右に分割された api-server ワークスペース。右のペインが入力待ちでオレンジのリングに囲まれ、サイドバーの行に「入力待ち」と Claude のメッセージが出ている。">
+        </picture>
+        <figcaption>右のペインで Claude Code が許可を求めているため、リングで光っています。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="tiles">
+    <div class="wrap narrow">
+      <h2><span class="step-num">3</span>タイル表示</h2>
+      <p>複数のワークスペースを、それぞれ入力もできるライブタイルとして並べます。</p>
+      <ul>
+        <li>サイドバーで <kbd>⌘</kbd>-クリック（追加・解除）や <kbd>⇧</kbd>-クリック（範囲）で選ぶと、すぐにタイルになります。</li>
+        <li>表示 › すべてのワークスペースをタイル表示（<kbd>⌃⌘T</kbd>）で全部を並べ、もう一度押すと 1 つに戻ります。最大 9 枚。</li>
+        <li>タイルの見出しに状態とタスクが出て、入力待ちのタイルはリングで光ります。<kbd>⇧⌘↩</kbd> で 1 枚を大きく表示。</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/ja-tiled-800.webp 800w, /img/ja-tiled-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/ja-tiled-1600.webp" width="1600" height="1000" loading="lazy" alt="4 つのワークスペースを 2×2 のタイルで表示。my-app は作業中、api-server は入力待ち、docs-site は完了、build-server は SSH の切断表示。">
+        </picture>
+        <figcaption>4 つのワークスペースを同時に表示。ターミナルは動いたまま並べ替わります。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="browser">
+    <div class="wrap narrow">
+      <h2><span class="step-num">4</span>ブラウザとプレビュー</h2>
+      <ul>
+        <li><kbd>⇧⌘B</kbd> でターミナルの右にブラウザを開きます。<kbd>⌘L</kbd> でアドレスバー、<kbd>⌘R</kbd> で再読み込み、<kbd>⌘[</kbd> / <kbd>⌘]</kbd> で戻る・進む。</li>
+        <li><kbd>⇧⌘O</kbd>（ファイル › プレビューで開く…）、またはターミナルに表示されたパスの <kbd>⌘</kbd>-クリックで、ファイルをプレビューペインに表示。画像、PDF、動画、Office、テキストは Quick Look、Markdown は整形表示、diff は色付きで表示します。</li>
+        <li>ファイルが変更されると自動で再読み込みされます。エージェントが書いたレポートや画像をそのまま確認できます。</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/ja-preview-800.webp 800w, /img/ja-preview-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/ja-preview-1600.webp" width="1600" height="1000" loading="lazy" alt="左上にターミナル、右に整形された Markdown のリリースノート、左下に色付きの diff のプレビュー。">
+        </picture>
+        <figcaption>Markdown と diff のプレビュー。ブラウザペインはトップの画面の右側です。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="cli">
+    <div class="wrap narrow">
+      <h2><span class="step-num">5</span><code>cmds</code> コマンド</h2>
+      <p>cmds のターミナルは自分がどのペインかを知っている（<code>CMDS_PANE_ID</code>）ので、<code>cmds</code> は実行したペインを基準に動きます。</p>
+<pre><code>cmds ls                                   # ワークスペースとペインの一覧
+cmds split down -- npm run dev            # 下に新しいペインを作って開発サーバーを起動
+cmds browser open http://localhost:3000   # ブラウザペインで開く
+cmds open README.md                       # ファイルをプレビュー
+git diff | cmds open --diff -             # diff を色付きで表示
+make test; cmds notify "tests done: $?"   # 終わったらこのペインを光らせる
+cmds stats                                # ワークスペースごとと Mac 全体の CPU・メモリ</code></pre>
+      <p><code>cmds --help</code> と <code>cmds &lt;コマンド&gt; --help</code> で全コマンドを確認できます。すべて <code>--json</code> で JSON を出力します。</p>
+      <figure>
+        <img src="/img/ja-cli-1000.webp" width="1000" height="374" loading="lazy" alt="ターミナルで git log と cmds ls を実行した画面。cmds ls がワークスペース my-app の分割の構成（ターミナル 2 つとブラウザ 1 つ）、ブランチ、ポート 5173、Claude の使用量を木構造で表示している。">
+        <figcaption><code>cmds ls</code> は分割の構成とエージェントの使用量も表示します。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="claude">
+    <div class="wrap narrow">
+      <h2><span class="step-num">6</span>Claude Code と Codex の設定</h2>
+      <h3>通知と状態（フック）</h3>
+      <p><code>~/.claude/settings.json</code>（またはプロジェクトの <code>.claude/settings.json</code>）に追加します。許可や入力を求めると「入力待ち」になってリングが光り、ターンが終わると「完了」、入力すると「作業中」に戻ります。</p>
+<pre><code>{
+  "hooks": {
+    "Notification": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "command -v cmds &gt;/dev/null &amp;&amp; cmds hook claude || true" }] }
+    ]
+  }
+}</code></pre>
+      <h3>使用量と上限（ステータスライン）</h3>
+      <p>ステータスラインのスクリプトが入力を読んだ（<code>input=$(cat)</code>）あとに 1 行追加します。モデル、コンテキスト、料金、5 時間・7 日間の上限がサイドバーに出ます。セッションの再開にもこの設定が必要です。</p>
+<pre><code>[ -n "$CMDS_PANE_ID" ] &amp;&amp; command -v cmds &gt;/dev/null 2&gt;&amp;1 &amp;&amp; printf '%s' "$input" | cmds hook claude-status &gt;/dev/null 2&gt;&amp;1</code></pre>
+      <p>ステータスラインのスクリプトがなければ、<code>"statusLine": {"type": "command", "command": "cmds hook claude-status"}</code> だけでも動きます（表示は空になります）。</p>
+      <h3>スキルと Codex</h3>
+      <ul>
+        <li>Claude Code のスキル：<code>integrations/claude/skills/cmds/SKILL.md</code> を <code>~/.claude/skills/cmds/</code> にコピーすると、Claude がフォーカスを奪わずに補助ペインやブラウザ、プレビューを使うようになります。</li>
+        <li>Codex：使用量は設定不要です。通知は <code>~/.codex/config.toml</code> の <code>[tui]</code> に <code>notifications = true</code>、<code>notification_method = "osc9"</code>、<code>notification_condition = "always"</code> を設定します。</li>
+      </ul>
+      <div class="split">
+        <div>
+          <h3>サイドバーの見方</h3>
+          <ul>
+            <li><strong>作業中</strong>（青）・<strong>入力待ち</strong>（オレンジ）・<strong>完了</strong>（緑）・<strong>待機</strong>・<strong>停止</strong>（グレー）</li>
+            <li>2 行目はエージェントのタスク（Claude Code のタイトル）</li>
+            <li>モデル、コンテキストの使用率、そのセッションの料金</li>
+            <li>最下部はアカウントの上限（5 時間・7 日間、Claude の利用上限額）と Mac 全体の CPU・メモリ。80% でオレンジ、95% で赤</li>
+          </ul>
+        </div>
+        <figure>
+          <img src="/img/ja-sidebar.webp" width="374" height="1600" loading="lazy" class="sidebar-shot" alt="サイドバーの拡大。作業中、入力待ち、完了のワークスペースと、それぞれの Claude のモデル・コンテキスト・料金。下部に上限メーター。">
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="iphone">
+    <div class="wrap narrow">
+      <h2><span class="step-num">7</span>iPhone/iPad のペアリング</h2>
+      <ol>
+        <li>Mac で <strong>cmds › iPhone/iPad とペアリング…</strong> を選ぶと、QR コードと 6 桁のコードが表示されます（ウィンドウを開いている間だけ有効）。</li>
+        <li>iPhone/iPad のコンパニオンで<strong>「ペアリングコードをスキャン」</strong>をタップして QR コードを読み取ります。カメラを使わない場合は、Mac を選んで ID を照合し、6 桁のコードを入力します。</li>
+        <li>接続すると、Mac のワークスペースの一覧が表示されます。ワークスペースを開くとターミナルの画面がライブで表示され、キーバーや入力欄から返答できます。</li>
+      </ol>
+      <p>同じネットワークにいなくても、Wi‑Fi がなければ Bluetooth LE で、外出先では cmds › SSH 経由のリモートアクセス… で設定したあなたの SSH サーバーを中継して接続します。どの経路でも、Mac の証明書にピン留めした同じ TLS 接続です。</p>
+      <!-- TODO(release): App Store / TestFlight 公開後に入手方法を追記 -->
+      <div class="phones">
+        <figure>
+          <img src="/img/ja-ios-connect-600.webp" width="600" height="1304" loading="lazy" alt="iPhone の「Mac に接続」画面。「ペアリングコードをスキャン」ボタン、このネットワーク上の Mac を探す表示、手動接続の入力欄、「デモデータで試す」。">
+          <figcaption>最初の画面</figcaption>
+        </figure>
+        <figure>
+          <img src="/img/ja-ios-list-600.webp" width="600" height="1304" loading="lazy" alt="iPhone のワークスペース一覧（デモデータ）。">
+          <figcaption>ワークスペース一覧</figcaption>
+        </figure>
+        <figure>
+          <img src="/img/ja-ios-pane-600.webp" width="600" height="1304" loading="lazy" alt="iPhone でターミナルを開いた画面（デモデータ）。Claude Code の質問とキーバー。">
+          <figcaption>ペインの画面</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="step" id="ssh">
+    <div class="wrap narrow">
+      <h2><span class="step-num">8</span>SSH ワークスペース</h2>
+      <ul>
+        <li><kbd>⇧⌘N</kbd>（ファイル › 新規 SSH ワークスペース…）でホストを入力します。<code>~/.ssh/config</code> のホストが補完され、鍵やジャンプホストもいつも通り使われます。</li>
+        <li>cmds は制限付きのソケットを同じ SSH 接続でサーバーへ転送します。<strong>ペイン › リモートヘルパーをインストール…</strong> を一度実行すると、サーバー上でも <code>cmds notify</code> や Claude Code のフックが動き、通知と使用量が手元のサイドバーに届きます。</li>
+        <li>接続が切れるとペインに「切断されました」と表示され、<kbd>⌘R</kbd> か「再接続」で同じコマンドを再実行します。</li>
+      </ul>
+      <figure>
+        <picture>
+          <source type="image/webp" srcset="/img/ja-ssh-800.webp 800w, /img/ja-ssh-1600.webp 1600w" sizes="(max-width: 860px) 100vw, 780px">
+          <img src="/img/ja-ssh-1600.webp" width="1600" height="1000" loading="lazy" alt="SSH ワークスペース build-server。ペインの中央に「切断されました — ssh build.example.invalid」と「ペインを閉じる」「再接続（⌘R）」のボタン。">
+        </picture>
+        <figcaption>切断時の表示（デモでは存在しないホストに接続しています）。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="step" id="shortcuts">
+    <div class="wrap narrow">
+      <h2><span class="step-num">9</span>キーボードショートカット</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">操作</th><th scope="col">キー</th></tr></thead>
+          <tbody>
+            <tr><td>新規ワークスペース / 新規 SSH ワークスペース</td><td><kbd>⌘N</kbd> / <kbd>⇧⌘N</kbd></td></tr>
+            <tr><td>ワークスペース 1〜9 を選択</td><td><kbd>⌘1</kbd> … <kbd>⌘9</kbd></td></tr>
+            <tr><td>次 / 前のワークスペース</td><td><kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd>、<kbd>⌃Tab</kbd> / <kbd>⌃⇧Tab</kbd></td></tr>
+            <tr><td>ワークスペース名を変更</td><td><kbd>⇧⌘R</kbd></td></tr>
+            <tr><td>右に分割 / 下に分割</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
+            <tr><td>ペイン間の移動</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
+            <tr><td>ペイン（タイル）のズーム</td><td><kbd>⇧⌘↩</kbd></td></tr>
+            <tr><td>すべてのワークスペースをタイル表示</td><td><kbd>⌃⌘T</kbd></td></tr>
+            <tr><td>最新の通知へジャンプ</td><td><kbd>⇧⌘U</kbd></td></tr>
+            <tr><td>ブラウザで分割 / プレビューで開く</td><td><kbd>⇧⌘B</kbd> / <kbd>⇧⌘O</kbd></td></tr>
+            <tr><td>アドレスバー / 再読み込み（SSH は再接続） / 戻る / 進む</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>
+            <tr><td>ペインを閉じる / ワークスペースを閉じる</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
+            <tr><td>サイドバーの表示 / コンパクト表示</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>
+            <tr><td>ワークスペースを絞り込む</td><td><kbd>⌥⌘F</kbd></td></tr>
+            <tr><td>文字を大きく / 小さく / 標準サイズ</td><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td></tr>
+            <tr><td>設定</td><td><kbd>⌘,</kbd></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <p>運営：合同会社N.N.（N.N. LLC.）<br>お問い合わせ：<a href="mailto:info@n-n.tokyo">info@n-n.tokyo</a></p>
+      <p>© 2026 N.N. LLC. cmds は GPL-3.0 のオープンソースソフトウェアです。</p>
+    </div>
+    <nav aria-label="フッター">
+      <a href="/">トップ</a>
+      <a href="/privacy/">プライバシーポリシー</a>
+      <a href="/en/guide/" hreflang="en" lang="en">English</a>
+    </nav>
+  </div>
+</footer>
+</body>
+</html>

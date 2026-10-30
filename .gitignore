@@ -10,3 +10,7 @@ vendor/GhosttyKit.xcframework
 App/Info.plist
 iOS/Info.plist
 design/icon/candidates/
+site/public/download/*.dmg
+site/public/download/SHA256SUMS
+site/public/download/latest.json
+site/.firebase/

@@ -87,17 +87,32 @@ targets:
         NSLocalNetworkUsageDescription: cmds syncs terminals to the iOS companion over the local network.
         NSBonjourServices: [_cmds._tcp]
         NSBluetoothAlwaysUsageDescription: cmds lets the iOS companion connect over Bluetooth when Wi‑Fi is off. The connection stays end-to-end encrypted.
+        # Programs running in a terminal are attributed to cmds by macOS privacy prompts (see App/cmds.entitlements).
+        NSAppleEventsUsageDescription: A program running in cmds would like to use AppleScript.
+        NSMicrophoneUsageDescription: A program running in cmds would like to use the microphone.
+        NSCameraUsageDescription: A program running in cmds would like to use the camera.
+        NSContactsUsageDescription: A program running in cmds would like to access your contacts.
+        NSCalendarsUsageDescription: A program running in cmds would like to access your calendars.
+        NSLocationUsageDescription: A program running in cmds would like to use your location.
+        NSPhotoLibraryUsageDescription: A program running in cmds would like to access your photo library.
     settings:
       base:
         PRODUCT_NAME: cmds
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: App/cmds.entitlements
         ENABLE_HARDENED_RUNTIME: NO
         # A stable signing identity keeps the firewall allowance and notification permission across rebuilds.
         DEVELOPMENT_TEAM: LY354RVYHA
         CODE_SIGN_IDENTITY: "Apple Development"
         OTHER_LDFLAGS: ["-lc++"]
         ARCHS: arm64
+      configs:
+        # Release builds run under the hardened runtime (required for notarization). They are still signed with
+        # "Apple Development" here so local Release builds need no keychain prompt; scripts/release/build-dmg.sh
+        # re-signs the app with the Developer ID certificate for distribution (docs/internals/release.md).
+        Release:
+          ENABLE_HARDENED_RUNTIME: YES
     postBuildScripts:
       - name: Bundle Ghostty resources
         basedOnDependencyAnalysis: false
@@ -126,6 +141,9 @@ targets:
         CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: NO
         SKIP_INSTALL: YES
+      configs:
+        Release:
+          ENABLE_HARDENED_RUNTIME: YES
   CmdsCompanion:
     type: application
     platform: iOS

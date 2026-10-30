@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Hardened-runtime entitlements of the Mac app (not sandboxed). Why each one is here:
+  docs/internals/release.md#entitlements. The same set as Ghostty.app's release entitlements: macOS attributes
+  privacy (TCC) requests of programs running in a terminal to the terminal app, and under the hardened runtime a
+  resource is refused outright unless the app holds the matching entitlement.
+  Deliberately absent: allow-jit / allow-unsigned-executable-memory (libghostty has no JIT; WebKit's JIT runs in its
+  own WebContent process), disable-library-validation (GhosttyKit is linked statically, no plug-ins),
+  get-task-allow (debuggers; rejected by notarization), and the sandbox network/bluetooth keys (the app is not
+  sandboxed, so Info.plist usage strings are enough for local network and Bluetooth).
+-->
+<plist version="1.0">
+<dict>
+	<!-- NSAppleScript "with administrator privileges" (Install Command Line Tool…, Keep Awake With Lid Closed)
+	     and osascript or other Apple Events sent by programs in a terminal. -->
+	<key>com.apple.security.automation.apple-events</key>
+	<true/>
+	<!-- Programs in a terminal that record audio or use the camera (dictation CLIs, ffmpeg, …). -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+	<key>com.apple.security.device.camera</key>
+	<true/>
+	<!-- Programs in a terminal that read Contacts, Calendars, Location or Photos (each still asks the user). -->
+	<key>com.apple.security.personal-information.addressbook</key>
+	<true/>
+	<key>com.apple.security.personal-information.calendars</key>
+	<true/>
+	<key>com.apple.security.personal-information.location</key>
+	<true/>
+	<key>com.apple.security.personal-information.photos-library</key>
+	<true/>
+</dict>
+</plist>
