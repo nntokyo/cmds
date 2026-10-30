@@ -23,6 +23,7 @@ public enum RemoteAPIPolicy {
         "system.ping", "system.identify",
         "notify", "sidebar.set_status",
         "agent.report", "agent.claude_hook", "agent.claude_status",
+        "agent.sessions", "agent.resume",
         "remote.location",
         "pane.read_text", "pane.send_text",
         "pane.list", "workspace.list",
@@ -31,6 +32,7 @@ public enum RemoteAPIPolicy {
     /// Methods whose `pane` param is forced to the scope's pane.
     static let paneMethods: Set<String> = [
         "notify", "agent.report", "agent.claude_hook", "agent.claude_status", "remote.location",
+        "agent.sessions", "agent.resume",
         "pane.read_text", "pane.send_text",
     ]
 
@@ -60,6 +62,13 @@ public enum RemoteAPIPolicy {
         try pin("workspace", to: scope.workspaceID, in: &object, applies: workspaceMethods.contains(method))
         // A remote process id means nothing on the Mac (the app would watch an unrelated local process).
         if method == "agent.report" { object["pid"] = nil }
+        // Resuming is limited to the pane's own session (`pane` is pinned above); `all` would reach other panes.
+        if method == "agent.resume" {
+            switch object["all"] {
+            case nil, .null?, .bool(false)?: object["all"] = nil
+            default: throw forbidden("agent.resume --all is not available over an SSH connection (only this pane)")
+            }
+        }
         // Only ids the methods above know; anything else (e.g. `id` of workspace.* methods) is dropped.
         object["id"] = nil
         return object.isEmpty ? nil : .object(object)
