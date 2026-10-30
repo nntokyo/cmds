@@ -250,6 +250,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     // MARK: Debug
 
+    #if DEBUG
     /// Lights a pane that is not focused (or the focused one when it is alone), to exercise the ring.
     @objc func debugNotifyOtherPane(_ sender: Any?) {
         let panes = controller.workspaces.flatMap(\.orderedPanes)
@@ -271,6 +272,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func debugSetStatus(_ sender: Any?) {
         try? controller.setStatus(workspaceID: nil, text: "Status set at \(Date().formatted(date: .omitted, time: .standard))")
     }
+    #endif
 
     // MARK: Validation
 
