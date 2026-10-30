@@ -75,11 +75,15 @@ public struct StatsSnapshot: Codable, Equatable, Sendable {
     public var workspaces: [WorkspaceStats]
     /// Latest account limits of the coding agents (Claude, Codex); omitted when none is known.
     public var agentLimits: [AgentLimits]?
+    /// Sleep prevention (idle assertion, lid-close option). Omitted by older apps.
+    public var keepAwake: KeepAwakeStatus?
 
-    public init(system: SystemStats?, workspaces: [WorkspaceStats], agentLimits: [AgentLimits]? = nil) {
+    public init(system: SystemStats?, workspaces: [WorkspaceStats], agentLimits: [AgentLimits]? = nil,
+                keepAwake: KeepAwakeStatus? = nil) {
         self.system = system
         self.workspaces = workspaces
         self.agentLimits = agentLimits
+        self.keepAwake = keepAwake
     }
 }
 

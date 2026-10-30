@@ -130,7 +130,7 @@ final class AppController {
         let limits = activeAgentLimits()
         return StatsSnapshot(system: systemStats, workspaces: workspaces.map {
             WorkspaceStats(id: $0.id, cpuPercent: $0.cpuPercent, memoryBytes: $0.memoryBytes)
-        }, agentLimits: limits.isEmpty ? nil : limits)
+        }, agentLimits: limits.isEmpty ? nil : limits, keepAwake: KeepAwakeManager.shared.status)
     }
 
     // MARK: - Agents

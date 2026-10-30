@@ -38,6 +38,7 @@ enum Format {
         } else {
             out = "system  (measuring, try again in a second)\n"
         }
+        if let keepAwake = snapshot.keepAwake { out += "awake   \(keepAwake.summary)\n" }
         out += limits(snapshot.agentLimits ?? [])
         guard !snapshot.workspaces.isEmpty else { return out + "no workspaces\n" }
         let idWidth = snapshot.workspaces.map(\.id.count).max() ?? 0

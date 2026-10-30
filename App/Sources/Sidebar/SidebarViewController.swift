@@ -41,6 +41,8 @@ final class SidebarViewController: NSViewController {
     required init?(coder: NSCoder) { fatalError() }
 
     override func loadView() {
+        NotificationCenter.default.addObserver(self, selector: #selector(keepAwakeChanged),
+                                               name: KeepAwakeManager.didChange, object: nil)
         let column = NSTableColumn(identifier: .init("workspace"))
         tableView.addTableColumn(column)
         tableView.headerView = nil
@@ -140,6 +142,11 @@ final class SidebarViewController: NSViewController {
         updateUsage()
     }
 
+    @objc private func keepAwakeChanged() {
+        guard isViewLoaded else { return }
+        updateUsage()
+    }
+
     @objc private func compactClicked() {
         onToggleCompact?()
     }
@@ -186,6 +193,9 @@ final class SidebarViewController: NSViewController {
             (cell as? CompactWorkspaceCellView)?.updateUsage(with: workspace)
         }
         let limits = controller.activeAgentLimits()
+        let keepAwake = KeepAwakeManager.shared.status
+        compactFooter.update(keepAwake: keepAwake)
+        usageFooter.update(keepAwake: keepAwake)
         if isCompact {
             compactFooter.update(sample: controller.systemSample)
             compactFooter.update(agentLimits: limits)

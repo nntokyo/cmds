@@ -77,6 +77,39 @@ Project file is generated: `xcodegen generate` (do not commit `cmds.xcodeproj`).
     out. Report-driven updates go through `usageChanges` (coalesced to 4/s); only appearing/disappearing agents emit
     `pane` changes (row height).
 
+## Keeping the Mac awake
+
+`App/Sources/App/KeepAwake.swift` (`KeepAwakeManager`); command strings, `pmset -g` parsing and the lid state machine
+in `CmdsCore/KeepAwake.swift` (`SleepDisabledCommand`, `LidSleepController`, unit-tested with a fake `pmset`).
+
+- **Idle sleep (automatic, no admin)**: while cmds runs it holds an IOKit `PreventUserIdleSystemSleep` assertion named
+  "cmds: keeping AI agent sessions running" (cmds › Prevent Idle Sleep, default on; `UserDefaults`
+  `KeepAwakePreventIdleSleep`). cmds › Keep Display Awake (default off, `KeepAwakeKeepDisplayOn`) adds
+  `PreventUserIdleDisplaySleep`. Assertions belong to the process, so they end when cmds quits, crashes or is killed.
+  Check with `pmset -g assertions`. **They do not prevent sleep when the lid is closed.**
+- **Lid closed (opt-in, needs an administrator)**: macOS has no unprivileged API against clamshell sleep. cmds › Keep
+  Awake With Lid Closed… shows a warning, then runs `/usr/bin/pmset -a disablesleep 1` through
+  `NSAppleScript("do shell script … with administrator privileges")`: macOS shows its own password dialog, cmds never
+  sees the password and only ever runs these two fixed commands. Unchecking it (or clicking the footer indicator)
+  runs `/usr/bin/pmset -a disablesleep 0`; so does quitting cmds (`applicationWillTerminate`, one more dialog). The
+  setting is system-wide (`pmset -g` shows `SleepDisabled 1`) and is not tied to the cmds process.
+  - cmds only turns `SleepDisabled` off again if it turned it on itself: it writes `lid-sleep-disabled.json` in the
+    support directory *before* the dialog and removes it only after sleep is restored. If `SleepDisabled` was already
+    on (another tool, or the user), the menu item shows a mixed state and cmds leaves it alone.
+  - Next launch with the marker still there (crash, force quit, cancelled dialog at quit): if `SleepDisabled` is still
+    1, an alert offers "Restore Sleep" (one dialog); if it is already 0, the marker is just removed.
+  - Switching to battery while cmds keeps a closed Mac awake: a notification and an alert offer to turn it off.
+    cmds cannot turn it off without the password, and nothing reacts to a low battery with the lid closed (no root
+    helper; a closed Mac shows no dialogs) — macOS still sleeps/shuts down at its critical battery level.
+  - **Caveat**: if cmds crashes or is killed, the lid keeps not sleeping the Mac until cmds starts again (and the
+    user restores) or the user runs `sudo pmset -a disablesleep 0`. A closed laptop that never sleeps keeps running in
+    a bag: it can overheat and drain the battery.
+  - Status: the sidebar footer shows "Awake (lid closed OK)" (orange, a moon icon in the compact rail) whenever
+    `SleepDisabled` is 1; `cmds stats` has an `awake` line, `system.stats` a `keepAwake` object. `pmset -g` is re-read
+    every 60 s (unprivileged).
+  - Isolated instances (`CMDS_SUPPORT_DIR`) hold the idle assertion (settings in memory only) but never prompt or run
+    `pmset` with privileges; the lid menu item is disabled.
+
 ## Socket API (JSON lines, see `CmdsCore/RPC.swift`)
 
 Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
@@ -85,7 +118,7 @@ Socket: `~/Library/Application Support/cmds/cmds.sock` (mode 0600).
 |---|---|---|
 | `system.ping` | – | `{"pong": true}` |
 | `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
-| `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits]}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known) |
+| `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits], "keepAwake": KeepAwakeStatus}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known; `keepAwake` = `idleAssertion`, `displayAssertion`, `lidCloseDisabled` (system `SleepDisabled`), `lidCloseByCmds`, `lidCloseAvailable`, `onBattery`, see [Keeping the Mac awake](#keeping-the-mac-awake)) |
 | `sync.status` | – | `SyncStatusReport` (iOS sync: `enabled`, `state`, `port`, `fingerprint`, `bonjour`, `pairingWindowOpen`, `pairedDevices`, `bluetooth` {`allowed`, `disabledByEnvironment`, `authorization`, `managerState`, `advertising`, `psm`, `channels`, `status`}, `remote` {`enabled`, `host`, `relayPort`, `forwarding`, `status`}, `clients` [{`deviceName`, `authenticated`, `peer`, `path`, `subscribedPanes`, `bytesSent`, `bytesReceived`, `connectedSince`, `connectedSeconds`}]); local socket only, see [SYNC.md](SYNC.md#testing-on-a-device) |
 | `agent.report` | `pane?`, `usage` (`AgentUsage`), `pid?` (agent process) | – (sets the pane's agent usage; its `limits` become that agent's account limits) |
 | `agent.claude_hook` | `pane?`, `input` (Claude Code hook JSON, object or JSON text) | – (notifies like `cmds hook claude`; never reads the transcript) |
