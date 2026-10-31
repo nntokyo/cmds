@@ -299,15 +299,18 @@ struct TerminalInputBar: View {
                         sendQuickReply(reply, withEnter: true)
                     } label: {
                         Text(reply).font(.callout).lineLimit(1)
-                            .frame(minHeight: 28)
+                            .frame(minWidth: 32, maxWidth: 240, minHeight: 32)
                     }
                     .buttonStyle(.bordered)
                     .tint(.accentColor)
-                    .accessibilityHint("Sends this text and Return")
+                    .accessibilityHint(lineMode && !text.isEmpty ? "Adds this text to the line being typed" : "Sends this text and Return")
+                    .accessibilityAction(named: Text("Insert without Enter")) { sendQuickReply(reply, withEnter: false) }
                     .accessibilityIdentifier("quickReply\(index)")
                     .contextMenu {
                         Button("Insert without Enter") { sendQuickReply(reply, withEnter: false) }
                     }
+                    // A button (and its menu) is never reused for another shortcut after the list is edited.
+                    .id(reply)
                 }
             }
             .padding(.horizontal, 8)
@@ -353,17 +356,19 @@ struct TerminalInputBar: View {
         text = ""
     }
 
-    /// Line mode: what was typed so far goes first, so a reply can finish a composed line;
-    /// without Enter, the reply is added to the line being composed instead.
+    /// Tap sends the shortcut and Return; Insert types it without Return. In line mode a shortcut never
+    /// sends a line you are still composing: with text in the field (or for Insert) it is added to the
+    /// field instead, for you to send with return.
     private func sendQuickReply(_ reply: String, withEnter: Bool) {
-        if lineMode && !withEnter {
+        // First, so the field's ctrl handling does not turn an inserted one-letter shortcut into a chord.
+        ctrlLatched = false
+        if lineMode && (!withEnter || !text.isEmpty) {
             text += reply
             lineFieldFocused = true
             return
         }
-        flushLine()
         sendToPane(reply, withEnter: withEnter)
-        ctrlLatched = false
+        if !lineMode && !withEnter { directFocused = true }
     }
 
     private func send(withEnter: Bool) {

@@ -464,6 +464,16 @@
         }
       }
     },
+    "Adds this text to the line being typed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力中の行にこのテキストを追加します"
+          }
+        }
+      }
+    },
     "Allow camera access for cmds in Settings, or pair without the camera." : {
       "localizations" : {
         "ja" : {
@@ -1842,12 +1852,12 @@
         }
       }
     },
-    "Shown above the key bar. Tap one to send its text and Return, for example a reply to an agent or a command such as claude. Long-press to insert it without Return." : {
+    "Shown above the key bar. Tap one to send its text and Return, for example a reply to an agent or a command such as claude. Long-press to insert it without Return. In line mode, while you are typing a line, it is added to the line instead." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キーバーの上に表示されます。タップするとテキストを送信して改行します（エージェントへの返答や、claude などのコマンド）。長押しすると改行せずに入力します。"
+            "value" : "キーバーの上に表示されます。タップするとテキストを送信して改行します（エージェントへの返答や、claude などのコマンド）。長押しすると改行せずに入力します。行入力モードで入力中の行があるときは、その行に追加します。"
           }
         }
       }
