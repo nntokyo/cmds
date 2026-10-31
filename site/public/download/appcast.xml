@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>cmds</title>
+    <link>https://cmds.n-n.tokyo/</link>
+    <description>Updates of cmds for macOS</description>
+    <language>en</language>
+    <item>
+      <title>cmds 0.2.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.2.0</link>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>0.2.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 31 Oct 2026 17:56:10 GMT</pubDate>
+      <description><![CDATA[
+<h3>自動アップデート</h3>
+<p>cmds は 1 日 1 回アップデートを確認し、新しい版をバックグラウンドでダウンロードして、終了時にインストールします。cmds › アップデートを確認… ですぐに入れられます。cmds › 設定… › アップデート でオフにできます。</p>
+<h3>Automatic updates</h3>
+<p>cmds checks for updates once a day, downloads a new version in the background and installs it when it quits. cmds › Check for Updates… installs it right away; cmds › Settings… › Updates turns it off.</p>
+      ]]></description>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.2.0/cmds-0.2.0.dmg" length="12812127" type="application/octet-stream" sparkle:edSignature="QgvijKb91+kJObBwC/F+GSf/Y7YuurIkNalKBc/m/jnew4NNU6WOnglLzyV0ADynqCH79HizzGN/x7IJDJAfAw=="></enclosure>
+    </item>
+  </channel>
+</rss><!-- sparkle-signatures:
+edSignature: oixwAHoU6KItntQe2jOa8oTcU3+UiGE2koZMEL2fstraLmPT8TJqHUlUZ9mI5FHWlz4xxPVimlUc864rNgo/Aw==
+length: 1839
+-->
