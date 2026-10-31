@@ -134,7 +134,8 @@ Static files in `site/public` (no build step), Firebase Hosting in project `star
   Permissions-Policy) and caching: HTML revalidates; `/assets/**` and `/img/**` are cached for a year as immutable,
   so **give a changed file a new name** (`site-2.css`, new image name) instead of overwriting it. DMGs are versioned
   and immutable; `latest.json` / `SHA256SUMS` are cached 5 minutes.
-- The DMG, `SHA256SUMS` and `latest.json` in `site/public/download/` are not committed (`.gitignore`).
+- The DMG, `SHA256SUMS` and `latest.json` in `site/public/download/` are not committed (`.gitignore`). Deploying from
+  another checkout or worktree removes them from the site unless you copy them in first.
 - Firebase Hosting on the Spark plan refuses executable files such as `.dmg` ("Executable files are forbidden"), so
   the DMG is served from the GitHub release (`https://github.com/nntokyo/cmds/releases/download/vX.Y.Z/cmds-X.Y.Z.dmg`)
   and the site links there; remove the DMG from `site/public/download/` before deploying.
