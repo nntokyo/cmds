@@ -130,7 +130,7 @@ Static files in `site/public` (no build step), Firebase Hosting in project `star
 - Deploy: `cd site && firebase deploy --only hosting:cmds`. One-time, before the first deploy:
   `firebase hosting:sites:create cmds-n-n-tokyo --project startup-project-4f8f8`, then add the custom domain in the
   Firebase console and its DNS records.
-- `firebase.json` sets the security headers (CSP without scripts, HSTS, nosniff, Referrer-Policy,
+- `firebase.json` sets the security headers (CSP allowing only `/assets/*.js` and the Google Analytics endpoints, HSTS, nosniff, Referrer-Policy,
   Permissions-Policy) and caching: HTML revalidates; `/assets/**` and `/img/**` are cached for a year as immutable,
   so **give a changed file a new name** (`site-2.css`, new image name) instead of overwriting it. DMGs are versioned
   and immutable; `latest.json` / `SHA256SUMS` are cached 5 minutes.
@@ -141,14 +141,23 @@ Static files in `site/public` (no build step), Firebase Hosting in project `star
 - Screenshots come from an isolated demo instance (`CMDS_SUPPORT_DIR`, sync off, a fake home with demo repos,
   synthetic agent reports through `cmds hook claude-status` / `cmds hook claude`) and the companion with `-mock` in
   the simulator, converted to WebP (1600/800 px). Never use screenshots of a real working instance.
+- Measurement (privacy policy section 6 discloses it):
+  - Google Analytics 4: account N.N, property `cmds.n-n.tokyo` (561703084), stream measurement ID `G-6JN971XLBV`,
+    loaded by `assets/analytics-1.js`. Besides page views it sends `download_mac` (DMG link), `app_store_click` and
+    `github_click`; see Reports › Engagement › Events, or Realtime.
+  - Search Console: URL-prefix property `https://cmds.n-n.tokyo/`, verified by the `google-site-verification` meta
+    tag in `index.html` (keep it), sitemap submitted.
+  - Actual DMG downloads (including direct links from GitHub): `gh api repos/nntokyo/cmds/releases --jq
+    '.[] | .tag_name as $t | .assets[] | "\($t) \(.download_count)"'`.
+  - iOS installs and App Store page views: App Store Connect › Analytics.
 
 ### iOS/iPadOS companion
 
-Not distributed yet. App Store or TestFlight distribution needs an App Store Connect app record for
-`tokyo.n-n.cmds.companion` (not created), an App Store distribution profile, the app's privacy details (no data
+On the App Store since 0.1.0 (2026-10-31, "cmds Companion", id6828885265). Store releases need the App Store
+Connect app record for `tokyo.n-n.cmds.companion`, an App Store distribution profile, the app's privacy details (no data
 collected) and review notes (pairing needs a Mac: the reviewer can use **Try with demo data**). Then: archive the
 `CmdsCompanion` scheme (Release) for "Any iOS Device", upload with Xcode Organizer or `xcrun altool`/Transporter,
-test through TestFlight, submit. Until then, build it to a device with Xcode or `xcrun devicectl device install app`
+test through TestFlight, submit. For development, build it to a device with Xcode or `xcrun devicectl device install app`
 ([testing.md](testing.md#testing-sync-on-a-device)).
 
 ### Local builds for your own Macs
