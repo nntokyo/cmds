@@ -14,7 +14,7 @@
 <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/assets/site-1.css">
-<script src="/assets/analytics-1.js" defer></script>
+<script src="/assets/analytics-2.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -54,8 +54,9 @@
   <h2>5. In-app browser</h2>
   <p>Websites you open in the in-app browser receive your IP address and other request data like in any browser, and their own policies apply. Text typed into the address bar that is not a URL is sent to Google Search.</p>
 
-  <h2>6. This website</h2>
-  <p>This website is served by Google's Firebase Hosting. To deliver it, Google may process access records (IP address, user agent, time and similar). The website uses Google Analytics to understand how it is used. Google Analytics sets cookies and sends Google the pages viewed, link clicks (download, App Store, GitHub), approximate region, and browser and device type. We receive only aggregated reports that do not identify you. See <a href="https://policies.google.com/technologies/partner-sites">how Google uses this data</a>. You can stop it with the <a href="https://tools.google.com/dlpage/gaoptout">opt-out add-on</a> or your browser settings. The website shows no ads.</p>
+  <h2 id="analytics">6. This website</h2>
+  <p>This website is served by Google's Firebase Hosting. To deliver it, Google may process access records (IP address, user agent, time and similar). The website uses Google Analytics to understand how it is used. Google Analytics sets cookies and sends Google the pages viewed, link clicks (download, App Store, GitHub), approximate region, and browser and device type. We receive only aggregated reports that do not identify you. See <a href="https://policies.google.com/technologies/partner-sites">how Google uses this data</a>. You can stop it with the setting below, the <a href="https://tools.google.com/dlpage/gaoptout">opt-out add-on</a> or your browser settings. The website shows no ads.</p>
+  <p hidden><label><input type="checkbox" id="analytics-toggle" checked> Allow analytics on this website in this browser</label><br><small>When off, Google Analytics is not loaded and its cookies are deleted. The choice is saved in this browser.</small></p>
 
   <h2>7. Contact</h2>
   <p>Questions about this policy: N.N. LLC, <a href="mailto:info@n-n.tokyo">info@n-n.tokyo</a>.</p>
@@ -73,6 +74,7 @@
     <nav aria-label="Footer">
       <a href="/en/">Home</a>
       <a href="/en/guide/">How to use</a>
+      <a href="/en/privacy/#analytics">Analytics settings</a>
       <a href="/privacy/" hreflang="ja" lang="ja">日本語</a>
     </nav>
   </div>
