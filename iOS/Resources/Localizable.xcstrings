@@ -444,6 +444,16 @@
         }
       }
     },
+    "Add Shortcut" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカットを追加"
+          }
+        }
+      }
+    },
     "Add this line to ~/.ssh/authorized_keys of that user on the relay host (replace an older cmds line for this device: it lists the relay ports of all your Macs). It only allows forwarding to those ports: no shell. The private key never leaves this device." : {
       "localizations" : {
         "ja" : {
@@ -460,6 +470,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "設定でcmdsのカメラへのアクセスを許可するか、カメラを使わずにペアリングしてください。"
+          }
+        }
+      }
+    },
+    "Approved" : {
+      "comment" : "quick reply sent to a coding agent",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "承認"
           }
         }
       }
@@ -671,6 +692,17 @@
         }
       }
     },
+    "Consider" : {
+      "comment" : "quick reply sent to a coding agent",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "考慮"
+          }
+        }
+      }
+    },
     "Context" : {
       "comment" : "agent context window",
       "localizations" : {
@@ -840,6 +872,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "完了"
+          }
+        }
+      }
+    },
+    "Double-check it" : {
+      "comment" : "quick reply sent to a coding agent",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再確認"
           }
         }
       }
@@ -1030,6 +1073,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "画像"
+          }
+        }
+      }
+    },
+    "Insert without Enter" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enterなしで入力"
           }
         }
       }
@@ -1588,6 +1641,16 @@
         }
       }
     },
+    "Restore Defaults" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初期設定に戻す"
+          }
+        }
+      }
+    },
     "Retry" : {
       "localizations" : {
         "ja" : {
@@ -1708,6 +1771,16 @@
         }
       }
     },
+    "Sends this text and Return" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このテキストを送信して改行します"
+          }
+        }
+      }
+    },
     "Session %@" : {
       "comment" : "agent session length",
       "localizations" : {
@@ -1739,6 +1812,16 @@
         }
       }
     },
+    "Shortcut buttons" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ショートカットボタン"
+          }
+        }
+      }
+    },
     "Show Workspace on Mac" : {
       "localizations" : {
         "ja" : {
@@ -1759,6 +1842,16 @@
         }
       }
     },
+    "Shown above the key bar. Tap one to send its text and Return, for example a reply to an agent or a command such as claude. Long-press to insert it without Return." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーバーの上に表示されます。タップするとテキストを送信して改行します（エージェントへの返答や、claude などのコマンド）。長押しすると改行せずに入力します。"
+          }
+        }
+      }
+    },
     "Spend limit" : {
       "comment" : "agent usage limit",
       "localizations" : {
@@ -1766,6 +1859,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "利用額の上限"
+          }
+        }
+      }
+    },
+    "Suggest an alternative" : {
+      "comment" : "quick reply sent to a coding agent",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別案"
           }
         }
       }
@@ -1837,6 +1941,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文字サイズ"
+          }
+        }
+      }
+    },
+    "Text to send" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "送信するテキスト"
           }
         }
       }

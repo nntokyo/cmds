@@ -53,7 +53,7 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   limits. Long-press a workspace for **Show on Mac**.
 - **Panes**: each terminal's live screen (no scrollback), with pinch to zoom; it follows the cursor row. The key bar
   has esc, tab, a ctrl latch, arrows, home/end, ^C, ^D, delete and return. Two input modes: *Direct* sends every
-  keystroke at once; *Line* lets you compose a line and send it with return. Long-press Send for **Send without Enter**. With a hardware keyboard (iPad), tap the screen and keys go
+  keystroke at once; *Line* lets you compose a line and send it with return. Long-press Send for **Send without Enter**. Shortcut buttons above the key bar send a canned text and Return: by default 承認, 考慮, 別案, 再確認 (Approved, Consider, Suggest an alternative, Double-check it in English), `claude` and `codex`; long-press one to insert it without Return. Edit, reorder or remove them in ⋯ › **Settings…**. With a hardware keyboard (iPad), tap the screen and keys go
   straight to the pane. The toolbar has **Show Workspace on Mac** and **Focus Pane on Mac**.
 - **Text size**: ⋯ › **Settings…** on the workspace list. **Fit to width** (default) sizes the font so the whole
   terminal width fits the screen; **Fixed size** uses a font size you pick (6–24 pt) and wide terminals scroll

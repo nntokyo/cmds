@@ -190,6 +190,7 @@ struct TerminalInputBar: View {
     /// Direct: every keystroke goes to the terminal (the Mac's line editor and cursor are the truth).
     /// Line: compose a whole line locally and send it with Enter.
     @AppStorage("inputMode") private var lineMode = false
+    @AppStorage(QuickReplies.key) private var quickReplies = QuickReplies.defaultStorage
 
     private struct KeyButton: Identifiable {
         /// Also the accessibility identifier (UI test drivers tap keys by it, e.g. `tap:left`).
@@ -218,6 +219,10 @@ struct TerminalInputBar: View {
 
     var body: some View {
         VStack(spacing: 6) {
+            let replies = QuickReplies.decode(quickReplies)
+            if !replies.isEmpty {
+                quickReplyRow(replies)
+            }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
                     Button {
@@ -286,6 +291,29 @@ struct TerminalInputBar: View {
         .background(.bar)
     }
 
+    private func quickReplyRow(_ replies: [String]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(Array(replies.enumerated()), id: \.offset) { index, reply in
+                    Button {
+                        sendQuickReply(reply, withEnter: true)
+                    } label: {
+                        Text(reply).font(.callout).lineLimit(1)
+                            .frame(minHeight: 28)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.accentColor)
+                    .accessibilityHint("Sends this text and Return")
+                    .accessibilityIdentifier("quickReply\(index)")
+                    .contextMenu {
+                        Button("Insert without Enter") { sendQuickReply(reply, withEnter: false) }
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+
     private var lineField: some View {
         HStack(spacing: 8) {
             TextField(ctrlLatched ? "ctrl + letter" : "Type a line", text: $text)
@@ -325,11 +353,28 @@ struct TerminalInputBar: View {
         text = ""
     }
 
+    /// Line mode: what was typed so far goes first, so a reply can finish a composed line;
+    /// without Enter, the reply is added to the line being composed instead.
+    private func sendQuickReply(_ reply: String, withEnter: Bool) {
+        if lineMode && !withEnter {
+            text += reply
+            lineFieldFocused = true
+            return
+        }
+        flushLine()
+        sendToPane(reply, withEnter: withEnter)
+        ctrlLatched = false
+    }
+
     private func send(withEnter: Bool) {
-        client.sendText(text, to: paneID)
-        if withEnter { client.sendKey(.enter, to: paneID) }
+        sendToPane(text, withEnter: withEnter)
         text = ""
         lineFieldFocused = true
+    }
+
+    private func sendToPane(_ string: String, withEnter: Bool) {
+        client.sendText(string, to: paneID)
+        if withEnter { client.sendKey(.enter, to: paneID) }
     }
 }
 
