@@ -110,7 +110,7 @@ notifications. Check them on the signed build before publishing it.
    - creates `build/release/cmds-X.Y.Z.dmg` (the app and an `Applications` link) and signs it,
    - submits it with `xcrun notarytool submit --keychain-profile cmds-notary --wait`, staples the ticket and checks
      it with `stapler validate` and `spctl`,
-   - writes `site/public/download/cmds-X.Y.Z.dmg`, `SHA256SUMS` and `latest.json` (version, size, SHA-256).
+   - writes `site/public/download/SHA256SUMS` and `latest.json` (version, size, SHA-256, the GitHub download URL).
    `--skip-notarize` stops after the signed DMG (for testing; not for publishing).
 6. Smoke-test the stapled DMG on a Mac: open it, drag cmds to Applications, start it. Gatekeeper must not warn.
    Check terminal, browser, preview, sync with a phone, notifications, Install Command Line Tool…, and that
@@ -151,11 +151,13 @@ Info.plist keys are in `project.yml`).
   copy built with a higher version and build number (`xcodebuild archive … MARKETING_VERSION=X CURRENT_PROJECT_VERSION=N`
   and `-exportArchive` with `destination=export`); zip the newer one (`ditto -c -k --keepParent`), write a test feed
   with `APPCAST_OUT` and `APPCAST_DOWNLOAD_URL` and serve both over HTTPS (a Firebase preview channel); copy the
-  candidate to a temporary folder and start it isolated with `CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1` and
-  `CMDS_UPDATE_FEED_URL`; after the download, quit it with its own CLI (`env -u CMDS_SOCKET_PATH
-  CMDS_SUPPORT_DIR=… …/cmds.app/Contents/Resources/bin/cmds quit`; never the app in use) and check that the copy now
-  has the newer version and a valid signature. Sparkle keeps its state in the `tokyo.n-n.cmds` defaults domain even
-  for isolated instances: delete only the `SU*` keys the test added.
+  candidate to a temporary folder (the test feed is ignored for a copy in an Applications folder, and for anything but
+  https) and start it isolated with `CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1` and `CMDS_UPDATE_FEED_URL`; after the
+  download, quit it with its own CLI (`env -u CMDS_SOCKET_PATH -u CMDS_PANE_ID -u CMDS_WORKSPACE_ID CMDS_SUPPORT_DIR=…
+  …/cmds.app/Contents/Resources/bin/cmds quit`; check with `identify` first that it is not the app in use) and check
+  that the copy now has the newer version and a valid signature. Sparkle keeps its state in the `tokyo.n-n.cmds`
+  defaults domain even for isolated instances: the test needs automatic download on there, and afterwards delete only
+  the `SU*` keys the test added. A feed edited after signing must be refused (no download).
 
 ### Website (cmds.n-n.tokyo)
 

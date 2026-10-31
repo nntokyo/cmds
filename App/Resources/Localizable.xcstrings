@@ -721,12 +721,22 @@
         }
       }
     },
-    "Automatic updates work in the release downloaded from cmds.n-n.tokyo, not in this build.": {
+    "Automatic updates are not available: %@": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動アップデートは cmds.n-n.tokyo からダウンロードしたリリース版で使えます。このビルドでは使えません。"
+            "value": "自動アップデートを使えません：%@"
+          }
+        }
+      }
+    },
+    "Automatic updates work in the release downloaded from cmds.n-n.tokyo, not in this build or instance.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動アップデートは cmds.n-n.tokyo からダウンロードしたリリース版で使えます。このビルド（またはテスト用の起動）では使えません。"
           }
         }
       }
@@ -997,6 +1007,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アップデートを自動的に確認"
+          }
+        }
+      }
+    },
+    "Checks cmds.n-n.tokyo once a day and asks before downloading an update.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 日 1 回 cmds.n-n.tokyo を確認し、アップデートをダウンロードする前に確認します。"
           }
         }
       }
@@ -3882,6 +3902,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsはiOS同期用の新しい鍵と証明書を作成し、すべてのiPhone/iPadのペアリングを解除します。それぞれ再度ペアリングが必要で、それまではこのMacの識別情報が変わったと表示されます。"
+          }
+        }
+      }
+    },
+    "cmds does not look for updates by itself. cmds › Check for Updates… looks now.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動では確認しません。cmds › アップデートを確認… で今すぐ確認できます。"
           }
         }
       }

@@ -212,16 +212,34 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         refreshUpdates()
     }
 
+    /// Also when the window becomes key: Sparkle's own update alert changes the same switches.
     private func refreshUpdates() {
         let updater = Updater.shared
         let available = updater.updater != nil
-        checkUpdatesCheckbox.state = updater.checksAutomatically ? .on : .off
-        installUpdatesCheckbox.state = updater.installsAutomatically ? .on : .off
+        let checks = updater.checksAutomatically
+        let installs = updater.installsAutomatically
+        checkUpdatesCheckbox.state = checks ? .on : .off
+        installUpdatesCheckbox.state = installs ? .on : .off
         checkUpdatesCheckbox.isEnabled = available
-        installUpdatesCheckbox.isEnabled = available && updater.checksAutomatically
-        updatesNote.stringValue = available
-            ? String(localized: "Checks cmds.n-n.tokyo once a day. A downloaded update is installed when cmds quits; cmds › Check for Updates… installs it now.")
-            : String(localized: "Automatic updates work in the release downloaded from cmds.n-n.tokyo, not in this build.")
+        installUpdatesCheckbox.isEnabled = available && checks
+        switch updater.status {
+        case .running:
+            updatesNote.stringValue = !checks
+                ? String(localized: "cmds does not look for updates by itself. cmds › Check for Updates… looks now.")
+                : installs
+                ? String(localized: "Checks cmds.n-n.tokyo once a day. A downloaded update is installed when cmds quits; cmds › Check for Updates… installs it now.")
+                : String(localized: "Checks cmds.n-n.tokyo once a day and asks before downloading an update.")
+        case .starting:
+            updatesNote.stringValue = ""
+        case .notThisBuild:
+            updatesNote.stringValue = String(localized: "Automatic updates work in the release downloaded from cmds.n-n.tokyo, not in this build or instance.")
+        case .failed(let message):
+            updatesNote.stringValue = String(localized: "Automatic updates are not available: \(message)")
+        }
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        refreshUpdates()
     }
 
     private func select(_ zoom: Double, in popup: NSPopUpButton) {
