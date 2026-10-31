@@ -219,8 +219,9 @@ struct TerminalInputBar: View {
 
     var body: some View {
         VStack(spacing: 6) {
-            if !QuickReplies.decode(quickReplies).isEmpty {
-                quickReplyRow
+            let replies = QuickReplies.decode(quickReplies)
+            if !replies.isEmpty {
+                quickReplyRow(replies)
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
@@ -290,10 +291,10 @@ struct TerminalInputBar: View {
         .background(.bar)
     }
 
-    private var quickReplyRow: some View {
+    private func quickReplyRow(_ replies: [String]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
-                ForEach(Array(QuickReplies.decode(quickReplies).enumerated()), id: \.offset) { index, reply in
+                ForEach(Array(replies.enumerated()), id: \.offset) { index, reply in
                     Button {
                         sendQuickReply(reply, withEnter: true)
                     } label: {
@@ -361,16 +362,19 @@ struct TerminalInputBar: View {
             return
         }
         flushLine()
-        client.sendText(reply, to: paneID)
-        if withEnter { client.sendKey(.enter, to: paneID) }
+        sendToPane(reply, withEnter: withEnter)
         ctrlLatched = false
     }
 
     private func send(withEnter: Bool) {
-        client.sendText(text, to: paneID)
-        if withEnter { client.sendKey(.enter, to: paneID) }
+        sendToPane(text, withEnter: withEnter)
         text = ""
         lineFieldFocused = true
+    }
+
+    private func sendToPane(_ string: String, withEnter: Bool) {
+        client.sendText(string, to: paneID)
+        if withEnter { client.sendKey(.enter, to: paneID) }
     }
 }
 
