@@ -7,8 +7,8 @@
 
 | What | Where | Current |
 |---|---|---|
-| App version (`CFBundleShortVersionString`) | `MARKETING_VERSION` in `project.yml`, shared by the Mac app and the companion | 0.1.2 (Mac release: 0.1.1) |
-| Build number (`CFBundleVersion`) | `CURRENT_PROJECT_VERSION` in `project.yml` | 3 |
+| App version (`CFBundleShortVersionString`) | `MARKETING_VERSION` in `project.yml`, shared by the Mac app and the companion | 0.1.3 (Mac release: 0.1.1) |
+| Build number (`CFBundleVersion`) | `CURRENT_PROJECT_VERSION` in `project.yml` | 4 |
 | Sync protocol | `SyncProtocol.version` (`CmdsCore/Sync/SyncProtocol.swift`); checked in `hello`, both sides must match ([sync-protocol.md](sync-protocol.md#versioning)) | 2 |
 | `cmds-remote.sh` | `CMDS_REMOTE_VERSION` in `CmdsCore/RemoteHelperScript.swift` | 1 |
 | Workspace export bundle | `WorkspaceBundle.currentVersion` (`CmdsCore/WorkspaceTransfer.swift`); newer bundles are refused | 1 |
@@ -143,8 +143,12 @@ Static files in `site/public` (no build step), Firebase Hosting in project `star
   the simulator, converted to WebP (1600/800 px). Never use screenshots of a real working instance.
 - Measurement (privacy policy section 6 discloses it):
   - Google Analytics 4: account N.N, property `cmds.n-n.tokyo` (561703084), stream measurement ID `G-6JN971XLBV`,
-    loaded by `assets/analytics-1.js`. Besides page views it sends `download_mac` (DMG link), `app_store_click` and
-    `github_click`; see Reports › Engagement › Events, or Realtime.
+    loaded by `assets/analytics-N.js` (give it a new number on every change; assets are cached as immutable).
+    Besides page views it sends `download_mac` (DMG link), `app_store_click` and `github_click`; see Reports ›
+    Engagement › Events, or Realtime. It is not loaded on the privacy pages, which hold the visitor opt-out;
+    cookies are host-only with the prefix `cmds` (sibling n-n.tokyo sites keep their own `_ga`); consent mode
+    denies analytics cookies in the EEA, the UK and Switzerland; Google signals and ad features are off. Keep
+    privacy policy section 6 in step with any change here.
   - Search Console: URL-prefix property `https://cmds.n-n.tokyo/`, verified by the `google-site-verification` meta
     tag in `index.html` (keep it), sitemap submitted.
   - Actual DMG downloads (including direct links from GitHub): `gh api repos/nntokyo/cmds/releases --jq

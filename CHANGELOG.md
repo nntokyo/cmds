@@ -7,14 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-## [0.1.2] - 2026-10-31
+## [0.1.3] - 2026-10-31
 
 iPhone/iPad only; the Mac app is unchanged from 0.1.1.
 
 ### Added
 
 - iPhone/iPad: shortcut buttons above the key bar that send a canned reply or command with Return (承認, 考慮, 別案,
-  再確認, `claude`, `codex` by default), editable in Settings (#8).
+  再確認, `claude`, `codex` by default), editable in Settings (#8). In line mode, while a line is being typed, a
+  shortcut is added to it instead of sending it.
+
+## [0.1.2] - 2026-10-31 [YANKED]
+
+Withdrawn from App Review before release; its changes ship in 0.1.3.
 
 ## [0.1.1] - 2026-10-31
 
@@ -107,7 +112,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.1.2...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.1.1...master
+[0.1.3]: https://github.com/nntokyo/cmds/compare/v0.1.1...master
 [0.1.2]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/nntokyo/cmds/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/nntokyo/cmds/releases/tag/v0.1.0

@@ -44,6 +44,7 @@ struct TerminalSettingsView: View {
     @AppStorage(TerminalTextSettings.rememberZoomKey) private var rememberZoom = false
     @AppStorage(QuickReplies.key) private var quickRepliesStorage = QuickReplies.defaultStorage
     @State private var quickReplies: [QuickReplyRow] = []
+    @State private var quickRepliesLoaded = false
 
     private struct QuickReplyRow: Identifiable {
         let id = UUID()
@@ -93,8 +94,16 @@ struct TerminalSettingsView: View {
                 }
                 quickReplySection
             }
-            .onAppear { quickReplies = QuickReplies.decode(quickRepliesStorage).map { QuickReplyRow(text: $0) } }
-            .onChange(of: quickReplies.map(\.text)) { _, new in quickRepliesStorage = QuickReplies.encode(new) }
+            .onAppear {
+                guard !quickRepliesLoaded else { return }
+                quickRepliesLoaded = true
+                quickReplies = QuickReplies.decode(quickRepliesStorage).map { QuickReplyRow(text: $0) }
+            }
+            .onChange(of: quickReplies.map(\.text)) { _, new in
+                // Only real edits are saved: untouched defaults keep following the device language.
+                let encoded = QuickReplies.encode(new)
+                if encoded != quickRepliesStorage { quickRepliesStorage = encoded }
+            }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -123,7 +132,7 @@ struct TerminalSettingsView: View {
                 EditButton().font(.footnote)
             }
         } footer: {
-            Text("Shown above the key bar. Tap one to send its text and Return, for example a reply to an agent or a command such as claude. Long-press to insert it without Return.")
+            Text("Shown above the key bar. Tap one to send its text and Return, for example a reply to an agent or a command such as claude. Long-press to insert it without Return. In line mode, while you are typing a line, it is added to the line instead.")
         }
     }
 }
