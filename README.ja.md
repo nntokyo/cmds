@@ -137,6 +137,7 @@ cmdsは[GNU General Public License v3.0](LICENSE)のフリーソフトウェア�
 | コンポーネント | 使用箇所 | ライセンス |
 |---|---|---|
 | [Ghostty](https://github.com/ghostty-org/ghostty)（libghostty、terminfoとシェル統合のリソース。サブモジュール`vendor/ghostty`） | Macアプリ | MIT（[vendor/ghostty/LICENSE](https://github.com/ghostty-org/ghostty/blob/main/LICENSE)）。Ghostty自身の依存関係はGhosttyのリポジトリを参照 |
+| [Sparkle](https://github.com/sparkle-project/Sparkle) 2（自動アップデート） | Macアプリ | MIT（[LICENSE](https://github.com/sparkle-project/Sparkle/blob/2.x/LICENSE)） |
 | [SwiftNIO SSH](https://github.com/apple/swift-nio-ssh)、[SwiftNIO](https://github.com/apple/swift-nio)、[SwiftNIO Transport Services](https://github.com/apple/swift-nio-transport-services)、[Swift Crypto](https://github.com/apple/swift-crypto)と、その依存先のswift-asn1、swift-atomics、swift-collections、swift-system | iOSコンパニオン（`Packages/CmdsSSH`） | Apache-2.0 |
 
-MacアプリとCLIは、libghostty以外にはAppleのフレームワークだけを使っています。
+Macアプリが使うのは、libghosttyとSparkleのほかはAppleのフレームワークだけです。CLIはAppleのフレームワークだけを使っています。

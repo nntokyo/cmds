@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+Mac only; the iPhone/iPad app is unchanged from 0.1.3.
+
+### Added
+
+- Mac: automatic updates (Sparkle). cmds checks cmds.n-n.tokyo once a day, downloads a new release in the background
+  and installs it when it quits; cmds › Check for Updates… installs it right away, and cmds › Settings… › Updates
+  turns either off. Updates and the update feed are EdDSA-signed. Only the downloaded release updates itself, and the
+  first update to this version is manual (#13).
+
 ## [0.1.3] - 2026-10-31
 
 iPhone/iPad only; the Mac app is unchanged from 0.1.1.

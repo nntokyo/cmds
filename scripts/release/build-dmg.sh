@@ -131,9 +131,17 @@ if [ "$DRY_RUN" = 0 ]; then
     || die "Ghostty's terminfo / shell integration are not in the app (vendor/ghostty/zig-out/share was missing at build time)"
 fi
 
-# Inside-out: nested code first (the bundled CLI), then the app. No --deep: it would apply the app's entitlements
-# to the CLI. Every Mach-O must carry the hardened runtime and a secure timestamp, or notarization fails.
+# Inside-out: nested code first (the bundled CLI, Sparkle's helpers and framework), then the app. No --deep: it
+# would apply the app's entitlements to them. Every Mach-O must carry the hardened runtime and a secure timestamp,
+# or notarization fails. Sparkle's order and the Downloader's own entitlements follow Sparkle's documentation.
 run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$APP/Contents/Resources/bin/cmds"
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE/Versions/B/XPCServices/Installer.xpc"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp --preserve-metadata=entitlements \
+  "$SPARKLE/Versions/B/XPCServices/Downloader.xpc"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE/Versions/B/Autoupdate"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE/Versions/B/Updater.app"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE"
 run codesign --force --sign "$IDENTITY" --options runtime --timestamp --entitlements "$ENTITLEMENTS" "$APP"
 
 log "Verify signature"

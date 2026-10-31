@@ -5,15 +5,18 @@
 
 ## Install
 
-cmds has no prebuilt download yet: build it from source as described in the
-[README](../../README.md#build-from-source) (Apple silicon Mac, macOS 14 or later).
+Download the notarized DMG from [cmds.n-n.tokyo](https://cmds.n-n.tokyo/) (Apple silicon Mac, macOS 14 or later), or
+build from source as described in the [README](../../README.md#build-from-source).
 
-1. Copy the built `cmds.app` to `/Applications` (or `~/Applications`) and open it from there. Keep it in one place:
+1. Drag `cmds.app` to `/Applications` (or `~/Applications`) and open it from there. Keep it in one place:
    macOS ties the firewall and notification permissions to the app's path and signature.
 2. If the macOS firewall is on, macOS asks whether cmds may accept incoming connections. Choose **Allow** if you want
    to use the iPhone companion; the terminal works either way.
 3. Allow notifications when asked, so panes that need attention can notify you while cmds is in the background.
-4. Optional: **cmds › Install Command Line Tool…** links `/usr/local/bin/cmds` to the CLI inside the app (asks for an
+4. Updates (the downloaded release, 0.2.0 and later): cmds checks cmds.n-n.tokyo once a day, downloads a new version
+   in the background and installs it when cmds quits; **cmds › Check for Updates…** installs it now. Turn either off in
+   **cmds › Settings… › Updates**. Builds from source never update themselves.
+5. Optional: **cmds › Install Command Line Tool…** links `/usr/local/bin/cmds` to the CLI inside the app (asks for an
    administrator password if needed), so `cmds` also works in other terminals. Terminals inside cmds have it already.
 
 ## Your first workspace
