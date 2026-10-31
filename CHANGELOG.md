@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-01
+
+Mac only; the iPhone/iPad app is unchanged from 0.1.3.
+
+### Added
+
+- Mac: automatic updates (Sparkle). cmds checks cmds.n-n.tokyo once a day, downloads a new release in the background
+  and installs it when it quits; cmds › Check for Updates… installs it right away, and cmds › Settings… › Updates
+  turns either off. Updates and the update feed are EdDSA-signed. Only the downloaded release updates itself, and the
+  first update to this version is manual (#13).
+
 ## [0.1.3] - 2026-10-31
 
 iPhone/iPad only; the Mac app is unchanged from 0.1.1.
@@ -112,7 +123,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.1.1...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.2.0...master
+[0.2.0]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.2.0
 [0.1.3]: https://github.com/nntokyo/cmds/compare/v0.1.1...master
 [0.1.2]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/nntokyo/cmds/compare/v0.1.0...v0.1.1

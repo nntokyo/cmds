@@ -46,7 +46,7 @@
         ]
       },
       {
-        "source": "/download/@(latest.json|SHA256SUMS)",
+        "source": "/download/@(latest.json|SHA256SUMS|appcast.xml)",
         "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
       }
     ]

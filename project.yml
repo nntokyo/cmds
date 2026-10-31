@@ -13,8 +13,8 @@ settings:
     SWIFT_EMIT_LOC_STRINGS: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     DEVELOPMENT_LANGUAGE: en
-    MARKETING_VERSION: "0.1.3"
-    CURRENT_PROJECT_VERSION: "4"
+    MARKETING_VERSION: "0.2.0"
+    CURRENT_PROJECT_VERSION: "5"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 packages:
@@ -23,6 +23,10 @@ packages:
   # SSH client for the companion's remote access (Apple's swift-nio-ssh; see Packages/CmdsSSH/Package.swift).
   CmdsSSH:
     path: Packages/CmdsSSH
+  # Automatic updates of the Mac app (docs/internals/release.md#automatic-updates).
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: "2.10.1"
 schemes:
   CmdsApp:
     build:
@@ -53,6 +57,7 @@ targets:
         optional: true
     dependencies:
       - package: CmdsCore
+      - package: Sparkle
       # The `cmds` CLI ships at cmds.app/Contents/Resources/bin/cmds (PATH of spawned terminals, "Install Command Line Tool…").
       - target: cmds-cli
         embed: true
@@ -95,6 +100,16 @@ targets:
         NSCalendarsUsageDescription: A program running in cmds would like to access your calendars.
         NSLocationUsageDescription: A program running in cmds would like to use your location.
         NSPhotoLibraryUsageDescription: A program running in cmds would like to access your photo library.
+        # Automatic updates (App/Sources/App/Updater.swift, docs/internals/release.md#automatic-updates): a daily check
+        # of the appcast, which must carry an EdDSA signature like every update, made with the key whose public half
+        # is SUPublicEDKey; updates are downloaded automatically and verified before they are extracted.
+        SUFeedURL: https://cmds.n-n.tokyo/download/appcast.xml
+        SUPublicEDKey: WRrXlNY/+sRmJsGwhqdOmjexcbSTwEe837Mx3WWFgNQ=
+        SURequireSignedFeed: true
+        SUVerifyUpdateBeforeExtraction: true
+        SUEnableAutomaticChecks: true
+        SUAutomaticallyUpdate: true
+        SUScheduledCheckInterval: 86400
     settings:
       base:
         PRODUCT_NAME: cmds

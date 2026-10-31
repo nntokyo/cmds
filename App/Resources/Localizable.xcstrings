@@ -374,6 +374,16 @@
         }
       }
     },
+    "%lld AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds の中で AI エージェントのセッションが %lld 件動いています。終了すると中断されます（保存されたセッションから後で再開できます）。"
+          }
+        }
+      }
+    },
     "%lld d ago": {
       "comment": "age of agent figures",
       "localizations": {
@@ -711,6 +721,26 @@
         }
       }
     },
+    "Automatic updates are not available: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動アップデートを使えません：%@"
+          }
+        }
+      }
+    },
+    "Automatic updates work in the release downloaded from cmds.n-n.tokyo, not in this build or instance.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動アップデートは cmds.n-n.tokyo からダウンロードしたリリース版で使えます。このビルド（またはテスト用の起動）では使えません。"
+          }
+        }
+      }
+    },
     "Awake (lid closed OK)": {
       "localizations": {
         "ja": {
@@ -957,6 +987,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "注意：スリープしないMacは蓋を閉じてバッグに入れても動き続け、過熱やバッテリー消耗の原因になります。Macがバッテリー駆動に切り替わると、cmdsはこの設定をオフにするよう求めます。cmdsがクラッシュしたり強制終了されたりした場合、cmdsを再度起動する（元に戻すよう提案します）か%@を実行するまでスリープは無効のままです。"
+          }
+        }
+      }
+    },
+    "Check for Updates…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを確認…"
+          }
+        }
+      }
+    },
+    "Check for updates automatically": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動的に確認"
+          }
+        }
+      }
+    },
+    "Checks cmds.n-n.tokyo once a day and asks before downloading an update.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 日 1 回 cmds.n-n.tokyo を確認し、アップデートをダウンロードする前に確認します。"
+          }
+        }
+      }
+    },
+    "Checks cmds.n-n.tokyo once a day. A downloaded update is installed when cmds quits; cmds › Check for Updates… installs it now.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 日 1 回 cmds.n-n.tokyo を確認します。ダウンロードしたアップデートは cmds の終了時にインストールされます。すぐに入れるには cmds › アップデートを確認… を使います。"
           }
         }
       }
@@ -1281,12 +1351,22 @@
       }
     },
     "Done": {
-      "comment": "sidebar agent state: finished, not seen yet",
+      "comment": "sidebar agent state: finished, not seen yet\nsubagent finished",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "完了"
+          }
+        }
+      }
+    },
+    "Download and install updates automatically": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動的にダウンロードしてインストール"
           }
         }
       }
@@ -2288,6 +2368,7 @@
       }
     },
     "Off": {
+      "comment": "show subagents",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -2469,12 +2550,32 @@
         }
       }
     },
+    "Quit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "終了"
+          }
+        }
+      }
+    },
     "Quit cmds": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "cmdsを終了"
+          }
+        }
+      }
+    },
+    "Quit cmds?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds を終了しますか？"
           }
         }
       }
@@ -3566,6 +3667,16 @@
         }
       }
     },
+    "Updates": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデート"
+          }
+        }
+      }
+    },
     "Usage": {
       "localizations": {
         "ja": {
@@ -3795,6 +3906,16 @@
         }
       }
     },
+    "cmds does not look for updates by itself. cmds › Check for Updates… looks now.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップデートを自動では確認しません。cmds › アップデートを確認… で今すぐ確認できます。"
+          }
+        }
+      }
+    },
     "cmds keeps it awake with the lid closed. A closed Mac that never sleeps drains the battery and can overheat in a bag.": {
       "localizations": {
         "ja": {
@@ -3988,36 +4109,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースのタイトル（省略可）"
-          }
-        }
-      }
-    },
-    "Quit cmds?": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "cmds を終了しますか？"
-          }
-        }
-      }
-    },
-    "%lld AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "cmds の中で AI エージェントのセッションが %lld 件動いています。終了すると中断されます（保存されたセッションから後で再開できます）。"
-          }
-        }
-      }
-    },
-    "Quit": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "終了"
           }
         }
       }

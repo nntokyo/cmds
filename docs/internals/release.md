@@ -7,8 +7,8 @@
 
 | What | Where | Current |
 |---|---|---|
-| App version (`CFBundleShortVersionString`) | `MARKETING_VERSION` in `project.yml`, shared by the Mac app and the companion | 0.1.3 (Mac release: 0.1.1) |
-| Build number (`CFBundleVersion`) | `CURRENT_PROJECT_VERSION` in `project.yml` | 4 |
+| App version (`CFBundleShortVersionString`) | `MARKETING_VERSION` in `project.yml`, shared by the Mac app and the companion | 0.2.0 (Mac); the iOS app is 0.1.3 |
+| Build number (`CFBundleVersion`) | `CURRENT_PROJECT_VERSION` in `project.yml` | 5 |
 | Sync protocol | `SyncProtocol.version` (`CmdsCore/Sync/SyncProtocol.swift`); checked in `hello`, both sides must match ([sync-protocol.md](sync-protocol.md#versioning)) | 2 |
 | `cmds-remote.sh` | `CMDS_REMOTE_VERSION` in `CmdsCore/RemoteHelperScript.swift` | 1 |
 | Workspace export bundle | `WorkspaceBundle.currentVersion` (`CmdsCore/WorkspaceTransfer.swift`); newer bundles are refused | 1 |
@@ -110,16 +110,54 @@ notifications. Check them on the signed build before publishing it.
    - creates `build/release/cmds-X.Y.Z.dmg` (the app and an `Applications` link) and signs it,
    - submits it with `xcrun notarytool submit --keychain-profile cmds-notary --wait`, staples the ticket and checks
      it with `stapler validate` and `spctl`,
-   - writes `site/public/download/cmds-X.Y.Z.dmg`, `SHA256SUMS` and `latest.json` (version, size, SHA-256).
+   - writes `site/public/download/SHA256SUMS` and `latest.json` (version, size, SHA-256, the GitHub download URL).
    `--skip-notarize` stops after the signed DMG (for testing; not for publishing).
 6. Smoke-test the stapled DMG on a Mac: open it, drag cmds to Applications, start it. Gatekeeper must not warn.
-   Check terminal, browser, preview, sync with a phone, notifications, Install Command Line Tool….
-7. Tag the commit `vX.Y.Z` and push the tag.
-8. GitHub release for the tag with the CHANGELOG section and the DMG attached (`gh release create vX.Y.Z
-   build/release/cmds-X.Y.Z.dmg --notes-file <section>`), once the repository is public.
-9. Website: fill in the `TODO(release)` markers in `site/public/index.html`, `site/public/en/index.html` and the
-   guide pages (download button, version, size, SHA-256 from `latest.json`, "notarized by Apple", GitHub link),
-   then deploy (below).
+   Check terminal, browser, preview, sync with a phone, notifications, Install Command Line Tool…, and that
+   cmds › Check for Updates… is enabled.
+7. `scripts/release/make-appcast.sh build/release/cmds-X.Y.Z.dmg [notes.html]` writes and signs
+   `site/public/download/appcast.xml` ([Automatic updates](#automatic-updates)); commit it.
+8. Tag the commit `vX.Y.Z` and push the tag.
+9. GitHub release for the tag with the CHANGELOG section and the DMG attached (`gh release create vX.Y.Z
+   build/release/cmds-X.Y.Z.dmg --notes-file <section>`). It must exist before the appcast is deployed: the
+   appcast downloads the DMG from it.
+10. Website: point the download button, version, size, SHA-256 (from `latest.json`), date and GitHub links in
+   `site/public/index.html`, `site/public/en/index.html` and the guide pages at the new release, then deploy
+   (below). Every installed release from 0.2.0 on picks the update up within a day.
+
+### Automatic updates
+
+The Mac app updates itself with [Sparkle](https://sparkle-project.org) 2 (`App/Sources/App/Updater.swift`; the
+Info.plist keys are in `project.yml`).
+
+- **Feed**: `https://cmds.n-n.tokyo/download/appcast.xml`, committed as `site/public/download/appcast.xml` and cached
+  for 5 minutes. One item, the latest release; its enclosure is the notarized DMG of the GitHub release. Sparkle
+  compares `CFBundleVersion`, so every Mac release needs a higher `CURRENT_PROJECT_VERSION`.
+- **Keys**: EdDSA. The private key is in the login keychain (Sparkle's `generate_keys --account cmds`) and exported to
+  `~/.keys/cmds-sparkle-ed25519` (mode 600). Keep a backup outside this Mac: without the key no update can reach the
+  installed apps again. The public half is `SUPublicEDKey`.
+- **Verification**: the DMG and the feed are both signed (`SURequireSignedFeed`), and updates are verified before they
+  are extracted (`SUVerifyUpdateBeforeExtraction`); macOS also checks that the new app is signed by the same team.
+  Never edit `appcast.xml` by hand: `make-appcast.sh` writes and signs it.
+- **Behaviour**: a check once a day without asking first (`SUEnableAutomaticChecks`, `SUScheduledCheckInterval`),
+  automatic download and install when cmds quits (`SUAutomaticallyUpdate`); cmds › Check for Updates… installs
+  right away (cmds asks first if agents are running). Users change both in Settings › Updates.
+- **Where it runs**: only in builds signed with the Developer ID (releases). Debug and local Release builds and
+  isolated instances (`CMDS_SUPPORT_DIR`) never update themselves; `CMDS_UPDATE_FEED_URL` points an isolated instance
+  at a test feed and makes it check at launch.
+- **Tools**: `generate_keys`, `sign_update`, `generate_appcast` are in
+  `build/<derived data>/SourcePackages/artifacts/sparkle/Sparkle/bin/` after any build.
+- **End-to-end test** (before a release that changes the updater): export the release candidate (Developer ID) and a
+  copy built with a higher version and build number (`xcodebuild archive … MARKETING_VERSION=X CURRENT_PROJECT_VERSION=N`
+  and `-exportArchive` with `destination=export`); zip the newer one (`ditto -c -k --keepParent`), write a test feed
+  with `APPCAST_OUT` and `APPCAST_DOWNLOAD_URL` and serve both over HTTPS (a Firebase preview channel); copy the
+  candidate to a temporary folder (the test feed is ignored for a copy in an Applications folder, and for anything but
+  https) and start it isolated with `CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1` and `CMDS_UPDATE_FEED_URL`; after the
+  download, quit it with its own CLI (`env -u CMDS_SOCKET_PATH -u CMDS_PANE_ID -u CMDS_WORKSPACE_ID CMDS_SUPPORT_DIR=…
+  …/cmds.app/Contents/Resources/bin/cmds quit`; check with `identify` first that it is not the app in use) and check
+  that the copy now has the newer version and a valid signature. Sparkle keeps its state in the `tokyo.n-n.cmds`
+  defaults domain even for isolated instances: the test needs automatic download on there, and afterwards delete only
+  the `SU*` keys the test added. A feed edited after signing must be refused (no download).
 
 ### Website (cmds.n-n.tokyo)
 

@@ -1,8 +1,8 @@
 import AppKit
 import CmdsCore
 
-/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards. Every control applies
-/// immediately (`AppSettings`); there is no OK button.
+/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards, automatic
+/// updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
@@ -17,6 +17,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let browserZoomPopup = NSPopUpButton()
     private let previewZoomPopup = NSPopUpButton()
     private let subagentsPopup = NSPopUpButton()
+    private let checkUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Check for updates automatically"), target: nil, action: nil)
+    private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
+    private let updatesNote = SettingsWindowController.note("")
     private var observer: NSObjectProtocol?
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
@@ -99,6 +102,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         subagentsPopup.target = self
         subagentsPopup.action = #selector(subagentsChanged)
 
+        checkUpdatesCheckbox.target = self
+        checkUpdatesCheckbox.action = #selector(checkUpdatesToggled)
+        installUpdatesCheckbox.target = self
+        installUpdatesCheckbox.action = #selector(installUpdatesToggled)
+
         let grid = NSGridView(views: [
             [Self.header(String(localized: "Terminal")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Font:")), fontPopup],
@@ -112,12 +120,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.header(String(localized: "Agents")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
+            [Self.header(String(localized: "Updates")), NSGridCell.emptyContentView],
+            [NSGridCell.emptyContentView, checkUpdatesCheckbox],
+            [NSGridCell.emptyContentView, installUpdatesCheckbox],
+            [NSGridCell.emptyContentView, updatesNote],
         ])
         grid.rowSpacing = 8
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        for row in [0, 4, 6, 9] {
+        for row in [0, 4, 6, 9, 12] {
             grid.row(at: row).mergeCells(in: NSRange(location: 0, length: 2))
             grid.row(at: row).topPadding = row == 0 ? 0 : 10
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
@@ -197,6 +209,37 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         select(settings.browserZoom, in: browserZoomPopup)
         select(settings.previewZoom, in: previewZoomPopup)
         subagentsPopup.selectItem(at: subagentsPopup.indexOfItem(withRepresentedObject: settings.showSubagents.rawValue))
+        refreshUpdates()
+    }
+
+    /// Also when the window becomes key: Sparkle's own update alert changes the same switches.
+    private func refreshUpdates() {
+        let updater = Updater.shared
+        let available = updater.updater != nil
+        let checks = updater.checksAutomatically
+        let installs = updater.installsAutomatically
+        checkUpdatesCheckbox.state = checks ? .on : .off
+        installUpdatesCheckbox.state = installs ? .on : .off
+        checkUpdatesCheckbox.isEnabled = available
+        installUpdatesCheckbox.isEnabled = available && checks
+        switch updater.status {
+        case .running:
+            updatesNote.stringValue = !checks
+                ? String(localized: "cmds does not look for updates by itself. cmds › Check for Updates… looks now.")
+                : installs
+                ? String(localized: "Checks cmds.n-n.tokyo once a day. A downloaded update is installed when cmds quits; cmds › Check for Updates… installs it now.")
+                : String(localized: "Checks cmds.n-n.tokyo once a day and asks before downloading an update.")
+        case .starting:
+            updatesNote.stringValue = ""
+        case .notThisBuild:
+            updatesNote.stringValue = String(localized: "Automatic updates work in the release downloaded from cmds.n-n.tokyo, not in this build or instance.")
+        case .failed(let message):
+            updatesNote.stringValue = String(localized: "Automatic updates are not available: \(message)")
+        }
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        refreshUpdates()
     }
 
     private func select(_ zoom: Double, in popup: NSPopUpButton) {
@@ -239,6 +282,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     @objc private func subagentsChanged() {
         let raw = subagentsPopup.selectedItem?.representedObject as? String
         settings.showSubagents = raw.flatMap(SubagentDisplay.init(rawValue:)) ?? .tiled
+    }
+
+    @objc private func checkUpdatesToggled() {
+        Updater.shared.checksAutomatically = checkUpdatesCheckbox.state == .on
+        refreshUpdates()
+    }
+
+    @objc private func installUpdatesToggled() {
+        Updater.shared.installsAutomatically = installUpdatesCheckbox.state == .on
+        refreshUpdates()
     }
 
     @objc private func previewZoomChanged() {

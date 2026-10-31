@@ -3,10 +3,10 @@
 #
 #   scripts/release/build-dmg.sh [--dry-run] [--skip-build] [--skip-notarize] [--identity <SHA-1|name>]
 #
-# Steps: Release build (scheme CmdsApp, hardened runtime) → re-sign the embedded CLI and the app with the
-# Developer ID certificate, hardened runtime, secure timestamp and App/cmds.entitlements → verify → DMG with an
-# Applications link → sign the DMG → notarize (notarytool, keychain profile "cmds-notary") → staple → SHA-256 →
-# site/public/download/ (the DMG, SHA256SUMS, latest.json). Nothing is uploaded or published.
+# Steps: Release build (scheme CmdsApp, hardened runtime) → re-sign the embedded CLI, Sparkle's helpers and the app
+# with the Developer ID certificate, hardened runtime, secure timestamp and App/cmds.entitlements → verify → DMG with
+# an Applications link → sign the DMG → notarize (notarytool, keychain profile "cmds-notary") → staple → SHA-256 →
+# site/public/download/ (SHA256SUMS, latest.json; the DMG is published on GitHub). Nothing is uploaded or published.
 #
 # --dry-run        print every command instead of running it (no build, no signing, no notarization)
 # --skip-build     reuse build/dd-release/Build/Products/Release/cmds.app
@@ -131,9 +131,17 @@ if [ "$DRY_RUN" = 0 ]; then
     || die "Ghostty's terminfo / shell integration are not in the app (vendor/ghostty/zig-out/share was missing at build time)"
 fi
 
-# Inside-out: nested code first (the bundled CLI), then the app. No --deep: it would apply the app's entitlements
-# to the CLI. Every Mach-O must carry the hardened runtime and a secure timestamp, or notarization fails.
+# Inside-out: nested code first (the bundled CLI, Sparkle's helpers and framework), then the app. No --deep: it
+# would apply the app's entitlements to them. Every Mach-O must carry the hardened runtime and a secure timestamp,
+# or notarization fails. Sparkle's order and the Downloader's own entitlements follow Sparkle's documentation.
 run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$APP/Contents/Resources/bin/cmds"
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE/Versions/B/XPCServices/Installer.xpc"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp --preserve-metadata=entitlements \
+  "$SPARKLE/Versions/B/XPCServices/Downloader.xpc"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE/Versions/B/Autoupdate"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE/Versions/B/Updater.app"
+run codesign --force --sign "$IDENTITY" --options runtime --timestamp "$SPARKLE"
 run codesign --force --sign "$IDENTITY" --options runtime --timestamp --entitlements "$ENTITLEMENTS" "$APP"
 
 log "Verify signature"
@@ -188,20 +196,19 @@ run spctl --assess --type open --context context:primary-signature --verbose=2 "
 log "Checksums"
 if [ "$DRY_RUN" = 1 ]; then
   run shasum -a 256 "$DMG"
-  run cp "$DMG" "$SITE_DOWNLOAD/$DMG_NAME"
   echo "[dry-run] write $SITE_DOWNLOAD/SHA256SUMS and $SITE_DOWNLOAD/latest.json"
   exit 0
 fi
 SHA256="$(shasum -a 256 "$DMG" | awk '{print $1}')"
 SIZE="$(stat -f %z "$DMG")"
 mkdir -p "$SITE_DOWNLOAD"
-cp "$DMG" "$SITE_DOWNLOAD/$DMG_NAME"
+# The DMG itself is served from the GitHub release: Firebase Hosting (Spark) refuses executable files.
 printf '%s  %s\n' "$SHA256" "$DMG_NAME" > "$SITE_DOWNLOAD/SHA256SUMS"
 cat > "$SITE_DOWNLOAD/latest.json" <<EOF
 {
   "version": "$VERSION",
   "build": "$BUILD_NUMBER",
-  "file": "/download/$DMG_NAME",
+  "file": "https://github.com/nntokyo/cmds/releases/download/v$VERSION/$DMG_NAME",
   "size": $SIZE,
   "sha256": "$SHA256",
   "minimumSystemVersion": "14.0",
@@ -217,7 +224,7 @@ Done: $DMG
   version  $VERSION (build $BUILD_NUMBER)
   size     $SIZE bytes
   sha256   $SHA256
-site/public/download/ now holds $DMG_NAME, SHA256SUMS and latest.json.
-Next (by hand): put the version, size and SHA-256 into site/public/index.html and site/public/en/index.html (TODO(release) markers),
-deploy the site, attach the DMG to the GitHub release (docs/internals/release.md).
+site/public/download/ now holds SHA256SUMS and latest.json.
+Next (docs/internals/release.md): scripts/release/make-appcast.sh "$DMG", the GitHub release with the DMG, then the
+website (download links, version, size, SHA-256) and its deploy.
 EOF
