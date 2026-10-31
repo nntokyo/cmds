@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- iPhone/iPad: shortcut buttons above the key bar that send a canned reply or command with Return (承認, 考慮, 別案,
+  再確認, `claude`, `codex` by default), editable in Settings (#8).
+
 ## [0.1.1] - 2026-10-31
 
 ### Fixed

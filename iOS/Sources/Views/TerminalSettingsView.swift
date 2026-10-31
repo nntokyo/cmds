@@ -42,6 +42,13 @@ struct TerminalSettingsView: View {
     @AppStorage(TerminalTextSettings.modeKey) private var mode = TerminalTextSettings.Mode.fit
     @AppStorage(TerminalTextSettings.fontSizeKey) private var fontSize = 12.0
     @AppStorage(TerminalTextSettings.rememberZoomKey) private var rememberZoom = false
+    @AppStorage(QuickReplies.key) private var quickRepliesStorage = QuickReplies.defaultStorage
+    @State private var quickReplies: [QuickReplyRow] = []
+
+    private struct QuickReplyRow: Identifiable {
+        let id = UUID()
+        var text: String
+    }
 
     var body: some View {
         NavigationStack {
@@ -84,7 +91,10 @@ struct TerminalSettingsView: View {
                 } footer: {
                     Text("Only changes how this device shows the terminal; the size on the Mac stays the same.")
                 }
+                quickReplySection
             }
+            .onAppear { quickReplies = QuickReplies.decode(quickRepliesStorage).map { QuickReplyRow(text: $0) } }
+            .onChange(of: quickReplies.map(\.text)) { _, new in quickRepliesStorage = QuickReplies.encode(new) }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -92,6 +102,28 @@ struct TerminalSettingsView: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+
+    private var quickReplySection: some View {
+        Section {
+            ForEach($quickReplies) { $row in
+                TextField("Text to send", text: $row.text)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+            }
+            .onDelete { quickReplies.remove(atOffsets: $0) }
+            .onMove { quickReplies.move(fromOffsets: $0, toOffset: $1) }
+            Button("Add Shortcut") { quickReplies.append(QuickReplyRow(text: "")) }
+            Button("Restore Defaults") { quickReplies = QuickReplies.defaults.map { QuickReplyRow(text: $0) } }
+        } header: {
+            HStack {
+                Text("Shortcut buttons")
+                Spacer()
+                EditButton().font(.footnote)
+            }
+        } footer: {
+            Text("Shown above the key bar. Tap one to send its text and Return, for example a reply to an agent or a command such as claude. Long-press to insert it without Return.")
         }
     }
 }
