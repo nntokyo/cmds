@@ -24,6 +24,8 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
     private var list = ClaudeAccountList(accounts: [], autoSwitch: false)
     private var observer: NSObjectProtocol?
     private var refreshTimer: Timer?
+    /// While the window is open: reset times count down and limits expire.
+    private static let refreshInterval: TimeInterval = 30
 
     private enum Column: String, CaseIterable {
         case name, directory, status, sessions
@@ -70,9 +72,8 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
         if window?.isVisible != true { window?.center() }
         super.showWindow(sender)
         window?.makeKeyAndOrderFront(sender)
-        // Reset times count down and limits expire while the window is open.
         refreshTimer?.invalidate()
-        let timer = Timer(timeInterval: 30, repeats: true) { _ in
+        let timer = Timer(timeInterval: Self.refreshInterval, repeats: true) { _ in
             MainActor.assumeIsolated { ClaudeAccountsWindowController.shared.refresh() }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -232,7 +233,7 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
               list.accounts.indices.contains(row) else { return nil }
         let account = list.accounts[row]
         let cell = (tableView.makeView(withIdentifier: id, owner: self) as? NSTableCellView) ?? makeCell(id)
-        let field = cell.textField!
+        guard let field = cell.textField else { return cell }
         field.textColor = .labelColor
         field.toolTip = nil
         switch column {
