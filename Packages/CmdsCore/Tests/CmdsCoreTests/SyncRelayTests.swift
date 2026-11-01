@@ -302,7 +302,7 @@ private final class EchoServer {
 }
 
 /// Minimal synchronous WebSocket client (what `WebSocketTransport` does on the phone).
-private final class WSClient {
+final class WSClient {
     private let connection: NWConnection
     private let queue = DispatchQueue(label: "ws-client")
     private let readyResult = LockedBox<Bool?>(nil)
