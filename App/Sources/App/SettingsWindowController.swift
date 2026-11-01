@@ -170,7 +170,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         NumberFormatter.localizedString(from: NSNumber(value: zoom), number: .percent)
     }
 
-    /// "Ghostty default", then the installed monospaced families (plus a saved family that is not installed).
+    /// "Ghostty default", then the installed monospaced families (plus a saved family that is not installed), titled
+    /// by their localized names (`displayName(ofFamily:)`); each item stores the family name.
     private func fillFontPopup() {
         fontPopup.removeAllItems()
         fontPopup.addItem(withTitle: String(localized: "Ghostty Default"))
@@ -181,10 +182,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             if let family = NSFont(name: name, size: 12)?.familyName, !family.hasPrefix(".") { families.insert(family) }
         }
         if let saved = settings.terminalFontFamily { families.insert(saved) }
-        for family in families.sorted(by: { $0.localizedStandardCompare($1) == .orderedAscending }) {
-            fontPopup.addItem(withTitle: family)
-            fontPopup.lastItem?.representedObject = family
+        let titled = families.map { (family: $0, title: Self.displayName(ofFamily: $0)) }
+        for (family, title) in titled.sorted(by: { $0.title.localizedStandardCompare($1.title) == .orderedAscending }) {
+            // Not `addItem(withTitle:)`: it drops an item with the same title, and two families may share one.
+            let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+            item.representedObject = family
+            fontPopup.menu?.addItem(item)
         }
+    }
+
+    /// A family's name as Font Book shows it. Some older Japanese fonts (e.g. ＤＦ平成ゴシック体W3) store their family
+    /// name in a legacy encoding that `NSFont.familyName` decodes as Mac Roman ("ÇcÇeïΩê¨ÉSÉVÉbÉNëÃW3"); their
+    /// localized name is right. The setting keeps the family name, which CoreText (and so Ghostty) finds either way.
+    private static func displayName(ofFamily family: String) -> String {
+        let name = NSFontManager.shared.localizedName(forFamily: family, face: nil)
+        return name.isEmpty ? family : name
     }
 
     // MARK: - State
