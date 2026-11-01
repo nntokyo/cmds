@@ -125,7 +125,7 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 
 [Unreleased]: https://github.com/nntokyo/cmds/compare/v0.2.0...master
 [0.2.0]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.2.0
-[0.1.3]: https://github.com/nntokyo/cmds/compare/v0.1.1...master
+[0.1.3]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.1.3
 [0.1.2]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/nntokyo/cmds/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/nntokyo/cmds/releases/tag/v0.1.0
