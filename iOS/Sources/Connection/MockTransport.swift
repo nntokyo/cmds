@@ -34,7 +34,8 @@ final class MockTransport: SyncTransport {
         guard !closed else { return }
         switch message {
         case .hello:
-            deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token"))))
+            deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token",
+                                                         features: [SyncFeature.scrollback]))))
             deliver(after: 0.1, .message(.state(currentState)))
             DispatchQueue.main.async { self.startTimer() }
         case .subscribe(let sub):
@@ -72,6 +73,17 @@ final class MockTransport: SyncTransport {
             for piece in SyncFile.messages(paneID: request.paneID, name: "chart.png", mime: "image/png", data: MockData.chartPNG()) {
                 deliver(after: 0.2, .message(.file(piece)))
             }
+        case .requestScrollback(let request):
+            // Like the Mac: a full screen, then the rows above it with the same seq.
+            guard subscribed.contains(request.paneID), let shell = shells[request.paneID] else {
+                return emit(.error(.init(code: .badRequest, message: "pane \(request.paneID) is not streamed")))
+            }
+            pushScreens()
+            guard case .screen(let screen)? = streamer.fullScreen(paneID: request.paneID) else { return }
+            emit(.screen(screen))
+            let rows = MockData.history(paneID: request.paneID) + shell.scrolledOff
+            emit(.scrollback(.init(paneID: request.paneID, seq: screen.seq,
+                                   lines: Array(rows.suffix(min(request.lines, SyncScrollback.maxLines))))))
         }
     }
 
@@ -224,6 +236,12 @@ struct FakeShell {
         self.lines = lines
     }
 
+    /// Rows that scrolled off the top of `snapshot`, oldest first.
+    var scrolledOff: [String] {
+        guard fixed == nil else { return [] }
+        return (lines + [prompt + current]).dropLast(rows).map { String($0.prefix(cols)) }
+    }
+
     var snapshot: ScreenSnapshot {
         if let fixed { return fixed }
         var visible = lines + [prompt + current]
@@ -357,6 +375,44 @@ enum MockData {
             let title = "Build time per day" as NSString
             title.draw(at: CGPoint(x: 24, y: 12), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 22),
                                                                    .foregroundColor: UIColor.white])
+        }
+    }
+
+    /// Earlier output above the demo screens (`requestScrollback`), so the phone has something to scroll back to.
+    static func history(paneID: String) -> [String] {
+        switch paneID {
+        case "p-agent":
+            // The shell before `claude` started (its header box is the first row of the demo screen).
+            return [
+                "demo@mac api % git switch -c feature/auth-tokens",
+                "Switched to a new branch 'feature/auth-tokens'",
+                "demo@mac api % npm test -- test/auth",
+                "",
+                "> api@1.4.0 test",
+                "> vitest run test/auth",
+                "",
+                " ✓ test/auth/login.test.ts (6 tests) 41ms",
+                " ✗ test/auth/middleware.test.ts (8 tests | 1 failed) 63ms",
+                "   ✗ rejects an expired token",
+                "     AssertionError: expected 200 to be 401",
+                "",
+                " Test Files  1 failed | 1 passed (2)",
+                "      Tests  1 failed | 13 passed (14)",
+                "demo@mac api % claude",
+            ]
+        case "p-shell":
+            return [
+                "demo@mac cmds % swift test --package-path Packages/CmdsCore",
+                "Building for debugging...",
+                "Build complete! (12.48s)",
+                "Test Suite 'All tests' passed at 2026-10-29 09:10:02.317.",
+                "\t Executed 412 tests, with 0 failures (0 unexpected) in 3.902 (4.118) seconds",
+                "demo@mac cmds % git status --short",
+                " M App/Sources/Sync/SyncServer.swift",
+                "demo@mac cmds % git commit -qam \"Sync: stream the screen of new panes\"",
+            ]
+        default:
+            return []
         }
     }
 
