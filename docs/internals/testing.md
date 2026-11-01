@@ -200,8 +200,9 @@ show real panes, e.g. a workspace made with `cmds new` that ran `seq 1 1500` (ea
 `sync-test-pairing.txt` is a `cmds-pair://v2?host=…&port=…&fp=…&code=…` URI. Launch the companion with
 `-noNotify -AppleLanguages '(en)' -AppleLocale en_US` (the steps below use English labels), then drive it:
 
-1. `tap:manualHost;;type:127.0.0.1:<port>;;tap:Connect;;wait:3;;tap:Pair Without Camera;;wait:3;;value:pairingFingerprint`
-2. Check the printed identity against `fp` (base64url; its first 6 bytes in hex read `XXXX-XXXX-XXXX`).
+1. `tap:manualHost;;type:127.0.0.1:<port>;;tap:Connect;;wait:3;;tap:Pair Without Camera;;wait:3;;dump`
+2. Check the label of `pairingFingerprint` in the dump against `fp` (base64url; its first 6 bytes in hex read
+   `XXXX-XXXX-XXXX`).
 3. `tap:It Matches;;wait:2;;tap:pairingCode;;type:<code>` pairs at the sixth digit.
 
 Never pick a Mac under "On This Network": that is the instance someone works in.

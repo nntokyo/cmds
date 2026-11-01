@@ -368,6 +368,8 @@ final class CompanionClient {
             mirror.removeAll()
             macFeatures = Set(welcome.features ?? [])
             cancelHistoryRequests()
+            // Possibly another Mac (pane ids are per Mac) or one without `scrollback`: the views ask again.
+            histories = [:]
             if !subscribedPaneIDs.isEmpty { send(.subscribe(.init(paneIDs: subscribedPaneIDs))) }
             startPinging()
             if !ProcessInfo.processInfo.arguments.contains("-noNotify") {
@@ -491,8 +493,7 @@ final class CompanionClient {
     /// Asks the Mac for the rows above a streamed pane's screen (Macs with `SyncFeature.scrollback`). Calls within
     /// `historyInterval` of the last request are folded into one request at its end.
     func refreshHistory(paneID: String) {
-        guard status.isLive, macFeatures.contains(SyncFeature.scrollback), subscribedPaneIDs.contains(paneID),
-              historyTasks[paneID] == nil else { return }
+        guard canRequestHistory(paneID: paneID), historyTasks[paneID] == nil else { return }
         let interval = linkPath == .bluetooth ? Self.historyIntervalBluetooth : Self.historyInterval
         let wait = historyRequestedAt[paneID].map { interval - Date().timeIntervalSince($0) } ?? 0
         guard wait <= 0 else {
@@ -507,6 +508,11 @@ final class CompanionClient {
         historyRequestedAt[paneID] = Date()
         let lines = linkPath == .bluetooth ? Self.historyLinesBluetooth : Self.historyLines
         send(.requestScrollback(.init(paneID: paneID, lines: lines)))
+    }
+
+    /// The pane is streamed from a connected Mac that answers `requestScrollback`.
+    func canRequestHistory(paneID: String) -> Bool {
+        status.isLive && macFeatures.contains(SyncFeature.scrollback) && subscribedPaneIDs.contains(paneID)
     }
 
     private func cancelHistoryRequests() {

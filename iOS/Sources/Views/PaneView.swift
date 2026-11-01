@@ -94,15 +94,19 @@ struct TerminalScreenView: View {
                         rowHeight: lineH, visible: $following))
                     // The terminal grid is usually taller than the phone; follow the cursor (the prompt) instead
                     // of pinning to the bottom, where a mostly empty screen shows only blank rows.
-                    .onAppear { proxy.scrollTo(Self.focusRow(snapshot), anchor: Self.focusAnchor) }
-                    .onChange(of: snapshot.cursorRow) {
-                        if following { proxy.scrollTo(Self.focusRow(snapshot), anchor: Self.focusAnchor) }
-                    }
-                    .onChange(of: fontSize) {
-                        if following { proxy.scrollTo(Self.focusRow(snapshot), anchor: Self.focusAnchor) }
-                    }
+                    .onAppear { scrollToFocus(proxy, snapshot) }
+                    // While following: the focus row moved (also with the cursor hidden), the earlier output above
+                    // it grew or shrank, or the text size changed.
+                    .onChange(of: Self.focusRow(snapshot)) { if following { scrollToFocus(proxy, snapshot) } }
+                    .onChange(of: history.count) { if following { scrollToFocus(proxy, snapshot) } }
+                    .onChange(of: fontSize) { if following { scrollToFocus(proxy, snapshot) } }
                     .onChange(of: latestRequests) {
-                        withAnimation(.snappy) { proxy.scrollTo(Self.focusRow(snapshot), anchor: Self.focusAnchor) }
+                        // The newest earlier output first, then the scroll once its rows are laid out: rows taken
+                        // over mid-scroll would move its target.
+                        adoptHistory()
+                        DispatchQueue.main.async {
+                            withAnimation(.snappy) { scrollToFocus(proxy, snapshot) }
+                        }
                     }
                 }
             } else {
@@ -136,23 +140,21 @@ struct TerminalScreenView: View {
         }
         .onAppear {
             if let saved = TerminalTextSettings.savedZoom(paneID: paneID) { zoom = saved }
-            history = client.histories[paneID] ?? []
+            adoptHistory()
         }
-        // Output scrolled the screen (its top row changed): ask for the rows that left it, while following.
+        // Output scrolled the screen (its top row changed): ask for the rows that left it, while following. Also
+        // once the pane is streamed from a Mac that answers (again), e.g. back on a pane whose screen did not move.
         .onChange(of: snapshot.map(Self.topRow), initial: true) {
             if following, Self.showsHistory { client.refreshHistory(paneID: paneID) }
         }
-        .onChange(of: client.histories[paneID]) { _, rows in
-            if following { history = rows ?? [] }
+        .onChange(of: client.canRequestHistory(paneID: paneID)) { _, can in
+            if can, following, Self.showsHistory { client.refreshHistory(paneID: paneID) }
         }
+        .onChange(of: client.histories[paneID]) { if following { adoptHistory() } }
         .onChange(of: following) { _, now in
             guard now, Self.showsHistory else { return }
-            history = client.histories[paneID] ?? []
+            adoptHistory()
             client.refreshHistory(paneID: paneID)
-        }
-        .onChange(of: paneID) {
-            history = client.histories[paneID] ?? []
-            following = true
         }
         .onTapGesture { keyboardFocused = true }
         .focusable()
@@ -183,6 +185,15 @@ struct TerminalScreenView: View {
     static func focusRow(_ s: ScreenSnapshot) -> Int {
         if let row = s.cursorRow, s.lines.indices.contains(row) { return row }
         return s.lines.lastIndex { !$0.isEmpty } ?? 0
+    }
+
+    private func scrollToFocus(_ proxy: ScrollViewProxy, _ s: ScreenSnapshot) {
+        proxy.scrollTo(Self.focusRow(s), anchor: Self.focusAnchor)
+    }
+
+    /// Shows the client's latest earlier output of this pane.
+    private func adoptHistory() {
+        history = client.histories[paneID] ?? []
     }
 
     /// Earlier output needs to know when the user scrolled away from the prompt (`RowVisibility`, iOS 18): without
