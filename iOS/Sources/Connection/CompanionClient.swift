@@ -79,9 +79,10 @@ final class CompanionClient {
     private var historyRequestedAt: [String: Date] = [:]
     /// A request that waits for the end of `historyInterval` (one per pane).
     private var historyTasks: [String: Task<Void, Never>] = [:]
-    /// Rows asked for per `requestScrollback`.
+    /// Rows asked for per `requestScrollback`, and at most one request per pane this often. Bluetooth carries less
+    /// (1000 rows of a wide pane can be about a megabyte).
     private static let historyLines = 500
-    /// At most one `requestScrollback` per pane this often; Bluetooth carries less.
+    private static let historyLinesBluetooth = 200
     private static let historyInterval: TimeInterval = 3
     private static let historyIntervalBluetooth: TimeInterval = 10
 
@@ -504,7 +505,8 @@ final class CompanionClient {
             return
         }
         historyRequestedAt[paneID] = Date()
-        send(.requestScrollback(.init(paneID: paneID, lines: Self.historyLines)))
+        let lines = linkPath == .bluetooth ? Self.historyLinesBluetooth : Self.historyLines
+        send(.requestScrollback(.init(paneID: paneID, lines: lines)))
     }
 
     private func cancelHistoryRequests() {
