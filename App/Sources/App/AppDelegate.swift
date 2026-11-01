@@ -18,6 +18,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let center = UNUserNotificationCenter.current()
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        // A Claude account hit its limit: one click continues the session with the next account (AppController+Accounts).
+        let switchAccount = UNNotificationAction(identifier: AppController.accountSwitchAction,
+                                                 title: String(localized: "Continue with Next Account"), options: [])
+        center.setNotificationCategories([UNNotificationCategory(identifier: AppController.accountNotificationCategory,
+                                                                 actions: [switchAccount], intentIdentifiers: [])])
 
         windowController.showWindow(nil)
         if let session = SessionStore.load(), !session.workspaces.isEmpty {
@@ -80,8 +85,16 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
         let paneID = response.notification.request.content.userInfo["paneID"] as? String
+        let action = response.actionIdentifier
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
+                if action == AppController.accountSwitchAction, let paneID,
+                   let pane = self.controller.pane(id: paneID), let change = pane.accountSwitch {
+                    // The banner's Continue: the offered account, or the next free one if that is limited now.
+                    if (try? self.controller.requestAccountSwitch(paneID: paneID, to: change.to)) == nil {
+                        self.controller.offerAccountSwitch(pane, from: change.from, notify: false)
+                    }
+                }
                 NSApp.activate()
                 self.windowController.showWindow(nil)
                 if let paneID { try? self.controller.focusPane(id: paneID) }

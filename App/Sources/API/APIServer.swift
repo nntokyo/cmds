@@ -151,13 +151,36 @@ final class APIServer {
             }
             let pid = try params.int("pid")
             try controller.reportAgentUsage(paneID: try params.string("pane"), usage: usage,
-                                            pid: pid.flatMap { $0 > 0 && $0 <= Int(Int32.max) ? Int32($0) : nil })
+                                            pid: pid.flatMap { $0 > 0 && $0 <= Int(Int32.max) ? Int32($0) : nil },
+                                            configDir: try params.string("configDir"))
         case "agent.claude_hook":
             try controller.claudeHook(paneID: try params.string("pane"), input: try params.json("input"))
         case "agent.claude_status":
             try controller.claudeStatus(paneID: try params.string("pane"), input: try params.json("input"))
         case "agent.sessions":
             return try .from(controller.agentSessionList(paneID: try params.string("pane")))
+        case "account.list":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods), like every account.* method.
+            return try .from(controller.accountList())
+        case "account.add":
+            try controller.addAccount(name: try params.required("name"), configDir: try params.required("configDir"))
+            return try .from(controller.accountList())
+        case "account.remove":
+            try controller.removeAccount(name: try params.required("name"))
+        case "account.move":
+            guard let index = try params.int("index") else { throw RPCError.invalidParams("index is required") }
+            try controller.moveAccount(name: try params.required("name"), to: index)
+        case "account.set":
+            if let auto = try params.bool("autoSwitch") { controller.setAccountAutoSwitch(auto) }
+            return try .from(controller.accountList())
+        case "account.clear_limit":
+            try controller.clearAccountLimit(name: try params.required("name"))
+        case "account.share":
+            let steps = try controller.shareAccountSessions(apply: try params.bool("apply") ?? false)
+            return .array(steps.map(Self.shareStep))
+        case "account.switch":
+            let account = try controller.requestAccountSwitch(paneID: try params.string("pane"), to: try params.string("account"))
+            return ["account": .string(account)]
         case "agent.resume":
             let all = try params.bool("all") ?? false
             let pane = try params.string("pane")
@@ -180,7 +203,8 @@ final class APIServer {
                 return try .from(controller.createSSHWorkspace(launch, title: try params.string("title")))
             }
             return try .from(controller.createWorkspace(title: try params.string("title"), cwd: try params.string("cwd"),
-                                                        command: try params.string("command")))
+                                                        command: try params.string("command"),
+                                                        account: try controller.resolveAccountParam(try params.string("account"))))
         case "workspace.select":
             try controller.selectWorkspace(id: try params.required("id"))
         case "workspace.close":
@@ -203,7 +227,8 @@ final class APIServer {
             return try .from(controller.split(paneID: try params.string("pane"), direction: direction, kind: kind,
                                               url: try params.string("url"), cwd: try params.string("cwd"),
                                               command: try params.string("command"),
-                                              focus: try params.bool("focus") ?? true, ssh: ssh))
+                                              focus: try params.bool("focus") ?? true, ssh: ssh,
+                                              account: try controller.resolveAccountParam(try params.string("account"))))
         case "pane.open_file":
             let direction = try splitDirection(params)
             let format = try params.string("format").map { raw -> PreviewFormat in
@@ -244,6 +269,22 @@ final class APIServer {
             throw RPCError.methodNotFound(method)
         }
         return nil
+    }
+
+    /// One step of `account.share`: `{account, projects, action: none|link|moveAside|skip, backup?, reason?}`.
+    private static func shareStep(_ step: ClaudeSessionSharing.Step) -> JSONValue {
+        var object: [String: JSONValue] = ["account": .string(step.account), "projects": .string(step.projectsPath)]
+        switch step.action {
+        case .none: object["action"] = "none"
+        case .createLink: object["action"] = "link"
+        case .moveAsideAndLink(let backup):
+            object["action"] = "moveAside"
+            object["backup"] = .string(backup)
+        case .skip(let reason):
+            object["action"] = "skip"
+            object["reason"] = .string(reason)
+        }
+        return .object(object)
     }
 
     /// `state.import`: a `WorkspaceBundle` (object or JSON text), `mode` (default append) and `resume`.

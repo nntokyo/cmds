@@ -23,6 +23,15 @@ struct SessionState: Codable {
         /// Agent sessions remembered per terminal pane (docs/guide/ai-agents.md "Resuming sessions"). Added later: older
         /// sessions lack it; records that cannot be decoded are dropped instead of failing the whole file.
         var agentSessions: [PaneAgentSession]? = nil
+        /// Claude account of each terminal pane that has one (its shell gets the account's `CLAUDE_CONFIG_DIR` again).
+        /// Added later; an account removed meanwhile is ignored.
+        var paneAccounts: [PaneAccount]? = nil
+    }
+
+    /// The Claude account of the pane at `paneIndex` (reading order of `layout`).
+    struct PaneAccount: Codable {
+        var paneIndex: Int
+        var account: String
     }
 
     /// The agent session of the pane at `paneIndex` (reading order of `layout`).
@@ -97,7 +106,7 @@ enum SessionStore {
 
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
-        case title, workingDirectory, layout, focusedPaneIndex, agentSessions
+        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts
     }
 
     init(from decoder: Decoder) throws {
@@ -109,6 +118,8 @@ extension SessionState.WorkspaceState {
         let lossy = try? c.decodeIfPresent([Lossy<SessionState.PaneAgentSession>].self, forKey: .agentSessions)
         let sessions = lossy?.compactMap(\.value) ?? []
         agentSessions = sessions.isEmpty ? nil : sessions
+        let accounts = (try? c.decodeIfPresent([Lossy<SessionState.PaneAccount>].self, forKey: .paneAccounts))?.compactMap(\.value) ?? []
+        paneAccounts = accounts.isEmpty ? nil : accounts
     }
 }
 

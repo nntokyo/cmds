@@ -20,8 +20,9 @@ extension AppController {
     }
 
     /// `agent.report`: usage of the agent in a terminal pane (Claude Code's status line via `cmds hook claude-status`).
-    /// With `pid` (the agent process) the usage is dropped as soon as that process exits.
-    func reportAgentUsage(paneID: String?, usage: AgentUsage, pid: Int32?) throws {
+    /// With `pid` (the agent process) the usage is dropped as soon as that process exits. `configDir`: Claude Code's
+    /// `CLAUDE_CONFIG_DIR` ("" = not set), which names the pane's account (AppController+Accounts).
+    func reportAgentUsage(paneID: String?, usage: AgentUsage, pid: Int32?, configDir: String? = nil) throws {
         let pane = try resolvePane(paneID)
         guard pane.kind == .terminal else { throw RPCError.invalidParams("pane \(pane.id) is not a terminal") }
         let now = Date()
@@ -41,7 +42,9 @@ extension AppController {
         pane.agentUsage = usage
         pane.agentSource = .report(process: process)
         pane.agentSignals.hasUsage = true
+        if usage.agent == .claude { noteClaudeConfigDir(pane, configDir: configDir) }
         rememberAgentSession(pane, usage: usage)
+        noteStatusLineLimits(pane, usage: usage, now: now)
         updateAgentActivity(pane, now: now, emitChange: !appeared)
         if appeared { emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id)) }
         scheduleAgentRefresh()

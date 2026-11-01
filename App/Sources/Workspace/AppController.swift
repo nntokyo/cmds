@@ -96,6 +96,11 @@ final class AppController {
     var resumeTimer: Timer?
     /// Follows subagent transcripts while any subagent is listed (AppController+Subagents).
     var subagentTimer: Timer?
+    /// The user's Claude Code accounts (AppController+Accounts.swift), from `claude-accounts.json` in the support
+    /// directory. Changed only through AppController+Accounts, which saves it.
+    var claudeAccounts = ClaudeAccountStore.load(from: ClaudeAccountStore.url())
+    /// Drives account switches in progress (AppController+Accounts).
+    var accountSwitchTimer: Timer?
     let subagentSubject = PassthroughSubject<Void, Never>()
     /// Fires on the main actor when subagent cards changed (current action, tokens, elapsed time). Adding or
     /// dropping a subagent is a pane change in `changes` instead.
@@ -172,11 +177,12 @@ final class AppController {
 
     /// Creates and selects a workspace with one terminal pane. `cwd` defaults to the home directory.
     @discardableResult
-    func createWorkspace(title: String? = nil, cwd: String? = nil, command: String? = nil) -> WorkspaceInfo {
+    func createWorkspace(title: String? = nil, cwd: String? = nil, command: String? = nil,
+                         account: ClaudeAccount? = nil) -> WorkspaceInfo {
         let workspace = makeWorkspace()
         workspace.customTitle = title
         let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? NSHomeDirectory()
-        let pane = makePane(kind: .terminal, in: workspace, cwd: directory, command: command, url: nil)
+        let pane = makePane(kind: .terminal, in: workspace, cwd: directory, command: command, url: nil, account: account)
         workspace.root = SplitNode(paneID: pane.id)
         workspace.focusedPaneID = pane.id
         workspace.workingDirectory = directory
@@ -267,8 +273,11 @@ final class AppController {
     @discardableResult
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
                url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
-               ssh: SSHLaunch? = nil, file: PreviewTarget? = nil) throws -> PaneInfo {
+               ssh: SSHLaunch? = nil, file: PreviewTarget? = nil, account: ClaudeAccount? = nil) throws -> PaneInfo {
         let source = try resolvePane(paneID)
+        if account != nil, kind != .terminal || ssh != nil || (source.ssh != nil && cwd == nil && command == nil) {
+            throw RPCError.invalidParams("an account is for local terminal panes (its config directory is on this Mac)")
+        }
         guard let workspace = workspace(id: source.workspaceID),
               let leaf = workspace.root?.leaf(for: source.id) else {
             throw RPCError.notFound("pane not found: \(source.id)")
@@ -288,7 +297,7 @@ final class AppController {
             let localSource = source.ssh == nil ? source.workingDirectory : nil
             let localWorkspace = workspace.isRemote ? nil : workspace.workingDirectory
             let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? localSource ?? localWorkspace ?? NSHomeDirectory()
-            pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file)
+            pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account)
         }
         workspace.zoomedPaneID = nil
         leaf.split(axis: direction.axis, newPaneID: pane.id)
@@ -604,7 +613,8 @@ final class AppController {
         try? closePane(id: pane.id)
     }
 
-    func raiseAttention(pane: Pane, title: String?, body: String) {
+    /// `category`: the macOS notification's category (its actions, e.g. `accountNotificationCategory`).
+    func raiseAttention(pane: Pane, title: String?, body: String, category: String? = nil) {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
         let text = [title, body].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ": ")
         workspace.notificationText = text.isEmpty ? nil : text
@@ -614,7 +624,9 @@ final class AppController {
         if !isVisiblyFocused(pane) {
             pane.setAttention(true)
             updateDockBadge()
-            if !NSApp.isActive { postUserNotification(pane: pane, workspace: workspace, title: title, body: body) }
+            if !NSApp.isActive {
+                postUserNotification(pane: pane, workspace: workspace, title: title, body: body, category: category)
+            }
             emit(.pane(workspaceID: workspace.id, paneID: pane.id))
         }
         emit(.workspace(id: workspace.id))
@@ -676,11 +688,16 @@ final class AppController {
                 guard let pane = workspace.panes[id], let session = savedAgentSession(pane) else { return nil }
                 return SessionState.PaneAgentSession(paneIndex: index, session: session)
             }
+            let paneAccounts = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneAccount? in
+                guard let pane = workspace.panes[id], pane.ssh == nil, let account = pane.claudeAccount else { return nil }
+                return SessionState.PaneAccount(paneIndex: index, account: account)
+            }
             return SessionState.WorkspaceState(
                 title: workspace.customTitle, workingDirectory: workspace.workingDirectory,
                 layout: node(root, in: workspace),
                 focusedPaneIndex: workspace.focusedPaneID.flatMap { root.paneIDs.firstIndex(of: $0) },
-                agentSessions: agentSessions.isEmpty ? nil : agentSessions)
+                agentSessions: agentSessions.isEmpty ? nil : agentSessions,
+                paneAccounts: paneAccounts.isEmpty ? nil : paneAccounts)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -705,10 +722,16 @@ final class AppController {
             guard let path, fileManager.fileExists(atPath: path) else { return NSHomeDirectory() }
             return path
         }
+        // Leaves are built in reading order, so their index matches `paneAccounts`.
+        var leafIndex = 0
+        var accounts: [Int: ClaudeAccount] = [:]
         func build(_ node: SessionState.Node, in workspace: Workspace) -> SplitNode {
+            if case .split = node {} else { leafIndex += 1 }
             switch node {
             case .terminal(let cwd):
-                return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil).id)
+                let account = accounts[leafIndex - 1]
+                return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil,
+                                                  account: account).id)
             case .browser(let url):
                 return SplitNode(paneID: makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url).id)
             case .preview(let path, let format):
@@ -730,6 +753,10 @@ final class AppController {
         for saved in state.workspaces {
             let workspace = makeWorkspace()
             workspace.customTitle = saved.title
+            leafIndex = 0
+            accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
+                claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
+            }) { first, _ in first }
             let root = build(saved.layout, in: workspace)
             workspace.root = root
             let ids = root.paneIDs
@@ -771,15 +798,18 @@ final class AppController {
         return "p\(nextPaneNumber)"
     }
 
+    /// `account`: a terminal whose environment has the account's `CLAUDE_CONFIG_DIR` (AppController+Accounts).
     private func makePane(kind: PaneKind, in workspace: Workspace, cwd: String?, command: String?, url: String?,
-                          file: PreviewTarget? = nil) -> Pane {
+                          file: PreviewTarget? = nil, account: ClaudeAccount? = nil) -> Pane {
         let id = makePaneID()
         let pane: Pane
         switch kind {
         case .terminal:
-            let environment = terminalEnvironment(paneID: id, workspaceID: workspace.id)
+            var environment = terminalEnvironment(paneID: id, workspaceID: workspace.id)
+            if let account { environment[ClaudeAccounts.configDirVariable] = ClaudeAccounts.expandedPath(account.configDir) }
             let config = TerminalLaunchConfig(workingDirectory: cwd, command: command, environment: environment)
             pane = Pane(id: id, workspaceID: workspace.id, terminal: TerminalEngineProvider.shared.makeSurface(config: config))
+            pane.claudeAccount = account?.name
             if pane.workingDirectory == nil { pane.workingDirectory = cwd }
         case .browser:
             let browser = BrowserPane()
@@ -843,13 +873,14 @@ final class AppController {
         NSApp.dockTile.badgeLabel = count > 0 ? String(count) : nil
     }
 
-    private func postUserNotification(pane: Pane, workspace: Workspace, title: String?, body: String) {
+    private func postUserNotification(pane: Pane, workspace: Workspace, title: String?, body: String, category: String?) {
         let content = UNMutableNotificationContent()
         content.title = title ?? workspace.displayTitle
         content.subtitle = title == nil ? "" : workspace.displayTitle
         content.body = body
         content.sound = .default
         content.userInfo = ["paneID": pane.id]
+        if let category { content.categoryIdentifier = category }
         let request = UNNotificationRequest(identifier: "cmds.\(pane.id).\(UUID().uuidString)", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }

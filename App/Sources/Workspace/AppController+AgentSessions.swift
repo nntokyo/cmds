@@ -63,6 +63,7 @@ extension AppController {
                                   model: usage.model, lastSeen: usage.updatedAt)
             isNew = true
         }
+        applyAccount(to: &record, in: pane)
         pane.agentSession = record
         // A live agent in the pane makes any offer moot (and must never get a resume command typed over it).
         if pane.resumeOffer != nil { clearResumeOffer(pane) }
@@ -226,6 +227,8 @@ extension AppController {
     }
 
     func updateResumeBanner(_ pane: Pane) {
+        // An account switch (AppController+Accounts) takes the bar first.
+        if showAccountBanner(pane) { return }
         guard let offer = pane.resumeOffer, let command = AgentResume.command(for: offer) else {
             pane.container.setBanner(nil)
             return

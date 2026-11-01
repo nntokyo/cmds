@@ -390,20 +390,24 @@ final class WorkspaceCellView: NSTableCellView {
         // Session figures only: the account limits (5h/7d) are the same for every row and shown in the footer.
         let parts = AgentFormat.summaryParts(usage, limits: [], strings: .localized)
         let others = workspace.agentPanes.count - 1
-        let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)"
+        // The Claude account the pane runs under (AppController+Accounts), after the model: `Opus @work`.
+        let account = primary.pane.claudeAccount
+        let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)|\(account ?? "")"
         if key != agentKey {
             agentKey = key
-            let name = parts.prefix { $0.style == .name }
+            var name = Array(parts.prefix { $0.style == .name })
+            if let account { name.append(AgentFormat.Part(" @\(account)", .label)) }
             var figures = Array(parts.drop { $0.style == .name })
             if figures.first?.style == .separator { figures.removeFirst() }
             if figures.isEmpty { figures = [AgentFormat.Part("–", .label)] }
-            agentNameLabel.attributedStringValue = Self.agentText(Array(name), stale: usage.isStale, others: others)
+            agentNameLabel.attributedStringValue = Self.agentText(name, stale: usage.isStale, others: others)
             agentLabel.attributedStringValue = Self.agentText(figures, stale: usage.isStale, others: 0)
         }
         let now = Date()
         var blocks = workspace.agentPanes.compactMap { pane -> String? in
             guard let usage = pane.agentUsage else { return nil }
-            return (AgentFormat.detailLines(usage, now: now, strings: .localized) + [pane.id == primary.pane.id ? String(localized: "Pane \(pane.id) (shown)") : String(localized: "Pane \(pane.id)")])
+            let account = pane.claudeAccount.map { [String(localized: "Account: \($0)")] } ?? []
+            return (AgentFormat.detailLines(usage, now: now, strings: .localized) + account + [pane.id == primary.pane.id ? String(localized: "Pane \(pane.id) (shown)") : String(localized: "Pane \(pane.id)")])
                 .joined(separator: "\n")
         }
         if let limits = AppController.shared.agentLimitsByKind[usage.agent]?.active(at: now) {

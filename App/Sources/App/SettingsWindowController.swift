@@ -1,8 +1,8 @@
 import AppKit
 import CmdsCore
 
-/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards, automatic
-/// updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
+/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards, Claude
+/// accounts (their own window), automatic updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
@@ -20,6 +20,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let checkUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Check for updates automatically"), target: nil, action: nil)
     private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
     private let updatesNote = SettingsWindowController.note("")
+    private let accountsButton = NSButton(title: String(localized: "Manage…"), target: nil, action: nil)
     private var observer: NSObjectProtocol?
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
@@ -102,6 +103,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         subagentsPopup.target = self
         subagentsPopup.action = #selector(subagentsChanged)
 
+        accountsButton.bezelStyle = .rounded
+        accountsButton.target = self
+        accountsButton.action = #selector(manageAccounts)
+
         checkUpdatesCheckbox.target = self
         checkUpdatesCheckbox.action = #selector(checkUpdatesToggled)
         installUpdatesCheckbox.target = self
@@ -120,6 +125,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.header(String(localized: "Agents")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
+            [Self.label(String(localized: "Claude accounts:")), accountsButton],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
             [Self.header(String(localized: "Updates")), NSGridCell.emptyContentView],
             [NSGridCell.emptyContentView, checkUpdatesCheckbox],
             [NSGridCell.emptyContentView, installUpdatesCheckbox],
@@ -129,7 +136,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        for row in [0, 4, 6, 9, 12] {
+        for row in [0, 4, 6, 9, 14] {
             grid.row(at: row).mergeCells(in: NSRange(location: 0, length: 2))
             grid.row(at: row).topPadding = row == 0 ? 0 : 10
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
@@ -294,6 +301,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     @objc private func subagentsChanged() {
         let raw = subagentsPopup.selectedItem?.representedObject as? String
         settings.showSubagents = raw.flatMap(SubagentDisplay.init(rawValue:)) ?? .tiled
+    }
+
+    @objc private func manageAccounts() {
+        ClaudeAccountsWindowController.shared.showWindow(nil)
     }
 
     @objc private func checkUpdatesToggled() {
