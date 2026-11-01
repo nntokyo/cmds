@@ -348,9 +348,12 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(filesToggleFollow(_:)):
             menuItem.state = focusedFiles?.followsTerminal == true ? .on : .off
             return focusedFiles != nil
-        case #selector(filesCopyToOtherPane(_:)), #selector(filesMoveToOtherPane(_:)), #selector(filesRename(_:)),
+        case #selector(filesCopyToOtherPane(_:)), #selector(filesMoveToOtherPane(_:)),
              #selector(filesMoveToTrash(_:)), #selector(filesPreview(_:)):
             return focusedFiles?.selectedEntries.isEmpty == false
+        case #selector(filesRename(_:)):
+            // One row, like Rename in the list's context menu.
+            return focusedFiles?.selectedEntries.count == 1
         case #selector(filesNewFolder(_:)), #selector(filesEnclosingFolder(_:)), #selector(filesGoToFolder(_:)),
              #selector(filesOpenTerminal(_:)):
             return focusedFiles != nil
