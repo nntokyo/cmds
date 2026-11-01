@@ -288,16 +288,12 @@ final class APIServer {
 
     /// One step of `account.share`: `{account, projects, action: none|link|moveAside|skip, backup?, reason?}`.
     private static func shareStep(_ step: ClaudeSessionSharing.Step) -> JSONValue {
-        var object: [String: JSONValue] = ["account": .string(step.account), "projects": .string(step.projectsPath)]
+        var object: [String: JSONValue] = ["account": .string(step.account), "projects": .string(step.projectsPath),
+                                           "action": .string(step.action.name.rawValue)]
         switch step.action {
-        case .none: object["action"] = "none"
-        case .createLink: object["action"] = "link"
-        case .moveAsideAndLink(let backup):
-            object["action"] = "moveAside"
-            object["backup"] = .string(backup)
-        case .skip(let reason):
-            object["action"] = "skip"
-            object["reason"] = .string(reason)
+        case .none, .createLink: break
+        case .moveAsideAndLink(let backup): object["backup"] = .string(backup)
+        case .skip(let reason): object["reason"] = .string(reason)
         }
         return .object(object)
     }

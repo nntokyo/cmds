@@ -32,6 +32,20 @@ public enum ClaudeSessionSharing {
             case moveAsideAndLink(backupName: String)
             /// Left alone (`elsewhere`, `noConfigDir`).
             case skip(reason: String)
+
+            /// The `action` of a step in `account.share` (API and CLI).
+            public enum Name: String, Sendable {
+                case unchanged = "none", link, moveAside, skip
+            }
+
+            public var name: Name {
+                switch self {
+                case .none: return .unchanged
+                case .createLink: return .link
+                case .moveAsideAndLink: return .moveAside
+                case .skip: return .skip
+                }
+            }
         }
 
         public var account: String
