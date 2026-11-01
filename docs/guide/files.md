@@ -61,7 +61,8 @@ Files panes list folders on this Mac only, so `cmds files` is not available from
 Copies run in the background with their progress below the list and a **Cancel** button; cancelling removes the
 partly copied item (never anything that was there before). Copies keep the files' dates, permissions and extended
 attributes, and symbolic links are copied as links. A move within a volume is a rename. A move to another volume
-copies the item and then puts the original in the Trash.
+copies the item and then puts the original in the Trash; if the original cannot go to the Trash, the copy stays
+(and is selected) and the alert says so, with the original left where it was.
 
 When a name is already taken in the destination, cmds asks:
 
