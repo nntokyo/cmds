@@ -11,6 +11,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 |---|---|
 | [guide/getting-started.md](guide/getting-started.md) | Install, first workspace, basic moves, the `cmds` command, where data is kept |
 | [guide/workspaces-and-panes.md](guide/workspaces-and-panes.md) | Workspaces and sidebar, splits, attention ring, browser and preview panes, SSH workspaces, session restore, keeping the Mac awake, language |
+| [guide/files.md](guide/files.md) | Files panes: browsing a folder, preview, copy and move between two panes, conflicts, rename, Trash, Follow Terminal, dropping files on a terminal |
 | [guide/iphone.md](guide/iphone.md) | The iPhone/iPad companion: pairing (QR or manual), what it shows, local network / Bluetooth / SSH relay, troubleshooting |
 | [guide/ai-agents.md](guide/ai-agents.md) | Claude Code hooks and status line, the Claude skill, Codex, usage and limits, resuming sessions, moving to a new version, agents on servers |
 

@@ -9,6 +9,15 @@ struct PaneSelectorBar: View {
     let selectedID: String?
     let select: (String) -> Void
 
+    static func symbol(for kind: PaneKind) -> String {
+        switch kind {
+        case .terminal: return "terminal"
+        case .browser: return "globe"
+        case .preview: return "doc.richtext"
+        case .files: return "folder"
+        }
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             if let layout = workspace.layout {
@@ -28,7 +37,7 @@ struct PaneSelectorBar: View {
                                 if client.needsAttention(pane) {
                                     Circle().fill(.orange).frame(width: 7, height: 7)
                                 }
-                                Image(systemName: pane.kind == .browser ? "globe" : pane.kind == .preview ? "doc.richtext" : "terminal")
+                                Image(systemName: Self.symbol(for: pane.kind))
                                     .font(.caption2)
                                 Text(pane.title.isEmpty ? String(localized: "Pane \(index + 1)") : DefaultTitle.localized(pane.title))
                                     .font(.subheadline)

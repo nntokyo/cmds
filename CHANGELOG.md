@@ -22,6 +22,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: Share Sessions… (`cmds accounts share`) lets every account reach the same session transcripts: each account's
   `projects` folder becomes a symlink to the first account's, after asking; an account's own folder is renamed, never
   deleted (#31).
+- Mac: files panes, a local folder as a list next to your terminals (#26). Columns for name, size, date modified, kind
+  and Git state (inside a repository); sorting, hidden files (⇧⌘.), type-to-select, back / forward / enclosing folder
+  and a clickable path. Return opens, Space shows the file in the preview pane. Two files panes side by side copy and
+  move between each other (F5 / F6, drag and drop, ⌘C / ⌘V / ⌥⌘V) in the background, with progress, Cancel and a
+  choice for names that are taken (keep both, replace, skip, for all). Rename (F2), New Folder (F7) and Move to Trash
+  (⌘⌫); nothing is deleted for good. Follow Terminal keeps the pane in the directory of the workspace's terminal; Open
+  Terminal Here opens one in the folder. File › New Files Pane (⇧⌘E), Pane › Files, `cmds files [PATH]` and the
+  socket method `files.open`; files panes come back after a relaunch and in exported workspaces.
+- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
+  versions see them as browser panes (#26).
+
+### Changed
+
+- Mac: file paths dropped or pasted into a terminal are also quoted when they contain `~`, `^` or `%`, and names with a
+  line break are put in single quotes (#26).
 
 ## [0.4.0] - 2026-11-02
 

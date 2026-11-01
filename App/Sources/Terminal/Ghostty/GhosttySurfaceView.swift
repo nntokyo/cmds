@@ -2,6 +2,7 @@
 // Copyright (c) 2024 Mitchell Hashimoto, Ghostty contributors. MIT License.
 
 import AppKit
+import CmdsCore
 import GhosttyKit
 
 /// NSView hosting one `ghostty_surface_t`. libghostty installs its own CAMetalLayer on this view
@@ -710,7 +711,7 @@ final class GhosttySurfaceView: NSView {
         let text: String
         if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
            !urls.isEmpty {
-            text = urls.map { GhosttyRuntime.shellEscape($0.path) }.joined(separator: " ")
+            text = ShellQuoting.quote(urls.map(\.path))
         } else if let s = pb.string(forType: .string) {
             text = s
         } else {

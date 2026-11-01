@@ -13,6 +13,9 @@ public enum SyncFeature {
     /// its `screen` / `screenDiff` to that phone carry the rows that left the top of the screen since the previous
     /// one (`scrolledOff`), or `historyReset` when the rows above the screen no longer continue what was sent.
     public static let scrollbackStream = "scrollbackStream"
+    /// Phone: decodes `PaneKind.files`. Phones without it get files panes as browser panes (`url` = the folder's
+    /// `file://` URL), like preview panes before `previewPanes`.
+    public static let filesPanes = "files"
 }
 
 /// Sending the file of a preview pane to the phone in `file` messages (`requestFile`).
@@ -93,6 +96,24 @@ public struct SyncFileAssembler: Sendable {
 }
 
 extension ServerMessage.State {
+    /// The state for a phone with these `hello.features`: pane kinds it cannot decode become browser panes.
+    public func forPhone(supportsPreview: Bool, supportsFiles: Bool) -> ServerMessage.State {
+        var state = self
+        if !supportsFiles { state = state.withoutFilesPanes }
+        if !supportsPreview { state = state.withoutPreviewPanes }
+        return state
+    }
+
+    public var hasFilesPanes: Bool { workspaces.contains { $0.panes.contains { $0.kind == .files } } }
+
+    /// The state for phones without `SyncFeature.filesPanes`.
+    public var withoutFilesPanes: ServerMessage.State {
+        guard hasFilesPanes else { return self }
+        var copy = self
+        copy.workspaces = workspaces.map(\.withoutFilesPanes)
+        return copy
+    }
+
     public var hasPreviewPanes: Bool { workspaces.contains { $0.panes.contains { $0.kind == .preview } } }
 
     /// The state for phones without `SyncFeature.previewPanes`.
@@ -105,6 +126,20 @@ extension ServerMessage.State {
 }
 
 extension WorkspaceInfo {
+    /// For phones without `SyncFeature.filesPanes`: files panes shown as browser panes with the folder's `file://` URL.
+    public var withoutFilesPanes: WorkspaceInfo {
+        var copy = self
+        copy.panes = panes.map { pane in
+            guard pane.kind == .files else { return pane }
+            var legacy = pane
+            legacy.kind = .browser
+            legacy.url = pane.workingDirectory.map { URL(fileURLWithPath: $0, isDirectory: true).absoluteString }
+            legacy.workingDirectory = nil
+            return legacy
+        }
+        return copy
+    }
+
     /// For phones without `SyncFeature.previewPanes`: preview panes shown as browser panes with a `file://` URL.
     public var withoutPreviewPanes: WorkspaceInfo {
         var copy = self

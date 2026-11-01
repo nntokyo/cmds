@@ -11,6 +11,16 @@ struct PaneView: View {
         VStack(spacing: 0) {
             if pane.kind == .preview {
                 PreviewFileView(pane: pane)
+            } else if pane.kind == .files {
+                // Browsing a Mac folder from the phone comes later (#26): the folder it shows, for now.
+                ContentUnavailableView {
+                    Label(pane.title, systemImage: "folder")
+                } description: {
+                    VStack {
+                        Text("Files pane on the Mac")
+                        if let folder = pane.workingDirectory { Text(folder).font(.caption.monospaced()) }
+                    }
+                }
             } else if pane.kind == .browser {
                 ContentUnavailableView {
                     Label(pane.title.isEmpty ? String(localized: "Browser") : DefaultTitle.localized(pane.title), systemImage: "globe")

@@ -977,6 +977,16 @@
         }
       }
     },
+    "Files pane on the Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macのファイル一覧ペイン"
+          }
+        }
+      }
+    },
     "First connection to %@. Compare this fingerprint with the relay host's key (on the relay: ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub)." : {
       "localizations" : {
         "ja" : {

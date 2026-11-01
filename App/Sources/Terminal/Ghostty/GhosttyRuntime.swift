@@ -2,6 +2,7 @@
 // Copyright (c) 2024 Mitchell Hashimoto, Ghostty contributors. MIT License.
 
 import AppKit
+import CmdsCore
 import GhosttyKit
 import UniformTypeIdentifiers
 import os
@@ -314,20 +315,9 @@ final class GhosttyRuntime {
     private static func pasteboardString(_ pb: NSPasteboard) -> String? {
         if let urls = pb.readObjects(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true]) as? [URL],
            !urls.isEmpty {
-            return urls.map { shellEscape($0.path) }.joined(separator: " ")
+            return ShellQuoting.quote(urls.map(\.path))
         }
         return pb.string(forType: .string)
-    }
-
-    /// Backslash-escapes shell metacharacters in a path (pasting/dropping file URLs).
-    nonisolated static func shellEscape(_ s: String) -> String {
-        let special = Set(" \\()[]{}<>\"'`!#$&;|*?\t")
-        var out = ""
-        for ch in s {
-            if special.contains(ch) { out.append("\\") }
-            out.append(ch)
-        }
-        return out
     }
 
     @MainActor

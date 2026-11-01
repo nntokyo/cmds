@@ -50,6 +50,9 @@ public enum RemoteAPIPolicy {
                 throw forbidden("cmds open is not available over an SSH connection: the file is on the server, not on this Mac "
                     + "(copy it to the Mac, e.g. with scp, and open it there)")
             }
+            if method == "files.open" {
+                throw forbidden("cmds files is not available over an SSH connection: it lists folders on this Mac, not on the server")
+            }
             throw forbidden("\(method) is not available over an SSH connection (remote sockets only reach their own pane)")
         }
         var object: [String: JSONValue]

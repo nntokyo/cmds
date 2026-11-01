@@ -56,7 +56,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
 - Launch the binary directly; `open` does not pass the environment reliably.
 - A window that is not on screen (another Space, hidden) is not drawn, so `screencapture` shows nothing. DEBUG
   builds answer `debug.preview_snapshot {pane}` → `{"png_base64"}` with a picture of a preview pane drawn off screen
-  (web content via WKWebView's snapshot; Quick Look's out-of-process view stays blank).
+  (web content via WKWebView's snapshot; Quick Look's out-of-process view stays blank), and
+  `debug.files_snapshot {pane}` the same for a files pane. `debug.files {pane, action?, …}` drives a files pane
+  without UI scripting and returns its folder, rows, selection, Git states and status line: `select {names}`,
+  `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
+  `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
+  answers name conflicts instead of the alert. Point it only at folders the test created.
 
 All switches: [reference/environment.md](../reference/environment.md#app-switches-isolated-and-test-instances).
 

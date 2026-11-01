@@ -434,6 +434,27 @@ extension CLI {
             ])
             ctx.printResult(result, field: "id")
         },
+        Command(name: "files", usage: "files [--pane P] [--down] [--no-focus] [PATH]",
+                summary: "List a folder in a files pane split to the right of a pane (default: the current one).",
+                details: """
+                    PATH defaults to the current directory; relative paths are resolved against it, and a file's folder
+                    is listed with the file selected. --pane naming a files pane shows the folder in that pane instead
+                    of splitting. --down splits below, --no-focus keeps the keyboard in the current pane.
+                    Not available from SSH panes (it lists folders on the Mac). Prints the files pane id.
+                    """,
+                options: ["pane"], flags: ["down", "no-focus"]) { ctx in
+            try ctx.args.expectPositionals(0...1, usage: "cmds files [--pane P] [--down] [--no-focus] [PATH]")
+            let argument = ctx.args.positionals.first ?? "."
+            let path = absolutePath(argument)
+            guard FileManager.default.fileExists(atPath: path) else { throw CLIError.failure("no such file or folder: \(argument)") }
+            let result = try ctx.call("files.open", [
+                "pane": ctx.pane.json,
+                "path": .string(path),
+                "direction": ctx.args.has("down") ? "down" : nil,
+                "focus": ctx.args.has("no-focus") ? false : nil,
+            ])
+            ctx.printResult(result, field: "id")
+        },
         Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] <url>",
                 summary: "Open a browser split to the right of a pane (default: the current one).",
                 details: "--no-focus keeps the keyboard in the current pane. Prints the new pane id.",

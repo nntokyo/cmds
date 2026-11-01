@@ -32,7 +32,7 @@ final class CompanionClient {
     /// Files of preview panes fetched with `requestFile` (images/PDFs shown on the phone).
     let previewFiles = PreviewFileStore()
     /// Optional protocol additions this build understands (`hello.features`).
-    static let features = [SyncFeature.previewPanes, SyncFeature.scrollbackStream]
+    static let features = [SyncFeature.previewPanes, SyncFeature.scrollbackStream, SyncFeature.filesPanes]
     /// Panes that raised a `notification` and have not been viewed since.
     private(set) var unreadPaneIDs: Set<String> = []
     private(set) var unreadWorkspaceIDs: Set<String> = []
