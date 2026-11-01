@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- iPhone/iPad: swipe down in a terminal for its earlier output (up to 500 rows above the screen). The screen stays put
+  while you read it, and Latest returns to the live screen. Needs cmds 0.3.0 or later on the Mac (#19).
+- Mac: answers the phone's requests for the rows above a pane's screen (sync feature `scrollback`) (#19).
+
 ## [0.2.1] - 2026-11-01
 
 Mac only; the iPhone/iPad app is unchanged from 0.1.3.
