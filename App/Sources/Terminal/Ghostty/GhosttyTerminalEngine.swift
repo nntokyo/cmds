@@ -84,36 +84,36 @@ final class GhosttyTerminalSurface: TerminalSurface {
         let size = ghostty_surface_size(surface)
         let rows = Int(size.rows), cols = Int(size.columns)
         guard rows > 0, cols > 0 else { return "" }
-        return (0..<rows).map { viewportRow(surface, $0, cols: cols) }.joined(separator: "\n")
+        return (0..<rows).map { readRow(surface, GHOSTTY_POINT_VIEWPORT, $0, cols: cols) ?? "" }.joined(separator: "\n")
     }
 
-    /// libghostty's text API reaches exact rows only inside the viewport: `ghostty_surface_read_text` clamps every
-    /// point to the viewport height, `GHOSTTY_POINT_SCREEN` ones too (apprt/embedded.zig `Point.pin`), and the
-    /// scrollbar action comes from the renderer, which stops while the surface is hidden. So the viewport is moved
-    /// over the wanted rows with `scroll_to_row`, they are read like `visibleText()` and the viewport goes back to the
-    /// bottom, all within this call on the main thread (about 1 ms for 1000 rows). Only those rows are read: the
-    /// history can be megabytes, and reading compressed pages inflates them again. A pane on screen may draw one frame
-    /// of the moved viewport (2 of 100 reads of 1000 rows did). A viewport the user scrolled up is left alone: with
-    /// output arriving in between, its place could not be found again exactly.
+    /// `ghostty_surface_scrollbar`, from cmds' libghostty patch (vendor/ghostty-patches): the same figures as the
+    /// renderer's scrollbar action, but read now, so they are current while the surface is not drawn too.
+    func scrollbar() -> TerminalScrollbar? {
+        guard let surface = surfaceView.surface else { return nil }
+        let bar = ghostty_surface_scrollbar(surface)
+        guard bar.len > 0 else { return nil }
+        return TerminalScrollbar(total: Int(clamping: bar.total), offset: Int(clamping: bar.offset),
+                                 rows: Int(clamping: bar.len))
+    }
+
+    /// The rows are read by their screen row, as `visibleText()` reads the viewport's: with cmds' libghostty patch,
+    /// exact `GHOSTTY_POINT_SCREEN` points reach the whole history (upstream clamps every point to the viewport
+    /// height). Only those rows are read: the history can be megabytes, and reading compressed pages inflates them
+    /// again.
     func historyRows(maxRows: Int) -> [String]? {
-        guard maxRows > 0, let surface = surfaceView.surface else { return [] }
-        let size = ghostty_surface_size(surface)
-        let rows = Int(size.rows), cols = Int(size.columns)
-        guard rows > 0, cols > 0, activeAreaRow(surface, cols: cols) == 0 else { return [] }
-        // The viewport followed the output; it does again whatever happens below.
-        defer { scrollViewport(toRow: .max) }
-        guard let top = historyLength(surface, rows: rows, cols: cols) else { return nil }
-        guard top > 0 else { return [] }
+        guard maxRows > 0, let surface = surfaceView.surface, let bar = scrollbar() else { return [] }
+        let cols = Int(ghostty_surface_size(surface).columns)
+        guard cols > 0, bar.offset > 0 else { return [] }
         var lines: [String] = []
-        lines.reserveCapacity(min(maxRows, top))
-        var start = max(0, top - maxRows)
-        while start < top {
-            scrollViewport(toRow: start)
-            let count = min(rows, top - start)
-            for row in 0..<count { lines.append(viewportRow(surface, row, cols: cols)) }
-            start += count
+        lines.reserveCapacity(min(maxRows, bar.offset))
+        for row in max(0, bar.offset - maxRows)..<bar.offset {
+            guard let line = readRow(surface, GHOSTTY_POINT_SCREEN, row, cols: cols) else { return nil }
+            lines.append(line)
         }
-        return lines
+        // New rows alone would not matter (screen rows count from the top of the history), but rows pruned past the
+        // scrollback limit or a cleared history shift them, and a scrolled viewport has others above it.
+        return scrollbar() == bar ? lines : nil
     }
 
     func scrollbackText(maxLines: Int) -> String {
@@ -183,69 +183,25 @@ final class GhosttyTerminalSurface: TerminalSurface {
         ghostty_point_s(tag: tag, coord: GHOSTTY_POINT_COORD_EXACT, x: UInt32(max(col, 0)), y: UInt32(max(row, 0)))
     }
 
-    /// A single-row rectangle selection: libghostty's text reader always unwraps soft wraps, so rows are read
+    /// Row `row` in `tag` coordinates (viewport, or screen = from the top of the history), nil when there is no such
+    /// row. A single-row rectangle selection: libghostty's text reader always unwraps soft wraps, so rows are read
     /// separately; `rectangle` also stops a wide char that wrapped onto the next row from being pulled into this one.
-    private func viewportRow(_ surface: ghostty_surface_t, _ row: Int, cols: Int) -> String {
+    private func readRow(_ surface: ghostty_surface_t, _ tag: ghostty_point_tag_e, _ row: Int, cols: Int) -> String? {
         let sel = ghostty_selection_s(
-            top_left: Self.cell(GHOSTTY_POINT_VIEWPORT, col: 0, row: row),
-            bottom_right: Self.cell(GHOSTTY_POINT_VIEWPORT, col: cols - 1, row: row),
+            top_left: Self.cell(tag, col: 0, row: row),
+            bottom_right: Self.cell(tag, col: cols - 1, row: row),
             rectangle: true)
-        let text = read(surface, sel)?.text ?? ""
+        guard let text = read(surface, sel)?.text else { return nil }
         return text.contains("\n") ? text.replacingOccurrences(of: "\n", with: " ") : text
     }
 
-    /// Viewport row of the active area's first row (0 while the viewport follows the output), or nil when that row is
-    /// below the viewport.
-    private func activeAreaRow(_ surface: ghostty_surface_t, cols: Int) -> Int? {
-        let cell = Self.cell(GHOSTTY_POINT_ACTIVE, col: 0, row: 0)
-        guard let first = read(surface, ghostty_selection_s(top_left: cell, bottom_right: cell, rectangle: false)),
-              first.y >= 0 else { return nil }
-        return first.cell / cols
-    }
-
-    /// Rows above the active area, found by moving the viewport: after `scroll_to_row:p` the active area's first row
-    /// is on viewport row H − p when 0 < H − p < rows, on row 0 when p ≥ H (the viewport stops at the active area)
-    /// and below the viewport when H − p ≥ rows. Starts at the scrollbar's figure, which is exact while the surface is
-    /// drawn, so one probe usually does. nil when the answers contradict each other (output arrived meanwhile).
-    private func historyLength(_ surface: ghostty_surface_t, rows: Int, cols: Int) -> Int? {
-        let maxProbe = 1 << 40
-        var low = 0, high = Int.max // low ≤ H ≤ high
-        var probe = max(0, (surfaceView.scrollbar.map { $0.total - $0.length } ?? 0) - rows / 2)
-        var step = rows
-        for _ in 0..<128 {
-            scrollViewport(toRow: probe)
-            switch activeAreaRow(surface, cols: cols) {
-            case let row? where row > 0: return probe + row
-            case 0?: high = min(high, probe)
-            default: low = max(low, probe + rows)
-            }
-            guard low < high else { return low == high ? low : nil }
-            if high == .max {
-                guard low < maxProbe else { return nil }
-                probe = low + step
-                step = min(step * 2, maxProbe)
-            } else {
-                // Within a screen the next probe lands below H, so it answers exactly.
-                probe = high - low < rows ? max(0, high - (rows - 1)) : low + (high - low) / 2
-            }
-        }
-        return nil
-    }
-
-    /// `scroll_to_row` moves the viewport synchronously (the other scroll actions go through the IO thread); a row in
-    /// the active area or below it pins the viewport to the active area, which then follows the output again.
-    private func scrollViewport(toRow row: Int) {
-        surfaceView.performBinding("scroll_to_row:\(max(0, row))")
-    }
-
-    /// Reads a selection's text plus where its top-left cell is in the viewport: position in points, (-1, -1) when
-    /// the selection is not in the viewport, and `cell` = viewport row · columns + column (0 when outside).
-    /// The returned text buffer is freed here.
-    private func read(_ surface: ghostty_surface_t, _ sel: ghostty_selection_s) -> (text: String, x: Double, y: Double, cell: Int)? {
+    /// Reads a selection's text plus the viewport position (points) of its top-left cell; the position
+    /// is (-1, -1) when the selection is not in the viewport. The returned text buffer is freed here.
+    private func read(_ surface: ghostty_surface_t, _ sel: ghostty_selection_s) -> (text: String, x: Double, y: Double)? {
         var text = ghostty_text_s()
         guard ghostty_surface_read_text(surface, sel, &text) else { return nil }
         defer { ghostty_surface_free_text(surface, &text) }
-        return (Self.string(from: text), text.tl_px_x, text.tl_px_y, Int(text.offset_start))
+        return (Self.string(from: text), text.tl_px_x, text.tl_px_y)
     }
 
     nonisolated static func string(from text: ghostty_text_s) -> String {
@@ -358,6 +314,7 @@ private final class FallbackSurface: TerminalSurface {
     func focus() { view.window?.makeFirstResponder(textView) }
     func visibleText() -> String { textView.string }
     func scrollbackText(maxLines: Int) -> String { textView.string }
+    func scrollbar() -> TerminalScrollbar? { nil }
     func historyRows(maxRows: Int) -> [String]? { [] } // `visibleText()` already has all of it
     var cursorPosition: (row: Int, col: Int)? { nil }
     var gridSize: (rows: Int, cols: Int)? { nil }

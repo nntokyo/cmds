@@ -54,10 +54,32 @@ final class SyncServer {
     /// Retry interval while a `file` transfer waits for the connection's write queue to drain.
     static let filePieceRetryInterval: TimeInterval = 0.05
     /// `requestScrollback` for a pane within this time of the previous one is ignored (the phone asks every few
-    /// seconds at most; each answer moves the terminal's viewport for a moment and can be 1000 rows).
+    /// seconds at most; an answer can be 1000 rows).
     static let scrollbackInterval: TimeInterval = 0.5
-    /// Reads of the screen and the rows above it per `requestScrollback` while output keeps changing them.
+    /// Reads of the screen and the rows above it per `requestScrollback` while output keeps moving them.
     static let scrollbackAttempts = 3
+    /// The last rows a streaming phone has above a pane's screen, read again with every update (`HistoryMark`).
+    static let historyCheckRows = 4
+
+    /// Where the rows a streaming phone has above a pane's screen end (`SyncFeature.scrollbackStream`): the viewport
+    /// of the last screen it got with rows above it, and the last few of those rows. Rows above the active area are
+    /// history, which programs cannot change, so they read the same until rows are pruned past the scrollback limit
+    /// or the history is cleared; then they shift, and other rows read differently.
+    struct HistoryMark {
+        var bar: TerminalScrollbar
+        var cols: Int
+        /// At most `historyCheckRows`, oldest first; the last one is screen row `bar.offset − 1`.
+        var tail: [String]
+    }
+
+    /// What a screen update carries for a streaming phone's rows above the screen.
+    enum HistoryUpdate: Equatable {
+        case unchanged
+        /// Rows that left the top of the screen since the previous update, oldest first.
+        case scrolledOff([String])
+        /// The rows above this screen do not continue the phone's; it asks again.
+        case reset
+    }
 
     final class Client {
         let connection: SyncConnection
@@ -76,6 +98,11 @@ final class SyncServer {
         var sendingFile = false
         /// Last answered `requestScrollback` per pane (subscribed panes only).
         var scrollbackSentAt: [String: Date] = [:]
+        /// `hello.features` has `SyncFeature.scrollbackStream`: screen updates carry the rows that left the screen.
+        var streamsHistory = false
+        /// Streaming phones: per subscribed pane whose `requestScrollback` was answered, where their rows above the
+        /// screen end. Dropped with `historyReset` (the phone asks again).
+        var historyMarks: [String: HistoryMark] = [:]
         var inputWindowStart = Date.distantPast
         var inputBytesInWindow = 0
         /// Panes to bring up to date with the next screen update: changed since the last one sent (throttled links
@@ -284,6 +311,7 @@ final class SyncServer {
     private func revokeSession(of client: Client, reason: String) {
         client.authenticated = false
         client.subscribed = []
+        client.historyMarks = [:]
         sendError(.invalidToken, reason, to: client, close: true)
     }
 
@@ -564,16 +592,21 @@ final class SyncServer {
     /// `requestScreen`: the whole screen if this client has seen the pane, else its first update.
     private func sendScreen(paneID: String, to client: Client) {
         if let msg = client.streamer.fullScreen(paneID: paneID) {
+            // The screen the phone has, so the rows above it are still the ones it has.
             send(msg, to: client)
         } else if let snapshot = snapshot(paneID: paneID) {
-            if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
+            guard let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) else { return }
+            // A screen read now, without knowing where its viewport is.
+            let reset = client.historyMarks.removeValue(forKey: paneID) != nil
+            send(reset ? msg.withHistory(scrolledOff: nil, reset: true) : msg, to: client)
         } else {
             sendPaneNotFound(paneID, to: client)
         }
     }
 
     /// `requestScrollback`: a full `screen` of the pane under a new seq, then the rows above it with that seq
-    /// (docs/internals/sync-protocol.md "Scrollback").
+    /// (docs/internals/sync-protocol.md "Scrollback"). A streaming phone gets the rows that leave the screen from
+    /// then on with its screen updates (`historyUpdate`).
     private func sendScrollback(_ request: ClientMessage.RequestScrollback, to client: Client) {
         let paneID = request.paneID
         guard let pane = AppController.shared.pane(id: paneID) else {
@@ -587,25 +620,28 @@ final class SyncServer {
         client.scrollbackSentAt[paneID] = now
         let maxRows = SyncScrollback.clampedLines(request.lines)
         do {
-            // Output between the reads would leave a gap or an overlap at the seam: read again while the screen
-            // moved meanwhile, and keep the last complete read.
-            var answer: (screen: ScreenSnapshot, rows: [String])?
+            // The rows must end right above the screen: read again while output moves the viewport meanwhile.
+            var answer: (screen: ScreenSnapshot, rows: [String], bar: TerminalScrollbar?)?
             for _ in 0..<Self.scrollbackAttempts {
-                let before = snapshot(paneID: paneID)
-                let rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows)
+                let bar = try AppController.shared.scrollbar(paneID: paneID)
                 guard let screen = snapshot(paneID: paneID) else {
                     return sendPaneNotFound(paneID, to: client)
                 }
-                guard let rows else { continue }
-                answer = (screen, rows)
-                if screen == before { break }
+                guard let rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows),
+                      try AppController.shared.scrollbar(paneID: paneID) == bar else { continue }
+                answer = (screen, rows.map(Self.trimmed), bar)
+                break
             }
             // Output kept moving the history: no answer rather than an empty one, which would clear the phone's
-            // rows. The phone asks again as the screen scrolls.
+            // rows. The phone asks again.
             guard let answer else { return }
             let full = client.streamer.full(paneID: paneID, snapshot: answer.screen)
             send(.screen(full), to: client)
-            send(.scrollback(.init(paneID: paneID, seq: full.seq, lines: answer.rows.map(Self.trimmed))), to: client)
+            send(.scrollback(.init(paneID: paneID, seq: full.seq, lines: answer.rows)), to: client)
+            if client.streamsHistory, let bar = answer.bar {
+                client.historyMarks[paneID] = HistoryMark(bar: bar, cols: answer.screen.cols,
+                                                          tail: Array(answer.rows.suffix(Self.historyCheckRows)))
+            }
             // This screen may be newer than the last tick's; the next tick compares the client's copy with the
             // current one even if the pane looks unchanged to it (e.g. the screen went back to what the tick saw).
             client.pendingScreens.insert(paneID)
@@ -718,7 +754,9 @@ final class SyncServer {
             client.deviceName = name
             client.tokenHash = SyncDeviceStore.hash(plainToken)
             client.supportsPreview = hello.features?.contains(SyncFeature.previewPanes) == true
-            send(.welcome(.init(macName: macName, token: plainToken, features: [SyncFeature.scrollback])), to: client)
+            client.streamsHistory = hello.features?.contains(SyncFeature.scrollbackStream) == true
+            send(.welcome(.init(macName: macName, token: plainToken,
+                                features: [SyncFeature.scrollback, SyncFeature.scrollbackStream])), to: client)
             send(.state(currentState(for: client)), to: client)
             // This client may now be ahead of the last broadcast; never skip the next one as a duplicate.
             lastStateData = nil
@@ -876,6 +914,7 @@ final class SyncServer {
         }
         client.subscribed = wanted
         client.scrollbackSentAt = client.scrollbackSentAt.filter { wanted.contains($0.key) }
+        client.historyMarks = client.historyMarks.filter { wanted.contains($0.key) }
         // Keeps per-pane seq for unsubscribed panes (CmdsCore >= 654204a), so a later
         // re-subscribe is not taken as stale by the phone's ScreenMirror.
         client.streamer.retain(paneIDs: wanted)
@@ -885,6 +924,11 @@ final class SyncServer {
 
     private var subscribedPanes: Set<String> {
         clients.values.reduce(into: Set<String>()) { if $1.authenticated { $0.formUnion($1.subscribed) } }
+    }
+
+    /// Panes a streaming phone has rows above the screen of (`Client.historyMarks`).
+    private var markedPanes: Set<String> {
+        clients.values.reduce(into: Set<String>()) { if $1.authenticated { $0.formUnion($1.historyMarks.keys) } }
     }
 
     private func pruneScreenCache() {
@@ -911,12 +955,18 @@ final class SyncServer {
     private func screenTick() {
         let panes = subscribedPanes
         guard !panes.isEmpty else { return stopScreenTimer() }
+        // Where the viewport of each pane a streaming phone has rows above was while the pane was read; only when it
+        // did not move meanwhile, so that the screen starts at that row.
+        let marked = markedPanes
+        var bars: [String: TerminalScrollbar] = [:]
         var changed: Set<String> = []
         for paneID in panes {
+            let bar = marked.contains(paneID) ? scrollbar(paneID: paneID) : nil
             guard let snapshot = snapshot(paneID: paneID) else {
                 lastSnapshot[paneID] = nil
                 continue
             }
+            if let bar, scrollbar(paneID: paneID) == bar { bars[paneID] = bar }
             // Compare the whole snapshot: a cursor move alone (e.g. ← on a prompt) must reach the phone.
             if lastSnapshot[paneID] == snapshot { continue }
             lastSnapshot[paneID] = snapshot
@@ -926,15 +976,83 @@ final class SyncServer {
         let now = Date()
         for client in clients.values where client.authenticated {
             client.pendingScreens.formUnion(changed.intersection(client.subscribed))
+            // A streaming phone also needs an update when the viewport moved without the screen's text changing, or
+            // after an update that could not carry the rows that left the screen.
+            let behind = client.historyMarks.compactMap { paneID, mark in
+                bars[paneID].map { $0.offset != mark.bar.offset || $0.total < mark.bar.total } == true ? paneID : nil
+            }
+            client.pendingScreens.formUnion(Set(behind).intersection(client.subscribed))
             guard !client.pendingScreens.isEmpty,
                   now.timeIntervalSince(client.lastScreensSentAt) >= client.screenInterval - Self.screenInterval / 4 else { continue }
             for paneID in client.pendingScreens where client.subscribed.contains(paneID) {
                 guard let snapshot = lastSnapshot[paneID] else { continue }
-                if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
+                sendUpdate(paneID: paneID, snapshot: snapshot, bar: bars[paneID], to: client)
             }
             client.pendingScreens = []
             client.lastScreensSentAt = now
         }
+    }
+
+    /// The pane's next `screen` / `screenDiff` for this client, if its screen changed. A streaming phone with rows
+    /// above it gets the rows that left the screen with it (or `historyReset`), also when only those changed, in an
+    /// unchanged full screen. `bar`: the viewport while `snapshot` was read, nil when it moved meanwhile.
+    private func sendUpdate(paneID: String, snapshot: ScreenSnapshot, bar: TerminalScrollbar?, to client: Client) {
+        let update = client.streamer.update(paneID: paneID, snapshot: snapshot)
+        guard let mark = client.historyMarks[paneID] else {
+            if let update { send(update, to: client) }
+            return
+        }
+        if update == nil, bar == nil || bar == mark.bar { return }
+        let history = historyUpdate(paneID: paneID, screen: snapshot, bar: bar, for: client)
+        let message: ServerMessage
+        switch (update, history) {
+        case (let update?, .unchanged): message = update
+        case (nil, .unchanged): return
+        default: message = update ?? .screen(client.streamer.full(paneID: paneID, snapshot: snapshot))
+        }
+        switch history {
+        case .unchanged: send(message, to: client)
+        case .scrolledOff(let rows): send(message.withHistory(scrolledOff: rows, reset: false), to: client)
+        case .reset: send(message.withHistory(scrolledOff: nil, reset: true), to: client)
+        }
+    }
+
+    /// The rows of the pane that left the top of the screen since the client's `HistoryMark`, read by screen row
+    /// without moving the viewport, and the mark moved to `bar`; `.reset` (mark dropped) when the rows above the
+    /// screen no longer continue the phone's; `.unchanged` while `bar` is unknown or moves (a later update catches up).
+    private func historyUpdate(paneID: String, screen: ScreenSnapshot, bar: TerminalScrollbar?,
+                               for client: Client) -> HistoryUpdate {
+        guard let mark = client.historyMarks[paneID] else { return .unchanged }
+        func reset() -> HistoryUpdate {
+            client.historyMarks[paneID] = nil
+            return .reset
+        }
+        // Resized: the rows above the screen were rewrapped, or moved into it.
+        guard screen.rows == mark.bar.rows, screen.cols == mark.cols else { return reset() }
+        guard let bar else { return .unchanged }
+        // History cleared, alternate screen, scrolled up on the Mac, or more rows at once than an answer has.
+        guard bar.rows == mark.bar.rows, bar.total >= mark.bar.total, bar.offset >= mark.bar.offset,
+              bar.offset - mark.bar.offset <= SyncScrollback.maxLines else { return reset() }
+        // Screen rows mark.offset − tail ..< bar.offset, while the viewport is still where the screen was read.
+        let count = bar.offset - mark.bar.offset + mark.tail.count
+        var rows: [String] = []
+        if count > 0 {
+            guard scrollbar(paneID: paneID) == bar,
+                  let read = try? AppController.shared.historyRows(paneID: paneID, maxRows: count), read.count == count,
+                  scrollbar(paneID: paneID) == bar else { return .unchanged }
+            rows = read.map(Self.trimmed)
+            // The phone's last rows read differently: the history shifted under them (pruned, cleared).
+            guard rows.prefix(mark.tail.count).elementsEqual(mark.tail) else { return reset() }
+            rows.removeFirst(mark.tail.count)
+        }
+        client.historyMarks[paneID] = HistoryMark(bar: bar, cols: screen.cols,
+                                                  tail: Array((mark.tail + rows).suffix(Self.historyCheckRows)))
+        return rows.isEmpty ? .unchanged : .scrolledOff(rows)
+    }
+
+    /// Where a pane's viewport is in its whole screen, or nil if unknown / not a terminal.
+    private func scrollbar(paneID: String) -> TerminalScrollbar? {
+        try? AppController.shared.scrollbar(paneID: paneID)
     }
 
     /// Current screen of a pane, or nil if it does not exist / is not a terminal.

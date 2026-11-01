@@ -4,14 +4,6 @@
 import AppKit
 import GhosttyKit
 
-/// `ghostty_action_scrollbar_s`: rows of the whole screen (scrollback + active area), index of the viewport's first
-/// row, viewport rows.
-struct GhosttyScrollbar: Equatable {
-    var total: Int
-    var offset: Int
-    var length: Int
-}
-
 /// NSView hosting one `ghostty_surface_t`. libghostty installs its own CAMetalLayer on this view
 /// and renders from its renderer thread; this class forwards AppKit input/size/focus to libghostty.
 @MainActor
@@ -20,10 +12,6 @@ final class GhosttySurfaceView: NSView {
     weak var owner: GhosttyTerminalSurface?
     /// Launched with `waitAfterCommand`: libghostty keeps the surface when the command exits.
     private(set) var waitsAfterCommand = false
-
-    /// Last `GHOSTTY_ACTION_SCROLLBAR`. libghostty's renderer reports it when it draws a changed frame, so it is stale
-    /// while the surface is hidden (other workspace, occluded window, display asleep); a hint only.
-    var scrollbar: GhosttyScrollbar?
 
     /// Cell size in points (libghostty reports pixels via CELL_SIZE).
     private(set) var cellSize: CGSize = .zero
@@ -681,9 +669,7 @@ final class GhosttySurfaceView: NSView {
 
     // MARK: - Edit actions
 
-    /// Runs a libghostty binding action (e.g. "copy_to_clipboard", "scroll_to_row:0") on this surface.
-    @discardableResult
-    func performBinding(_ action: String) -> Bool {
+    private func performBinding(_ action: String) -> Bool {
         guard let surface else { return false }
         return action.withCString { ghostty_surface_binding_action(surface, $0, UInt(action.utf8.count)) }
     }
