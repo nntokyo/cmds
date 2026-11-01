@@ -195,12 +195,11 @@ extension FilesPane {
         case (.move, true): text = String(localized: "Moving \(status.index) of \(status.count): \(status.name)")
         case (.move, false): text = String(localized: "Moving \(status.name)")
         }
+        progressIndicator.isIndeterminate = false
         if status.bytesTotal > 0 {
             text += " — " + String(localized: "\(byteFormatter.string(fromByteCount: status.bytesDone)) of \(byteFormatter.string(fromByteCount: status.bytesTotal))")
-            progressIndicator.isIndeterminate = false
             progressIndicator.doubleValue = min(1, Double(status.bytesDone) / Double(status.bytesTotal))
         } else {
-            progressIndicator.isIndeterminate = false
             progressIndicator.doubleValue = status.count > 0 ? Double(status.index - 1) / Double(status.count) : 0
         }
         statusLabel.stringValue = text
@@ -221,10 +220,14 @@ extension FilesPane {
             other.load()
         }
         guard !failures.isEmpty else { return }
-        let lines = failures.prefix(8).map { "\($0.name): \(Self.text($0.reason))" }
-        let more = failures.count > 8 ? "\n" + String(localized: "and \(failures.count - 8) more") : ""
+        let shown = Self.failuresListed
+        let lines = failures.prefix(shown).map { "\($0.name): \(Self.text($0.reason))" }
+        let more = failures.count > shown ? "\n" + String(localized: "and \(failures.count - shown) more") : ""
         showError(String(localized: "Some items could not be copied or moved."), detail: lines.joined(separator: "\n") + more)
     }
+
+    /// Failures named in the alert after a copy or move; the rest are counted.
+    private static let failuresListed = 8
 
     private static func text(_ reason: FileOperation.Failure.Reason) -> String {
         switch reason {
@@ -268,9 +271,10 @@ extension FilesPane {
     func contextMenu() -> NSMenu {
         let menu = NSMenu()
         let entries = targetEntries
-        func add(_ title: String, _ action: Selector, enabled: Bool = true) {
+        func add(_ title: String, _ action: Selector, enabled: Bool = true, checked: Bool? = nil) {
             let item = NSMenuItem(title: title, action: enabled ? action : nil, keyEquivalent: "")
             item.target = self
+            if let checked { item.state = checked ? .on : .off }
             menu.addItem(item)
         }
         let hasFile = entries.contains { !$0.isFolder }
@@ -290,14 +294,8 @@ extension FilesPane {
         }
         add(String(localized: "New Folder"), #selector(newFolder))
         add(String(localized: "Open Terminal Here"), #selector(openTerminalHere))
-        let hidden = NSMenuItem(title: String(localized: "Show Hidden Files"), action: #selector(toggleHiddenFiles), keyEquivalent: "")
-        hidden.target = self
-        hidden.state = showHidden ? .on : .off
-        menu.addItem(hidden)
-        let follow = NSMenuItem(title: String(localized: "Follow Terminal"), action: #selector(toggleFollowTerminal), keyEquivalent: "")
-        follow.target = self
-        follow.state = followsTerminal ? .on : .off
-        menu.addItem(follow)
+        add(String(localized: "Show Hidden Files"), #selector(toggleHiddenFiles), checked: showHidden)
+        add(String(localized: "Follow Terminal"), #selector(toggleFollowTerminal), checked: followsTerminal)
         return menu
     }
 
