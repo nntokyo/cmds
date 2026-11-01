@@ -108,6 +108,14 @@ final class GitStatusTests: XCTestCase {
         XCTAssertEqual(changes.map(\.state), [.modified, .modified, .added, .renamed, .untracked, .untracked, .conflicted, .deleted])
     }
 
+    func testCopiesSkipTheirOldPathAndIgnoredFilesAreLeftOut() {
+        let changes = GitStatus.parse(porcelain([
+            "C  copy.txt", "orig.txt", " R moved.txt", "was.txt", "!! build.log", "AA both.txt", " T link", "DD gone.txt",
+        ]))
+        XCTAssertEqual(changes.map(\.path), ["copy.txt", "moved.txt", "both.txt", "link", "gone.txt"])
+        XCTAssertEqual(changes.map(\.state), [.renamed, .renamed, .conflicted, .modified, .conflicted])
+    }
+
     func testStatesPerFolderEntry() {
         let changes = GitStatus.parse(porcelain([
             " M App/Sources/a.swift", "?? App/Sources/new.swift", "A  App/b.swift", "?? App/Tmp/", " M top.txt",
@@ -136,6 +144,9 @@ final class FilesSyncTests: XCTestCase {
 
         let oldest = state.forPhone(supportsPreview: false, supportsFiles: false).workspaces[0].panes
         XCTAssertEqual(oldest.map(\.kind), [.terminal, .browser, .browser])
+
+        let previewOnly = state.forPhone(supportsPreview: false, supportsFiles: true).workspaces[0].panes
+        XCTAssertEqual(previewOnly.map(\.kind), [.terminal, .files, .browser])
 
         XCTAssertEqual(state.forPhone(supportsPreview: true, supportsFiles: true), state)
     }
