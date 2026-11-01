@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-02
+
+Mac and iPhone/iPad.
+
 ### Added
 
 - Mac: while a phone shows a pane's earlier output, the rows that scroll off the pane's screen are sent along with the
@@ -166,7 +170,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.3.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.4.0...master
+[0.4.0]: https://github.com/nntokyo/cmds/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nntokyo/cmds/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/nntokyo/cmds/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.2.0
