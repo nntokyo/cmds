@@ -60,6 +60,13 @@ final class SyncCodecTests: XCTestCase {
         XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("features"))
     }
 
+    func testScrollbackLinesAreClamped() {
+        XCTAssertEqual(SyncScrollback.clampedLines(-5), 1)
+        XCTAssertEqual(SyncScrollback.clampedLines(0), 1)
+        XCTAssertEqual(SyncScrollback.clampedLines(500), 500)
+        XCTAssertEqual(SyncScrollback.clampedLines(5000), SyncScrollback.maxLines)
+    }
+
     func testWireFormatIsFlatWithTypeField() throws {
         let data = try codec.encode(ClientMessage.input(.init(paneID: "p1", text: "hi")))
         XCTAssertEqual(String(decoding: data, as: UTF8.self), #"{"paneID":"p1","text":"hi","type":"input"}"#)
