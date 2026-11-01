@@ -175,7 +175,7 @@ public final class FileOperation: @unchecked Sendable {
         let isFolder = (try? source.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
         if FileNames.isSameOrInside(destination.path, source.path) { return .fail(.intoItself) }
         let target = destination.appendingPathComponent(name, isDirectory: isFolder)
-        if source.standardizedFileURL.path == target.standardizedFileURL.path {
+        if FileNames.isSamePath(source, target) {
             // Into its own folder: a copy gets a new name, a move has nothing to do.
             guard mode == .copy else { return .skip(countBytes: false) }
             return .transfer(to: destination.appendingPathComponent(keepBothName(name, isFolder: isFolder)))

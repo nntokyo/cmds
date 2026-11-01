@@ -112,4 +112,33 @@ public enum FileNames {
         let b = (folder as NSString).standardizingPath.split(separator: "/")
         return a.count >= b.count && Array(a.prefix(b.count)) == b
     }
+
+    /// Both file URLs name the same path once standardized (`..`, trailing slash).
+    public static func isSamePath(_ a: URL, _ b: URL) -> Bool {
+        a.standardizedFileURL.path == b.standardizedFileURL.path
+    }
+
+    /// A path typed into Go to Folder: absolute, `~/…`, or relative to `folder`. Surrounding spaces are ignored.
+    public static func resolve(typed: String, in folder: String) -> String {
+        let path = (typed.trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath
+        return path.hasPrefix("/") ? path : (folder as NSString).appendingPathComponent(path)
+    }
+
+    /// The closest folder above `path` that still exists (`/` at the latest): where a pane goes when its folder is
+    /// deleted or moved away.
+    public static func nearestFolder(above path: String, isFolder: (String) -> Bool) -> String {
+        var parent = (path as NSString).deletingLastPathComponent
+        while parent != "/", !isFolder(parent) { parent = (parent as NSString).deletingLastPathComponent }
+        return parent
+    }
+}
+
+/// Which row a files pane selects after rows go away.
+public enum FileSelection {
+    /// After `removed` leave `rows` (names in list order), like the Finder: the next row that stays after the first
+    /// removed one, else the last one before it; nil when nothing stays.
+    public static func afterRemoving(_ removed: Set<String>, from rows: [String]) -> String? {
+        let first = rows.firstIndex { removed.contains($0) } ?? 0
+        return rows[first...].first { !removed.contains($0) } ?? rows[..<first].last { !removed.contains($0) }
+    }
 }

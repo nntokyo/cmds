@@ -74,6 +74,39 @@ final class FileNamesTests: XCTestCase {
         XCTAssertFalse(FileNames.isSameOrInside("/a", "/a/b"))
         XCTAssertTrue(FileNames.isSameOrInside("/x", "/"))
     }
+
+    func testSamePath() {
+        XCTAssertTrue(FileNames.isSamePath(URL(fileURLWithPath: "/a/b/../c"), URL(fileURLWithPath: "/a/c/", isDirectory: true)))
+        XCTAssertFalse(FileNames.isSamePath(URL(fileURLWithPath: "/a/b"), URL(fileURLWithPath: "/a/c")))
+    }
+
+    func testTypedPaths() {
+        XCTAssertEqual(FileNames.resolve(typed: "  /etc  ", in: "/tmp"), "/etc")
+        XCTAssertEqual(FileNames.resolve(typed: "sub/dir", in: "/tmp"), "/tmp/sub/dir")
+        XCTAssertEqual(FileNames.resolve(typed: "~/Documents", in: "/tmp"), NSHomeDirectory() + "/Documents")
+        XCTAssertEqual(FileNames.resolve(typed: "", in: "/tmp"), "/tmp")
+    }
+
+    func testNearestFolder() {
+        let existing: Set<String> = ["/", "/a", "/a/b"]
+        XCTAssertEqual(FileNames.nearestFolder(above: "/a/b/c/d", isFolder: existing.contains), "/a/b")
+        XCTAssertEqual(FileNames.nearestFolder(above: "/a/b", isFolder: existing.contains), "/a")
+        XCTAssertEqual(FileNames.nearestFolder(above: "/x/y", isFolder: existing.contains), "/")
+        XCTAssertEqual(FileNames.nearestFolder(above: "/x", isFolder: { _ in false }), "/")
+    }
+}
+
+final class FileSelectionTests: XCTestCase {
+    func testAfterRemovingKeepsTheKeyboardNearby() {
+        let rows = ["a", "b", "c", "d", "e"]
+        XCTAssertEqual(FileSelection.afterRemoving(["b", "c"], from: rows), "d")
+        XCTAssertEqual(FileSelection.afterRemoving(["b", "d"], from: rows), "c")
+        XCTAssertEqual(FileSelection.afterRemoving(["d", "e"], from: rows), "c")
+        XCTAssertEqual(FileSelection.afterRemoving(["a", "b", "c", "d", "e"], from: rows), nil)
+        // Names no longer listed: from the top.
+        XCTAssertEqual(FileSelection.afterRemoving(["z"], from: rows), "a")
+        XCTAssertEqual(FileSelection.afterRemoving(["z"], from: []), nil)
+    }
 }
 
 final class ShellQuotingTests: XCTestCase {

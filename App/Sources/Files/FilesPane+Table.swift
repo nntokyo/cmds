@@ -277,7 +277,7 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
         let destinationPath = destination.standardizedFileURL.path
         if sources.contains(where: { FileNames.isSameOrInside(destinationPath, $0.standardizedFileURL.path) }) { return [] }
         let operation = Self.dropOperation(info, sources: sources, destination: destination)
-        if operation == .move, sources.allSatisfy({ $0.deletingLastPathComponent().standardizedFileURL.path == destinationPath }) {
+        if operation == .move, sources.allSatisfy({ FileNames.isSamePath($0.deletingLastPathComponent(), destination) }) {
             return []
         }
         return operation

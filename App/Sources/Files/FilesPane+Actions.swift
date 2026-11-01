@@ -68,8 +68,7 @@ extension FilesPane {
         alert.window.initialFirstResponder = field
         present(alert) { [weak self] response in
             guard let self, response == .alertFirstButtonReturn else { return }
-            let raw = (field.stringValue.trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath
-            let path = raw.hasPrefix("/") ? raw : (self.folder as NSString).appendingPathComponent(raw)
+            let path = FileNames.resolve(typed: field.stringValue, in: self.folder)
             if Self.isFolder(path) {
                 self.navigate(to: path)
             } else if FileManager.default.fileExists(atPath: path) {
@@ -107,10 +106,8 @@ extension FilesPane {
     @objc func moveToTrash() {
         let entries = targetEntries
         guard !entries.isEmpty else { return NSSound.beep() }
-        // Keep the keyboard near where the items were: the next row that stays, else the one before.
-        let trashed = Set(entries.map(\.name))
-        let first = rows.firstIndex { trashed.contains($0.name) } ?? 0
-        let next = rows[first...].first { !trashed.contains($0.name) } ?? rows[..<first].last { !trashed.contains($0.name) }
+        // Keep the keyboard near where the items were.
+        let next = FileSelection.afterRemoving(Set(entries.map(\.name)), from: rows.map(\.name))
         NSWorkspace.shared.recycle(entries.map(url(of:))) { [weak self] _, error in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
@@ -118,7 +115,7 @@ extension FilesPane {
                     if let error {
                         self.showError(String(localized: "Could not move to the Trash."), detail: error.localizedDescription)
                     }
-                    self.pendingSelection = next.map { [$0.name] } ?? []
+                    self.pendingSelection = next.map { [$0] } ?? []
                     self.load()
                 }
             }
@@ -214,13 +211,12 @@ extension FilesPane {
         progressIndicator.isHidden = true
         cancelButton.isHidden = true
         updateStatus()
-        let names = created.filter { $0.deletingLastPathComponent().standardizedFileURL.path == destination.standardizedFileURL.path }
+        let names = created.filter { FileNames.isSamePath($0.deletingLastPathComponent(), destination) }
             .map(\.lastPathComponent)
-        if destination.standardizedFileURL.path == folderURL.standardizedFileURL.path, !names.isEmpty {
+        if FileNames.isSamePath(destination, folderURL), !names.isEmpty {
             pendingSelection = names
             load()
-        } else if let other = otherPane?(), other.folderURL.standardizedFileURL.path == destination.standardizedFileURL.path,
-                  !names.isEmpty {
+        } else if let other = otherPane?(), FileNames.isSamePath(other.folderURL, destination), !names.isEmpty {
             other.pendingSelection = names
             other.load()
         }
