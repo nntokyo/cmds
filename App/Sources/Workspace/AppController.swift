@@ -360,6 +360,11 @@ final class AppController {
         try terminal(for: paneID).historyRows(maxRows: maxRows)
     }
 
+    /// Where the pane's visible screen is in its whole screen (`TerminalSurface.scrollbar`).
+    func scrollbar(paneID: String?) throws -> TerminalScrollbar? {
+        try terminal(for: paneID).scrollbar()
+    }
+
     /// Visible screen with its grid size and cursor, read back to back.
     func screenState(paneID: String?) throws -> (text: String, grid: (rows: Int, cols: Int)?, cursor: (row: Int, col: Int)?) {
         let terminal = try terminal(for: paneID)

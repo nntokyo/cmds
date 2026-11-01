@@ -75,10 +75,21 @@ In addition to `CMDS_SUPPORT_DIR`, which also selects separate keychain items fo
   swift test --filter SyncRelayTests` (in `Packages/CmdsCore`) pins the instance's certificate and pairs through two
   relays and a simulated L2CAP channel.
 - Scrollback test against an isolated instance: `CMDS_SCROLLBACK_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
-  swift test --filter SyncScrollbackTests` (in `Packages/CmdsCore`) creates its own workspace through the instance's
-  socket (next to that file), runs `seq 1 1500` there, pairs and checks `requestScrollback`: `welcome.features`, the
-  full `screen` and `scrollback` under one `seq`, consecutive rows ending right above the screen, the 1000-row limit,
-  the 0.5 s guard and the errors. It closes that workspace when done.
+  swift test --filter SyncScrollbackTests` (in `Packages/CmdsCore`). Each test creates its own workspace through the
+  instance's socket (next to that file), prints numbered rows there, pairs and checks:
+  - `requestScrollback` for a phone without the stream: `welcome.features`, the full `screen` and `scrollback` under
+    one `seq`, consecutive rows ending right above the screen, the 1000-row limit, a request within 0.5 s of an answer
+    answered once 0.5 s have passed, the errors, and no `scrolledOff` / `historyReset`;
+  - the stream (`scrollbackStream`): a script in a temporary directory prints in steps the test releases. The answer
+    and every `scrolledOff` after it must form one consecutive sequence that ends right above each screen that carries
+    rows (never overlapping it otherwise), through bursts of 100 rows and of 4000 rows (which may reset);
+    `historyReset` after `printf '\033[3J'` while the screen's text stays the same, and no rows after it until the
+    next answer; a second phone without the feature gets neither field;
+  - the stream across pruning: 120 000 rows fill the scrollback (skipped when Ghostty keeps them all, e.g. with a
+    raised `scrollback-limit`), then bursts of 100 and of 800 rows keep it pruning: no `historyReset`, one consecutive
+    sequence; a request sent during heavy output (3.9 million rows) is answered once the rows can be read.
+
+  It closes the workspaces when done.
 
 ### Remote access via SSH
 
@@ -209,10 +220,13 @@ Never pick a Mac under "On This Network": that is the instance someone works in.
 
 ## UI tests in the simulator
 
-`TerminalScreenTests` (same target) launches the companion with `-mock -noNotify -mockFullScreenTUI` and checks
-rendering against the demo data; it skips itself on a real device. Run it with
-`-only-testing:CmdsDeviceDriver/TerminalScreenTests` and the companion installed on the simulator. `-mock` alone
-(or "Try with demo data" on the connect screen) runs the app without a Mac.
+`TerminalScreenTests` (same target) launches the companion with `-mock -noNotify` and the demo flags it needs
+(`-mockFullScreenTUI`, `-mockStreamOutput`, `-mockNoHistoryStream`, `-uiTestProbes`;
+[reference/environment.md](../reference/environment.md#ios-companion-launch-arguments)) and checks rendering against the
+demo data: the zoomed TUI, earlier output, and earlier output that keeps up while it is read (#22: the rows on screen
+must not change, compared as text and as screenshots, and the rows above the screen must have no gap). It skips itself
+on a real device. Run it with `-only-testing:CmdsDeviceDriver/TerminalScreenTests` and the companion installed on the
+simulator. `-mock` alone (or "Try with demo data" on the connect screen) runs the app without a Mac.
 
 ## Terminal engine harness
 

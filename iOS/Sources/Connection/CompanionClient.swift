@@ -23,13 +23,15 @@ final class CompanionClient {
     private(set) var agentLimits: [AgentLimits] = []
     /// Bumped whenever any screen changes (cheap observation hook).
     private(set) var screens: [String: ScreenSnapshot] = [:]
-    /// Rows above each streamed pane's screen (`scrollback`), oldest first; empty for Macs without
-    /// `SyncFeature.scrollback`. Refreshed with `refreshHistory(paneID:)`.
-    private(set) var histories: [String: [String]] = [:]
+    /// Rows above each streamed pane's screen (`scrollback`); none for Macs without `SyncFeature.scrollback`. Asked
+    /// for with `refreshHistory(paneID:)`. A Mac with `SyncFeature.scrollbackStream` adds the rows that scroll off the
+    /// screen to every screen update, appended here in the same update; while the pane is read
+    /// (`setReadingHistory(paneID:reading:)`) nothing else changes them (see `pendingHistories`).
+    private(set) var histories: [String: PaneHistory] = [:]
     /// Files of preview panes fetched with `requestFile` (images/PDFs shown on the phone).
     let previewFiles = PreviewFileStore()
     /// Optional protocol additions this build understands (`hello.features`).
-    static let features = [SyncFeature.previewPanes]
+    static let features = [SyncFeature.previewPanes, SyncFeature.scrollbackStream]
     /// Panes that raised a `notification` and have not been viewed since.
     private(set) var unreadPaneIDs: Set<String> = []
     private(set) var unreadWorkspaceIDs: Set<String> = []
@@ -77,7 +79,8 @@ final class CompanionClient {
     /// Requests the connected Mac answers (`welcome.features`).
     private var macFeatures: Set<String> = []
     private var historyRequestedAt: [String: Date] = [:]
-    /// A request that waits for the end of `historyInterval` (one per pane).
+    /// A request that waits for the end of `historyInterval` (one per pane); with a streaming Mac also the next try of
+    /// an unanswered request.
     private var historyTasks: [String: Task<Void, Never>] = [:]
     /// Rows asked for per `requestScrollback`, and at most one request per pane this often. Bluetooth carries less
     /// (1000 rows of a wide pane can be about a megabyte).
@@ -85,6 +88,18 @@ final class CompanionClient {
     private static let historyLinesBluetooth = 200
     private static let historyInterval: TimeInterval = 3
     private static let historyIntervalBluetooth: TimeInterval = 10
+    /// Streaming Mac: panes whose `requestScrollback` it answered on this connection, so their screen updates carry
+    /// the rows that scroll off (`scrolledOff`) or `historyReset`.
+    private var streamedHistoryPaneIDs: Set<String> = []
+    /// Panes whose earlier output the user is reading (`setReadingHistory`).
+    private var readingPaneIDs: Set<String> = []
+    /// Streaming Mac, pane being read: its rows once they no longer continue the shown ones (a reset or a new
+    /// connection whose answer does not continue them, `readingHistoryCap` reached). The shown rows stay as they are,
+    /// because any change above the rows being read would move them; these replace them when reading ends.
+    private var pendingHistories: [String: PaneHistory] = [:]
+    /// Rows kept above a screen, and while it is read: dropping rows at the top would move the text being read.
+    private static let historyCap = 2000
+    private static let readingHistoryCap = 10_000
 
     init(makeTransport: @escaping (MacTarget, SyncTLS.PeerPolicy?) -> SyncTransport) {
         self.makeTransport = makeTransport
@@ -368,8 +383,15 @@ final class CompanionClient {
             mirror.removeAll()
             macFeatures = Set(welcome.features ?? [])
             cancelHistoryRequests()
-            // Possibly another Mac (pane ids are per Mac) or one without `scrollback`: the views ask again.
-            histories = [:]
+            streamedHistoryPaneIDs = []
+            // Possibly another Mac (pane ids are per Mac) or one without `scrollback`: the views ask again. With a
+            // streaming Mac, rows being read stay until reading ends.
+            if streamsHistory {
+                for paneID in Set(histories.keys).union(pendingHistories.keys) { replaceHistory(paneID, with: nil) }
+            } else {
+                histories = [:]
+                pendingHistories = [:]
+            }
             if !subscribedPaneIDs.isEmpty { send(.subscribe(.init(paneIDs: subscribedPaneIDs))) }
             startPinging()
             if !ProcessInfo.processInfo.arguments.contains("-noNotify") {
@@ -411,13 +433,24 @@ final class CompanionClient {
                 screens[gone] = nil
                 mirror.remove(paneID: gone)
             }
-            for gone in histories.keys where !live.contains(gone) { histories[gone] = nil }
+            forgetHistories { !live.contains($0) }
 
         case .screen(let screen):
-            apply(mirror.apply(screen))
+            // The rows that left the screen's top go in with it, so both are drawn in the same frame.
+            let result = mirror.apply(screen)
+            apply(result)
+            if result != .stale {
+                extendHistory(screen.paneID, scrolledOff: screen.scrolledOff, reset: screen.historyReset == true)
+            }
 
         case .screenDiff(let diff):
-            apply(mirror.apply(diff))
+            let result = mirror.apply(diff)
+            apply(result)
+            // Also when the diff did not apply (a full screen is requested): the rows are relative to the previous
+            // update the Mac sent, not to the copy here.
+            if result != .stale {
+                extendHistory(diff.paneID, scrolledOff: diff.scrolledOff, reset: diff.historyReset == true)
+            }
 
         case .notification(let note):
             if let paneID = note.paneID, paneID == viewedPaneID, isAppActive {
@@ -433,9 +466,14 @@ final class CompanionClient {
 
         case .scrollback(let rows):
             // Follows the full `screen` it was read with; panes no longer streamed are dropped.
-            if subscribedPaneIDs.contains(rows.paneID), histories[rows.paneID] != rows.lines {
-                histories[rows.paneID] = rows.lines
+            guard subscribedPaneIDs.contains(rows.paneID) else { break }
+            if streamsHistory {
+                // From here on the Mac sends the rows that scroll off with the screen: no further requests.
+                streamedHistoryPaneIDs.insert(rows.paneID)
+                historyTasks.removeValue(forKey: rows.paneID)?.cancel()
+                if continueHistory(rows.paneID, with: rows.lines) { break }
             }
+            replaceHistory(rows.paneID, with: rows.lines)
 
         case .pong:
             break // `lastInbound` was updated on arrival; that is all a pong is for
@@ -482,7 +520,7 @@ final class CompanionClient {
     func setVisiblePanes(_ paneIDs: [String]) {
         guard paneIDs != subscribedPaneIDs else { return }
         subscribedPaneIDs = paneIDs
-        for paneID in histories.keys where !paneIDs.contains(paneID) { histories[paneID] = nil }
+        forgetHistories { !paneIDs.contains($0) }
         for paneID in Array(historyTasks.keys) + Array(historyRequestedAt.keys) where !paneIDs.contains(paneID) {
             historyTasks.removeValue(forKey: paneID)?.cancel()
             historyRequestedAt[paneID] = nil
@@ -490,10 +528,18 @@ final class CompanionClient {
         if status.isLive { send(.subscribe(.init(paneIDs: paneIDs))) }
     }
 
+    // MARK: Earlier output
+
+    /// The connected (or last) Mac sends the rows that scroll off a pane's screen with its screen updates
+    /// (`SyncFeature.scrollbackStream`), so `histories` stay continuous without asking again.
+    var streamsHistory: Bool { macFeatures.contains(SyncFeature.scrollbackStream) }
+
     /// Asks the Mac for the rows above a streamed pane's screen (Macs with `SyncFeature.scrollback`). Calls within
-    /// `historyInterval` of the last request are folded into one request at its end.
+    /// `historyInterval` of the last request are folded into one request at its end. A streaming Mac is asked once
+    /// per pane and connection (again after `historyReset`), until it answers.
     func refreshHistory(paneID: String) {
         guard canRequestHistory(paneID: paneID), historyTasks[paneID] == nil else { return }
+        if streamsHistory, streamedHistoryPaneIDs.contains(paneID) { return }
         let interval = linkPath == .bluetooth ? Self.historyIntervalBluetooth : Self.historyInterval
         let wait = historyRequestedAt[paneID].map { interval - Date().timeIntervalSince($0) } ?? 0
         guard wait <= 0 else {
@@ -508,11 +554,121 @@ final class CompanionClient {
         historyRequestedAt[paneID] = Date()
         let lines = linkPath == .bluetooth ? Self.historyLinesBluetooth : Self.historyLines
         send(.requestScrollback(.init(paneID: paneID, lines: lines)))
+        guard streamsHistory else { return }
+        // The Mac may leave a request unanswered while output keeps moving the rows (sync-protocol.md "Scrollback"),
+        // and with the rows streamed nothing else asks again: try again until it answers.
+        historyTasks[paneID] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(interval))
+            guard let self, !Task.isCancelled else { return }
+            self.historyTasks[paneID] = nil
+            self.refreshHistory(paneID: paneID)
+        }
     }
 
     /// The pane is streamed from a connected Mac that answers `requestScrollback`.
     func canRequestHistory(paneID: String) -> Bool {
         status.isLive && macFeatures.contains(SyncFeature.scrollback) && subscribedPaneIDs.contains(paneID)
+    }
+
+    /// The view of a pane stopped following its screen to read earlier output (`reading`), or follows it again.
+    /// While a pane is read with a streaming Mac, the rows that scroll off its screen are still added below the shown
+    /// ones, and nothing else changes them: no rows are dropped below `readingHistoryCap`, and rows that do not
+    /// continue them wait in `pendingHistories`. When reading ends, those are shown and the rows are trimmed to
+    /// `historyCap`; the view calls this once it keeps the bottom in place again.
+    func setReadingHistory(paneID: String, reading: Bool) {
+        if reading {
+            readingPaneIDs.insert(paneID)
+        } else if readingPaneIDs.remove(paneID) != nil {
+            showPendingHistory(paneID)
+        }
+    }
+
+    /// Latest: shows the rows held back while reading before the view scrolls to the screen. The pane still counts as
+    /// read until its view follows the screen again (`setReadingHistory`).
+    func showLatestHistory(paneID: String) {
+        showPendingHistory(paneID)
+    }
+
+    /// The pending rows (else the shown ones), trimmed to `historyCap`.
+    private func showPendingHistory(_ paneID: String) {
+        guard var history = pendingHistories.removeValue(forKey: paneID) ?? histories[paneID] else { return }
+        history.dropOldest(history.lines.count - Self.historyCap)
+        if histories[paneID] != history { histories[paneID] = history }
+    }
+
+    /// A pane's rows from a `scrollback` answer, or none (new connection). While a streaming Mac's pane is read, they
+    /// wait in `pendingHistories` and the shown rows stay.
+    private func replaceHistory(_ paneID: String, with lines: [String]?) {
+        let history = lines.map { PaneHistory(lines: $0) }
+        if streamsHistory, readingPaneIDs.contains(paneID) {
+            pendingHistories[paneID] = history ?? PaneHistory()
+            return
+        }
+        pendingHistories[paneID] = nil
+        if histories[paneID] != history { histories[paneID] = history }
+    }
+
+    /// `scrolledOff` / `historyReset` of a screen update from a streaming Mac (for panes whose request it answered).
+    private func extendHistory(_ paneID: String, scrolledOff rows: [String]?, reset: Bool) {
+        guard streamsHistory, streamedHistoryPaneIDs.contains(paneID) else { return }
+        if reset {
+            // The rows above the screen no longer continue these: ask again. The answer replaces them, or adds the
+            // newer rows when it still has the last of them (`continueHistory`). Until then they stay: dropping them
+            // at once would make the screen jump whenever rows above it are in view (a full scrollback resets often).
+            streamedHistoryPaneIDs.remove(paneID)
+            refreshHistory(paneID: paneID)
+            return
+        }
+        if let rows { appendHistory(paneID, rows) }
+    }
+
+    /// A streaming Mac's answer that still has the last shown rows (after a reset that only dropped the oldest rows of
+    /// a full scrollback, or a new connection): adds the newer rows below them, so rows being read stay where they are
+    /// and keep growing. False when it does not continue them, or reaches further back while the pane is not read.
+    private func continueHistory(_ paneID: String, with answer: [String]) -> Bool {
+        guard let shown = histories[paneID]?.lines, let newer = Self.rows(after: shown, in: answer) else { return false }
+        if !readingPaneIDs.contains(paneID), answer.count > shown.count + newer.count { return false }
+        pendingHistories[paneID] = nil
+        appendHistory(paneID, Array(newer))
+        return true
+    }
+
+    /// Adds rows below a pane's rows, or below the pending ones while there are. Rows being read are never dropped at
+    /// the top: once they are full they stay, and the rest waits in `pendingHistories`.
+    private func appendHistory(_ paneID: String, _ rows: [String]) {
+        guard !rows.isEmpty else { return }
+        let reading = readingPaneIDs.contains(paneID)
+        let cap = reading ? Self.readingHistoryCap : Self.historyCap
+        if pendingHistories[paneID] != nil {
+            pendingHistories[paneID]?.append(rows, keepingAtMost: cap)
+        } else if reading, (histories[paneID]?.lines.count ?? 0) + rows.count > cap {
+            var pending = histories[paneID] ?? PaneHistory()
+            pending.append(rows, keepingAtMost: cap)
+            pendingHistories[paneID] = pending
+        } else {
+            histories[paneID, default: PaneHistory()].append(rows, keepingAtMost: cap)
+        }
+    }
+
+    /// The rows of `answer` after the last of `shown`, when `answer` has those last rows (the latest place, so repeated
+    /// text adds as few rows as possible). Needs enough of them, some not blank, so the match is not a coincidence.
+    static func rows(after shown: [String], in answer: [String]) -> ArraySlice<String>? {
+        let tail = shown.suffix(24)
+        guard tail.count >= 8, tail.filter({ !$0.isEmpty }).count >= 3 else { return nil }
+        var end = answer.count
+        while end >= tail.count {
+            if answer[(end - tail.count)..<end].elementsEqual(tail) { return answer[end...] }
+            end -= 1
+        }
+        return nil
+    }
+
+    /// Drops the rows (and the reading state) of panes that are no longer streamed or gone.
+    private func forgetHistories(where gone: (String) -> Bool) {
+        for paneID in histories.keys where gone(paneID) { histories[paneID] = nil }
+        pendingHistories = pendingHistories.filter { !gone($0.key) }
+        streamedHistoryPaneIDs = streamedHistoryPaneIDs.filter { !gone($0) }
+        readingPaneIDs = readingPaneIDs.filter { !gone($0) }
     }
 
     private func cancelHistoryRequests() {

@@ -188,9 +188,16 @@ public enum ServerMessage: Equatable, Sendable {
         public var lines: [String]
         public var cursorRow: Int?
         public var cursorCol: Int?
+        /// `SyncFeature.scrollbackStream`: rows that left the top of the screen since the previous `screen` /
+        /// `screenDiff` of this pane sent to this phone, oldest first; append them to the rows above the screen.
+        public var scrolledOff: [String]?
+        /// `SyncFeature.scrollbackStream`: the rows above this screen do not continue the ones sent before (scrollback
+        /// cleared, pane resized, alternate screen, too many rows at once): drop them and ask again.
+        public var historyReset: Bool?
 
         public init(paneID: String, seq: UInt64, rows: Int, cols: Int, lines: [String],
-                    cursorRow: Int? = nil, cursorCol: Int? = nil) {
+                    cursorRow: Int? = nil, cursorCol: Int? = nil, scrolledOff: [String]? = nil,
+                    historyReset: Bool? = nil) {
             self.paneID = paneID
             self.seq = seq
             self.rows = rows
@@ -198,6 +205,8 @@ public enum ServerMessage: Equatable, Sendable {
             self.lines = lines
             self.cursorRow = cursorRow
             self.cursorCol = cursorCol
+            self.scrolledOff = scrolledOff
+            self.historyReset = historyReset
         }
 
         public init(paneID: String, seq: UInt64, snapshot: ScreenSnapshot) {
@@ -219,15 +228,22 @@ public enum ServerMessage: Equatable, Sendable {
         public var changes: [LineChange]
         public var cursorRow: Int?
         public var cursorCol: Int?
+        /// As in `Screen`.
+        public var scrolledOff: [String]?
+        /// As in `Screen`.
+        public var historyReset: Bool?
 
         public init(paneID: String, seq: UInt64, baseSeq: UInt64, changes: [LineChange],
-                    cursorRow: Int? = nil, cursorCol: Int? = nil) {
+                    cursorRow: Int? = nil, cursorCol: Int? = nil, scrolledOff: [String]? = nil,
+                    historyReset: Bool? = nil) {
             self.paneID = paneID
             self.seq = seq
             self.baseSeq = baseSeq
             self.changes = changes
             self.cursorRow = cursorRow
             self.cursorCol = cursorCol
+            self.scrolledOff = scrolledOff
+            self.historyReset = historyReset
         }
     }
 
@@ -288,6 +304,23 @@ public enum ServerMessage: Equatable, Sendable {
             self.paneID = paneID
             self.seq = seq
             self.lines = lines
+        }
+    }
+
+    /// This `screen` / `screenDiff` with the rows that scrolled off its top attached, or `historyReset`
+    /// (`SyncFeature.scrollbackStream`). Other messages are returned unchanged.
+    public func withHistory(scrolledOff: [String]?, reset: Bool) -> ServerMessage {
+        switch self {
+        case .screen(var screen):
+            screen.scrolledOff = scrolledOff
+            screen.historyReset = reset ? true : nil
+            return .screen(screen)
+        case .screenDiff(var diff):
+            diff.scrolledOff = scrolledOff
+            diff.historyReset = reset ? true : nil
+            return .screenDiff(diff)
+        default:
+            return self
         }
     }
 

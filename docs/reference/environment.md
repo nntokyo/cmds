@@ -60,7 +60,7 @@ Mac launch argument: `-AppleLanguages '(ja)'` or `'(en)'` starts the app in that
 | Variable | Used by |
 |---|---|
 | `CMDS_RELAY_E2E_PAIRING=<file>` | `SyncRelayTests` (CmdsCore): pairs through the Bluetooth relay against an isolated instance started with `CMDS_SYNC_TEST_PAIRING=1`. |
-| `CMDS_SCROLLBACK_E2E_PAIRING=<file>` | `SyncScrollbackTests` (CmdsCore): `requestScrollback` against an isolated instance started with `CMDS_SYNC_TEST_PAIRING=1`, in a workspace the test creates through that instance's socket. |
+| `CMDS_SCROLLBACK_E2E_PAIRING=<file>` | `SyncScrollbackTests` (CmdsCore): `requestScrollback` and the history stream (`scrollbackStream`) against an isolated instance started with `CMDS_SYNC_TEST_PAIRING=1`, in workspaces the tests create through that instance's socket. |
 | `CMDS_SSH_E2E_DIR`, `CMDS_SSH_E2E_PORT`, `CMDS_SSH_E2E_PAIRING`, `CMDS_SSH_E2E_RELAY_PORT` | `SSHTunnelTests` (CmdsSSH): end-to-end remote access through a throwaway sshd. |
 | `CMDS_UI_SCRIPT` | `DeviceDriverTests` (iOS UI test target `CmdsDeviceDriver`); pass it to `xcodebuild` as `TEST_RUNNER_CMDS_UI_SCRIPT=…`. Output lines start with `CMDS_UI_STEP`, `CMDS_UI_VALUE`, `CMDS_UI_DUMP_BEGIN` / `CMDS_UI_DUMP_END`. |
 
@@ -81,5 +81,8 @@ libghostty binding action after 3 s, `CMDS_HARNESS_DUMP=<path>` writes the curso
 |---|---|
 | `-mock` | Run against built-in demo data (no Mac needed; also "Try with demo data" on the connect screen). |
 | `-mockFullScreenTUI` | With `-mock`: the Claude pane shows a large full-screen TUI (used by `TerminalScreenTests`). |
+| `-mockStreamOutput` | With `-mock`: the dotfiles pane prints a numbered line five times a second into a full scrollback (every 30 lines it drops its oldest rows and resets the stream, like a Mac whose scrollback is full; used by `TerminalScreenTests`). |
+| `-mockNoHistoryStream` | With `-mock`: the demo Mac answers like cmds 0.3.0, without streaming the rows that scroll off a screen (`scrollbackStream`). |
+| `-uiTestProbes` | Adds the accessibility elements `terminalRows` (all rows of the open terminal, earlier output first) and `terminalViewport` (the rows on screen), for UI tests. |
 | `-noNotify` | Do not post local notifications. |
 | `-cmdsTransport auto\|network\|bluetooth\|ssh` | Debug builds only: force one connection path ([internals/testing.md](../internals/testing.md#testing-sync-on-a-device)). |

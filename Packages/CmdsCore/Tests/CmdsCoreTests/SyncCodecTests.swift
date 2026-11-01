@@ -60,6 +60,31 @@ final class SyncCodecTests: XCTestCase {
         XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("features"))
     }
 
+    func testScreenMessagesCarryScrolledOffRows() throws {
+        let screen = ServerMessage.screen(.init(paneID: "p1", seq: 4, rows: 2, cols: 10, lines: ["c", "d"]))
+            .withHistory(scrolledOff: ["a", "b"], reset: false)
+        XCTAssertEqual(try codec.decodeServerMessage(try codec.encode(screen)), screen)
+        let diff = ServerMessage.screenDiff(.init(paneID: "p1", seq: 5, baseSeq: 4, changes: []))
+            .withHistory(scrolledOff: nil, reset: true)
+        XCTAssertEqual(try codec.decodeServerMessage(try codec.encode(diff)), diff)
+        guard case .screenDiff(let decoded) = try codec.decodeServerMessage(try codec.encode(diff)) else {
+            return XCTFail()
+        }
+        XCTAssertEqual(decoded.historyReset, true)
+        XCTAssertNil(decoded.scrolledOff)
+    }
+
+    func testScreenWithoutHistoryFieldsKeepsTheOldWireFormat() throws {
+        let plain = ServerMessage.screenDiff(.init(paneID: "p1", seq: 2, baseSeq: 1, changes: []))
+        let text = String(decoding: try codec.encode(plain), as: UTF8.self)
+        XCTAssertFalse(text.contains("scrolledOff"))
+        XCTAssertFalse(text.contains("historyReset"))
+        let old = #"{"type":"screen","paneID":"p1","seq":1,"rows":1,"cols":3,"lines":["abc"]}"#
+        guard case .screen(let screen) = try codec.decodeServerMessage(Data(old.utf8)) else { return XCTFail() }
+        XCTAssertNil(screen.scrolledOff)
+        XCTAssertNil(screen.historyReset)
+    }
+
     func testScrollbackLinesAreClamped() {
         XCTAssertEqual(SyncScrollback.clampedLines(-5), 1)
         XCTAssertEqual(SyncScrollback.clampedLines(0), 1)

@@ -2,7 +2,8 @@ import SwiftUI
 
 /// cmds companion: mirrors workspaces and terminal screens of the cmds Mac app.
 /// Launch with `-mock` to run against built-in demo data (no Mac needed); add `-mockFullScreenTUI` to make the
-/// Claude pane a large full-screen TUI screen (used by `TerminalScreenTests`).
+/// Claude pane a large full-screen TUI screen (used by `TerminalScreenTests`). The other test flags are listed in
+/// docs/reference/environment.md.
 @main
 struct CompanionApp: App {
     @State private var client = CompanionClient.live()

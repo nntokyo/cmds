@@ -7,6 +7,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Mac: while a phone shows a pane's earlier output, the rows that scroll off the pane's screen are sent along with the
+  screen updates, so the earlier output continues without gaps, also while a full scrollback drops its oldest rows
+  (sync feature `scrollbackStream`, for phones that support it) (#22).
+
+### Fixed
+
+- iPhone/iPad: earlier output keeps up while you read it. The rows that scroll off the screen meanwhile are added
+  between the earlier output and the screen, instead of missing until you return, and the text you read does not move.
+  Needs cmds 0.4.0 or later on the Mac (#22).
+- Mac: the earlier output of a pane is read without moving the terminal's view. A pane on screen no longer flickers
+  while a phone follows it, and a pane scrolled up on the Mac now gives the phone the rows above what it shows (it gave
+  none) (#21).
+- Mac: a phone's request for a pane's earlier output that comes within 0.5 s of the previous one, or while output
+  keeps the screen moving, is answered as soon as possible instead of being dropped (#22).
+
+### Changed
+
+- Building from source: `scripts/build-ghostty.sh` builds GhosttyKit with cmds' patches on libghostty
+  (`vendor/ghostty-patches`); a plain GhosttyKit no longer builds the app (#21).
+
 ## [0.3.0] - 2026-11-01
 
 Mac and iPhone/iPad.

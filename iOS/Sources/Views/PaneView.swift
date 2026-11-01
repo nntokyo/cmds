@@ -43,14 +43,16 @@ struct TerminalScreenView: View {
     @AppStorage(TerminalTextSettings.fontSizeKey) private var fixedFontSize = 12.0
     @GestureState private var pinch: CGFloat = 1
     @FocusState private var keyboardFocused: Bool
-    /// Earlier output shown above the screen (`CompanionClient.histories`). Taken over only while following, so a
-    /// refresh never moves the text the user is reading.
-    @State private var history: [String] = []
+    /// Earlier output shown above the screen with a Mac that does not stream it (`CompanionClient.histories`). Taken
+    /// over only while following, so a refresh never moves the text the user is reading.
+    @State private var history = PaneHistory()
     /// The focus row is on screen, so new output keeps it in view. Scrolling it away (into earlier output, or
     /// panning a zoomed screen) stops that until the user scrolls back or taps Latest.
     @State private var following = true
     /// Bumped by the Latest button (outside the scroll view reader).
     @State private var latestRequests = 0
+    /// UI tests (`-uiTestProbes`): the rows on screen.
+    @State private var probedViewport: ProbedViewport?
 
     /// Focus row vertically centred, line starts at the left edge (centring a long row horizontally would
     /// scroll the start of every line off screen).
@@ -70,6 +72,7 @@ struct TerminalScreenView: View {
     var body: some View {
         GeometryReader { geo in
             if let snapshot, snapshot.cols > 0 {
+                let above = shownHistory
                 let available = geo.size.width - Self.padding * 2
                 let base = textMode == .fixed ? CGFloat(fixedFontSize)
                     : available / (CGFloat(snapshot.cols) * Self.cellWidthPerPoint)
@@ -77,33 +80,41 @@ struct TerminalScreenView: View {
                 let cellW = fontSize * Self.cellWidthPerPoint
                 let lineH = (fontSize * Self.lineHeightPerPoint).rounded(.up)
                 let contentW = CGFloat(snapshot.cols) * cellW
-                let contentH = CGFloat(history.count + snapshot.rows) * lineH
+                let contentH = CGFloat(above.lines.count + snapshot.rows) * lineH
 
                 ScrollViewReader { proxy in
                     ScrollView([.horizontal, .vertical]) {
-                        screen(snapshot, fontSize: fontSize, cellW: cellW, lineH: lineH)
+                        screen(snapshot, above: above, fontSize: fontSize, cellW: cellW, lineH: lineH)
                             .frame(width: contentW, height: contentH, alignment: .topLeading)
                             .padding(Self.padding)
                             .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .topLeading)
                     }
-                    // Earlier output arrives above the screen: keep the bottom, and with it the prompt, in place.
-                    .defaultScrollAnchor(.bottomLeading)
+                    .modifier(ScrollAnchors(keepTop: client.streamsHistory && !following))
                     .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
                     .modifier(RowVisibility(
-                        rowTop: Self.padding + CGFloat(history.count + Self.focusRow(snapshot)) * lineH,
-                        rowHeight: lineH, visible: $following))
+                        rowTop: Self.padding + CGFloat(above.lines.count + Self.focusRow(snapshot)) * lineH,
+                        rowHeight: lineH, visible: $following,
+                        // At once, so no screen update in between drops rows above the ones being read. (Reading
+                        // ends in `onChange(of: following)`, once the scroll view keeps the bottom in place again.)
+                        changed: { if !$0 { client.setReadingHistory(paneID: paneID, reading: true) } },
+                        lost: { scrollToFocus(proxy, snapshot) }))
+                    .modifier(ViewportProbe(rowTop: Self.padding, rowHeight: lineH, viewport: $probedViewport))
                     // The terminal grid is usually taller than the phone; follow the cursor (the prompt) instead
                     // of pinning to the bottom, where a mostly empty screen shows only blank rows.
                     .onAppear { scrollToFocus(proxy, snapshot) }
                     // While following: the focus row moved (also with the cursor hidden), the earlier output above
-                    // it grew or shrank, or the text size changed.
+                    // it grew or shrank (older Macs; streamed rows keep the bottom in place, see `ScrollAnchors`),
+                    // or the text size changed.
                     .onChange(of: Self.focusRow(snapshot)) { if following { scrollToFocus(proxy, snapshot) } }
-                    .onChange(of: history.count) { if following { scrollToFocus(proxy, snapshot) } }
+                    .onChange(of: history.lines.count) {
+                        if following, !client.streamsHistory { scrollToFocus(proxy, snapshot) }
+                    }
                     .onChange(of: fontSize) { if following { scrollToFocus(proxy, snapshot) } }
                     .onChange(of: latestRequests) {
                         // The newest earlier output first, then the scroll once its rows are laid out: rows taken
                         // over mid-scroll would move its target.
                         adoptHistory()
+                        client.showLatestHistory(paneID: paneID)
                         DispatchQueue.main.async {
                             withAnimation(.snappy) { scrollToFocus(proxy, snapshot) }
                         }
@@ -142,17 +153,22 @@ struct TerminalScreenView: View {
             if let saved = TerminalTextSettings.savedZoom(paneID: paneID) { zoom = saved }
             adoptHistory()
         }
+        .onDisappear { client.setReadingHistory(paneID: paneID, reading: false) }
         // Output scrolled the screen (its top row changed): ask for the rows that left it, while following. Also
         // once the pane is streamed from a Mac that answers (again), e.g. back on a pane whose screen did not move.
+        // A Mac that streams these rows is asked only until it answered (`refreshHistory`).
         .onChange(of: snapshot.map(Self.topRow), initial: true) {
             if following, Self.showsHistory { client.refreshHistory(paneID: paneID) }
         }
         .onChange(of: client.canRequestHistory(paneID: paneID)) { _, can in
-            if can, following, Self.showsHistory { client.refreshHistory(paneID: paneID) }
+            // Streamed rows that arrive while reading wait in the client until reading ends.
+            if can, following || client.streamsHistory, Self.showsHistory { client.refreshHistory(paneID: paneID) }
         }
-        .onChange(of: client.histories[paneID]) { if following { adoptHistory() } }
+        .onChange(of: client.histories[paneID]) { if following, !client.streamsHistory { adoptHistory() } }
+        .onChange(of: client.streamsHistory) { adoptHistory() }
         .onChange(of: following) { _, now in
             guard now, Self.showsHistory else { return }
+            client.setReadingHistory(paneID: paneID, reading: false)
             adoptHistory()
             client.refreshHistory(paneID: paneID)
         }
@@ -177,7 +193,22 @@ struct TerminalScreenView: View {
                 .accessibilityIdentifier("terminalLatest")
             }
         }
+        .overlay(alignment: .topLeading) {
+            if Self.showsTestProbes, let snapshot {
+                TerminalTestProbes(rows: shownHistory.lines + snapshot.lines, viewport: probedViewport)
+            }
+        }
     }
+
+    /// Rows above the screen. A Mac that streams them (`SyncFeature.scrollbackStream`) keeps them continuous, and the
+    /// client changes them only at the bottom while they are read, so they are shown as they come; with other Macs
+    /// the copy taken while following.
+    private var shownHistory: PaneHistory {
+        client.streamsHistory ? client.histories[paneID] ?? PaneHistory() : history
+    }
+
+    /// UI tests: the rows on screen and all rows as accessibility values (`TerminalScreenTests`).
+    static let showsTestProbes = ProcessInfo.processInfo.arguments.contains("-uiTestProbes")
 
     /// Row to keep in view: the cursor row, else the last non-empty row. Each row view carries its index as
     /// scroll id. (A single zero-content anchor view pushed down with padding did not work: scrollTo left a
@@ -191,9 +222,9 @@ struct TerminalScreenView: View {
         proxy.scrollTo(Self.focusRow(s), anchor: Self.focusAnchor)
     }
 
-    /// Shows the client's latest earlier output of this pane.
+    /// Older Macs: shows the client's latest earlier output of this pane.
     private func adoptHistory() {
-        history = client.histories[paneID] ?? []
+        history = client.histories[paneID] ?? PaneHistory()
     }
 
     /// Earlier output needs to know when the user scrolled away from the prompt (`RowVisibility`, iOS 18): without
@@ -209,11 +240,12 @@ struct TerminalScreenView: View {
         return "\(row):\(s.lines[row])"
     }
 
-    /// Earlier output first (row ids -n … -1), then the screen (row ids 0 … rows-1, which `focusRow` uses).
-    private func screen(_ s: ScreenSnapshot, fontSize: CGFloat, cellW: CGFloat, lineH: CGFloat) -> some View {
+    /// Earlier output first (`HistoryRowID`s), then the screen (row ids 0 … rows-1, which `focusRow` uses).
+    private func screen(_ s: ScreenSnapshot, above: PaneHistory, fontSize: CGFloat, cellW: CGFloat,
+                        lineH: CGFloat) -> some View {
         ZStack(alignment: .topLeading) {
             VStack(alignment: .leading, spacing: 0) {
-                TerminalHistoryRows(lines: history, fontSize: fontSize, lineH: lineH).equatable()
+                TerminalHistoryRows(history: above, fontSize: fontSize, lineH: lineH).equatable()
                 ForEach(Array(s.lines.enumerated()), id: \.offset) { row, line in
                     TerminalRow(line: line, fontSize: fontSize, lineH: lineH).id(row)
                 }
@@ -222,7 +254,7 @@ struct TerminalScreenView: View {
                 Rectangle()
                     .fill(Color.accentColor.opacity(0.65))
                     .frame(width: max(2, cellW), height: lineH)
-                    .offset(x: CGFloat(col) * cellW, y: CGFloat(history.count + row) * lineH)
+                    .offset(x: CGFloat(col) * cellW, y: CGFloat(above.lines.count + row) * lineH)
                     .allowsHitTesting(false)
             }
         }
@@ -266,39 +298,176 @@ private struct TerminalRow: View {
     }
 }
 
-/// The rows above the screen. Equatable, so the many screen updates do not rebuild hundreds of rows.
+/// Scroll ids of the rows above the screen (`ForEach` ids are scroll targets as well): types of their own, so they
+/// never match a screen row's index (`focusRow`).
+private struct HistoryBlockID: Hashable { let index: Int }
+private struct HistoryRowID: Hashable { let index: Int }
+
+/// The rows above the screen, in blocks by row number (`PaneHistory.first`): rows added at the bottom or dropped at the
+/// top rebuild only the blocks they touch. Equatable, so the many screen updates alone rebuild nothing.
 private struct TerminalHistoryRows: View, Equatable {
-    let lines: [String]
+    let history: PaneHistory
     let fontSize: CGFloat
     let lineH: CGFloat
+    private static let blockRows = 128
 
     var body: some View {
+        let first = history.first
+        let end = first + history.lines.count
+        let blocks = end > first ? Array((first / Self.blockRows)...((end - 1) / Self.blockRows)) : []
         VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
-                TerminalRow(line: line, fontSize: fontSize, lineH: lineH).id(index - lines.count)
+            ForEach(blocks.map(HistoryBlockID.init(index:)), id: \.self) { block in
+                let start = max(first, block.index * Self.blockRows)
+                let stop = min(end, (block.index + 1) * Self.blockRows)
+                TerminalHistoryBlock(lines: history.lines[(start - first)..<(stop - first)], firstRow: start,
+                                     fontSize: fontSize, lineH: lineH)
+                    .equatable()
             }
         }
     }
 }
 
-/// Whether a row of the scroll view's content (`rowTop` from the content's top) is on screen. Needs iOS 18
+private struct TerminalHistoryBlock: View, Equatable {
+    let lines: ArraySlice<String>
+    /// Row number of the first of `lines`.
+    let firstRow: Int
+    let fontSize: CGFloat
+    let lineH: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach((firstRow..<firstRow + lines.count).map(HistoryRowID.init(index:)), id: \.self) { row in
+                TerminalRow(line: lines[lines.startIndex + row.index - firstRow], fontSize: fontSize, lineH: lineH)
+            }
+        }
+    }
+}
+
+/// Which part of the content the scroll view keeps in place when the content's size changes. Normally the bottom:
+/// earlier output arrives above the screen, and the prompt stays where it is. While reading earlier output that a Mac
+/// streams (iOS 18), the top: the rows that scrolled off the screen are added between the earlier output and the screen
+/// while the screen's own rows move up by as many rows, so every row already there stays where it is.
+private struct ScrollAnchors: ViewModifier {
+    let keepTop: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+                .defaultScrollAnchor(.bottomLeading, for: .initialOffset)
+                .defaultScrollAnchor(.bottomLeading, for: .alignment)
+                .defaultScrollAnchor(keepTop ? .topLeading : .bottomLeading, for: .sizeChanges)
+        } else {
+            content.defaultScrollAnchor(.bottomLeading)
+        }
+    }
+}
+
+/// Whether a row of the scroll view's content (`rowTop` from the content's top) is on screen: `visible` turns false only
+/// when the user scrolls it away. When a change of the content pushes it off screen meanwhile (rows added above it
+/// faster than the scroll view keeps the bottom in place), `lost` brings it back. Needs iOS 18
 /// (`onScrollGeometryChange`); on iOS 17 the row always counts as visible and no earlier output is shown, so the
 /// screen keeps following the prompt as before.
 private struct RowVisibility: ViewModifier {
     let rowTop: CGFloat
     let rowHeight: CGFloat
     @Binding var visible: Bool
+    /// Called right when `visible` changes, before the view updates.
+    let changed: (Bool) -> Void
+    /// The row left the screen while `visible` without the user scrolling: bring it back.
+    let lost: () -> Void
+    @State private var onScreen = true
+    /// The user drags the content, or it decelerates after a drag.
+    @State private var userScrolling = false
 
     func body(content: Content) -> some View {
         if #available(iOS 18.0, *) {
-            content.onScrollGeometryChange(for: Bool.self) { scroll in
-                scroll.visibleRect.maxY > rowTop && scroll.visibleRect.minY < rowTop + rowHeight
-            } action: { _, now in
-                if now != visible { visible = now }
+            content
+                .onScrollGeometryChange(for: Bool.self) { scroll in
+                    scroll.visibleRect.maxY > rowTop && scroll.visibleRect.minY < rowTop + rowHeight
+                } action: { _, now in
+                    onScreen = now
+                    update()
+                }
+                .onScrollPhaseChange { _, phase in
+                    userScrolling = phase == .tracking || phase == .interacting || phase == .decelerating
+                    update()
+                }
+        } else {
+            content
+        }
+    }
+
+    private func update() {
+        if onScreen != visible, onScreen || userScrolling {
+            visible = onScreen
+            changed(onScreen)
+        } else if !onScreen, visible, !userScrolling {
+            // Once the scroll view has settled (it may keep the bottom in place by itself).
+            DispatchQueue.main.async {
+                if !onScreen, visible, !userScrolling { lost() }
+            }
+        }
+    }
+}
+
+/// UI tests (`-uiTestProbes`): the content rows on screen, as row indices.
+private struct ProbedViewport: Equatable {
+    /// Top of the visible part, in points from the content's top.
+    var top: CGFloat
+    var rows: ClosedRange<Int>
+}
+
+/// UI tests (`-uiTestProbes`, iOS 18): records which rows (`rowTop` + index × `rowHeight`) are on screen.
+private struct ViewportProbe: ViewModifier {
+    let rowTop: CGFloat
+    let rowHeight: CGFloat
+    @Binding var viewport: ProbedViewport?
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            if TerminalScreenView.showsTestProbes {
+                content.onScrollGeometryChange(for: CGRect.self) { $0.visibleRect } action: { _, rect in
+                    let first = Int(((rect.minY - rowTop) / rowHeight).rounded(.down))
+                    let last = Int(((rect.maxY - rowTop) / rowHeight).rounded(.up)) - 1
+                    viewport = ProbedViewport(top: rect.minY, rows: max(0, first)...max(0, first, last))
+                }
+            } else {
+                content
             }
         } else {
             content
         }
+    }
+}
+
+/// UI tests (`-uiTestProbes`): `terminalRows` (every row, earlier output first) and `terminalViewport` (the rows on
+/// screen, after a line with their indices and the top of the visible part) as accessibility values.
+private struct TerminalTestProbes: View {
+    let rows: [String]
+    let viewport: ProbedViewport?
+
+    var body: some View {
+        ZStack {
+            probe("terminalRows", rows.joined(separator: "\n"))
+            probe("terminalViewport", viewportText)
+        }
+        .frame(width: 1, height: 1)
+        .allowsHitTesting(false)
+    }
+
+    private var viewportText: String {
+        guard let viewport, !rows.isEmpty else { return "" }
+        let shown = min(viewport.rows.lowerBound, rows.count - 1)...min(viewport.rows.upperBound, rows.count - 1)
+        return (["rows \(shown.lowerBound)-\(shown.upperBound) top \(Int(viewport.top.rounded()))"] + rows[shown])
+            .joined(separator: "\n")
+    }
+
+    private func probe(_ id: String, _ value: String) -> some View {
+        Color.clear
+            .accessibilityElement()
+            .accessibilityLabel(id)
+            .accessibilityValue(value)
+            .accessibilityIdentifier(id)
     }
 }
 

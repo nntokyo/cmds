@@ -67,12 +67,29 @@ protocol TerminalSurface: AnyObject {
     var foregroundProcessGroupID: pid_t? { get }
     /// Plain text of scrollback + screen, capped to `maxLines` from the bottom.
     func scrollbackText(maxLines: Int) -> String
+    /// Where the viewport is in the whole screen (history + active area), read now; nil if unknown.
+    func scrollbar() -> TerminalScrollbar?
     /// Up to `maxRows` rows above the viewport, oldest first; the last one is the row right above the first line of
     /// `visibleText()`. One entry per displayed row as in `visibleText()` (soft wraps not joined). Reads only those
-    /// rows. Empty when there are none (alternate screen, e.g. vim) or the viewport is scrolled up (not following the
-    /// output); nil when output moved the history while it was being measured (ask again).
+    /// rows and never moves the viewport; while it is scrolled up, these are the rows above what it shows. Empty when
+    /// there are none (alternate screen, e.g. vim); nil when the `scrollbar()` changed during the read (output, rows
+    /// pruned past the scrollback limit): ask again.
     func historyRows(maxRows: Int) -> [String]?
     func close()
+}
+
+/// A terminal's viewport in its whole screen, in rows: the history (scrollback) on top of the active area.
+struct TerminalScrollbar: Equatable {
+    /// Rows of the whole screen.
+    var total: Int
+    /// Screen row at the top of the viewport, i.e. the number of rows above it: `total − rows` while the viewport
+    /// follows the output, less while it is scrolled up; 0 on the alternate screen, which has no history.
+    var offset: Int
+    /// Rows of the viewport.
+    var rows: Int
+    /// Rows pruned from the top of the history past the scrollback limit so far (since the screen was created):
+    /// screen rows read earlier moved up by the difference. Clearing the history or resizing does not count.
+    var pruned: Int
 }
 
 @MainActor

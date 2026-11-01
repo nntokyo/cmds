@@ -9,6 +9,10 @@ public enum SyncFeature {
     public static let previewPanes = "preview"
     /// Mac: answers `requestScrollback` with `scrollback` (the rows above a pane's screen).
     public static let scrollback = "scrollback"
+    /// Phone (`hello.features`) and Mac (`welcome.features`): after the Mac answered a pane's `requestScrollback`,
+    /// its `screen` / `screenDiff` to that phone carry the rows that left the top of the screen since the previous
+    /// one (`scrolledOff`), or `historyReset` when the rows above the screen no longer continue what was sent.
+    public static let scrollbackStream = "scrollbackStream"
 }
 
 /// Rows above the screen (`requestScrollback` / `scrollback`).
