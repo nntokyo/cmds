@@ -138,7 +138,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"scrollbackStream"` (see "Scrollback"). The Mac lists what it answers in `welcome.features`. |
+| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"files"` (see "Files panes"), `"scrollbackStream"` (see "Scrollback"). The Mac lists what it answers in `welcome.features`. |
 | `subscribe` | `paneIDs:[String]` | Replaces the streamed set. Mac sends a full `screen` for each new pane. `[]` stops streaming. |
 | `requestScreen` | `paneID` | Ask for a full `screen` (after a diff gap). |
 | `input` | `paneID, text` | Typed/pasted text, sent as-is (no newline translation). |
@@ -180,6 +180,14 @@ Mac: only the file currently shown in an existing preview pane (the request name
 an agent on the Mac chose that file), at most 10 MB, one request at a time per connection, read off the main thread.
 The phone keeps the result per pane until the pane goes away or its file changes (reload button to fetch again).
 `SyncFileAssembler` (CmdsCore) joins the pieces; pieces out of order restart it.
+
+## Files panes
+
+Files panes (`PaneKind.files`, `PaneInfo.workingDirectory` = the folder on the Mac) appear in `state` only for phones
+whose `hello.features` contains `"files"`. Other phones (also those with `"preview"`) fail to decode the unknown pane
+kind, so the Mac sends them files panes as `browser` panes with `url` = the folder's `file://` URL
+(`ServerMessage.State.forPhone`, `withoutFilesPanes`; the state is encoded once per variant). The phone shows the
+folder's path; there are no messages to list or fetch a folder's contents yet.
 
 ## Scrollback
 

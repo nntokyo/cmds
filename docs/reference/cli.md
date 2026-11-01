@@ -47,6 +47,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds notify [--title T] [--pane P] <body…>` | Light the attention ring + sidebar text (+ macOS notification when cmds is in the background) |
 | `cmds status [--workspace W] <text…>` | Set the sidebar text without ringing (`""` clears) |
 | `cmds open [--pane P] [--down] [--no-focus] [--diff] <file\|->` | Show a local file in a preview pane split to the right (`--down`: below); prints the pane id. Images in an image view; PDF, video, Office, text/code in Quick Look; Markdown rendered (GitHub style, dark mode, local images); unified diffs (`.diff`/`.patch`, or any file with `--diff`) coloured with line numbers. Reloads when the file changes (atomic saves too); a deleted file shows a placeholder until it is back. Relative paths are resolved against the current directory; `-` saves stdin to a temporary file (`git diff \| cmds open --diff -`). `--pane` naming a preview pane replaces its file. Refused in SSH panes (the file is on the server). In the app: File › Open in Preview… (⇧⌘O), or ⌘-click a file path in a terminal |
+| `cmds files [--pane P] [--down] [--no-focus] [PATH]` | List a local folder in a files pane split to the right (`--down`: below); prints the pane id. `PATH` defaults to the current directory; a file's folder opens with the file selected. `--pane` naming a files pane shows the folder there instead. Refused in SSH panes (it lists folders on the Mac). In the app: File › New Files Pane (⇧⌘E). See [Files panes](../guide/files.md) |
 | `cmds browser open [--pane P] [--no-focus] <url>` | Open a browser split to the right; prints the pane id |
 | `cmds browser navigate [--pane P] <url>` | Load a URL |
 | `cmds browser url [--pane P]` | Print URL and title |
@@ -79,6 +80,7 @@ Examples:
 cmds split down -- npm run dev          # dev server below this pane
 cmds browser open http://localhost:3000
 cmds open --no-focus out/report.md       # show a generated report next to this pane
+cmds files --no-focus out               # list the output folder next to this pane
 git diff | cmds open --no-focus --diff -
 cmds browser eval 'document.title'
 cmds browser snapshot -o /tmp/page.png

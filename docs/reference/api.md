@@ -73,6 +73,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `pane.list` | `workspace?` | `[PaneInfo]` |
 | `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?`, `account?` (local terminals) | `PaneInfo` |
 | `pane.open_file` | `path` (absolute, existing file), `pane?` (to split from; a preview pane shows the file itself instead), `direction?` (`right`/`down`), `focus?` (default true), `format?` (`markdown`/`diff`/`quicklook`) | `PaneInfo` (kind `preview`); refused (403) on SSH panes' sockets |
+| `files.open` | `path` (absolute, existing folder or file), `pane?` (to split from; a files pane shows the folder itself instead), `direction?` (`right`/`down`), `focus?` (default true) | `PaneInfo` (kind `files`, `workingDirectory` = the folder; a file's folder is listed with the file selected); refused (403) on SSH panes' sockets. [Files panes](../guide/files.md) |
 | `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
 | `pane.focus` | `pane` | – |
 | `pane.close` | `pane` | – |
@@ -113,9 +114,10 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `workingDirectory?`, `ports`, `notificationText?`, `attention`, `panes` (`[PaneInfo]`), `layout?` (split tree), and
   optional `cpuPercent` (100 = one core), `memoryBytes` (physical footprint), `remoteHost` (while the focused pane is
   an SSH pane).
-- `PaneInfo` = `id`, `kind` (`terminal` / `browser` / `preview`), `title`, `focused`, `attention`,
-  `workingDirectory?`, `url?` (browser), `file?` (preview: absolute path), `remote?` = `{host, connected, branch?}`
-  (SSH panes), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude Code runs under).
+- `PaneInfo` = `id`, `kind` (`terminal` / `browser` / `preview` / `files`), `title`, `focused`, `attention`,
+  `workingDirectory?` (files: the listed folder), `url?` (browser), `file?` (preview: absolute path), `remote?` =
+  `{host, connected, branch?}` (SSH panes), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude
+  Code runs under).
 - `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`, `memoryTotalBytes`, `memoryPressure` (1 normal,
   2 warning, 4 critical; optional).
 - `AgentUsage` = `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`, `effort`,

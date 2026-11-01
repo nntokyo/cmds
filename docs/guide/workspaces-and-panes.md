@@ -153,6 +153,14 @@ The header shows the file name and folder (click to reveal in Finder), **Open in
 Preview only reaches files on this Mac, so it is not available from SSH panes. Rendering details:
 [internals/architecture.md](../internals/architecture.md#key-concepts).
 
+## Files panes
+
+A files pane lists a local folder (name, size, date modified, kind, Git state) with back/forward, the path, hidden
+files and type-to-select. Two of them side by side copy and move between each other (F5/F6, drag and drop) with
+progress and a choice for names that are taken; rename, new folder and Move to Trash are there too, and a pane can
+follow a terminal's `cd`. Open one with **File › New Files Pane** (⇧⌘E) or `cmds files [PATH]`. Everything about them:
+[files.md](files.md).
+
 ## SSH workspaces
 
 An SSH pane runs your own `ssh` (so `~/.ssh/config`, keys, agents, jump hosts and `ControlMaster` apply) and gives
@@ -211,7 +219,8 @@ The `printf` alone gives the cwd (no process, no helper needed); `cmds-remote.sh
 ## Session restore
 
 When cmds quits and starts again, it restores the workspaces, their split layout and titles, and per pane the
-working directory, browser URL, previewed file or SSH host. Terminals start fresh shells in their directories
+working directory, browser URL, previewed file, files pane folder (with its hidden-files and Follow Terminal
+settings) or SSH host. Terminals start fresh shells in their directories
 (screen contents and running programs are not restored); SSH panes wait for you to connect. Coding-agent sessions that
 ran in a pane are offered for resuming: [ai-agents.md](ai-agents.md#resuming-sessions). To move workspaces to another
 instance or Mac, use File › Export Workspaces… / Import Workspaces… ([ai-agents.md](ai-agents.md#moving-to-a-new-version)).

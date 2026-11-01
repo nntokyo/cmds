@@ -43,14 +43,37 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Open browser split | ⇧⌘B | File |
 | Open in Preview… (file picker) | ⇧⌘O | File |
 | Preview a file path shown in a terminal | ⌘-click the path | – |
+| New files pane (lists the focused pane's folder) | ⇧⌘E | File |
 
 ## Browser, preview and SSH panes
 
 | Action | Key | Menu |
 |---|---|---|
 | Focus address bar | ⌘L | View |
-| Reload (browser page; preview file; **reconnect** a disconnected SSH pane) | ⌘R | View › Reload Page |
+| Reload (browser page; preview file; files pane's folder; **reconnect** a disconnected SSH pane) | ⌘R | View › Reload Page |
+| Back / forward (browser; files pane) | ⌘[ / ⌘] | View |
+
+## Files panes
+
+In the list of a files pane ([guide](../guide/files.md)). F-keys, Space and Return are taken by the list only, never
+as menu shortcuts, so programs in terminals keep them.
+
+| Action | Key | Menu |
+|---|---|---|
+| Open (folder in the pane, file in its default app) | Return, ⌘↓, double-click | right-click › Open |
+| Show in the preview pane | Space | Pane › Files |
+| Enclosing folder | ⌘↑ | Pane › Files |
 | Back / forward | ⌘[ / ⌘] | View |
+| Go to folder (type a path) | ⇧⌘G | Pane › Files |
+| Show hidden files (toggle) | ⇧⌘. | Pane › Files |
+| Select by name | type its first letters | – |
+| Copy / move to the other files pane | F5 / F6 | Pane › Files |
+| Keyboard to the other files pane | Tab | – |
+| Rename | F2 | Pane › Files |
+| New folder | F7 | Pane › Files |
+| Move to Trash | ⌘⌫ | Pane › Files |
+| Copy items / paste (copy) here / move here | ⌘C / ⌘V / ⌥⌘V | Edit (⌘C, ⌘V) |
+| Reload the folder | ⌘R | View |
 
 ## Text size
 

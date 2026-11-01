@@ -18,6 +18,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Panes` | Split container views, pane container with notification ring, SSH connect sheet and overlay, agent resume banner. |
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
+| `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `GitStatusReader`). Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `ShellQuoting`, `GitStatus`, `FileOperation`). |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
@@ -38,7 +39,7 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
 ## Key concepts
 
 - **Workspace** = one vertical tab. Holds a split tree of panes. Each workspace has a primary working directory.
-- **Pane** = terminal (`TerminalSurface`), browser (`WKWebView`) or preview (a local file). IDs are short strings (e.g. `p1`, `w1`), stable while the app runs and reassigned on launch.
+- **Pane** = terminal (`TerminalSurface`), browser (`WKWebView`), preview (a local file) or files (a local folder). IDs are short strings (e.g. `p1`, `w1`), stable while the app runs and reassigned on launch.
 - **Preview pane** (`PaneKind.preview`, `PaneInfo.file` = absolute path): header (name, folder → Reveal in Finder,
   Open in Default App, Reload/⌘R). Images: `NSImageView`; Markdown (`.md`): `MarkdownHTML` (GitHub-flavoured subset,
   raw HTML escaped, only http(s)/mailto/file/relative links) and unified diffs (`.diff`/`.patch` or `format: diff`):
@@ -53,6 +54,16 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
   URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
   (the file is on the server). Session restore keeps preview panes (path, forced format).
+- **Files pane** (`PaneKind.files`, `PaneInfo.workingDirectory` = the folder; [guide](../guide/files.md)): the
+  folder is read on a background queue (`FileEntry` per item, sorted by `FileSorting`) and watched with the same
+  vnode `FileWatcher` as preview panes (re-listed at most every 0.5 s). Git states come from
+  `git --no-optional-locks status --porcelain=v1 -z -- .` (only below a `.git`, 4 s limit, parsed by `GitStatus`).
+  Copies and moves are a `FileOperation` on its own thread: `copyfile(3)` recursive with a progress callback that
+  also cancels (the partial item is removed), renames within a volume, copy + Trash across volumes; a taken name
+  asks the main thread (semaphore) for skip / replace (Trash) / keep both (`FileNames.keepBoth`). Nothing is ever
+  deleted for good. "The other pane" is the workspace's other files pane focused most recently (`Pane.focusedAt`).
+  Follow Terminal follows the workspace's local terminal pane focused most recently (`followedTerminal`), on its
+  OSC 7 changes and when it takes focus. Session restore keeps the folder, hidden files and Follow Terminal.
 - **SSH pane** ([ssh.md](ssh.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
   forwarded to the server (`ssh -R`); `PaneInfo.remote` = `{host, connected, branch?}`, `WorkspaceInfo.remoteHost`
   while the focused pane is one (its cwd/branch are then remote). Survives `ssh` exiting (Reconnect overlay).
