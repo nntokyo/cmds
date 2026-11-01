@@ -1,4 +1,5 @@
 import AppKit
+import CmdsCore
 
 /// Contract between the app shell (workspaces, panes) and the terminal engine.
 /// The engine is libghostty (`Terminal/Ghostty/`); the shell must only use this file's API.
@@ -67,7 +68,8 @@ protocol TerminalSurface: AnyObject {
     var foregroundProcessGroupID: pid_t? { get }
     /// Plain text of scrollback + screen, capped to `maxLines` from the bottom.
     func scrollbackText(maxLines: Int) -> String
-    /// Where the viewport is in the whole screen (history + active area), read now; nil if unknown.
+    /// Where the viewport is in the whole screen (history + active area), read now; nil if unknown. (`TerminalScrollbar`
+    /// is in CmdsCore, which unit-tests the sync stream's arithmetic on it.)
     func scrollbar() -> TerminalScrollbar?
     /// Up to `maxRows` rows above the viewport, oldest first; the last one is the row right above the first line of
     /// `visibleText()`. One entry per displayed row as in `visibleText()` (soft wraps not joined). Reads only those
@@ -76,20 +78,6 @@ protocol TerminalSurface: AnyObject {
     /// pruned past the scrollback limit): ask again.
     func historyRows(maxRows: Int) -> [String]?
     func close()
-}
-
-/// A terminal's viewport in its whole screen, in rows: the history (scrollback) on top of the active area.
-struct TerminalScrollbar: Equatable {
-    /// Rows of the whole screen.
-    var total: Int
-    /// Screen row at the top of the viewport, i.e. the number of rows above it: `total − rows` while the viewport
-    /// follows the output, less while it is scrolled up; 0 on the alternate screen, which has no history.
-    var offset: Int
-    /// Rows of the viewport.
-    var rows: Int
-    /// Rows pruned from the top of the history past the scrollback limit so far (since the screen was created):
-    /// screen rows read earlier moved up by the difference. Clearing the history or resizing does not count.
-    var pruned: Int
 }
 
 @MainActor

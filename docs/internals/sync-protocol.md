@@ -229,12 +229,13 @@ without asking again.
   pruned too, which takes more pruning between two updates than the whole history above them, the Mac resets.
 - **Older Macs** send no `scrollbackStream` and never these fields; **older phones** do not list it, so they never get
   them (0.3.0 phones ask again as the screen scrolls).
-- **The phone** (`CompanionClient`) asks once per pane and connection, again after `historyReset`, and repeats a
-  request that got no answer every 3 s (10 s over Bluetooth). It appends `scrolledOff` in the same update as the
-  screen, so both are drawn in one frame. It keeps 2000 rows, and up to 10 000 while the pane's earlier output is
-  being read, when nothing above the rows being read is dropped or replaced. After a reset it keeps its rows until
-  the answer (on a new connection only those of a pane being read): when the answer still has its last 24 rows, only
-  the rows after them are added; otherwise the answer replaces them, while the pane is read only once reading ends.
+- **The phone** (`CompanionClient`; the rows are kept by `HistoryMirror` in CmdsCore) asks once per pane and
+  connection, again after `historyReset`, and repeats a request that got no answer every 3 s (10 s over Bluetooth).
+  It appends `scrolledOff` in the same update as the screen, so both are drawn in one frame. It keeps 2000 rows, and
+  up to 10 000 while the pane's earlier output is being read, when nothing above the rows being read is dropped or
+  replaced. After a reset it keeps its rows until the answer (on a new connection only those of a pane being read):
+  when the answer still has its last 24 rows, only the rows after them are added; otherwise the answer replaces them,
+  while the pane is read only once reading ends.
 
 ### How the Mac reads it
 
@@ -252,14 +253,15 @@ count from the top of the scrollback, so pruning moves every row up by the rows 
   scrollback (42 000 rows kept of 100 000 printed, M1 Debug build).
 - The answer reads the scrollbar before the screen and after the rows: the same both times, or it tries again (three
   times per try, a try every 0.5 s while the request waits).
-- The stream keeps, per phone and pane, a mark: the viewport of the last screen sent with rows above it (`offset`,
-  total, rows, pruned count, cols) and its last 4 rows. Each screen tick reads the scrollbar right before and right
-  after reading a marked pane's screen; when both agree, the mark is moved up by the rows pruned since, and an update
-  to that phone carries screen rows `mark ..< offset`; then the mark moves on. Without the pruned count, a page pruned
-  in the same tick as new output that made up for the total would go unnoticed (a test with a full scrollback: 6 of 8
-  bursts of 800 rows). The last 4 rows are read again with the new ones as a safety net: history cannot change, so
-  different text means it changed in a way the counts do not show (`historyReset`). Cost per tick: about 35 µs for
-  the scrollbar reads, and about 3 µs per row sent (0.33 ms for 100 rows).
+- The stream keeps, per phone and pane, a mark (`HistoryMark` in CmdsCore, used by `SyncServer+Scrollback.swift`):
+  the viewport of the last screen sent with rows above it (`offset`, total, rows, pruned count, cols) and its last 4
+  rows. Each screen tick reads the scrollbar right before and right after reading a marked pane's screen; when both
+  agree, the mark is moved up by the rows pruned since, and an update to that phone carries screen rows
+  `mark ..< offset`; then the mark moves on. Without the pruned count, a page pruned in the same tick as new output
+  that made up for the total would go unnoticed (a test with a full scrollback: 6 of 8 bursts of 800 rows). The last
+  4 rows are read again with the new ones as a safety net: history cannot change, so different text means it changed
+  in a way the counts do not show (`historyReset`). Cost per tick: about 35 µs for the scrollbar reads, and about
+  3 µs per row sent (0.33 ms for 100 rows).
 
 ## Mac identity
 

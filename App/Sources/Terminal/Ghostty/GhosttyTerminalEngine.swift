@@ -1,4 +1,5 @@
 import AppKit
+import CmdsCore
 import GhosttyKit
 
 /// libghostty-backed terminal engine. All surfaces share one `ghostty_app_t` (`GhosttyRuntime`).

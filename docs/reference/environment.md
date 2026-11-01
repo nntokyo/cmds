@@ -81,7 +81,7 @@ libghostty binding action after 3 s, `CMDS_HARNESS_DUMP=<path>` writes the curso
 |---|---|
 | `-mock` | Run against built-in demo data (no Mac needed; also "Try with demo data" on the connect screen). |
 | `-mockFullScreenTUI` | With `-mock`: the Claude pane shows a large full-screen TUI (used by `TerminalScreenTests`). |
-| `-mockStreamOutput` | With `-mock`: the dotfiles pane prints a numbered line five times a second into a full scrollback (every 30 lines it drops its oldest rows and resets the stream, like a Mac whose scrollback is full; used by `TerminalScreenTests`). |
+| `-mockStreamOutput` | With `-mock`: the dotfiles pane prints a numbered line five times a second into a full scrollback (every 30 lines it drops its oldest rows and resets the stream, more often than a Mac, which follows a pruned scrollback; used by `TerminalScreenTests`). |
 | `-mockNoHistoryStream` | With `-mock`: the demo Mac answers like cmds 0.3.0, without streaming the rows that scroll off a screen (`scrollbackStream`). |
 | `-uiTestProbes` | Adds the accessibility elements `terminalRows` (all rows of the open terminal, earlier output first) and `terminalViewport` (the rows on screen), for UI tests. |
 | `-noNotify` | Do not post local notifications. |
