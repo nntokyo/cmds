@@ -69,7 +69,8 @@ protocol TerminalSurface: AnyObject {
     func scrollbackText(maxLines: Int) -> String
     /// Up to `maxRows` rows above the viewport, oldest first; the last one is the row right above the first line of
     /// `visibleText()`. One entry per displayed row as in `visibleText()` (soft wraps not joined). Reads only those
-    /// rows. Empty when there are none (alternate screen, e.g. vim) or the viewport is scrolled up by a screen or more.
+    /// rows. Empty when there are none (alternate screen, e.g. vim) or the viewport is scrolled up (not following the
+    /// output).
     func historyRows(maxRows: Int) -> [String]
     func close()
 }

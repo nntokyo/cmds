@@ -76,7 +76,8 @@ final class SyncServer {
         var scrollbackSentAt: [String: Date] = [:]
         var inputWindowStart = Date.distantPast
         var inputBytesInWindow = 0
-        /// Panes changed since the last screen update sent to this client (throttled links only).
+        /// Panes to bring up to date with the next screen update: changed since the last one sent (throttled links
+        /// collect several ticks), or sent a screen outside the tick (`requestScrollback`).
         var pendingScreens: Set<String> = []
         var lastScreensSentAt = Date.distantPast
         /// Minimum spacing of screen updates for this connection (Bluetooth: 4 Hz; network: every tick).
@@ -596,6 +597,9 @@ final class SyncServer {
             let full = client.streamer.full(paneID: paneID, snapshot: screen)
             send(.screen(full), to: client)
             send(.scrollback(.init(paneID: paneID, seq: full.seq, lines: rows.map(Self.trimmed))), to: client)
+            // This screen may be newer than the last tick's; the next tick compares the client's copy with the
+            // current one even if the pane looks unchanged to it (e.g. the screen went back to what the tick saw).
+            client.pendingScreens.insert(paneID)
         } catch {
             sendError(for: error, to: client)
         }

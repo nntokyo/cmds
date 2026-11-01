@@ -195,7 +195,7 @@ The phone asks for the rows above a pane's screen with `requestScrollback {paneI
   `screenDiff`s build on that screen as usual. The last row is directly above that screen's first row. Rows that
   scroll off the screen afterwards are not sent; ask again to extend the history.
 - **Empty** when there is no history: the alternate screen (vim, less, other full-screen programs) has none. Also empty
-  while the pane is scrolled up by a screen or more on the Mac.
+  while the pane is scrolled up on the Mac (its viewport is not at the bottom), which the Mac leaves alone.
 - **Limits.** Subscribed terminal panes only. A request for the same pane within 0.5 s of the previous one is ignored
   (no answer); the phone asks every few seconds at most. 1000 rows of a wide pane can be about a megabyte; ask for
   fewer over Bluetooth.
@@ -203,9 +203,9 @@ The phone asks for the rows above a pane's screen with `requestScrollback {paneI
   the phone does not send it to them. **Older phones** never send it and ignore `welcome.features`.
 - **How the Mac reads it.** libghostty's text API reaches exact rows only inside the viewport (every point is clamped
   to the viewport height), so the Mac moves the terminal's viewport over the wanted rows (`scroll_to_row`), reads them
-  row by row and puts the viewport back, all in one call on the main thread (about 1 ms for 1000 rows). It never reads
-  the whole history, which can be megabytes and partly compressed. A pane that is on screen on the Mac may draw one
-  frame of the moved viewport.
+  row by row and returns the viewport to the bottom, all in one call on the main thread (about 1 ms for 1000 rows). It
+  never reads the whole history, which can be megabytes and partly compressed. A pane that is on screen on the Mac may
+  draw one frame of the moved viewport.
 
 ## Mac identity
 

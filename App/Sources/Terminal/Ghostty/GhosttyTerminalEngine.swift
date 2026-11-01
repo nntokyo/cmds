@@ -90,21 +90,19 @@ final class GhosttyTerminalSurface: TerminalSurface {
     /// libghostty's text API reaches exact rows only inside the viewport: `ghostty_surface_read_text` clamps every
     /// point to the viewport height, `GHOSTTY_POINT_SCREEN` ones too (apprt/embedded.zig `Point.pin`), and the
     /// scrollbar action comes from the renderer, which stops while the surface is hidden. So the viewport is moved
-    /// over the wanted rows with `scroll_to_row`, they are read like `visibleText()` and the viewport is put back, all
-    /// within this call on the main thread (about 1 ms for 1000 rows). Only those rows are read: the history can be
-    /// megabytes, and reading compressed pages inflates them again. A pane on screen may draw one frame of the moved
-    /// viewport (2 of 100 reads of 1000 rows did).
+    /// over the wanted rows with `scroll_to_row`, they are read like `visibleText()` and the viewport goes back to the
+    /// bottom, all within this call on the main thread (about 1 ms for 1000 rows). Only those rows are read: the
+    /// history can be megabytes, and reading compressed pages inflates them again. A pane on screen may draw one frame
+    /// of the moved viewport (2 of 100 reads of 1000 rows did). A viewport the user scrolled up is left alone: with
+    /// output arriving in between, its place could not be found again exactly.
     func historyRows(maxRows: Int) -> [String] {
         guard maxRows > 0, let surface = surfaceView.surface else { return [] }
         let size = ghostty_surface_size(surface)
         let rows = Int(size.rows), cols = Int(size.columns)
-        // Scrolled up by a screen or more, the viewport's place is unknown and could not be restored exactly.
-        guard rows > 0, cols > 0, let lead = activeAreaRow(surface, cols: cols) else { return [] }
-        guard let history = historyLength(surface, rows: rows, cols: cols) else {
-            restoreViewport(lead: lead, top: nil)
-            return []
-        }
-        let top = history - lead // the viewport's first row, counted from the top of the scrollback
+        guard rows > 0, cols > 0, activeAreaRow(surface, cols: cols) == 0 else { return [] }
+        // The viewport followed the output; it does again whatever happens below.
+        defer { scrollViewport(toRow: .max) }
+        guard let top = historyLength(surface, rows: rows, cols: cols), top > 0 else { return [] }
         var lines: [String] = []
         lines.reserveCapacity(min(maxRows, top))
         var start = max(0, top - maxRows)
@@ -114,7 +112,6 @@ final class GhosttyTerminalSurface: TerminalSurface {
             for row in 0..<count { lines.append(viewportRow(surface, row, cols: cols)) }
             start += count
         }
-        restoreViewport(lead: lead, top: top)
         return lines
     }
 
@@ -238,14 +235,6 @@ final class GhosttyTerminalSurface: TerminalSurface {
     /// the active area or below it pins the viewport to the active area, which then follows the output again.
     private func scrollViewport(toRow row: Int) {
         surfaceView.performBinding("scroll_to_row:\(max(0, row))")
-    }
-
-    /// Puts the viewport back after `historyRows`: following the output (`lead` 0), else at `top`. Without `top`,
-    /// `lead` rows up from the bottom, which libghostty applies on its IO thread a moment later.
-    private func restoreViewport(lead: Int, top: Int?) {
-        if lead > 0, let top { return scrollViewport(toRow: top) }
-        scrollViewport(toRow: .max)
-        if lead > 0 { surfaceView.performBinding("scroll_page_lines:-\(lead)") }
     }
 
     /// Reads a selection's text plus where its top-left cell is in the viewport: position in points, (-1, -1) when
