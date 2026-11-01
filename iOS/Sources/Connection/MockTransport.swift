@@ -83,7 +83,7 @@ final class MockTransport: SyncTransport {
             emit(.screen(screen))
             let rows = MockData.history(paneID: request.paneID) + shell.scrolledOff
             emit(.scrollback(.init(paneID: request.paneID, seq: screen.seq,
-                                   lines: Array(rows.suffix(min(request.lines, SyncScrollback.maxLines))))))
+                                   lines: Array(rows.suffix(SyncScrollback.clampedLines(request.lines))))))
         }
     }
 

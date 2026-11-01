@@ -568,7 +568,7 @@ final class SyncServer {
         } else if let snapshot = snapshot(paneID: paneID) {
             if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
         } else {
-            sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
+            sendPaneNotFound(paneID, to: client)
         }
     }
 
@@ -577,7 +577,7 @@ final class SyncServer {
     private func sendScrollback(_ request: ClientMessage.RequestScrollback, to client: Client) {
         let paneID = request.paneID
         guard let pane = AppController.shared.pane(id: paneID) else {
-            return sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
+            return sendPaneNotFound(paneID, to: client)
         }
         guard pane.kind == .terminal, client.subscribed.contains(paneID) else {
             return sendError(.badRequest, "not a subscribed terminal pane: \(paneID.prefix(64))", to: client)
@@ -585,7 +585,7 @@ final class SyncServer {
         let now = Date()
         if let last = client.scrollbackSentAt[paneID], now.timeIntervalSince(last) < Self.scrollbackInterval { return }
         client.scrollbackSentAt[paneID] = now
-        let maxRows = min(max(request.lines, 1), SyncScrollback.maxLines)
+        let maxRows = SyncScrollback.clampedLines(request.lines)
         do {
             // Output between the reads would leave a gap or an overlap at the seam: read again while the screen
             // moved meanwhile, and keep the last complete read.
@@ -594,7 +594,7 @@ final class SyncServer {
                 let before = snapshot(paneID: paneID)
                 let rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows)
                 guard let screen = snapshot(paneID: paneID) else {
-                    return sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
+                    return sendPaneNotFound(paneID, to: client)
                 }
                 guard let rows else { continue }
                 answer = (screen, rows)
@@ -962,6 +962,10 @@ final class SyncServer {
     private func send(_ message: ServerMessage, to client: Client, close: Bool = false) {
         guard let data = try? codec.encode(message) else { return }
         client.connection.send(data, thenClose: close)
+    }
+
+    private func sendPaneNotFound(_ paneID: String, to client: Client) {
+        sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
     }
 
     private func sendError(_ code: SyncErrorCode, _ message: String, to client: Client, close: Bool = false) {
