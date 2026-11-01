@@ -383,7 +383,8 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
 
     /// Asks before linking: lists what each account's projects folder becomes.
     @objc private func shareSessions() {
-        guard let window, let steps = try? controller.shareAccountSessions(apply: false) else { return }
+        guard let window else { return }
+        let steps = controller.accountSharingPlan()
         var lines: [String] = []
         for step in steps {
             switch step.action {
@@ -405,7 +406,7 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn, let self else { return }
-            do { _ = try self.controller.shareAccountSessions(apply: true) } catch { self.showError(error) }
+            do { _ = try self.controller.shareAccountSessions() } catch { self.showError(error) }
             self.refresh()
         }
     }

@@ -187,7 +187,8 @@ final class APIServer {
         case "account.clear_limit":
             try controller.clearAccountLimit(name: try params.required("name"))
         case "account.share":
-            let steps = try controller.shareAccountSessions(apply: try params.bool("apply") ?? false)
+            let apply = try params.bool("apply") ?? false
+            let steps = apply ? try controller.shareAccountSessions() : controller.accountSharingPlan()
             return .array(steps.map(Self.shareStep))
         case "account.switch":
             let account = try controller.requestAccountSwitch(paneID: try params.string("pane"), to: try params.string("account"))

@@ -88,12 +88,9 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         let action = response.actionIdentifier
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
-                if action == AppController.accountSwitchAction, let paneID,
-                   let pane = self.controller.pane(id: paneID), let change = pane.accountSwitch {
-                    // The banner's Continue: the offered account, or the next free one if that is limited now.
-                    if (try? self.controller.requestAccountSwitch(paneID: paneID, to: change.to)) == nil {
-                        self.controller.offerAccountSwitch(pane, from: change.from, notify: false)
-                    }
+                if action == AppController.accountSwitchAction, let paneID, let pane = self.controller.pane(id: paneID) {
+                    // The banner's Continue: the offered account, or the offer worked out again.
+                    self.controller.continueAccountSwitch(pane)
                 }
                 NSApp.activate()
                 self.windowController.showWindow(nil)
