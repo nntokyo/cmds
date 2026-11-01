@@ -7,8 +7,8 @@
 
 | What | Where | Current |
 |---|---|---|
-| App version (`CFBundleShortVersionString`) | `MARKETING_VERSION` in `project.yml`, shared by the Mac app and the companion | 0.2.1 (Mac); the iOS app is 0.1.3 |
-| Build number (`CFBundleVersion`) | `CURRENT_PROJECT_VERSION` in `project.yml` | 6 |
+| App version (`CFBundleShortVersionString`) | `MARKETING_VERSION` in `project.yml`, shared by the Mac app and the companion | 0.3.0 (Mac and iOS) |
+| Build number (`CFBundleVersion`) | `CURRENT_PROJECT_VERSION` in `project.yml` | 7 |
 | Sync protocol | `SyncProtocol.version` (`CmdsCore/Sync/SyncProtocol.swift`); checked in `hello`, both sides must match ([sync-protocol.md](sync-protocol.md#versioning)) | 2 |
 | `cmds-remote.sh` | `CMDS_REMOTE_VERSION` in `CmdsCore/RemoteHelperScript.swift` | 1 |
 | Workspace export bundle | `WorkspaceBundle.currentVersion` (`CmdsCore/WorkspaceTransfer.swift`); newer bundles are refused | 1 |
