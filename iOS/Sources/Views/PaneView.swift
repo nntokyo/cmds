@@ -140,13 +140,13 @@ struct TerminalScreenView: View {
         }
         // Output scrolled the screen (its top row changed): ask for the rows that left it, while following.
         .onChange(of: snapshot.map(Self.topRow), initial: true) {
-            if following { client.refreshHistory(paneID: paneID) }
+            if following, Self.showsHistory { client.refreshHistory(paneID: paneID) }
         }
         .onChange(of: client.histories[paneID]) { _, rows in
             if following { history = rows ?? [] }
         }
         .onChange(of: following) { _, now in
-            guard now else { return }
+            guard now, Self.showsHistory else { return }
             history = client.histories[paneID] ?? []
             client.refreshHistory(paneID: paneID)
         }
@@ -183,6 +183,13 @@ struct TerminalScreenView: View {
     static func focusRow(_ s: ScreenSnapshot) -> Int {
         if let row = s.cursorRow, s.lines.indices.contains(row) { return row }
         return s.lines.lastIndex { !$0.isEmpty } ?? 0
+    }
+
+    /// Earlier output needs to know when the user scrolled away from the prompt (`RowVisibility`, iOS 18): without
+    /// that, every refresh would move the rows being read.
+    static var showsHistory: Bool {
+        if #available(iOS 18.0, *) { return true }
+        return false
     }
 
     /// The first non-empty row and its index: changes when output scrolls the screen.
@@ -264,8 +271,8 @@ private struct TerminalHistoryRows: View, Equatable {
 }
 
 /// Whether a row of the scroll view's content (`rowTop` from the content's top) is on screen. Needs iOS 18
-/// (`onScrollGeometryChange`); on iOS 17 the row always counts as visible, so the screen keeps following the
-/// prompt as before.
+/// (`onScrollGeometryChange`); on iOS 17 the row always counts as visible and no earlier output is shown, so the
+/// screen keeps following the prompt as before.
 private struct RowVisibility: ViewModifier {
     let rowTop: CGFloat
     let rowHeight: CGFloat
