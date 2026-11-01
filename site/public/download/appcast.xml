@@ -7,22 +7,22 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.2.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.2.1</link>
-      <sparkle:version>6</sparkle:version>
-      <sparkle:shortVersionString>0.2.1</sparkle:shortVersionString>
+      <title>cmds 0.3.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.3.0</link>
+      <sparkle:version>7</sparkle:version>
+      <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 01 Nov 2026 07:53:27 GMT</pubDate>
+      <pubDate>Sun, 01 Nov 2026 10:47:13 GMT</pubDate>
       <description><![CDATA[
-<h3>修正</h3>
-<p><code>cmds --version</code> がどの版でも 0.1.0 と表示していた問題を直しました。使っている cmds の版を表示します。</p>
-<h3>Fixed</h3>
-<p><code>cmds --version</code> printed 0.1.0 in every release; it now prints the version of the cmds it comes with.</p>
+<h3>追加</h3>
+<p>iPhone/iPad の cmds Companion で、ターミナルの過去の出力をさかのぼれるようになりました（画面の上へ最大 500 行）。Mac は 0.3.0 以降、iPhone/iPad は iOS 18 以降と App Store の cmds Companion 0.3.0 が必要です。</p>
+<h3>Added</h3>
+<p>The cmds Companion app on iPhone/iPad can now scroll back into a terminal's earlier output (up to 500 rows above the screen). Needs cmds 0.3.0 or later on the Mac, and iOS 18 with cmds Companion 0.3.0 from the App Store.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.2.1/cmds-0.2.1.dmg" length="12812773" type="application/octet-stream" sparkle:edSignature="d+pa3TXSa2LIn+hOxwSvmyPMDcGZddtOqH7s3g9RLWWkUDCLaVfsRHB0EHxPY6MsOeCo/5PPRqmZ8saEda7vCg=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.3.0/cmds-0.3.0.dmg" length="12825305" type="application/octet-stream" sparkle:edSignature="fa9TqNXB4Oh2opEQxydaHsHb7pxGYAEHrsT6XI3pp0acaFhH/2Mo0qykjgcr7mpQufPybY5AGBS/v6sCjBR/Bg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: IoFtp4+Nzp34OMvqUrTnfsvzH6LUcrHT+06H8Jca7ENhjlcLqQXBHefPOZIkXm5H8C4871nXA6j5dmtftE+dAw==
-length: 1555
+edSignature: IQUzNPgmT328RCCk5LzTHxm9jJ3MoMXplzEN4ra9iX5HPG7qdg9MXiuJQ6xb37Rp5QpXDw7lkiN5xRoC91/wDw==
+length: 1776
 -->
