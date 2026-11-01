@@ -139,6 +139,32 @@ final class ClaudeAccountTests: XCTestCase {
         XCTAssertFalse(unknown.isActive(at: now.addingTimeInterval(3600)))
     }
 
+    func testFallbackDurationsAndPastResetTimes() {
+        // Without a reset time an account counts as limited for the session window (usage) or a quarter hour (rate).
+        XCTAssertEqual(ClaudeLimitDetector.fallbackDuration(.usageLimit), 5 * 3600)
+        XCTAssertEqual(ClaudeLimitDetector.fallbackDuration(.rateLimit), 15 * 60)
+        // A reset time that has passed already is no better than none: estimated from now.
+        let past = ClaudeLimitHit(kind: .usageLimit, resetsAt: now.addingTimeInterval(-60), line: "x").limit(now: now)
+        XCTAssertTrue(past.estimated)
+        XCTAssertEqual(past.resetsAt, now.addingTimeInterval(5 * 3600))
+        let atNow = ClaudeLimitHit(kind: .rateLimit, resetsAt: now, line: "x").limit(now: now)
+        XCTAssertTrue(atNow.estimated)
+        XCTAssertEqual(atNow.resetsAt, now.addingTimeInterval(15 * 60))
+        XCTAssertEqual(past.detectedAt, now)
+        XCTAssertEqual(past.message, "x")
+    }
+
+    func testLimitMessageIsShortened() throws {
+        let long = String(repeating: "x", count: 250)
+        XCTAssertEqual(ClaudeAccountLimit(kind: .usageLimit, resetsAt: now, message: long).message?.count, 200)
+        let json = #"{"kind":"rateLimit","resetsAt":1800000000,"message":"\#(long)"}"#
+        let decoded = try JSONDecoder().decode(ClaudeAccountLimit.self, from: Data(json.utf8))
+        XCTAssertEqual(decoded.message?.count, 200)
+        // detectedAt defaults to the reset time; a missing reset time fails the record.
+        XCTAssertEqual(decoded.detectedAt, Date(timeIntervalSince1970: 1_800_000_000))
+        XCTAssertThrowsError(try JSONDecoder().decode(ClaudeAccountLimit.self, from: Data(#"{"kind":"usageLimit"}"#.utf8)))
+    }
+
     // MARK: Accounts
 
     func testNamesAndPaths() {
@@ -176,6 +202,24 @@ final class ClaudeAccountTests: XCTestCase {
         accounts[2].limit = limit
         XCTAssertNil(ClaudeAccounts.next(after: "a", in: accounts, now: now))
         XCTAssertNil(ClaudeAccounts.firstAvailable(in: accounts, now: now))
+    }
+
+    func testNextAccountMatchesNamesIgnoringCase() {
+        let accounts = [ClaudeAccount(name: "Work", configDir: "/w"), ClaudeAccount(name: "home", configDir: "/h")]
+        XCTAssertEqual(ClaudeAccounts.next(after: "work", in: accounts, now: now)?.name, "home")
+        // An account that is not (or no longer) in the list: the first free one, from the top.
+        XCTAssertEqual(ClaudeAccounts.next(after: "gone", in: accounts, now: now)?.name, "Work")
+        // A single account never switches to itself.
+        XCTAssertNil(ClaudeAccounts.next(after: "Work", in: Array(accounts.prefix(1)), now: now))
+        XCTAssertNil(ClaudeAccounts.next(after: nil, in: [], now: now))
+    }
+
+    func testMergeKeepsLaterEstimateOverExpiredLimit() {
+        let expired = ClaudeAccountLimit(kind: .usageLimit, resetsAt: now.addingTimeInterval(-1), detectedAt: now)
+        let estimated = ClaudeAccountLimit(kind: .rateLimit, resetsAt: now.addingTimeInterval(900), estimated: true, detectedAt: now)
+        XCTAssertEqual(ClaudeAccounts.merge(expired, estimated, now: now), estimated)
+        let soonerEstimate = ClaudeAccountLimit(kind: .rateLimit, resetsAt: now.addingTimeInterval(300), estimated: true, detectedAt: now)
+        XCTAssertEqual(ClaudeAccounts.merge(estimated, soonerEstimate, now: now), estimated)
     }
 
     func testMergeLimits() {
@@ -317,6 +361,52 @@ final class ClaudeAccountTests: XCTestCase {
         try fm.createDirectory(atPath: home + "/b/" + backup, withIntermediateDirectories: true)
         XCTAssertThrowsError(try ClaudeSessionSharing.apply(steps, accounts: accounts, home: home))
         XCTAssertEqual(ClaudeSessionSharing.link(of: accounts[1], in: accounts, home: home), .separate)
+    }
+
+    func testSharingNeverReplacesWhatAppearedMeanwhile() throws {
+        let home = try temporaryDirectory().path
+        let fm = FileManager.default
+        for path in ["/a/projects", "/b"] { try fm.createDirectory(atPath: home + path, withIntermediateDirectories: true) }
+        let accounts = [ClaudeAccount(name: "a", configDir: home + "/a"), ClaudeAccount(name: "b", configDir: home + "/b")]
+        let steps = ClaudeSessionSharing.plan(accounts, now: now, home: home)
+        XCTAssertEqual(steps[1].action, .createLink)
+        // b/projects appears between planning and applying (Claude Code started there): it is not replaced.
+        try fm.createDirectory(atPath: home + "/b/projects/-x", withIntermediateDirectories: true)
+        XCTAssertThrowsError(try ClaudeSessionSharing.apply(steps, accounts: accounts, home: home))
+        XCTAssertTrue(fm.fileExists(atPath: home + "/b/projects/-x"))
+        XCTAssertEqual(ClaudeSessionSharing.link(of: accounts[1], in: accounts, home: home), .separate)
+    }
+
+    func testBackupNamesAreNumberedWhenTaken() throws {
+        let home = try temporaryDirectory().path
+        let fm = FileManager.default
+        let projects = home + "/a/projects"
+        let first = ClaudeSessionSharing.backupName(for: projects, now: now, fileManager: fm)
+        XCTAssertTrue(first.hasPrefix("projects.before-cmds-2026"), first)
+        try fm.createDirectory(atPath: home + "/a/" + first, withIntermediateDirectories: true)
+        XCTAssertEqual(ClaudeSessionSharing.backupName(for: projects, now: now, fileManager: fm), first + "-2")
+        try fm.createDirectory(atPath: home + "/a/" + first + "-2", withIntermediateDirectories: true)
+        XCTAssertEqual(ClaudeSessionSharing.backupName(for: projects, now: now, fileManager: fm), first + "-3")
+    }
+
+    func testSharingWithoutAnySignedInAccountDoesNothing() throws {
+        let home = try temporaryDirectory().path
+        let accounts = [ClaudeAccount(name: "a", configDir: home + "/a"), ClaudeAccount(name: "b", configDir: home + "/b")]
+        XCTAssertNil(ClaudeSessionSharing.store(accounts, home: home))
+        let steps = ClaudeSessionSharing.plan(accounts, now: now, home: home)
+        XCTAssertEqual(steps.map(\.account), ["a", "b"])
+        for step in steps { if case .skip = step.action {} else { XCTFail("\(step.action)") } }
+        XCTAssertEqual(try ClaudeSessionSharing.apply(steps, accounts: accounts, home: home), [])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: home + "/a"))
+    }
+
+    func testTranscriptReachableNeedsAValidID() throws {
+        let home = try temporaryDirectory().path
+        try FileManager.default.createDirectory(atPath: home + "/a/projects/-p", withIntermediateDirectories: true)
+        try Data().write(to: URL(fileURLWithPath: home + "/a/projects/-p/\(uuid).jsonl"))
+        XCTAssertTrue(ClaudeSessionSharing.transcriptReachable(sessionID: uuid, configDir: home + "/a", home: home))
+        XCTAssertFalse(ClaudeSessionSharing.transcriptReachable(sessionID: "../\(uuid)", configDir: home + "/a", home: home))
+        XCTAssertFalse(ClaudeSessionSharing.transcriptReachable(sessionID: uuid, configDir: home + "/missing", home: home))
     }
 
     private func temporaryDirectory() throws -> URL {
