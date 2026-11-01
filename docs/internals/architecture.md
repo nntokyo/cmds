@@ -18,7 +18,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Panes` | Split container views, pane container with notification ring, SSH connect sheet and overlay, agent resume banner. |
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
-| `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `GitStatusReader`). Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`). |
+| `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `GitStatusReader`). Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git). |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
