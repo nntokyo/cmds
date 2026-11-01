@@ -28,7 +28,7 @@ extension FilesPane {
             rename(rows[row], to: newName)
         case "paste":
             let paths = (params?["paths"]?.arrayValue ?? []).compactMap(\.stringValue)
-            let move = params?["move"].flatMap { if case .bool(let value) = $0 { return value } else { return nil } } ?? false
+            let move = params?["move"]?.boolValue ?? false
             startOperation(move ? .move : .copy, sources: paths.map { URL(fileURLWithPath: $0) }, destination: folderURL)
         case "hidden": setShowHidden(params?["on"] != .bool(false))
         case "follow": setFollowsTerminal(params?["on"] != .bool(false))

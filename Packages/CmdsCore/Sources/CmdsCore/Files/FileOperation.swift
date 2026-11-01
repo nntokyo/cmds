@@ -63,6 +63,8 @@ public final class FileOperation: @unchecked Sendable {
     private var cancelledFlag = false
     private var status: Status
     private var lastStatusPost = Date.distantPast
+    /// Worker thread only, set when `run` starts.
+    private var destinationVolume: NSObject?
 
     public init(mode: Mode, sources: [URL], destination: URL) {
         self.mode = mode
@@ -92,92 +94,124 @@ public final class FileOperation: @unchecked Sendable {
 
     // MARK: - Worker
 
+    /// At most this often a progress report while a file is copied (the start and end of each item always report).
+    private static let statusInterval: TimeInterval = 0.1
+
+    /// What to do with one source.
+    private enum Step {
+        case transfer(to: URL)
+        /// Nothing to do; `countBytes` when its bytes still count as done (a skipped conflict).
+        case skip(countBytes: Bool)
+        case fail(Failure.Reason)
+        case stop
+    }
+
     private func run() {
-        let fileManager = FileManager.default
         var created: [URL] = []
         var failures: [Failure] = []
         var applyToAll: Resolution?
-        let destinationVolume = Self.volume(of: destination)
-
-        // Bytes to copy (moves within a volume are renames: nothing to count).
-        var sizes: [Int64] = []
-        for source in sources {
-            if mode == .move, Self.volume(of: source) == destinationVolume, destinationVolume != nil {
-                sizes.append(0)
-            } else {
-                sizes.append(Self.byteCount(source))
-            }
-            if isCancelled { break }
-        }
+        var stopped = false
+        destinationVolume = Self.volume(of: destination)
+        let sizes = measure()
         status.bytesTotal = sizes.reduce(0, +)
 
-        var stopped = false
-        for (index, source) in sources.enumerated() {
-            if isCancelled || stopped { break }
+        items: for (index, source) in sources.enumerated() {
+            if isCancelled { break }
             let name = source.lastPathComponent
+            let size = index < sizes.count ? sizes[index] : 0
             status.index = index + 1
             status.name = name
             post(force: true)
-            let isFolder = (try? source.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
-            if FileNames.isSameOrInside(destination.path, source.path) {
-                failures.append(Failure(name: name, reason: .intoItself))
-                continue
-            }
-            var target = destination.appendingPathComponent(name, isDirectory: isFolder)
-            if source.standardizedFileURL.path == target.standardizedFileURL.path {
-                // Into its own folder: a copy gets a new name, a move has nothing to do.
-                guard mode == .copy else { continue }
-                target = destination.appendingPathComponent(keepBothName(name, isFolder: isFolder))
-            } else if Self.exists(target) {
-                let choice = applyToAll ?? ask(name: name, isFolder: isFolder, applyToAll: &applyToAll)
-                switch choice {
-                case .stop:
-                    stopped = true
-                    continue
-                case .skip:
-                    status.bytesDone += index < sizes.count ? sizes[index] : 0
-                    continue
-                case .keepBoth:
-                    target = destination.appendingPathComponent(keepBothName(name, isFolder: isFolder))
-                case .replace:
-                    if FileNames.isSameOrInside(source.path, target.path) {
-                        failures.append(Failure(name: name, reason: .replaceContainsSource))
-                        continue
-                    }
-                    do {
-                        try trash(target)
-                    } catch {
-                        failures.append(Failure(name: name, reason: .error(error.localizedDescription)))
-                        continue
-                    }
-                }
+            let target: URL
+            switch step(for: source, applyToAll: &applyToAll) {
+            case .transfer(let url):
+                target = url
+            case .skip(let countBytes):
+                if countBytes { status.bytesDone += size }
+                continue items
+            case .fail(let reason):
+                failures.append(Failure(name: name, reason: reason))
+                continue items
+            case .stop:
+                stopped = true
+                break items
             }
             let base = status.bytesDone
             do {
-                if mode == .move, destinationVolume != nil, Self.volume(of: source) == destinationVolume {
-                    try fileManager.moveItem(at: source, to: target)
-                } else {
-                    try copy(source, to: target, base: base)
-                    if mode == .move { try trash(source) }
-                }
+                try transfer(source, to: target, base: base)
                 created.append(target)
             } catch CopyError.cancelled {
                 // Our own partial output, never a file that was there before (the target did not exist).
-                try? fileManager.removeItem(at: target)
-                break
+                try? FileManager.default.removeItem(at: target)
+                break items
             } catch {
                 if case CopyError.failed = error, Self.exists(target), !created.contains(target) {
-                    try? fileManager.removeItem(at: target)
+                    try? FileManager.default.removeItem(at: target)
                 }
                 failures.append(Failure(name: name, reason: .error((error as? CopyError)?.message ?? error.localizedDescription)))
             }
-            status.bytesDone = base + (index < sizes.count ? sizes[index] : 0)
+            status.bytesDone = base + size
             post(force: true)
         }
         let cancelled = isCancelled || stopped
         DispatchQueue.main.async { [self] in
             MainActor.assumeIsolated { onFinish?(created, failures, cancelled) }
         }
+    }
+
+    /// Bytes to copy per source (moves within a volume are renames: nothing to count); fewer when cancelled meanwhile.
+    private func measure() -> [Int64] {
+        var sizes: [Int64] = []
+        for source in sources {
+            sizes.append(isRename(source) ? 0 : Self.byteCount(source))
+            if isCancelled { break }
+        }
+        return sizes
+    }
+
+    /// Where `source` goes: a name that is taken asks (or follows "apply to all"); Replace trashes the existing item.
+    private func step(for source: URL, applyToAll: inout Resolution?) -> Step {
+        let name = source.lastPathComponent
+        let isFolder = (try? source.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+        if FileNames.isSameOrInside(destination.path, source.path) { return .fail(.intoItself) }
+        let target = destination.appendingPathComponent(name, isDirectory: isFolder)
+        if FileNames.isSamePath(source, target) {
+            // Into its own folder: a copy gets a new name, a move has nothing to do.
+            guard mode == .copy else { return .skip(countBytes: false) }
+            return .transfer(to: destination.appendingPathComponent(keepBothName(name, isFolder: isFolder)))
+        }
+        guard Self.exists(target) else { return .transfer(to: target) }
+        switch applyToAll ?? ask(name: name, isFolder: isFolder, applyToAll: &applyToAll) {
+        case .stop:
+            return .stop
+        case .skip:
+            return .skip(countBytes: true)
+        case .keepBoth:
+            return .transfer(to: destination.appendingPathComponent(keepBothName(name, isFolder: isFolder)))
+        case .replace:
+            if FileNames.isSameOrInside(source.path, target.path) { return .fail(.replaceContainsSource) }
+            do {
+                try trash(target)
+            } catch {
+                return .fail(.error(error.localizedDescription))
+            }
+            return .transfer(to: target)
+        }
+    }
+
+    /// A move within the destination's volume is a rename; anything else is copied, and a move then trashes the
+    /// original.
+    private func transfer(_ source: URL, to target: URL, base: Int64) throws {
+        if isRename(source) {
+            try FileManager.default.moveItem(at: source, to: target)
+        } else {
+            try copy(source, to: target, base: base)
+            if mode == .move { try trash(source) }
+        }
+    }
+
+    private func isRename(_ source: URL) -> Bool {
+        mode == .move && destinationVolume != nil && Self.volume(of: source) == destinationVolume
     }
 
     private func keepBothName(_ name: String, isFolder: Bool) -> String {
@@ -216,7 +250,7 @@ public final class FileOperation: @unchecked Sendable {
 
     private func post(force: Bool = false) {
         let now = Date()
-        guard force || now.timeIntervalSince(lastStatusPost) > 0.1 else { return }
+        guard force || now.timeIntervalSince(lastStatusPost) > Self.statusInterval else { return }
         lastStatusPost = now
         let snapshot = status
         DispatchQueue.main.async { [self] in

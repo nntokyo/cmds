@@ -68,8 +68,7 @@ extension FilesPane {
         alert.window.initialFirstResponder = field
         present(alert) { [weak self] response in
             guard let self, response == .alertFirstButtonReturn else { return }
-            let raw = (field.stringValue.trimmingCharacters(in: .whitespaces) as NSString).expandingTildeInPath
-            let path = raw.hasPrefix("/") ? raw : (self.folder as NSString).appendingPathComponent(raw)
+            let path = FileNames.resolve(typed: field.stringValue, in: self.folder)
             if Self.isFolder(path) {
                 self.navigate(to: path)
             } else if FileManager.default.fileExists(atPath: path) {
@@ -107,10 +106,8 @@ extension FilesPane {
     @objc func moveToTrash() {
         let entries = targetEntries
         guard !entries.isEmpty else { return NSSound.beep() }
-        // Keep the keyboard near where the items were: the next row that stays, else the one before.
-        let trashed = Set(entries.map(\.name))
-        let first = rows.firstIndex { trashed.contains($0.name) } ?? 0
-        let next = rows[first...].first { !trashed.contains($0.name) } ?? rows[..<first].last { !trashed.contains($0.name) }
+        // Keep the keyboard near where the items were.
+        let next = FileSelection.afterRemoving(Set(entries.map(\.name)), from: rows.map(\.name))
         NSWorkspace.shared.recycle(entries.map(url(of:))) { [weak self] _, error in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
@@ -118,7 +115,7 @@ extension FilesPane {
                     if let error {
                         self.showError(String(localized: "Could not move to the Trash."), detail: error.localizedDescription)
                     }
-                    self.pendingSelection = next.map { [$0.name] } ?? []
+                    self.pendingSelection = next.map { [$0] } ?? []
                     self.load()
                 }
             }
@@ -198,12 +195,11 @@ extension FilesPane {
         case (.move, true): text = String(localized: "Moving \(status.index) of \(status.count): \(status.name)")
         case (.move, false): text = String(localized: "Moving \(status.name)")
         }
+        progressIndicator.isIndeterminate = false
         if status.bytesTotal > 0 {
             text += " — " + String(localized: "\(byteFormatter.string(fromByteCount: status.bytesDone)) of \(byteFormatter.string(fromByteCount: status.bytesTotal))")
-            progressIndicator.isIndeterminate = false
             progressIndicator.doubleValue = min(1, Double(status.bytesDone) / Double(status.bytesTotal))
         } else {
-            progressIndicator.isIndeterminate = false
             progressIndicator.doubleValue = status.count > 0 ? Double(status.index - 1) / Double(status.count) : 0
         }
         statusLabel.stringValue = text
@@ -214,21 +210,24 @@ extension FilesPane {
         progressIndicator.isHidden = true
         cancelButton.isHidden = true
         updateStatus()
-        let names = created.filter { $0.deletingLastPathComponent().standardizedFileURL.path == destination.standardizedFileURL.path }
+        let names = created.filter { FileNames.isSamePath($0.deletingLastPathComponent(), destination) }
             .map(\.lastPathComponent)
-        if destination.standardizedFileURL.path == folderURL.standardizedFileURL.path, !names.isEmpty {
+        if FileNames.isSamePath(destination, folderURL), !names.isEmpty {
             pendingSelection = names
             load()
-        } else if let other = otherPane?(), other.folderURL.standardizedFileURL.path == destination.standardizedFileURL.path,
-                  !names.isEmpty {
+        } else if let other = otherPane?(), FileNames.isSamePath(other.folderURL, destination), !names.isEmpty {
             other.pendingSelection = names
             other.load()
         }
         guard !failures.isEmpty else { return }
-        let lines = failures.prefix(8).map { "\($0.name): \(Self.text($0.reason))" }
-        let more = failures.count > 8 ? "\n" + String(localized: "and \(failures.count - 8) more") : ""
+        let shown = Self.failuresListed
+        let lines = failures.prefix(shown).map { "\($0.name): \(Self.text($0.reason))" }
+        let more = failures.count > shown ? "\n" + String(localized: "and \(failures.count - shown) more") : ""
         showError(String(localized: "Some items could not be copied or moved."), detail: lines.joined(separator: "\n") + more)
     }
+
+    /// Failures named in the alert after a copy or move; the rest are counted.
+    private static let failuresListed = 8
 
     private static func text(_ reason: FileOperation.Failure.Reason) -> String {
         switch reason {
@@ -272,9 +271,10 @@ extension FilesPane {
     func contextMenu() -> NSMenu {
         let menu = NSMenu()
         let entries = targetEntries
-        func add(_ title: String, _ action: Selector, enabled: Bool = true) {
+        func add(_ title: String, _ action: Selector, enabled: Bool = true, checked: Bool? = nil) {
             let item = NSMenuItem(title: title, action: enabled ? action : nil, keyEquivalent: "")
             item.target = self
+            if let checked { item.state = checked ? .on : .off }
             menu.addItem(item)
         }
         let hasFile = entries.contains { !$0.isFolder }
@@ -294,14 +294,8 @@ extension FilesPane {
         }
         add(String(localized: "New Folder"), #selector(newFolder))
         add(String(localized: "Open Terminal Here"), #selector(openTerminalHere))
-        let hidden = NSMenuItem(title: String(localized: "Show Hidden Files"), action: #selector(toggleHiddenFiles), keyEquivalent: "")
-        hidden.target = self
-        hidden.state = showHidden ? .on : .off
-        menu.addItem(hidden)
-        let follow = NSMenuItem(title: String(localized: "Follow Terminal"), action: #selector(toggleFollowTerminal), keyEquivalent: "")
-        follow.target = self
-        follow.state = followsTerminal ? .on : .off
-        menu.addItem(follow)
+        add(String(localized: "Show Hidden Files"), #selector(toggleHiddenFiles), checked: showHidden)
+        add(String(localized: "Follow Terminal"), #selector(toggleFollowTerminal), checked: followsTerminal)
         return menu
     }
 

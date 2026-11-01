@@ -247,9 +247,7 @@ final class FilesPane: NSView {
         case .failure(let error):
             if !Self.isFolder(folder) {
                 // Deleted or moved away: go to the nearest folder that is still there.
-                var parent = (folder as NSString).deletingLastPathComponent
-                while parent != "/", !Self.isFolder(parent) { parent = (parent as NSString).deletingLastPathComponent }
-                navigate(to: parent, record: false)
+                navigate(to: FileNames.nearestFolder(above: folder, isFolder: Self.isFolder), record: false)
                 return
             }
             loadError = error.localizedDescription

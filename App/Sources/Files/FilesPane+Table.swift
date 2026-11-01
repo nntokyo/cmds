@@ -6,7 +6,14 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
     enum Column: String, CaseIterable {
         case name, git, size, modified, kind
 
-        var identifier: NSUserInterfaceItemIdentifier { NSUserInterfaceItemIdentifier("files." + rawValue) }
+        private static let identifierPrefix = "files."
+
+        var identifier: NSUserInterfaceItemIdentifier { NSUserInterfaceItemIdentifier(Self.identifierPrefix + rawValue) }
+
+        init?(identifier: NSUserInterfaceItemIdentifier) {
+            guard identifier.rawValue.hasPrefix(Self.identifierPrefix) else { return nil }
+            self.init(rawValue: String(identifier.rawValue.dropFirst(Self.identifierPrefix.count)))
+        }
 
         var sortKey: FileSortKey? {
             switch self {
@@ -74,7 +81,7 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
     func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
 
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        guard let tableColumn, let column = Column(rawValue: String(tableColumn.identifier.rawValue.dropFirst("files.".count))),
+        guard let tableColumn, let column = Column(identifier: tableColumn.identifier),
               let entry = rows[safe: row] else { return nil }
         let cell = tableView.makeView(withIdentifier: tableColumn.identifier, owner: self) as? NSTableCellView
             ?? makeCell(column)
@@ -277,7 +284,7 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
         let destinationPath = destination.standardizedFileURL.path
         if sources.contains(where: { FileNames.isSameOrInside(destinationPath, $0.standardizedFileURL.path) }) { return [] }
         let operation = Self.dropOperation(info, sources: sources, destination: destination)
-        if operation == .move, sources.allSatisfy({ $0.deletingLastPathComponent().standardizedFileURL.path == destinationPath }) {
+        if operation == .move, sources.allSatisfy({ FileNames.isSamePath($0.deletingLastPathComponent(), destination) }) {
             return []
         }
         return operation
@@ -333,21 +340,38 @@ final class FilesTableView: NSTableView, NSMenuItemValidation {
         guard let pane else { return super.keyDown(with: event) }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         switch (event.keyCode, flags) {
-        case (36, []), (76, []), (125, [.command]): pane.openSelection()
-        case (126, [.command]): pane.goUp()
-        case (49, []): pane.previewSelection()
-        case (51, [.command]): pane.moveToTrash()
-        case (120, []): pane.renameSelection()
-        case (96, []): pane.copyToOtherPane()
-        case (97, []): pane.moveToOtherPane()
-        case (98, []): pane.newFolder()
-        case (48, []): pane.focusOtherPane()
-        case (47, [.command, .shift]): pane.toggleHiddenFiles()
-        case (5, [.command, .shift]): pane.goToFolder()
-        case (9, [.command, .option]): pane.paste(move: true)
+        case (Self.returnKeyCode, []), (Self.keypadEnterKeyCode, []), (Self.downArrowKeyCode, [.command]):
+            pane.openSelection()
+        case (Self.upArrowKeyCode, [.command]): pane.goUp()
+        case (Self.spaceKeyCode, []): pane.previewSelection()
+        case (Self.deleteKeyCode, [.command]): pane.moveToTrash()
+        case (Self.f2KeyCode, []): pane.renameSelection()
+        case (Self.f5KeyCode, []): pane.copyToOtherPane()
+        case (Self.f6KeyCode, []): pane.moveToOtherPane()
+        case (Self.f7KeyCode, []): pane.newFolder()
+        case (Self.tabKeyCode, []): pane.focusOtherPane()
+        case (Self.periodKeyCode, [.command, .shift]): pane.toggleHiddenFiles()
+        case (Self.gKeyCode, [.command, .shift]): pane.goToFolder()
+        case (Self.vKeyCode, [.command, .option]): pane.paste(move: true)
         default: super.keyDown(with: event)
         }
     }
+
+    // Virtual key codes (US layout positions, as `kVK_…` in Carbon).
+    private static let returnKeyCode: UInt16 = 36
+    private static let keypadEnterKeyCode: UInt16 = 76
+    private static let downArrowKeyCode: UInt16 = 125
+    private static let upArrowKeyCode: UInt16 = 126
+    private static let spaceKeyCode: UInt16 = 49
+    private static let deleteKeyCode: UInt16 = 51
+    private static let tabKeyCode: UInt16 = 48
+    private static let f2KeyCode: UInt16 = 120
+    private static let f5KeyCode: UInt16 = 96
+    private static let f6KeyCode: UInt16 = 97
+    private static let f7KeyCode: UInt16 = 98
+    private static let periodKeyCode: UInt16 = 47
+    private static let gKeyCode: UInt16 = 5
+    private static let vKeyCode: UInt16 = 9
 
     override func menu(for event: NSEvent) -> NSMenu? {
         guard let pane else { return nil }

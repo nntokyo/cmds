@@ -74,6 +74,39 @@ final class FileNamesTests: XCTestCase {
         XCTAssertFalse(FileNames.isSameOrInside("/a", "/a/b"))
         XCTAssertTrue(FileNames.isSameOrInside("/x", "/"))
     }
+
+    func testSamePath() {
+        XCTAssertTrue(FileNames.isSamePath(URL(fileURLWithPath: "/a/b/../c"), URL(fileURLWithPath: "/a/c/", isDirectory: true)))
+        XCTAssertFalse(FileNames.isSamePath(URL(fileURLWithPath: "/a/b"), URL(fileURLWithPath: "/a/c")))
+    }
+
+    func testTypedPaths() {
+        XCTAssertEqual(FileNames.resolve(typed: "  /etc  ", in: "/tmp"), "/etc")
+        XCTAssertEqual(FileNames.resolve(typed: "sub/dir", in: "/tmp"), "/tmp/sub/dir")
+        XCTAssertEqual(FileNames.resolve(typed: "~/Documents", in: "/tmp"), NSHomeDirectory() + "/Documents")
+        XCTAssertEqual(FileNames.resolve(typed: "", in: "/tmp"), "/tmp")
+    }
+
+    func testNearestFolder() {
+        let existing: Set<String> = ["/", "/a", "/a/b"]
+        XCTAssertEqual(FileNames.nearestFolder(above: "/a/b/c/d", isFolder: existing.contains), "/a/b")
+        XCTAssertEqual(FileNames.nearestFolder(above: "/a/b", isFolder: existing.contains), "/a")
+        XCTAssertEqual(FileNames.nearestFolder(above: "/x/y", isFolder: existing.contains), "/")
+        XCTAssertEqual(FileNames.nearestFolder(above: "/x", isFolder: { _ in false }), "/")
+    }
+}
+
+final class FileSelectionTests: XCTestCase {
+    func testAfterRemovingKeepsTheKeyboardNearby() {
+        let rows = ["a", "b", "c", "d", "e"]
+        XCTAssertEqual(FileSelection.afterRemoving(["b", "c"], from: rows), "d")
+        XCTAssertEqual(FileSelection.afterRemoving(["b", "d"], from: rows), "c")
+        XCTAssertEqual(FileSelection.afterRemoving(["d", "e"], from: rows), "c")
+        XCTAssertEqual(FileSelection.afterRemoving(["a", "b", "c", "d", "e"], from: rows), nil)
+        // Names no longer listed: from the top.
+        XCTAssertEqual(FileSelection.afterRemoving(["z"], from: rows), "a")
+        XCTAssertEqual(FileSelection.afterRemoving(["z"], from: []), nil)
+    }
 }
 
 final class ShellQuotingTests: XCTestCase {
@@ -108,6 +141,14 @@ final class GitStatusTests: XCTestCase {
         XCTAssertEqual(changes.map(\.state), [.modified, .modified, .added, .renamed, .untracked, .untracked, .conflicted, .deleted])
     }
 
+    func testCopiesSkipTheirOldPathAndIgnoredFilesAreLeftOut() {
+        let changes = GitStatus.parse(porcelain([
+            "C  copy.txt", "orig.txt", " R moved.txt", "was.txt", "!! build.log", "AA both.txt", " T link", "DD gone.txt",
+        ]))
+        XCTAssertEqual(changes.map(\.path), ["copy.txt", "moved.txt", "both.txt", "link", "gone.txt"])
+        XCTAssertEqual(changes.map(\.state), [.renamed, .renamed, .conflicted, .modified, .conflicted])
+    }
+
     func testStatesPerFolderEntry() {
         let changes = GitStatus.parse(porcelain([
             " M App/Sources/a.swift", "?? App/Sources/new.swift", "A  App/b.swift", "?? App/Tmp/", " M top.txt",
@@ -136,6 +177,9 @@ final class FilesSyncTests: XCTestCase {
 
         let oldest = state.forPhone(supportsPreview: false, supportsFiles: false).workspaces[0].panes
         XCTAssertEqual(oldest.map(\.kind), [.terminal, .browser, .browser])
+
+        let previewOnly = state.forPhone(supportsPreview: false, supportsFiles: true).workspaces[0].panes
+        XCTAssertEqual(previewOnly.map(\.kind), [.terminal, .files, .browser])
 
         XCTAssertEqual(state.forPhone(supportsPreview: true, supportsFiles: true), state)
     }

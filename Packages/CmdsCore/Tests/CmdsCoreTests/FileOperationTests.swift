@@ -42,6 +42,7 @@ final class FileOperationTests: XCTestCase {
         var failures: [FileOperation.Failure] = []
         var cancelled = false
         var conflicts: [String] = []
+        var statuses: [FileOperation.Status] = []
     }
 
     /// Runs the operation; conflicts are answered with `answer`.
@@ -59,6 +60,7 @@ final class FileOperationTests: XCTestCase {
             outcome.conflicts.append(name)
             reply(answer.0, answer.1)
         }
+        operation.onStatus = { status in outcome.statuses.append(status) }
         operation.onFinish = { created, failures, cancelled in
             outcome.created = created
             outcome.failures = failures
@@ -181,5 +183,65 @@ final class FileOperationTests: XCTestCase {
         let outcome = run(.copy, [source.appendingPathComponent("a.txt")]) { $0.cancel() }
         XCTAssertTrue(outcome.cancelled)
         XCTAssertEqual(names(destination), [])
+    }
+
+    func testStatusCountsTheBytesOfSkippedAndCopiedItems() throws {
+        try write("12345", source.appendingPathComponent("a.txt"))
+        try write("123", source.appendingPathComponent("folder/b.txt"))
+        try write("old", destination.appendingPathComponent("a.txt"))
+        let outcome = run(.copy, [source.appendingPathComponent("a.txt"), source.appendingPathComponent("folder")],
+                          answer: (.skip, false))
+        XCTAssertEqual(outcome.conflicts, ["a.txt"])
+        let last = try XCTUnwrap(outcome.statuses.last)
+        XCTAssertEqual(last.mode, .copy)
+        XCTAssertEqual(last.count, 2)
+        XCTAssertEqual(last.index, 2)
+        XCTAssertEqual(last.name, "folder")
+        XCTAssertEqual(last.bytesTotal, 8)
+        XCTAssertEqual(last.bytesDone, 8)
+        XCTAssertEqual(outcome.statuses.first?.index, 1)
+        XCTAssertEqual(outcome.statuses.first?.name, "a.txt")
+    }
+
+    func testMoveWithinAVolumeCountsNoBytes() throws {
+        try write("12345", source.appendingPathComponent("a.txt"))
+        let outcome = run(.move, [source.appendingPathComponent("a.txt")])
+        XCTAssertEqual(outcome.statuses.last?.bytesTotal, 0)
+        XCTAssertEqual(outcome.statuses.last?.bytesDone, 0)
+    }
+
+    func testReplacingTheFolderTheItemComesFromIsRefused() throws {
+        // dst/folder/folder moved into dst: replacing dst/folder would trash the item itself.
+        try write("a", destination.appendingPathComponent("folder/folder/a.txt"))
+        let inner = destination.appendingPathComponent("folder/folder")
+        let outcome = run(.move, [inner], answer: (.replace, false))
+        XCTAssertEqual(outcome.failures.map(\.reason), [.replaceContainsSource])
+        XCTAssertEqual(read(inner.appendingPathComponent("a.txt")), "a")
+        XCTAssertEqual(names(trashFolder), [])
+    }
+
+    func testReplaceFailsWhenTheTrashFails() throws {
+        try write("new", source.appendingPathComponent("a.txt"))
+        try write("old", destination.appendingPathComponent("a.txt"))
+        struct TrashError: LocalizedError { var errorDescription: String? { "no trash" } }
+        let outcome = run(.copy, [source.appendingPathComponent("a.txt")], answer: (.replace, false)) { operation in
+            operation.trash = { _ in throw TrashError() }
+        }
+        XCTAssertEqual(outcome.failures.map(\.reason), [.error("no trash")])
+        XCTAssertEqual(read(destination.appendingPathComponent("a.txt")), "old")
+    }
+
+    func testByteCountExistsAndVolume() throws {
+        try write("12345", source.appendingPathComponent("folder/a.txt"))
+        try write("123", source.appendingPathComponent("folder/inner/b.txt"))
+        let link = source.appendingPathComponent("folder/link")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: root.appendingPathComponent("missing"))
+        XCTAssertEqual(FileOperation.byteCount(source.appendingPathComponent("folder")), 8, "links are not followed")
+        XCTAssertEqual(FileOperation.byteCount(source.appendingPathComponent("folder/a.txt")), 5)
+        XCTAssertEqual(FileOperation.byteCount(source.appendingPathComponent("none")), 0)
+        XCTAssertTrue(FileOperation.exists(link), "a link whose target is missing exists")
+        XCTAssertFalse(FileOperation.exists(source.appendingPathComponent("none")))
+        XCTAssertNotNil(FileOperation.volume(of: source))
+        XCTAssertEqual(FileOperation.volume(of: source.appendingPathComponent("not yet")), FileOperation.volume(of: source))
     }
 }
