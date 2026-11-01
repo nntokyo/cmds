@@ -33,43 +33,9 @@ enum GitStatusReader {
 
     /// stdout of a successful run; nil on failure or timeout.
     private static func run(_ executable: String, _ arguments: [String]) -> Data? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = arguments
         var environment = ProcessInfo.processInfo.environment
         environment["GIT_OPTIONAL_LOCKS"] = "0"
         environment["GIT_TERMINAL_PROMPT"] = "0"
-        process.environment = environment
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = FileHandle.nullDevice
-        process.standardInput = FileHandle.nullDevice
-        let done = DispatchSemaphore(value: 0)
-        process.terminationHandler = { _ in done.signal() }
-        do {
-            try process.run()
-        } catch {
-            return nil
-        }
-        // Read while it runs (a full pipe would block git).
-        let reader = DispatchQueue(label: "cmds.git-status.read")
-        let readDone = DispatchSemaphore(value: 0)
-        let box = DataBox()
-        reader.async {
-            box.data = output.fileHandleForReading.readDataToEndOfFile()
-            readDone.signal()
-        }
-        if done.wait(timeout: .now() + timeout) == .timedOut {
-            process.terminate()
-            _ = done.wait(timeout: .now() + 1)
-            _ = readDone.wait(timeout: .now() + 1)
-            return nil
-        }
-        _ = readDone.wait(timeout: .now() + 2)
-        return process.terminationStatus == 0 ? box.data : nil
-    }
-
-    private final class DataBox: @unchecked Sendable {
-        var data = Data()
+        return CommandOutput.run(executable, arguments, environment: environment, timeout: timeout)
     }
 }

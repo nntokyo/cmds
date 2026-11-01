@@ -231,6 +231,33 @@ final class FileOperationTests: XCTestCase {
         XCTAssertEqual(read(destination.appendingPathComponent("a.txt")), "old")
     }
 
+    func testMoveAcrossVolumesCopiesThenTrashesTheOriginal() throws {
+        try write("a", source.appendingPathComponent("folder/a.txt"))
+        let outcome = run(.move, [source.appendingPathComponent("folder")]) { $0.movesAcrossVolumes = true }
+        XCTAssertTrue(outcome.failures.isEmpty)
+        XCTAssertEqual(outcome.created.map(\.lastPathComponent), ["folder"])
+        XCTAssertEqual(read(destination.appendingPathComponent("folder/a.txt")), "a")
+        XCTAssertEqual(names(source), [])
+        XCTAssertEqual(names(trashFolder).count, 1, "the original is in the Trash")
+        XCTAssertEqual(outcome.statuses.last?.bytesTotal, 1, "counted as a copy")
+    }
+
+    func testMoveAcrossVolumesKeepsTheCopyWhenTheOriginalCannotBeTrashed() throws {
+        try write("a", source.appendingPathComponent("a.txt"))
+        try write("b", source.appendingPathComponent("b.txt"))
+        struct TrashError: LocalizedError { var errorDescription: String? { "no trash" } }
+        let outcome = run(.move, [source.appendingPathComponent("a.txt"), source.appendingPathComponent("b.txt")]) {
+            $0.movesAcrossVolumes = true
+            $0.trash = { _ in throw TrashError() }
+        }
+        XCTAssertEqual(outcome.failures.map(\.name), ["a.txt", "b.txt"])
+        XCTAssertEqual(outcome.failures.map(\.reason), [.originalNotTrashed("no trash"), .originalNotTrashed("no trash")])
+        XCTAssertEqual(outcome.created.map(\.lastPathComponent), ["a.txt", "b.txt"], "the copies are selected")
+        XCTAssertEqual(read(destination.appendingPathComponent("a.txt")), "a")
+        XCTAssertEqual(names(source), ["a.txt", "b.txt"], "the originals stay")
+        XCTAssertFalse(outcome.cancelled)
+    }
+
     func testByteCountExistsAndVolume() throws {
         try write("12345", source.appendingPathComponent("folder/a.txt"))
         try write("123", source.appendingPathComponent("folder/inner/b.txt"))

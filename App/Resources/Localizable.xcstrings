@@ -1607,6 +1607,16 @@
         }
       }
     },
+    "Copied, but the original could not be moved to the Trash: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーしましたが、元の項目をゴミ箱に移動できませんでした: %@"
+          }
+        }
+      }
+    },
     "Copy": {
       "localizations": {
         "ja": {

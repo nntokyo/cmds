@@ -234,6 +234,8 @@ extension FilesPane {
         case .intoItself: return String(localized: "A folder cannot be copied or moved into itself.")
         case .replaceContainsSource: return String(localized: "The item to replace contains the item being moved.")
         case .error(let message): return message
+        case .originalNotTrashed(let message):
+            return String(localized: "Copied, but the original could not be moved to the Trash: \(message)")
         }
     }
 

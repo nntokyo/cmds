@@ -33,6 +33,9 @@ public final class FileOperation: @unchecked Sendable {
             case replaceContainsSource
             /// From the file system (English, or the system's localized error text).
             case error(String)
+            /// A move across volumes was copied (the copy is in `created`), but the original could not be moved to
+            /// the Trash; the error text as for `error`.
+            case originalNotTrashed(String)
         }
 
         public var name: String
@@ -58,6 +61,8 @@ public final class FileOperation: @unchecked Sendable {
 
     /// Tests: called on the worker thread with each progress report of `copyfile`.
     var onCopyProgress: (@Sendable (Int64) -> Void)?
+    /// Tests: moves are copied and their originals trashed, as across volumes.
+    var movesAcrossVolumes = false
 
     private let lock = NSLock()
     private var cancelledFlag = false
@@ -138,8 +143,9 @@ public final class FileOperation: @unchecked Sendable {
             }
             let base = status.bytesDone
             do {
-                try transfer(source, to: target, base: base)
+                let problem = try transfer(source, to: target, base: base)
                 created.append(target)
+                if let problem { failures.append(Failure(name: name, reason: problem)) }
             } catch CopyError.cancelled {
                 // Our own partial output, never a file that was there before (the target did not exist).
                 try? FileManager.default.removeItem(at: target)
@@ -200,18 +206,25 @@ public final class FileOperation: @unchecked Sendable {
     }
 
     /// A move within the destination's volume is a rename; anything else is copied, and a move then trashes the
-    /// original.
-    private func transfer(_ source: URL, to target: URL, base: Int64) throws {
+    /// original. Throws when nothing was transferred; returns the problem of a move whose copy is done but whose
+    /// original is still there.
+    private func transfer(_ source: URL, to target: URL, base: Int64) throws -> Failure.Reason? {
         if isRename(source) {
             try FileManager.default.moveItem(at: source, to: target)
-        } else {
-            try copy(source, to: target, base: base)
-            if mode == .move { try trash(source) }
+            return nil
         }
+        try copy(source, to: target, base: base)
+        guard mode == .move else { return nil }
+        do {
+            try trash(source)
+        } catch {
+            return .originalNotTrashed(error.localizedDescription)
+        }
+        return nil
     }
 
     private func isRename(_ source: URL) -> Bool {
-        mode == .move && destinationVolume != nil && Self.volume(of: source) == destinationVolume
+        mode == .move && !movesAcrossVolumes && destinationVolume != nil && Self.volume(of: source) == destinationVolume
     }
 
     private func keepBothName(_ name: String, isFolder: Bool) -> String {
