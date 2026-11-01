@@ -131,7 +131,9 @@ Code: `CmdsCore/AgentUsage.swift`, `AgentFormat.swift`, `ClaudeStatusLine.swift`
 ### Claude accounts
 
 Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), `ClaudeLimitDetector.swift`,
-`ClaudeSessionSharing.swift`; app: `Workspace/AppController+Accounts.swift`, `App/ClaudeAccountsWindowController.swift`,
+`ClaudeSessionSharing.swift`, `ClaudeAccountSwitchTiming.swift` (when a switch quits Claude Code); app:
+`Workspace/AppController+Accounts.swift` (accounts, a pane's account, limits), `Workspace/AppController+AccountSwitch.swift`
+(offer, switch, banner) with `Workspace/AccountSwitch.swift`, `App/ClaudeAccountsWindowController.swift`,
 `Panes/AccountSwitchBannerView.swift`. Behaviour: [guide/ai-agents.md](../guide/ai-agents.md#several-claude-accounts).
 
 - **Store**: `ClaudeAccountSettings` (accounts in order with their last limit, `autoSwitch`) in
@@ -143,14 +145,15 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   (`AgentSession`), so `AgentResume.command` resumes it with `env CLAUDE_CONFIG_DIR='<dir>' claude --resume <id>`.
 - **Limits**: the metadata scan (2 s) calls `scanClaudeLimits`: the visible text of local panes running Claude Code
   goes through `ClaudeLimitDetector.detect` (last 40 lines, a line must start with a limit message); `agent.report`
-  checks the status-line windows (`hit(fromLimits:)`). A hit is handled once per pane and line for 5 h
+  checks the status-line windows (`hit(fromLimits:)`). Without a reset time a limit lasts 5 h (usage,
+  `ClaudeLimitDetector.sessionWindow`) or 15 min (rate, `rateLimitWait`). A hit is handled once per pane and line for 5 h
   (`Pane.seenLimitLines`, because a resumed session can show the old line again), merged into the account's limit
   (`ClaudeAccounts.merge`) and saved.
 - **Switch** (`Pane.accountSwitch`, `AccountSwitch.Phase`): `offered(problem?)` → `waitingForIdle` → `quitting` →
   handed to the resume machinery (`resumeOffer` + `resumeRequestedAt`). A 0.3 s timer runs while a switch is in
-  progress: idle = Claude Code is the foreground process (`PaneProcessProbe`), activity not busy, no running
-  subagent, screen unchanged for 2 s; then Ctrl-C (`\u{3}` through `sendText`) twice 0.4 s apart, then every 2.5 s up
-  to four; once the shell is the foreground process with no agent on the tty, the pane's usage is dropped and the
+  progress; the rules are `ClaudeAccountSwitchTiming` (unit-tested): idle = Claude Code is the foreground process
+  (`PaneProcessProbe`), activity not busy, no running subagent, screen unchanged for 2 s; then Ctrl-C (`\u{3}` through
+  `sendText`) twice 0.4 s apart, then every 2.5 s up to four, giving up 5 s after the last; once the shell is the foreground process with no agent on the tty, the pane's usage is dropped and the
   session is queued under the new account. The banner shares the pane's bar with the resume banner and wins.
 - **Sharing**: `ClaudeSessionSharing.plan/apply` (unit-tested on temporary folders): the store is the first account
   whose folder exists; others get `projects` → store as a symlink, an own `projects` folder renamed
