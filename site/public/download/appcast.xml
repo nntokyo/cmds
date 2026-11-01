@@ -7,26 +7,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.4.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.4.0</link>
-      <sparkle:version>8</sparkle:version>
-      <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+      <title>cmds 0.5.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.5.0</link>
+      <sparkle:version>9</sparkle:version>
+      <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 01 Nov 2026 17:45:14 GMT</pubDate>
+      <pubDate>Sun, 01 Nov 2026 23:46:39 GMT</pubDate>
       <description><![CDATA[
-<h3>追加・修正</h3>
-<p>iPhone/iPad の cmds Companion で過去の出力を読んでいる間も、画面から流れた行が途切れずに追加され、読んでいる位置は動かなくなりました（iPhone/iPad は App Store の cmds Companion 0.4.0 が必要です）。</p>
-<p>Mac で過去の出力を読むときにターミナルの表示を動かさなくなり、iPhone で見ている間のちらつきがなくなりました。Mac で上にスクロールしているペインでも、iPhone に過去の出力を送ります。</p>
-<p>設定のターミナルフォントの一覧で、一部の日本語フォント名が文字化けしていたのを直しました。</p>
-<h3>Added and fixed</h3>
-<p>While you read a terminal's earlier output in the cmds Companion app on iPhone/iPad, the rows that scroll off keep arriving without gaps and the text you read stays put (needs cmds Companion 0.4.0 from the App Store).</p>
-<p>The Mac reads earlier output without moving the terminal's view, so a pane no longer flickers while a phone follows it, and a pane scrolled up on the Mac now sends its earlier output too.</p>
-<p>Settings › Terminal font no longer shows some Japanese font names garbled.</p>
+<h3>追加</h3>
+<p>ファイルペイン：ローカルのフォルダをターミナルの隣に一覧で表示します。名前・サイズ・変更日・種類・Git の状態の列、並べ替え、隠しファイルの表示、プレビュー。2 つのファイルペインの間でコピー・移動（F5 / F6、ドラッグ＆ドロップ）、名前の変更、新規フォルダ、ゴミ箱に入れる。ファイル › 新規ファイルペイン（⇧⌘E）または <code>cmds files</code> で開きます。</p>
+<p>自分の複数の Claude アカウント：アカウントごとに Claude Code の設定フォルダを指定し、ペインをアカウントを選んで起動できます。利用上限に達すると、次のアカウントで同じセッションを続けるよう提案します（自動にもできます）。セッションの共有で、どのアカウントからも同じセッション履歴を使えます。cmds が保存するのは名前とパスだけで、認証情報は保存しません。</p>
+<p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
+<h3>Added</h3>
+<p>Files panes: a local folder as a list next to your terminals, with columns for name, size, date modified, kind and Git state, sorting, hidden files and preview. Copy and move between two files panes (F5 / F6, drag and drop), rename, new folder and Move to Trash. Open one with File › New Files Pane (⇧⌘E) or <code>cmds files</code>.</p>
+<p>Several Claude accounts of your own: give each account its Claude Code config folder and start a pane under it. When an account hits its usage limit, cmds offers to continue the same session with the next account (or does it by itself). Share Sessions lets every account reach the same session history. cmds stores only names and paths, never credentials.</p>
+<p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.4.0/cmds-0.4.0.dmg" length="11912436" type="application/octet-stream" sparkle:edSignature="qT1tCctRJVIVT+JozpYYDomxqpssDRueSKqx6y8E86aKJ1cE9NXHUw3fTUmU9ZrzYXt0jkWCcSRPs6eict++AQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.5.0/cmds-0.5.0.dmg" length="13145862" type="application/octet-stream" sparkle:edSignature="CGiPGcVXt8ip2ao5Eqrdc3lnuHnBzM47UYhIEt1RqBB0kmN6/rb3dlSYZTeX+9sih2+SxTKZ4pwYHf+Xnv1EDA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: F6SKTcAho0G2+TYJy9PZZ/s8dnVKQ7uDQlGIXIrN2p8wVz3ZfWIkVy4ABI3lUQwZsunB4CRsWAvRx4eMTIkPAA==
-length: 2478
+edSignature: H3BxOhXtBZ7SsGlqKcHJ6t95pGDXChmdFC+R0tqLpG6yxo+zPQEY+67hoZRIBMJDLo31YjGEHqJoMv3stV2nDQ==
+length: 3181
 -->
