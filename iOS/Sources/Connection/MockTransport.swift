@@ -275,8 +275,10 @@ struct FakeShell {
     var historyEpoch = 0
     /// Next number of `printNumberedLine`.
     var nextNumber = 1
-    /// Like a full scrollback on the Mac, where Ghostty drops a page of the oldest rows at once and the Mac resets the
-    /// stream: `printNumberedLine` keeps at most `limit` lines, drops `page` of them at a time and bumps `historyEpoch`.
+    /// A full scrollback that resets the stream whenever it drops a page of its oldest rows (more often than a Mac,
+    /// which follows the pruning and resets only once the phone's last rows are pruned too, so that the phone's
+    /// handling of `historyReset` gets exercised): `printNumberedLine` keeps at most `limit` lines, drops `page` of
+    /// them at a time and bumps `historyEpoch`.
     var prunedPages: (limit: Int, page: Int)?
 
     init(rows: Int = 24, cols: Int = 80, prompt: String, lines: [String] = []) {
