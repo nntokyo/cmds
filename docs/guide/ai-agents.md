@@ -262,10 +262,11 @@ Claude Code keeps each session in `<config dir>/projects/<project>/<session id>.
 only in its own config directory. So that the next account can resume a session, the accounts share one `projects`
 folder: **Share Sessions…** (or `cmds accounts share`, then `--yes`) shows what it will do and, when you confirm,
 
-- keeps the first account's `projects` folder (the first one whose folder exists) as the shared one,
+- keeps the first account's `projects` folder (the first one whose folder exists) as the shared one; if that is
+  already a link (you reordered the accounts after sharing), the folder it links to stays the shared one,
 - turns every other account's `projects` into a symbolic link to it; an account's own `projects` folder is renamed to
   `projects.before-cmds-<date>` first (kept, never deleted, merged or overwritten; move sessions you want back in
-  yourself),
+  yourself; if the link then cannot be made, the folder is moved back),
 - leaves alone a `projects` that already links elsewhere, and accounts whose folder does not exist yet.
 
 Before switching, cmds checks that the session's file is reachable from the next account (it lists folder names; it
