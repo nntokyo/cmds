@@ -156,8 +156,10 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   `sendText`) twice 0.4 s apart, then every 2.5 s up to four, giving up 5 s after the last; once the shell is the foreground process with no agent on the tty, the pane's usage is dropped and the
   session is queued under the new account. The banner shares the pane's bar with the resume banner and wins.
 - **Sharing**: `ClaudeSessionSharing.plan/apply` (unit-tested on temporary folders): the store is the first account
-  whose folder exists; others get `projects` → store as a symlink, an own `projects` folder renamed
-  `projects.before-cmds-<yyyyMMdd-HHmm>` first; a rename whose target exists fails. `transcriptReachable` checks
+  whose folder exists, its `projects` with symlinks resolved (after reordering, the real folder a linked account points
+  to; its owner counts as shared and is never moved aside); others get `projects` → store as a symlink, an own
+  `projects` folder renamed `projects.before-cmds-<yyyyMMdd-HHmm>` first; a rename whose target exists fails, and a
+  link that cannot be made after the rename moves the folder back. `transcriptReachable` checks
   `<dir>/projects/*/<id>.jsonl` by name before a switch.
 
 ## Keeping the Mac awake
