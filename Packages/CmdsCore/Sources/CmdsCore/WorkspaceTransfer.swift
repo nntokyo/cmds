@@ -117,7 +117,8 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
     }
 
     /// One pane. `kind` terminal: `cwd`, or `host` (+ `remoteCwd`) for an SSH pane; browser: `url`; preview: `path`
-    /// (+ `format`). `agentSession` only on terminal panes (on an SSH pane its `host` is the pane's).
+    /// (+ `format`); files: `path` (the folder). `agentSession` only on terminal panes (on an SSH pane its `host` is
+    /// the pane's).
     public struct Pane: Codable, Equatable, Sendable {
         public var kind: PaneKind
         public var cwd: String?
@@ -319,6 +320,15 @@ extension WorkspaceBundle {
             if let format = pane.format, PreviewFormat(rawValue: format) == nil {
                 throw TransferError("\(label): unknown preview format \"\(format.prefix(20))\"")
             }
+        case .files:
+            guard pane.cwd == nil, pane.host == nil, pane.remoteCwd == nil, pane.url == nil, pane.format == nil,
+                  pane.agentSession == nil else {
+                throw TransferError("\(label): files pane with terminal/browser/preview fields")
+            }
+            guard let raw = pane.path, let checked = try path(raw, "\(label) files path", remote: false) else {
+                throw TransferError("\(label): files pane needs a folder path")
+            }
+            pane.path = checked.hasPrefix("/") ? (checked as NSString).standardizingPath : checked
         }
         return pane
     }
@@ -497,6 +507,9 @@ extension WorkspaceBundle {
         case .preview:
             guard let file = object["file"]?.stringValue, file.hasPrefix("/") else { return nil }
             pane = Pane(kind: .preview, path: file)
+        case .files:
+            guard let folder = (try? path(cwd, "", remote: false)) ?? nil else { return nil }
+            pane = Pane(kind: .files, path: folder)
         case .terminal:
             if let host = object["remote"]?["host"]?.stringValue {
                 guard let checkedHost = try? SSHLaunch.validateHost(host) else { return nil }

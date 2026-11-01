@@ -8,6 +8,8 @@ public enum PaneKind: String, Codable, Sendable {
     case browser
     /// A local file shown with Quick Look (Markdown and diffs rendered by cmds). `PaneInfo.file` is its path.
     case preview
+    /// A local folder listed by cmds (docs/guide/files.md). `PaneInfo.workingDirectory` is the folder.
+    case files
 }
 
 public enum SplitAxis: String, Codable, Sendable {
