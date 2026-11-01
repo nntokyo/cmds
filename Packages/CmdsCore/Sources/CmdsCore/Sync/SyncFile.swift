@@ -15,17 +15,6 @@ public enum SyncFeature {
     public static let scrollbackStream = "scrollbackStream"
 }
 
-/// Rows above the screen (`requestScrollback` / `scrollback`).
-public enum SyncScrollback {
-    /// Most rows the Mac sends for one request.
-    public static let maxLines = 1000
-
-    /// Rows sent for a request of `lines`: at least 1, at most `maxLines`.
-    public static func clampedLines(_ lines: Int) -> Int {
-        min(max(lines, 1), maxLines)
-    }
-}
-
 /// Sending the file of a preview pane to the phone in `file` messages (`requestFile`).
 public enum SyncFile {
     /// Largest file sent. Bigger ones get one `file` message with `truncated: true` and no data.
