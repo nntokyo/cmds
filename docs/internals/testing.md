@@ -183,6 +183,7 @@ separated by `;;`:
 | `type:<text>` | Type into the focused element (`\n` = return) |
 | `wait:<seconds>` | Wait |
 | `pinch:<scale>` | Pinch the terminal screen (>1 zooms in) |
+| `swipe:<down\|up>[~count]` | Swipe the terminal screen (down scrolls back into earlier output) |
 | `value:<identifier>` | Print `CMDS_UI_VALUE <identifier> <accessibility value>` |
 | `waitValue:<id>~<text>[~secs]` | Wait (default 30 s) until that value contains the text, else fail |
 | `back` | Navigation bar back button |
@@ -190,6 +191,20 @@ separated by `;;`:
 
 Elements are found by accessibility identifier (e.g. `terminalScreen`, `connectionStatus`, key bar keys such as
 `left`, `esc`, `ctrlc`), never by localized text.
+
+## The simulator companion against an isolated instance
+
+The simulator shares the Mac's loopback, so the companion can pair with an instance started with
+`CMDS_SYNC_TEST_PAIRING=1 CMDS_SYNC_NO_BONJOUR=1 CMDS_SYNC_NO_BLUETOOTH=1` (DEBUG build, own `CMDS_SUPPORT_DIR`) and
+show real panes, e.g. a workspace made with `cmds new` that ran `seq 1 1500` (earlier output, #19).
+`sync-test-pairing.txt` is a `cmds-pair://v2?host=…&port=…&fp=…&code=…` URI. Launch the companion with
+`-noNotify -AppleLanguages '(en)' -AppleLocale en_US` (the steps below use English labels), then drive it:
+
+1. `tap:manualHost;;type:127.0.0.1:<port>;;tap:Connect;;wait:3;;tap:Pair Without Camera;;wait:3;;value:pairingFingerprint`
+2. Check the printed identity against `fp` (base64url; its first 6 bytes in hex read `XXXX-XXXX-XXXX`).
+3. `tap:It Matches;;wait:2;;tap:pairingCode;;type:<code>` pairs at the sixth digit.
+
+Never pick a Mac under "On This Network": that is the instance someone works in.
 
 ## UI tests in the simulator
 
