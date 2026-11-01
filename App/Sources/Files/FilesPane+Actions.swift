@@ -19,6 +19,12 @@ extension FilesPane {
         files.forEach { NSWorkspace.shared.open($0) }
     }
 
+    /// Double-click on a row (not on the header or below the rows).
+    @objc func rowDoubleClicked() {
+        guard tableView.clickedRow >= 0 else { return }
+        openSelection()
+    }
+
     @objc func openWithDefaultApp() {
         let urls = targetEntries.map(url(of:))
         guard !urls.isEmpty else { return NSSound.beep() }
@@ -99,20 +105,21 @@ extension FilesPane {
 
     /// ⌘⌫: to the Trash (never deleted for good; Put Back works from the Finder).
     @objc func moveToTrash() {
-        let urls = targetEntries.map(url(of:))
-        guard !urls.isEmpty else { return NSSound.beep() }
-        let next = (tableView.selectedRowIndexes.first ?? 0)
-        NSWorkspace.shared.recycle(urls) { [weak self] _, error in
-            MainActor.assumeIsolated {
-                guard let self else { return }
-                if let error {
-                    self.showError(String(localized: "Could not move to the Trash."), detail: error.localizedDescription)
-                }
-                self.load()
-                // Keep the keyboard near where the items were.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                    let row = min(next, self.rows.count - 1)
-                    if row >= 0 { self.tableView.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false) }
+        let entries = targetEntries
+        guard !entries.isEmpty else { return NSSound.beep() }
+        // Keep the keyboard near where the items were: the next row that stays, else the one before.
+        let trashed = Set(entries.map(\.name))
+        let first = rows.firstIndex { trashed.contains($0.name) } ?? 0
+        let next = rows[first...].first { !trashed.contains($0.name) } ?? rows[..<first].last { !trashed.contains($0.name) }
+        NSWorkspace.shared.recycle(entries.map(url(of:))) { [weak self] _, error in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    if let error {
+                        self.showError(String(localized: "Could not move to the Trash."), detail: error.localizedDescription)
+                    }
+                    self.pendingSelection = next.map { [$0.name] } ?? []
+                    self.load()
                 }
             }
         }

@@ -31,7 +31,7 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
         tableView.intercellSpacing = NSSize(width: 6, height: 2)
         tableView.columnAutoresizingStyle = .firstColumnOnlyAutoresizingStyle
         tableView.target = self
-        tableView.doubleAction = #selector(openSelection)
+        tableView.doubleAction = #selector(rowDoubleClicked)
         tableView.setAccessibilityIdentifier("files.table")
         let specs: [(Column, String, CGFloat, CGFloat)] = [
             (.name, String(localized: "Name"), 220, 80),
