@@ -444,8 +444,8 @@ final class AppController {
         return try split(paneID: source.id, direction: direction, kind: .preview, focus: focus, file: target)
     }
 
-    /// ⌘-click on a file path in a terminal: shows it in the workspace's preview pane if it has one, else in a new
-    /// preview split to the right. The terminal keeps the keyboard.
+    /// ⌘-click on a file path in a terminal (or Space in a files pane): shows it in the workspace's preview pane if it
+    /// has one, else in a new preview split to the right. The pane keeps the keyboard.
     func openFileFromTerminal(_ pane: Pane, path: String) {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
         let existing = workspace.orderedPanes.first { $0.kind == .preview }
@@ -462,6 +462,63 @@ final class AppController {
         guard let preview = pane.preview else { throw RPCError.invalidParams("pane \(pane.id) is not a preview pane") }
         guard preview.fileExists else { throw RPCError.notFound("file not found: \(preview.fileName)") }
         return preview.path
+    }
+
+    // MARK: - Files
+
+    /// `files.open`: lists a local folder in a files pane split off `paneID` (default: focused pane). When `paneID` is
+    /// a files pane, it shows the folder instead. A file's folder is listed with the file selected. `path` must be
+    /// absolute (the CLI resolves relative paths against its cwd).
+    @discardableResult
+    func openFolder(paneID: String? = nil, path raw: String, direction: SplitDirection = .right,
+                    focus: Bool = true) throws -> PaneInfo {
+        guard raw.hasPrefix("/") else { throw RPCError.invalidParams("path must be absolute: \(raw)") }
+        let path = (raw as NSString).standardizingPath
+        guard FileManager.default.fileExists(atPath: path) else { throw RPCError.notFound("no such file or folder: \(path)") }
+        var folder = path
+        var select: [String]?
+        if !FilesPane.isFolder(path) {
+            folder = (path as NSString).deletingLastPathComponent
+            select = [(path as NSString).lastPathComponent]
+        }
+        let source = try resolvePane(paneID)
+        if let files = source.files {
+            files.navigate(to: folder, select: select)
+            if focus { try focusPane(id: source.id) }
+            return try paneInfo(id: source.id)
+        }
+        let info = try split(paneID: source.id, direction: direction, kind: .files, cwd: folder, focus: focus)
+        if let select { pane(id: info.id)?.files?.navigate(to: folder, select: select) }
+        return info
+    }
+
+    /// The files pane that Copy / Move to Other Pane of `pane` goes to: of the workspace's other files panes, the one
+    /// focused most recently.
+    func otherFilesPane(for pane: Pane) -> Pane? {
+        guard let workspace = workspace(id: pane.workspaceID) else { return nil }
+        return workspace.orderedPanes.filter { $0.files != nil && $0.id != pane.id }.max { $0.focusedAt < $1.focusedAt }
+    }
+
+    /// The terminal that files panes with Follow Terminal follow: the workspace's local terminal pane focused most
+    /// recently (else the first one).
+    func followedTerminal(in workspace: Workspace) -> Pane? {
+        let terminals = workspace.orderedPanes.filter { $0.kind == .terminal && $0.ssh == nil }
+        guard let latest = terminals.map(\.focusedAt).max() else { return nil }
+        return terminals.first { $0.focusedAt == latest }
+    }
+
+    /// `terminal` changed directory or took focus: files panes following it go there.
+    private func followTerminal(_ terminal: Pane, in workspace: Workspace) {
+        guard terminal.kind == .terminal, terminal.ssh == nil, let directory = terminal.workingDirectory,
+              followedTerminal(in: workspace) === terminal else { return }
+        for pane in workspace.orderedPanes { pane.files?.follow(directory) }
+    }
+
+    /// Follow Terminal was switched on in a files pane: go to the followed terminal's directory now.
+    func followTerminal(filesPane pane: Pane) {
+        guard let workspace = workspace(id: pane.workspaceID),
+              let directory = followedTerminal(in: workspace)?.workingDirectory else { return }
+        pane.files?.follow(directory)
     }
 
     // MARK: - UI commands
@@ -514,6 +571,7 @@ final class AppController {
 
     func paneDidChangeWorkingDirectory(_ pane: Pane) {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
+        followTerminal(pane, in: workspace)
         if workspace.focusedPaneID == pane.id, pane.workingDirectory != nil {
             updateLocation(of: workspace, from: pane)
             emit(.workspace(id: workspace.id))
@@ -673,6 +731,10 @@ final class AppController {
                 let pane = workspace.panes[id]
                 if pane?.kind == .browser { return .browser(url: pane?.url) }
                 if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
+                if let files = pane?.files {
+                    return .files(path: files.folder, showHidden: files.showHidden ? true : nil,
+                                  follow: files.followsTerminal ? true : nil)
+                }
                 if let pane, let ssh = pane.ssh {
                     let cwd = (try? SSHLaunch.validateRemoteCwd(pane.workingDirectory)) ?? ssh.launch.remoteCwd
                     return .ssh(host: ssh.launch.host, remoteCwd: cwd)
@@ -738,6 +800,10 @@ final class AppController {
                 // A missing file shows a placeholder (and appears when it is created again).
                 let target = PreviewTarget(path: path, format: format.flatMap(PreviewFormat.init(rawValue:)))
                 return SplitNode(paneID: makePane(kind: .preview, in: workspace, cwd: nil, command: nil, url: nil, file: target).id)
+            case .files(let path, let showHidden, let follow):
+                let pane = makePane(kind: .files, in: workspace, cwd: existing(path), command: nil, url: nil)
+                pane.files?.restore(showHidden: showHidden ?? false, followsTerminal: follow ?? false)
+                return SplitNode(paneID: pane.id)
             case .ssh(let host, let remoteCwd):
                 // Never connects on launch: the pane shows "Not connected — Connect (⌘R)".
                 guard let launch = try? SSHLaunch(host: host, remoteCwd: remoteCwd) else {
@@ -818,6 +884,8 @@ final class AppController {
         case .preview:
             let preview = PreviewPane(path: file?.path ?? NSHomeDirectory(), format: file?.format)
             pane = Pane(id: id, workspaceID: workspace.id, preview: preview)
+        case .files:
+            pane = Pane(id: id, workspaceID: workspace.id, files: FilesPane(folder: cwd ?? NSHomeDirectory()))
         }
         pane.controller = self
         workspace.panes[id] = pane
@@ -847,7 +915,9 @@ final class AppController {
     private func applyFocus(_ pane: Pane, in workspace: Workspace) {
         let wasRemote = workspace.isRemote
         workspace.focusedPaneID = pane.id
+        pane.focusedAt = Date()
         if let zoomed = workspace.zoomedPaneID, zoomed != pane.id { workspace.zoomedPaneID = nil }
+        followTerminal(pane, in: workspace)
         // Moving to or from an SSH pane always replaces the location (an SSH pane may not know its cwd yet).
         if pane.kind == .terminal,
            pane.ssh != nil || wasRemote || (pane.workingDirectory != nil && pane.workingDirectory != workspace.workingDirectory) {

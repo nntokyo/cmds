@@ -15,6 +15,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     }
 
     private var focusedBrowser: BrowserPane? { controller.focusedPane?.browser }
+    private var focusedFiles: FilesPane? { controller.focusedPane?.files }
 
     // MARK: File
 
@@ -75,6 +76,26 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         }
         if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: open) } else { open(panel.runModal()) }
     }
+
+    /// ⇧⌘E: a files pane split to the right of the focused pane, in its folder (docs/guide/files.md).
+    @objc func openFilesPane(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        if controller.focusedPane == nil { controller.createWorkspace() }
+        _ = try? controller.split(direction: .right, kind: .files)
+    }
+
+    // Pane › Files (the focused files pane; its list also takes the keys in docs/reference/shortcuts.md).
+    @objc func filesCopyToOtherPane(_ sender: Any?) { focusedFiles?.copyToOtherPane() }
+    @objc func filesMoveToOtherPane(_ sender: Any?) { focusedFiles?.moveToOtherPane() }
+    @objc func filesNewFolder(_ sender: Any?) { focusedFiles?.newFolder() }
+    @objc func filesRename(_ sender: Any?) { focusedFiles?.renameSelection() }
+    @objc func filesMoveToTrash(_ sender: Any?) { focusedFiles?.moveToTrash() }
+    @objc func filesPreview(_ sender: Any?) { focusedFiles?.previewSelection() }
+    @objc func filesEnclosingFolder(_ sender: Any?) { focusedFiles?.goUp() }
+    @objc func filesGoToFolder(_ sender: Any?) { focusedFiles?.goToFolder() }
+    @objc func filesToggleHidden(_ sender: Any?) { focusedFiles?.toggleHiddenFiles() }
+    @objc func filesToggleFollow(_ sender: Any?) { focusedFiles?.toggleFollowTerminal() }
+    @objc func filesOpenTerminal(_ sender: Any?) { focusedFiles?.openTerminalHere() }
 
     // MARK: Export / import (AppController+Transfer.swift)
 
@@ -205,18 +226,25 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     // MARK: Browser
 
     @objc func browserFocusAddress(_ sender: Any?) { focusedBrowser?.focusAddressBar() }
-    /// ⌘R: reload the focused browser or preview, or reconnect the focused SSH pane whose ssh is not running.
+    /// ⌘R: reload the focused browser, preview or files pane, or reconnect the focused SSH pane whose ssh is not running.
     @objc func browserReload(_ sender: Any?) {
         if let pane = controller.focusedDisconnectedSSHPane {
             try? controller.connectSSH(paneID: pane.id)
         } else if let preview = controller.focusedPane?.preview {
             preview.reload()
+        } else if let files = focusedFiles {
+            files.reload()
         } else {
             focusedBrowser?.reload()
         }
     }
-    @objc func browserBack(_ sender: Any?) { focusedBrowser?.goBack() }
-    @objc func browserForward(_ sender: Any?) { focusedBrowser?.goForward() }
+    /// ⌘[ / ⌘]: the focused browser's or files pane's history.
+    @objc func browserBack(_ sender: Any?) {
+        if let files = focusedFiles { files.goBack() } else { focusedBrowser?.goBack() }
+    }
+    @objc func browserForward(_ sender: Any?) {
+        if let files = focusedFiles { files.goForward() } else { focusedBrowser?.goForward() }
+    }
 
     // MARK: View / Help
 
@@ -242,6 +270,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             Focus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U
             Browser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]
             Open in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it
+            New Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files
             Toggle sidebar ⌘B · Rename workspace ⇧⌘R
             Tile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩
             """)
@@ -287,6 +316,10 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
                 menuItem.title = String(localized: "Reload Preview")
                 return true
             }
+            if focusedFiles != nil {
+                menuItem.title = String(localized: "Reload Folder")
+                return true
+            }
             menuItem.title = String(localized: "Reload Page")
             return focusedBrowser != nil
         case #selector(resumeAgentSession(_:)):
@@ -301,9 +334,26 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             return true
         case #selector(installRemoteHelper(_:)):
             return controller.focusedPane?.ssh?.connected == true
-        case #selector(browserFocusAddress(_:)),
-             #selector(browserBack(_:)), #selector(browserForward(_:)):
+        case #selector(browserBack(_:)):
+            if let files = focusedFiles { return !files.backStack.isEmpty }
             return focusedBrowser != nil
+        case #selector(browserForward(_:)):
+            if let files = focusedFiles { return !files.forwardStack.isEmpty }
+            return focusedBrowser != nil
+        case #selector(browserFocusAddress(_:)):
+            return focusedBrowser != nil
+        case #selector(filesToggleHidden(_:)):
+            menuItem.state = focusedFiles?.showHidden == true ? .on : .off
+            return focusedFiles != nil
+        case #selector(filesToggleFollow(_:)):
+            menuItem.state = focusedFiles?.followsTerminal == true ? .on : .off
+            return focusedFiles != nil
+        case #selector(filesCopyToOtherPane(_:)), #selector(filesMoveToOtherPane(_:)), #selector(filesRename(_:)),
+             #selector(filesMoveToTrash(_:)), #selector(filesPreview(_:)):
+            return focusedFiles?.selectedEntries.isEmpty == false
+        case #selector(filesNewFolder(_:)), #selector(filesEnclosingFolder(_:)), #selector(filesGoToFolder(_:)),
+             #selector(filesOpenTerminal(_:)):
+            return focusedFiles != nil
         case #selector(closePane(_:)), #selector(closeWorkspace(_:)), #selector(splitRight(_:)),
              #selector(splitDown(_:)), #selector(openBrowser(_:)), #selector(renameWorkspace(_:)),
              #selector(focusLeft(_:)), #selector(focusRight(_:)), #selector(focusUp(_:)), #selector(focusDown(_:)):

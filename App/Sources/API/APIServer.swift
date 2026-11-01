@@ -89,6 +89,17 @@ final class APIServer {
                         ["png_base64": .string(try await preview.debugSnapshot().base64EncodedString())]
                     }
                 }
+            case "debug.files":
+                // Tests only: drive a files pane (FilesPane+Debug.swift).
+                guard let files = controller.pane(id: try params.required("pane"))?.files else {
+                    throw RPCError.invalidParams("not a files pane")
+                }
+                connection.reply(id: id, result: try files.debugPerform(params.value))
+            case "debug.files_snapshot":
+                guard let files = controller.pane(id: try params.required("pane"))?.files else {
+                    throw RPCError.invalidParams("not a files pane")
+                }
+                connection.reply(id: id, result: ["png_base64": .string(try files.debugSnapshot().base64EncodedString())])
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 SettingsWindowController.shared.showSettings(nil)
@@ -220,8 +231,8 @@ final class APIServer {
         case "pane.split":
             let direction = try splitDirection(params)
             let rawKind = try params.string("kind") ?? (try params.string("url") != nil ? "browser" : "terminal")
-            guard let kind = PaneKind(rawValue: rawKind), kind != .preview else {
-                throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\" (files: pane.open_file)")
+            guard let kind = PaneKind(rawValue: rawKind), kind == .terminal || kind == .browser else {
+                throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\" (files: pane.open_file, folders: files.open)")
             }
             let ssh = try params.string("ssh").map { try SSHLaunch.checked(host: $0, remoteCwd: try params.string("remoteCwd")) }
             return try .from(controller.split(paneID: try params.string("pane"), direction: direction, kind: kind,
@@ -240,6 +251,10 @@ final class APIServer {
             return try .from(controller.openFile(paneID: try params.string("pane"), path: try params.required("path"),
                                                  direction: direction, focus: try params.bool("focus") ?? true,
                                                  format: format))
+        case "files.open":
+            return try .from(controller.openFolder(paneID: try params.string("pane"), path: try params.required("path"),
+                                                   direction: try splitDirection(params),
+                                                   focus: try params.bool("focus") ?? true))
         case "pane.reconnect":
             try controller.connectSSH(paneID: try params.string("pane"))
         case "pane.focus":

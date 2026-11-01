@@ -9,6 +9,8 @@ struct SessionState: Codable {
         case browser(url: String?)
         /// Preview pane (file path; `format` = forced rendering such as `diff`). Added later: older sessions lack it.
         case preview(path: String, format: String?)
+        /// Files pane (folder; `showHidden`/`follow` only when on). Added later: older versions cannot read it.
+        case files(path: String, showHidden: Bool?, follow: Bool?)
         /// SSH pane: reconnected only when the user clicks Connect (never on launch).
         case ssh(host: String, remoteCwd: String?)
         case split(axis: SplitAxis, ratio: Double, first: Node, second: Node)

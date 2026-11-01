@@ -1,7 +1,8 @@
 import AppKit
 import CmdsCore
 
-/// One pane of a workspace: a terminal surface, a browser or a file preview, hosted in a `PaneContainerView`.
+/// One pane of a workspace: a terminal surface, a browser, a file preview or a files list, hosted in a
+/// `PaneContainerView`.
 @MainActor
 final class Pane {
     let id: String
@@ -12,6 +13,8 @@ final class Pane {
     let browser: BrowserPane?
     /// Set for preview panes (a local file).
     let preview: PreviewPane?
+    /// Set for files panes (a local folder); `workingDirectory` is the folder.
+    let files: FilesPane?
     /// Set for SSH panes (docs/internals/ssh.md); `workingDirectory` is then a path on the remote host.
     let ssh: SSHSession?
     let container: PaneContainerView
@@ -64,6 +67,9 @@ final class Pane {
     /// An account switch offered or in progress.
     var accountSwitch: AccountSwitch?
 
+    /// Last time the pane took focus (the "other" files pane is the one used most recently).
+    var focusedAt = Date.distantPast
+
     weak var controller: AppController?
 
     init(id: String, workspaceID: String, terminal: TerminalSurface, ssh: SSHSession? = nil) {
@@ -73,6 +79,7 @@ final class Pane {
         self.terminal = terminal
         browser = nil
         preview = nil
+        files = nil
         self.ssh = ssh
         title = ssh.map { $0.launch.label } ?? (terminal.title.isEmpty ? "Terminal" : terminal.title)
         workingDirectory = ssh == nil ? terminal.workingDirectory : ssh?.launch.remoteCwd
@@ -88,6 +95,7 @@ final class Pane {
         terminal = nil
         browser = nil
         preview = nil
+        files = nil
         self.ssh = ssh
         title = ssh.launch.label
         workingDirectory = ssh.launch.remoteCwd
@@ -144,6 +152,7 @@ final class Pane {
         terminal = nil
         ssh = nil
         preview = nil
+        files = nil
         self.browser = browser
         title = "Browser"
         container = PaneContainerView(paneID: id, content: browser)
@@ -165,6 +174,7 @@ final class Pane {
         terminal = nil
         ssh = nil
         browser = nil
+        files = nil
         self.preview = preview
         title = preview.fileName
         container = PaneContainerView(paneID: id, content: preview)
@@ -172,6 +182,46 @@ final class Pane {
             guard let self else { return }
             self.title = preview.fileName
             self.controller?.paneDidChange(self)
+        }
+    }
+
+    init(id: String, workspaceID: String, files: FilesPane) {
+        self.id = id
+        self.workspaceID = workspaceID
+        kind = .files
+        terminal = nil
+        ssh = nil
+        browser = nil
+        preview = nil
+        self.files = files
+        title = files.title
+        workingDirectory = files.folder
+        container = PaneContainerView(paneID: id, content: files)
+        files.onStateChange = { [weak self] in
+            guard let self else { return }
+            self.title = files.title
+            self.workingDirectory = files.folder
+            self.controller?.paneDidChange(self)
+        }
+        files.onFocus = { [weak self] in
+            guard let self else { return }
+            self.controller?.paneDidBecomeFocused(self)
+        }
+        files.onFollowEnabled = { [weak self] in
+            guard let self else { return }
+            self.controller?.followTerminal(filesPane: self)
+        }
+        files.otherPane = { [weak self] in
+            guard let self else { return nil }
+            return self.controller?.otherFilesPane(for: self)?.files
+        }
+        files.onPreview = { [weak self] path in
+            guard let self else { return }
+            self.controller?.openFileFromTerminal(self, path: path)
+        }
+        files.onOpenTerminal = { [weak self] folder in
+            guard let self else { return }
+            _ = try? self.controller?.split(paneID: self.id, direction: .down, kind: .terminal, cwd: folder)
         }
     }
 
@@ -184,6 +234,8 @@ final class Pane {
             terminal.focus()
         } else if let preview {
             preview.focus()
+        } else if let files {
+            files.focus()
         } else {
             browser?.focus()
         }
@@ -211,6 +263,7 @@ final class Pane {
         }
         browser?.tearDown()
         preview?.tearDown()
+        files?.tearDown()
         ssh?.stopAPI()
     }
 }

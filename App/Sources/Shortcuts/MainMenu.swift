@@ -61,6 +61,7 @@ enum MainMenu {
         menu.addItem(item("New SSH Workspace…", #selector(CommandRouter.newSSHWorkspace(_:)), "n", [.command, .shift], target: router))
         menu.addItem(item("Open Browser Split", #selector(CommandRouter.openBrowser(_:)), "b", [.command, .shift], target: router))
         menu.addItem(item("Open in Preview…", #selector(CommandRouter.openInPreview(_:)), "o", [.command, .shift], target: router))
+        menu.addItem(item("New Files Pane", #selector(CommandRouter.openFilesPane(_:)), "e", [.command, .shift], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Export Workspaces…", #selector(CommandRouter.exportWorkspaces(_:)), "", target: router))
         menu.addItem(item("Import Workspaces…", #selector(CommandRouter.importWorkspaces(_:)), "", target: router))
@@ -162,6 +163,28 @@ enum MainMenu {
         menu.addItem(item("Resume All Agent Sessions", #selector(CommandRouter.resumeAllAgentSessions(_:)), "", target: router))
         menu.addItem(.separator())
         menu.addItem(item("Install Remote Helper…", #selector(CommandRouter.installRemoteHelper(_:)), "", target: router))
+        menu.addItem(.separator())
+        menu.addItem(submenu(filesMenu(router)))
+        return menu
+    }
+
+    /// Pane › Files: commands of the focused files pane. Its list takes F-keys, Space and Return itself; they are not
+    /// menu key equivalents, which would take them away from terminal programs.
+    private static func filesMenu(_ router: CommandRouter) -> NSMenu {
+        let menu = NSMenu(title: String(localized: "Files"))
+        menu.addItem(item("Show in Preview Pane", #selector(CommandRouter.filesPreview(_:)), "", target: router))
+        menu.addItem(item("Copy to Other Pane", #selector(CommandRouter.filesCopyToOtherPane(_:)), "", target: router))
+        menu.addItem(item("Move to Other Pane", #selector(CommandRouter.filesMoveToOtherPane(_:)), "", target: router))
+        menu.addItem(.separator())
+        menu.addItem(item("New Folder", #selector(CommandRouter.filesNewFolder(_:)), "", target: router))
+        menu.addItem(item("Rename", #selector(CommandRouter.filesRename(_:)), "", target: router))
+        menu.addItem(item("Move to Trash", #selector(CommandRouter.filesMoveToTrash(_:)), "", target: router))
+        menu.addItem(.separator())
+        menu.addItem(item("Enclosing Folder", #selector(CommandRouter.filesEnclosingFolder(_:)), "", target: router))
+        menu.addItem(item("Go to Folder…", #selector(CommandRouter.filesGoToFolder(_:)), "", target: router))
+        menu.addItem(item("Show Hidden Files", #selector(CommandRouter.filesToggleHidden(_:)), "", target: router))
+        menu.addItem(item("Follow Terminal", #selector(CommandRouter.filesToggleFollow(_:)), "", target: router))
+        menu.addItem(item("Open Terminal Here", #selector(CommandRouter.filesOpenTerminal(_:)), "", target: router))
         return menu
     }
 

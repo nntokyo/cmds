@@ -332,6 +332,22 @@
         }
       }
     },
+    "%@ of %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ of %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@中%1$@"
+          }
+        }
+      }
+    },
     "%@ session (%@)": {
       "localizations": {
         "en": {
@@ -464,6 +480,34 @@
         }
       }
     },
+    "%lld items": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld項目"
+          }
+        }
+      }
+    },
     "%lld min ago": {
       "comment": "age of agent figures",
       "localizations": {
@@ -471,6 +515,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld分前"
+          }
+        }
+      }
+    },
+    "%lld of %lld selected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld selected"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld項目中%1$lld項目を選択"
           }
         }
       }
@@ -633,6 +693,26 @@
         }
       }
     },
+    "A folder cannot be copied or moved into itself.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダをそれ自身の中にコピーまたは移動することはできません。"
+          }
+        }
+      }
+    },
+    "A folder named “%@” already exists in the destination.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動先に“%@”という名前のフォルダがすでにあります。"
+          }
+        }
+      }
+    },
     "A folder of its own for each account, e.g. ~/.claude-work. Use ~/.claude for the account plain claude uses. cmds does not sign in: open a workspace with the account, run claude and type /login.": {
       "localizations": {
         "ja": {
@@ -743,6 +823,16 @@
         }
       }
     },
+    "Added": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追加"
+          }
+        }
+      }
+    },
     "Advertising (PSM %@)": {
       "localizations": {
         "ja": {
@@ -813,6 +903,16 @@
         }
       }
     },
+    "An item named “%@” already exists in the destination.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動先に“%@”という名前の項目がすでにあります。"
+          }
+        }
+      }
+    },
     "App %@ · Wired %@ · Compressed %@": {
       "localizations": {
         "en": {
@@ -835,6 +935,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "適用"
+          }
+        }
+      }
+    },
+    "Apply to all": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてに適用"
           }
         }
       }
@@ -1399,6 +1509,16 @@
         }
       }
     },
+    "Conflict": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "競合"
+          }
+        }
+      }
+    },
     "Connect": {
       "localizations": {
         "ja": {
@@ -1497,6 +1617,52 @@
         }
       }
     },
+    "Copy Path": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスをコピー"
+          }
+        }
+      }
+    },
+    "Copy to Other Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一方のペインにコピー"
+          }
+        }
+      }
+    },
+    "Copying %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@をコピー中"
+          }
+        }
+      }
+    },
+    "Copying %lld of %lld: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Copying %1$lld of %2$lld: %3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー中（%1$lld/%2$lld）：%3$@"
+          }
+        }
+      }
+    },
     "Cost %@": {
       "comment": "agent session cost",
       "localizations": {
@@ -1518,12 +1684,42 @@
         }
       }
     },
+    "Could not create a folder here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ここにフォルダを作成できませんでした。"
+          }
+        }
+      }
+    },
     "Could not install the command line tool: %@": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "コマンドラインツールをインストールできませんでした：%@"
+          }
+        }
+      }
+    },
+    "Could not move to the Trash.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱に入れられませんでした。"
+          }
+        }
+      }
+    },
+    "Could not rename “%@”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”の名前を変更できませんでした。"
           }
         }
       }
@@ -1548,12 +1744,32 @@
         }
       }
     },
+    "Date Modified": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更日"
+          }
+        }
+      }
+    },
     "Debug": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "デバッグ"
+          }
+        }
+      }
+    },
+    "Deleted": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
           }
         }
       }
@@ -1671,6 +1887,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "iOS同期を有効にする"
+          }
+        }
+      }
+    },
+    "Enclosing Folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内包しているフォルダ"
           }
         }
       }
@@ -1806,6 +2032,16 @@
         }
       }
     },
+    "Files": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル一覧"
+          }
+        }
+      }
+    },
     "Filter Workspaces": {
       "localizations": {
         "ja": {
@@ -1876,6 +2112,26 @@
         }
       }
     },
+    "Follow Terminal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルに追従"
+          }
+        }
+      }
+    },
+    "Following the terminal's directory (click to stop)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルのディレクトリに追従中（クリックで停止）"
+          }
+        }
+      }
+    },
     "Font size": {
       "localizations": {
         "ja": {
@@ -1938,6 +2194,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ghostty の設定どおり"
+          }
+        }
+      }
+    },
+    "Git": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Git"
+          }
+        }
+      }
+    },
+    "Git status: M modified, A added, R renamed, D deleted, ? untracked, U conflict": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gitの状態：M 変更、A 追加、R 名前変更、D 削除、? 未追跡、U 競合"
+          }
+        }
+      }
+    },
+    "Go": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動"
+          }
+        }
+      }
+    },
+    "Go to Folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダへ移動"
+          }
+        }
+      }
+    },
+    "Go to Folder…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダへ移動…"
           }
         }
       }
@@ -2214,6 +2520,16 @@
         }
       }
     },
+    "Keep Both": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "両方とも残す"
+          }
+        }
+      }
+    },
     "Keep Display Awake": {
       "localizations": {
         "ja": {
@@ -2250,6 +2566,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "キーボードショートカット"
+          }
+        }
+      }
+    },
+    "Kind": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "種類"
           }
         }
       }
@@ -2490,6 +2816,16 @@
         }
       }
     },
+    "Modified": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更"
+          }
+        }
+      }
+    },
     "Move Down": {
       "localizations": {
         "ja": {
@@ -2550,6 +2886,52 @@
         }
       }
     },
+    "Move to Other Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一方のペインに移動"
+          }
+        }
+      }
+    },
+    "Move to Trash": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱に入れる"
+          }
+        }
+      }
+    },
+    "Moving %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を移動中"
+          }
+        }
+      }
+    },
+    "Moving %lld of %lld: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Moving %1$lld of %2$lld: %3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動中（%1$lld/%2$lld）：%3$@"
+          }
+        }
+      }
+    },
     "Name": {
       "localizations": {
         "ja": {
@@ -2597,6 +2979,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "新しいコード"
+          }
+        }
+      }
+    },
+    "New Files Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ファイル一覧ペイン"
+          }
+        }
+      }
+    },
+    "New Folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規フォルダ"
           }
         }
       }
@@ -2651,12 +3053,12 @@
         }
       }
     },
-    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nToggle sidebar ⌘B · Rename workspace ⇧⌘R\nTile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩": {
+    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nNew Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files\nToggle sidebar ⌘B · Rename workspace ⇧⌘R\nTile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R\n並べて表示：サイドバーで ⌘-クリック／⇧-クリック · すべてを並べて表示 ⌃⌘T · タイルを拡大 ⇧⌘↩"
+            "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\n新規ファイル一覧ペイン ⇧⌘E・一覧で：Return 開く・Space プレビュー・F5/F6 もう一方のペインにコピー/移動・F2 名前変更・F7 新規フォルダ・⌘⌫ ゴミ箱・⌘↑ 上の階層・⇧⌘. 非表示ファイル\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R\n並べて表示：サイドバーで ⌘-クリック／⇧-クリック · すべてを並べて表示 ⌃⌘T · タイルを拡大 ⇧⌘↩"
           }
         }
       }
@@ -2772,12 +3174,32 @@
         }
       }
     },
+    "Open": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開く"
+          }
+        }
+      }
+    },
     "Open Browser Split": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ブラウザを分割して開く"
+          }
+        }
+      }
+    },
+    "Open Terminal Here": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ここでターミナルを開く"
           }
         }
       }
@@ -2798,6 +3220,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "プレビューで開く…"
+          }
+        }
+      }
+    },
+    "Open one with File › New Files Pane (⇧⌘E), then copy or move between the two.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル › 新規ファイル一覧ペイン（⇧⌘E）で開くと、2つのペインの間でコピーや移動ができます。"
           }
         }
       }
@@ -3064,6 +3496,16 @@
         }
       }
     },
+    "Reload Folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを再読み込み"
+          }
+        }
+      }
+    },
     "Reload Page": {
       "localizations": {
         "ja": {
@@ -3174,6 +3616,16 @@
         }
       }
     },
+    "Renamed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前変更"
+          }
+        }
+      }
+    },
     "Rename…": {
       "localizations": {
         "ja": {
@@ -3190,6 +3642,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "置き換える"
+          }
+        }
+      }
+    },
+    "Replace moves the existing item to the Trash. Keep Both gives the new one a numbered name.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "置き換えると既存の項目はゴミ箱に入ります。両方とも残すと、新しい項目の名前に番号が付きます。"
           }
         }
       }
@@ -3566,6 +4028,16 @@
         }
       }
     },
+    "Show Hidden Files": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非表示ファイルを表示"
+          }
+        }
+      }
+    },
     "Show Single Workspace": {
       "localizations": {
         "ja": {
@@ -3582,6 +4054,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サブエージェントを表示"
+          }
+        }
+      }
+    },
+    "Show in Preview Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビューペインで表示"
           }
         }
       }
@@ -3643,6 +4125,16 @@
         }
       }
     },
+    "Size": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイズ"
+          }
+        }
+      }
+    },
     "Size from your Ghostty config: %@ pt": {
       "localizations": {
         "ja": {
@@ -3659,6 +4151,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サイズ:"
+          }
+        }
+      }
+    },
+    "Skip": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキップ"
           }
         }
       }
@@ -3710,6 +4212,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "小さく"
+          }
+        }
+      }
+    },
+    "Some items could not be copied or moved.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部の項目をコピーまたは移動できませんでした。"
           }
         }
       }
@@ -3771,6 +4283,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "状態：%@"
+          }
+        }
+      }
+    },
+    "Stop": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中止"
           }
         }
       }
@@ -3974,6 +4496,16 @@
         }
       }
     },
+    "The item to replace contains the item being moved.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "置き換える項目の中に、移動する項目があります。"
+          }
+        }
+      }
+    },
     "The remote directory is too long.": {
       "localizations": {
         "ja": {
@@ -4040,6 +4572,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペーストするテキストはコマンドを実行する可能性があります（改行または制御文字を含みます）。ペーストしますか？"
+          }
+        }
+      }
+    },
+    "There is no other files pane in this workspace.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースには、ほかのファイル一覧ペインがありません。"
           }
         }
       }
@@ -4237,6 +4779,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "取り消す"
+          }
+        }
+      }
+    },
+    "Untracked": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未追跡"
           }
         }
       }
@@ -4490,6 +5042,16 @@
         }
       }
     },
+    "and %lld more": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほか%lld件"
+          }
+        }
+      }
+    },
     "cmds creates a new key and certificate for iOS Sync and unpairs every iPhone and iPad. Each one must be paired again; until then they report that this Mac's identity changed.": {
       "localizations": {
         "ja": {
@@ -4716,6 +5278,16 @@
         }
       }
     },
+    "untitled folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名称未設定フォルダ"
+          }
+        }
+      }
+    },
     "warning": {
       "comment": "memory pressure",
       "localizations": {
@@ -4733,6 +5305,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースのタイトル（省略可）"
+          }
+        }
+      }
+    },
+    "“%@” already exists in this folder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダには“%@”がすでにあります。"
           }
         }
       }

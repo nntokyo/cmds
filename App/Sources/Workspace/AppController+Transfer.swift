@@ -29,6 +29,9 @@ extension AppController {
             case .preview(let path, let format):
                 defer { next += 1 }
                 return .pane(WorkspaceBundle.Pane(kind: .preview, path: path, format: format))
+            case .files(let path, _, _):
+                defer { next += 1 }
+                return .pane(WorkspaceBundle.Pane(kind: .files, path: path))
             }
         }
         let workspaces = state.workspaces.map { saved -> WorkspaceBundle.Workspace in
@@ -100,6 +103,8 @@ extension SessionState {
                     return .browser(url: pane.url)
                 case .preview:
                     return .preview(path: pane.path ?? NSHomeDirectory(), format: pane.format)
+                case .files:
+                    return .files(path: local(pane.path) ?? NSHomeDirectory(), showHidden: nil, follow: nil)
                 }
             }
         }
