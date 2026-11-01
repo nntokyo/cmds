@@ -100,10 +100,10 @@ final class GitStatusTests: XCTestCase {
 
     func testParse() {
         let changes = GitStatus.parse(porcelain([
-            " M App/main.swift", "M  README.md", "A  new.txt", "R  docs/new name.md", "docs/old.md",
+            " M App/main.swift", "M  README.md", "A  new.txt", "R  pages/new name.md", "pages/old.md",
             "?? build/", "?? notes.txt", "UU conflict.swift", " D gone.txt",
         ]))
-        XCTAssertEqual(changes.map(\.path), ["App/main.swift", "README.md", "new.txt", "docs/new name.md", "build/",
+        XCTAssertEqual(changes.map(\.path), ["App/main.swift", "README.md", "new.txt", "pages/new name.md", "build/",
                                              "notes.txt", "conflict.swift", "gone.txt"])
         XCTAssertEqual(changes.map(\.state), [.modified, .modified, .added, .renamed, .untracked, .untracked, .conflicted, .deleted])
     }
