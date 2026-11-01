@@ -44,6 +44,7 @@ public enum ScreenDiffer {
 ///     // on subscribe:          streamer.reset(paneID:) then send streamer.update(...)
 ///     // on every screen tick:  if let msg = streamer.update(paneID:, snapshot:) { send(msg) }
 ///     // on requestScreen:      send(streamer.fullScreen(paneID:))
+///     // on requestScrollback:  send(.screen(streamer.full(paneID:, snapshot:))), then the rows with its seq
 public struct ScreenStreamer: Sendable {
     private struct PaneState: Sendable {
         var seq: UInt64
@@ -89,6 +90,16 @@ public struct ScreenStreamer: Sendable {
         state.seq += 1
         panes[paneID] = state
         return .screen(.init(paneID: paneID, seq: state.seq, snapshot: last))
+    }
+
+    /// Full `screen` of `snapshot` under a new `seq`, even when nothing changed (`requestScrollback` sends its rows
+    /// with this seq). Later updates diff against it.
+    public mutating func full(paneID: String, snapshot: ScreenSnapshot) -> ServerMessage.Screen {
+        var state = panes[paneID] ?? PaneState(seq: 0, last: nil)
+        state.seq += 1
+        state.last = snapshot
+        panes[paneID] = state
+        return .init(paneID: paneID, seq: state.seq, snapshot: snapshot)
     }
 
     /// Forget what was sent for a pane so the next `update` produces a full screen.

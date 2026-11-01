@@ -49,6 +49,47 @@ final class SyncScreenTests: XCTestCase {
         XCTAssertNil(streamer.fullScreen(paneID: "unknown"))
     }
 
+    /// `requestScrollback`: a full screen under a new seq even when nothing changed; later diffs build on it.
+    func testFullScreenIsNewBase() throws {
+        var streamer = ScreenStreamer()
+        var mirror = ScreenMirror()
+        let lines = (0..<10).map { "row \($0)" }
+        let s1 = ScreenSnapshot(rows: 10, cols: 20, lines: lines, cursorRow: 9, cursorCol: 0)
+
+        // Unknown pane: starts at seq 1.
+        let first = streamer.full(paneID: "p", snapshot: s1)
+        XCTAssertEqual(first, ServerMessage.Screen(paneID: "p", seq: 1, snapshot: s1))
+        XCTAssertEqual(mirror.apply(first), .updated(paneID: "p"))
+        XCTAssertNil(streamer.update(paneID: "p", snapshot: s1))
+
+        // Same snapshot again: still a full screen, one seq up.
+        let again = streamer.full(paneID: "p", snapshot: s1)
+        XCTAssertEqual(again.seq, 2)
+        XCTAssertEqual(mirror.apply(again), .updated(paneID: "p"))
+
+        // A snapshot newer than the last update replaces the base: the next change diffs against it.
+        var s2 = s1
+        s2.lines[0] = "scrolled"
+        let fresh = streamer.full(paneID: "p", snapshot: s2)
+        XCTAssertEqual(fresh.seq, 3)
+        XCTAssertEqual(mirror.apply(fresh), .updated(paneID: "p"))
+        XCTAssertNil(streamer.update(paneID: "p", snapshot: s2))
+        var s3 = s2
+        s3.lines[4] = "changed"
+        guard case .screenDiff(let diff) = streamer.update(paneID: "p", snapshot: s3) else { return XCTFail() }
+        XCTAssertEqual(diff.baseSeq, 3)
+        XCTAssertEqual(diff.changes, [LineChange(row: 4, text: "changed")])
+        XCTAssertEqual(mirror.apply(diff), .updated(paneID: "p"))
+        XCTAssertEqual(mirror["p"], s3)
+
+        // seq keeps rising across reset and requestScreen.
+        streamer.reset(paneID: "p")
+        XCTAssertEqual(streamer.full(paneID: "p", snapshot: s3).seq, 5)
+        guard case .screen(let requested) = streamer.fullScreen(paneID: "p") else { return XCTFail() }
+        XCTAssertEqual(requested.seq, 6)
+        XCTAssertEqual(requested.snapshot, s3)
+    }
+
     func testMirrorFollowsStreamer() {
         var streamer = ScreenStreamer()
         var mirror = ScreenMirror()

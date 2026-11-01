@@ -53,6 +53,9 @@ final class SyncServer {
     static let identityResetRestartDelay: TimeInterval = 0.5
     /// Retry interval while a `file` transfer waits for the connection's write queue to drain.
     static let filePieceRetryInterval: TimeInterval = 0.05
+    /// `requestScrollback` for a pane within this time of the previous one is ignored (the phone asks every few
+    /// seconds at most; each answer moves the terminal's viewport for a moment and can be 1000 rows).
+    static let scrollbackInterval: TimeInterval = 0.5
 
     final class Client {
         let connection: SyncConnection
@@ -69,6 +72,8 @@ final class SyncServer {
         var supportsPreview = false
         /// A `requestFile` is being read/sent (one at a time per phone).
         var sendingFile = false
+        /// Last answered `requestScrollback` per pane (subscribed panes only).
+        var scrollbackSentAt: [String: Date] = [:]
         var inputWindowStart = Date.distantPast
         var inputBytesInWindow = 0
         /// Panes changed since the last screen update sent to this client (throttled links only).
@@ -548,6 +553,8 @@ final class SyncServer {
             perform(client) { try AppController.shared.focusPane(id: focus.id) }
         case .requestFile(let request):
             sendFile(paneID: request.paneID, to: client)
+        case .requestScrollback(let request):
+            sendScrollback(request, to: client)
         }
     }
 
@@ -559,6 +566,38 @@ final class SyncServer {
             if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
         } else {
             sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
+        }
+    }
+
+    /// `requestScrollback`: a full `screen` of the pane under a new seq, then the rows above it with that seq
+    /// (docs/internals/sync-protocol.md "Scrollback").
+    private func sendScrollback(_ request: ClientMessage.RequestScrollback, to client: Client) {
+        let paneID = request.paneID
+        guard let pane = AppController.shared.pane(id: paneID) else {
+            return sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
+        }
+        guard pane.kind == .terminal, client.subscribed.contains(paneID) else {
+            return sendError(.badRequest, "not a subscribed terminal pane: \(paneID.prefix(64))", to: client)
+        }
+        let now = Date()
+        if let last = client.scrollbackSentAt[paneID], now.timeIntervalSince(last) < Self.scrollbackInterval { return }
+        client.scrollbackSentAt[paneID] = now
+        let maxRows = min(max(request.lines, 1), SyncScrollback.maxLines)
+        do {
+            // Output between the two reads would leave a gap or an overlap at the seam: read once more if the
+            // screen moved meanwhile.
+            var screen = snapshot(paneID: paneID)
+            var rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows)
+            if snapshot(paneID: paneID) != screen {
+                rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows)
+                screen = snapshot(paneID: paneID)
+            }
+            guard let screen else { return sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client) }
+            let full = client.streamer.full(paneID: paneID, snapshot: screen)
+            send(.screen(full), to: client)
+            send(.scrollback(.init(paneID: paneID, seq: full.seq, lines: rows.map(Self.trimmed))), to: client)
+        } catch {
+            sendError(for: error, to: client)
         }
     }
 
@@ -666,7 +705,7 @@ final class SyncServer {
             client.deviceName = name
             client.tokenHash = SyncDeviceStore.hash(plainToken)
             client.supportsPreview = hello.features?.contains(SyncFeature.previewPanes) == true
-            send(.welcome(.init(macName: macName, token: plainToken)), to: client)
+            send(.welcome(.init(macName: macName, token: plainToken, features: [SyncFeature.scrollback])), to: client)
             send(.state(currentState(for: client)), to: client)
             // This client may now be ahead of the last broadcast; never skip the next one as a duplicate.
             lastStateData = nil
@@ -823,6 +862,7 @@ final class SyncServer {
             }
         }
         client.subscribed = wanted
+        client.scrollbackSentAt = client.scrollbackSentAt.filter { wanted.contains($0.key) }
         // Keeps per-pane seq for unsubscribed panes (CmdsCore >= 654204a), so a later
         // re-subscribe is not taken as stale by the phone's ScreenMirror.
         client.streamer.retain(paneIDs: wanted)
@@ -887,18 +927,21 @@ final class SyncServer {
     /// Current screen of a pane, or nil if it does not exist / is not a terminal.
     private func snapshot(paneID: String) -> ScreenSnapshot? {
         guard !paneID.isEmpty, let state = try? AppController.shared.screenState(paneID: paneID) else { return nil }
-        var lines = state.text.components(separatedBy: "\n").map { line -> String in
-            var line = line
-            if line.hasSuffix("\r") { line.removeLast() }
-            while line.hasSuffix(" ") { line.removeLast() }
-            return line
-        }
+        var lines = state.text.components(separatedBy: "\n").map(Self.trimmed)
         let rows = max(1, state.grid?.rows ?? lines.count)
         let cols = max(1, state.grid?.cols ?? lines.reduce(20) { max($0, $1.count) })
         if lines.count > rows { lines.removeLast(lines.count - rows) }
         if lines.count < rows { lines += Array(repeating: "", count: rows - lines.count) }
         return ScreenSnapshot(rows: rows, cols: cols, lines: lines,
                               cursorRow: state.cursor?.row, cursorCol: state.cursor?.col)
+    }
+
+    /// A row as sent in `screen` and `scrollback`: without trailing spaces (or CR).
+    private static func trimmed(_ line: String) -> String {
+        var line = line
+        if line.hasSuffix("\r") { line.removeLast() }
+        while line.hasSuffix(" ") { line.removeLast() }
+        return line
     }
 
     // MARK: - Sending
