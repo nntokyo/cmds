@@ -4,10 +4,15 @@ import UIKit
 
 /// In-process fake Mac for previews and `-mock` launches. Speaks the real protocol (including
 /// `ScreenStreamer` diffs) so the client code path is the same as with a real Mac.
+///
+/// Like a current Mac it streams the rows that scroll off a screen (`SyncFeature.scrollbackStream`); launched with
+/// `-mockNoHistoryStream` it answers like cmds 0.3.0 (`requestScrollback` only). `-mockStreamOutput` makes the dotfiles
+/// pane print a numbered line five times a second into a full scrollback (`TerminalScreenTests`).
 final class MockTransport: SyncTransport {
     var onEvent: ((TransportEvent) -> Void)?
 
     private var timer: Timer?
+    private var outputTimer: Timer?
     private var streamer = ScreenStreamer()
     private var subscribed: Set<String> = []
     private var workspaces: [WorkspaceInfo]
@@ -17,6 +22,13 @@ final class MockTransport: SyncTransport {
     private var system: SystemStats?
     private var agentLimits: [AgentLimits] = []
     private let startedAt = Date()
+    /// This demo Mac streams scrolled-off rows (not with `-mockNoHistoryStream`), and the phone asked for them.
+    private let streamsHistory = !ProcessInfo.processInfo.arguments.contains("-mockNoHistoryStream")
+    private var phoneStreamsHistory = false
+    /// Panes whose `requestScrollback` was answered: their shell's `historyEpoch`, and its `scrolledCount` when the
+    /// last screen update was sent.
+    private var historyStreams: [String: (epoch: Int, scrolled: Int)] = [:]
+    private static let streamOutputInterval: TimeInterval = 0.2
 
     init() {
         workspaces = MockData.workspaces
@@ -33,9 +45,10 @@ final class MockTransport: SyncTransport {
     func send(_ message: ClientMessage) {
         guard !closed else { return }
         switch message {
-        case .hello:
-            deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token",
-                                                         features: [SyncFeature.scrollback]))))
+        case .hello(let hello):
+            phoneStreamsHistory = streamsHistory && hello.features?.contains(SyncFeature.scrollbackStream) == true
+            let features = [SyncFeature.scrollback] + (streamsHistory ? [SyncFeature.scrollbackStream] : [])
+            deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token", features: features))))
             deliver(after: 0.1, .message(.state(currentState)))
             DispatchQueue.main.async { self.startTimer() }
         case .subscribe(let sub):
@@ -43,6 +56,7 @@ final class MockTransport: SyncTransport {
             for paneID in new.subtracting(subscribed) { streamer.reset(paneID: paneID) }
             subscribed = new
             streamer.retain(paneIDs: new)
+            historyStreams = historyStreams.filter { new.contains($0.key) }
             pushScreens()
         case .requestScreen(let req):
             if let msg = streamer.fullScreen(paneID: req.paneID) { emit(msg) }
@@ -84,6 +98,10 @@ final class MockTransport: SyncTransport {
             let rows = MockData.history(paneID: request.paneID) + shell.scrolledOff
             emit(.scrollback(.init(paneID: request.paneID, seq: screen.seq,
                                    lines: Array(rows.suffix(SyncScrollback.clampedLines(request.lines))))))
+            // From here on, like the Mac: the rows that scroll off go with the screen updates.
+            if phoneStreamsHistory {
+                historyStreams[request.paneID] = (shell.historyEpoch, shell.scrolledCount)
+            }
         }
     }
 
@@ -91,11 +109,20 @@ final class MockTransport: SyncTransport {
         closed = true
         timer?.invalidate()
         timer = nil
+        outputTimer?.invalidate()
+        outputTimer = nil
     }
 
     private func startTimer() {
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in self?.step() }
+        guard ProcessInfo.processInfo.arguments.contains("-mockStreamOutput") else { return }
+        outputTimer?.invalidate()
+        outputTimer = Timer.scheduledTimer(withTimeInterval: Self.streamOutputInterval, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.shells[MockData.streamOutputPaneID]?.printNumberedLine()
+            self.pushScreens()
+        }
     }
 
     private func step() {
@@ -199,8 +226,22 @@ final class MockTransport: SyncTransport {
     private func pushScreens() {
         for paneID in subscribed.sorted() {
             guard let shell = shells[paneID], let msg = streamer.update(paneID: paneID, snapshot: shell.snapshot) else { continue }
-            emit(msg)
+            emit(withScrolledOffRows(msg, paneID: paneID, shell: shell))
         }
+    }
+
+    /// Like the Mac: a streamed pane's update carries the rows that left the top of its screen since the previous
+    /// update, or `historyReset` when they do not continue the rows sent (cleared, a page of old rows dropped, or more
+    /// rows than the shell kept); then the phone asks again.
+    private func withScrolledOffRows(_ msg: ServerMessage, paneID: String, shell: FakeShell) -> ServerMessage {
+        guard let stream = historyStreams[paneID] else { return msg }
+        let new = shell.scrolledCount - stream.scrolled
+        guard shell.historyEpoch == stream.epoch, new >= 0, new <= shell.scrolledOff.count else {
+            historyStreams[paneID] = nil
+            return msg.withHistory(scrolledOff: nil, reset: true)
+        }
+        historyStreams[paneID]?.scrolled = shell.scrolledCount
+        return new > 0 ? msg.withHistory(scrolledOff: Array(shell.scrolledOff.suffix(new)), reset: false) : msg
     }
 
     /// Round-trip through the codec so the mock exercises encoding too.
@@ -228,6 +269,15 @@ struct FakeShell {
     var ctrlHistory: [String] = []
     /// Fixed screen (a full-screen TUI), ignoring `lines`/`prompt`.
     var fixed: ScreenSnapshot?
+    /// Lines dropped from the front of `lines` to keep it short.
+    var droppedLines = 0
+    /// Bumped when the rows above the screen no longer continue the ones sent before (cleared, `prunedPages`).
+    var historyEpoch = 0
+    /// Next number of `printNumberedLine`.
+    var nextNumber = 1
+    /// Like a full scrollback on the Mac, where Ghostty drops a page of the oldest rows at once and the Mac resets the
+    /// stream: `printNumberedLine` keeps at most `limit` lines, drops `page` of them at a time and bumps `historyEpoch`.
+    var prunedPages: (limit: Int, page: Int)?
 
     init(rows: Int = 24, cols: Int = 80, prompt: String, lines: [String] = []) {
         self.rows = rows
@@ -240,6 +290,36 @@ struct FakeShell {
     var scrolledOff: [String] {
         guard fixed == nil else { return [] }
         return (lines + [prompt + current]).dropLast(rows).map { String($0.prefix(cols)) }
+    }
+
+    /// Rows that have left the top of the screen in this `historyEpoch`, including the dropped ones.
+    var scrolledCount: Int {
+        fixed == nil ? droppedLines + max(0, lines.count + 1 - rows) : 0
+    }
+
+    /// Like `seq`: the next numbered output line.
+    mutating func printNumberedLine() {
+        appendOutput(String(format: "line %05d", nextNumber), keepingAtMost: 5000)
+        nextNumber += 1
+        if let prunedPages, lines.count > prunedPages.limit {
+            lines.removeFirst(prunedPages.page)
+            droppedLines += prunedPages.page
+            historyEpoch += 1
+        }
+    }
+
+    private mutating func appendOutput(_ line: String, keepingAtMost limit: Int) {
+        lines.append(line)
+        if lines.count > limit {
+            droppedLines += lines.count - limit
+            lines.removeFirst(lines.count - limit)
+        }
+    }
+
+    private mutating func clearLines() {
+        lines = []
+        droppedLines = 0
+        historyEpoch += 1
     }
 
     var snapshot: ScreenSnapshot {
@@ -266,7 +346,7 @@ struct FakeShell {
         case .ctrlC:
             lines.append(prompt + current + "^C")
             current = ""
-        case .ctrlL: lines = []
+        case .ctrlL: clearLines()
         case .tab: current += "  "
         default: break
         }
@@ -282,7 +362,7 @@ struct FakeShell {
         case "pwd": lines += ["/Users/demo/Source/tools/cmds"]
         case "git status":
             lines += ["On branch main", "Your branch is up to date with 'origin/main'.", "", "nothing to commit, working tree clean"]
-        case "clear": lines = []
+        case "clear": clearLines()
         default:
             let name = cmd.split(separator: " ").first.map(String.init) ?? cmd
             lines += ["zsh: command not found: \(name)"]
@@ -310,8 +390,7 @@ struct FakeShell {
 
     mutating func appendBuildLine(tick: Int) {
         let files = ["Workspace.swift", "SplitView.swift", "SyncServer.swift", "Ghostty.swift", "Sidebar.swift"]
-        lines.append("[\(tick / 2)/120] Compiling CmdsApp \(files[(tick / 2) % files.count])")
-        if lines.count > 200 { lines.removeFirst(lines.count - 200) }
+        appendOutput("[\(tick / 2)/120] Compiling CmdsApp \(files[(tick / 2) % files.count])", keepingAtMost: 200)
     }
 }
 
@@ -444,8 +523,18 @@ enum MockData {
         if ProcessInfo.processInfo.arguments.contains("-mockFullScreenTUI") {
             shells["p-agent"]?.fixed = fullScreenTUI()
         }
+        if ProcessInfo.processInfo.arguments.contains("-mockStreamOutput") {
+            // A command printing numbered lines, 300 of them already, into a full scrollback (a reset every 30 lines).
+            var shell = FakeShell(prompt: "", lines: ["demo@mac .dotfiles % ./print-lines.sh"])
+            for _ in 0..<300 { shell.printNumberedLine() }
+            shell.prunedPages = (limit: 330, page: 30)
+            shells[streamOutputPaneID] = shell
+        }
         return shells
     }
+
+    /// The pane that prints numbered lines with `-mockStreamOutput` (the only pane of the dotfiles workspace).
+    static let streamOutputPaneID = "p-dot"
 
     /// Like Claude Code in a large Mac pane: 56×150, a header at the top, the prompt and status lines at the
     /// bottom, empty rows in between, cursor (hidden on the Mac) on the prompt row.
