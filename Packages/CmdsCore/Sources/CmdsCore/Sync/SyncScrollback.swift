@@ -112,3 +112,184 @@ public struct HistoryMark: Equatable, Sendable {
         return scrolledOff.isEmpty ? .unchanged : .scrolledOff(scrolledOff)
     }
 }
+
+// MARK: - Phone side
+
+/// The rows above a pane's screen as the phone has them (`HistoryMirror`).
+public struct PaneHistory: Equatable, Sendable {
+    /// Oldest first; the last one is directly above the screen's first row.
+    public var lines: [String]
+    /// Rows dropped from the top since these rows began: `lines[i]` is row `first + i`. A row keeps its number (its
+    /// identity in the view) while rows are added at the bottom and dropped at the top.
+    public var first: Int
+
+    public init(lines: [String] = [], first: Int = 0) {
+        self.lines = lines
+        self.first = first
+    }
+
+    /// Adds rows at the bottom and drops the oldest beyond `cap`.
+    public mutating func append(_ rows: [String], keepingAtMost cap: Int) {
+        lines.append(contentsOf: rows)
+        dropOldest(lines.count - cap)
+    }
+
+    /// Drops the `count` oldest rows (nothing when `count` is not positive).
+    public mutating func dropOldest(_ count: Int) {
+        guard count > 0 else { return }
+        let dropped = min(count, lines.count)
+        lines.removeFirst(dropped)
+        first += dropped
+    }
+}
+
+/// Phone side: the rows above each streamed pane's screen (`histories`), from `scrollback` answers and, from a Mac that
+/// streams them (`SyncFeature.scrollbackStream`), the rows that scroll off with every screen update. While a pane's
+/// earlier output is read (`setReading`), the shown rows only grow at the bottom: no rows are dropped below
+/// `maxRowsWhileReading`, and rows that do not continue them wait until reading ends.
+public struct HistoryMirror: Sendable {
+    /// Rows kept above a screen, and while it is read: dropping rows at the top would move the text being read.
+    public static let maxRows = 2000
+    public static let maxRowsWhileReading = 10_000
+    /// `rows(after:in:)`: the last shown rows looked for in an answer, how many of them it needs at least, and how many
+    /// of those must not be blank, so that a match is not a coincidence.
+    static let matchRows = 24
+    static let minMatchRows = 8
+    static let minNonBlankMatchRows = 3
+
+    /// The rows shown above each pane's screen.
+    public private(set) var histories: [String: PaneHistory] = [:]
+    /// The connected Mac streams the rows that scroll off (`connected(streams:)`).
+    public private(set) var streams = false
+    /// Streaming Mac, pane being read: its rows once they no longer continue the shown ones (a reset or a new
+    /// connection whose answer does not continue them, `maxRowsWhileReading` reached). The shown rows stay as they
+    /// are, because any change above the rows being read would move them; these replace them when reading ends.
+    private var pending: [String: PaneHistory] = [:]
+    /// Panes whose earlier output the user is reading (`setReading`).
+    private var reading: Set<String> = []
+    /// Streaming Mac: panes whose `requestScrollback` it answered on this connection, so their screen updates carry
+    /// the rows that scroll off (`scrolledOff`) or `historyReset`.
+    private var streamed: Set<String> = []
+
+    public init() {}
+
+    /// The Mac streams this pane's rows: it needs no further `requestScrollback` until a `historyReset`.
+    public func isStreamed(_ paneID: String) -> Bool { streamed.contains(paneID) }
+
+    /// A new connection (`welcome`): possibly another Mac (pane ids are per Mac) or one without `scrollback`, so the
+    /// rows are asked for again. With a streaming Mac, rows being read stay until reading ends.
+    public mutating func connected(streams: Bool) {
+        self.streams = streams
+        streamed = []
+        if streams {
+            for paneID in Set(histories.keys).union(pending.keys) { replace(paneID, with: nil) }
+        } else {
+            histories = [:]
+            pending = [:]
+        }
+    }
+
+    /// A `scrollback` answer (it follows the full `screen` it was read with). From a streaming Mac it starts the
+    /// stream of the pane, and when it still has the last shown rows only the newer rows are added.
+    public mutating func receive(_ lines: [String], paneID: String) {
+        if streams {
+            streamed.insert(paneID)
+            if continueHistory(paneID, with: lines) { return }
+        }
+        replace(paneID, with: lines)
+    }
+
+    /// `scrolledOff` / `historyReset` of a screen update from a streaming Mac (for panes whose request it answered).
+    /// True after a reset: ask again (`requestScrollback`).
+    public mutating func extend(paneID: String, scrolledOff rows: [String]?, reset: Bool) -> Bool {
+        guard streams, streamed.contains(paneID) else { return false }
+        if reset {
+            // The rows above the screen no longer continue these: ask again. The answer replaces them, or adds the
+            // newer rows when it still has the last of them (`continueHistory`). Until then they stay: dropping them
+            // at once would make the screen jump whenever rows above it are in view.
+            streamed.remove(paneID)
+            return true
+        }
+        if let rows { append(paneID, rows) }
+        return false
+    }
+
+    /// The view of a pane stopped following its screen to read earlier output (`isReading`), or follows it again.
+    /// When reading ends, the rows that waited are shown and the rows are trimmed to `maxRows`.
+    public mutating func setReading(paneID: String, _ isReading: Bool) {
+        if isReading {
+            reading.insert(paneID)
+        } else if reading.remove(paneID) != nil {
+            showPending(paneID)
+        }
+    }
+
+    /// Latest: the rows held back while reading (else the shown ones) are shown, trimmed to `maxRows`. The pane still
+    /// counts as read until `setReading(paneID:false)`.
+    public mutating func showPending(_ paneID: String) {
+        guard var history = pending.removeValue(forKey: paneID) ?? histories[paneID] else { return }
+        history.dropOldest(history.lines.count - Self.maxRows)
+        if histories[paneID] != history { histories[paneID] = history }
+    }
+
+    /// Drops the rows (and the reading state) of panes that are no longer streamed or gone.
+    public mutating func forget(where gone: (String) -> Bool) {
+        for paneID in histories.keys where gone(paneID) { histories[paneID] = nil }
+        pending = pending.filter { !gone($0.key) }
+        streamed = streamed.filter { !gone($0) }
+        reading = reading.filter { !gone($0) }
+    }
+
+    /// A pane's rows from a `scrollback` answer, or none (new connection). While a streaming Mac's pane is read, they
+    /// wait in `pending` and the shown rows stay.
+    private mutating func replace(_ paneID: String, with lines: [String]?) {
+        let history = lines.map { PaneHistory(lines: $0) }
+        if streams, reading.contains(paneID) {
+            pending[paneID] = history ?? PaneHistory()
+            return
+        }
+        pending[paneID] = nil
+        if histories[paneID] != history { histories[paneID] = history }
+    }
+
+    /// A streaming Mac's answer that still has the last shown rows (after a reset that left them in place, or a new
+    /// connection): adds the newer rows below them, so rows being read stay where they are and keep growing. False
+    /// when it does not continue them, or reaches further back while the pane is not read.
+    private mutating func continueHistory(_ paneID: String, with answer: [String]) -> Bool {
+        guard let shown = histories[paneID]?.lines, let newer = Self.rows(after: shown, in: answer) else { return false }
+        if !reading.contains(paneID), answer.count > shown.count + newer.count { return false }
+        pending[paneID] = nil
+        append(paneID, Array(newer))
+        return true
+    }
+
+    /// Adds rows below a pane's rows, or below the pending ones while there are. Rows being read are never dropped at
+    /// the top: once they are full they stay, and the rest waits in `pending`.
+    private mutating func append(_ paneID: String, _ rows: [String]) {
+        guard !rows.isEmpty else { return }
+        let isReading = reading.contains(paneID)
+        let cap = isReading ? Self.maxRowsWhileReading : Self.maxRows
+        if pending[paneID] != nil {
+            pending[paneID]?.append(rows, keepingAtMost: cap)
+        } else if isReading, (histories[paneID]?.lines.count ?? 0) + rows.count > cap {
+            var waiting = histories[paneID] ?? PaneHistory()
+            waiting.append(rows, keepingAtMost: cap)
+            pending[paneID] = waiting
+        } else {
+            histories[paneID, default: PaneHistory()].append(rows, keepingAtMost: cap)
+        }
+    }
+
+    /// The rows of `answer` after the last of `shown`, when `answer` has those last rows (the latest place, so repeated
+    /// text adds as few rows as possible). Needs enough of them, some not blank, so the match is not a coincidence.
+    static func rows(after shown: [String], in answer: [String]) -> ArraySlice<String>? {
+        let tail = shown.suffix(matchRows)
+        guard tail.count >= minMatchRows, tail.filter({ !$0.isEmpty }).count >= minNonBlankMatchRows else { return nil }
+        var end = answer.count
+        while end >= tail.count {
+            if answer[(end - tail.count)..<end].elementsEqual(tail) { return answer[end...] }
+            end -= 1
+        }
+        return nil
+    }
+}
