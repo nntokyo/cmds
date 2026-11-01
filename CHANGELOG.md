@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
+  versions see them as browser panes (#26).
+
+## [0.5.0] - 2026-11-02
+
+Mac only; the iPhone/iPad app is unchanged from 0.4.0.
+
+### Added
+
 - Mac: several Claude accounts of your own. An account is a name and a Claude Code config directory
   (`CLAUDE_CONFIG_DIR`) that you sign in to yourself; cmds stores only names and paths, never credentials
   (Settings › Agents › Claude accounts, `cmds accounts`). `cmds new --account NAME -- claude` (and `cmds split
@@ -21,7 +30,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   next account that has not hit its limit (#31).
 - Mac: Share Sessions… (`cmds accounts share`) lets every account reach the same session transcripts: each account's
   `projects` folder becomes a symlink to the first account's, after asking; an account's own folder is renamed, never
-  deleted (#31).
+  deleted (#31, #39).
 - Mac: files panes, a local folder as a list next to your terminals (#26). Columns for name, size, date modified, kind
   and Git state (inside a repository); sorting, hidden files (⇧⌘.), type-to-select, back / forward / enclosing folder
   and a clickable path. Return opens, Space shows the file in the preview pane. Two files panes side by side copy and
@@ -29,9 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   choice for names that are taken (keep both, replace, skip, for all). Rename (F2), New Folder (F7) and Move to Trash
   (⌘⌫); nothing is deleted for good. Follow Terminal keeps the pane in the directory of the workspace's terminal; Open
   Terminal Here opens one in the folder. File › New Files Pane (⇧⌘E), Pane › Files, `cmds files [PATH]` and the
-  socket method `files.open`; files panes come back after a relaunch and in exported workspaces.
-- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
-  versions see them as browser panes (#26).
+  socket method `files.open`; files panes come back after a relaunch and in exported workspaces (#40).
 
 ### Changed
 
@@ -201,7 +208,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.4.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.5.0...master
+[0.5.0]: https://github.com/nntokyo/cmds/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nntokyo/cmds/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nntokyo/cmds/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/nntokyo/cmds/compare/v0.2.0...v0.2.1
