@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- iPhone/iPad: earlier output keeps up while you read it. The rows that scroll off the screen meanwhile are added
+  between the earlier output and the screen, instead of missing until you return, and the text you read does not move.
+  Needs cmds 0.4.0 or later on the Mac (#22).
+
 ## [0.3.0] - 2026-11-01
 
 Mac and iPhone/iPad.
