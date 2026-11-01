@@ -17,6 +17,7 @@ final class SyncCodecTests: XCTestCase {
             .focusPane(.init(id: "p2")),
             .ping(.init()),
             .ping(.init(nonce: 7)),
+            .requestScrollback(.init(paneID: "p1", lines: 400)),
         ]
         for message in messages {
             let data = try codec.encode(message)
@@ -32,6 +33,7 @@ final class SyncCodecTests: XCTestCase {
                                layout: .pane(id: "p1"))
         let messages: [ServerMessage] = [
             .welcome(.init(macName: "Mac", token: "abc")),
+            .welcome(.init(macName: "Mac", token: "abc", features: [SyncFeature.scrollback])),
             .error(.init(code: .invalidPairingCode, message: "nope")),
             .state(.init(workspaces: [ws])),
             .screen(.init(paneID: "p1", seq: 1, rows: 2, cols: 10, lines: ["$ ls", ""], cursorRow: 1, cursorCol: 0)),
@@ -40,11 +42,22 @@ final class SyncCodecTests: XCTestCase {
             .notification(.init(paneID: "p1", workspaceID: "w1", title: "Claude", body: "needs input")),
             .notification(.init(paneID: nil, workspaceID: "w1", title: "t", body: "b")),
             .pong(.init(nonce: 7)),
+            .scrollback(.init(paneID: "p1", seq: 4, lines: ["$ make", "", "日本語の行"])),
+            .scrollback(.init(paneID: "p1", seq: 5, lines: [])),
         ]
         for message in messages {
             let data = try codec.encode(message)
             XCTAssertEqual(try codec.decodeServerMessage(data), message, String(decoding: data, as: UTF8.self))
         }
+    }
+
+    /// Macs before `scrollback` send no `features`; phones before it ignore the key.
+    func testWelcomeFeaturesAreOptional() throws {
+        let old = #"{"type":"welcome","protocolVersion":2,"macName":"Mac","token":"t"}"#
+        guard case .welcome(let welcome) = try codec.decodeServerMessage(Data(old.utf8)) else { return XCTFail() }
+        XCTAssertNil(welcome.features)
+        let data = try codec.encode(ServerMessage.welcome(.init(macName: "Mac", token: "t")))
+        XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("features"))
     }
 
     func testWireFormatIsFlatWithTypeField() throws {

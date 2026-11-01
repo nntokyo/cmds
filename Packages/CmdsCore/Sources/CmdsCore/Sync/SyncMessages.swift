@@ -15,6 +15,7 @@ public enum ClientMessage: Equatable, Sendable {
     case focusPane(FocusPane)
     case ping(Ping)
     case requestFile(RequestFile)
+    case requestScrollback(RequestScrollback)
 
     /// First message on every connection. Give `token` when one is stored for this Mac,
     /// otherwise `pairingCode` (the 6 digits shown on the Mac).
@@ -88,6 +89,19 @@ public enum ClientMessage: Equatable, Sendable {
         public init(paneID: String) { self.paneID = paneID }
     }
 
+    /// Ask for the rows above the screen of a streamed terminal pane (Macs that list `SyncFeature.scrollback` in
+    /// `welcome.features`). Answered with a full `screen` and then `scrollback` aligned to it, or `error`
+    /// (`notFound`: no such pane; `badRequest`: not a streamed terminal pane).
+    public struct RequestScrollback: Codable, Equatable, Sendable {
+        public var paneID: String
+        /// Most rows wanted; the Mac sends at most `SyncScrollback.maxLines`.
+        public var lines: Int
+        public init(paneID: String, lines: Int) {
+            self.paneID = paneID
+            self.lines = lines
+        }
+    }
+
     public struct Ping: Codable, Equatable, Sendable {
         /// Echoed in `pong` (optional, for RTT measurement).
         public var nonce: Int?
@@ -105,6 +119,7 @@ public enum ClientMessage: Equatable, Sendable {
         case .focusPane: return "focusPane"
         case .ping: return "ping"
         case .requestFile: return "requestFile"
+        case .requestScrollback: return "requestScrollback"
         }
     }
 }
@@ -120,17 +135,22 @@ public enum ServerMessage: Equatable, Sendable {
     case notification(Notification)
     case pong(Pong)
     case file(File)
+    case scrollback(Scrollback)
 
     /// Authentication succeeded. The phone stores `token` (Keychain, per Mac) for future connects.
     public struct Welcome: Codable, Equatable, Sendable {
         public var protocolVersion: Int
         public var macName: String
         public var token: String
+        /// Optional requests this Mac answers (`SyncFeature`); absent from older Macs.
+        public var features: [String]?
 
-        public init(protocolVersion: Int = SyncProtocol.version, macName: String, token: String) {
+        public init(protocolVersion: Int = SyncProtocol.version, macName: String, token: String,
+                    features: [String]? = nil) {
             self.protocolVersion = protocolVersion
             self.macName = macName
             self.token = token
+            self.features = features
         }
     }
 
@@ -256,6 +276,21 @@ public enum ServerMessage: Equatable, Sendable {
         }
     }
 
+    /// Rows above the screen of a pane (answer to `requestScrollback`), oldest first, one entry per row as the
+    /// terminal shows it (soft wraps kept, trailing spaces trimmed). Sent right after the full `screen` with the same
+    /// `seq`: the last entry is the row above that screen's first row.
+    public struct Scrollback: Codable, Equatable, Sendable {
+        public var paneID: String
+        public var seq: UInt64
+        public var lines: [String]
+
+        public init(paneID: String, seq: UInt64, lines: [String]) {
+            self.paneID = paneID
+            self.seq = seq
+            self.lines = lines
+        }
+    }
+
     public var typeName: String {
         switch self {
         case .welcome: return "welcome"
@@ -266,6 +301,7 @@ public enum ServerMessage: Equatable, Sendable {
         case .notification: return "notification"
         case .pong: return "pong"
         case .file: return "file"
+        case .scrollback: return "scrollback"
         }
     }
 }
@@ -292,6 +328,7 @@ extension ClientMessage: Codable {
         case "focusPane": self = .focusPane(try FocusPane(from: decoder))
         case "ping": self = .ping(try Ping(from: decoder))
         case "requestFile": self = .requestFile(try RequestFile(from: decoder))
+        case "requestScrollback": self = .requestScrollback(try RequestScrollback(from: decoder))
         default: throw UnknownSyncMessageType(type: type)
         }
     }
@@ -307,6 +344,7 @@ extension ClientMessage: Codable {
         case .focusPane(let p): try p.encode(to: encoder)
         case .ping(let p): try p.encode(to: encoder)
         case .requestFile(let p): try p.encode(to: encoder)
+        case .requestScrollback(let p): try p.encode(to: encoder)
         }
         var c = encoder.container(keyedBy: SyncTypeKey.self)
         try c.encode(typeName, forKey: .type)
@@ -325,6 +363,7 @@ extension ServerMessage: Codable {
         case "notification": self = .notification(try Notification(from: decoder))
         case "pong": self = .pong(try Pong(from: decoder))
         case "file": self = .file(try File(from: decoder))
+        case "scrollback": self = .scrollback(try Scrollback(from: decoder))
         default: throw UnknownSyncMessageType(type: type)
         }
     }
@@ -339,6 +378,7 @@ extension ServerMessage: Codable {
         case .notification(let p): try p.encode(to: encoder)
         case .pong(let p): try p.encode(to: encoder)
         case .file(let p): try p.encode(to: encoder)
+        case .scrollback(let p): try p.encode(to: encoder)
         }
         var c = encoder.container(keyedBy: SyncTypeKey.self)
         try c.encode(typeName, forKey: .type)
