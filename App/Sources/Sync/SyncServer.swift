@@ -73,6 +73,8 @@ final class SyncServer {
         var closing = false
         /// `hello.features` has `SyncFeature.previewPanes` (else preview panes are sent as browser panes).
         var supportsPreview = false
+        /// `hello.features` has `SyncFeature.filesPanes` (else files panes are sent as browser panes).
+        var supportsFiles = false
         /// A `requestFile` is being read/sent (one at a time per phone).
         var sendingFile = false
         /// Last read of the rows above a pane's screen for a `requestScrollback`, answered or not (subscribed panes).
@@ -691,6 +693,7 @@ final class SyncServer {
             client.deviceName = name
             client.tokenHash = SyncDeviceStore.hash(plainToken)
             client.supportsPreview = hello.features?.contains(SyncFeature.previewPanes) == true
+            client.supportsFiles = hello.features?.contains(SyncFeature.filesPanes) == true
             client.streamsHistory = hello.features?.contains(SyncFeature.scrollbackStream) == true
             send(.welcome(.init(macName: macName, token: plainToken,
                                 features: [SyncFeature.scrollback, SyncFeature.scrollbackStream])), to: client)
@@ -747,21 +750,20 @@ final class SyncServer {
         let state = currentState()
         guard let data = try? codec.encode(.state(state)), data != lastStateData else { return }
         lastStateData = data
-        // Phones that predate preview panes cannot decode their kind: they get them as browser panes.
-        var legacyData: Data?
+        // Phones that predate preview or files panes cannot decode their kind: they get them as browser panes.
+        var encoded: [[Bool]: Data] = [[true, true]: data]
         for client in clients.values where client.authenticated {
-            if client.supportsPreview || !state.hasPreviewPanes {
-                client.connection.send(data)
-            } else {
-                if legacyData == nil { legacyData = try? codec.encode(.state(state.withoutPreviewPanes)) }
-                if let legacyData { client.connection.send(legacyData) }
+            let supports = [client.supportsPreview || !state.hasPreviewPanes, client.supportsFiles || !state.hasFilesPanes]
+            if encoded[supports] == nil {
+                encoded[supports] = try? codec.encode(.state(state.forPhone(supportsPreview: supports[0], supportsFiles: supports[1])))
             }
+            if let variant = encoded[supports] { client.connection.send(variant) }
         }
     }
 
     private func currentState(for client: Client) -> ServerMessage.State {
         let state = currentState()
-        return client.supportsPreview ? state : state.withoutPreviewPanes
+        return state.forPhone(supportsPreview: client.supportsPreview, supportsFiles: client.supportsFiles)
     }
 
     /// `requestFile`: the file shown in a preview pane, read off the main thread and sent in `file` pieces.
