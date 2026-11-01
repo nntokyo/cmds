@@ -209,10 +209,13 @@ Never pick a Mac under "On This Network": that is the instance someone works in.
 
 ## UI tests in the simulator
 
-`TerminalScreenTests` (same target) launches the companion with `-mock -noNotify -mockFullScreenTUI` and checks
-rendering against the demo data; it skips itself on a real device. Run it with
-`-only-testing:CmdsDeviceDriver/TerminalScreenTests` and the companion installed on the simulator. `-mock` alone
-(or "Try with demo data" on the connect screen) runs the app without a Mac.
+`TerminalScreenTests` (same target) launches the companion with `-mock -noNotify` and the demo flags it needs
+(`-mockFullScreenTUI`, `-mockStreamOutput`, `-mockNoHistoryStream`, `-uiTestProbes`;
+[reference/environment.md](../reference/environment.md#ios-companion-launch-arguments)) and checks rendering against the
+demo data: the zoomed TUI, earlier output, and earlier output that keeps up while it is read (#22: the rows on screen
+must not change, compared as text and as screenshots, and the rows above the screen must have no gap). It skips itself
+on a real device. Run it with `-only-testing:CmdsDeviceDriver/TerminalScreenTests` and the companion installed on the
+simulator. `-mock` alone (or "Try with demo data" on the connect screen) runs the app without a Mac.
 
 ## Terminal engine harness
 
