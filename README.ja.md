@@ -46,10 +46,9 @@ cmdsは、AIコーディングエージェントを動かすためのmacOSネイ
 git clone --recurse-submodules https://github.com/nntokyo/cmds.git
 cd cmds                                   # 既存のクローンでは: git submodule update --init
 
-# 1. GhosttyサブモジュールからGhosttyKit.xcframeworkを作る
-(cd vendor/ghostty && zig build -Demit-xcframework=true -Dxcframework-target=native \
-  -Demit-macos-app=false -Doptimize=ReleaseFast)
-ln -s "$PWD/vendor/ghostty/macos/GhosttyKit.xcframework" vendor/GhosttyKit.xcframework
+# 1. GhosttyサブモジュールからcmdsのパッチつきでGhosttyKit.xcframeworkを作る（Zigのビルドで数分かかる）
+#    vendor/GhosttyKit.xcframeworkのリンクも作る
+scripts/build-ghostty.sh
 
 # 2. Xcodeプロジェクトを生成する（生成物なのでコミットしない）
 brew install xcodegen
@@ -62,6 +61,10 @@ open build/dd/Build/Products/Debug/cmds.app
 ```
 
 - iOSコンパニオンは`CmdsCompanion`スキームです。Xcodeから実機で実行してください。
+- **libghosttyのパッチ**：アプリには`vendor/ghostty-patches`のパッチ（ビューポートを動かさずにスクロールバックを読む等）が
+  必要で、パッチなしのGhosttyKitではビルドできません。`scripts/build-ghostty.sh`はビルドの間だけサブモジュールにパッチを
+  当てて最後に戻すので、サブモジュールは固定した上流のリビジョンのままです。サブモジュールかパッチが変わったら、もう一度
+  実行してください。
 - **署名**：`project.yml`はメンテナーのチーム（`DEVELOPMENT_TEAM: LY354RVYHA`）で署名します。自分のチームに書き換えて
   `xcodegen generate`をもう一度実行してください（`xcodebuild`に`DEVELOPMENT_TEAM=…`を渡す方法もあります）。
   詳細とリリースビルド：[docs/internals/release.md](docs/internals/release.md)。

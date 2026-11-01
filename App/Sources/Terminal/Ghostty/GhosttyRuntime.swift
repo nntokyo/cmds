@@ -286,13 +286,7 @@ final class GhosttyRuntime {
             view.owner?.handleChildExited()
             return true
 
-        case GHOSTTY_ACTION_SCROLLBAR:
-            let s = action.action.scrollbar
-            view.scrollbar = GhosttyScrollbar(total: Int(clamping: s.total), offset: Int(clamping: s.offset),
-                                              length: Int(clamping: s.len))
-            return true
-
-        case GHOSTTY_ACTION_COLOR_CHANGE, GHOSTTY_ACTION_RENDERER_HEALTH,
+        case GHOSTTY_ACTION_COLOR_CHANGE, GHOSTTY_ACTION_RENDERER_HEALTH, GHOSTTY_ACTION_SCROLLBAR,
              GHOSTTY_ACTION_MOUSE_OVER_LINK, GHOSTTY_ACTION_SELECTION_CHANGED, GHOSTTY_ACTION_CONFIG_CHANGE,
              GHOSTTY_ACTION_SIZE_LIMIT, GHOSTTY_ACTION_INITIAL_SIZE, GHOSTTY_ACTION_KEY_SEQUENCE,
              GHOSTTY_ACTION_KEY_TABLE, GHOSTTY_ACTION_PROGRESS_REPORT, GHOSTTY_ACTION_COMMAND_FINISHED:

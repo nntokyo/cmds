@@ -44,10 +44,9 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 git clone --recurse-submodules https://github.com/nntokyo/cmds.git
 cd cmds                                   # existing clone: git submodule update --init
 
-# 1. GhosttyKit.xcframework from the Ghostty submodule
-(cd vendor/ghostty && zig build -Demit-xcframework=true -Dxcframework-target=native \
-  -Demit-macos-app=false -Doptimize=ReleaseFast)
-ln -s "$PWD/vendor/ghostty/macos/GhosttyKit.xcframework" vendor/GhosttyKit.xcframework
+# 1. GhosttyKit.xcframework from the Ghostty submodule with cmds' patches (Zig build, takes minutes);
+#    also links vendor/GhosttyKit.xcframework
+scripts/build-ghostty.sh
 
 # 2. Xcode project (generated, not committed)
 brew install xcodegen
@@ -60,6 +59,10 @@ open build/dd/Build/Products/Debug/cmds.app
 ```
 
 - The iOS companion is the `CmdsCompanion` scheme; run it on your device from Xcode.
+- **libghostty patches**: the app needs the patches in `vendor/ghostty-patches` (e.g. reading the scrollback without
+  moving the viewport) and does not build against a plain GhosttyKit. `scripts/build-ghostty.sh` applies them to the
+  submodule for the build and reverts them afterwards, so the submodule stays at its pinned upstream revision. Run it
+  again whenever the submodule or a patch changes.
 - **Signing**: `project.yml` signs with the maintainer's team (`DEVELOPMENT_TEAM: LY354RVYHA`). Set your own team
   there (or pass `DEVELOPMENT_TEAM=…` to `xcodebuild`) and run `xcodegen generate` again. Details and release builds:
   [docs/internals/release.md](docs/internals/release.md).

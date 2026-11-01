@@ -82,9 +82,9 @@ notifications. Check them on the signed build before publishing it.
 
    `build-dmg.sh` only refers to the profile name; it never sees the password, and stops with this command when the
    profile is missing.
-3. GhosttyKit built in the checkout (`vendor/GhosttyKit.xcframework` and `vendor/ghostty/zig-out/share`, README
-   "Build from source"): without `zig-out/share` the app would ship without terminfo and shell integration, and the
-   script refuses to continue.
+3. GhosttyKit built in the checkout with `scripts/build-ghostty.sh` (`vendor/GhosttyKit.xcframework` with cmds'
+   libghostty patches, and `vendor/ghostty/zig-out/share`; README "Build from source"): without `zig-out/share` the
+   app would ship without terminfo and shell integration, and the script refuses to continue.
 
 ### Mac app
 
@@ -96,7 +96,8 @@ notifications. Check them on the signed build before publishing it.
 > not prompt for keychain access; the app inside is notarized and stapled, the DMG itself is signed only.
 
 1. Start from a clean, up-to-date `master` with the submodule at the committed revision
-   (`git submodule update --init`); rebuild GhosttyKit if the submodule moved.
+   (`git submodule update --init`); rebuild GhosttyKit (`scripts/build-ghostty.sh`) if the submodule or
+   `vendor/ghostty-patches` changed.
 2. Bump `MARKETING_VERSION` (and `CURRENT_PROJECT_VERSION`) in `project.yml`, move the `Unreleased` entries in
    `CHANGELOG.md` under `## [X.Y.Z] - YYYY-MM-DD` with a compare link, then `xcodegen generate`.
 3. Run the unit tests ([testing.md](testing.md#unit-tests)).
