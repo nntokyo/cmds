@@ -57,13 +57,29 @@ public enum ClaudeSessionSharing {
         (ClaudeAccounts.expandedPath(configDir, home: home) as NSString).appendingPathComponent("projects")
     }
 
-    /// The account whose `projects` is the store, and the store's real path (symlinks resolved).
+    /// The store's real path: the first existing account's `projects` with symlinks resolved, so when that account's
+    /// `projects` is already a link (the accounts were reordered after sharing), the folder it links to stays the store.
+    /// `account`: the account whose own `projects` is that folder, else the first existing account.
     public static func store(_ accounts: [ClaudeAccount], fileManager: FileManager = .default,
                              home: String = NSHomeDirectory()) -> (account: String, path: String)? {
-        guard let account = accounts.first(where: { ClaudeAccounts.configDirExists($0, fileManager: fileManager, home: home) }) else {
-            return nil
+        let existing = accounts.filter { ClaudeAccounts.configDirExists($0, fileManager: fileManager, home: home) }
+        guard let first = existing.first else { return nil }
+        let path = resolvedProjectsPath(first.configDir, home: home)
+        let owner = existing.first { account in
+            let projects = projectsPath(account.configDir, home: home)
+            return itemType(projects, fileManager: fileManager) == .typeDirectory
+                && resolvedProjectsPath(account.configDir, home: home) == path
         }
-        return (account.name, (projectsPath(account.configDir, home: home) as NSString).resolvingSymlinksInPath)
+        return ((owner ?? first).name, path)
+    }
+
+    static func resolvedProjectsPath(_ configDir: String, home: String) -> String {
+        (projectsPath(configDir, home: home) as NSString).resolvingSymlinksInPath
+    }
+
+    /// The type of the item at `path` itself (a symlink is not followed); nil when there is none.
+    private static func itemType(_ path: String, fileManager: FileManager) -> FileAttributeType? {
+        (try? fileManager.attributesOfItem(atPath: path))?[.type] as? FileAttributeType
     }
 
     public static func link(of account: ClaudeAccount, in accounts: [ClaudeAccount], fileManager: FileManager = .default,
@@ -72,13 +88,12 @@ public enum ClaudeSessionSharing {
               let store = store(accounts, fileManager: fileManager, home: home) else { return .noConfigDir }
         if store.account == account.name { return .shared }
         let projects = projectsPath(account.configDir, home: home)
-        // attributesOfItem does not follow a symlink: tells a link from a directory, also a dangling link.
-        guard let type = (try? fileManager.attributesOfItem(atPath: projects))?[.type] as? FileAttributeType else {
-            return .missing
-        }
-        if type == .typeSymbolicLink {
-            return (projects as NSString).resolvingSymlinksInPath == store.path ? .shared : .elsewhere
-        }
+        // Not following a symlink tells a link from a directory, also a dangling link.
+        guard let type = itemType(projects, fileManager: fileManager) else { return .missing }
+        // The store itself, however it is reached, is never moved aside (it would be linked to itself).
+        if (type == .typeSymbolicLink || type == .typeDirectory),
+           resolvedProjectsPath(account.configDir, home: home) == store.path { return .shared }
+        if type == .typeSymbolicLink { return .elsewhere }
         return type == .typeDirectory ? .separate : .elsewhere
     }
 
@@ -100,7 +115,8 @@ public enum ClaudeSessionSharing {
     }
 
     /// Carries out `plan`. Creates the store's `projects` directory if it does not exist yet. Never deletes or
-    /// overwrites: a rename whose target exists, or a link where something appeared meanwhile, fails that step.
+    /// overwrites: a rename whose target exists, a link where something appeared meanwhile, or a step that would move
+    /// the store itself aside fails that step; when the link cannot be made after a rename, the folder is moved back.
     /// Returns the accounts that were linked; throws on the first failure (earlier steps stay done).
     @discardableResult
     public static func apply(_ steps: [Step], accounts: [ClaudeAccount], fileManager: FileManager = .default,
@@ -114,11 +130,26 @@ public enum ClaudeSessionSharing {
                 continue
             case .moveAsideAndLink(let backupName):
                 let backup = ((step.projectsPath as NSString).deletingLastPathComponent as NSString).appendingPathComponent(backupName)
+                guard (step.projectsPath as NSString).resolvingSymlinksInPath != store.path else {
+                    throw SharingError("\(step.projectsPath) is the shared folder itself")
+                }
                 guard !fileManager.fileExists(atPath: backup) else {
                     throw SharingError("\(backup) already exists")
                 }
                 try fileManager.moveItem(atPath: step.projectsPath, toPath: backup)
-                try fileManager.createSymbolicLink(atPath: step.projectsPath, withDestinationPath: store.path)
+                do {
+                    try fileManager.createSymbolicLink(atPath: step.projectsPath, withDestinationPath: store.path)
+                } catch {
+                    // Put the folder back where it was (a move never overwrites: if something took its place, the
+                    // folder stays under the backup name and the error says so).
+                    do {
+                        try fileManager.moveItem(atPath: backup, toPath: step.projectsPath)
+                    } catch let restoreError {
+                        throw SharingError("could not link \(step.projectsPath) (\(error)); the folder stays at \(backup) "
+                                           + "because moving it back failed: \(restoreError)")
+                    }
+                    throw error
+                }
             case .createLink:
                 try fileManager.createSymbolicLink(atPath: step.projectsPath, withDestinationPath: store.path)
             }

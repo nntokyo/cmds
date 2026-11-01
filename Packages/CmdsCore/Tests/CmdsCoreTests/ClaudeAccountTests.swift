@@ -388,6 +388,68 @@ final class ClaudeAccountTests: XCTestCase {
         XCTAssertEqual(ClaudeSessionSharing.link(of: accounts[1], in: accounts, home: home), .separate)
     }
 
+    func testSharingAfterReorderingKeepsTheRealStore() throws {
+        let home = try temporaryDirectory().path
+        let fm = FileManager.default
+        try fm.createDirectory(atPath: home + "/a/projects/-p", withIntermediateDirectories: true)
+        try Data("{}\n".utf8).write(to: URL(fileURLWithPath: home + "/a/projects/-p/\(uuid).jsonl"))
+        try fm.createDirectory(atPath: home + "/b", withIntermediateDirectories: true)
+        let a = ClaudeAccount(name: "a", configDir: home + "/a"), b = ClaudeAccount(name: "b", configDir: home + "/b")
+        try ClaudeSessionSharing.apply(ClaudeSessionSharing.plan([a, b], now: now, home: home), accounts: [a, b], home: home)
+
+        // b (a link to a's folder) is moved to the top: a's folder stays the store, nothing is to be done.
+        let reordered = [b, a]
+        XCTAssertEqual(ClaudeSessionSharing.store(reordered, home: home)?.account, "a")
+        XCTAssertEqual(ClaudeSessionSharing.link(of: a, in: reordered, home: home), .shared)
+        XCTAssertEqual(ClaudeSessionSharing.link(of: b, in: reordered, home: home), .shared)
+        let steps = ClaudeSessionSharing.plan(reordered, now: now, home: home)
+        XCTAssertEqual(steps.map(\.action), [.none, .none])
+        XCTAssertEqual(try ClaudeSessionSharing.apply(steps, accounts: reordered, home: home), [])
+        var isDirectory: ObjCBool = false
+        XCTAssertTrue(fm.fileExists(atPath: home + "/a/projects", isDirectory: &isDirectory) && isDirectory.boolValue)
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: home + "/a").sorted(), ["projects"])
+
+        // An account added later is linked to the real folder, not to b's link.
+        try fm.createDirectory(atPath: home + "/c", withIntermediateDirectories: true)
+        let c = ClaudeAccount(name: "c", configDir: home + "/c")
+        let withC = [b, a, c]
+        XCTAssertEqual(try ClaudeSessionSharing.apply(ClaudeSessionSharing.plan(withC, now: now, home: home), accounts: withC,
+                                                      home: home), ["c"])
+        XCTAssertTrue(ClaudeSessionSharing.transcriptReachable(sessionID: uuid, configDir: home + "/c", home: home))
+        XCTAssertEqual(ClaudeSessionSharing.link(of: c, in: withC, home: home), .shared)
+    }
+
+    func testApplyNeverMovesTheStoreAside() throws {
+        let home = try temporaryDirectory().path
+        let fm = FileManager.default
+        try fm.createDirectory(atPath: home + "/a/projects", withIntermediateDirectories: true)
+        try fm.createDirectory(atPath: home + "/b", withIntermediateDirectories: true)
+        try fm.createSymbolicLink(atPath: home + "/b/projects", withDestinationPath: home + "/a/projects")
+        let accounts = [ClaudeAccount(name: "b", configDir: home + "/b"), ClaudeAccount(name: "a", configDir: home + "/a")]
+        // A step planned by older code (or before the folders changed) that would link the store to itself.
+        let step = ClaudeSessionSharing.Step(account: "a", projectsPath: home + "/a/projects",
+                                             action: .moveAsideAndLink(backupName: "projects.before-cmds-x"))
+        XCTAssertThrowsError(try ClaudeSessionSharing.apply([step], accounts: accounts, home: home))
+        var isDirectory: ObjCBool = false
+        XCTAssertTrue(fm.fileExists(atPath: home + "/a/projects", isDirectory: &isDirectory) && isDirectory.boolValue)
+        XCTAssertFalse(fm.fileExists(atPath: home + "/a/projects.before-cmds-x"))
+    }
+
+    func testFailedLinkMovesTheFolderBack() throws {
+        let home = try temporaryDirectory().path
+        let fm = FileManager.default
+        try fm.createDirectory(atPath: home + "/a/projects", withIntermediateDirectories: true)
+        try fm.createDirectory(atPath: home + "/b/projects/-old", withIntermediateDirectories: true)
+        let accounts = [ClaudeAccount(name: "a", configDir: home + "/a"), ClaudeAccount(name: "b", configDir: home + "/b")]
+        let steps = ClaudeSessionSharing.plan(accounts, now: now, home: home)
+        guard case .moveAsideAndLink = steps[1].action else { return XCTFail("\(steps[1].action)") }
+        XCTAssertThrowsError(try ClaudeSessionSharing.apply(steps, accounts: accounts, fileManager: NoLinksFileManager(), home: home))
+        // b's own folder is back where it was, with its contents; no backup is left.
+        XCTAssertTrue(fm.fileExists(atPath: home + "/b/projects/-old"))
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: home + "/b"), ["projects"])
+        XCTAssertEqual(ClaudeSessionSharing.link(of: accounts[1], in: accounts, home: home), .separate)
+    }
+
     func testBackupNamesAreNumberedWhenTaken() throws {
         let home = try temporaryDirectory().path
         let fm = FileManager.default
@@ -425,5 +487,12 @@ final class ClaudeAccountTests: XCTestCase {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: url) }
         return url
+    }
+}
+
+/// A file manager that cannot create symbolic links (a link failing after its folder was moved aside).
+private final class NoLinksFileManager: FileManager, @unchecked Sendable {
+    override func createSymbolicLink(atPath path: String, withDestinationPath destPath: String) throws {
+        throw CocoaError(.fileWriteNoPermission)
     }
 }
