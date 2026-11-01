@@ -282,10 +282,11 @@ extension AppController {
                        category: problem == nil ? Self.accountNotificationCategory : nil)
     }
 
-    /// The Claude Code session to continue: the running one, else one offered for resuming.
+    /// The Claude Code session to continue: the one seen in the pane now, else the one an earlier offer kept (Claude
+    /// Code may have exited since), else one offered for resuming.
     private func switchableSession(_ pane: Pane) -> AgentSession? {
-        if let session = pane.accountSwitch?.session { return session }
         if let session = pane.agentSession, session.agent == .claude { return session }
+        if let session = pane.accountSwitch?.session { return session }
         if let offer = pane.resumeOffer, offer.agent == .claude { return offer }
         return nil
     }
