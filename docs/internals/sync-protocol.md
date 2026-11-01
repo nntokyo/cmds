@@ -218,8 +218,9 @@ without asking again.
   earlier update could not carry them), the Mac sends a full `screen` with the same lines to carry them.
 - **Late, never wrong.** An update read while output moved the viewport carries none; a later one carries them all.
   Until then the rows above end above the screen's first row, with a gap but no overlap.
-- **`historyReset: true`**: the rows above this screen do not continue the ones sent before. Drop them and ask again
-  with `requestScrollback`; until the next answer the Mac sends no `scrolledOff` for the pane. The Mac resets when
+- **`historyReset: true`**: the rows above this screen do not continue the ones sent before. Ask again with
+  `requestScrollback`; until the next answer the Mac sends no `scrolledOff` for the pane, and the phone's rows no
+  longer continue the screen (the phone may keep showing them until the answer, see below). The Mac resets when
   the pane was resized (its rows were rewrapped), the scrollback was cleared (`CSI 3 J`, `clear` in some shells), the
   pane switched to the alternate screen, its viewport on the Mac moved up, or more than 1000 rows
   (`SyncScrollback.maxLines`) left the screen between two updates.
@@ -228,6 +229,12 @@ without asking again.
   pruned too, which takes more pruning between two updates than the whole history above them, the Mac resets.
 - **Older Macs** send no `scrollbackStream` and never these fields; **older phones** do not list it, so they never get
   them (0.3.0 phones ask again as the screen scrolls).
+- **The phone** (`CompanionClient`) asks once per pane and connection, again after `historyReset`, and repeats a
+  request that got no answer every 3 s (10 s over Bluetooth). It appends `scrolledOff` in the same update as the
+  screen, so both are drawn in one frame. It keeps 2000 rows, and up to 10 000 while the pane's earlier output is
+  being read, when nothing above the rows being read is dropped or replaced. After a reset it keeps its rows until
+  the answer (on a new connection only those of a pane being read): when the answer still has its last 24 rows, only
+  the rows after them are added; otherwise the answer replaces them, while the pane is read only once reading ends.
 
 ### How the Mac reads it
 
