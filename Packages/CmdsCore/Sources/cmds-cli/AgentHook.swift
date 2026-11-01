@@ -23,6 +23,8 @@ enum AgentHook {
         params["usage"] = try? JSONValue.from(usage)
         guard params["usage"] != nil else { return }
         if let pid = agentProcessID() { params["pid"] = .number(Double(pid)) }
+        // Which config directory (account) Claude Code runs with; "" = the default ~/.claude. A path, never its contents.
+        params["configDir"] = .string(ctx.environment[ClaudeAccounts.configDirVariable] ?? "")
         post(socketPath: ctx.socketPath, method: "agent.report", params: .object(params))
     }
 

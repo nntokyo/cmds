@@ -32,10 +32,12 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var remote: RemoteInfo?
     /// Preview panes: absolute path of the shown file on the Mac.
     public var file: String?
+    /// The Claude account (`ClaudeAccount.name`) the pane's Claude Code runs under, when known.
+    public var account: String?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
                 workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
-                remote: RemoteInfo? = nil, file: String? = nil) {
+                remote: RemoteInfo? = nil, file: String? = nil, account: String? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -46,6 +48,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.agent = agent
         self.remote = remote
         self.file = file
+        self.account = account
     }
 }
 

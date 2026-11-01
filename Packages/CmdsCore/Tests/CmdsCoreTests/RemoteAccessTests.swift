@@ -37,8 +37,15 @@ final class RemoteAPIPolicyTests: XCTestCase {
     }
 
     func testDropsRemotePid() throws {
-        let params = try RemoteAPIPolicy.authorize(method: "agent.report", params: ["pid": 123, "usage": [:]], scope: scope)
+        let params = try RemoteAPIPolicy.authorize(method: "agent.report", params: ["pid": 123, "usage": [:], "configDir": "/x"],
+                                                   scope: scope)
         XCTAssertNil(params?["pid"])
+        // A server's CLAUDE_CONFIG_DIR does not name an account on the Mac (#31).
+        XCTAssertNil(params?["configDir"])
+        // Accounts are managed and switched on the Mac only.
+        for method in ["account.list", "account.add", "account.share", "account.switch"] {
+            XCTAssertThrowsError(try RemoteAPIPolicy.authorize(method: method, params: [:], scope: scope), method)
+        }
         XCTAssertEqual(params?["pane"]?.stringValue, "p7")
     }
 

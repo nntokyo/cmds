@@ -61,7 +61,11 @@ public enum RemoteAPIPolicy {
         try pin("pane", to: scope.paneID, in: &object, applies: paneMethods.contains(method))
         try pin("workspace", to: scope.workspaceID, in: &object, applies: workspaceMethods.contains(method))
         // A remote process id means nothing on the Mac (the app would watch an unrelated local process).
-        if method == "agent.report" { object["pid"] = nil }
+        if method == "agent.report" {
+            object["pid"] = nil
+            // A server's CLAUDE_CONFIG_DIR is not one of this Mac's accounts.
+            object["configDir"] = nil
+        }
         // Resuming is limited to the pane's own session (`pane` is pinned above); `all` would reach other panes.
         if method == "agent.resume" {
             switch object["all"] {

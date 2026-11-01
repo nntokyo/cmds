@@ -114,6 +114,8 @@ private struct Lossy<Value: Decodable>: Decodable {
 
 /// Rules for accounts: names, paths, matching a config dir to an account and choosing the next one.
 public enum ClaudeAccounts {
+    /// The environment variable that selects Claude Code's config directory.
+    public static let configDirVariable = "CLAUDE_CONFIG_DIR"
     /// Claude Code's default config directory when `CLAUDE_CONFIG_DIR` is not set.
     public static let defaultConfigDir = "~/.claude"
     /// `--account auto` (`cmds new`, `cmds split`): the first account without an active limit.
