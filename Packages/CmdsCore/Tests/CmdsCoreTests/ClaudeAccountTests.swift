@@ -204,6 +204,17 @@ final class ClaudeAccountTests: XCTestCase {
         XCTAssertNil(ClaudeAccounts.firstAvailable(in: accounts, now: now))
     }
 
+    func testConfigDirExistsAndNames() throws {
+        let home = try temporaryDirectory().path
+        try FileManager.default.createDirectory(atPath: home + "/.claude-work", withIntermediateDirectories: true)
+        try Data().write(to: URL(fileURLWithPath: home + "/file"))
+        XCTAssertTrue(ClaudeAccounts.configDirExists(ClaudeAccount(name: "w", configDir: "~/.claude-work"), home: home))
+        XCTAssertFalse(ClaudeAccounts.configDirExists(ClaudeAccount(name: "f", configDir: "~/file"), home: home))
+        XCTAssertFalse(ClaudeAccounts.configDirExists(ClaudeAccount(name: "m", configDir: "~/missing"), home: home))
+        XCTAssertTrue(ClaudeAccount(name: "Work", configDir: "/w").hasName("wORK"))
+        XCTAssertFalse(ClaudeAccount(name: "Work", configDir: "/w").hasName("work2"))
+    }
+
     func testNextAccountMatchesNamesIgnoringCase() {
         let accounts = [ClaudeAccount(name: "Work", configDir: "/w"), ClaudeAccount(name: "home", configDir: "/h")]
         XCTAssertEqual(ClaudeAccounts.next(after: "work", in: accounts, now: now)?.name, "home")

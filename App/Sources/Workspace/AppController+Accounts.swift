@@ -74,7 +74,7 @@ extension AppController {
     /// The screen must not change for this long before Claude Code counts as idle.
     static let accountSwitchIdleTime: TimeInterval = 2
     /// The same limit line in a pane is handled once in this time (a resumed session may show it again).
-    static let limitLineMemory: TimeInterval = 5 * 3600
+    static let limitLineMemory = ClaudeLimitDetector.sessionWindow
     static let accountNotificationCategory = "cmds.accountLimit"
     static let accountSwitchAction = "cmds.switchAccount"
 
@@ -92,12 +92,10 @@ extension AppController {
     func accountList(now: Date = Date()) -> ClaudeAccountList {
         let accounts = claudeAccounts.accounts
         let statuses = accounts.map { account -> ClaudeAccountStatus in
-            var isDirectory: ObjCBool = false
-            let exists = FileManager.default.fileExists(atPath: ClaudeAccounts.expandedPath(account.configDir),
-                                                        isDirectory: &isDirectory) && isDirectory.boolValue
             let panes = workspaces.flatMap(\.orderedPanes)
-                .filter { $0.claudeAccount?.caseInsensitiveCompare(account.name) == .orderedSame }.map(\.id)
-            return ClaudeAccountStatus(name: account.name, configDir: account.configDir, exists: exists,
+                .filter { $0.claudeAccount.map(account.hasName) ?? false }.map(\.id)
+            return ClaudeAccountStatus(name: account.name, configDir: account.configDir,
+                                       exists: ClaudeAccounts.configDirExists(account),
                                        limit: account.isLimited(at: now) ? account.limit : nil,
                                        sessions: ClaudeSessionSharing.link(of: account, in: accounts), panes: panes)
         }
