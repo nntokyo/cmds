@@ -152,6 +152,9 @@ targets:
       base:
         PRODUCT_NAME: cmds
         PRODUCT_MODULE_NAME: cmds_cli
+        # `cmds --version` (#16): an Info.plist with MARKETING_VERSION in the binary, read through Bundle.main.
+        GENERATE_INFOPLIST_FILE: YES
+        CREATE_INFOPLIST_SECTION_IN_BINARY: YES
         ARCHS: arm64
         CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: NO

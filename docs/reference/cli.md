@@ -64,7 +64,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds hook claude-status` | Claude Code status-line reporter ([setup](../guide/ai-agents.md#claude-code)) |
 
 Every command accepts `--json` (print the raw result) and `--help` (also `cmds help <command>`); `cmds --version`
-prints the CLI version. Exit codes: `0` ok, `1` the request failed
+prints the version of the cmds the CLI came with (`dev` when built with SwiftPM). Exit codes: `0` ok, `1` the request failed
 (e.g. unknown pane), `2` usage error, `3` the app is not reachable.
 
 Examples:

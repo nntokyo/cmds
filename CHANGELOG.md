@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- `cmds --version` printed 0.1.0 in every release; it now prints the version of the cmds it comes with (#16).
+
 ## [0.2.0] - 2026-11-01
 
 Mac only; the iPhone/iPad app is unchanged from 0.1.3.

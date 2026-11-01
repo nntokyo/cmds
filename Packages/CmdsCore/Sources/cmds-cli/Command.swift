@@ -20,7 +20,14 @@ struct Command {
 }
 
 enum CLI {
-    static let version = "0.1.0"
+    /// The version of the cmds this CLI was built with (`cmds --version`): the Xcode target `cmds-cli`, the CLI inside
+    /// cmds.app, embeds an Info.plist with MARKETING_VERSION in the binary. A SwiftPM build has none and says `dev`.
+    static let version = bundleVersion(Bundle.main.infoDictionary)
+
+    static func bundleVersion(_ info: [String: Any]?) -> String {
+        guard let version = info?["CFBundleShortVersionString"] as? String, !version.isEmpty else { return "dev" }
+        return version
+    }
 
     static func main(_ argv: [String], environment: [String: String]) -> Int32 {
         var words = argv
