@@ -60,10 +60,11 @@ Mac launch argument: `-AppleLanguages '(ja)'` or `'(en)'` starts the app in that
 | Variable | Used by |
 |---|---|
 | `CMDS_RELAY_E2E_PAIRING=<file>` | `SyncRelayTests` (CmdsCore): pairs through the Bluetooth relay against an isolated instance started with `CMDS_SYNC_TEST_PAIRING=1`. |
+| `CMDS_SCROLLBACK_E2E_PAIRING=<file>` | `SyncScrollbackTests` (CmdsCore): `requestScrollback` against an isolated instance started with `CMDS_SYNC_TEST_PAIRING=1`, in a workspace the test creates through that instance's socket. |
 | `CMDS_SSH_E2E_DIR`, `CMDS_SSH_E2E_PORT`, `CMDS_SSH_E2E_PAIRING`, `CMDS_SSH_E2E_RELAY_PORT` | `SSHTunnelTests` (CmdsSSH): end-to-end remote access through a throwaway sshd. |
 | `CMDS_UI_SCRIPT` | `DeviceDriverTests` (iOS UI test target `CmdsDeviceDriver`); pass it to `xcodebuild` as `TEST_RUNNER_CMDS_UI_SCRIPT=…`. Output lines start with `CMDS_UI_STEP`, `CMDS_UI_VALUE`, `CMDS_UI_DUMP_BEGIN` / `CMDS_UI_DUMP_END`. |
 
-Details for all three: [internals/testing.md](../internals/testing.md).
+Details: [internals/testing.md](../internals/testing.md).
 
 ## libghostty harness
 

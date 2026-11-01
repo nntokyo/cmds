@@ -1137,6 +1137,17 @@
         }
       }
     },
+    "Latest" : {
+      "comment" : "button over a terminal scrolled into earlier output: back to the live screen",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新へ"
+          }
+        }
+      }
+    },
     "Left" : {
       "localizations" : {
         "ja" : {
@@ -1747,6 +1758,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "QRコードをスキャンする方が安全です。Macの識別情報全体を確認できます。"
+          }
+        }
+      }
+    },
+    "Scrolls back to the live screen." : {
+      "comment" : "accessibility hint of the Latest button",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新の画面に戻ります。"
           }
         }
       }

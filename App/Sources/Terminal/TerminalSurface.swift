@@ -67,6 +67,11 @@ protocol TerminalSurface: AnyObject {
     var foregroundProcessGroupID: pid_t? { get }
     /// Plain text of scrollback + screen, capped to `maxLines` from the bottom.
     func scrollbackText(maxLines: Int) -> String
+    /// Up to `maxRows` rows above the viewport, oldest first; the last one is the row right above the first line of
+    /// `visibleText()`. One entry per displayed row as in `visibleText()` (soft wraps not joined). Reads only those
+    /// rows. Empty when there are none (alternate screen, e.g. vim) or the viewport is scrolled up (not following the
+    /// output); nil when output moved the history while it was being measured (ask again).
+    func historyRows(maxRows: Int) -> [String]?
     func close()
 }
 

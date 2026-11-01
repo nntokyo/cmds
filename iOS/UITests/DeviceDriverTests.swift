@@ -10,6 +10,7 @@ import XCTest
 ///     type:<text>                   type into the focused element (\n = return)
 ///     wait:<seconds>
 ///     pinch:<scale>                 pinch the terminal screen (>1 zooms in)
+///     swipe:<down|up>[~count]       swipe the terminal screen (down scrolls back into earlier output)
 ///     value:<identifier>            print `CMDS_UI_VALUE <identifier> <accessibility value>`
 ///     waitValue:<id>~<text>[~secs]  wait (default 30 s) until that value contains <text>, else fail;
 ///                                   e.g. waitValue:connectionStatus~path=bluetooth (debug builds)
@@ -54,6 +55,15 @@ final class DeviceDriverTests: XCTestCase {
                 XCTAssertTrue(element.waitForExistence(timeout: 5), "no terminal screen")
                 let scale = CGFloat(Double(argument) ?? 2)
                 element.pinch(withScale: scale, velocity: scale >= 1 ? 1 : -1)
+            case "swipe":
+                // swipe:<down|up>[~count]
+                let parts = argument.components(separatedBy: "~")
+                let element = app.descendants(matching: .any).matching(
+                    NSPredicate(format: "identifier == %@", "terminalScreen")).firstMatch
+                XCTAssertTrue(element.waitForExistence(timeout: 5), "no terminal screen")
+                for _ in 0..<max(1, parts.count > 1 ? Int(parts[1]) ?? 1 : 1) {
+                    if parts[0] == "up" { element.swipeUp(velocity: .fast) } else { element.swipeDown(velocity: .fast) }
+                }
             case "value":
                 let element = Self.element(app, argument)
                 XCTAssertTrue(element.waitForExistence(timeout: 5), "no element \(argument)")

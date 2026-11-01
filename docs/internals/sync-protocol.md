@@ -138,7 +138,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"). |
+| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"). The Mac lists what it answers in `welcome.features`. |
 | `subscribe` | `paneIDs:[String]` | Replaces the streamed set. Mac sends a full `screen` for each new pane. `[]` stops streaming. |
 | `requestScreen` | `paneID` | Ask for a full `screen` (after a diff gap). |
 | `input` | `paneID, text` | Typed/pasted text, sent as-is (no newline translation). |
@@ -147,19 +147,21 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 | `focusPane` | `id` | Focus a pane on the Mac. |
 | `ping` | `nonce?:Int` | Phone pings every 10 s; reconnects if nothing received for 30 s. |
 | `requestFile` | `paneID` | Optional (feature `preview`). The file shown in that preview pane. Answered with `file` pieces or `error` (`notFound`: no such pane / file missing; `badRequest`: not a preview pane, feature not announced, a request already running). Older Macs answer `error{badRequest}` (unknown type). |
+| `requestScrollback` | `paneID, lines:Int` | Optional (Macs whose `welcome.features` has `"scrollback"`). Up to `lines` rows above the pane's screen (1…1000, `SyncScrollback.maxLines`). Answered with a full `screen` and right after it `scrollback` under the same `seq`, or `error` (`notFound`: no such pane; `badRequest`: not a terminal pane, or not subscribed). Ignored within 0.5 s of the previous one for that pane. Older Macs answer `error{badRequest}` (unknown type). See "Scrollback". |
 
 ## Mac → Phone (`ServerMessage`)
 
 | type | fields | notes |
 |---|---|---|
-| `welcome` | `protocolVersion, macName, token` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. |
+| `welcome` | `protocolVersion, macName, token, features?:[String]` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. `features`: optional requests this Mac answers (`SyncFeature`): `"scrollback"` (see "Scrollback"); absent from older Macs. |
 | `error` | `code:SyncErrorCode, message` | Codes: `unsupportedVersion pairingRequired invalidPairingCode invalidToken rateLimited notAuthenticated badRequest notFound internal`. After auth errors (`isAuthFailure`) the Mac closes the socket. |
 | `state` | `workspaces:[WorkspaceInfo], system?:SystemStats, agentLimits?:[AgentLimits]` | `agentLimits` = latest account limits per coding agent (`{agent: claude/codex/other, limits:[{id: five_hour/seven_day/spend/…, usedPercent, resetsAt? (epoch s), windowMinutes?, usedUSD?, limitUSD?, period?}], plan?, updatedAt}`), omitted when none is known or by older Macs; panes running an agent carry `PaneInfo.agent?` (`AgentUsage`, see [reference/api.md](../reference/api.md#types)). Agent figures alone change at the same ≤ 2 s cadence as CPU/memory. Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
-| `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?` | Full visible screen (no scrollback). Trailing spaces may be trimmed. Cursor nil = hidden. |
+| `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?` | Full visible screen, i.e. the Mac's viewport (the rows above it: `requestScrollback`). Trailing spaces may be trimmed. Cursor nil = hidden. |
 | `screenDiff` | `paneID, seq, baseSeq, changes:[{row,text}], cursorRow?, cursorCol?` | Only when rows/cols unchanged. Applies to the screen with `seq == baseSeq`; cursor is absolute. |
 | `notification` | `paneID?, workspaceID, title, body` | Pane raised attention (agent waiting, OSC 9/777…). Phone posts a local notification. |
 | `pong` | `nonce?` | Echo of `ping.nonce`. |
 | `file` | `paneID, name, mime, size:Int, offset:Int, data:base64, truncated?:Bool` | Answer to `requestFile`: bytes `offset ..< offset+len(data)` of the `size`-byte file, in pieces of ≤ 2 MiB (`SyncFile.chunkBytes`, so a frame stays under 4 MiB), in order; complete when the pieces reach `size` (an empty file is one piece with `size` 0). `truncated: true` (no data): over `SyncFile.maxBytes` (10 MB) or unreadable. |
+| `scrollback` | `paneID, seq, lines:[String]` | Answer to `requestScrollback`, sent right after the full `screen` with the same `seq`: the rows above that screen, oldest first, the last one directly above its first row. One entry per displayed row (soft wraps kept, trailing spaces trimmed); empty when there are none. |
 
 `seq` increases per pane for every `screen`/`screenDiff` and never goes backwards on a connection.
 The phone (`ScreenMirror`) ignores stale messages and sends `requestScreen` when a diff's `baseSeq`
@@ -178,6 +180,33 @@ Mac: only the file currently shown in an existing preview pane (the request name
 an agent on the Mac chose that file), at most 10 MB, one request at a time per connection, read off the main thread.
 The phone keeps the result per pane until the pane goes away or its file changes (reload button to fetch again).
 `SyncFileAssembler` (CmdsCore) joins the pieces; pieces out of order restart it.
+
+## Scrollback
+
+The phone asks for the rows above a pane's screen with `requestScrollback {paneID, lines}`, only from Macs that list
+`"scrollback"` (`SyncFeature.scrollback`) in `welcome.features`.
+
+- **Relative to the viewport.** `screen` is what the pane shows on the Mac (its viewport); `scrollback` has the rows
+  above it, oldest first: at most `lines` (clamped to 1…`SyncScrollback.maxLines` = 1000), fewer when the history is
+  shorter. Rows are what the terminal displays, like `screen` lines: a soft-wrapped line is several rows, trailing
+  spaces are trimmed.
+- **Aligned by `seq`.** The Mac reads the screen and the rows back to back (up to three times while the screen
+  changes in between), then sends a full `screen` under a new `seq` and right after it `scrollback` with that `seq`;
+  later `screenDiff`s build on that screen as usual. The last row is directly above that screen's first row. Rows that
+  scroll off the screen afterwards are not sent; ask again to extend the history. While output keeps moving the
+  history the Mac may send nothing at all (never an empty `scrollback` in its place); ask again later.
+- **Empty** when there is no history: the alternate screen (vim, less, other full-screen programs) has none. Also empty
+  while the pane is scrolled up on the Mac (its viewport is not at the bottom), which the Mac leaves alone.
+- **Limits.** Subscribed terminal panes only. A request for the same pane within 0.5 s of the previous one is ignored
+  (no answer); the phone asks every few seconds at most. 1000 rows of a wide pane can be about a megabyte; ask for
+  fewer over Bluetooth.
+- **Older Macs** send no `welcome.features` and answer `requestScrollback` with `error{badRequest}` (unknown type), so
+  the phone does not send it to them. **Older phones** never send it and ignore `welcome.features`.
+- **How the Mac reads it.** libghostty's text API reaches exact rows only inside the viewport (every point is clamped
+  to the viewport height), so the Mac moves the terminal's viewport over the wanted rows (`scroll_to_row`), reads them
+  row by row and returns the viewport to the bottom, all in one call on the main thread (about 1 ms for 1000 rows). It
+  never reads the whole history, which can be megabytes and partly compressed. A pane that is on screen on the Mac may
+  draw one frame of the moved viewport.
 
 ## Mac identity
 
@@ -249,13 +278,15 @@ pairing. The user re-pairs (scan the new QR code) or cancels.
 4. Phone sends `subscribe` for visible panes; Mac keeps one `ScreenStreamer` per connection and on
    each screen tick (~10 Hz, changed panes only) sends `streamer.update(paneID:snapshot:)` if non-nil.
    On `subscribe`: `streamer.reset(paneID:)` for new panes and `retain(paneIDs:)`. On `requestScreen`:
-   `streamer.fullScreen(paneID:)`.
+   `streamer.fullScreen(paneID:)`. On `requestScrollback`: `streamer.full(paneID:snapshot:)`, then
+   `scrollback` with its `seq`.
 5. Phone reconnects with exponential backoff (`SyncBackoff`, 0.5 s → 30 s, ±20 % jitter), immediately
    on returning to the foreground. Auth failures and identity mismatches do not auto-retry.
 
 Mac-side limits: hello within 10 s; at most 16 connections and 4 unauthenticated ones per host; 1 MiB
 per incoming frame, read one frame at a time; 16 KiB per `input` and 64 KiB of input per second;
-32 subscribed panes; screens at most 4 per second over Bluetooth; 16 relayed SSH connections; no pairing codes over SSH; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
+32 subscribed panes; screens at most 4 per second over Bluetooth; `requestScrollback` up to 1000 rows, one per pane
+per 0.5 s; 16 relayed SSH connections; no pairing codes over SSH; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
 total per minute (then 1 minute); a client that does not read 8 MiB of output is dropped.
 
 ## API summary (CmdsCore)
@@ -267,7 +298,8 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
   `.probe`), `evaluate(presented:policy:)`, `leafFingerprint(of:)`.
 - `SyncFingerprint` (`base64url`, `short`, `hex`, `matches(_:)`), `SyncPairingPayload` (`uri`,
   `parse(_:)`), `SyncCertificate.make(...)`, `DER`.
-- `ScreenStreamer` (per connection), `ScreenSnapshot` (rows, cols, lines, cursor).
+- `ScreenStreamer` (per connection; `full(paneID:snapshot:)` for `requestScrollback`), `ScreenSnapshot` (rows, cols,
+  lines, cursor).
 - `ScreenDiffer.diff(from:to:)` / `apply(_:to:)` for custom use.
 - `SyncKey.terminalBytes(applicationCursor:)` if writing keys straight to the pty.
 

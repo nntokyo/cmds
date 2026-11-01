@@ -51,7 +51,9 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
 - **Workspaces**: the same list as the Mac's sidebar with directory, branch, attention, CPU and memory, and the coding
   agent of each workspace. The bottom bar shows the Mac's CPU, memory and memory pressure and each agent's account
   limits. Long-press a workspace for **Show on Mac**.
-- **Panes**: each terminal's live screen (no scrollback), with pinch to zoom; it follows the cursor row. The key bar
+- **Panes**: each terminal's live screen, with pinch to zoom; it follows the cursor row. Swipe down for earlier output
+  (up to 500 rows above the screen, 200 over Bluetooth; iOS 18 or later, and cmds 0.3.0 or later on the Mac): while
+  you read it the screen stays put, and **Latest** (最新へ) or scrolling back down returns to the live screen. The key bar
   has esc, tab, a ctrl latch, arrows, home/end, ^C, ^D, delete and return. Two input modes: *Direct* sends every
   keystroke at once; *Line* lets you compose a line and send it with return. Long-press Send for **Send without Enter**. Shortcut buttons above the key bar send a canned text and Return: by default 承認, 考慮, 別案, 再確認 (Approved, Consider, Suggest an alternative, Double-check it in English), `claude` and `codex`; long-press one to insert it without Return. In line mode, while you are typing a line, a shortcut is added to that line instead of being sent. Edit, reorder or remove them in ⋯ › **Settings…**. With a hardware keyboard (iPad), tap the screen and keys go
   straight to the pane. The toolbar has **Show Workspace on Mac** and **Focus Pane on Mac**.

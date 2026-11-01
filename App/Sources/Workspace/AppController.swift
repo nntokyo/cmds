@@ -354,6 +354,12 @@ final class AppController {
         return terminal.visibleText()
     }
 
+    /// Up to `maxRows` rows above the pane's visible screen, oldest first; nil when output got in the way
+    /// (`TerminalSurface.historyRows`).
+    func historyRows(paneID: String?, maxRows: Int) throws -> [String]? {
+        try terminal(for: paneID).historyRows(maxRows: maxRows)
+    }
+
     /// Visible screen with its grid size and cursor, read back to back.
     func screenState(paneID: String?) throws -> (text: String, grid: (rows: Int, cols: Int)?, cursor: (row: Int, col: Int)?) {
         let terminal = try terminal(for: paneID)

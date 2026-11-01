@@ -34,6 +34,45 @@ final class TerminalScreenTests: XCTestCase {
         XCTAssertGreaterThan(Self.textPixels(in: shot.image), 50, "zoomed terminal shows no text")
     }
 
+    /// Earlier output (`requestScrollback`) sits above the screen: swiping down reveals it and stops following the
+    /// prompt; Latest returns to the prompt (#19).
+    func testScrollsBackIntoEarlierOutput() throws {
+        #if !targetEnvironment(simulator)
+        throw XCTSkip("simulator only")
+        #endif
+        let app = XCUIApplication(bundleIdentifier: "tokyo.n-n.cmds.companion")
+        app.launchArguments = ["-mock", "-noNotify", "-mockFullScreenTUI"]
+        app.launch()
+        defer { app.terminate() }
+
+        let workspace = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "api-server")).firstMatch
+        XCTAssertTrue(workspace.waitForExistence(timeout: 10))
+        workspace.tap()
+        let screen = app.descendants(matching: .any).matching(NSPredicate(format: "identifier == %@", "terminalScreen")).firstMatch
+        XCTAssertTrue(screen.waitForExistence(timeout: 10))
+        Thread.sleep(forTimeInterval: 1.5)
+        // Zoomed in, the screen and the rows above it are taller than the phone.
+        screen.pinch(withScale: 3, velocity: 1)
+        Thread.sleep(forTimeInterval: 1)
+        let latest = app.buttons.matching(NSPredicate(format: "identifier == %@", "terminalLatest")).firstMatch
+        XCTAssertFalse(latest.exists, "following the prompt: no Latest button")
+
+        for _ in 0..<6 { screen.swipeDown(velocity: .fast) }
+        XCTAssertTrue(latest.waitForExistence(timeout: 3), "scrolled into earlier output: Latest appears")
+        let top = screen.screenshot()
+        let attachment = XCTAttachment(screenshot: top)
+        attachment.name = "earlier output"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+        XCTAssertGreaterThan(Self.textPixels(in: top.image), 50, "no earlier output above the screen")
+
+        Thread.sleep(forTimeInterval: 2.5) // output keeps arriving; reading stays where it is
+        XCTAssertTrue(latest.exists, "a screen update scrolled back to the prompt while reading")
+        latest.tap()
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: latest)
+        wait(for: [gone], timeout: 3)
+    }
+
     /// Pixels drawn by terminal text (light gray on the dark background); the blue cursor and the orange
     /// attention border do not count.
     private static func textPixels(in image: UIImage) -> Int {

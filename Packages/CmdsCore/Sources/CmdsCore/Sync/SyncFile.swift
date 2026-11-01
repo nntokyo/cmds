@@ -1,11 +1,20 @@
 import Foundation
 import UniformTypeIdentifiers
 
-/// Optional protocol additions announced in `hello.features` (docs/internals/sync-protocol.md).
+/// Optional protocol additions (docs/internals/sync-protocol.md): the phone lists what it understands in
+/// `hello.features`, the Mac what it answers in `welcome.features`.
 public enum SyncFeature {
-    /// The phone decodes `PaneKind.preview` and understands `requestFile` / `file`. Phones without it get preview
+    /// Phone: decodes `PaneKind.preview` and understands `requestFile` / `file`. Phones without it get preview
     /// panes as browser panes (`url` = `file://…`), because older builds fail on an unknown pane kind.
     public static let previewPanes = "preview"
+    /// Mac: answers `requestScrollback` with `scrollback` (the rows above a pane's screen).
+    public static let scrollback = "scrollback"
+}
+
+/// Rows above the screen (`requestScrollback` / `scrollback`).
+public enum SyncScrollback {
+    /// Most rows the Mac sends for one request.
+    public static let maxLines = 1000
 }
 
 /// Sending the file of a preview pane to the phone in `file` messages (`requestFile`).

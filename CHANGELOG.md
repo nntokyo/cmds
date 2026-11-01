@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-01
+
+Mac and iPhone/iPad.
+
+### Added
+
+- iPhone/iPad: swipe down in a terminal for its earlier output (up to 500 rows above the screen, 200 over Bluetooth).
+  The screen stays put while you read it, and Latest returns to the live screen. Needs iOS 18 and cmds 0.3.0 or later
+  on the Mac (#19).
+- Mac: answers the phone's requests for the rows above a pane's screen (sync feature `scrollback`) (#19).
+
 ## [0.2.1] - 2026-11-01
 
 Mac only; the iPhone/iPad app is unchanged from 0.1.3.
@@ -131,7 +142,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.2.1...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.3.0...master
+[0.3.0]: https://github.com/nntokyo/cmds/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/nntokyo/cmds/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.2.0
 [0.1.3]: https://github.com/nntokyo/cmds/compare/v0.1.1...v0.1.3
