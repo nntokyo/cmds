@@ -46,24 +46,32 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
 | `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits], "keepAwake": KeepAwakeStatus}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known; `keepAwake` = `idleAssertion`, `displayAssertion`, `lidCloseDisabled` (system `SleepDisabled`), `lidCloseByCmds`, `lidCloseAvailable`, `onBattery`, see [Keeping the Mac awake](../internals/architecture.md#keeping-the-mac-awake)) |
 | `sync.status` | – | `SyncStatusReport` (iOS sync: `enabled`, `state`, `port`, `fingerprint`, `bonjour`, `pairingWindowOpen`, `pairedDevices`, `bluetooth` {`allowed`, `disabledByEnvironment`, `authorization`, `managerState`, `advertising`, `psm`, `channels`, `status`}, `remote` {`enabled`, `host`, `relayPort`, `forwarding`, `status`}, `clients` [{`deviceName`, `authenticated`, `peer`, `path`, `subscribedPanes`, `bytesSent`, `bytesReceived`, `connectedSince`, `connectedSeconds`}]); local socket only, see [Testing on a device](../internals/testing.md#testing-sync-on-a-device) |
-| `agent.report` | `pane?`, `usage` (`AgentUsage`), `pid?` (agent process) | – (sets the pane's agent usage; its `limits` become that agent's account limits) |
+| `agent.report` | `pane?`, `usage` (`AgentUsage`), `pid?` (agent process), `configDir?` (Claude Code's `CLAUDE_CONFIG_DIR`, `""` = not set; names the pane's [Claude account](../guide/ai-agents.md#several-claude-accounts); dropped on SSH panes' sockets) | – (sets the pane's agent usage; its `limits` become that agent's account limits; a window at 100 % marks the pane's Claude account limited) |
 | `agent.claude_hook` | `pane?`, `input` (Claude Code hook JSON, object or JSON text) | – (notifies and updates the agent state like `cmds hook claude`; never reads the transcript) |
 | `agent.claude_status` | `pane?`, `input` (status-line JSON) | – (like `cmds hook claude-status`, without a pid) |
 | `agent.list` | – | `{"panes": [{"workspace", "pane", "usage": AgentUsage}], "limits": [AgentLimits]}` |
 | `agent.subagents` | `pane?`, `workspace?` (default: all) | `SubagentList` `{"subagents": [{"id", "workspace", "pane", "agentType"?, "description"?, "state": "running"/"done", "startedAt", "endedAt"?, "action"?, "tokens"?, "elapsedSeconds"}]}`: Claude Code subagents from the `SubagentStart`/`SubagentStop` hooks (dates in seconds since 2001); local socket only |
 | `agent.sessions` | `pane?` (default: all panes) | `AgentSessionList` `{"mode": "ask"/"always"/"never", "sessions": [{"workspace", "pane", "state", "session": AgentSession, "command"?}]}` |
 | `agent.resume` | `pane?` or `all: true` | `{"queued": [pane], "skipped": [{"pane", "reason"}]}` (types the resume command once the pane's prompt is ready; [Resuming sessions](../guide/ai-agents.md#resuming-sessions)) |
+| `account.list` | – | `ClaudeAccountList` `{"accounts": [{"name", "configDir", "exists", "limit"?: {"kind": "usageLimit"/"rateLimit", "resetsAt", "estimated", "detectedAt", "message"?}, "sessions": "shared"/"missing"/"separate"/"elsewhere"/"noConfigDir", "panes": [id]}], "autoSwitch"}` (`limit` only while active). All `account.*` methods: local socket only |
+| `account.add` | `name`, `configDir` (absolute or `~/…`) | `ClaudeAccountList` |
+| `account.remove` | `name` | – (the folder is left as it is) |
+| `account.move` | `name`, `index` (0-based) | – |
+| `account.set` | `autoSwitch?` (bool) | `ClaudeAccountList` |
+| `account.clear_limit` | `name` | – |
+| `account.share` | `apply?` (default false: only the plan) | `[{"account", "projects", "action": "none"/"link"/"moveAside"/"skip", "backup"?, "reason"?}]` ([Sharing sessions](../guide/ai-agents.md#sharing-sessions-between-accounts)) |
+| `account.switch` | `pane?`, `account?` (default: the next without a limit) | `{"account"}`; the switch waits for Claude Code's idle prompt; refused when the session id is unknown, not reachable from the account, or the pane is an SSH pane |
 | `state.export` | – | `WorkspaceBundle` (workspaces, layout, per-pane agent sessions; [bundle format](cli.md#moving-workspaces-to-another-cmds)); local socket only |
 | `state.import` | `bundle` (object or JSON text), `mode?` (`append` default / `replace`), `resume?` (`ask`/`always`/`never`, default: the app setting) | `{"workspaces": [id], "panes", "closed", "resume", "offers": [{"workspace", "pane", "agent", "sessionID", "command"?}]}`; validates the bundle first; local socket only |
 | `remote.location` | `pane?`, `cwd?`, `branch?` | – (SSH panes: remote cwd/branch from `cmds-remote.sh prompt`) |
 | `workspace.list` | – | `[WorkspaceInfo]` |
-| `workspace.create` | `title?`, `cwd?`, `command?` or `ssh` (host), `remoteCwd?` | `WorkspaceInfo` |
+| `workspace.create` | `title?`, `cwd?`, `command?`, `account?` (Claude account name or `auto`) or `ssh` (host), `remoteCwd?` | `WorkspaceInfo` |
 | `workspace.select` | `id` | – |
 | `workspace.close` | `id` | – |
 | `view.tile` | one of `off: true`, `all: true`, `workspaces` ([id], at least two); `active?` (workspace to give the keyboard); `zoom?` (bool: show the active tile alone); no params = query | `TileStatus` `{"mode": "off"/"all"/"selected", "workspaces": [id] (display order), "active"?, "zoomed"?, "hidden"}` (`hidden` = left out beyond 9), `"rows"?` ([[id]], top to bottom: only while the user's dragged arrangement is shown; `workspaces` lists the same ids in reading order). Calling with `workspaces` resets to the automatic layout. [Tiled view](../guide/workspaces-and-panes.md#tiled-view); local socket only |
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
-| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?` | `PaneInfo` |
+| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?`, `account?` (local terminals) | `PaneInfo` |
 | `pane.open_file` | `path` (absolute, existing file), `pane?` (to split from; a preview pane shows the file itself instead), `direction?` (`right`/`down`), `focus?` (default true), `format?` (`markdown`/`diff`/`quicklook`) | `PaneInfo` (kind `preview`); refused (403) on SSH panes' sockets |
 | `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
 | `pane.focus` | `pane` | – |
@@ -107,7 +115,7 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   an SSH pane).
 - `PaneInfo` = `id`, `kind` (`terminal` / `browser` / `preview`), `title`, `focused`, `attention`,
   `workingDirectory?`, `url?` (browser), `file?` (preview: absolute path), `remote?` = `{host, connected, branch?}`
-  (SSH panes), `agent?` (`AgentUsage`).
+  (SSH panes), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude Code runs under).
 - `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`, `memoryTotalBytes`, `memoryPressure` (1 normal,
   2 warning, 4 critical; optional).
 - `AgentUsage` = `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`, `effort`,

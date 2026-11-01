@@ -13,6 +13,7 @@ Names are defined in `CmdsEnv` (`Packages/CmdsCore/Sources/CmdsCore/RPC.swift`) 
 | `CMDS_PANE_ID` | Id of the pane itself (`p1`, …). The CLI sends it so commands act on *this* pane even when another one is focused. Ids are reassigned when cmds restarts. |
 | `CMDS_SUPPORT_DIR` | Only in terminals of an isolated instance: the resolved absolute support directory, so the CLI there talks to that instance. |
 | `PATH` | The bundled CLI's directory (`cmds.app/Contents/Resources/bin`) comes first, so `cmds` is on `PATH`. |
+| `CLAUDE_CONFIG_DIR` | Only in panes opened with a Claude account (`cmds new --account`, [Several Claude accounts](../guide/ai-agents.md#several-claude-accounts)): the account's config directory, absolute. |
 | `TERM`, `TERM_PROGRAM` | `xterm-ghostty`, `ghostty` (set by libghostty): programs treat the pane like Ghostty. |
 
 ## Set on the server in SSH panes
@@ -42,7 +43,7 @@ environment reliably. How to use them together: [internals/testing.md](../intern
 
 | Variable | Effect |
 |---|---|
-| `CMDS_SUPPORT_DIR=<dir>` | Replaces `~/Library/Application Support/cmds` (`session.json`, `sync-devices.json`, `cmds.sock`, sync settings) and wins over an inherited `CMDS_SOCKET_PATH`. The instance also uses its own keychain items for the sync identity, keeps settings (language, keep-awake, resume mode, compact sidebar) in memory, leaves the saved window frames alone, never activates itself on launch and never runs `pmset` with privileges. |
+| `CMDS_SUPPORT_DIR=<dir>` | Replaces `~/Library/Application Support/cmds` (`session.json`, `sync-devices.json`, `claude-accounts.json`, `cmds.sock`, sync settings) and wins over an inherited `CMDS_SOCKET_PATH`. The instance also uses its own keychain items for the sync identity, keeps settings (language, keep-awake, resume mode, compact sidebar) in memory, leaves the saved window frames alone, never activates itself on launch and never runs `pmset` with privileges. |
 | `CMDS_SYNC_DISABLED=1` | Do not start the iOS sync server (no Bonjour advert, no port, no Bluetooth). |
 | `CMDS_SYNC_PORT=<port>` | Sync listen port instead of `47823`; unlike the default it never falls back to another port when taken. |
 | `CMDS_SYNC_NO_BONJOUR=1` | Run the sync server without the Bonjour advert, so no phone discovers the instance. |

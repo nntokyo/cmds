@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Mac: several Claude accounts of your own. An account is a name and a Claude Code config directory
+  (`CLAUDE_CONFIG_DIR`) that you sign in to yourself; cmds stores only names and paths, never credentials
+  (Settings › Agents › Claude accounts, `cmds accounts`). `cmds new --account NAME -- claude` (and `cmds split
+  --account`, `--account auto`) starts a pane under an account; the sidebar shows it after the model. Use only your
+  own accounts; you are responsible for following Anthropic's terms for each (#31).
+- Mac: when Claude Code shows "You've hit your … limit · resets …", an API rate-limit error, or a status-line limit
+  at 100 %, cmds records the account's reset time and offers to continue the session with the next account
+  (a bar in the pane and a notification with one click), or does it by itself (`cmds accounts auto on`). It waits
+  until Claude Code is idle at its prompt, quits it and resumes the same session with `claude --resume` under the
+  next account that has not hit its limit (#31).
+- Mac: Share Sessions… (`cmds accounts share`) lets every account reach the same session transcripts: each account's
+  `projects` folder becomes a symlink to the first account's, after asking; an account's own folder is renamed, never
+  deleted (#31).
+
 ## [0.4.0] - 2026-11-02
 
 Mac and iPhone/iPad.

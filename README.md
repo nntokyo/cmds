@@ -24,6 +24,9 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
   model, context, cost and 5-hour / 7-day / spend limits; a Claude Code skill.
 - **Session restore and resume**: layout and directories come back after a restart, and Claude Code / Codex sessions
   are offered for resuming; export/import moves them to another instance.
+- **Several Claude accounts** of your own: panes run Claude Code under an account (`CLAUDE_CONFIG_DIR`); when one
+  hits its usage limit, the session continues under the next one, on request or by itself, at the idle prompt. Use only
+  your own accounts; you are responsible for following Anthropic's terms for each.
 - **`cmds` CLI and socket API**: split, send, read, notify, open, browse, list, stats, events — JSON on request.
 - **iPhone/iPad companion**: QR pairing with TLS 1.3 pinned to the Mac's own certificate; connects over the local
   network (incl. peer-to-peer Wi‑Fi), Bluetooth LE when Wi‑Fi is off, or through an SSH relay host when away.
