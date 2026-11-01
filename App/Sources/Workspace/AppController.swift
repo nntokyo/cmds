@@ -502,9 +502,7 @@ final class AppController {
     /// The terminal that files panes with Follow Terminal follow: the workspace's local terminal pane focused most
     /// recently (else the first one).
     func followedTerminal(in workspace: Workspace) -> Pane? {
-        let terminals = workspace.orderedPanes.filter { $0.kind == .terminal && $0.ssh == nil }
-        guard let latest = terminals.map(\.focusedAt).max() else { return nil }
-        return terminals.first { $0.focusedAt == latest }
+        workspace.orderedPanes.filter { $0.kind == .terminal && $0.ssh == nil }.max { $0.focusedAt < $1.focusedAt }
     }
 
     /// `terminal` changed directory or took focus: files panes following it go there.

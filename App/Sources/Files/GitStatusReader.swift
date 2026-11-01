@@ -51,8 +51,7 @@ enum GitStatusReader {
         } catch {
             return nil
         }
-        // Read while it runs (a full pipe would block git), up to a limit.
-        var data = Data()
+        // Read while it runs (a full pipe would block git).
         let reader = DispatchQueue(label: "cmds.git-status.read")
         let readDone = DispatchSemaphore(value: 0)
         let box = DataBox()
@@ -67,8 +66,7 @@ enum GitStatusReader {
             return nil
         }
         _ = readDone.wait(timeout: .now() + 2)
-        data = box.data
-        return process.terminationStatus == 0 ? data : nil
+        return process.terminationStatus == 0 ? box.data : nil
     }
 
     private final class DataBox: @unchecked Sendable {
