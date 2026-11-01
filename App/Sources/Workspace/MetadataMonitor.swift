@@ -90,6 +90,7 @@ final class MetadataMonitor {
                     self?.scanning = false
                     self?.controller.applyMetadata(result)
                     self?.controller.applyAgentScan(codex)
+                    self?.controller.scanClaudeLimits()
                     self?.controller.applyResourceUsage(scan.usage, system: system)
                 }
             }

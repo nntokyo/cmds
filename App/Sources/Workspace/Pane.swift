@@ -55,6 +55,15 @@ final class Pane {
     /// The lastSeen of `agentSession` as last saved, to save again only now and then.
     var agentSessionSavedAt: Date?
 
+    // Claude accounts (AppController+Accounts.swift, docs/guide/ai-agents.md "Several Claude accounts").
+    /// The account Claude Code runs under here: given when the pane was created (its shell has the account's
+    /// `CLAUDE_CONFIG_DIR`), set by a switch, or learned from the status line. Saved in the session.
+    var claudeAccount: String?
+    /// Limit lines already handled in this pane, by when (a resumed session may show the old line again).
+    var seenLimitLines: [String: Date] = [:]
+    /// An account switch offered or in progress.
+    var accountSwitch: AccountSwitch?
+
     weak var controller: AppController?
 
     init(id: String, workspaceID: String, terminal: TerminalSurface, ssh: SSHSession? = nil) {
@@ -189,7 +198,7 @@ final class Pane {
     func info(focused: Bool) -> PaneInfo {
         PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
                  workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
-                 file: preview?.path)
+                 file: preview?.path, account: claudeAccount)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.

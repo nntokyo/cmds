@@ -374,6 +374,64 @@
         }
       }
     },
+    "%@: its projects folder is renamed to %@ (kept, not deleted), then linked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@: its projects folder is renamed to %2$@ (kept, not deleted), then linked"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：projectsフォルダを%2$@に名前変更して（削除せずに残します）からリンクします"
+          }
+        }
+      }
+    },
+    "%@: keeps %@ (the shared folder)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@: keeps %2$@ (the shared folder)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：%2$@をそのまま使います（共有フォルダ）"
+          }
+        }
+      }
+    },
+    "%@: left alone (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@: left alone (%2$@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：変更しません（%2$@）"
+          }
+        }
+      }
+    },
+    "%@: projects becomes a link to the shared folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@：projectsを共有フォルダへのリンクにします"
+          }
+        }
+      }
+    },
     "%lld AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.": {
       "localizations": {
         "ja": {
@@ -575,6 +633,26 @@
         }
       }
     },
+    "A folder of its own for each account, e.g. ~/.claude-work. Use ~/.claude for the account plain claude uses. cmds does not sign in: open a workspace with the account, run claude and type /login.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントごとに専用のフォルダを指定します（例：~/.claude-work）。普段のclaudeが使うアカウントは~/.claudeです。cmdsはサインインしません。そのアカウントでワークスペースを開き、claudeを起動して/loginと入力してください。"
+          }
+        }
+      }
+    },
+    "A new workspace whose shell uses this account (CLAUDE_CONFIG_DIR); run claude there, and /login the first time": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアカウント（CLAUDE_CONFIG_DIR）を使うシェルで新しいワークスペースを開きます。そこでclaudeを起動し、初回は/loginしてください"
+          }
+        }
+      }
+    },
     "A program in this terminal wants to read the clipboard. Allow it?": {
       "localizations": {
         "ja": {
@@ -595,6 +673,26 @@
         }
       }
     },
+    "Account: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウント：%@"
+          }
+        }
+      }
+    },
+    "Accounts are for local terminal panes, not SSH panes.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントはこのMacのターミナルペーン用です。SSHペーンでは使えません。"
+          }
+        }
+      }
+    },
     "Actual Size": {
       "localizations": {
         "ja": {
@@ -611,6 +709,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "追加"
+          }
+        }
+      }
+    },
+    "Add Account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントを追加"
+          }
+        }
+      }
+    },
+    "Add Claude Account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeアカウントを追加"
+          }
+        }
+      }
+    },
+    "Add at least two accounts to continue sessions across them.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントをまたいでセッションを続けるには、2つ以上のアカウントを追加してください。"
           }
         }
       }
@@ -737,6 +865,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動アップデートは cmds.n-n.tokyo からダウンロードしたリリース版で使えます。このビルド（またはテスト用の起動）では使えません。"
+          }
+        }
+      }
+    },
+    "Available": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "利用可能"
           }
         }
       }
@@ -1061,12 +1199,92 @@
         }
       }
     },
+    "Choose…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択…"
+          }
+        }
+      }
+    },
+    "Claude Accounts": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeアカウント"
+          }
+        }
+      }
+    },
+    "Claude Code did not quit. Quit it yourself, then try again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeが終了しませんでした。手動で終了してから、もう一度試してください。"
+          }
+        }
+      }
+    },
+    "Claude Code keeps each session in its config folder’s projects folder. To continue a session under another account, every account’s projects folder becomes a symbolic link to the first account’s. Sessions kept only in a renamed folder are not resumable from there until you move them back yourself.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeは各セッションを設定フォルダ内のprojectsフォルダに保存します。別のアカウントでセッションを続けられるよう、各アカウントのprojectsフォルダを最初のアカウントのprojectsフォルダへのシンボリックリンクにします。名前を変更したフォルダにだけあるセッションは、手動で戻すまで再開できません。"
+          }
+        }
+      }
+    },
     "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Claude Code のサブエージェントを、各ワークスペースの下にカードで表示します（現在の操作つき）。SubagentStart / SubagentStop フックが必要です。"
+          }
+        }
+      }
+    },
+    "Claude account limit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeアカウントの上限"
+          }
+        }
+      }
+    },
+    "Claude account switched": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeアカウントを切り替えました"
+          }
+        }
+      }
+    },
+    "Claude accounts:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeアカウント："
+          }
+        }
+      }
+    },
+    "Clear Limit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限を消去"
           }
         }
       }
@@ -1161,6 +1379,26 @@
         }
       }
     },
+    "Config Directory": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定フォルダ"
+          }
+        }
+      }
+    },
+    "Config directory:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定フォルダ："
+          }
+        }
+      }
+    },
     "Connect": {
       "localizations": {
         "ja": {
@@ -1209,6 +1447,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "コンテキスト%@"
+          }
+        }
+      }
+    },
+    "Continue with Next Account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のアカウントで続ける"
+          }
+        }
+      }
+    },
+    "Continue with “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”で続ける"
+          }
+        }
+      }
+    },
+    "Continuing the session with “%@” (was “%@”).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Continuing the session with “%1$@” (was “%2$@”)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを“%1$@”で続けます（切り替え前：“%2$@”）。"
           }
         }
       }
@@ -1371,6 +1645,16 @@
         }
       }
     },
+    "Each account is a Claude Code config directory (CLAUDE_CONFIG_DIR) that you sign in to yourself once: open a workspace with the account, run claude and type /login. cmds keeps only the names and paths, never credentials. When an account hits its limit, cmds offers to continue the session with the next account.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各アカウントはClaude Codeの設定フォルダ（CLAUDE_CONFIG_DIR）で、最初に一度だけ自分でサインインします。そのアカウントでワークスペースを開き、claudeを起動して/loginと入力してください。cmdsが保存するのは名前とパスだけで、認証情報は保存しません。アカウントが上限に達すると、次のアカウントでセッションを続けるか確認します。"
+          }
+        }
+      }
+    },
     "Edit": {
       "localizations": {
         "ja": {
@@ -1437,6 +1721,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべてのiPhone/iPadが切断され、新しいコードで再度ペアリングが必要になります。"
+          }
+        }
+      }
+    },
+    "Every other account has hit its limit.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアカウントもすべて上限に達しています。"
           }
         }
       }
@@ -1598,6 +1892,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "フォント:"
+          }
+        }
+      }
+    },
+    "Forget this account’s limit (e.g. when it has reset early)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアカウントの上限の記録を消去します（早くリセットされたときなど）"
           }
         }
       }
@@ -1830,6 +2134,16 @@
         }
       }
     },
+    "Its folder %@ and everything in it stay as they are. Panes using it keep running.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ%@とその中身はそのまま残ります。このアカウントを使っているペーンも動き続けます。"
+          }
+        }
+      }
+    },
     "Jump to Latest Attention": {
       "localizations": {
         "ja": {
@@ -2021,6 +2335,16 @@
         }
       }
     },
+    "Limit — %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限 — %@"
+          }
+        }
+      }
+    },
     "Lines +%lld −%lld": {
       "comment": "lines changed by the agent",
       "localizations": {
@@ -2034,6 +2358,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "変更行 +%1$lld −%2$lld"
+          }
+        }
+      }
+    },
+    "Linked elsewhere": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別の場所にリンク"
           }
         }
       }
@@ -2064,6 +2398,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Macがバッテリー駆動です"
+          }
+        }
+      }
+    },
+    "Manage…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理…"
           }
         }
       }
@@ -2146,6 +2490,16 @@
         }
       }
     },
+    "Move Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下へ移動"
+          }
+        }
+      }
+    },
     "Move Tile Down": {
       "localizations": {
         "ja": {
@@ -2182,6 +2536,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイルを上へ移動"
+          }
+        }
+      }
+    },
+    "Move Up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上へ移動"
+          }
+        }
+      }
+    },
+    "Name": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前"
+          }
+        }
+      }
+    },
+    "Name:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前："
           }
         }
       }
@@ -2337,6 +2721,16 @@
         }
       }
     },
+    "Not shared": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有なし"
+          }
+        }
+      }
+    },
     "Not supported on this Mac": {
       "localizations": {
         "ja": {
@@ -2415,6 +2809,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "その他"
+          }
+        }
+      }
+    },
+    "Otherwise cmds asks in the pane and in a notification. Either way it waits until Claude Code is idle at its prompt, quits it and resumes the same session with the next account that has not hit its limit.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オフのときは、ペーンと通知で確認します。どちらの場合も、Claude Codeがプロンプトで待機するまで待ってから終了し、上限に達していない次のアカウントで同じセッションを再開します。"
           }
         }
       }
@@ -2710,6 +3114,36 @@
         }
       }
     },
+    "Remove": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除"
+          }
+        }
+      }
+    },
+    "Remove Account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントを削除"
+          }
+        }
+      }
+    },
+    "Remove “%@” from cmds?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”をcmdsから削除しますか？"
+          }
+        }
+      }
+    },
     "Rename": {
       "localizations": {
         "ja": {
@@ -2991,6 +3425,26 @@
         }
       }
     },
+    "Sessions": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション"
+          }
+        }
+      }
+    },
+    "Sessions are shared: each account’s projects folder is the first account’s.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションは共有されています。各アカウントのprojectsフォルダは最初のアカウントのものです。"
+          }
+        }
+      }
+    },
     "Set Sidebar Status": {
       "localizations": {
         "ja": {
@@ -3028,6 +3482,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定…"
+          }
+        }
+      }
+    },
+    "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のClaude Codeアカウントを複数登録し、上限に達したら次のアカウントでセッションを続けます。"
+          }
+        }
+      }
+    },
+    "Share": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有"
+          }
+        }
+      }
+    },
+    "Share Sessions…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを共有…"
+          }
+        }
+      }
+    },
+    "Share sessions between accounts?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウント間でセッションを共有しますか？"
+          }
+        }
+      }
+    },
+    "Shared": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有"
           }
         }
       }
@@ -3251,6 +3755,16 @@
         }
       }
     },
+    "Status": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状態"
+          }
+        }
+      }
+    },
     "Status: %@": {
       "localizations": {
         "ja": {
@@ -3315,6 +3829,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用スワップ%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "Switch automatically when an account hits its limit": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントが上限に達したら自動で切り替える"
+          }
+        }
+      }
+    },
+    "Switching to “%@” once Claude Code is idle…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeが待機状態になったら“%@”に切り替えます…"
+          }
+        }
+      }
+    },
+    "Switching to “%@”: quitting Claude Code…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”に切り替え中：Claude Codeを終了しています…"
           }
         }
       }
@@ -3460,6 +4004,26 @@
         }
       }
     },
+    "The session cannot be reached from “%@”: share sessions in Settings › Claude Accounts first.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”からこのセッションを参照できません。先に「設定」›「Claudeアカウント」でセッションを共有してください。"
+          }
+        }
+      }
+    },
+    "The session id is not known: add cmds hook claude-status to the status line in this account’s settings.json.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションIDが不明です。このアカウントのsettings.jsonでステータスラインにcmds hook claude-statusを追加してください。"
+          }
+        }
+      }
+    },
     "The ssh process exited. Reconnect runs the same command again.": {
       "localizations": {
         "ja": {
@@ -3516,6 +4080,16 @@
         }
       }
     },
+    "This folder does not exist yet: open a workspace with the account and sign in with claude.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダはまだありません。そのアカウントでワークスペースを開き、claudeでサインインしてください。"
+          }
+        }
+      }
+    },
     "Tile All Workspaces": {
       "localizations": {
         "ja": {
@@ -3542,6 +4116,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイトル："
+          }
+        }
+      }
+    },
+    "To continue a session under another account, its transcripts must be shared (a projects symlink).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のアカウントでセッションを続けるには、セッションの記録を共有する必要があります（projectsのシンボリックリンク）。"
           }
         }
       }
@@ -3693,6 +4277,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "中継ポートは1024〜65535の範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "Use only your own accounts. You are responsible for following Anthropic’s terms for each account.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のアカウントだけを使ってください。各アカウントでAnthropicの利用規約を守る責任は利用者にあります。"
           }
         }
       }
@@ -4029,6 +4623,16 @@
         }
       }
     },
+    "projects is a link or file pointing elsewhere; cmds leaves it alone.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "projectsは別の場所を指すリンクまたはファイルです。cmdsは変更しません。"
+          }
+        }
+      }
+    },
     "pt": {
       "comment": "font size unit (points)",
       "localizations": {
@@ -4046,6 +4650,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "リモートのディレクトリ（省略可。例：~/src/app）"
+          }
+        }
+      }
+    },
+    "resets %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@にリセット"
+          }
+        }
+      }
+    },
+    "resets around %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ごろリセット"
           }
         }
       }
@@ -4109,6 +4733,80 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースのタイトル（省略可）"
+          }
+        }
+      }
+    },
+    "“%@” hit its limit (%@).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "“%1$@” hit its limit (%2$@)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”が上限に達しました（%2$@）。"
+          }
+        }
+      }
+    },
+    "“%@” hit its limit.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”が上限に達しました。"
+          }
+        }
+      }
+    },
+    "“%@” hit its limit. %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "“%1$@” hit its limit. %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”が上限に達しました。%2$@"
+          }
+        }
+      }
+    },
+    "“%@” hit its limit. Continue with “%@”?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "“%1$@” hit its limit. Continue with “%2$@”?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”が上限に達しました。“%2$@”で続けますか？"
+          }
+        }
+      }
+    },
+    "“%@” hit its limit. Continuing with “%@” once Claude Code is idle.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "“%1$@” hit its limit. Continuing with “%2$@” once Claude Code is idle."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”が上限に達しました。Claude Codeが待機状態になったら“%2$@”で続けます。"
           }
         }
       }

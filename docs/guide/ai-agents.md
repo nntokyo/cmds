@@ -1,7 +1,7 @@
 # Using AI coding agents in cmds
 
 > How to connect Claude Code, Codex and other agents to cmds: notifications, usage and limits, the Claude skill,
-> session resume and agents on SSH servers.
+> session resume, several Claude accounts and agents on SSH servers.
 
 Each terminal has `cmds` on `PATH` (the copy inside the app bundle) and `CMDS_SOCKET_PATH`, `CMDS_WORKSPACE_ID`,
 `CMDS_PANE_ID` in its environment, so an agent running in a pane can drive the app with the CLI
@@ -184,6 +184,93 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
   resumes (`agent.resume`). From a server, `cmds-remote` sockets only reach their own pane (`--all` is refused).
 
 Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting from `CMDS_AGENT_RESUME=ask|always|never`.
+
+## Several Claude accounts
+
+If you have more than one Claude account of your own (say a work and a personal subscription), cmds can run Claude
+Code panes under each of them and move a session to the next account when one hits its usage limit.
+
+> Use only your own accounts. You are responsible for following Anthropic's terms for each account.
+
+### Accounts
+
+An account is a name and a Claude Code config directory (`CLAUDE_CONFIG_DIR`). Claude Code keeps everything of an
+account there (sign-in, settings, sessions); `~/.claude` is the one plain `claude` uses. cmds stores only the names
+and paths (in `claude-accounts.json` in its support directory), never reads, copies or stores credentials, and never
+signs in for you.
+
+1. Add the accounts in **Settings › Agents › Claude accounts › Manage…** (+, a name and a folder such as
+   `~/.claude-work`) or with `cmds accounts add work ~/.claude-work`. Their order is the switching order (▲▼,
+   `cmds accounts move`).
+2. Sign in once per account yourself: select it and click **New Workspace** (or `cmds new --account work`), run
+   `claude` there and type `/login`.
+3. Set up each account's `settings.json` (`<config dir>/settings.json`) like `~/.claude/settings.json`: the
+   [hooks](#notifications-hooks) and, needed for switching, the [status line](#usage-and-limits-status-line), which
+   tells cmds the session id and which account Claude Code runs under. Copying the file or symlinking it to
+   `~/.claude/settings.json` both work; cmds does not touch it.
+4. **Share Sessions…** ([below](#sharing-sessions-between-accounts)).
+
+### Starting Claude Code under an account
+
+`cmds new --account work -- claude` (or `cmds split --account work -- claude`) opens a pane whose shell has
+`CLAUDE_CONFIG_DIR` set to the account's folder, so `claude` and everything started from it uses that account.
+`--account auto` takes the first account in order that has not hit its limit. The pane keeps its account after a
+restart. The sidebar shows it after the agent and model (`Claude Opus @work`), its tooltip says `Account: work`, `cmds ls` and
+`cmds sessions` print `account work`. A pane where you start `claude` yourself gets the account whose folder matches
+the `CLAUDE_CONFIG_DIR` Claude Code reports through the status line (none set: the account using `~/.claude`, if
+any).
+
+### When an account hits its limit
+
+Every 2 s cmds reads the last 40 lines of each local pane running Claude Code for a line that *starts* with one of
+Claude Code's limit messages (a file or diff that only contains the words does not count):
+
+- usage limit: `You've hit your limit · resets 3pm (Asia/Tokyo)`, `You've hit your weekly limit · resets Nov 7, 9am`,
+  `5-hour limit reached ∙ resets 3pm`, `Claude usage limit reached. Your limit will reset at 3pm (…)`;
+- API rate limit: `API Error: 429 {…"rate_limit_error"…}`, `API Error: Rate limit reached`.
+
+A status-line window (5-hour, 7-day, spend) at 100 % counts too. Warnings (`Approaching usage limit`, `You've used 90%
+of …`) do not. The account is marked limited until the reset time in the message (in its time zone, else the
+Mac's); without one, for 5 hours (usage limit) or 15 minutes (rate limit). Settings and `cmds accounts` show it;
+**Clear Limit** / `cmds accounts clear NAME` forgets it.
+
+Then, if you have accounts set up:
+
+- **Ask** (default): a bar at the top of the pane — "“work” hit its limit (resets 15:00)." with **Continue with
+  “personal”** and **Dismiss** — the ring, the sidebar text and, when cmds is in the background, a macOS notification
+  with **Continue with Next Account**. When it cannot switch, the bar says why: every other account is limited, the
+  session id is unknown (no status line in that account), or the session is not reachable from the next account
+  (**Settings…** to share sessions).
+- **Automatic** (Settings › Claude Accounts › Switch automatically, `cmds accounts auto on`): the same, without asking.
+
+Switching to the next account in order that has not hit its limit, in that pane only:
+
+1. Waits until Claude Code is idle at its prompt: it is the pane's foreground process, not working, no subagent
+   running, and the screen has not changed for 2 s. Never mid-turn.
+2. Sends Ctrl-C twice, as Claude Code asks to quit (a draft typed in its prompt is cleared by the first one), more if
+   needed; after four without effect it gives up and says so.
+3. Once the shell is back, types `cd '<dir>' && env CLAUDE_CONFIG_DIR='<next folder>' claude --resume <id>` the way
+   [resuming](#resuming-sessions) does (at an empty shell prompt, once). The conversation continues under the next
+   account; ask Claude to go on with what it was doing.
+
+`cmds accounts switch [--pane P] [--to NAME]` does the same on request, also without a limit. Accounts are for local
+panes; SSH panes are never switched.
+
+### Sharing sessions between accounts
+
+Claude Code keeps each session in `<config dir>/projects/<project>/<session id>.jsonl`, and `claude --resume` looks
+only in its own config directory. So that the next account can resume a session, the accounts share one `projects`
+folder: **Share Sessions…** (or `cmds accounts share`, then `--yes`) shows what it will do and, when you confirm,
+
+- keeps the first account's `projects` folder (the first one whose folder exists) as the shared one,
+- turns every other account's `projects` into a symbolic link to it; an account's own `projects` folder is renamed to
+  `projects.before-cmds-<date>` first (kept, never deleted, merged or overwritten; move sessions you want back in
+  yourself),
+- leaves alone a `projects` that already links elsewhere, and accounts whose folder does not exist yet.
+
+Before switching, cmds checks that the session's file is reachable from the next account (it lists folder names; it
+does not read transcripts). The first time an account opens a project, Claude Code may ask whether you trust the
+folder.
 
 ## Moving to a new version
 

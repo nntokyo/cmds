@@ -67,4 +67,20 @@ final class CLIFormatEnglishTests: XCTestCase {
         // The default is untouched.
         XCTAssertEqual(AgentFormat.limitLines(windows, now: now), ["5-hour limit 40% used"])
     }
+
+    func testAccounts() {
+        let limit = ClaudeAccountLimit(kind: .usageLimit, resetsAt: now.addingTimeInterval(7800), detectedAt: now)
+        let list = ClaudeAccountList(accounts: [
+            ClaudeAccountStatus(name: "work", configDir: "~/.claude-work", exists: true, limit: limit, sessions: .shared, panes: ["p3"]),
+            ClaudeAccountStatus(name: "me", configDir: "~/.claude", exists: true, limit: nil, sessions: .separate, panes: []),
+        ], autoSwitch: false)
+        let lines = Format.accounts(list, now: now).split(separator: "\n").map(String.init)
+        XCTAssertEqual(lines.count, 3)
+        XCTAssertTrue(lines[0].hasPrefix("1  work  ~/.claude-work  limit, resets "), lines[0])
+        XCTAssertTrue(lines[0].hasSuffix("  sessions shared  panes p3"), lines[0])
+        XCTAssertEqual(lines[1], "2  me    ~/.claude       available  sessions not shared")
+        XCTAssertEqual(lines[2], "switch at the limit: ask")
+        XCTAssertEqual(Format.accounts(ClaudeAccountList(accounts: [], autoSwitch: true), now: now),
+                       "no Claude accounts (add one: cmds accounts add NAME CONFIG_DIR)\n")
+    }
 }

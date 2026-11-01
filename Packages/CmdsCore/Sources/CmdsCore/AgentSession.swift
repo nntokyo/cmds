@@ -19,9 +19,13 @@ public struct AgentSession: Codable, Equatable, Sendable {
     public var model: String?
     /// Last time the agent reported (status line / session file).
     public var lastSeen: Date
+    /// Claude Code under one of the user's accounts (`ClaudeAccount`): its name, and the config directory the resume
+    /// command passes as `CLAUDE_CONFIG_DIR` (absolute). nil: the shell's own environment.
+    public var account: String?
+    public var configDir: String?
 
     public init(agent: AgentKind, sessionID: String, cwd: String? = nil, host: String? = nil, title: String? = nil,
-                model: String? = nil, lastSeen: Date = Date()) {
+                model: String? = nil, lastSeen: Date = Date(), account: String? = nil, configDir: String? = nil) {
         self.agent = agent
         self.sessionID = sessionID
         self.cwd = cwd
@@ -29,10 +33,12 @@ public struct AgentSession: Codable, Equatable, Sendable {
         self.title = title
         self.model = model
         self.lastSeen = lastSeen
+        self.account = account
+        self.configDir = configDir
     }
 
     private enum CodingKeys: String, CodingKey {
-        case agent, sessionID, cwd, host, title, model, lastSeen
+        case agent, sessionID, cwd, host, title, model, lastSeen, account, configDir
     }
 
     /// Fails for records that cannot be resumed (unknown agent, malformed id), so callers can drop them.
@@ -51,6 +57,9 @@ public struct AgentSession: Codable, Equatable, Sendable {
         title = c.lenientString(.title)
         model = c.lenientString(.model)
         lastSeen = c.lenientDate(.lastSeen) ?? Date()
+        account = c.lenientString(.account)
+        // Typed into a shell: only a directory every shell quotes the same way (else resumed without it).
+        configDir = c.lenientString(.configDir).flatMap { $0.hasPrefix("/") && AgentResume.quotedPath($0) != nil ? $0 : nil }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -62,6 +71,8 @@ public struct AgentSession: Codable, Equatable, Sendable {
         try c.encodeIfPresent(title, forKey: .title)
         try c.encodeIfPresent(model, forKey: .model)
         try c.encode(lastSeen.timeIntervalSince1970, forKey: .lastSeen)
+        try c.encodeIfPresent(account, forKey: .account)
+        try c.encodeIfPresent(configDir, forKey: .configDir)
     }
 
     /// `Claude Code session "Fix login" (Opus, 3 h ago)`-style one-liner for banners and the CLI.
@@ -170,14 +181,21 @@ public enum AgentResume {
     }
 
     /// The command line typed into the pane's shell (without the trailing Return):
-    /// `cd '<cwd>' && claude --resume <id>` / `cd '<cwd>' && codex resume <id>`.
-    /// nil when the session cannot be resumed safely (unsupported agent, invalid id).
+    /// `cd '<cwd>' && claude --resume <id>` / `cd '<cwd>' && codex resume <id>`; a Claude Code session of an account
+    /// (`configDir`) runs `env CLAUDE_CONFIG_DIR='<dir>' claude --resume <id>` (`env` works in every shell).
+    /// nil when the session cannot be resumed safely (unsupported agent, invalid id, unquotable config dir).
     /// A cwd that cannot be quoted for every shell (quotes, backslashes, control characters) is left out.
     public static func command(for session: AgentSession) -> String? {
         guard isValidSessionID(session.sessionID) else { return nil }
         let resume: String
         switch session.agent {
-        case .claude: resume = "claude --resume \(session.sessionID)"
+        case .claude:
+            if let dir = session.configDir {
+                guard dir.hasPrefix("/"), let quoted = quotedPath(dir) else { return nil }
+                resume = "env CLAUDE_CONFIG_DIR=\(quoted) claude --resume \(session.sessionID)"
+            } else {
+                resume = "claude --resume \(session.sessionID)"
+            }
         case .codex: resume = "codex resume \(session.sessionID)"
         case .other: return nil
         }

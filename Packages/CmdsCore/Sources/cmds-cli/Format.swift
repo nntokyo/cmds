@@ -67,6 +67,7 @@ enum Format {
         if let remote = pane.remote { line += "  ssh \(remote.host)\(remote.connected ? "" : " (disconnected)")" }
         if pane.kind == .terminal, let cwd = pane.workingDirectory { line += "  \(pane.remote == nil ? abbreviate(cwd) : cwd)" }
         if pane.id == currentPane { line += "  (this pane)" }
+        if let account = pane.account { line += "  account \(oneLine(account))" }
         if let agent = pane.agent {
             // Account limits are left to `cmds agents` / `cmds stats` (the session's own copy may be older).
             line += "  [\(AgentFormat.summary(agent, limits: []))\(agent.isStale ? ", idle" : "")]"
@@ -137,6 +138,7 @@ enum Format {
             var where_ = "id \(entry.session.sessionID)"
             if let host = entry.session.host { where_ += "  on \(oneLine(host))" }
             if let cwd = entry.session.cwd { where_ += "  in \(oneLine(cwd))" }
+            if let account = entry.session.account { where_ += "  account \(oneLine(account))" }
             out += indent + where_ + "\n"
             if let command = entry.command, entry.state == .offered || entry.state == .waiting {
                 out += indent + "$ \(command)\n"
@@ -160,6 +162,52 @@ enum Format {
             if let plan = entry.plan { line += "  · plan \(plan)" }
             if now.timeIntervalSince(entry.updatedAt) > 600 { line += "  (as of \(AgentFormat.age(entry.updatedAt, now: now)))" }
             return line + "\n"
+        }.joined()
+    }
+
+    /// `cmds accounts`: one line per Claude account in the user's order, then the switch setting.
+    /// `1  work  ~/.claude-work  limit, resets 15:00 (in 2h10m)  sessions shared  panes p3 p5`
+    static func accounts(_ list: ClaudeAccountList, now: Date = Date()) -> String {
+        guard !list.accounts.isEmpty else {
+            return "no Claude accounts (add one: cmds accounts add NAME CONFIG_DIR)\n"
+        }
+        let nameWidth = list.accounts.map(\.name.count).max() ?? 0
+        let dirWidth = list.accounts.map(\.configDir.count).max() ?? 0
+        var out = ""
+        for (index, account) in list.accounts.enumerated() {
+            var line = "\(index + 1)  " + account.name.padding(toLength: nameWidth, withPad: " ", startingAt: 0)
+                + "  " + account.configDir.padding(toLength: dirWidth, withPad: " ", startingAt: 0) + "  "
+            if let limit = account.limit {
+                line += "\(limit.kind == .rateLimit ? "rate limit" : "limit"), resets "
+                    + (limit.estimated ? "about " : "") + AgentFormat.resetTime(limit.resetsAt, now: now)
+            } else {
+                line += account.exists ? "available" : "missing directory"
+            }
+            switch account.sessions {
+            case .shared: line += "  sessions shared"
+            case .missing, .separate: line += "  sessions not shared"
+            case .elsewhere: line += "  projects links elsewhere"
+            case .noConfigDir: break
+            }
+            if !account.panes.isEmpty { line += "  panes \(account.panes.joined(separator: " "))" }
+            out += line + "\n"
+        }
+        return out + "switch at the limit: \(list.autoSwitch ? "automatic" : "ask")\n"
+    }
+
+    /// `cmds accounts share`: what each account's projects folder becomes.
+    static func shareSteps(_ steps: [JSONValue], applied: Bool) -> String {
+        steps.map { step in
+            let account = step["account"]?.stringValue ?? "?"
+            let projects = abbreviate(step["projects"]?.stringValue ?? "")
+            switch step["action"]?.stringValue {
+            case "none": return "\(account): \(projects) is shared already\n"
+            case "link": return "\(account): \(applied ? "linked" : "link") \(projects) to the shared folder\n"
+            case "moveAside":
+                let backup = step["backup"]?.stringValue ?? ""
+                return "\(account): \(applied ? "renamed" : "rename") \(projects) to \(backup) (kept), then \(applied ? "linked" : "link")\n"
+            default: return "\(account): left alone — \(step["reason"]?.stringValue ?? "")\n"
+            }
         }.joined()
     }
 
