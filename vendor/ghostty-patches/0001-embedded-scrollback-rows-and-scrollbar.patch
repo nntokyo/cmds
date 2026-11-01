@@ -17,30 +17,70 @@ while the surface is not drawn. Together they let an embedder read the
 rows right above the viewport (screen rows offset-n ..< offset) without
 moving it.
 
+It also returns PageList.pruned_rows, the rows pruned from the top of the
+scrollback to stay within its limits (grow, Limits.enforce) since the
+screen was created. Screen rows move up by that much, so an embedder that
+remembers a screen row (e.g. the last one it sent elsewhere) can find it
+again after pruning instead of starting over. Erasing the history, resets
+and resizes are not counted.
+
 cmds carries this on Ghostty b2c78c9bd9bc (scripts/build-ghostty.sh
 applies it for the build and reverts it afterwards).
 ---
- include/ghostty.h      |  1 +
- src/apprt/embedded.zig | 24 ++++++++++++++++++++++--
- 2 files changed, 23 insertions(+), 2 deletions(-)
+ include/ghostty.h         | 11 +++++++++++
+ src/apprt/embedded.zig    | 43 +++++++++++++++++++++++++++++++++++++++++--
+ src/terminal/PageList.zig | 12 ++++++++++++
+ 3 files changed, 64 insertions(+), 2 deletions(-)
 
 diff --git a/include/ghostty.h b/include/ghostty.h
-index 9a12b9c..60ae455 100644
+index 9a12b9c..c0a68f8 100644
 --- a/include/ghostty.h
 +++ b/include/ghostty.h
-@@ -1240,6 +1240,7 @@ GHOSTTY_API bool ghostty_surface_read_text(ghostty_surface_t,
+@@ -529,6 +529,16 @@ typedef struct {
+   uint32_t cell_height_px;
+ } ghostty_surface_size_s;
+ 
++// Scrollbar of the active screen (ghostty_surface_scrollbar): rows of the
++// whole screen, screen row at the top of the viewport, viewport rows, and
++// rows pruned from the top of the scrollback so far.
++typedef struct {
++  uint64_t total;
++  uint64_t offset;
++  uint64_t len;
++  uint64_t pruned;
++} ghostty_surface_scrollbar_s;
++
+ // Config types
+ 
+ // config.Path
+@@ -1240,6 +1250,7 @@ GHOSTTY_API bool ghostty_surface_read_text(ghostty_surface_t,
                                                ghostty_selection_s,
                                                ghostty_text_s*);
  GHOSTTY_API void ghostty_surface_free_text(ghostty_surface_t, ghostty_text_s*);
-+GHOSTTY_API ghostty_action_scrollbar_s ghostty_surface_scrollbar(ghostty_surface_t);
++GHOSTTY_API ghostty_surface_scrollbar_s ghostty_surface_scrollbar(ghostty_surface_t);
  
  #ifdef __APPLE__
  GHOSTTY_API void ghostty_surface_set_display_id(ghostty_surface_t, uint32_t);
 diff --git a/src/apprt/embedded.zig b/src/apprt/embedded.zig
-index 697f0a7..acbab70 100644
+index 697f0a7..0f65de8 100644
 --- a/src/apprt/embedded.zig
 +++ b/src/apprt/embedded.zig
-@@ -1642,9 +1642,15 @@ pub const CAPI = struct {
+@@ -1610,6 +1610,14 @@ pub const CAPI = struct {
+         }
+     };
+ 
++    // ghostty_surface_scrollbar_s
++    const SurfaceScrollbar = extern struct {
++        total: u64,
++        offset: u64,
++        len: u64,
++        pruned: u64,
++    };
++
+     // ghostty_point_s
+     const Point = extern struct {
+         tag: Tag,
+@@ -1642,9 +1650,15 @@ pub const CAPI = struct {
                  ),
              };
  
@@ -58,7 +98,7 @@ index 697f0a7..acbab70 100644
  
              return switch (self.coord_tag) {
                  // Exact coordinates require a specific pin.
-@@ -1980,6 +1986,20 @@ pub const CAPI = struct {
+@@ -1980,6 +1994,31 @@ pub const CAPI = struct {
          ptr.deinit();
      }
  
@@ -69,13 +109,61 @@ index 697f0a7..acbab70 100644
 +    /// so it is stale while the surface is not drawn. With exact screen
 +    /// points, rows above the viewport can be read without moving it:
 +    /// screen row offset - 1 is the row right above the viewport.
-+    export fn ghostty_surface_scrollbar(surface: *Surface) terminal.Scrollbar.C {
++    ///
++    /// `pruned` counts the rows pruned from the top of the scrollback to
++    /// stay within its limits since the screen was created: a screen row
++    /// read earlier moved up by the difference. Clearing the history,
++    /// resets and resizes do not count.
++    export fn ghostty_surface_scrollbar(surface: *Surface) SurfaceScrollbar {
 +        surface.core_surface.renderer_state.mutex.lockUncancelable(global.io());
 +        defer surface.core_surface.renderer_state.mutex.unlock(global.io());
-+        const screen = surface.core_surface.renderer_state.terminal.screens.active;
-+        return screen.pages.scrollbar().cval();
++        const pages = &surface.core_surface.renderer_state.terminal.screens.active.pages;
++        const bar = pages.scrollbar();
++        return .{
++            .total = @intCast(bar.total),
++            .offset = @intCast(bar.offset),
++            .len = @intCast(bar.len),
++            .pruned = pages.pruned_rows,
++        };
 +    }
 +
      /// Tell the surface that it needs to schedule a render
      export fn ghostty_surface_refresh(surface: *Surface) void {
          surface.refresh();
+diff --git a/src/terminal/PageList.zig b/src/terminal/PageList.zig
+index 8a62b6f..0afec0d 100644
+--- a/src/terminal/PageList.zig
++++ b/src/terminal/PageList.zig
+@@ -456,6 +456,13 @@ limits: Limits,
+ /// specifically for scrollbar information so we can have the total size.
+ total_rows: usize,
+ 
++/// The number of rows pruned from the top of the scrollback to stay within
++/// its limits (grow, Limits.enforce) since this PageList was created. Rows
++/// counted from the top of the screen move up by this much, so comparing
++/// two values tells where a row read earlier is now. Rows erased on request
++/// (erasing the history, reset) and resizes are not counted.
++pruned_rows: u64 = 0,
++
+ /// The list of tracked pins. These are kept up to date automatically.
+ tracked_pins: PinSet,
+ 
+@@ -4061,6 +4068,10 @@ pub fn grow(self: *PageList) Allocator.Error!?*List.Node {
+             break :prune;
+         }
+ 
++        // These rows are gone from the top, whether the page is reused
++        // or destroyed below.
++        self.pruned_rows += first.rows();
++
+         // If we have a pin viewport cache then we need to update it.
+         if (self.viewport == .pin) viewport: {
+             if (self.viewport_pin_row_offset) |*v| {
+@@ -7128,6 +7139,7 @@ const Limits = struct {
+         // Reconcile viewport mode and cached row offsets with the combined prefix
+         // removal only after every page and pin points into the final list.
+         if (removed > 0) pagelist.fixupViewport(removed);
++        pagelist.pruned_rows += removed;
+     }
+ 
+     /// Returns the minimum valid "max size" for a given number of rows and cols

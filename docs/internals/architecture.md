@@ -29,7 +29,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `design/icon` | App icon artwork and the scripts that generate every icon size ([README](../../design/icon/README.md)). |
 | `scripts` | `build-ghostty.sh` (GhosttyKit with cmds' libghostty patches), `l10n-sync.sh` (String Catalog sync), `check-links.py` (Markdown link check). |
 | `vendor/ghostty` | Ghostty source (submodule, pinned upstream revision). `vendor/GhosttyKit.xcframework` is a symlink/copy of `vendor/ghostty/macos/GhosttyKit.xcframework` (ignored); build steps in the [README](../../README.md#build-from-source). |
-| `vendor/ghostty-patches` | cmds' patches on libghostty (exact screen points above the viewport, `ghostty_surface_scrollbar`), applied for the build only by `scripts/build-ghostty.sh`. |
+| `vendor/ghostty-patches` | cmds' patches on libghostty (exact screen points above the viewport, `ghostty_surface_scrollbar` with the rows pruned from the scrollback), applied for the build only by `scripts/build-ghostty.sh`. |
 
 The Xcode project is generated from `project.yml` with `xcodegen generate` (do not commit `cmds.xcodeproj`).
 Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `cmds.app/Contents/Resources/bin/cmds`),
