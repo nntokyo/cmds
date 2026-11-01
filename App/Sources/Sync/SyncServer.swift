@@ -56,6 +56,8 @@ final class SyncServer {
     /// `requestScrollback` for a pane within this time of the previous one is ignored (the phone asks every few
     /// seconds at most; each answer moves the terminal's viewport for a moment and can be 1000 rows).
     static let scrollbackInterval: TimeInterval = 0.5
+    /// Reads of the screen and the rows above it per `requestScrollback` while output keeps changing them.
+    static let scrollbackAttempts = 3
 
     final class Client {
         let connection: SyncConnection
@@ -585,18 +587,25 @@ final class SyncServer {
         client.scrollbackSentAt[paneID] = now
         let maxRows = min(max(request.lines, 1), SyncScrollback.maxLines)
         do {
-            // Output between the two reads would leave a gap or an overlap at the seam: read once more if the
-            // screen moved meanwhile.
-            var screen = snapshot(paneID: paneID)
-            var rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows)
-            if snapshot(paneID: paneID) != screen {
-                rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows)
-                screen = snapshot(paneID: paneID)
+            // Output between the reads would leave a gap or an overlap at the seam: read again while the screen
+            // moved meanwhile, and keep the last complete read.
+            var answer: (screen: ScreenSnapshot, rows: [String])?
+            for _ in 0..<Self.scrollbackAttempts {
+                let before = snapshot(paneID: paneID)
+                let rows = try AppController.shared.historyRows(paneID: paneID, maxRows: maxRows)
+                guard let screen = snapshot(paneID: paneID) else {
+                    return sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client)
+                }
+                guard let rows else { continue }
+                answer = (screen, rows)
+                if screen == before { break }
             }
-            guard let screen else { return sendError(.notFound, "pane not found: \(paneID.prefix(64))", to: client) }
-            let full = client.streamer.full(paneID: paneID, snapshot: screen)
+            // Output kept moving the history: no answer rather than an empty one, which would clear the phone's
+            // rows. The phone asks again as the screen scrolls.
+            guard let answer else { return }
+            let full = client.streamer.full(paneID: paneID, snapshot: answer.screen)
             send(.screen(full), to: client)
-            send(.scrollback(.init(paneID: paneID, seq: full.seq, lines: rows.map(Self.trimmed))), to: client)
+            send(.scrollback(.init(paneID: paneID, seq: full.seq, lines: answer.rows.map(Self.trimmed))), to: client)
             // This screen may be newer than the last tick's; the next tick compares the client's copy with the
             // current one even if the pane looks unchanged to it (e.g. the screen went back to what the tick saw).
             client.pendingScreens.insert(paneID)

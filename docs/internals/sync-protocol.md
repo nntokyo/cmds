@@ -190,10 +190,11 @@ The phone asks for the rows above a pane's screen with `requestScrollback {paneI
   above it, oldest first: at most `lines` (clamped to 1…`SyncScrollback.maxLines` = 1000), fewer when the history is
   shorter. Rows are what the terminal displays, like `screen` lines: a soft-wrapped line is several rows, trailing
   spaces are trimmed.
-- **Aligned by `seq`.** The Mac reads the screen and the rows back to back (once more if the screen changed in
-  between), then sends a full `screen` under a new `seq` and right after it `scrollback` with that `seq`; later
-  `screenDiff`s build on that screen as usual. The last row is directly above that screen's first row. Rows that
-  scroll off the screen afterwards are not sent; ask again to extend the history.
+- **Aligned by `seq`.** The Mac reads the screen and the rows back to back (up to three times while the screen
+  changes in between), then sends a full `screen` under a new `seq` and right after it `scrollback` with that `seq`;
+  later `screenDiff`s build on that screen as usual. The last row is directly above that screen's first row. Rows that
+  scroll off the screen afterwards are not sent; ask again to extend the history. While output keeps moving the
+  history the Mac may send nothing at all (never an empty `scrollback` in its place); ask again later.
 - **Empty** when there is no history: the alternate screen (vim, less, other full-screen programs) has none. Also empty
   while the pane is scrolled up on the Mac (its viewport is not at the bottom), which the Mac leaves alone.
 - **Limits.** Subscribed terminal panes only. A request for the same pane within 0.5 s of the previous one is ignored

@@ -95,14 +95,15 @@ final class GhosttyTerminalSurface: TerminalSurface {
     /// history can be megabytes, and reading compressed pages inflates them again. A pane on screen may draw one frame
     /// of the moved viewport (2 of 100 reads of 1000 rows did). A viewport the user scrolled up is left alone: with
     /// output arriving in between, its place could not be found again exactly.
-    func historyRows(maxRows: Int) -> [String] {
+    func historyRows(maxRows: Int) -> [String]? {
         guard maxRows > 0, let surface = surfaceView.surface else { return [] }
         let size = ghostty_surface_size(surface)
         let rows = Int(size.rows), cols = Int(size.columns)
         guard rows > 0, cols > 0, activeAreaRow(surface, cols: cols) == 0 else { return [] }
         // The viewport followed the output; it does again whatever happens below.
         defer { scrollViewport(toRow: .max) }
-        guard let top = historyLength(surface, rows: rows, cols: cols), top > 0 else { return [] }
+        guard let top = historyLength(surface, rows: rows, cols: cols) else { return nil }
+        guard top > 0 else { return [] }
         var lines: [String] = []
         lines.reserveCapacity(min(maxRows, top))
         var start = max(0, top - maxRows)
@@ -357,7 +358,7 @@ private final class FallbackSurface: TerminalSurface {
     func focus() { view.window?.makeFirstResponder(textView) }
     func visibleText() -> String { textView.string }
     func scrollbackText(maxLines: Int) -> String { textView.string }
-    func historyRows(maxRows: Int) -> [String] { [] } // `visibleText()` already has all of it
+    func historyRows(maxRows: Int) -> [String]? { [] } // `visibleText()` already has all of it
     var cursorPosition: (row: Int, col: Int)? { nil }
     var gridSize: (rows: Int, cols: Int)? { nil }
     var foregroundProcessGroupID: pid_t? { nil }
