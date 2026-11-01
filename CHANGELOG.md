@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   none) (#21).
 - Mac: a phone's request for a pane's earlier output that comes within 0.5 s of the previous one, or while output
   keeps the screen moving, is answered as soon as possible instead of being dropped (#22).
+- Mac: Settings › Terminal font showed some Japanese fonts with garbled names (e.g. `ÇcÇeïΩê¨ÉSÉVÉbÉNëÃW3` for
+  ＤＦ平成ゴシック体W3); the list now uses the names Font Book shows (#28).
 
 ### Changed
 
