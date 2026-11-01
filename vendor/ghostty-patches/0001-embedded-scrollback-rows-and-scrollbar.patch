@@ -1,0 +1,81 @@
+From: RYO <info@n-n.tokyo>
+Subject: [PATCH] apprt/embedded: exact screen points above the viewport,
+ ghostty_surface_scrollbar
+
+ghostty_surface_read_text clamped the y of every exact point to the
+viewport height, screen and history points too, so an embedder could not
+read a row of the scrollback above the viewport without scrolling the
+viewport there first. Clamp only active and viewport points; screen and
+history points reach every row (PageList.pin returns null past the end,
+so read_text returns false as for any other invalid point).
+
+ghostty_surface_scrollbar returns the active screen's scrollbar (total
+rows, offset of the viewport's top, viewport rows) synchronously, under
+the renderer state mutex like read_text. The scrollbar action carries the
+same values, but only when the renderer draws a frame, so it is stale
+while the surface is not drawn. Together they let an embedder read the
+rows right above the viewport (screen rows offset-n ..< offset) without
+moving it.
+
+cmds carries this on Ghostty b2c78c9bd9bc (scripts/build-ghostty.sh
+applies it for the build and reverts it afterwards).
+---
+ include/ghostty.h      |  1 +
+ src/apprt/embedded.zig | 24 ++++++++++++++++++++++--
+ 2 files changed, 23 insertions(+), 2 deletions(-)
+
+diff --git a/include/ghostty.h b/include/ghostty.h
+index 9a12b9c..60ae455 100644
+--- a/include/ghostty.h
++++ b/include/ghostty.h
+@@ -1240,6 +1240,7 @@ GHOSTTY_API bool ghostty_surface_read_text(ghostty_surface_t,
+                                               ghostty_selection_s,
+                                               ghostty_text_s*);
+ GHOSTTY_API void ghostty_surface_free_text(ghostty_surface_t, ghostty_text_s*);
++GHOSTTY_API ghostty_action_scrollbar_s ghostty_surface_scrollbar(ghostty_surface_t);
+ 
+ #ifdef __APPLE__
+ GHOSTTY_API void ghostty_surface_set_display_id(ghostty_surface_t, uint32_t);
+diff --git a/src/apprt/embedded.zig b/src/apprt/embedded.zig
+index 697f0a7..acbab70 100644
+--- a/src/apprt/embedded.zig
++++ b/src/apprt/embedded.zig
+@@ -1642,9 +1642,15 @@ pub const CAPI = struct {
+                 ),
+             };
+ 
+-            // Clamp our point to the screen bounds.
++            // Clamp our point to the screen bounds. Only the active area and
++            // the viewport are one screen tall: screen and history points
++            // reach every row of the scrollback (pin returns null past the
++            // last row of the screen).
+             const clamped_x = @min(self.x, screen.pages.cols -| 1);
+-            const clamped_y = @min(self.y, screen.pages.rows -| 1);
++            const clamped_y: u32 = switch (self.tag) {
++                .active, .viewport => @min(self.y, screen.pages.rows -| 1),
++                .screen, .history => self.y,
++            };
+ 
+             return switch (self.coord_tag) {
+                 // Exact coordinates require a specific pin.
+@@ -1980,6 +1986,20 @@ pub const CAPI = struct {
+         ptr.deinit();
+     }
+ 
++    /// The scrollbar of the active screen, read now: the total rows of the
++    /// screen (scrollback and active area), the row offset of the
++    /// viewport's top and the viewport's height. The scrollbar action
++    /// carries the same values but only when the renderer draws a frame,
++    /// so it is stale while the surface is not drawn. With exact screen
++    /// points, rows above the viewport can be read without moving it:
++    /// screen row offset - 1 is the row right above the viewport.
++    export fn ghostty_surface_scrollbar(surface: *Surface) terminal.Scrollbar.C {
++        surface.core_surface.renderer_state.mutex.lockUncancelable(global.io());
++        defer surface.core_surface.renderer_state.mutex.unlock(global.io());
++        const screen = surface.core_surface.renderer_state.terminal.screens.active;
++        return screen.pages.scrollbar().cval();
++    }
++
+     /// Tell the surface that it needs to schedule a render
+     export fn ghostty_surface_refresh(surface: *Surface) void {
+         surface.refresh();
