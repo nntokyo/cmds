@@ -147,7 +147,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 | `focusPane` | `id` | Focus a pane on the Mac. |
 | `ping` | `nonce?:Int` | Phone pings every 10 s; reconnects if nothing received for 30 s. |
 | `requestFile` | `paneID` | Optional (feature `preview`). The file shown in that preview pane. Answered with `file` pieces or `error` (`notFound`: no such pane / file missing; `badRequest`: not a preview pane, feature not announced, a request already running). Older Macs answer `error{badRequest}` (unknown type). |
-| `requestScrollback` | `paneID, lines:Int` | Optional (Macs whose `welcome.features` has `"scrollback"`). Up to `lines` rows above the pane's screen (1…1000, `SyncScrollback.maxLines`). Answered with a full `screen` and right after it `scrollback` under the same `seq`, or `error` (`notFound`: no such pane; `badRequest`: not a terminal pane, or not subscribed). Ignored within 0.5 s of the previous one for that pane. Older Macs answer `error{badRequest}` (unknown type). See "Scrollback". |
+| `requestScrollback` | `paneID, lines:Int` | Optional (Macs whose `welcome.features` has `"scrollback"`). Up to `lines` rows above the pane's screen (1…1000, `SyncScrollback.maxLines`). Answered with a full `screen` and right after it `scrollback` under the same `seq`, or `error` (`notFound`: no such pane; `badRequest`: not a terminal pane, or not subscribed). Within 0.5 s of the previous answer for that pane, or while output keeps the screen moving, it is answered later (one waiting request per pane; a newer one replaces it). Older Macs answer `error{badRequest}` (unknown type). See "Scrollback". |
 
 ## Mac → Phone (`ServerMessage`)
 
@@ -194,13 +194,14 @@ The phone asks for the rows above a pane's screen with `requestScrollback {paneI
   viewport in between), then sends a full `screen` under a new `seq` and right after it `scrollback` with that `seq`;
   later `screenDiff`s build on that screen as usual. The last row is directly above that screen's first row. Rows that
   scroll off the screen afterwards come with the screen updates to phones that stream (below); other phones ask
-  again. While output keeps moving the viewport the Mac may send nothing at all (never an empty `scrollback` in its
-  place); ask again later.
+  again.
+- **Answered late rather than never.** While output keeps moving the viewport, the Mac keeps the request and answers
+  once it can read the screen and the rows together, trying again every 0.5 s while the pane stays subscribed (never
+  an empty `scrollback` in its place). One request waits per pane; a newer one replaces it (its `lines` count).
 - **Empty** when there is no history: the alternate screen (vim, less, other full-screen programs) has none. While the
   pane is scrolled up on the Mac, the rows are the ones above what it shows there.
-- **Limits.** Subscribed terminal panes only. A request for the same pane within 0.5 s of the previous one is ignored
-  (no answer); the phone asks every few seconds at most. 1000 rows of a wide pane can be about a megabyte; ask for
-  fewer over Bluetooth.
+- **Limits.** Subscribed terminal panes only. A request within 0.5 s of the previous answer for the same pane waits
+  until 0.5 s have passed. 1000 rows of a wide pane can be about a megabyte; ask for fewer over Bluetooth.
 - **Older Macs** send no `welcome.features` and answer `requestScrollback` with `error{badRequest}` (unknown type), so
   the phone does not send it to them. **Older phones** never send it and ignore `welcome.features`.
 
@@ -220,10 +221,11 @@ without asking again.
 - **`historyReset: true`**: the rows above this screen do not continue the ones sent before. Drop them and ask again
   with `requestScrollback`; until the next answer the Mac sends no `scrolledOff` for the pane. The Mac resets when
   the pane was resized (its rows were rewrapped), the scrollback was cleared (`CSI 3 J`, `clear` in some shells), the
-  pane switched to the alternate screen, its viewport on the Mac moved up, more than 1000 rows
-  (`SyncScrollback.maxLines`) left the screen between two updates, or rows were pruned past the scrollback limit
-  (Ghostty drops the oldest page of a full scrollback, a few hundred rows, so a pane that keeps printing into a full
-  scrollback resets every few hundred rows).
+  pane switched to the alternate screen, its viewport on the Mac moved up, or more than 1000 rows
+  (`SyncScrollback.maxLines`) left the screen between two updates.
+- **A full scrollback does not reset.** Once the scrollback is full, Ghostty drops its oldest page (a few hundred
+  rows) as output continues; the stream carries on across that. Only when everything above the phone's last rows was
+  pruned too, which takes more pruning between two updates than the whole history above them, the Mac resets.
 - **Older Macs** send no `scrollbackStream` and never these fields; **older phones** do not list it, so they never get
   them (0.3.0 phones ask again as the screen scrolls).
 
@@ -231,22 +233,26 @@ without asking again.
 
 cmds builds libghostty with a patch (`vendor/ghostty-patches`, applied by `scripts/build-ghostty.sh`): exact
 `GHOSTTY_POINT_SCREEN` points of `ghostty_surface_read_text` reach every row of the scrollback (upstream clamps every
-point to the viewport height), and `ghostty_surface_scrollbar` returns the scrollbar (rows of the whole screen, screen
-row at the viewport's top, viewport rows) at once (the scrollbar action only comes when the renderer draws, so it
-stops while the pane is hidden).
+point to the viewport height), and `ghostty_surface_scrollbar` returns, at once, the scrollbar (rows of the whole
+screen, screen row at the viewport's top, viewport rows; the scrollbar action only comes when the renderer draws, so
+it stops while the pane is hidden) and the rows pruned from the top of the scrollback so far (`PageList.pruned_rows`,
+counted where Ghostty prunes past the scrollback limit; clearing the history and resizes do not count). Screen rows
+count from the top of the scrollback, so pruning moves every row up by the rows pruned.
 
 - `TerminalSurface.historyRows` reads screen rows `offset − n ..< offset` one by one without moving the viewport, so
   nothing flickers on the Mac, and returns nil when the scrollbar changed meanwhile. It never reads the whole
   history, which can be megabytes and partly compressed. About 1.8 ms for 1000 rows (0.18 ms for 100) on a full
   scrollback (42 000 rows kept of 100 000 printed, M1 Debug build).
-- The answer reads the scrollbar before the screen and after the rows: the same both times, or it reads again.
+- The answer reads the scrollbar before the screen and after the rows: the same both times, or it tries again (three
+  times per try, a try every 0.5 s while the request waits).
 - The stream keeps, per phone and pane, a mark: the viewport of the last screen sent with rows above it (`offset`,
-  total, rows, cols) and its last 4 rows. Each screen tick reads the scrollbar right before and right after reading a
-  marked pane's screen; when both agree, an update to that phone carries screen rows `mark ..< offset` and the mark
-  moves on. The last 4 rows are read again with them: history cannot change, so different text means rows were pruned
-  or cleared under the mark (`historyReset`), also when new output made up for the total (in a test with a full
-  scrollback, 6 of 8 bursts of 800 rows pruned a page and still grew the total). Cost per tick: about 35 µs for the
-  scrollbar reads, and about 3 µs per row sent (0.33 ms for 100 rows).
+  total, rows, pruned count, cols) and its last 4 rows. Each screen tick reads the scrollbar right before and right
+  after reading a marked pane's screen; when both agree, the mark is moved up by the rows pruned since, and an update
+  to that phone carries screen rows `mark ..< offset`; then the mark moves on. Without the pruned count, a page pruned
+  in the same tick as new output that made up for the total would go unnoticed (a test with a full scrollback: 6 of 8
+  bursts of 800 rows). The last 4 rows are read again with the new ones as a safety net: history cannot change, so
+  different text means it changed in a way the counts do not show (`historyReset`). Cost per tick: about 35 µs for
+  the scrollbar reads, and about 3 µs per row sent (0.33 ms for 100 rows).
 
 ## Mac identity
 
@@ -326,8 +332,8 @@ pairing. The user re-pairs (scan the new QR code) or cancels.
 
 Mac-side limits: hello within 10 s; at most 16 connections and 4 unauthenticated ones per host; 1 MiB
 per incoming frame, read one frame at a time; 16 KiB per `input` and 64 KiB of input per second;
-32 subscribed panes; screens at most 4 per second over Bluetooth; `requestScrollback` up to 1000 rows, one per pane
-per 0.5 s; up to 1000 `scrolledOff` rows per update (more: `historyReset`); 16 relayed SSH connections; no pairing codes over SSH; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
+32 subscribed panes; screens at most 4 per second over Bluetooth; `requestScrollback` up to 1000 rows, one answer per pane
+per 0.5 s (one request waits per pane); up to 1000 `scrolledOff` rows per update (more: `historyReset`); 16 relayed SSH connections; no pairing codes over SSH; failed pairing attempts 5 per host per minute (then a 5-minute lockout) and 20 in
 total per minute (then 1 minute); a client that does not read 8 MiB of output is dropped.
 
 ## API summary (CmdsCore)

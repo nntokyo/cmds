@@ -88,13 +88,14 @@ final class GhosttyTerminalSurface: TerminalSurface {
     }
 
     /// `ghostty_surface_scrollbar`, from cmds' libghostty patch (vendor/ghostty-patches): the same figures as the
-    /// renderer's scrollbar action, but read now, so they are current while the surface is not drawn too.
+    /// renderer's scrollbar action, but read now, so they are current while the surface is not drawn too, plus the
+    /// rows pruned so far (`PageList.pruned_rows`).
     func scrollbar() -> TerminalScrollbar? {
         guard let surface = surfaceView.surface else { return nil }
         let bar = ghostty_surface_scrollbar(surface)
         guard bar.len > 0 else { return nil }
         return TerminalScrollbar(total: Int(clamping: bar.total), offset: Int(clamping: bar.offset),
-                                 rows: Int(clamping: bar.len))
+                                 rows: Int(clamping: bar.len), pruned: Int(clamping: bar.pruned))
     }
 
     /// The rows are read by their screen row, as `visibleText()` reads the viewport's: with cmds' libghostty patch,

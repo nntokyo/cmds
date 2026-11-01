@@ -28,20 +28,27 @@ final class SyncScrollbackTests: XCTestCase {
         XCTAssertEqual(rows.count, 100)
         assertNumbers(rows, endRightAbove: screen)
 
-        // More than the limit: at most SyncScrollback.maxLines. The 7-row request right after it is ignored.
+        // More than the limit: at most SyncScrollback.maxLines.
         Thread.sleep(forTimeInterval: 0.6)
         try phone.send(.requestScrollback(.init(paneID: paneID, lines: 5000)))
         try phone.send(.requestScrollback(.init(paneID: paneID, lines: 7)))
         let (bigScreen, bigRows) = try phone.scrollback(paneID)
+        let bigAnsweredAt = Date()
         XCTAssertGreaterThan(bigScreen.seq, screen.seq)
         XCTAssertEqual(bigRows.count, SyncScrollback.maxLines)
         assertNumbers(bigRows, endRightAbove: bigScreen)
 
-        // At least one row. Being the next answer, it also shows that the 7-row request got none.
+        // The 7-row request came right after it: it waits for the 0.5 s spacing and is answered then.
+        let (sevenScreen, sevenRows) = try phone.scrollback(paneID)
+        XCTAssertGreaterThan(Date().timeIntervalSince(bigAnsweredAt), 0.3, "answered within the 0.5 s spacing")
+        XCTAssertEqual(sevenRows.count, 7)
+        assertNumbers(sevenRows, endRightAbove: sevenScreen)
+
+        // At least one row.
         Thread.sleep(forTimeInterval: 0.6)
         try phone.send(.requestScrollback(.init(paneID: paneID, lines: 0)))
         let (oneScreen, oneRow) = try phone.scrollback(paneID)
-        XCTAssertEqual(oneRow.count, 1, "a request within 0.5 s of the previous one is ignored")
+        XCTAssertEqual(oneRow.count, 1)
         assertNumbers(oneRow, endRightAbove: oneScreen)
 
         // Unknown pane: notFound. A pane that is not subscribed: badRequest.
@@ -146,6 +153,83 @@ final class SyncScrollbackTests: XCTestCase {
 
         try plain.wait(for: paneID) { Self.lastNumber($0) == 7600 }
         XCTAssertEqual(plain.historyMessages, 0, "scrolledOff / historyReset for a phone without scrollbackStream")
+    }
+
+    /// A full scrollback keeps being pruned (a page of a few hundred rows at a time) while output continues: the
+    /// stream follows the pruning without `historyReset`, also for more rows than a page between two updates. A
+    /// request sent while heavy output keeps the screen moving is answered once the output allows it. Needs Ghostty's
+    /// default scrollback limit (or a smaller one); skipped when 120 000 rows fit.
+    func testScrollbackStreamAcrossPruningFromIsolatedInstance() throws {
+        let instance = try Instance()
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cmds-scrollback-e2e-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        // Numbered rows only, in steps the test releases by creating go<n>; bursts a b: 100 rows every 0.2 s;
+        // pages a b: 800 rows (more than a page is pruned at once) every 0.4 s. `-f %.0f`: BSD seq prints 1e+06 and
+        // up in exponent form otherwise.
+        let script = """
+        d='\(dir.path)'
+        wait_for() { while [ ! -e "$d/go$1" ]; do sleep 0.05; done; }
+        bursts() {
+            i=$1
+            while [ $i -lt $2 ]; do seq $((i * 100 + 1)) $((i * 100 + 100)); sleep 0.2; i=$((i + 1)); done
+        }
+        pages() {
+            i=$1
+            while [ $i -lt $2 ]; do seq $((i * 800 + 1)) $((i * 800 + 800)); sleep 0.4; i=$((i + 1)); done
+        }
+        seq 1 120000
+        wait_for 1; bursts 1200 1240
+        wait_for 2; pages 155 161
+        wait_for 3; seq -f %.0f 128801 4000000
+        """
+        let scriptURL = dir.appendingPathComponent("run.sh")
+        try script.write(to: scriptURL, atomically: true, encoding: .utf8)
+        func go(_ step: Int) {
+            FileManager.default.createFile(atPath: dir.appendingPathComponent("go\(step)").path, contents: nil)
+        }
+
+        let (workspaceID, paneID) = try instance.createWorkspace(title: "scrollback pruning e2e")
+        defer { instance.closeWorkspace(workspaceID) }
+        try instance.type("sh \(scriptURL.path)\n", into: paneID)
+
+        let phone = try Phone(instance, hello: .init(deviceName: "scrollback pruning test",
+                                                     deviceID: "scrollback-pruning-test",
+                                                     features: [SyncFeature.scrollbackStream],
+                                                     pairingCode: instance.payload.code))
+        try phone.send(.subscribe(.init(paneIDs: [paneID])))
+        try phone.wait(for: paneID, timeout: 120) { $0.lines.contains("120000") }
+        guard let oldest = try instance.firstNumber(in: paneID), oldest > 1 else {
+            throw XCTSkip("the scrollback holds all 120 000 rows, so nothing is pruned (scrollback-limit raised?)")
+        }
+
+        try phone.send(.requestScrollback(.init(paneID: paneID, lines: 1000)))
+        var history = try backfill(phone, paneID, rows: 1000)
+        var resets = 0
+
+        // 4000 rows in bursts of 100: several pages are pruned, the rows still continue.
+        go(1)
+        try follow(phone, paneID, history: &history, resets: &resets) { screen, rows in
+            Self.lastNumber(screen) == 124_000 && Self.meets(rows, screen)
+        }
+        XCTAssertEqual(resets, 0, "historyReset while the scrollback was pruned")
+
+        // 800 rows at once: a page or two pruned between two updates while the total may still grow.
+        go(2)
+        try follow(phone, paneID, history: &history, resets: &resets) { screen, rows in
+            Self.lastNumber(screen) == 128_800 && Self.meets(rows, screen)
+        }
+        XCTAssertEqual(resets, 0, "historyReset while the scrollback was pruned")
+        XCTAssertGreaterThan(try instance.firstNumber(in: paneID) ?? 0, oldest, "nothing was pruned meanwhile")
+
+        // Heavy output: a request sent while it moves the screen is kept and answered once the rows can be read.
+        go(3)
+        try phone.wait(for: paneID) { (Self.lastNumber($0) ?? 0) > 128_800 }
+        try phone.send(.requestScrollback(.init(paneID: paneID, lines: 500)))
+        let (screen, rows) = try phone.scrollback(paneID, within: 2000)
+        XCTAssertEqual(rows.count, 500)
+        assertNumbers(rows, endRightAbove: screen)
     }
 
     // MARK: - Stream checks
@@ -285,6 +369,14 @@ final class SyncScrollbackTests: XCTestCase {
         func type(_ text: String, into paneID: String) throws {
             try api.call("pane.send_text", params: ["pane": .string(paneID), "text": .string(text)])
         }
+
+        /// The first number in the pane's text (its whole scrollback and screen), nil if there is none.
+        func firstNumber(in paneID: String) throws -> Int? {
+            let result = try api.call("pane.read_text",
+                                      params: ["pane": .string(paneID), "scrollback": .number(1_000_000)])
+            let lines = (result["text"]?.stringValue ?? "").split(separator: "\n")
+            return lines.lazy.compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }.first
+        }
     }
 
     /// One phone connection (pinned TLS WebSocket) with its copy of the screens.
@@ -341,9 +433,9 @@ final class SyncScrollbackTests: XCTestCase {
         }
 
         /// The answer to a `requestScrollback`: the full screen sent right before the rows, under the same seq.
-        func scrollback(_ paneID: String) throws -> (ServerMessage.Screen, [String]) {
+        func scrollback(_ paneID: String, within maxMessages: Int = 500) throws -> (ServerMessage.Screen, [String]) {
             var previous: ServerMessage?
-            for _ in 0..<500 {
+            for _ in 0..<maxMessages {
                 let message = try next()
                 if case .scrollback(let scrollback) = message {
                     guard case .screen(let screen)? = previous, screen.paneID == paneID else {

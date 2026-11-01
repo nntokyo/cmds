@@ -87,6 +87,9 @@ struct TerminalScrollbar: Equatable {
     var offset: Int
     /// Rows of the viewport.
     var rows: Int
+    /// Rows pruned from the top of the history past the scrollback limit so far (since the screen was created):
+    /// screen rows read earlier moved up by the difference. Clearing the history or resizing does not count.
+    var pruned: Int
 }
 
 @MainActor

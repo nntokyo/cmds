@@ -78,13 +78,16 @@ In addition to `CMDS_SUPPORT_DIR`, which also selects separate keychain items fo
   swift test --filter SyncScrollbackTests` (in `Packages/CmdsCore`). Each test creates its own workspace through the
   instance's socket (next to that file), prints numbered rows there, pairs and checks:
   - `requestScrollback` for a phone without the stream: `welcome.features`, the full `screen` and `scrollback` under
-    one `seq`, consecutive rows ending right above the screen, the 1000-row limit, the 0.5 s guard, the errors, and no
-    `scrolledOff` / `historyReset`;
+    one `seq`, consecutive rows ending right above the screen, the 1000-row limit, a request within 0.5 s of an answer
+    answered once 0.5 s have passed, the errors, and no `scrolledOff` / `historyReset`;
   - the stream (`scrollbackStream`): a script in a temporary directory prints in steps the test releases. The answer
     and every `scrolledOff` after it must form one consecutive sequence that ends right above each screen that carries
     rows (never overlapping it otherwise), through bursts of 100 rows and of 4000 rows (which may reset);
     `historyReset` after `printf '\033[3J'` while the screen's text stays the same, and no rows after it until the
-    next answer; a second phone without the feature gets neither field.
+    next answer; a second phone without the feature gets neither field;
+  - the stream across pruning: 120 000 rows fill the scrollback (skipped when Ghostty keeps them all, e.g. with a
+    raised `scrollback-limit`), then bursts of 100 and of 800 rows keep it pruning: no `historyReset`, one consecutive
+    sequence; a request sent during heavy output (3.9 million rows) is answered once the rows can be read.
 
   It closes the workspaces when done.
 
