@@ -32,6 +32,20 @@ public enum ClaudeSessionSharing {
             case moveAsideAndLink(backupName: String)
             /// Left alone (`elsewhere`, `noConfigDir`).
             case skip(reason: String)
+
+            /// The `action` of a step in `account.share` (API and CLI).
+            public enum Name: String, Sendable {
+                case unchanged = "none", link, moveAside, skip
+            }
+
+            public var name: Name {
+                switch self {
+                case .none: return .unchanged
+                case .createLink: return .link
+                case .moveAsideAndLink: return .moveAside
+                case .skip: return .skip
+                }
+            }
         }
 
         public var account: String
@@ -46,22 +60,16 @@ public enum ClaudeSessionSharing {
     /// The account whose `projects` is the store, and the store's real path (symlinks resolved).
     public static func store(_ accounts: [ClaudeAccount], fileManager: FileManager = .default,
                              home: String = NSHomeDirectory()) -> (account: String, path: String)? {
-        for account in accounts {
-            var isDirectory: ObjCBool = false
-            let dir = ClaudeAccounts.expandedPath(account.configDir, home: home)
-            guard fileManager.fileExists(atPath: dir, isDirectory: &isDirectory), isDirectory.boolValue else { continue }
-            let projects = projectsPath(account.configDir, home: home)
-            return (account.name, (projects as NSString).resolvingSymlinksInPath)
+        guard let account = accounts.first(where: { ClaudeAccounts.configDirExists($0, fileManager: fileManager, home: home) }) else {
+            return nil
         }
-        return nil
+        return (account.name, (projectsPath(account.configDir, home: home) as NSString).resolvingSymlinksInPath)
     }
 
     public static func link(of account: ClaudeAccount, in accounts: [ClaudeAccount], fileManager: FileManager = .default,
                             home: String = NSHomeDirectory()) -> ClaudeProjectsLink {
-        var isDirectory: ObjCBool = false
-        let dir = ClaudeAccounts.expandedPath(account.configDir, home: home)
-        guard fileManager.fileExists(atPath: dir, isDirectory: &isDirectory), isDirectory.boolValue else { return .noConfigDir }
-        guard let store = store(accounts, fileManager: fileManager, home: home) else { return .noConfigDir }
+        guard ClaudeAccounts.configDirExists(account, fileManager: fileManager, home: home),
+              let store = store(accounts, fileManager: fileManager, home: home) else { return .noConfigDir }
         if store.account == account.name { return .shared }
         let projects = projectsPath(account.configDir, home: home)
         // attributesOfItem does not follow a symlink: tells a link from a directory, also a dangling link.

@@ -16,9 +16,11 @@ public struct ClaudeLimitHit: Equatable, Sendable {
 
     /// The limit to record for the account; without a reset time it is estimated (`fallbackDuration`).
     public func limit(now: Date = Date()) -> ClaudeAccountLimit {
-        let estimated = resetsAt == nil || resetsAt! <= now
-        let reset = estimated ? now.addingTimeInterval(ClaudeLimitDetector.fallbackDuration(kind)) : resetsAt!
-        return ClaudeAccountLimit(kind: kind, resetsAt: reset, estimated: estimated, detectedAt: now, message: line)
+        if let resetsAt, resetsAt > now {
+            return ClaudeAccountLimit(kind: kind, resetsAt: resetsAt, estimated: false, detectedAt: now, message: line)
+        }
+        let reset = now.addingTimeInterval(ClaudeLimitDetector.fallbackDuration(kind))
+        return ClaudeAccountLimit(kind: kind, resetsAt: reset, estimated: true, detectedAt: now, message: line)
     }
 }
 
@@ -35,12 +37,16 @@ public struct ClaudeLimitHit: Equatable, Sendable {
 /// Warnings such as `Approaching usage limit · resets at 10pm` or `You've used 90% of your weekly limit` are not hits.
 public enum ClaudeLimitDetector {
     public static let scannedLines = 40
+    /// Claude Code's usage window: a usage limit without a reset time lasts this long.
+    public static let sessionWindow: TimeInterval = 5 * 3600
+    /// A rate limit without a reset time lasts this long.
+    public static let rateLimitWait: TimeInterval = 15 * 60
 
     /// How long an account counts as limited when the message had no reset time.
     public static func fallbackDuration(_ kind: ClaudeLimitKind) -> TimeInterval {
         switch kind {
-        case .usageLimit: return 5 * 3600 // the session window
-        case .rateLimit: return 15 * 60
+        case .usageLimit: return sessionWindow
+        case .rateLimit: return rateLimitWait
         }
     }
 

@@ -20,6 +20,9 @@ public struct ClaudeAccount: Codable, Equatable, Sendable {
     }
 
     public func isLimited(at now: Date = Date()) -> Bool { limit?.isActive(at: now) ?? false }
+
+    /// Account names are unique ignoring case (`ClaudeAccountSettings`), so they are matched that way.
+    public func hasName(_ other: String) -> Bool { name.caseInsensitiveCompare(other) == .orderedSame }
 }
 
 /// How an account's limit was recognised.
@@ -38,15 +41,17 @@ public struct ClaudeAccountLimit: Codable, Equatable, Sendable {
     public var resetsAt: Date
     public var estimated: Bool
     public var detectedAt: Date
-    /// The line that showed it (trimmed, at most 200 characters), for the user.
+    /// The line that showed it (trimmed, at most `maxMessageLength` characters), for the user.
     public var message: String?
+
+    public static let maxMessageLength = 200
 
     public init(kind: ClaudeLimitKind, resetsAt: Date, estimated: Bool = false, detectedAt: Date = Date(), message: String? = nil) {
         self.kind = kind
         self.resetsAt = resetsAt
         self.estimated = estimated
         self.detectedAt = detectedAt
-        self.message = message.map { String($0.prefix(200)) }
+        self.message = message.map(Self.shortened)
     }
 
     public func isActive(at now: Date = Date()) -> Bool { resetsAt > now }
@@ -63,8 +68,10 @@ public struct ClaudeAccountLimit: Codable, Equatable, Sendable {
         self.resetsAt = resetsAt
         estimated = c.lenientBool(.estimated) ?? false
         detectedAt = c.lenientDate(.detectedAt) ?? resetsAt
-        message = c.lenientString(.message).map { String($0.prefix(200)) }
+        message = c.lenientString(.message).map(Self.shortened)
     }
+
+    private static func shortened(_ message: String) -> String { String(message.prefix(maxMessageLength)) }
 
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
@@ -103,7 +110,7 @@ public struct ClaudeAccountSettings: Codable, Equatable, Sendable {
     }
 
     public func account(named name: String) -> ClaudeAccount? {
-        accounts.first { $0.name.caseInsensitiveCompare(name) == .orderedSame }
+        accounts.first { $0.hasName(name) }
     }
 }
 
@@ -121,11 +128,12 @@ public enum ClaudeAccounts {
     /// `--account auto` (`cmds new`, `cmds split`): the first account without an active limit.
     public static let automatic = "auto"
     public static let maxAccounts = 20
+    public static let maxNameLength = 32
 
     /// Names are shown in the sidebar and typed on the command line: letters, digits, `-`, `_`, `.`, `@`, 1–32
     /// characters, starting with a letter or digit, not `auto`. nil when fine.
     public static func nameProblem(_ name: String) -> String? {
-        guard (1...32).contains(name.count) else { return "the name must be 1 to 32 characters" }
+        guard (1...maxNameLength).contains(name.count) else { return "the name must be 1 to \(maxNameLength) characters" }
         let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.@")
         guard name.unicodeScalars.allSatisfy(allowed.contains),
               let first = name.unicodeScalars.first, CharacterSet.alphanumerics.contains(first) else {
@@ -154,11 +162,19 @@ public enum ClaudeAccounts {
         return (expanded as NSString).standardizingPath
     }
 
+    /// The account's config directory exists as a directory (the user has created / signed in to it).
+    public static func configDirExists(_ account: ClaudeAccount, fileManager: FileManager = .default,
+                                       home: String = NSHomeDirectory()) -> Bool {
+        var isDirectory: ObjCBool = false
+        return fileManager.fileExists(atPath: expandedPath(account.configDir, home: home), isDirectory: &isDirectory)
+            && isDirectory.boolValue
+    }
+
     /// The account whose directory is `configDir` (`CLAUDE_CONFIG_DIR` as Claude Code saw it; nil or empty =
     /// the default `~/.claude`). Paths are compared expanded, and also with symlinks resolved.
     public static func account(forConfigDir configDir: String?, in accounts: [ClaudeAccount],
                                home: String = NSHomeDirectory()) -> ClaudeAccount? {
-        let raw = (configDir?.isEmpty ?? true) ? defaultConfigDir : configDir!
+        let raw = configDir.flatMap { $0.isEmpty ? nil : $0 } ?? defaultConfigDir
         let wanted = expandedPath(raw, home: home)
         if let exact = accounts.first(where: { expandedPath($0.configDir, home: home) == wanted }) { return exact }
         let resolved = (wanted as NSString).resolvingSymlinksInPath
@@ -168,7 +184,7 @@ public enum ClaudeAccounts {
     /// The account to continue with after `current` hit its limit: the next one in the user's order (wrapping
     /// around) without an active limit, never `current` itself. nil when every other account is limited.
     public static func next(after current: String?, in accounts: [ClaudeAccount], now: Date = Date()) -> ClaudeAccount? {
-        let start = current.flatMap { name in accounts.firstIndex { $0.name.caseInsensitiveCompare(name) == .orderedSame } }
+        let start = current.flatMap { name in accounts.firstIndex { $0.hasName(name) } }
         let ordered = start.map { Array(accounts[($0 + 1)...] + accounts[..<$0]) } ?? accounts
         return ordered.first { !$0.isLimited(at: now) }
     }

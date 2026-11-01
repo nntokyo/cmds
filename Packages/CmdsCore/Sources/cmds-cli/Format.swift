@@ -201,10 +201,10 @@ enum Format {
         steps.map { step in
             let account = step["account"]?.stringValue ?? "?"
             let projects = abbreviate(step["projects"]?.stringValue ?? "")
-            switch step["action"]?.stringValue {
-            case "none": return "\(account): \(projects) is shared already\n"
-            case "link": return "\(account): \(applied ? "linked" : "link") \(projects) to the shared folder\n"
-            case "moveAside":
+            switch step["action"]?.stringValue.flatMap(ClaudeSessionSharing.Step.Action.Name.init(rawValue:)) {
+            case .unchanged?: return "\(account): \(projects) is shared already\n"
+            case .link?: return "\(account): \(applied ? "linked" : "link") \(projects) to the shared folder\n"
+            case .moveAside?:
                 let backup = step["backup"]?.stringValue ?? ""
                 return "\(account): \(applied ? "renamed" : "rename") \(projects) to \(backup) (kept), then \(applied ? "linked" : "link")\n"
             default: return "\(account): left alone — \(step["reason"]?.stringValue ?? "")\n"

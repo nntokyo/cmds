@@ -83,4 +83,25 @@ final class CLIFormatEnglishTests: XCTestCase {
         XCTAssertEqual(Format.accounts(ClaudeAccountList(accounts: [], autoSwitch: true), now: now),
                        "no Claude accounts (add one: cmds accounts add NAME CONFIG_DIR)\n")
     }
+
+    func testShareSteps() {
+        let steps: [JSONValue] = [
+            .object(["account": "main", "projects": "/m/projects", "action": "none"]),
+            .object(["account": "work", "projects": "/w/projects", "action": "moveAside", "backup": "projects.before-cmds-1"]),
+            .object(["account": "fresh", "projects": "/f/projects", "action": "link"]),
+            .object(["account": "gone", "projects": "/g/projects", "action": "skip", "reason": "no folder"]),
+        ]
+        XCTAssertEqual(Format.shareSteps(steps, applied: false), """
+            main: /m/projects is shared already
+            work: rename /w/projects to projects.before-cmds-1 (kept), then link
+            fresh: link /f/projects to the shared folder
+            gone: left alone — no folder
+
+            """)
+        XCTAssertEqual(Format.shareSteps(Array(steps[1...2]), applied: true), """
+            work: renamed /w/projects to projects.before-cmds-1 (kept), then linked
+            fresh: linked /f/projects to the shared folder
+
+            """)
+    }
 }
