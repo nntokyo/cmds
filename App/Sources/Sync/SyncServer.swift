@@ -751,14 +751,22 @@ final class SyncServer {
         guard let data = try? codec.encode(.state(state)), data != lastStateData else { return }
         lastStateData = data
         // Phones that predate preview or files panes cannot decode their kind: they get them as browser panes.
-        var encoded: [[Bool]: Data] = [[true, true]: data]
+        var encoded: [StateVariant: Data] = [StateVariant(preview: true, files: true): data]
         for client in clients.values where client.authenticated {
-            let supports = [client.supportsPreview || !state.hasPreviewPanes, client.supportsFiles || !state.hasFilesPanes]
-            if encoded[supports] == nil {
-                encoded[supports] = try? codec.encode(.state(state.forPhone(supportsPreview: supports[0], supportsFiles: supports[1])))
+            let variant = StateVariant(preview: client.supportsPreview || !state.hasPreviewPanes,
+                                       files: client.supportsFiles || !state.hasFilesPanes)
+            if encoded[variant] == nil {
+                encoded[variant] = try? codec.encode(.state(state.forPhone(supportsPreview: variant.preview,
+                                                                            supportsFiles: variant.files)))
             }
-            if let variant = encoded[supports] { client.connection.send(variant) }
+            if let variantData = encoded[variant] { client.connection.send(variantData) }
         }
+    }
+
+    /// The pane kinds a state is sent with as they are (the others as browser panes), one encoding per variant.
+    private struct StateVariant: Hashable {
+        var preview: Bool
+        var files: Bool
     }
 
     private func currentState(for client: Client) -> ServerMessage.State {

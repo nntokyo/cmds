@@ -104,23 +104,25 @@ extension ServerMessage.State {
         return state
     }
 
-    public var hasFilesPanes: Bool { workspaces.contains { $0.panes.contains { $0.kind == .files } } }
+    public var hasFilesPanes: Bool { hasPanes(.files) }
 
     /// The state for phones without `SyncFeature.filesPanes`.
     public var withoutFilesPanes: ServerMessage.State {
-        guard hasFilesPanes else { return self }
-        var copy = self
-        copy.workspaces = workspaces.map(\.withoutFilesPanes)
-        return copy
+        hasFilesPanes ? mapWorkspaces(\.withoutFilesPanes) : self
     }
 
-    public var hasPreviewPanes: Bool { workspaces.contains { $0.panes.contains { $0.kind == .preview } } }
+    public var hasPreviewPanes: Bool { hasPanes(.preview) }
 
     /// The state for phones without `SyncFeature.previewPanes`.
     public var withoutPreviewPanes: ServerMessage.State {
-        guard hasPreviewPanes else { return self }
+        hasPreviewPanes ? mapWorkspaces(\.withoutPreviewPanes) : self
+    }
+
+    private func hasPanes(_ kind: PaneKind) -> Bool { workspaces.contains { $0.panes.contains { $0.kind == kind } } }
+
+    private func mapWorkspaces(_ transform: (WorkspaceInfo) -> WorkspaceInfo) -> ServerMessage.State {
         var copy = self
-        copy.workspaces = workspaces.map(\.withoutPreviewPanes)
+        copy.workspaces = workspaces.map(transform)
         return copy
     }
 }
@@ -128,28 +130,29 @@ extension ServerMessage.State {
 extension WorkspaceInfo {
     /// For phones without `SyncFeature.filesPanes`: files panes shown as browser panes with the folder's `file://` URL.
     public var withoutFilesPanes: WorkspaceInfo {
-        var copy = self
-        copy.panes = panes.map { pane in
-            guard pane.kind == .files else { return pane }
-            var legacy = pane
-            legacy.kind = .browser
-            legacy.url = pane.workingDirectory.map { URL(fileURLWithPath: $0, isDirectory: true).absoluteString }
-            legacy.workingDirectory = nil
-            return legacy
+        asBrowserPanes(.files) { pane in
+            pane.url = pane.workingDirectory.map { URL(fileURLWithPath: $0, isDirectory: true).absoluteString }
+            pane.workingDirectory = nil
         }
-        return copy
     }
 
     /// For phones without `SyncFeature.previewPanes`: preview panes shown as browser panes with a `file://` URL.
     public var withoutPreviewPanes: WorkspaceInfo {
+        asBrowserPanes(.preview) { pane in
+            pane.url = pane.file.map { URL(fileURLWithPath: $0).absoluteString }
+            pane.file = nil
+        }
+    }
+
+    /// Panes of `kind` turned into browser panes; `legacy` moves what they show into the browser fields.
+    private func asBrowserPanes(_ kind: PaneKind, _ legacy: (inout PaneInfo) -> Void) -> WorkspaceInfo {
         var copy = self
         copy.panes = panes.map { pane in
-            guard pane.kind == .preview else { return pane }
-            var legacy = pane
-            legacy.kind = .browser
-            legacy.url = pane.file.map { URL(fileURLWithPath: $0).absoluteString }
-            legacy.file = nil
-            return legacy
+            guard pane.kind == kind else { return pane }
+            var browser = pane
+            browser.kind = .browser
+            legacy(&browser)
+            return browser
         }
         return copy
     }
