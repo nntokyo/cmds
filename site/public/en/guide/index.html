@@ -59,6 +59,8 @@
         <li><a href="#claude">Setting up Claude Code and Codex</a></li>
         <li><a href="#iphone">Pairing an iPhone/iPad</a></li>
         <li><a href="#ssh">SSH workspaces</a></li>
+        <li><a href="#files">Files panes</a></li>
+        <li><a href="#schedules">Schedules</a></li>
         <li><a href="#shortcuts">Keyboard shortcuts</a></li>
       </ol>
     </nav>
@@ -257,9 +259,57 @@ cmds stats                                # CPU and memory per workspace and for
     </div>
   </section>
 
+  <section class="step" id="files">
+    <div class="wrap narrow">
+      <h2><span class="step-num">9</span>Files panes</h2>
+      <p>A folder on your Mac or on an SSH host, as a list next to your terminals. Two side by side make a two-pane file manager.</p>
+      <ul>
+        <li><kbd>⇧⌘E</kbd> (File › New Files Pane) opens the focused terminal's directory to the right. From a terminal: <code>cmds files [PATH]</code>.</li>
+        <li><kbd>↩</kbd> opens, <kbd>Space</kbd> shows the file in the preview pane. Inside a Git repository a column shows what changed (<code>M</code>, <code>A</code>, <code>?</code>…). With Follow Terminal on, the pane goes wherever you <code>cd</code> in the terminal.</li>
+        <li><kbd>F5</kbd> / <kbd>F6</kbd> copy or move to the other pane; drag and drop, the Finder and <kbd>⌘C</kbd> / <kbd>⌘V</kbd> work too. When a name is taken, choose Keep Both, Replace or Skip.</li>
+        <li><kbd>F2</kbd> renames, <kbd>F7</kbd> makes a new folder, <kbd>⌘⌫</kbd> moves to the Trash. Nothing is ever deleted for good.</li>
+        <li>Dropping files on a terminal types their paths, quoted for the shell.</li>
+      </ul>
+      <h3>Folders on SSH hosts</h3>
+      <ul>
+        <li><kbd>⌥⇧⌘E</kbd> (File › New Remote Files Pane…) asks for a host and a folder; <kbd>⇧⌘E</kbd> in an SSH pane opens the pane's remote directory. From a terminal: <code>cmds files HOST:PATH</code>. Nothing is installed on the server (SFTP).</li>
+        <li>cmds runs your own <code>ssh</code> (<code>~/.ssh/config</code>, keys, agent, jump hosts). It never asks for or stores a password and never adds host keys: password-only hosts and unknown or changed host keys are refused, with a note on what to do.</li>
+        <li>Open and preview use a downloaded, read-only copy. Move to Trash moves items to the server's own Trash (<code>~/.local/share/Trash</code>) and never deletes them.</li>
+      </ul>
+      <h3>Transfers</h3>
+      <ul>
+        <li>Copies and moves between the Mac and a host, or two hosts, run in the background in a transfer queue. Follow them in the pane and in Window › Transfers (<kbd>⌥⌘T</kbd>), with Pause, Cancel, Retry and a log; <code>cmds transfers</code> shows the same.</li>
+        <li>Files are written under a temporary name and get theirs only when complete. Cancel removes only what the transfer wrote.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="step" id="schedules">
+    <div class="wrap narrow">
+      <h2><span class="step-num">10</span>Schedules</h2>
+      <p>Window › Schedules… or <code>cmds schedule</code> sets up work for later. Schedules run while cmds runs.</p>
+      <ul>
+        <li><strong>When</strong>: once, on weekdays at set times, or when a Claude account's or Codex's limit resets (every time, with Every time it resets).</li>
+        <li><strong>What</strong>: start a workspace in the background (folder, account, a first command or a first prompt for Claude Code), continue a Claude Code or Codex session, or type into an existing pane (a command at an empty shell prompt, or a prompt into an idle agent).</li>
+        <li><strong>Safely</strong>: nothing is typed into a busy agent, one asking for input, or a pane running another program, and nothing runs twice. A run that cannot go ahead is skipped, and the history says why.</li>
+        <li>A notification a minute before a run offers Skip, and the sidebar's footer shows the next run. Runs missed while the Mac slept or cmds was not running get one catch-up run, if not too late.</li>
+        <li>When every account has hit its limit, Continue at 15:01 in the pane's bar makes a schedule that types <code>continue</code> after the reset.</li>
+      </ul>
+<pre><code># Continue this pane's session when the "work" account's limit resets
+cmds schedule add --name "Continue after reset" --after-limit work --continue
+
+# Weekdays at 09:00: start Claude Code in ~/src/app and give it a task
+cmds schedule add --name "Morning tests" --every weekdays --time 09:00 \
+  --start ~/src/app --account auto --prompt "Run the test suite and summarise failures" -- claude
+
+cmds schedule list      # list
+cmds schedule history   # past runs</code></pre>
+    </div>
+  </section>
+
   <section class="step" id="shortcuts">
     <div class="wrap narrow">
-      <h2><span class="step-num">9</span>Keyboard shortcuts</h2>
+      <h2><span class="step-num">11</span>Keyboard shortcuts</h2>
       <div class="table-wrap">
         <table>
           <thead><tr><th scope="col">Action</th><th scope="col">Key</th></tr></thead>
@@ -274,6 +324,9 @@ cmds stats                                # CPU and memory per workspace and for
             <tr><td>Tile all workspaces</td><td><kbd>⌃⌘T</kbd></td></tr>
             <tr><td>Jump to latest attention</td><td><kbd>⇧⌘U</kbd></td></tr>
             <tr><td>Browser split / open in preview</td><td><kbd>⇧⌘B</kbd> / <kbd>⇧⌘O</kbd></td></tr>
+            <tr><td>Files pane / remote files pane</td><td><kbd>⇧⌘E</kbd> / <kbd>⌥⇧⌘E</kbd></td></tr>
+            <tr><td>Copy / move to the other pane</td><td><kbd>F5</kbd> / <kbd>F6</kbd></td></tr>
+            <tr><td>Transfers</td><td><kbd>⌥⌘T</kbd></td></tr>
             <tr><td>Address bar / reload (reconnect SSH) / back / forward</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>
             <tr><td>Close pane / close workspace</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
             <tr><td>Toggle sidebar / compact sidebar</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>

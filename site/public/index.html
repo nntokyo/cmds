@@ -76,12 +76,14 @@
         <div class="card"><h3>アプリ内ブラウザ</h3><p>WebKit のブラウザをターミナルの隣に。開発サーバーの画面を確認でき、<code>cmds browser eval</code> や <code>snapshot</code> でエージェントからも操作できます。</p></div>
         <div class="card"><h3>分割とタイル表示</h3><p>右・下への入れ子の分割、ペインのズーム。複数のワークスペースを最大 9 枚のライブタイルとして並べ、5 つの Claude Code を同時に見ることも。サイドバーからドラッグして配置できます。</p></div>
         <div class="card"><h3>ファイルプレビュー</h3><p>画像、PDF、動画、Office（Quick Look）、GitHub 風の Markdown、色付きの diff。ファイルが変わると自動で再読み込み。ターミナル上のパスを <kbd>⌘</kbd>-クリックでも開けます。</p></div>
+        <div class="card"><h3>ファイル一覧ペイン</h3><p>Mac や SSH ホストのフォルダをターミナルの隣に一覧表示。2 つ並べてコピー・移動でき、サーバーとの間のファイルは転送キューで一時停止・再試行も。SSH はいつもの <code>ssh</code> の設定と鍵を使い、パスワードは保存しません。</p></div>
         <div class="card"><h3>CLI とソケット API</h3><p>同梱の <code>cmds</code> コマンドで分割、入力、画面の読み取り、通知、ブラウザ操作、統計を。すべて <code>--json</code> 対応で、スクリプトやエージェントから扱えます。</p></div>
         <div class="card"><h3>libghostty の GPU 描画</h3><p>ターミナルの描画は Ghostty のエンジン（libghostty）による Metal の GPU 描画。true color、<code>xterm-ghostty</code> の terminfo とシェル統合を同梱。</p></div>
         <div class="card"><h3>Swift と AppKit でネイティブ</h3><p>Electron ではなく Swift と AppKit で書かれた Mac アプリ。メニュー、ショートカット、通知、Quick Look など macOS の作法に沿って動きます。</p></div>
         <div class="card"><h3>SSH ワークスペース</h3><p>いつもの <code>ssh</code> と <code>~/.ssh/config</code> をそのまま使い、制限付きのソケットをサーバーへ転送。サーバー上のエージェントの通知や使用量も手元に届き、切断時は再接続ボタンが出ます。</p></div>
         <div class="card"><h3>スリープさせない</h3><p>cmds の実行中は Mac のアイドルスリープを防止。長いエージェントの作業も止まりません。必要なら蓋を閉じても動かし続ける設定も（オプトイン）。</p></div>
         <div class="card"><h3>セッションの復元</h3><p>再起動後もワークスペース、分割、ディレクトリ、URL が戻り、Claude Code / Codex のセッションの再開を提案します。書き出し・読み込みで別の Mac へも移せます。</p></div>
+        <div class="card"><h3>スケジュール</h3><p>決まった時刻や利用上限のリセット時に、ワークスペースを始める、Claude Code / Codex のセッションを続ける、ペインに入力する。作業中のエージェントには入力せず、同じ実行を 2 回しません。<code>cmds schedule</code> でも設定できます。</p></div>
         <div class="card"><h3>日本語と英語</h3><p>Mac アプリも iPhone/iPad アプリも日本語と英語の UI に対応。言語はメニューから切り替えられます。</p></div>
       </div>
       <div class="gallery">
