@@ -213,19 +213,23 @@ public struct ContinueSession: Codable, Equatable, Sendable {
     /// nil = the session's account.
     public var account: String?
     public var prompt: String
+    /// The pane the schedule was made for (`--pane`, the limit bar's pane): used when it still holds the session
+    /// (`ScheduleRunTiming.sessionPane`). Pane ids change when cmds restarts; then the session decides.
+    public var pane: String?
 
     public static let defaultPrompt = "continue"
 
     public init(agent: AgentKind = .claude, sessionID: String, cwd: String? = nil, account: String? = nil,
-                prompt: String = ContinueSession.defaultPrompt) {
+                prompt: String = ContinueSession.defaultPrompt, pane: String? = nil) {
         self.agent = agent
         self.sessionID = sessionID
         self.cwd = cwd
         self.account = account
         self.prompt = prompt
+        self.pane = pane
     }
 
-    private enum CodingKeys: String, CodingKey { case agent, sessionID, cwd, account, prompt }
+    private enum CodingKeys: String, CodingKey { case agent, sessionID, cwd, account, prompt, pane }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -237,6 +241,7 @@ public struct ContinueSession: Codable, Equatable, Sendable {
         cwd = c.lenientString(.cwd)
         account = c.lenientString(.account)
         prompt = c.lenientString(.prompt) ?? Self.defaultPrompt
+        pane = c.lenientString(.pane)
     }
 }
 
@@ -286,6 +291,19 @@ public enum ScheduleLatePolicy: Equatable, Sendable {
     /// `once` and `limitReset`: up to 6 h late; `weekly`: up to 15 min.
     public static func defaultPolicy(for trigger: ScheduleTrigger) -> ScheduleLatePolicy {
         trigger.isOneShot ? .runIfWithin(6 * 3600) : .runIfWithin(15 * 60)
+    }
+
+    /// The editor's "Run if at most this late: N minutes": blank = `defaultPolicy(for:)`; nil = not a number.
+    public static func fromMinutes(_ text: String, trigger: ScheduleTrigger) -> ScheduleLatePolicy? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return defaultPolicy(for: trigger) }
+        guard let minutes = Double(trimmed), minutes.isFinite else { return nil }
+        return .runIfWithin(minutes * 60)
+    }
+
+    /// A late window in whole minutes, as the editor shows it.
+    public static func minutesText(_ seconds: TimeInterval) -> String {
+        String(Int((seconds / 60).rounded()))
     }
 }
 
@@ -466,6 +484,16 @@ public struct Schedule: Codable, Equatable, Sendable {
     }
 }
 
+extension Schedule {
+    /// Already continues `sessionID` when `account`'s limit resets, and will run (the limit bar's "Continue at" makes
+    /// one such schedule per session and account). One without a next firing does not count.
+    public func continuesAtReset(sessionID: String, account: String) -> Bool {
+        guard enabled, nextFireAt != nil, case .limitReset(let name, _) = trigger,
+              case .continueSession(let action) = action else { return false }
+        return name.caseInsensitiveCompare(account) == .orderedSame && action.sessionID == sessionID
+    }
+}
+
 // MARK: - Runs
 
 /// Where a run is. Active states first, then the final ones.
@@ -607,6 +635,8 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
     case otherProgram
     case agentNotRunning
     case differentSession
+    /// Several panes hold the session, and the schedule's own pane is not one of them.
+    case ambiguousSession
     case movedToOtherAccount
     case notClaude
     // Failed
@@ -642,6 +672,7 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
         case .otherProgram: return "the pane was running another program"
         case .agentNotRunning: return "Claude Code was no longer running in the pane"
         case .differentSession: return "the pane was running a different session"
+        case .ambiguousSession: return "several panes hold the session"
         case .movedToOtherAccount: return "the session had moved to another account"
         case .notClaude: return "the agent in the pane is not Claude Code"
         case .accountRemoved: return "the account was removed"

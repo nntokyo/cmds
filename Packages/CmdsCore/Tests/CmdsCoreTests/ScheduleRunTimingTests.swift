@@ -195,4 +195,24 @@ final class ScheduleRunTimingTests: XCTestCase {
         XCTAssertFalse(T.showsChoice(screen: "> 1+1 is 2"))
         XCTAssertFalse(T.showsChoice(screen: "user@mac ~ % "))
     }
+
+    // MARK: Which pane holds the session (#55)
+
+    func testSessionPaneKeepsTheChosenPane() {
+        // Two panes hold the same session: the schedule's own pane gets the prompt, not the first one.
+        XCTAssertEqual(T.sessionPane(preferred: "p2", running: ["p1", "p2"], remembering: []), .pane("p2"))
+        XCTAssertEqual(T.sessionPane(preferred: "p2", running: [], remembering: ["p1", "p2"]), .pane("p2"))
+        // Ambiguous without it (its id is stale after a restart, or none was given): skipped.
+        XCTAssertEqual(T.sessionPane(preferred: "p9", running: ["p1", "p2"], remembering: []), .ambiguous)
+        XCTAssertEqual(T.sessionPane(preferred: nil, running: [], remembering: ["p1", "p2"]), .ambiguous)
+    }
+
+    func testSessionPaneRunningWins() {
+        XCTAssertEqual(T.sessionPane(preferred: nil, running: ["p1"], remembering: []), .pane("p1"))
+        XCTAssertEqual(T.sessionPane(preferred: "p9", running: [], remembering: ["p3"]), .pane("p3"))
+        // Never a second copy: a pane running the session wins over the chosen pane that only remembers it.
+        XCTAssertEqual(T.sessionPane(preferred: "p2", running: ["p1"], remembering: ["p2"]), .pane("p1"))
+        XCTAssertEqual(T.sessionPane(preferred: nil, running: ["p1"], remembering: ["p2", "p3"]), .pane("p1"))
+        XCTAssertEqual(T.sessionPane(preferred: "p1", running: [], remembering: []), .none)
+    }
 }

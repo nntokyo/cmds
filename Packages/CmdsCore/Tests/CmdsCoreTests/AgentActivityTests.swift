@@ -82,6 +82,25 @@ final class AgentSignalsTests: XCTestCase {
         XCTAssertEqual(signals.activity(at: t0 + 2), .none)
     }
 
+    /// A quick turn (UserPromptSubmit, then Stop before the next look) still counts as worked on (#55).
+    func testQuickTurnStillCountsAsWorked() {
+        var signals = AgentSignals()
+        signals.hasUsage = true
+        let enter = t0 + 10
+        XCTAssertFalse(signals.workedSince(enter))
+        signals.hook = .busy
+        signals.hookAt = t0 + 10.1
+        signals.workingHookAt = t0 + 10.1 // as AppController.claudeHook records a working hook
+        signals.hook = .finished
+        signals.hookAt = t0 + 10.2
+        XCTAssertNil(signals.lastBusyAt) // the busy hook alone is forgotten…
+        XCTAssertTrue(signals.workedSince(enter)) // …but the turn is remembered
+        XCTAssertFalse(signals.workedSince(t0 + 11)) // nothing after a later Return
+        // Not before the agent's exit.
+        signals.endedAt = t0 + 10.5
+        XCTAssertFalse(signals.workedSince(enter))
+    }
+
     func testWorkspaceOrder() {
         XCTAssertEqual([AgentActivity.idle, .needsInput, .busy, .none].max(), .needsInput)
         XCTAssertEqual([AgentActivity.idle, .busy, .none].max(), .busy)

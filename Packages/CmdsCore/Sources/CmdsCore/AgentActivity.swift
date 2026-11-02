@@ -94,6 +94,8 @@ public struct AgentSignals: Equatable, Sendable {
     /// Latest hook event and when it arrived.
     public var hook: HookState?
     public var hookAt: Date?
+    /// The last `UserPromptSubmit` / tool hook, kept after a later `Stop` (a turn can end within one look).
+    public var workingHookAt: Date?
     /// Current title glyph and when the title last changed to/with a glyph.
     public var titleGlyph: AgentTitle.Glyph?
     public var titleChangedAt: Date?
@@ -153,6 +155,11 @@ public struct AgentSignals: Equatable, Sendable {
         guard let best else { return .idle }
         if best.activity == .busy, titleGlyph != .busy, now.timeIntervalSince(best.date) > best.timeout { return .idle }
         return best.activity
+    }
+
+    /// The agent was seen working after `date`, even if the turn has ended since (a schedule run's prompt).
+    public func workedSince(_ date: Date) -> Bool {
+        (lastBusyAt ?? .distantPast) > date || (valid(workingHookAt) ?? .distantPast) > date
     }
 
     /// When the agent last showed it was working (to tell whether it resumed after a notification).

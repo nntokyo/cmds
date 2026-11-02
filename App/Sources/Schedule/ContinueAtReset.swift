@@ -22,16 +22,12 @@ extension AppController {
         guard let session = continuableSession(pane), let at = continueAtResetTime(pane),
               let account = limitedAccount(of: pane) else { return }
         let runner = scheduleRunner
-        let existing = runner.schedules.first { schedule in
-            guard schedule.enabled, case .limitReset(let name, _) = schedule.trigger,
-                  case .continueSession(let action) = schedule.action else { return false }
-            return name.caseInsensitiveCompare(account) == .orderedSame && action.sessionID == session.sessionID
-        }
+        let existing = runner.schedules.first { $0.continuesAtReset(sessionID: session.sessionID, account: account) }
         if existing == nil {
             let title = AgentResume.cleanTitle(session.title) ?? String(session.sessionID.prefix(8))
             let draft = ScheduleDraft(name: String(String(localized: "Continue “\(title)”").prefix(ScheduleLimits.maxNameLength)),
                                       trigger: .limitReset(account: account, delay: Self.continueAtResetDelay),
-                                      action: .continueSession(ContinueSession(sessionID: session.sessionID, cwd: session.cwd)))
+                                      action: .continueSession(ContinueSession(sessionID: session.sessionID, cwd: session.cwd, pane: pane.id)))
             do {
                 try runner.add(draft, origin: .app)
             } catch {

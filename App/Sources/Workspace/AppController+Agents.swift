@@ -74,7 +74,9 @@ extension AppController {
         switch event {
         case .needsInput: pane.agentSignals.hook = .needsInput
         case .finished: pane.agentSignals.hook = .finished
-        case .working: pane.agentSignals.hook = .busy
+        case .working:
+            pane.agentSignals.hook = .busy
+            pane.agentSignals.workingHookAt = now
         case .ended:
             pane.agentSignals.hook = nil
             pane.agentSignals.endedAt = now

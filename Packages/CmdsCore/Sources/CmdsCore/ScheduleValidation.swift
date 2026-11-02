@@ -11,6 +11,8 @@ public enum ScheduleProblem: Equatable, Sendable {
     case unknownTimeZone(String)
     case delayOutOfRange
     case lateOutOfRange
+    /// The editor's late field is not a number.
+    case lateNotANumber
     case accountInvalid(String)
     case accountUnknown(String)
     case accountNotLimited(String)
@@ -34,6 +36,7 @@ public enum ScheduleProblem: Equatable, Sendable {
         case .timesTooClose: return "times of day must be at least \(Int(ScheduleLimits.minTimeGap / 60)) minutes apart"
         case .unknownTimeZone(let zone): return "unknown time zone \(zone)"
         case .delayOutOfRange: return "the delay must be 0 to \(Int(ScheduleLimits.maxDelay / 60)) minutes"
+        case .lateNotANumber: return "give the late window as a number of minutes"
         case .lateOutOfRange: return "a late run must be allowed for 1 minute to \(Int(ScheduleLimits.maxLateWindow / 86400)) days"
         case .accountInvalid(let name): return "\(name) is not a valid account name"
         case .accountUnknown(let name): return "no account named \(name)"
@@ -99,6 +102,14 @@ public enum ScheduleValidation {
             problems += promptProblems(action.prompt)
         }
         return problems
+    }
+
+    /// Whether a change is checked with `problems(_:accounts:existing:now:)` in full (also a time that is still ahead
+    /// and an account limit): a new schedule (`old` nil), a new trigger, or turning it on. Other edits of a schedule
+    /// whose time has passed are fine. The editor and the runner use this one rule.
+    public static func needsFullCheck(old: ScheduleDraft?, new: ScheduleDraft) -> Bool {
+        guard let old else { return true }
+        return new.trigger != old.trigger || (new.enabled && !old.enabled)
     }
 
     /// Everything checked when a schedule is created or changed: `problems(_:)` plus the accounts it names, a time

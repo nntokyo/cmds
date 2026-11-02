@@ -298,7 +298,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             latePopup.selectItem(at: 0)
         case .runIfWithin(let seconds)?:
             latePopup.selectItem(at: 1)
-            lateField.stringValue = String(Int((seconds / 60).rounded()))
+            lateField.stringValue = ScheduleLatePolicy.minutesText(seconds)
         case nil:
             latePopup.selectItem(at: 1)
         }
@@ -311,9 +311,10 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         sessionPopup.removeAllItems()
         sessions = []
         let list = (try? AppController.shared.agentSessionList(paneID: nil))?.sessions ?? []
+        // One item per session and pane: with the same session in two panes, the chosen pane is the run's target.
         for entry in list where entry.session.agent == .claude && entry.session.host == nil {
-            guard !sessions.contains(where: { $0.sessionID == entry.session.sessionID }) else { continue }
-            sessions.append(ContinueSession(sessionID: entry.session.sessionID, cwd: entry.session.cwd))
+            guard !sessions.contains(where: { $0.sessionID == entry.session.sessionID && $0.pane == entry.pane }) else { continue }
+            sessions.append(ContinueSession(sessionID: entry.session.sessionID, cwd: entry.session.cwd, pane: entry.pane))
             sessionPopup.addItem(withTitle: "\(AppController.localizedSummary(entry.session)) — \(entry.pane)")
         }
         if let current, !sessions.contains(where: { $0.sessionID == current.sessionID }) {
@@ -325,7 +326,10 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             sessionPopup.isEnabled = false
         } else {
             sessionPopup.isEnabled = true
-            let index = current.flatMap { session in sessions.firstIndex { $0.sessionID == session.sessionID } } ?? 0
+            let index = current.flatMap { session in
+                sessions.firstIndex { $0.sessionID == session.sessionID && $0.pane == session.pane }
+                    ?? sessions.firstIndex { $0.sessionID == session.sessionID }
+            } ?? 0
             sessionPopup.selectItem(at: index)
         }
     }
@@ -378,12 +382,11 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         let late: ScheduleLatePolicy
         if latePopup.indexOfSelectedItem == 0 {
             late = .skip
-        } else if lateField.stringValue.trimmingCharacters(in: .whitespaces).isEmpty {
-            late = .defaultPolicy(for: trigger)
-        } else if let minutes = Double(lateField.stringValue.trimmingCharacters(in: .whitespaces)) {
-            late = .runIfWithin(minutes * 60)
+        } else if let parsed = ScheduleLatePolicy.fromMinutes(lateField.stringValue, trigger: trigger) {
+            late = parsed
         } else {
-            late = .runIfWithin(0)
+            problems.append(.lateNotANumber)
+            late = .defaultPolicy(for: trigger)
         }
         let notify = ScheduleNotify.allCases[safe: notifyPopup.indexOfSelectedItem] ?? .failures
         let draft = ScheduleDraft(name: nameField.stringValue.trimmingCharacters(in: .whitespaces),
@@ -410,12 +413,13 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         let (draft, parseProblems) = draft()
         if lateField.isEnabled, lateField.stringValue.isEmpty, let draft,
            case .runIfWithin(let seconds) = ScheduleLatePolicy.defaultPolicy(for: draft.trigger) {
-            lateField.placeholderString = String(Int(seconds / 60))
+            lateField.placeholderString = ScheduleLatePolicy.minutesText(seconds)
         }
         var problems = parseProblems
         if let draft {
-            let full = original.map { draft.trigger != $0.trigger || (draft.enabled && !$0.enabled) || $0.nextFireAt == nil } ?? true
-            problems += runner.problems(draft, excluding: original?.id, full: full && draft.enabled)
+            // The runner's rule, so what is shown here is what Save checks.
+            let full = ScheduleValidation.needsFullCheck(old: original?.draft, new: draft)
+            problems += runner.problems(draft, excluding: original?.id, full: full)
         }
         var seen: [String] = []
         for text in problems.map(ScheduleText.problem) where !seen.contains(text) { seen.append(text) }

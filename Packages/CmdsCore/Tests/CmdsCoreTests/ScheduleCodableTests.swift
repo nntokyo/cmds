@@ -293,6 +293,63 @@ final class ScheduleValidationTests: XCTestCase {
         XCTAssertEqual(ScheduleProblem.promptTooLong.english, "the prompt must be at most 8 KB")
     }
 
+    /// One rule for the editor and the runner (#55): a new schedule, a new trigger or turning it on is checked in full,
+    /// also when the schedule stays off.
+    func testFullCheckRule() {
+        let past = draft(.once(at: now.addingTimeInterval(-60)))
+        var off = past
+        off.enabled = false
+        XCTAssertTrue(ScheduleValidation.needsFullCheck(old: nil, new: off))
+        var changed = off
+        changed.trigger = .once(at: now.addingTimeInterval(-120))
+        XCTAssertTrue(ScheduleValidation.needsFullCheck(old: off, new: changed))
+        var renamed = off
+        renamed.name = "y"
+        XCTAssertFalse(ScheduleValidation.needsFullCheck(old: off, new: renamed))
+        XCTAssertTrue(ScheduleValidation.needsFullCheck(old: off, new: past)) // turned on
+        XCTAssertFalse(ScheduleValidation.needsFullCheck(old: past, new: off)) // turned off
+        var renamedOn = past
+        renamedOn.name = "y"
+        XCTAssertFalse(ScheduleValidation.needsFullCheck(old: past, new: renamedOn))
+    }
+
+    /// The editor's late field (#55): blank = default, not a number = a problem of its own, minutes rounded.
+    func testLateField() {
+        XCTAssertEqual(ScheduleLatePolicy.fromMinutes(" ", trigger: .once(at: now)), .runIfWithin(6 * 3600))
+        XCTAssertEqual(ScheduleLatePolicy.fromMinutes("30", trigger: .once(at: now)), .runIfWithin(1800))
+        XCTAssertEqual(ScheduleLatePolicy.fromMinutes(" 1.5 ", trigger: .once(at: now)), .runIfWithin(90))
+        XCTAssertNil(ScheduleLatePolicy.fromMinutes("soon", trigger: .once(at: now)))
+        XCTAssertNil(ScheduleLatePolicy.fromMinutes("nan", trigger: .once(at: now)))
+        XCTAssertEqual(ScheduleLatePolicy.minutesText(89), "1")
+        XCTAssertEqual(ScheduleLatePolicy.minutesText(90), "2")
+        XCTAssertEqual(ScheduleLatePolicy.minutesText(15 * 60), "15")
+        XCTAssertEqual(ScheduleProblem.lateNotANumber.english, "give the late window as a number of minutes")
+    }
+
+    /// "Continue at": an existing schedule counts only when it will run (#55).
+    func testContinuesAtReset() {
+        let action = ScheduleAction.continueSession(ContinueSession(sessionID: "abc"))
+        var schedule = Schedule(id: "s00000001", draft: draft(.limitReset(account: "Work", delay: 60), action), origin: .app,
+                                createdAt: now, nextFireAt: now.addingTimeInterval(3600))
+        XCTAssertTrue(schedule.continuesAtReset(sessionID: "abc", account: "work"))
+        XCTAssertFalse(schedule.continuesAtReset(sessionID: "abd", account: "work"))
+        XCTAssertFalse(schedule.continuesAtReset(sessionID: "abc", account: "me"))
+        schedule.nextFireAt = nil
+        XCTAssertFalse(schedule.continuesAtReset(sessionID: "abc", account: "work"))
+        schedule.nextFireAt = now
+        schedule.enabled = false
+        XCTAssertFalse(schedule.continuesAtReset(sessionID: "abc", account: "work"))
+    }
+
+    /// The schedule's own pane is stored with the session (#55); older files without it still load.
+    func testContinueSessionPane() throws {
+        let action = ContinueSession(sessionID: "abc", pane: "p12")
+        let decoded = try JSONDecoder().decode(ContinueSession.self, from: JSONEncoder().encode(action))
+        XCTAssertEqual(decoded.pane, "p12")
+        let old = try JSONDecoder().decode(ContinueSession.self, from: Data(#"{"sessionID":"abc"}"#.utf8))
+        XCTAssertNil(old.pane)
+    }
+
     func testContinueSession() {
         func problems(_ action: ContinueSession) -> [ScheduleProblem] {
             ScheduleValidation.problems(draft(.once(at: now), .continueSession(action)))

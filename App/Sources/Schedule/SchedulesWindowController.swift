@@ -412,7 +412,7 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
         let id = schedule.id
         var draft = schedule.draft
         draft.enabled = sender.state == .on
-        let problems = runner.problems(draft, excluding: id, full: draft.enabled)
+        let problems = runner.problems(draft, excluding: id, full: ScheduleValidation.needsFullCheck(old: schedule.draft, new: draft))
         if !problems.isEmpty {
             showMessage(problems.map(ScheduleText.problem).joined(separator: "\n"))
             return refresh()

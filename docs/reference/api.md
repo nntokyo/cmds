@@ -140,7 +140,9 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `createdAt`, `nextFireAt?`. `trigger`: `{"type": "once", "at"}`, `{"type": "weekly", "weekdays": ["mon"…"sun"],
   "times": ["09:00"], "timeZone"?}` (no zone: the Mac's), `{"type": "limitReset", "account", "delay"}` (seconds,
   0–3600). `action`: `{"type": "startWorkspace", "cwd", "title"?, "account"?` (name or `auto`), `"command"?, "prompt"?}`
-  or `{"type": "continueSession", "agent": "claude", "sessionID", "cwd"?, "account"?, "prompt"}`. `late`:
+  or `{"type": "continueSession", "agent": "claude", "sessionID", "cwd"?, "account"?, "prompt", "pane"?}` (`pane`:
+  the pane to use when several hold the session; without it, or when it no longer holds it, such a run is skipped
+  with `ambiguousSession`). `late`:
   `{"type": "skip"}` or `{"type": "runIfWithin", "seconds"}` (default 21600 for `once`/`limitReset`, 900 for
   `weekly`). `notify`: `failures` (default), `always`, `never`. `origin`: `{"type": "app"}` or
   `{"type": "api", "pane"?}`. The same format is stored in `schedules.json`.
