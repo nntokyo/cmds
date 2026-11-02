@@ -253,6 +253,9 @@ Switching to the next account in order that has not hit its limit, in that pane 
    [resuming](#resuming-sessions) does (at an empty shell prompt, once). The conversation continues under the next
    account; ask Claude to go on with what it was doing.
 
+When every other account is limited too, the bar offers **Continue at 15:01** (the notification **Continue When It
+Resets**): a [schedule](schedules.md) types `continue` into the session one minute after the account's reset.
+
 `cmds accounts switch [--pane P] [--to NAME]` does the same on request, also without a limit. Accounts are for local
 panes; SSH panes are never switched.
 

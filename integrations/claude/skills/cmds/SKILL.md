@@ -15,6 +15,8 @@ cmds のターミナルでは `cmds` CLI が PATH にあり、`CMDS_PANE_ID` / `
 - 自分が作っていないペイン・ワークスペースを閉じない。`cmds read` で他のペインを読むのは、ユーザーに頼まれたときだけ。
 - ペインを開くときは `--no-focus` を付ける。付けないと、ユーザーが打っているキーボードの入力先が移ってしまう。
 - 終わったら、自分が起動したサーバーやウォッチャーを止め（`cmds send --pane <id> $'\x03'`）、ペインを閉じる（`cmds close-pane <id>`）。
+- **スケジュール（`cmds schedule add`）は、ユーザーに頼まれたときだけ作る。** 後で実行したほうがよい作業（上限のリセット後に続ける、夜間に回す）に気づいたら、
+  コマンド例を示して提案するところまでにする。作ったスケジュールは確認なしで実行され、ウインドウには「CLI から作成」と表示される。
 
 ## よく使う手順
 
@@ -56,5 +58,7 @@ cmds status ""                                     # 消す
 
 - 入力待ち・完了の通知は Claude Code のフック（`cmds hook claude`）が自動で出す。自分で `cmds notify` を使うのは、
   途中でユーザーの判断が要る出来事（長いビルドの失敗など）があるときだけにする。
+- ユーザーに頼まれて、上限のリセット後にこのセッションを続けるとき: `cmds schedule add --name "上限後に続ける" --after-limit <アカウント> --continue`
+  （`cmds schedule` で一覧、`cmds schedule history` で結果）。
 - 状態を機械的に読むときは `--json` を付ける（例: `cmds ls --json`、`cmds stats --json`）。
 - 詳しい使い方: `cmds --help`、`cmds <command> --help`。

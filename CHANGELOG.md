@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: schedules (Window › Schedules…, Settings › Agents, `cmds schedule`, socket `schedule.*`). Start a workspace in
+  the background (folder, account or `auto`, a command typed at its prompt, a first prompt for the Claude Code it
+  starts) or continue a remembered Claude Code session (resumed first when it is not running) once, on weekdays at
+  set times, or when an account's limit resets. Nothing is typed into a busy agent, a pane running another program, or
+  a pane the schedule did not create or target, and nothing is typed twice. Missed times get one catch-up run within
+  the schedule's late policy, else a missed notice. A history shows how each run ended. Schedules run while cmds runs;
+  `schedule.*` is refused on SSH panes' sockets (#45).
+- Mac: when every account has hit its limit, the bar in the pane offers Continue at 15:01 (and the notification
+  Continue When It Resets): `continue` is typed into the session after the reset (#45).
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
