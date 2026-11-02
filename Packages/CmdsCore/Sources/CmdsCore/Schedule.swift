@@ -825,7 +825,7 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
         case .notCodex: return "the agent in the pane is not Codex"
         case .paneNotFound: return "the target pane was not found"
         case .ambiguousTarget: return "several panes match the target"
-        case .skippedByUser: return "skipped"
+        case .skippedByUser: return "skipped on request"
         case .accountRemoved: return "the account was removed"
         case .accountStillLimited: return "the account was still limited"
         case .paneClosed: return "the pane was closed"

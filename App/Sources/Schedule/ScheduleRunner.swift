@@ -455,6 +455,10 @@ final class ScheduleRunner {
         schedules[index].draft = draft
         if !draft.enabled {
             schedules[index].nextFireAt = nil
+        } else if !rearm, schedules[index].trigger.repeats {
+            // A repeating limit trigger waiting for its next limit stays so (a reset it handled or skipped never
+            // comes back).
+            schedules[index].nextFireAt = recomputed(schedules[index], now: now())
         } else if rearm || schedules[index].nextFireAt == nil {
             schedules[index].nextFireAt = nextFire(schedules[index], after: now())
         }

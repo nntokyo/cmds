@@ -53,6 +53,7 @@ final class ScheduleCLITests: XCTestCase {
     func testAfterLimit() throws {
         XCTAssertEqual(try options(["--after-limit", "work"]).trigger, ["type": "limitReset", "account": "work", "delay": 60])
         XCTAssertEqual(try options(["--after-limit", "work", "--delay", "2m"]).trigger?["delay"], 120)
+        XCTAssertEqual(try options(["--after-limit", "work", "--delay", "0"]).trigger?["delay"], 0)
         usageError(["--delay", "2m"])
     }
 

@@ -5544,12 +5544,12 @@
         }
       }
     },
-    "Skipped by you.": {
+    "Skipped on request.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スキップしました。"
+            "value": "指示によりスキップしました。"
           }
         }
       }

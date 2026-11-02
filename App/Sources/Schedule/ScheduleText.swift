@@ -25,7 +25,7 @@ enum ScheduleText {
         case .notCodex: return String(localized: "The agent in the pane is not Codex.")
         case .paneNotFound: return String(localized: "The target pane was not found.")
         case .ambiguousTarget: return String(localized: "Several panes match the target.")
-        case .skippedByUser: return String(localized: "Skipped by you.")
+        case .skippedByUser: return String(localized: "Skipped on request.")
         case .accountRemoved: return String(localized: "The account was removed.")
         case .accountStillLimited: return String(localized: "The account was still limited.")
         case .paneClosed: return String(localized: "The pane was closed.")

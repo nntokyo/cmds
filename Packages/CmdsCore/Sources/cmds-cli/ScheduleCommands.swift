@@ -377,8 +377,9 @@ extension CLI {
         throw CLIError.usage("--at expects \"YYYY-MM-DD HH:MM\" or HH:MM, got \(raw)")
     }
 
-    /// `90m`, `2h`, `1h30m`, `45s`, `1d`.
+    /// `90m`, `2h`, `1h30m`, `45s`, `1d`; `0` (e.g. `--delay 0`).
     static func parseDuration(_ raw: String, option: String) throws -> TimeInterval {
+        if raw == "0" { return 0 }
         let units: [Character: TimeInterval] = ["s": 1, "m": 60, "h": 3600, "d": 86400]
         let invalid = CLIError.usage("--\(option) expects a duration like 90m, 2h, 1h30m or 45s, got \(raw)")
         var total: TimeInterval = 0
