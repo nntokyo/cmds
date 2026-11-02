@@ -12,11 +12,11 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
       <sparkle:version>11</sparkle:version>
       <sparkle:shortVersionString>0.7.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Mon, 02 Nov 2026 03:54:47 GMT</pubDate>
+      <pubDate>Mon, 02 Nov 2026 06:48:04 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
-<p>SSH ホストのファイルペイン：ファイル › 新規リモートファイルペイン…（⌥⇧⌘E）、SSH ペインで ⇧⌘E、または <code>cmds files HOST:PATH</code> で、ホストのフォルダを SFTP で開きます。接続にはお使いの <code>ssh</code> の設定と鍵をそのまま使い、パスワードを尋ねたり保存したりはしません。名前の変更、新規フォルダ、開く・プレビュー、ここでターミナルを開く、ゴミ箱に入れる（サーバー側のゴミ箱へ移すだけで削除はしません）ができます。</p>
-<p>転送キュー：Mac と SSH ホストの間、またはホスト同士で、コピーと移動ができます（F5 / F6、ドラッグ＆ドロップ、Finder からのドロップ、⌘C / ⌘V）。進み具合はペインと ウィンドウ › 転送（⌥⌘T）で確認でき、一時停止・キャンセル・再試行ができます。ファイルは転送が終わってから本来の名前になり、キャンセルしても転送が書いたものしか消しません。</p>
+<p>SSH ホストのファイル一覧ペイン：ファイル › 新規リモートファイルパネル…（⌥⇧⌘E）、SSH ペインで ⇧⌘E、または <code>cmds files HOST:PATH</code> で、ホストのフォルダを SFTP で開きます。接続にはお使いの <code>ssh</code> の設定と鍵をそのまま使い、パスワードを尋ねたり保存したりはしません。名前の変更、新規フォルダ、開く・プレビュー、ここでターミナルを開く、ゴミ箱に入れる（サーバー側のゴミ箱へ移すだけで削除はしません）ができます。</p>
+<p>転送キュー：Mac と SSH ホストの間、またはホスト同士で、コピーと移動ができます（F5 / F6、ドラッグ＆ドロップ、Finder からのドロップ、⌘C / ⌘V）。進み具合はペインと ウインドウ › 転送（⌥⌘T）で確認でき、一時停止・キャンセル・再試行ができます。ファイルは転送が終わってから本来の名前になり、キャンセルしても転送が書いたものしか消しません。</p>
 <p>スケジュール：既存のペインへの入力（空のシェルへのコマンド、待機中の Claude Code や Codex へのプロンプト）、Codex のセッションの継続と Codex の利用上限のリセット時の実行、リセットのたびの繰り返し、実行 1 分前の通知（スキップ可）とサイドバーでの次回表示に対応しました。</p>
 <h3>修正</h3>
 <p><code>cmds read p2</code> がフォーカス中のペインを読んでいた問題を直しました。<code>--pane P</code> で指定してください。</p>
@@ -35,6 +35,6 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 8sa4hGteRdfWMwjfFwejzUo0Ikae6MifIFBUpGIN/XLQ4UwNVWzC4baBhPkiRyFnDGSFXPHJj6bnyNwSjeB8Aw==
-length: 4648
+edSignature: 9zTRxKiW/yO2j4QiPiaccaMIqeVqqR4VXGEXag/4AH4wrCrvYOqV4a0NL2tVgqNziQsNi5QWz21uCDAjR/4kDg==
+length: 4654
 -->
