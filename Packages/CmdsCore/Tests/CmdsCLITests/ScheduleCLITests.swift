@@ -93,7 +93,9 @@ final class ScheduleCLITests: XCTestCase {
             AgentSessionEntry(workspace: "w2", pane: "p9", state: .running, session: remote, command: nil),
         ])
         XCTAssertEqual(try CLI.continueAction(target: .pane("p3"), pane: "p3", sessions: sessions, account: nil, prompt: nil), [
+            // The chosen pane goes along (#55): with two panes holding the session, the prompt goes to this one.
             "type": "continueSession", "agent": "claude", "sessionID": "6f1c2d3e-0000", "cwd": "/Users/me/src/app",
+            "pane": "p3",
         ])
         XCTAssertEqual(try CLI.continueAction(target: .session("other"), pane: nil, sessions: sessions, account: "me",
                                               prompt: "go on"),

@@ -2709,6 +2709,16 @@
         }
       }
     },
+    "Give the late window as a number of minutes.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遅れて実行できる時間は分数（数字）で入力してください。"
+          }
+        }
+      }
+    },
     "Go": {
       "localizations": {
         "ja": {
@@ -4613,6 +4623,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "お使いのssh（~/.ssh/configを使用）を実行し、このペインのcmdsソケットをサーバーに転送します。サーバー上のcmds-remote.shから通知やエージェントの使用状況を送れるようになります。サーバーには何もインストールしません。"
+          }
+        }
+      }
+    },
+    "Several panes hold the session.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複数のペインがこのセッションを持っています。"
           }
         }
       }

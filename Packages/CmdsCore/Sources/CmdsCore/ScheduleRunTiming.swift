@@ -174,6 +174,26 @@ public enum ScheduleRunTiming {
         }
     }
 
+    public enum SessionPane: Equatable, Sendable {
+        case pane(String)
+        /// No pane holds the session.
+        case none
+        /// Several panes hold it and none of them is the schedule's own: the run is skipped (`ambiguousSession`).
+        case ambiguous
+    }
+
+    /// The pane a `continueSession` run uses. `running`: panes where Claude Code runs the session now; `remembering`:
+    /// other panes that remember or offer it; `preferred`: the schedule's own pane (`ContinueSession.pane`). A pane
+    /// running the session wins over one remembering it (never a second copy of a running session); among them the
+    /// preferred pane, else the only one.
+    public static func sessionPane(preferred: String?, running: [String], remembering: [String]) -> SessionPane {
+        for panes in [running, remembering] where !panes.isEmpty {
+            if let preferred, panes.contains(preferred) { return .pane(preferred) }
+            return panes.count == 1 ? .pane(panes[0]) : .ambiguous
+        }
+        return .none
+    }
+
     /// The account to wait for with `auto`: none is free; `resets` are the accounts' reset times. nil = no account
     /// frees up within `accountWait` from `now`, so the run is skipped at once.
     public static func autoAccountFreeIn(resets: [Date], now: Date) -> TimeInterval? {

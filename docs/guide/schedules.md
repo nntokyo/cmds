@@ -19,7 +19,7 @@ A schedule has a **trigger** and an **action**.
 | Action | What happens |
 |---|---|
 | Start a workspace | A new workspace opens in a folder, in the background: it is not selected and does not take the keyboard. Optionally under an account (or `auto`, the first account without a limit), with a title, a **command** typed at its shell prompt (e.g. `claude`), and a **first prompt** pasted into the Claude Code that command starts, once it is idle. A weekly schedule opens a new workspace each time |
-| Continue a Claude Code session | A remembered Claude Code session gets a prompt (default `continue`). If Claude Code is running it in a pane, the prompt is pasted there once it is idle. If the pane is at its shell prompt, the session is resumed first (`claude --resume <id>`, under the account). If no pane holds it any more, it is resumed in a new background workspace in its folder |
+| Continue a Claude Code session | A remembered Claude Code session gets a prompt (default `continue`). If Claude Code is running it in a pane, the prompt is pasted there once it is idle. If the pane is at its shell prompt, the session is resumed first (`claude --resume <id>`, under the account). If no pane holds it any more, it is resumed in a new background workspace in its folder. If several panes hold it, the pane the schedule was made for is used; when that is not one of them, the run is skipped |
 
 Examples:
 

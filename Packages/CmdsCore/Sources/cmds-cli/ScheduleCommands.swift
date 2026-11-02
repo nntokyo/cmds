@@ -388,6 +388,8 @@ extension CLI {
         if let cwd = entry?.session.cwd { action["cwd"] = .string(cwd) }
         if let account { action["account"] = .string(account) }
         if let prompt { action["prompt"] = .string(prompt) }
+        // The chosen pane is the run's target when several panes hold the session.
+        if let pane { action["pane"] = .string(pane) }
         return .object(action)
     }
 

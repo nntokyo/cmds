@@ -399,7 +399,7 @@ final class ScheduleRunner {
         let old = schedules[index]
         var draft = old.draft
         change(&draft)
-        let rearm = draft.trigger != old.trigger || (draft.enabled && !old.enabled)
+        let rearm = ScheduleValidation.needsFullCheck(old: old.draft, new: draft)
         try validate(draft, excluding: id, full: rearm)
         schedules[index].draft = draft
         if !draft.enabled {

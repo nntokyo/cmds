@@ -77,7 +77,7 @@ extension ScheduleRunner {
             if let account = action.account { return account }
             // "When work resets": the session continues under work (if it moved to another account, it is skipped).
             if case .limitReset(let account, _) = run.schedule.trigger { return account }
-            guard let pane = sessionPane(action.sessionID) else { return nil }
+            guard case .pane(let pane) = sessionPane(action) else { return nil }
             return pane.claudeAccount ?? sessionRecord(action.sessionID, in: pane)?.account
         }
     }
@@ -175,7 +175,7 @@ extension ScheduleRunner {
         o.accountSwitchInProgress = pane.accountSwitch?.isInProgress == true
         o.resumeQueued = pane.resumeRequestedAt != nil && pane.resumeOffer != nil
         if let enterAt = run.enterAt {
-            o.promptSubmitted = pane.agentActivity == .busy || (pane.agentSignals.lastBusyAt ?? .distantPast) > enterAt
+            o.promptSubmitted = pane.agentActivity == .busy || pane.agentSignals.workedSince(enterAt)
         }
         return o
     }
@@ -225,7 +225,14 @@ extension ScheduleRunner {
 
     private func beginContinue(_ run: ActiveScheduleRun, _ action: ContinueSession, account: ClaudeAccount?, now: Date) {
         let id = action.sessionID
-        guard let pane = sessionPane(id) else {
+        let pane: Pane
+        switch sessionPane(action) {
+        case .pane(let found):
+            pane = found
+        case .ambiguous:
+            // Several panes hold it and the schedule's own pane is not one of them: never guess.
+            return finish(run, .skipped, .ambiguousSession)
+        case .none:
             // (c) No pane holds it: resume it in a new background workspace.
             guard let folder = action.cwd else { return finish(run, .failed, .sessionNotFound) }
             guard let cwd = existingFolder(folder) else { return finish(run, .failed, .folderMissing) }
@@ -330,11 +337,25 @@ extension ScheduleRunner {
         return pane.terminal
     }
 
-    /// The local terminal pane holding the Claude Code session: running it, else remembering or offering it.
-    func sessionPane(_ id: String) -> Pane? {
+    enum SessionPane {
+        case pane(Pane)
+        case none
+        case ambiguous
+    }
+
+    /// The local terminal pane holding the action's Claude Code session (`ScheduleRunTiming.sessionPane`): running it,
+    /// else remembering or offering it; the schedule's own pane first.
+    func sessionPane(_ action: ContinueSession) -> SessionPane {
+        let id = action.sessionID
         let panes = controller.workspaces.flatMap(\.orderedPanes).filter { $0.kind == .terminal && $0.ssh == nil && !$0.isClosing }
-        return panes.first { $0.agentUsage?.agent == .claude && $0.agentUsage?.sessionID == id }
-            ?? panes.first { sessionRecord(id, in: $0) != nil }
+        let running = panes.filter { $0.agentUsage?.agent == .claude && $0.agentUsage?.sessionID == id }
+        let remembering = panes.filter { pane in !running.contains { $0 === pane } && sessionRecord(id, in: pane) != nil }
+        switch ScheduleRunTiming.sessionPane(preferred: action.pane, running: running.map(\.id),
+                                             remembering: remembering.map(\.id)) {
+        case .pane(let paneID): return panes.first { $0.id == paneID }.map(SessionPane.pane) ?? .none
+        case .none: return .none
+        case .ambiguous: return .ambiguous
+        }
     }
 
     func sessionRecord(_ id: String, in pane: Pane) -> AgentSession? {
