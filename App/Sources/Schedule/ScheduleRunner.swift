@@ -423,15 +423,26 @@ final class ScheduleRunner {
         }
     }
 
-    /// A `sendText` target given as a pane (`{"pane": "p3"}`) is stored as that pane's tag (given now if it has none):
-    /// pane ids change when cmds restarts, tags do not. Only a local terminal pane can be a target.
-    func storingTarget(_ draft: ScheduleDraft) throws -> ScheduleDraft {
-        guard case .sendText(var action) = draft.action, case .pane(let id) = action.target else { return draft }
-        guard controller.pane(id: id) != nil else { throw RPCError.notFound("pane not found: \(id)") }
-        guard let pane = targetablePane(id) else { throw RPCError.invalidParams(ScheduleProblem.targetInvalid.english) }
-        action.target = .tag(controller.scheduleTag(for: pane))
+    /// A pane given by id is stored as that pane's tag (given now if it has none): pane ids change when cmds restarts,
+    /// tags do not. A `sendText` target (`{"pane": "p3"}`) must be a local terminal pane; a `continueSession` pane only
+    /// breaks a tie between panes holding the session, so one that cannot be targeted is dropped.
+    func storingPaneTags(_ draft: ScheduleDraft) throws -> ScheduleDraft {
         var stored = draft
-        stored.action = .sendText(action)
+        switch draft.action {
+        case .sendText(var action):
+            guard case .pane(let id) = action.target else { return draft }
+            guard controller.pane(id: id) != nil else { throw RPCError.notFound("pane not found: \(id)") }
+            guard let pane = targetablePane(id) else { throw RPCError.invalidParams(ScheduleProblem.targetInvalid.english) }
+            action.target = .tag(controller.scheduleTag(for: pane))
+            stored.action = .sendText(action)
+        case .continueSession(var action):
+            guard let id = action.pane else { return draft }
+            action.paneTag = targetablePane(id).map(controller.scheduleTag(for:))
+            action.pane = nil
+            stored.action = .continueSession(action)
+        case .startWorkspace:
+            break
+        }
         return stored
     }
 
@@ -443,7 +454,7 @@ final class ScheduleRunner {
     @discardableResult
     func add(_ draft: ScheduleDraft, origin: ScheduleOrigin) throws -> Schedule {
         try requireWritable()
-        let draft = try storingTarget(draft)
+        let draft = try storingPaneTags(draft)
         try validate(draft, excluding: nil, full: true)
         let now = now()
         var schedule = Schedule(id: ScheduleIDs.make(prefix: ScheduleIDs.schedulePrefix, taken: Set(schedules.map(\.id))),
@@ -465,7 +476,7 @@ final class ScheduleRunner {
         let old = schedules[index]
         var draft = old.draft
         change(&draft)
-        draft = try storingTarget(draft)
+        draft = try storingPaneTags(draft)
         let rearm = ScheduleValidation.needsFullCheck(old: old.draft, new: draft)
         try validate(draft, excluding: id, full: rearm)
         schedules[index].draft = draft

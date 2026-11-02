@@ -414,13 +414,46 @@ final class ScheduleValidationTests: XCTestCase {
         XCTAssertFalse(schedule.continuesAtReset(sessionID: "abc", account: "work"))
     }
 
-    /// The schedule's own pane is stored with the session (#55); older files without it still load.
+    /// The schedule's own pane is stored as its tag (#55, #58): pane ids change when cmds restarts. `pane` is input only
+    /// (the app turns it into `paneTag`) and never written; older files without either still load.
     func testContinueSessionPane() throws {
-        let action = ContinueSession(sessionID: "abc", pane: "p12")
+        let action = ContinueSession(sessionID: "abc", pane: "p12", paneTag: "t0000000a")
+        let written = try JSONSerialization.jsonObject(with: JSONEncoder().encode(action)) as! [String: Any]
+        XCTAssertEqual(written["paneTag"] as? String, "t0000000a")
+        XCTAssertNil(written["pane"])
         let decoded = try JSONDecoder().decode(ContinueSession.self, from: JSONEncoder().encode(action))
-        XCTAssertEqual(decoded.pane, "p12")
+        XCTAssertEqual(decoded.paneTag, "t0000000a")
+        XCTAssertNil(decoded.pane)
+        // The API's input.
+        let input = try JSONDecoder().decode(ContinueSession.self, from: Data(#"{"sessionID":"abc","pane":"p3"}"#.utf8))
+        XCTAssertEqual(input.pane, "p3")
+        XCTAssertNil(input.paneTag)
+        // A tag that is not one is dropped.
+        let bad = try JSONDecoder().decode(ContinueSession.self, from: Data(#"{"sessionID":"abc","paneTag":"p3"}"#.utf8))
+        XCTAssertNil(bad.paneTag)
         let old = try JSONDecoder().decode(ContinueSession.self, from: Data(#"{"sessionID":"abc"}"#.utf8))
         XCTAssertNil(old.pane)
+        XCTAssertNil(old.paneTag)
+        // Still a phase-1 schedule: older builds ignore the tag.
+        let schedule = Schedule(id: "s00000001", draft: ScheduleDraft(name: "x", trigger: .once(at: now),
+                                                                      action: .continueSession(action)),
+                                origin: .app, createdAt: now)
+        XCTAssertEqual(schedule.requiredVersion, 1)
+    }
+
+    /// A pane id saved by cmds 0.6 is from an earlier launch: dropped when the file is read (the session decides).
+    func testFileDropsSavedPaneIDs() throws {
+        let text = """
+            {"version": 1, "schedules": [
+              {"id": "s00000001", "name": "x", "trigger": {"type": "once", "at": 1800000000},
+               "action": {"type": "continueSession", "sessionID": "abc", "prompt": "continue", "pane": "p3"}},
+              {"id": "s00000002", "name": "y", "trigger": {"type": "once", "at": 1800000000},
+               "action": {"type": "continueSession", "sessionID": "abd", "prompt": "continue", "paneTag": "t0000000b"}}]}
+            """
+        let file = try JSONDecoder().decode(ScheduleFile.self, from: Data(text.utf8))
+        XCTAssertEqual(file.schedules.count, 2)
+        XCTAssertEqual(file.schedules[0].action, .continueSession(ContinueSession(sessionID: "abc")))
+        XCTAssertEqual(file.schedules[1].action, .continueSession(ContinueSession(sessionID: "abd", paneTag: "t0000000b")))
     }
 
     func testContinueSession() {

@@ -67,7 +67,10 @@ extension ScheduleRunner {
         let remembering = panes.filter { pane in
             !running.contains { $0 === pane } && sessionRecord(id, agent: action.agent, in: pane) != nil
         }
-        switch ScheduleRunTiming.sessionPane(preferred: action.pane, running: running.map(\.id),
+        // The schedule's own pane, by its tag (pane ids change when cmds restarts).
+        var preferred: String?
+        if let tag = action.paneTag, case .pane(let id) = controller.resolveScheduleTarget(.tag(tag)) { preferred = id }
+        switch ScheduleRunTiming.sessionPane(preferred: preferred, running: running.map(\.id),
                                              remembering: remembering.map(\.id)) {
         case .pane(let paneID): return panes.first { $0.id == paneID }.map(SessionPane.pane) ?? .none
         case .none: return .none

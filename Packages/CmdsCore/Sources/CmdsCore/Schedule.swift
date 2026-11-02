@@ -249,23 +249,27 @@ public struct ContinueSession: Codable, Equatable, Sendable {
     /// nil = the session's account. Claude Code only (cmds has no Codex accounts).
     public var account: String?
     public var prompt: String
-    /// The pane the schedule was made for (`--pane`, the limit bar's pane): used when it still holds the session
-    /// (`ScheduleRunTiming.sessionPane`). Pane ids change when cmds restarts; then the session decides.
+    /// Input only (`schedule.add` / `update`, the editor, the limit bar): the pane the schedule is made for, as a
+    /// current pane id. The app stores that pane's tag in `paneTag` instead (`ScheduleRunner`); never written.
     public var pane: String?
+    /// The tag of the pane the schedule was made for (`Pane.scheduleTag`, kept in `session.json`): used when that pane
+    /// still holds the session (`ScheduleRunTiming.sessionPane`), also after cmds restarts; else the session decides.
+    public var paneTag: String?
 
     public static let defaultPrompt = "continue"
 
     public init(agent: AgentKind = .claude, sessionID: String, cwd: String? = nil, account: String? = nil,
-                prompt: String = ContinueSession.defaultPrompt, pane: String? = nil) {
+                prompt: String = ContinueSession.defaultPrompt, pane: String? = nil, paneTag: String? = nil) {
         self.agent = agent
         self.sessionID = sessionID
         self.cwd = cwd
         self.account = account
         self.prompt = prompt
         self.pane = pane
+        self.paneTag = paneTag
     }
 
-    private enum CodingKeys: String, CodingKey { case agent, sessionID, cwd, account, prompt, pane }
+    private enum CodingKeys: String, CodingKey { case agent, sessionID, cwd, account, prompt, pane, paneTag }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -278,6 +282,17 @@ public struct ContinueSession: Codable, Equatable, Sendable {
         account = c.lenientString(.account)
         prompt = c.lenientString(.prompt) ?? Self.defaultPrompt
         pane = c.lenientString(.pane)
+        paneTag = c.lenientString(.paneTag).flatMap { ScheduleIDs.isValid($0, prefix: ScheduleIDs.paneTagPrefix) ? $0 : nil }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(agent, forKey: .agent)
+        try c.encode(sessionID, forKey: .sessionID)
+        try c.encodeIfPresent(cwd, forKey: .cwd)
+        try c.encodeIfPresent(account, forKey: .account)
+        try c.encode(prompt, forKey: .prompt)
+        try c.encodeIfPresent(paneTag, forKey: .paneTag)
     }
 }
 
@@ -625,6 +640,16 @@ public struct Schedule: Codable, Equatable, Sendable {
 }
 
 extension Schedule {
+    /// Without a `continueSession` pane id: one read from a file was saved by cmds 0.6 in an earlier launch, and pane
+    /// ids change when cmds restarts (`ScheduleFile`).
+    var withoutPaneID: Schedule {
+        guard case .continueSession(var action) = action, action.pane != nil else { return self }
+        action.pane = nil
+        var schedule = self
+        schedule.action = .continueSession(action)
+        return schedule
+    }
+
     /// Already continues `sessionID` when `account`'s limit resets, and will run (the limit bar's "Continue at" makes
     /// one such schedule per session and account). One without a next firing does not count.
     public func continuesAtReset(sessionID: String, account: String) -> Bool {
@@ -875,7 +900,7 @@ public enum ScheduleLimits {
 public enum ScheduleIDs {
     public static let schedulePrefix = "s"
     public static let runPrefix = "r"
-    /// A pane's schedule tag (`PaneTarget.tag`, saved in `session.json`).
+    /// A pane's schedule tag (`PaneTarget.tag`, `ContinueSession.paneTag`, saved in `session.json`).
     public static let paneTagPrefix = "t"
 
     /// `prefix` + 8 random lowercase hex digits, not in `taken`.

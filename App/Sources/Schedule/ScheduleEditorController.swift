@@ -388,9 +388,13 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             sessionPopup.isEnabled = false
         } else {
             sessionPopup.isEnabled = true
+            // The edited schedule's pane is stored by its tag; the items name panes by id.
+            let controller = AppController.shared
             let index = current.flatMap { session in
-                sessions.firstIndex { $0.sessionID == session.sessionID && $0.pane == session.pane }
-                    ?? sessions.firstIndex { $0.sessionID == session.sessionID }
+                sessions.firstIndex { item in
+                    item.sessionID == session.sessionID && session.paneTag != nil
+                        && item.pane.flatMap(controller.pane(id:))?.scheduleTag == session.paneTag
+                } ?? sessions.firstIndex { $0.sessionID == session.sessionID }
             } ?? 0
             sessionPopup.selectItem(at: index)
         }

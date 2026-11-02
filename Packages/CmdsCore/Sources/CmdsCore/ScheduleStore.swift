@@ -39,7 +39,7 @@ public struct ScheduleFile: Codable, Equatable, Sendable {
         var seen = Set<String>()
         schedules = raw.compactMap(\.value).filter {
             ScheduleValidation.problems($0.draft).isEmpty && seen.insert($0.id).inserted
-        }
+        }.map(\.withoutPaneID)
         dropped = raw.count - schedules.count
     }
 
