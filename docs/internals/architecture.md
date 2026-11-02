@@ -138,7 +138,9 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
 `Panes/AccountSwitchBannerView.swift`. Behaviour: [guide/ai-agents.md](../guide/ai-agents.md#several-claude-accounts).
 
 - **Store**: `ClaudeAccountSettings` (accounts in order with their last limit, `autoSwitch`) in
-  `<support dir>/claude-accounts.json`, so an isolated instance has its own. Names and paths only.
+  `<support dir>/claude-accounts.json`, so an isolated instance has its own. Names and paths only. Loaded through
+  `StoredFile`: a damaged file is moved aside (`claude-accounts.json.corrupt-<time>`, kept) and reported; one that
+  cannot be read stays in place and is not saved over.
 - **A pane's account** (`Pane.claudeAccount`, saved as `paneAccounts` per workspace in `session.json`): set when the
   pane is created with one (its environment gets `CLAUDE_CONFIG_DIR`), by a switch, or from the `configDir` that
   `cmds hook claude-status` sends with `agent.report` (the hook's own `CLAUDE_CONFIG_DIR`, inherited from Claude

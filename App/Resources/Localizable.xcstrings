@@ -1610,6 +1610,16 @@
         }
       }
     },
+    "Claude accounts could not be read": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeアカウントを読み込めませんでした"
+          }
+        }
+      }
+    },
     "Claude accounts:": {
       "localizations": {
         "ja": {
