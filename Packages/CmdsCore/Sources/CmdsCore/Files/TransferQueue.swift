@@ -177,11 +177,11 @@ public struct TransferInfo: Codable, Equatable, Sendable {
         copied = counts.copied
         moved = counts.moved
         skipped = counts.skipped
-        failures = job.log.lazy.compactMap { entry -> Failure? in
+        failures = Array(job.log.lazy.compactMap { entry -> Failure? in
             switch entry.outcome {
             case .failed(let message), .originalKept(let message): return Failure(path: entry.path, message: message)
             default: return nil
             }
-        }.prefix(Self.failuresListed).map { $0 }
+        }.prefix(Self.failuresListed))
     }
 }
