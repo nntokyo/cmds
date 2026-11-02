@@ -17,4 +17,10 @@ public enum ScheduleNotice {
         guard let at = time(of: schedule), let next = schedule.nextFireAt else { return false }
         return now >= at && now < next && shownFor != next
     }
+
+    /// When the next notice is to be shown (the notice timer): the earliest notice time after `now` of a firing whose
+    /// notice was not shown yet (`shownFor`, by schedule id).
+    public static func nextTime(of schedules: [Schedule], after now: Date, shownFor: [String: Date]) -> Date? {
+        schedules.filter { shownFor[$0.id] != $0.nextFireAt }.compactMap(time(of:)).filter { $0 > now }.min()
+    }
 }

@@ -24,4 +24,27 @@ final class ScheduleNoticeTests: XCTestCase {
         XCTAssertFalse(ScheduleNotice.isDue(schedule(next: fire, enabled: false), now: fire.addingTimeInterval(-5), shownFor: nil))
         XCTAssertNil(ScheduleNotice.time(of: schedule(next: nil)))
     }
+
+    func testNextNoticeTime() {
+        let fire = Date(timeIntervalSince1970: 10_000)
+        let now = fire.addingTimeInterval(-600)
+        func s(_ id: String, _ next: Date?, warn: Bool = true) -> Schedule {
+            var made = schedule(next: next, warn: warn)
+            made.id = id
+            return made
+        }
+        let schedules = [s("s00000001", fire), s("s00000002", fire.addingTimeInterval(-300)),
+                         s("s00000003", fire.addingTimeInterval(-400), warn: false), s("s00000004", nil)]
+        // The earliest notice still ahead.
+        XCTAssertEqual(ScheduleNotice.nextTime(of: schedules, after: now, shownFor: [:]), fire.addingTimeInterval(-360))
+        // One already shown for its firing time does not count; one shown for an earlier time does.
+        XCTAssertEqual(ScheduleNotice.nextTime(of: schedules, after: now, shownFor: ["s00000002": fire.addingTimeInterval(-300)]),
+                       fire.addingTimeInterval(-60))
+        XCTAssertEqual(ScheduleNotice.nextTime(of: schedules, after: now, shownFor: ["s00000002": fire]),
+                       fire.addingTimeInterval(-360))
+        // A notice time that has come is not ahead.
+        XCTAssertEqual(ScheduleNotice.nextTime(of: schedules, after: fire.addingTimeInterval(-360), shownFor: [:]),
+                       fire.addingTimeInterval(-60))
+        XCTAssertNil(ScheduleNotice.nextTime(of: schedules, after: fire, shownFor: [:]))
+    }
 }

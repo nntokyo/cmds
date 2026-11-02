@@ -20,9 +20,7 @@ extension ScheduleRunner {
         for schedule in schedules where ScheduleNotice.isDue(schedule, now: now, shownFor: noticeShownFor[schedule.id]) {
             showNotice(schedule)
         }
-        let upcoming = schedules.filter { noticeShownFor[$0.id] != $0.nextFireAt }.compactMap(ScheduleNotice.time(of:))
-            .filter { $0 > now }
-        guard let next = upcoming.min() else { return }
+        guard let next = ScheduleNotice.nextTime(of: schedules, after: now, shownFor: noticeShownFor) else { return }
         let timer = Timer(fire: next.addingTimeInterval(-clockOffset), interval: 0, repeats: false) { [weak self] _ in
             MainActor.assumeIsolated { self?.armNotice() }
         }
