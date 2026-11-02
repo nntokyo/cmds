@@ -685,6 +685,8 @@ public enum ScheduleLimits {
     /// History: per schedule, in total, and age.
     public static let maxRunsPerSchedule = 50
     public static let maxRuns = 300
+    /// `schedule.history` without a limit.
+    public static let defaultHistoryLimit = 20
     public static let runRetention: TimeInterval = 90 * 86400
 }
 

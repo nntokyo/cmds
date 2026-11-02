@@ -50,8 +50,7 @@ extension CLI {
                     """,
                 options: scheduleValueOptions, flags: scheduleFlags) { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds schedule add --name NAME TRIGGER ACTION (see --help)")
-            let options = try parseScheduleOptions(ctx.args, now: Date(), timeZone: .current,
-                                                   cwd: FileManager.default.currentDirectoryPath, readStandardInput: readStandardInput)
+            let options = try parseScheduleOptions(ctx)
             guard let name = options.name else { throw CLIError.usage("--name is required") }
             guard let trigger = options.trigger else {
                 throw CLIError.usage("give a trigger: --at, --in, --every or --after-limit")
@@ -64,15 +63,13 @@ extension CLI {
             if let notify = options.notify { draft["notify"] = .string(notify) }
             if let enabled = options.enabled { draft["enabled"] = .bool(enabled) }
             let result = try ctx.call("schedule.add", ["schedule": .object(draft), "pane": ctx.envPane.json])
-            if ctx.json { return ctx.printJSON(result) }
-            print(Format.scheduleAdded(try perform { try result.decode(ScheduleListEntry.self) }), terminator: "")
+            try printEntry(result, ctx)
         },
         Command(name: "schedule edit", usage: "schedule edit <id> [add options]",
                 summary: "Change a schedule: a trigger option replaces the trigger, an action option the action.",
                 details: scheduleUsage, options: scheduleValueOptions, flags: scheduleFlags.union(["enabled"])) { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds schedule edit <id> [add options]")
-            let options = try parseScheduleOptions(ctx.args, now: Date(), timeZone: .current,
-                                                   cwd: FileManager.default.currentDirectoryPath, readStandardInput: readStandardInput)
+            let options = try parseScheduleOptions(ctx)
             var params: [String: JSONValue?] = ["id": .string(ctx.args.positionals[0])]
             params["name"] = options.name.json
             params["trigger"] = options.trigger
@@ -82,8 +79,7 @@ extension CLI {
             params["enabled"] = ctx.args.has("enabled") ? .bool(true) : options.enabled.map { .bool($0) }
             guard params.values.compactMap({ $0 }).count > 1 else { throw CLIError.usage("nothing to change") }
             let result = try ctx.call("schedule.update", params)
-            if ctx.json { return ctx.printJSON(result) }
-            print(Format.scheduleAdded(try perform { try result.decode(ScheduleListEntry.self) }), terminator: "")
+            try printEntry(result, ctx)
         },
         Command(name: "schedule show", usage: "schedule show <id>", summary: "Show a schedule, its next run and its last runs.") { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds schedule show <id>")
@@ -93,7 +89,7 @@ extension CLI {
                 throw CLIError.failure("schedule not found: \(id)")
             }
             let history = try perform {
-                try ctx.call("schedule.history", ["id": .string(id), "limit": .number(5)]).decode(ScheduleHistoryList.self)
+                try ctx.call("schedule.history", ["id": .string(id), "limit": .number(Double(showRunsLimit))]).decode(ScheduleHistoryList.self)
             }
             if ctx.json { return ctx.printJSON(try .from(entry)) }
             print(Format.scheduleDetails(entry, runs: history.runs), terminator: "")
@@ -123,7 +119,7 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
         },
         Command(name: "schedule history", usage: "schedule history [id] [--limit N]",
-                summary: "Show past runs, newest first (default 20, at most 300).", options: ["limit"]) { ctx in
+                summary: "Show past runs, newest first (default \(ScheduleLimits.defaultHistoryLimit), at most \(ScheduleLimits.maxRuns)).", options: ["limit"]) { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds schedule history [id] [--limit N]")
             let result = try ctx.call("schedule.history", ["id": ctx.args.positionals.first.json,
                                                            "limit": try ctx.args.int("limit").map { .number(Double($0)) }])
@@ -138,6 +134,8 @@ extension CLI {
         "session", "late", "notify",
     ]
     static let scheduleFlags: Set<String> = ["continue", "disabled"]
+    /// Last runs in `schedule show`.
+    private static let showRunsLimit = 5
 
     private static func listSchedules(_ ctx: Context) throws {
         let result = try ctx.call("schedule.list")
@@ -148,6 +146,11 @@ extension CLI {
     private static func setScheduleEnabled(_ ctx: Context, _ enabled: Bool) throws {
         try ctx.args.expectPositionals(1...1, usage: "cmds schedule \(enabled ? "enable" : "disable") <id>")
         let result = try ctx.call("schedule.update", ["id": .string(ctx.args.positionals[0]), "enabled": .bool(enabled)])
+        try printEntry(result, ctx)
+    }
+
+    /// A schedule as `schedule.add` / `schedule.update` return it: one line (or the JSON).
+    private static func printEntry(_ result: JSONValue, _ ctx: Context) throws {
         if ctx.json { return ctx.printJSON(result) }
         print(Format.scheduleAdded(try perform { try result.decode(ScheduleListEntry.self) }), terminator: "")
     }
@@ -191,6 +194,12 @@ extension CLI {
         var late: JSONValue?
         var notify: String?
         var enabled: Bool?
+    }
+
+    /// The options as typed now, in the Mac's zone and the current directory.
+    private static func parseScheduleOptions(_ ctx: Context) throws -> ScheduleOptions {
+        try parseScheduleOptions(ctx.args, now: Date(), timeZone: .current, cwd: FileManager.default.currentDirectoryPath,
+                                 readStandardInput: readStandardInput)
     }
 
     static func parseScheduleOptions(_ args: Arguments, now: Date, timeZone: TimeZone, cwd: String,
@@ -303,6 +312,7 @@ extension CLI {
     /// `90m`, `2h`, `1h30m`, `45s`, `1d`.
     static func parseDuration(_ raw: String, option: String) throws -> TimeInterval {
         let units: [Character: TimeInterval] = ["s": 1, "m": 60, "h": 3600, "d": 86400]
+        let invalid = CLIError.usage("--\(option) expects a duration like 90m, 2h, 1h30m or 45s, got \(raw)")
         var total: TimeInterval = 0
         var digits = ""
         for character in raw.lowercased() {
@@ -312,12 +322,10 @@ extension CLI {
                 total += value * unit
                 digits = ""
             } else {
-                throw CLIError.usage("--\(option) expects a duration like 90m, 2h, 1h30m or 45s, got \(raw)")
+                throw invalid
             }
         }
-        guard digits.isEmpty, !raw.isEmpty else {
-            throw CLIError.usage("--\(option) expects a duration like 90m, 2h, 1h30m or 45s, got \(raw)")
-        }
+        guard digits.isEmpty, !raw.isEmpty else { throw invalid }
         return total
     }
 
