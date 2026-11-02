@@ -135,7 +135,7 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
 `ClaudeSessionSharing.swift`, `ClaudeAccountSwitchTiming.swift` (when a switch quits Claude Code); app:
 `Workspace/AppController+Accounts.swift` (accounts, a pane's account, limits), `Workspace/AppController+AccountSwitch.swift`
 (offer, switch, banner) with `Workspace/AccountSwitch.swift`, `App/ClaudeAccountsWindowController.swift`,
-`Panes/AccountSwitchBannerView.swift`. Behaviour: [guide/ai-agents.md](../guide/ai-agents.md#several-claude-accounts).
+`Panes/AccountSwitchBannerView.swift`; CLI `cmds-cli/AccountCommands.swift`. Behaviour: [guide/ai-agents.md](../guide/ai-agents.md#several-claude-accounts).
 
 - **Store**: `ClaudeAccountSettings` (accounts in order with their last limit, `autoSwitch`) in
   `<support dir>/claude-accounts.json`, so an isolated instance has its own. Names and paths only. Loaded through
