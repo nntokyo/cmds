@@ -41,6 +41,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: `schedules.json` is written as version 2 once a schedule uses a feature added here; cmds 0.6 then shows such a
   file read only instead of running it. Files with only 0.6-style schedules stay at version 1 (#45).
 
+### Fixed
+
+- CLI: `cmds read p2` read the focused pane, not p2: a pane id given without `--pane` was ignored. `cmds read`,
+  `cmds browser url` and `cmds browser snapshot` now refuse a bare argument with their usage; use `--pane P` (#61).
+
 ## [0.6.0] - 2026-11-02
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.
