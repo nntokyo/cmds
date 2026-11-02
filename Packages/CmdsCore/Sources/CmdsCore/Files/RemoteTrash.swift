@@ -11,6 +11,9 @@ public struct RemoteTrash {
     let tree: SFTPFileTree
 
     public static let relativeFolder = ".local/share/Trash"
+    /// The Trash folders cmds makes, and the `.trashinfo` files it writes, are the login user's only.
+    static let folderPermissions: UInt32 = 0o700
+    static let infoPermissions: UInt32 = 0o600
 
     public var folder: String { RemotePath.join(tree.home, Self.relativeFolder) }
 
@@ -35,7 +38,7 @@ public struct RemoteTrash {
         let candidate = taken(name) ? FileNames.keepBoth(name, isFolder: false, taken: taken) : name
         // The .trashinfo first (exclusive create reserves the name), as the specification asks.
         let infoPath = RemotePath.join(info, candidate + ".trashinfo")
-        let writer = try tree.createFile(infoPath, permissions: 0o600)
+        let writer = try tree.createFile(infoPath, permissions: Self.infoPermissions)
         do {
             try writer.write(Data(Self.trashInfo(path: source, date: date).utf8))
             try writer.finish()
@@ -62,7 +65,7 @@ public struct RemoteTrash {
                 }
                 continue
             }
-            try tree.makeFolder(path, permissions: 0o700)
+            try tree.makeFolder(path, permissions: Self.folderPermissions)
         }
     }
 

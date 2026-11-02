@@ -6,6 +6,10 @@ public enum SFTP {
     public static let version: UInt32 = 3
     /// Largest packet accepted from the server (OpenSSH's own limit is 256 KiB).
     public static let maxPacketLength = 512 * 1024
+    /// Most names accepted in one `NAME` reply.
+    static let maxNames: UInt32 = 100_000
+    /// Extended attributes accepted per `ATTRS` (fewer than this; they are read and dropped).
+    static let maxExtendedAttributes: UInt32 = 1024
 
     public enum PacketType: UInt8, Sendable {
         case initialize = 1, version = 2, open = 3, close = 4, read = 5, write = 6, lstat = 7, fstat = 8
@@ -206,7 +210,7 @@ public enum SFTP {
             }
             if flags & Attributes.extendedFlag != 0 {
                 let count = try uint32()
-                guard count < 1024 else { throw ProtocolError("too many extended attributes") }
+                guard count < SFTP.maxExtendedAttributes else { throw ProtocolError("too many extended attributes") }
                 for _ in 0..<count {
                     _ = try bytes()
                     _ = try bytes()
@@ -243,7 +247,7 @@ public enum SFTP {
         case .name:
             let id = try reader.uint32()
             let count = try reader.uint32()
-            guard count <= 100_000 else { throw ProtocolError("too many names") }
+            guard count <= maxNames else { throw ProtocolError("too many names") }
             var entries: [NameEntry] = []
             for _ in 0..<count {
                 let name = try reader.string()

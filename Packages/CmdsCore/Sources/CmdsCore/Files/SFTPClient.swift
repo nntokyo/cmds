@@ -143,7 +143,6 @@ public final class SFTPClient: @unchecked Sendable {
     private var nextID: UInt32 = 1
     private var pending: [UInt32: Pending] = [:]
     private var closedReason: String?
-    public private(set) var extensions: [String: String] = [:]
     private var disconnectHandler: (@Sendable (String) -> Void)?
 
     /// Called once (on the thread that noticed) when the connection ends, with the reason for the user.
@@ -168,11 +167,10 @@ public final class SFTPClient: @unchecked Sendable {
         do {
             try transport.write(SFTP.packet(.initialize) { $0.uint32(SFTP.version) })
             let response = try readResponse()
-            guard case .version(let version, let extensions) = response else {
+            guard case .version(let version, _) = response else {
                 throw SFTPError.protocolError("expected VERSION")
             }
             guard version >= 3 else { throw SFTPError.protocolError("server speaks SFTP version \(version)") }
-            self.extensions = extensions
         } catch let error as SFTPError {
             transport.close()
             throw (error.isStreamEnd ? SFTPError.disconnected(transport.closeReason ?? error.description) : error)
@@ -298,10 +296,6 @@ public final class SFTPClient: @unchecked Sendable {
 
     public func lstat(_ path: String) throws -> SFTP.Attributes {
         try attributes(send(.lstat) { $0.string(path) }.wait())
-    }
-
-    public func fstat(_ handle: Data) throws -> SFTP.Attributes {
-        try attributes(send(.fstat) { $0.bytes(handle) }.wait())
     }
 
     private func attributes(_ response: SFTP.Response) throws -> SFTP.Attributes {
