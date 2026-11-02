@@ -101,6 +101,8 @@ final class AppController {
     var claudeAccounts = ClaudeAccountStore.load(from: ClaudeAccountStore.url())
     /// Drives account switches in progress (AppController+Accounts).
     var accountSwitchTimer: Timer?
+    /// Schedules (App/Sources/Schedule): started by the app delegate after session restore.
+    private(set) lazy var scheduleRunner = ScheduleRunner(controller: self)
     let subagentSubject = PassthroughSubject<Void, Never>()
     /// Fires on the main actor when subagent cards changed (current action, tokens, elapsed time). Adding or
     /// dropping a subagent is a pane change in `changes` instead.
@@ -176,9 +178,11 @@ final class AppController {
     // MARK: - Workspaces
 
     /// Creates and selects a workspace with one terminal pane. `cwd` defaults to the home directory.
+    /// With `select: false` (scheduled runs) it is added in the background: the selection and the keyboard stay where
+    /// they are.
     @discardableResult
     func createWorkspace(title: String? = nil, cwd: String? = nil, command: String? = nil,
-                         account: ClaudeAccount? = nil) -> WorkspaceInfo {
+                         account: ClaudeAccount? = nil, select: Bool = true) -> WorkspaceInfo {
         let workspace = makeWorkspace()
         workspace.customTitle = title
         let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? NSHomeDirectory()
@@ -188,6 +192,10 @@ final class AppController {
         workspace.workingDirectory = directory
         workspace.gitBranch = GitInfo.branch(at: directory)
         workspaces.append(workspace)
+        guard select else {
+            emit(.workspaces)
+            return workspace.info(selected: false)
+        }
         setSelectedWorkspace(workspace.id)
         emit(.workspaces)
         focusSelectedPaneView()

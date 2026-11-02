@@ -1,0 +1,390 @@
+import AppKit
+import CmdsCore
+
+/// A run in progress (`ScheduleRunner.active`).
+@MainActor
+final class ActiveScheduleRun {
+    /// What is left to type: a shell command (at an empty prompt), then a prompt (into idle Claude Code).
+    enum Stage {
+        /// `resume`: the session to record in the pane once its resume command is typed.
+        case shell(command: String, resume: AgentSession?)
+        case agent(prompt: String)
+    }
+
+    var record: ScheduleRun
+    /// The schedule as it was when the run started.
+    let schedule: Schedule
+    var stateSince: Date
+    var stages: [Stage] = []
+    var expect = ScheduleRunTiming.Expectation()
+    /// `startWorkspace` with `account: auto` (the account is chosen when the run gets past waitingForAccount).
+    var automaticAccount = false
+    /// The pane's screen and since when it has looked like that.
+    var screen: String?
+    var screenSince: Date?
+    var enterAt: Date?
+
+    init(record: ScheduleRun, schedule: Schedule, now: Date) {
+        self.record = record
+        self.schedule = schedule
+        stateSince = now
+    }
+}
+
+/// Driving runs: `ScheduleRunTiming.step` decides from an `Observation` of the pane; this file only looks and types.
+extension ScheduleRunner {
+    // MARK: Starting
+
+    @discardableResult
+    func startRun(_ schedule: Schedule, cause: ScheduleRun.Cause, dueAt: Date) -> ScheduleRun {
+        let now = now()
+        var record = ScheduleRun(id: newRunID(), scheduleID: schedule.id, scheduleName: schedule.name, cause: cause,
+                                 dueAt: dueAt, startedAt: now, state: .waitingForAccount)
+        // Limits: one active run per schedule, `maxActiveRuns` in all.
+        let refusal: ScheduleReason? = active.contains { $0.record.scheduleID == schedule.id } ? .previousRunActive
+            : active.count >= ScheduleLimits.maxActiveRuns ? .tooManyRuns
+            : ScheduleValidation.problems(schedule.draft).isEmpty ? nil : .invalidSchedule
+        if let refusal {
+            record.state = refusal == .invalidSchedule ? .failed : .skipped
+            record.reason = refusal
+            record.endedAt = now
+            log(record)
+            addToHistory(record)
+            emit(.run(record))
+            notify(record, schedule: schedule)
+            return record
+        }
+        let run = ActiveScheduleRun(record: record, schedule: schedule, now: now)
+        record.account = runAccount(run)
+        run.record.account = record.account
+        active.append(run)
+        log(run.record)
+        emit(.run(run.record))
+        step(run, now: now)
+        startTickTimerIfNeeded()
+        return run.record
+    }
+
+    /// The account the run uses: the action's, else (continueSession) the limit trigger's or the session's.
+    private func runAccount(_ run: ActiveScheduleRun) -> String? {
+        switch run.schedule.action {
+        case .startWorkspace(let action):
+            run.automaticAccount = action.account?.lowercased() == ClaudeAccounts.automatic
+            return run.automaticAccount ? nil : action.account
+        case .continueSession(let action):
+            if let account = action.account { return account }
+            // "When work resets": the session continues under work (if it moved to another account, it is skipped).
+            if case .limitReset(let account, _) = run.schedule.trigger { return account }
+            guard let pane = sessionPane(action.sessionID) else { return nil }
+            return pane.claudeAccount ?? sessionRecord(action.sessionID, in: pane)?.account
+        }
+    }
+
+    private func startTickTimerIfNeeded() {
+        guard tickTimer == nil, !active.isEmpty else { return }
+        let timer = Timer(timeInterval: ScheduleRunTiming.tickInterval, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.tick() }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        tickTimer = timer
+    }
+
+    private func tick() {
+        let now = now()
+        for run in active { step(run, now: now) }
+        if active.isEmpty {
+            tickTimer?.invalidate()
+            tickTimer = nil
+        }
+    }
+
+    // MARK: Stepping
+
+    private func step(_ run: ActiveScheduleRun, now: Date) {
+        guard active.contains(where: { $0 === run }) else { return }
+        // Before typing the resume into a pane, a resume the user queued meanwhile does it instead.
+        if run.record.state == .waitingForPane, case .shell(_, let resume?)? = run.stages.first,
+           let pane = run.record.pane.flatMap(controller.pane(id:)), pane.resumeRequestedAt != nil,
+           pane.resumeOffer?.sessionID == resume.sessionID {
+            run.stages.removeFirst()
+            run.expect.startsAgent = true
+            move(run, to: .waitingForAgent, now: now)
+        }
+        let observation = observe(run, now: now)
+        let decision = ScheduleRunTiming.step(state: run.record.state, observation: observation,
+                                              elapsed: now.timeIntervalSince(run.stateSince), expect: run.expect)
+        switch decision {
+        case .wait:
+            return
+        case .proceed:
+            begin(run, now: now)
+        case .type:
+            typeCommand(run, now: now)
+        case .paste:
+            pastePrompt(run, now: now)
+        case .enter:
+            guard let terminal = terminal(of: run) else { return finish(run, .failed, .paneClosed) }
+            terminal.sendText("\r")
+            run.enterAt = now
+            move(run, to: .confirming, now: now)
+        case .succeed(let reason):
+            finish(run, .succeeded, reason)
+        case .fail(let reason):
+            // `auto`: no account frees up in time.
+            if reason == .accountStillLimited, run.automaticAccount { return finish(run, .skipped, .allAccountsLimited) }
+            finish(run, .failed, reason)
+        case .skip(let reason):
+            finish(run, .skipped, reason)
+        }
+    }
+
+    private func move(_ run: ActiveScheduleRun, to state: ScheduleRunState, now: Date) {
+        run.record.state = state
+        run.stateSince = now
+        run.screen = nil
+        run.screenSince = nil
+        log(run.record)
+        emit(.run(run.record))
+    }
+
+    /// What the run's pane shows now (or, while waiting for an account, whether it is free).
+    private func observe(_ run: ActiveScheduleRun, now: Date) -> ScheduleRunTiming.Observation {
+        var o = ScheduleRunTiming.Observation()
+        if run.record.state == .waitingForAccount {
+            observeAccount(run, into: &o, now: now)
+            return o
+        }
+        guard let paneID = run.record.pane, let pane = controller.pane(id: paneID), !pane.isClosing,
+              let terminal = pane.terminal else {
+            o.paneExists = false
+            return o
+        }
+        var group: pid_t?
+        if pane.ssh == nil, now.timeIntervalSince(pane.terminalStartedAt) >= 0.8, let pgid = terminal.foregroundProcessGroupID {
+            group = pgid
+            switch PaneProcessProbe.classify(pid: pgid) {
+            case .shell?: o.foreground = .shell
+            case .agent?: o.foreground = .agent
+            case .other?: o.foreground = .other
+            case nil: o.foreground = .unknown
+            }
+        }
+        // Looked up only where it decides something (it lists every process): before typing into a shell, and to
+        // tell a quit agent from a backgrounded one.
+        if o.foreground == .shell, let group,
+           run.record.state == .waitingForPane || run.record.state == .waitingForAgent {
+            o.agentOnTerminal = PaneProcessProbe.agentOnTerminal(of: group)
+        }
+        o.otherAgent = pane.agentUsage?.agent == .codex
+        o.activity = pane.agentActivity
+        o.subagentRunning = pane.subagents.contains { $0.info.state == .running }
+        let screen = terminal.visibleText()
+        if screen != run.screen {
+            run.screen = screen
+            run.screenSince = now
+        }
+        o.screenUnchangedFor = now.timeIntervalSince(run.screenSince ?? now)
+        if o.foreground == .shell {
+            o.atEmptyPrompt = !screen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && AgentResume.isAtEmptyPrompt(screen: screen, cursor: terminal.cursorPosition)
+        }
+        o.choiceOnScreen = o.foreground == .agent && ScheduleRunTiming.showsChoice(screen: screen)
+        if pane.agentUsage?.agent == .claude { o.sessionID = pane.agentUsage?.sessionID }
+        o.accountSwitchInProgress = pane.accountSwitch?.isInProgress == true
+        o.resumeQueued = pane.resumeRequestedAt != nil && pane.resumeOffer != nil
+        if let enterAt = run.enterAt {
+            o.promptSubmitted = pane.agentActivity == .busy || (pane.agentSignals.lastBusyAt ?? .distantPast) > enterAt
+        }
+        return o
+    }
+
+    private func observeAccount(_ run: ActiveScheduleRun, into o: inout ScheduleRunTiming.Observation, now: Date) {
+        let accounts = controller.claudeAccounts.accounts
+        if run.automaticAccount {
+            guard ClaudeAccounts.firstAvailable(in: accounts, now: now) == nil else { return }
+            o.accountLimited = true
+            o.accountFreeIn = ScheduleRunTiming.autoAccountFreeIn(resets: accounts.compactMap { $0.limit?.resetsAt }, now: now)
+            return
+        }
+        guard let name = run.record.account, let account = accounts.first(where: { $0.hasName(name) }),
+              let limit = account.limit, limit.isActive(at: now) else { return }
+        o.accountLimited = true
+        o.accountFreeIn = limit.resetsAt.timeIntervalSince(now)
+    }
+
+    // MARK: Actions
+
+    /// The account is free: open the workspace, or find the session's pane.
+    private func begin(_ run: ActiveScheduleRun, now: Date) {
+        let accounts = controller.claudeAccounts.accounts
+        if run.automaticAccount {
+            guard let account = ClaudeAccounts.firstAvailable(in: accounts, now: now) else {
+                return finish(run, .skipped, .allAccountsLimited)
+            }
+            run.record.account = account.name
+        } else if let name = run.record.account, !accounts.contains(where: { $0.hasName(name) }) {
+            // The run's account was removed (a session's own account that is not one of the user's accounts is fine).
+            if run.accountIsRequired { return finish(run, .failed, .accountRemoved) }
+            run.record.account = nil
+        }
+        let account = run.record.account.flatMap { name in accounts.first { $0.hasName(name) } }
+        switch run.schedule.action {
+        case .startWorkspace(let action):
+            guard let cwd = existingFolder(action.cwd) else { return finish(run, .failed, .folderMissing) }
+            let info = controller.createWorkspace(title: action.title ?? run.schedule.name, cwd: cwd, account: account,
+                                                  select: false)
+            run.record.workspace = info.id
+            run.record.pane = info.panes.first?.id
+            guard let command = action.command else { return finish(run, .succeeded, .workspaceOpened) }
+            run.stages = [.shell(command: command, resume: nil)] + (action.prompt.map { [.agent(prompt: $0)] } ?? [])
+            run.expect = ScheduleRunTiming.Expectation(sessionID: nil, startsAgent: true, ownsPane: true)
+            move(run, to: .waitingForPane, now: now)
+        case .continueSession(let action):
+            beginContinue(run, action, account: account, now: now)
+        }
+    }
+
+    private func beginContinue(_ run: ActiveScheduleRun, _ action: ContinueSession, account: ClaudeAccount?, now: Date) {
+        let id = action.sessionID
+        guard let pane = sessionPane(id) else {
+            // (c) No pane holds it: resume it in a new background workspace.
+            guard let folder = action.cwd else { return finish(run, .failed, .sessionNotFound) }
+            guard let cwd = existingFolder(folder) else { return finish(run, .failed, .folderMissing) }
+            let session = resumeSession(id, cwd: cwd, account: account, remembered: nil, now: now)
+            guard let command = AgentResume.command(for: session) else { return finish(run, .failed, .resumeNotPossible) }
+            let info = controller.createWorkspace(title: run.schedule.name, cwd: cwd, account: account, select: false)
+            run.record.workspace = info.id
+            run.record.pane = info.panes.first?.id
+            run.stages = [.shell(command: command, resume: session), .agent(prompt: action.prompt)]
+            run.expect = ScheduleRunTiming.Expectation(sessionID: id, startsAgent: true, ownsPane: true)
+            return move(run, to: .waitingForPane, now: now)
+        }
+        run.record.workspace = pane.workspaceID
+        run.record.pane = pane.id
+        if active.contains(where: { $0 !== run && $0.record.pane == pane.id }) { return finish(run, .skipped, .paneInUse) }
+        if let usage = pane.agentUsage {
+            // (a) Running: only the same session, under the run's account (else an automatic switch moved it).
+            guard usage.agent == .claude, usage.sessionID == id else { return finish(run, .skipped, .differentSession) }
+            if let wanted = run.record.account, let current = controller.currentAccount(of: pane),
+               current.caseInsensitiveCompare(wanted) != .orderedSame {
+                return finish(run, .skipped, .movedToOtherAccount)
+            }
+            run.stages = [.agent(prompt: action.prompt)]
+            run.expect = ScheduleRunTiming.Expectation(sessionID: id, startsAgent: false, ownsPane: false)
+            return move(run, to: .waitingForAgent, now: now)
+        }
+        if pane.resumeRequestedAt != nil, pane.resumeOffer?.sessionID == id {
+            // A resume is queued already: it starts Claude Code; the prompt follows.
+            run.stages = [.agent(prompt: action.prompt)]
+            run.expect = ScheduleRunTiming.Expectation(sessionID: id, startsAgent: true, ownsPane: false)
+            return move(run, to: .waitingForAgent, now: now)
+        }
+        // (b) At a shell: type the resume command (under the run's account), then the prompt.
+        let remembered = sessionRecord(id, in: pane)
+        let cwd = remembered?.cwd ?? action.cwd
+        let session = resumeSession(id, cwd: cwd, account: account, remembered: remembered, now: now)
+        guard let command = AgentResume.command(for: session) else { return finish(run, .failed, .resumeNotPossible) }
+        run.stages = [.shell(command: command, resume: session), .agent(prompt: action.prompt)]
+        run.expect = ScheduleRunTiming.Expectation(sessionID: id, startsAgent: true, ownsPane: false)
+        move(run, to: .waitingForPane, now: now)
+    }
+
+    /// Types the stage's command once. The run moves on whatever happens next: nothing is typed twice.
+    private func typeCommand(_ run: ActiveScheduleRun, now: Date) {
+        guard case .shell(let command, let resume)? = run.stages.first,
+              let pane = run.record.pane.flatMap(controller.pane(id:)), let terminal = pane.terminal else {
+            return finish(run, .failed, .paneClosed)
+        }
+        run.stages.removeFirst()
+        if let resume {
+            // The resume banner must not type it as well; the pane now holds this session (under the run's account).
+            if pane.resumeOffer != nil { controller.clearResumeOffer(pane) }
+            pane.agentSession = resume
+            pane.resumedSessionID = resume.sessionID
+            if let name = resume.account { pane.claudeAccount = name }
+            controller.scheduleSave()
+        }
+        terminal.typeText(command + "\r")
+        guard !run.stages.isEmpty else { return finish(run, .succeeded, .commandTyped) }
+        move(run, to: .waitingForAgent, now: now)
+    }
+
+    private func pastePrompt(_ run: ActiveScheduleRun, now: Date) {
+        guard case .agent(let prompt)? = run.stages.first, let terminal = terminal(of: run) else {
+            return finish(run, .failed, .paneClosed)
+        }
+        run.stages.removeFirst()
+        // A paste (bracketed when Claude Code asks for it), so line breaks stay in the prompt; Return follows.
+        terminal.sendText(prompt)
+        move(run, to: .typing, now: now)
+    }
+
+    func finish(_ run: ActiveScheduleRun, _ state: ScheduleRunState, _ reason: ScheduleReason, notify shouldNotify: Bool = true) {
+        guard let index = active.firstIndex(where: { $0 === run }) else { return }
+        active.remove(at: index)
+        run.record.state = state
+        run.record.reason = reason
+        run.record.endedAt = now()
+        log(run.record)
+        addToHistory(run.record)
+        emit(.run(run.record))
+        emit(.schedules(id: run.record.scheduleID))
+        if shouldNotify { notify(run.record, schedule: schedule(id: run.schedule.id) ?? run.schedule) }
+    }
+
+    // MARK: Helpers
+
+    private func terminal(of run: ActiveScheduleRun) -> TerminalSurface? {
+        guard let pane = run.record.pane.flatMap(controller.pane(id:)), !pane.isClosing else { return nil }
+        return pane.terminal
+    }
+
+    /// The local terminal pane holding the Claude Code session: running it, else remembering or offering it.
+    func sessionPane(_ id: String) -> Pane? {
+        let panes = controller.workspaces.flatMap(\.orderedPanes).filter { $0.kind == .terminal && $0.ssh == nil && !$0.isClosing }
+        return panes.first { $0.agentUsage?.agent == .claude && $0.agentUsage?.sessionID == id }
+            ?? panes.first { sessionRecord(id, in: $0) != nil }
+    }
+
+    func sessionRecord(_ id: String, in pane: Pane) -> AgentSession? {
+        [pane.resumeOffer, pane.agentSession].compactMap { $0 }.first { $0.agent == .claude && $0.sessionID == id }
+    }
+
+    /// The session to resume: its remembered details, under `account` (else the account it had).
+    private func resumeSession(_ id: String, cwd: String?, account: ClaudeAccount?, remembered: AgentSession?,
+                               now: Date) -> AgentSession {
+        var session = remembered ?? AgentSession(agent: .claude, sessionID: id)
+        session.cwd = cwd.map { ($0 as NSString).expandingTildeInPath } ?? session.cwd
+        session.lastSeen = now
+        if let account {
+            session.account = account.name
+            session.configDir = ClaudeAccounts.expandedPath(account.configDir)
+        }
+        return session
+    }
+
+    private func existingFolder(_ path: String) -> String? {
+        let expanded = (path as NSString).expandingTildeInPath
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: expanded, isDirectory: &isDirectory), isDirectory.boolValue else { return nil }
+        return expanded
+    }
+
+    /// Ids, states and reason codes only; never prompts or commands.
+    private func log(_ run: ScheduleRun) {
+        scheduleLog.info("run \(run.id, privacy: .public) of \(run.scheduleID, privacy: .public): \(run.state.rawValue, privacy: .public) \(run.reason?.rawValue ?? "", privacy: .public) pane \(run.pane ?? "-", privacy: .public)")
+    }
+}
+
+extension ActiveScheduleRun {
+    /// The schedule names the account itself (its absence is an error); a session's remembered account may be gone.
+    var accountIsRequired: Bool {
+        switch schedule.action {
+        case .startWorkspace(let action): return action.account != nil
+        case .continueSession(let action):
+            if action.account != nil { return true }
+            if case .limitReset = schedule.trigger { return true }
+            return false
+        }
+    }
+}
