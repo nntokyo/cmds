@@ -2242,7 +2242,7 @@
       }
     },
     "Done": {
-      "comment": "sidebar agent state: finished, not seen yet\nsubagent finished",
+      "comment": "an agent or subagent finished",
       "localizations": {
         "ja": {
           "stringUnit": {

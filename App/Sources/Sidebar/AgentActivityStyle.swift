@@ -11,7 +11,7 @@ enum AgentActivityStyle {
             switch self {
             case .working: return String(localized: "Working", comment: "sidebar agent state: the agent is busy")
             case .needsInput: return String(localized: "Needs Input", comment: "sidebar agent state: waiting for the user's answer or permission")
-            case .done: return String(localized: "Done", comment: "sidebar agent state: finished, not seen yet")
+            case .done: return String(localized: "Done", comment: "an agent or subagent finished")
             case .idle: return String(localized: "Idle", comment: "sidebar agent state: waiting for the next prompt")
             case .stopped: return String(localized: "Stopped", comment: "sidebar agent state: the agent exited")
             }

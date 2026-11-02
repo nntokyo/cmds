@@ -259,7 +259,8 @@ public enum AgentResume {
     }
 
     /// Terminal titles are often decorated (`✳ Fix login`, spinner glyphs); returns the readable part, nil when empty
-    /// or just a default title (a path or `user@host:path` set by the shell, a shell or agent name).
+    /// or just a default title (a path or `user@host:path` set by the shell, a shell or agent name, or the command line
+    /// the shell shows while a command starts, such as a typed resume command, #49).
     public static func cleanTitle(_ title: String?) -> String? {
         guard let title else { return nil }
         let trimmed = title.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines
@@ -267,8 +268,17 @@ public enum AgentResume {
         let lower = trimmed.lowercased()
         guard !trimmed.isEmpty, trimmed != "Terminal", !["claude", "claude code", "codex"].contains(lower),
               !AgentProcessClassifier.shells.contains(lower), !trimmed.hasPrefix("/"), !trimmed.hasPrefix("~"),
-              trimmed.range(of: #"^[^\s]+@[^\s]+:"#, options: .regularExpression) == nil else { return nil }
+              trimmed.range(of: #"^[^\s]+@[^\s]+:"#, options: .regularExpression) == nil,
+              !isCommandLine(trimmed) else { return nil }
         return String(trimmed.prefix(80))
+    }
+
+    /// A shell command line rather than a title: one starting with `cd`, `env`, `claude` or `codex` and an argument,
+    /// or a `NAME=value` assignment, or containing `&&`, `||` or `--resume` (#49).
+    private static func isCommandLine(_ title: String) -> Bool {
+        title.range(of: #"^(cd|env|claude|codex)\s+\S"#, options: .regularExpression) != nil
+            || title.range(of: #"^[A-Za-z_][A-Za-z0-9_]*=\S"#, options: .regularExpression) != nil
+            || title.contains("&&") || title.contains("||") || title.contains("--resume")
     }
 
     /// `just now`, `5 min ago`, `3 h ago`, `2 d ago`.

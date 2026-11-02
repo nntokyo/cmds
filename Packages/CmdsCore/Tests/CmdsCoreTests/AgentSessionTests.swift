@@ -78,6 +78,25 @@ final class AgentSessionTests: XCTestCase {
         }
     }
 
+    /// #49: the command line a shell shows while a typed (resume) command starts is not a session title.
+    func testCleanTitleDropsCommandLines() {
+        let id = "0b5c2f8e-1a2b-4c3d-8e9f-0123456789ab"
+        for command in [
+            "cd '/Users/me/src/app' && env CLAUDE_CONFIG_DIR='/Users/me/.claude-work' claude --resume \(id)",
+            "cd '/Users/me/src/app' && claude --resume \(id)",
+            "cd '/Users/me/src/app' && codex resume \(id)",
+            "env CLAUDE_CONFIG_DIR='/Users/me/.claude-work' claude --resume \(id)",
+            "claude --resume \(id)", "codex resume \(id)", "claude -c", "CLAUDE_CONFIG_DIR=~/.claude-work claude",
+            "✳ cd ~/src && claude",
+        ] {
+            XCTAssertNil(AgentResume.cleanTitle(command), command)
+        }
+        // Real titles that mention such words stay.
+        XCTAssertEqual(AgentResume.cleanTitle("✳ Fix cd handling"), "Fix cd handling")
+        XCTAssertEqual(AgentResume.cleanTitle("Claude Code resume banner"), "Claude Code resume banner")
+        XCTAssertEqual(AgentResume.cleanTitle("Codex review of env loading"), "Codex review of env loading")
+    }
+
     func testLooksLikePrompt() {
         XCTAssertTrue(AgentResume.looksLikePrompt(screen: "Last login: Mon\nme@host:~/src$ "))
         XCTAssertTrue(AgentResume.looksLikePrompt(screen: "~/src main ❯\n\n"))

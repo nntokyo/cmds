@@ -23,6 +23,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Mac: a remembered Claude Code or Codex session no longer takes the command line typed to start it (e.g.
+  `cd '…' && env CLAUDE_CONFIG_DIR=… claude --resume …`) as its title. `cmds sessions`, the resume banners and
+  schedules show the session's own title, or none, also for sessions remembered before (#49).
 - Mac: a damaged `claude-accounts.json` is no longer replaced by the next change to the accounts. It is kept as
   `claude-accounts.json.corrupt-<time>` in the cmds support folder and cmds says so; a file it cannot read at all is
   left alone and not saved over (#46).
