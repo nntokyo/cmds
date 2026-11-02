@@ -255,6 +255,34 @@ final class ScheduleValidationTests: XCTestCase {
         XCTAssertEqual(problems(StartWorkspace(cwd: "/tmp", account: "bad name")), [.accountInvalid("bad name")])
     }
 
+    /// Boundaries and character classes kept when the checks got named limits and one control-character test (#47).
+    func testBoundariesAndControlCharacters() {
+        XCTAssertEqual(ScheduleValidation.problems(draft(.once(at: now), late: .runIfWithin(59))), [.lateOutOfRange])
+        XCTAssertEqual(ScheduleValidation.problems(draft(.once(at: now), late: .runIfWithin(60))), [])
+        XCTAssertEqual(ScheduleValidation.problems(draft(.once(at: now), late: .runIfWithin(7 * 86400))), [])
+        func problems(_ action: StartWorkspace) -> [ScheduleProblem] {
+            ScheduleValidation.problems(draft(.once(at: now), .startWorkspace(action)))
+        }
+        XCTAssertEqual(problems(StartWorkspace(cwd: "/" + String(repeating: "a", count: 1023))), [])
+        XCTAssertEqual(problems(StartWorkspace(cwd: "/" + String(repeating: "a", count: 1024))), [.folderInvalid])
+        XCTAssertEqual(problems(StartWorkspace(cwd: "~")), [])
+        XCTAssertEqual(problems(StartWorkspace(cwd: "/tmp/a\u{7F}")), [.folderInvalid])
+        // Names, titles, commands: C0, DEL, C1 and the Unicode line / paragraph separators are refused.
+        for bad in ["\u{0}", "\u{1F}", "\u{7F}", "\u{85}", "\u{9F}", "\u{2028}", "\u{2029}"] {
+            XCTAssertEqual(problems(StartWorkspace(cwd: "/tmp", command: "echo " + bad)), [.commandInvalid], bad.debugDescription)
+            XCTAssertEqual(ScheduleValidation.problems(draft(.once(at: now), name: "a" + bad)), [.nameInvalid])
+        }
+        XCTAssertEqual(problems(StartWorkspace(cwd: "/tmp", command: "echo \u{A0}é")), [])
+        // A prompt keeps line breaks and tabs (and the Unicode separators); other control characters are refused.
+        for good in ["a\nb", "a\tb", "a\u{2028}b", "a\u{2029}b", "a\u{A0}b"] {
+            XCTAssertEqual(problems(StartWorkspace(cwd: "/tmp", command: "claude", prompt: good)), [], good.debugDescription)
+        }
+        for bad in ["a\rb", "a\u{0}", "a\u{7F}", "a\u{85}", "a\u{9F}"] {
+            XCTAssertEqual(problems(StartWorkspace(cwd: "/tmp", command: "claude", prompt: bad)), [.promptInvalid],
+                           bad.debugDescription)
+        }
+    }
+
     func testContinueSession() {
         func problems(_ action: ContinueSession) -> [ScheduleProblem] {
             ScheduleValidation.problems(draft(.once(at: now), .continueSession(action)))
