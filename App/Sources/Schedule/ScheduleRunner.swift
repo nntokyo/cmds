@@ -22,9 +22,8 @@ enum ScheduleChange {
 ///   plus a 60 s safety check. A firing time that passed while the Mac slept or cmds was not running gets one
 ///   catch-up run within the late policy, else a missed entry (`ScheduleCatchUp`).
 /// - Runs (ScheduleRunner+Runs.swift, +ContinueSession, +SendText): a state machine per run, driven every 0.3 s by
-///   `ScheduleRunTiming`. Only the
-///   run's own pane, the pane holding the targeted Claude Code / Codex session, or the pane a `sendText` target names
-///   (`PaneTags.swift`) is typed into, once.
+///   `ScheduleRunTiming`. Only the run's own pane, the pane holding the targeted Claude Code / Codex session, or the
+///   pane a `sendText` target names (`PaneTags.swift`) is typed into, once.
 /// - Notices (ScheduleRunner+Notice.swift): "starts in 1 minute" with Skip before a scheduled firing.
 /// - Never logs prompts or commands.
 @MainActor
