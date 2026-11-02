@@ -11,7 +11,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 |---|---|
 | [guide/getting-started.md](guide/getting-started.md) | Install, first workspace, basic moves, the `cmds` command, where data is kept |
 | [guide/workspaces-and-panes.md](guide/workspaces-and-panes.md) | Workspaces and sidebar, splits, attention ring, browser and preview panes, SSH workspaces, session restore, keeping the Mac awake, language |
-| [guide/files.md](guide/files.md) | Files panes: browsing a folder, preview, copy and move between two panes, conflicts, rename, Trash, Follow Terminal, dropping files on a terminal |
+| [guide/files.md](guide/files.md) | Files panes: browsing a folder, preview, copy and move between two panes, conflicts, rename, Trash, Follow Terminal, dropping files on a terminal, folders on SSH hosts, the transfer queue |
 | [guide/iphone.md](guide/iphone.md) | The iPhone/iPad companion: pairing (QR or manual), what it shows, local network / Bluetooth / SSH relay, troubleshooting |
 | [guide/schedules.md](guide/schedules.md) | Schedules: start a workspace or continue a Claude Code session at a time, on weekdays or when a limit resets; safety rules, missed runs, history |
 | [guide/ai-agents.md](guide/ai-agents.md) | Claude Code hooks and status line, the Claude skill, Codex, usage and limits, resuming sessions, moving to a new version, agents on servers |
@@ -32,6 +32,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 | [internals/architecture.md](internals/architecture.md) | Repository layout, targets, key concepts, resource and agent usage, keep-awake implementation |
 | [internals/sync-protocol.md](internals/sync-protocol.md) | Companion sync protocol v2: transports, messages, pairing, Mac identity, threat model |
 | [internals/ssh.md](internals/ssh.md) | SSH panes: the `ssh` command, forwarded socket and its allowlist, `cmds-remote.sh`, server requirements |
+| [internals/files-sftp.md](internals/files-sftp.md) | Files panes on SSH hosts: the `ssh` command, the SFTP client, connections, transfers, the server's Trash |
 | [internals/localization.md](internals/localization.md) | String Catalogs, adding strings, what stays English, Japanese style |
 | [internals/testing.md](internals/testing.md) | Unit tests, isolated instances, sync and SSH end-to-end tests, device driver, UI tests, machine load |
 | [internals/release.md](internals/release.md) | Versions, signing, building a release |

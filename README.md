@@ -18,9 +18,10 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 - **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`).
 - **Preview panes**: images, PDFs, video and Office files (Quick Look), rendered Markdown and coloured diffs, reloaded
   when the file changes; ⌘-click a path in the terminal to open it.
-- **Files panes**: a local folder as a list (size, date, kind, Git state); two side by side copy and move between
-  each other with progress and conflict handling; rename, new folder, Move to Trash; follow a terminal's `cd`; drop
-  files on a terminal to type their quoted paths.
+- **Files panes**: a folder on the Mac or on an SSH host (SFTP with your own ssh, keys and agent) as a list (size,
+  date, kind, Git state); two side by side copy and move between each other with progress and conflict handling,
+  through a transfer queue (pause, cancel, retry) for servers; rename, new folder, Move to Trash (the server's Trash
+  on hosts, never deleted); follow a terminal's `cd`; drop files on a terminal to type their quoted paths.
 - **SSH workspaces**: your own `ssh` with a restricted socket forwarded to the server, so notifications, status and
   agent usage work remotely; reconnect overlay.
 - **Coding agents**: Claude Code hooks and status-line reporter, Codex usage read from its session files; per-pane
@@ -96,6 +97,7 @@ More: [docs/guide/getting-started.md](docs/guide/getting-started.md).
   cmds browser open http://localhost:3000   # browser pane on the right
   git diff | cmds open --diff -             # coloured diff in a preview pane
   cmds files                                # this directory in a files pane
+  cmds files home:/var/www                  # a folder on the SSH host "home"
   long-task; cmds notify "done: $?"         # light this pane when finished
   ```
 

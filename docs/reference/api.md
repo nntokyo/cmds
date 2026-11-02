@@ -80,7 +80,10 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `pane.list` | `workspace?` | `[PaneInfo]` |
 | `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?`, `account?` (local terminals) | `PaneInfo` |
 | `pane.open_file` | `path` (absolute, existing file), `pane?` (to split from; a preview pane shows the file itself instead), `direction?` (`right`/`down`), `focus?` (default true), `format?` (`markdown`/`diff`/`quicklook`) | `PaneInfo` (kind `preview`); refused (403) on SSH panes' sockets |
-| `files.open` | `path` (absolute, existing folder or file), `pane?` (to split from; a files pane shows the folder itself instead), `direction?` (`right`/`down`), `focus?` (default true) | `PaneInfo` (kind `files`, `workingDirectory` = the folder; a file's folder is listed with the file selected); refused (403) on SSH panes' sockets. [Files panes](../guide/files.md) |
+| `files.open` | `path` (absolute, existing folder or file), `pane?` (to split from; a files pane shows the folder itself instead), `direction?` (`right`/`down`), `focus?` (default true); `host?` (an SSH host: `path` is then a folder there, absolute, `~/…`, relative to the remote home or empty, checked by the listing) | `PaneInfo` (kind `files`, `workingDirectory` = the folder, `remote` = `{host, connected}` on a host; a file's folder is listed with the file selected); refused (403) on SSH panes' sockets. [Files panes](../guide/files.md) |
+| `transfer.list` | – | `[TransferInfo]`: the transfer queue, oldest first. All `transfer.*` methods: local socket only. [Transfers](../guide/files.md#transfers) |
+| `transfer.pause` / `transfer.resume` / `transfer.cancel` / `transfer.retry` | `id` | – (`retry`: a failed or cancelled transfer; else 400) |
+| `transfer.clear` | – | – (removes finished transfers) |
 | `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
 | `pane.focus` | `pane` | – |
 | `pane.close` | `pane` | – |
@@ -126,8 +129,14 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   an SSH pane).
 - `PaneInfo` = `id`, `kind` (`terminal` / `browser` / `preview` / `files`), `title`, `focused`, `attention`,
   `workingDirectory?` (files: the listed folder), `url?` (browser), `file?` (preview: absolute path), `remote?` =
-  `{host, connected, branch?}` (SSH panes), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude
+  `{host, connected, branch?}` (SSH panes; files panes on a host, `connected` false until it was listed, e.g. after a
+  relaunch), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude
   Code runs under).
+- `TransferInfo` = `id`, `mode` (`copy`/`move`), `state` (`queued`, `running`, `paused`, `waiting`, `done`,
+  `failed`, `cancelled`), `sources` and `destination` (`HOST:PATH` on SSH hosts, else paths), `itemsDone`,
+  `itemsTotal`, `bytesDone`, `bytesTotal`, `current?` (the file being written), `error?` (why the whole transfer
+  stopped, e.g. the connection), `asking?` (a name conflict waiting for an answer in the app), `copied`, `moved`,
+  `skipped` (counts of the log) and `failures` (`[{path, message}]`, at most 50).
 - `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`, `memoryTotalBytes`, `memoryPressure` (1 normal,
   2 warning, 4 critical; optional).
 - `AgentUsage` = `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`, `effort`,

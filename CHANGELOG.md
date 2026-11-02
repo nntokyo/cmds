@@ -9,6 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: files panes on SSH hosts. File › New Remote Files Pane… (⌥⇧⌘E), ⇧⌘E in an SSH pane, or
+  `cmds files HOST:PATH` lists a folder on a host over SFTP with your own `ssh` (`~/.ssh/config`, keys, agent, an open
+  `ControlMaster`). cmds never asks for or stores a password and never adds host keys: password-only hosts, unknown and
+  changed host keys are refused with a note on what to do. Rename, New Folder, Open and preview (a downloaded copy),
+  Open Terminal Here (an SSH pane), and Move to Trash, which moves items to the server's own Trash
+  (`~/.local/share/Trash`) and never deletes them. Remote panes come back after a relaunch and wait for Connect (#26).
+- Mac: a transfer queue for copies and moves between the Mac and SSH hosts, or two hosts (F5 / F6, drag and drop,
+  dropping from the Finder, ⌘C / ⌘V): progress in the pane, Window › Transfers (⌥⌘T) with Pause, Cancel, Retry and a
+  log per transfer, and the usual Keep Both / Replace / Skip conflicts (Replace moves the existing item to the Trash
+  of its side). Files arrive under a temporary name and get theirs only when complete; Cancel removes only what the
+  transfer wrote. `cmds transfers` and `transfer.*` on the socket (#26).
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
