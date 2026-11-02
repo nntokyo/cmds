@@ -81,6 +81,12 @@ final class FileLocationTests: XCTestCase {
         XCTAssertFalse(RemotePath.isSameOrInside("/ab", "/a"))
         XCTAssertEqual(RemotePath.resolve(typed: "../x", in: "/a/b"), "/a/x")
         XCTAssertEqual(RemotePath.resolve(typed: "~/x", in: "/a/b"), "~/x")
+        XCTAssertEqual(RemotePath.absolute("", home: "/home/me"), "/home/me")
+        XCTAssertEqual(RemotePath.absolute("~", home: "/home/me"), "/home/me")
+        XCTAssertEqual(RemotePath.absolute("~/src", home: "/home/me"), "/home/me/src")
+        XCTAssertEqual(RemotePath.absolute("src/x", home: "/home/me"), "/home/me/src/x")
+        XCTAssertEqual(RemotePath.absolute("/var/../www", home: "/home/me"), "/var/../www")
+        XCTAssertEqual(RemotePath.absolute("~other", home: "/home/me"), "/home/me/~other")
     }
 }
 
@@ -477,5 +483,220 @@ final class SFTPTransferTests: XCTestCase {
         XCTAssertEqual(queue.snapshots.map(\.id), [1, 2])
         queue.clearFinished()
         XCTAssertTrue(queue.snapshots.isEmpty)
+    }
+
+    // MARK: - Rules not covered above
+
+    func testMoveIntoItsOwnFolderIsSkipped() throws {
+        try write(home + "/a.txt", "a")
+        let job = job(.move, [r(home + "/a.txt")], to: r(home))
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .done)
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.skipped])
+        XCTAssertEqual(read(home + "/a.txt"), "a")
+        XCTAssertEqual(server.renamed.count, 0)
+    }
+
+    func testSkippedConflictCountsItsBytes() throws {
+        try write(mac + "/a.txt", "12345")
+        try write(home + "/a.txt", "old")
+        let job = job(.copy, [.local(mac + "/a.txt")], to: r(home), policy: .skip)
+        job.run()
+        XCTAssertEqual(job.snapshot.progress.bytesDone, 5)
+        XCTAssertEqual(job.snapshot.progress.bytesTotal, 5)
+        XCTAssertEqual(job.snapshot.progress.itemsDone, 1)
+        XCTAssertEqual(job.snapshot.progress.itemsTotal, 1)
+    }
+
+    func testReplaceIsRefusedWhenTheTrashFails() throws {
+        try write(home + "/a.txt", "new")
+        try write(mac + "/a.txt", "old")
+        local.trashItem = { _ in throw FileTreeError("no Trash here") }
+        let job = job(.copy, [r(home + "/a.txt")], to: .local(mac), policy: .replace)
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .failed)
+        XCTAssertEqual(job.snapshot.log.map(\.outcome),
+                       [.failed("The existing item could not be moved to the Trash: no Trash here")])
+        XCTAssertEqual(read(mac + "/a.txt"), "old")
+    }
+
+    func testReplaceRefusedWhenTheTargetContainsTheSource() throws {
+        try write(home + "/x/x", "inner")
+        let job = job(.move, [r(home + "/x/x")], to: r(home), policy: .replace)
+        job.run()
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed("The item to replace contains the item being moved.")])
+        XCTAssertEqual(read(home + "/x/x"), "inner")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: home + "/.local/share/Trash"))
+    }
+
+    func testMoveKeepsTheOriginalWhenItsTrashFails() throws {
+        try write(mac + "/a.txt", "a")
+        local.trashItem = { _ in throw FileTreeError("no Trash here") }
+        let job = job(.move, [.local(mac + "/a.txt")], to: r(home))
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .failed)
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.originalKept("no Trash here")])
+        XCTAssertEqual(read(home + "/a.txt"), "a")
+        XCTAssertEqual(read(mac + "/a.txt"), "a")
+    }
+
+    func testSpecialFilesAreNotCopied() throws {
+        try FileManager.default.createDirectory(atPath: mac + "/dir", withIntermediateDirectories: true)
+        XCTAssertEqual(mkfifo(mac + "/dir/pipe", 0o600), 0)
+        XCTAssertEqual(mkfifo(mac + "/top", 0o600), 0)
+        try write(mac + "/dir/a.txt", "a")
+        let job = job(.copy, [.local(mac + "/dir"), .local(mac + "/top")], to: r(home))
+        job.run()
+        let snapshot = job.snapshot
+        XCTAssertEqual(snapshot.state, .done, "\(snapshot.log)")
+        XCTAssertEqual(snapshot.log.map(\.path), ["dir/a.txt", "dir/pipe", "dir", "top"])
+        XCTAssertEqual(snapshot.log.map(\.outcome), [.copied, .notCopied, .copied, .notCopied])
+        XCTAssertEqual(names(home + "/dir"), ["a.txt"])
+    }
+
+    func testFolderInsideItselfIsRefusedForCopies() throws {
+        try write(home + "/a/b/c.txt", "c")
+        let job = job(.copy, [r(home + "/a")], to: r(home + "/a/b"))
+        job.run()
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed("A folder cannot be copied or moved into itself.")])
+        XCTAssertEqual(names(home + "/a/b"), ["c.txt"])
+    }
+
+    func testDroppedConnectionWhileMakingAFolderFailsTheJobWithoutLogging() throws {
+        try write(mac + "/dir/a.txt", "a")
+        // After the handshake's realpath: the lstat of the target is answered, the mkdir is not.
+        server.dropAfterRequests = 2
+        let job = job(.copy, [.local(mac + "/dir")], to: r(home))
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .failed)
+        XCTAssertEqual(job.snapshot.error, "test server closed the connection")
+        XCTAssertEqual(job.snapshot.log, [])
+    }
+
+    func testMissingSourceFailsAndIsRetried() throws {
+        let job = job(.copy, [.local(mac + "/later.txt")], to: r(home))
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .failed)
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed("No such file or folder")])
+        try write(mac + "/later.txt", "now")
+        XCTAssertTrue(job.prepareRetry())
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .done)
+        XCTAssertEqual(read(home + "/later.txt"), "now")
+    }
+
+    func testCancelBeforeStartAndRetryOnlyAfterFinishing() throws {
+        try write(mac + "/a", "a")
+        let job = job(.copy, [.local(mac + "/a")], to: r(home))
+        XCTAssertFalse(job.prepareRetry())
+        job.cancel()
+        XCTAssertEqual(job.currentState, .cancelled)
+        XCTAssertNotNil(job.snapshot.finished)
+        job.run()
+        XCTAssertEqual(job.currentState, .cancelled)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: home + "/a"))
+        XCTAssertTrue(job.prepareRetry())
+        job.run()
+        XCTAssertEqual(job.currentState, .done)
+        XCTAssertEqual(read(home + "/a"), "a")
+    }
+
+    func testQueueRunsOneJobPerDestinationFolder() throws {
+        try write(mac + "/a.bin", "a")
+        try write(mac + "/b.bin", "b")
+        try write(mac + "/c.bin", "c")
+        try FileManager.default.createDirectory(atPath: home + "/other", withIntermediateDirectories: true)
+        let queue = TransferQueue(callbackQueue: DispatchQueue(label: "test"))
+        let jobs = [("a.bin", home!), ("b.bin", home!), ("c.bin", home! + "/other")].map { name, folder in
+            let job = TransferJob(id: queue.makeID(), mode: .copy, sources: [.local(mac + "/" + name)], destination: r(folder))
+            job.tree = { [remote, local] location in location.isRemote ? remote! as FileTree : local! as FileTree }
+            return job
+        }
+        // The first holds its folder while paused.
+        jobs[0].pause()
+        jobs.forEach(queue.add)
+        var deadline = Date().addingTimeInterval(10)
+        while jobs[2].currentState != .done || jobs[0].currentState != .paused, Date() < deadline { usleep(20_000) }
+        // The third (another folder) ran beside the first; the second waits for the first's folder.
+        XCTAssertEqual(jobs[2].currentState, .done)
+        XCTAssertEqual(jobs[0].currentState, .paused)
+        XCTAssertEqual(jobs[1].currentState, .queued)
+        jobs[0].resume()
+        deadline = Date().addingTimeInterval(10)
+        while jobs[1].currentState != .done, Date() < deadline { usleep(20_000) }
+        XCTAssertEqual(jobs.map(\.currentState), [.done, .done, .done])
+    }
+}
+
+final class TransferTextTests: XCTestCase {
+    private func snapshot(_ outcomes: [TransferJob.Outcome], error: String? = nil) -> TransferJob.Snapshot {
+        let date = Date(timeIntervalSince1970: 0)
+        return TransferJob.Snapshot(
+            id: 4, mode: .copy, sources: [.local("/a"), .remote(host: "h", path: "/b")],
+            destination: .remote(host: "h", path: "/srv"), state: .failed,
+            progress: TransferJob.Progress(itemsDone: 1, itemsTotal: 2, bytesDone: 3, bytesTotal: 4, current: "x"),
+            log: outcomes.enumerated().map { TransferJob.LogEntry(path: "p\($0.offset)", outcome: $0.element, date: date) },
+            error: error, started: date, finished: nil, asking: "y")
+    }
+
+    func testTransferInfoCountsTheLog() {
+        let info = TransferInfo(snapshot([.copied, .replaced, .keptBoth("k 2"), .merged, .moved, .skipped, .notCopied,
+                                          .failed("bad"), .originalKept("kept")], error: "gone"))
+        XCTAssertEqual(info.id, 4)
+        XCTAssertEqual(info.sources, ["/a", "h:/b"])
+        XCTAssertEqual(info.destination, "h:/srv")
+        XCTAssertEqual([info.itemsDone, info.itemsTotal], [1, 2])
+        XCTAssertEqual([info.bytesDone, info.bytesTotal], [3, 4])
+        XCTAssertEqual(info.current, "x")
+        XCTAssertEqual(info.asking, "y")
+        XCTAssertEqual(info.error, "gone")
+        XCTAssertEqual([info.copied, info.moved, info.skipped], [4, 1, 2])
+        XCTAssertEqual(info.failures, [TransferInfo.Failure(path: "p7", message: "bad"),
+                                       TransferInfo.Failure(path: "p8", message: "kept")])
+    }
+
+    func testTransferInfoListsAtMostFiftyFailures() {
+        let info = TransferInfo(snapshot(Array(repeating: .failed("x"), count: 60)))
+        XCTAssertEqual(info.failures.count, 50)
+        XCTAssertEqual(info.failures.last?.path, "p49")
+    }
+
+    func testOutcomeFailures() {
+        XCTAssertEqual([TransferJob.Outcome.copied, .moved, .skipped, .replaced, .keptBoth("a"), .merged, .notCopied,
+                        .failed("f"), .originalKept("o")].map(\.isFailure),
+                       [false, false, false, false, false, false, false, true, true])
+    }
+
+    func testSFTPErrorText() {
+        XCTAssertEqual(SFTPError.status(code: 3, message: "").description, "Permission denied")
+        XCTAssertEqual(SFTPError.status(code: 3, message: "Failure").description, "Permission denied")
+        XCTAssertEqual(SFTPError.status(code: 8, message: "").description, "Not supported by the server")
+        XCTAssertEqual(SFTPError.status(code: 1, message: "").description, "End of file")
+        XCTAssertEqual(SFTPError.status(code: 4, message: "").description, "The server reported a failure")
+        XCTAssertEqual(SFTPError.status(code: 4, message: "failure").description, "failure")
+        XCTAssertEqual(SFTPError.status(code: 4, message: "Disk full").description, "Disk full")
+        XCTAssertEqual(SFTPError.disconnected("gone").description, "gone")
+        XCTAssertEqual(SFTPError.protocolError("x").description, "SFTP protocol error: x")
+    }
+
+    func testLocalTreeRemovesOnlyPartFilesAndNeverOverwrites() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-tree-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: folder) }
+        let tree = LocalFileTree()
+        try Data("a".utf8).write(to: URL(fileURLWithPath: folder + "/a"))
+        try Data("b".utf8).write(to: URL(fileURLWithPath: folder + "/b"))
+        XCTAssertThrowsError(try tree.removePart(folder + "/a"))
+        XCTAssertThrowsError(try tree.rename(folder + "/a", to: folder + "/b"))
+        XCTAssertThrowsError(try tree.createFile(folder + "/b", permissions: nil))
+        XCTAssertNoThrow(try tree.removePart(folder + "/" + TransferNames.part(for: "gone")))
+        let part = folder + "/" + TransferNames.part(for: "c")
+        let writer = try tree.createFile(part, permissions: 0o600)
+        try writer.write(Data("c".utf8))
+        try writer.finish()
+        try tree.removePart(part)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder).sorted(), ["a", "b"])
+        XCTAssertEqual(try tree.item(at: folder + "/a")?.kind, .file)
+        XCTAssertNil(try tree.item(at: folder + "/missing"))
     }
 }

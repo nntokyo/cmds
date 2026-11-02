@@ -280,19 +280,20 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int,
                    proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
         guard let locations = Self.locations(info.draggingPasteboard), !locations.isEmpty else { return [] }
-        let ontoFolder = dropOperation == .on && rows[safe: row]?.isFolder == true
-        if !ontoFolder { tableView.setDropRow(-1, dropOperation: .on) } // the whole list: into this folder
+        let folderRow = dropFolderRow(row, dropOperation)
+        if folderRow == nil { tableView.setDropRow(-1, dropOperation: .on) } // the whole list: into this folder
         if isRemote || locations.contains(where: \.isRemote) {
-            let destination = ontoFolder ? location(of: rows[row]) : location
-            if locations.contains(where: { $0 == destination || ($0.isSameTree(as: destination) && $0.parent == destination
-                && Self.remoteDropOperation(info, sources: locations, destination: destination) == .move) }) {
+            let destination = folderRow.map(location(of:)) ?? location
+            let operation = Self.remoteDropOperation(info, sources: locations, destination: destination)
+            // Onto one of the dragged items, or moved into the folder they are already in: nothing to do.
+            if locations.contains(where: { $0 == destination
+                || ($0.isSameTree(as: destination) && $0.parent == destination && operation == .move) }) {
                 return []
             }
-            return Self.remoteDropOperation(info, sources: locations, destination: destination)
+            return operation
         }
         let sources = locations.map { URL(fileURLWithPath: $0.path) }
-        var destination = folderURL
-        if ontoFolder, let entry = rows[safe: row] { destination = url(of: entry) }
+        let destination = folderRow.map(url(of:)) ?? folderURL
         // Onto one of the dragged items, or into the folder they are already in: nothing to do.
         let destinationPath = destination.standardizedFileURL.path
         if sources.contains(where: { FileNames.isSameOrInside(destinationPath, $0.standardizedFileURL.path) }) { return [] }
@@ -306,39 +307,45 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
     func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int,
                    dropOperation: NSTableView.DropOperation) -> Bool {
         guard let locations = Self.locations(info.draggingPasteboard), !locations.isEmpty else { return false }
+        let folderRow = dropFolderRow(row, dropOperation)
         if isRemote || locations.contains(where: \.isRemote) {
-            var destination = location
-            if row >= 0, dropOperation == .on, let entry = rows[safe: row], entry.isFolder { destination = location(of: entry) }
+            let destination = folderRow.map(location(of:)) ?? location
             let operation = Self.remoteDropOperation(info, sources: locations, destination: destination)
             startTransfer(operation == .move ? .move : .copy, sources: locations, destination: destination)
             return true
         }
         let sources = locations.map { URL(fileURLWithPath: $0.path) }
-        var destination = folderURL
-        if row >= 0, dropOperation == .on, let entry = rows[safe: row], entry.isFolder { destination = url(of: entry) }
+        let destination = folderRow.map(url(of:)) ?? folderURL
         let operation = Self.dropOperation(info, sources: sources, destination: destination)
         return startOperation(operation == .move ? .move : .copy, sources: sources, destination: destination)
     }
 
+    /// The folder row a drop is on, or nil when it goes into the shown folder.
+    private func dropFolderRow(_ row: Int, _ dropOperation: NSTableView.DropOperation) -> FileEntry? {
+        guard dropOperation == .on, let entry = rows[safe: row], entry.isFolder else { return nil }
+        return entry
+    }
+
     /// Like the Finder: ⌥ copies, ⌘ moves; otherwise items move within a volume and are copied to another one.
     static func dropOperation(_ info: NSDraggingInfo, sources: [URL], destination: URL) -> NSDragOperation {
-        let mask = info.draggingSourceOperationMask
-        if mask == .copy { return .copy }
-        if mask == .generic || mask == .move { return .move }
-        guard mask.contains(.move) || mask.contains(.generic) else { return mask.contains(.copy) ? .copy : [] }
-        let volume = FileOperation.volume(of: destination)
-        let sameVolume = volume != nil && sources.allSatisfy { FileOperation.volume(of: $0) == volume }
-        return sameVolume ? .move : .copy
+        dragOperation(info.draggingSourceOperationMask) {
+            let volume = FileOperation.volume(of: destination)
+            return volume != nil && sources.allSatisfy { FileOperation.volume(of: $0) == volume }
+        }
     }
 
     /// Drops that involve a server: ⌥ copies, ⌘ moves; otherwise items move within one host and are copied between
     /// this Mac and a host or two hosts.
     static func remoteDropOperation(_ info: NSDraggingInfo, sources: [FileLocation], destination: FileLocation) -> NSDragOperation {
-        let mask = info.draggingSourceOperationMask
+        dragOperation(info.draggingSourceOperationMask) { sources.allSatisfy { $0.isSameTree(as: destination) } }
+    }
+
+    /// Copy when only copying is allowed (⌥), move when only moving is (⌘); otherwise move when `moves` says so.
+    private static func dragOperation(_ mask: NSDragOperation, moves: () -> Bool) -> NSDragOperation {
         if mask == .copy { return .copy }
         if mask == .generic || mask == .move { return .move }
         guard mask.contains(.move) || mask.contains(.generic) else { return mask.contains(.copy) ? .copy : [] }
-        return sources.allSatisfy { $0.isSameTree(as: destination) } ? .move : .copy
+        return moves() ? .move : .copy
     }
 
     static func fileURLs(_ pasteboard: NSPasteboard) -> [URL]? {

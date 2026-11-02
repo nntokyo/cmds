@@ -55,15 +55,7 @@ extension FilesPane {
     nonisolated static func readRemote(host: String, path: String) throws -> RemoteListing {
         let tree = try RemoteConnections.shared.tree(host: host)
         let client = tree.client
-        var target = path
-        if target.isEmpty || target == "~" {
-            target = tree.home
-        } else if target.hasPrefix("~/") {
-            target = RemotePath.join(tree.home, String(target.dropFirst(2)))
-        } else if !target.hasPrefix("/") {
-            target = RemotePath.join(tree.home, target)
-        }
-        var folder = try client.realpath(target)
+        var folder = try client.realpath(RemotePath.absolute(path, home: tree.home))
         var select: String?
         if try client.stat(folder).fileType != .folder {
             select = RemotePath.name(folder)
@@ -326,16 +318,11 @@ extension FilesPane {
             load()
         }
         updateStatus()
-        if job.state == .failed {
-            let failures = job.log.filter { $0.outcome.isFailure }
-            let lines = failures.prefix(8).map { "\($0.path): \($0.outcome.localizedText)" }
-                + (job.error.map { [$0] } ?? [])
-            let more = failures.count > 8 ? "\n" + String(localized: "and \(failures.count - 8) more") : ""
-            if startedTransfers.contains(job.id) {
-                showError(String(localized: "Some items could not be copied or moved."),
-                          detail: lines.joined(separator: "\n") + more + "\n\n"
-                              + String(localized: "Retry it in Window › Transfers."))
-            }
+        if job.state == .failed, startedTransfers.contains(job.id) {
+            let failures = job.log.filter { $0.outcome.isFailure }.map { "\($0.path): \($0.outcome.localizedText)" }
+            showError(String(localized: "Some items could not be copied or moved."),
+                      detail: Self.failureList(failures, extra: job.error.map { [$0] } ?? []) + "\n\n"
+                          + String(localized: "Retry it in Window › Transfers."))
         }
     }
 

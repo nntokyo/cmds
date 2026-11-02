@@ -232,8 +232,11 @@ final class FilesPane: NSView {
         updateHeader()
     }
 
+    /// Not at `/`, and (remote) the server has resolved the folder (a `~/…` path has no known parent yet).
+    var canGoUp: Bool { folder != "/" && !(isRemote && !folder.hasPrefix("/")) }
+
     @objc func goUp() {
-        guard folder != "/", !(isRemote && !folder.hasPrefix("/")) else { return NSSound.beep() }
+        guard canGoUp else { return NSSound.beep() }
         navigate(to: isRemote ? RemotePath.parent(folder) : (folder as NSString).deletingLastPathComponent)
     }
 
@@ -608,7 +611,7 @@ final class FilesPane: NSView {
     func updateHeader() {
         backButton.isEnabled = !backStack.isEmpty
         forwardButton.isEnabled = !forwardStack.isEmpty
-        upButton.isEnabled = folder != "/" && !(isRemote && !folder.hasPrefix("/"))
+        upButton.isEnabled = canGoUp
         pathControl.isHidden = isRemote
         remotePathLabel.isHidden = !isRemote
         followButton.isHidden = isRemote

@@ -144,6 +144,15 @@ public enum RemotePath {
         return a.count >= b.count && Array(a.prefix(b.count)) == b
     }
 
+    /// A remote pane's path made absolute against the login folder: `""` and `~` are `home`, `~/x` and `x` are inside
+    /// it; absolute paths stay as they are (the server resolves `..` and links with `realpath`).
+    public static func absolute(_ path: String, home: String) -> String {
+        if path.isEmpty || path == "~" { return home }
+        if path.hasPrefix("~/") { return join(home, String(path.dropFirst(2))) }
+        if !path.hasPrefix("/") { return join(home, path) }
+        return path
+    }
+
     /// A path typed into Go to Folder of a remote pane: absolute, `~`/`~/…` (left for the server to resolve), or
     /// relative to `folder`.
     public static func resolve(typed: String, in folder: String) -> String {

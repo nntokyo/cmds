@@ -32,11 +32,7 @@ extension FilesPane {
             let sources = try paths.map { path -> FileLocation in
                 do { return try FileLocation.parse(path) } catch { throw RPCError.invalidParams("\(error)") }
             }
-            if isRemote || sources.contains(where: \.isRemote) {
-                startTransfer(move ? .move : .copy, sources: sources, destination: location)
-            } else {
-                startOperation(move ? .move : .copy, sources: paths.map { URL(fileURLWithPath: $0) }, destination: folderURL)
-            }
+            copyOrMoveHere(sources, move: move)
         case "trash": moveToTrash()
         case "reload": reload()
         case "goto":

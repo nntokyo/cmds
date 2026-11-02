@@ -183,6 +183,12 @@ extension FilesPane {
     /// ⌘V copies the files on the pasteboard into the shown folder; ⌥⌘V moves them.
     func paste(move: Bool) {
         guard let sources = Self.locations(.general), !sources.isEmpty else { return NSSound.beep() }
+        copyOrMoveHere(sources, move: move)
+    }
+
+    /// Copies or moves `sources` into the shown folder: through the transfer queue when a server is involved, else as
+    /// a `FileOperation` with progress in the footer.
+    func copyOrMoveHere(_ sources: [FileLocation], move: Bool) {
         if isRemote || sources.contains(where: \.isRemote) {
             return startTransfer(move ? .move : .copy, sources: sources, destination: location)
         }
@@ -252,14 +258,19 @@ extension FilesPane {
             other.load()
         }
         guard !failures.isEmpty else { return }
-        let shown = Self.failuresListed
-        let lines = failures.prefix(shown).map { "\($0.name): \(Self.text($0.reason))" }
-        let more = failures.count > shown ? "\n" + String(localized: "and \(failures.count - shown) more") : ""
-        showError(String(localized: "Some items could not be copied or moved."), detail: lines.joined(separator: "\n") + more)
+        showError(String(localized: "Some items could not be copied or moved."),
+                  detail: Self.failureList(failures.map { "\($0.name): \(Self.text($0.reason))" }))
     }
 
     /// Failures named in the alert after a copy or move; the rest are counted.
     private static let failuresListed = 8
+
+    /// The alert's lines for failed items: the first `failuresListed`, then `extra`, then how many more failed.
+    static func failureList(_ lines: [String], extra: [String] = []) -> String {
+        let shown = failuresListed
+        let more = lines.count > shown ? "\n" + String(localized: "and \(lines.count - shown) more") : ""
+        return (lines.prefix(shown) + extra).joined(separator: "\n") + more
+    }
 
     private static func text(_ reason: FileOperation.Failure.Reason) -> String {
         switch reason {

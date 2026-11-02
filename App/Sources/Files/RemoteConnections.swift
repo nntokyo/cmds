@@ -6,13 +6,15 @@ private let remoteLog = Logger(subsystem: "tokyo.n-n.cmds", category: "files-rem
 
 /// SFTP connections of files panes and transfers (docs/internals/files-sftp.md): one `ssh -s HOST sftp` per host,
 /// shared by that host's panes and transfers, made on first use and closed when nothing has used it for
-/// `idleTimeout`; a connection that dropped is made again on the next use. Every call that connects blocks its thread, so it is only made from background queues and transfer
-/// threads, never the main thread.
+/// `idleTimeout`; a connection that dropped is made again on the next use. Every call that connects blocks its
+/// thread, so it is only made from background queues and transfer threads, never the main thread.
 final class RemoteConnections: @unchecked Sendable {
     static let shared = RemoteConnections()
 
     /// Seconds a connection stays open after its last use.
     static let idleTimeout: TimeInterval = 120
+    /// How often idle connections are looked for.
+    static let idleCheckInterval: TimeInterval = 30
 
     private let lock = NSLock()
     private var connections: [String: SSHFileConnection] = [:]
@@ -59,8 +61,8 @@ final class RemoteConnections: @unchecked Sendable {
         return try tree(host: host)
     }
 
-    /// Marks the host's connection as in use now (a running transfer keeps it open).
-    func touch(_ host: String) {
+    /// Marks the host's connection as used now (running transfers keep it open through `busyHosts`).
+    private func touch(_ host: String) {
         lock.lock()
         lastUsed[host] = Date()
         lock.unlock()
@@ -116,7 +118,7 @@ final class RemoteConnections: @unchecked Sendable {
         defer { lock.unlock() }
         guard timer == nil else { return }
         let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
-        timer.schedule(deadline: .now() + 30, repeating: 30)
+        timer.schedule(deadline: .now() + Self.idleCheckInterval, repeating: Self.idleCheckInterval)
         timer.setEventHandler { [weak self] in self?.closeIdle() }
         timer.resume()
         self.timer = timer

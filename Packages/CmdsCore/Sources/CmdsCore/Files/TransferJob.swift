@@ -84,6 +84,29 @@ public final class TransferJob: @unchecked Sendable {
         public var finished: Date?
         /// Waiting for an answer to a conflict about this name.
         public var asking: String?
+
+        /// The log counted (Transfers window, `cmds transfers`).
+        public var counts: Counts { Counts(log.map(\.outcome)) }
+    }
+
+    /// How many items of a log were copied (also replaced, kept both, completed), moved, skipped (also special files)
+    /// or failed (also originals left in place).
+    public struct Counts: Equatable, Sendable {
+        public var copied = 0
+        public var moved = 0
+        public var skipped = 0
+        public var failed = 0
+
+        public init(_ outcomes: [Outcome]) {
+            for outcome in outcomes {
+                switch outcome {
+                case .copied, .replaced, .keptBoth, .merged: copied += 1
+                case .moved: moved += 1
+                case .skipped, .notCopied: skipped += 1
+                case .failed, .originalKept: failed += 1
+                }
+            }
+        }
     }
 
     public let id: Int
@@ -173,12 +196,6 @@ public final class TransferJob: @unchecked Sendable {
         signal()
     }
 
-    public var isCancelled: Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return cancelRequested
-    }
-
     /// Makes a failed or cancelled job run again (the queue starts it): items already done are not repeated.
     public func prepareRetry() -> Bool {
         var ok = false
@@ -210,7 +227,13 @@ public final class TransferJob: @unchecked Sendable {
 
     // MARK: - Run (the job's thread)
 
+    /// Cancel was requested (seen at a checkpoint).
     private struct Cancelled: Error {}
+    /// Stop was the answer to a name conflict.
+    private struct StopRequested: Error {}
+
+    /// While paused, how often the job looks again in case a signal was missed.
+    private static let pausePollInterval: TimeInterval = 1
 
     /// Runs until done, failed or cancelled. The queue calls it on a thread of its own.
     public func run() {
@@ -242,16 +265,12 @@ public final class TransferJob: @unchecked Sendable {
                 if finishedItem { markCompleted(index) }
             }
             finish(failureCount() > failuresBefore ? .failed : .done)
-        } catch is Cancelled {
-            finish(.cancelled)
-        } catch is StopRequested {
+        } catch is Cancelled, is StopRequested {
             finish(.cancelled)
         } catch {
             finish(.failed, error: "\(error)")
         }
     }
-
-    private struct StopRequested: Error {}
 
     private func finish(_ final: State, error message: String? = nil) {
         update {
@@ -291,7 +310,7 @@ public final class TransferJob: @unchecked Sendable {
                 return
             }
             setState(.paused)
-            wake.wait(until: Date().addingTimeInterval(1))
+            wake.wait(until: Date().addingTimeInterval(Self.pausePollInterval))
         }
     }
 
@@ -336,23 +355,19 @@ public final class TransferJob: @unchecked Sendable {
         case .folder:
             var total: Int64 = 0
             for child in (try? tree.list(path)) ?? [] {
-                total += try size(of: join(path, child.name, tree: tree), in: tree)
+                total += try size(of: tree.paths.join(path, child.name), in: tree)
             }
             return total
         default: return 0
         }
     }
 
-    private func join(_ folder: String, _ name: String, tree: FileTree) -> String {
-        tree is SFTPFileTree ? RemotePath.join(folder, name) : (folder as NSString).appendingPathComponent(name)
-    }
-
-    private func parentPath(_ path: String, tree: FileTree) -> String {
-        tree is SFTPFileTree ? RemotePath.parent(path) : (path as NSString).deletingLastPathComponent
-    }
-
-    private func isSameOrInside(_ path: String, _ folder: String, tree: FileTree) -> Bool {
-        tree is SFTPFileTree ? RemotePath.isSameOrInside(path, folder) : FileNames.isSameOrInside(path, folder)
+    /// Where a top-level item is written, once a name conflict is settled.
+    private struct Target {
+        var path: String
+        var outcome: Outcome
+        /// A folder this job created before (Retry fills it in).
+        var merging = false
     }
 
     /// One top-level item; returns true when it needs no retry (done, skipped, or failed for good).
@@ -368,66 +383,21 @@ public final class TransferJob: @unchecked Sendable {
             return true
         }
         let sameTree = source.isSameTree(as: destination)
-        if sameTree, isSameOrInside(destination.path, source.path, tree: destinationTree) {
+        if sameTree, destinationTree.paths.isSameOrInside(destination.path, source.path) {
             record(name, .failed("A folder cannot be copied or moved into itself."))
             return true
         }
-        let destinationFolder = destination.path
-        var target = join(destinationFolder, name, tree: destinationTree)
-        var merging = false
-        var outcome: Outcome = mode == .move ? .moved : .copied
-        if sameTree && parentPath(source.path, tree: sourceTree) == destinationFolder {
-            guard mode == .copy else {
-                record(name, .skipped)
-                return true
-            }
-            target = join(destinationFolder, keepBothName(name, isFolder: item.kind == .folder, in: destinationFolder,
-                                                          tree: destinationTree), tree: destinationTree)
-        } else if let existing = try destinationTree.item(at: target) {
-            if existing.kind == .folder, item.kind == .folder, ownFolder(target) {
-                merging = true
-            } else {
-                switch try resolve(name: name, isFolder: existing.kind == .folder) {
-                case .stop:
-                    throw StopRequested()
-                case .skip:
-                    record(name, .skipped)
-                    addBytesDone(sameTree && mode == .move ? 0 : try size(of: source.path, in: sourceTree))
-                    return true
-                case .keepBoth:
-                    let newName = keepBothName(name, isFolder: item.kind == .folder, in: destinationFolder, tree: destinationTree)
-                    target = join(destinationFolder, newName, tree: destinationTree)
-                    outcome = .keptBoth(newName)
-                case .replace:
-                    if sameTree, isSameOrInside(source.path, target, tree: sourceTree) {
-                        record(name, .failed("The item to replace contains the item being moved."))
-                        return true
-                    }
-                    do {
-                        try destinationTree.trash(target)
-                    } catch {
-                        record(name, .failed("The existing item could not be moved to the Trash: \(error)"))
-                        return true
-                    }
-                    outcome = .replaced
-                }
-            }
+        guard let target = try self.target(for: item, at: source, from: sourceTree, to: destinationTree) else { return true }
+        // Within one tree a move is a rename; when that fails (another file system on the same host), copy and trash.
+        if mode == .move, sameTree, (try? sourceTree.rename(source.path, to: target.path)) != nil {
+            record(name, target.outcome)
+            return true
         }
-        if merging { outcome = .merged }
-        if mode == .move, sameTree {
-            do {
-                try sourceTree.rename(source.path, to: target)
-                record(name, outcome)
-                return true
-            } catch {
-                // Another file system on the same host: copy and trash instead.
-            }
-        }
-        let topCreatedFolder = item.kind == .folder && !merging
+        let createdFolder = item.kind == .folder && !target.merging
         do {
             let failuresBefore = failureCount()
-            try copy(item, from: source.path, in: sourceTree, to: target, in: destinationTree, relative: name,
-                     merging: merging, isTopLevel: true)
+            try copy(item, from: source.path, in: sourceTree, to: target.path, in: destinationTree, relative: name,
+                     merging: target.merging, isTopLevel: true)
             guard failureCount() == failuresBefore else { return false }
             if mode == .move {
                 do {
@@ -437,11 +407,59 @@ public final class TransferJob: @unchecked Sendable {
                     return true
                 }
             }
-            record(name, outcome)
+            record(name, target.outcome)
             return true
         } catch is Cancelled {
-            if topCreatedFolder, ownFolder(target) { try? destinationTree.trash(target) }
+            if createdFolder, ownFolder(target.path) { try? destinationTree.trash(target.path) }
             throw Cancelled()
+        }
+    }
+
+    /// The path a top-level item goes to: its name in the destination, another name (a copy into its own folder, Keep
+    /// Both), or its name after the existing item went to the Trash (Replace). Nil when it is not written (skipped or
+    /// refused; logged).
+    private func target(for item: FileItem, at source: FileLocation, from sourceTree: FileTree,
+                        to destinationTree: FileTree) throws -> Target? {
+        let name = source.name
+        let paths = destinationTree.paths
+        let folder = destination.path
+        let sameTree = source.isSameTree(as: destination)
+        let path = paths.join(folder, name)
+        let outcome: Outcome = mode == .move ? .moved : .copied
+        if sameTree && sourceTree.paths.parent(source.path) == folder {
+            guard mode == .copy else {
+                record(name, .skipped)
+                return nil
+            }
+            let newName = keepBothName(name, isFolder: item.kind == .folder, in: folder, tree: destinationTree)
+            return Target(path: paths.join(folder, newName), outcome: outcome)
+        }
+        guard let existing = try destinationTree.item(at: path) else { return Target(path: path, outcome: outcome) }
+        if existing.kind == .folder, item.kind == .folder, ownFolder(path) {
+            return Target(path: path, outcome: .merged, merging: true)
+        }
+        switch try resolve(name: name, isFolder: existing.kind == .folder) {
+        case .stop:
+            throw StopRequested()
+        case .skip:
+            record(name, .skipped)
+            addBytesDone(sameTree && mode == .move ? 0 : try size(of: source.path, in: sourceTree))
+            return nil
+        case .keepBoth:
+            let newName = keepBothName(name, isFolder: item.kind == .folder, in: folder, tree: destinationTree)
+            return Target(path: paths.join(folder, newName), outcome: .keptBoth(newName))
+        case .replace:
+            if sameTree, sourceTree.paths.isSameOrInside(source.path, path) {
+                record(name, .failed("The item to replace contains the item being moved."))
+                return nil
+            }
+            do {
+                try destinationTree.trash(path)
+            } catch {
+                record(name, .failed("The existing item could not be moved to the Trash: \(error)"))
+                return nil
+            }
+            return Target(path: path, outcome: .replaced)
         }
     }
 
@@ -457,12 +475,18 @@ public final class TransferJob: @unchecked Sendable {
         return ownFolders.contains(path)
     }
 
+    private func addOwnFolder(_ path: String) {
+        lock.lock()
+        ownFolders.insert(path)
+        lock.unlock()
+    }
+
     private func addBytesDone(_ bytes: Int64) {
         update { $0.progress.bytesDone += bytes }
     }
 
     private func keepBothName(_ name: String, isFolder: Bool, in folder: String, tree: FileTree) -> String {
-        FileNames.keepBoth(name, isFolder: isFolder) { tree.exists(join(folder, $0, tree: tree)) }
+        FileNames.keepBoth(name, isFolder: isFolder) { tree.exists(tree.paths.join(folder, $0)) }
     }
 
     private func resolve(name: String, isFolder: Bool) throws -> Resolution {
@@ -499,6 +523,24 @@ public final class TransferJob: @unchecked Sendable {
         func get() -> (Resolution, Bool) { lock.lock(); defer { lock.unlock() }; return value }
     }
 
+    /// Runs one step of copying `relative`: true when it worked. A failure is logged (false), except a lost connection
+    /// or a cancel, which stop the job.
+    private func attempt(_ relative: String, _ step: () throws -> Void) throws -> Bool {
+        do {
+            try step()
+            return true
+        } catch is Cancelled {
+            throw Cancelled()
+        } catch let error as SFTPError {
+            if case .disconnected = error { throw error }
+            record(relative, .failed(error.description))
+            return false
+        } catch {
+            record(relative, .failed("\(error)"))
+            return false
+        }
+    }
+
     /// Copies one item (recursively) to `target`, which does not exist yet (or is a folder this job created, when
     /// `merging`). Failures inside are logged; throws only to stop the job (cancel, connection gone).
     private func copy(_ item: FileItem, from source: String, in sourceTree: FileTree, to target: String,
@@ -506,86 +548,63 @@ public final class TransferJob: @unchecked Sendable {
         try checkpoint()
         switch item.kind {
         case .file:
-            do {
+            let copied = try attempt(relative) {
                 try copyFile(item, from: source, in: sourceTree, to: target, in: destinationTree, relative: relative)
-                if !isTopLevel { record(relative, .copied) }
-            } catch is Cancelled {
-                throw Cancelled()
-            } catch let error as SFTPError {
-                if case .disconnected = error { throw error }
-                record(relative, .failed(error.description))
-            } catch {
-                record(relative, .failed("\(error)"))
             }
+            if copied, !isTopLevel { record(relative, .copied) }
         case .folder:
             if !merging {
-                do {
+                let made = try attempt(relative) {
                     try destinationTree.makeFolder(target, permissions: item.permissions.map { $0 | 0o700 })
-                    lock.lock()
-                    ownFolders.insert(target)
-                    lock.unlock()
-                } catch let error as SFTPError {
-                    if case .disconnected = error { throw error }
-                    record(relative, .failed(error.description))
-                    return
-                } catch {
-                    record(relative, .failed("\(error)"))
-                    return
+                    addOwnFolder(target)
                 }
+                guard made else { return }
             }
-            let children: [FileItem]
-            do {
-                children = try sourceTree.list(source)
-            } catch let error as SFTPError {
-                if case .disconnected = error { throw error }
-                record(relative, .failed(error.description))
-                return
-            } catch {
-                record(relative, .failed("\(error)"))
-                return
-            }
+            var children: [FileItem] = []
+            guard try attempt(relative, { children = try sourceTree.list(source) }) else { return }
             for child in children.sorted(by: { $0.name < $1.name }) {
-                let childTarget = join(target, child.name, tree: destinationTree)
-                var childMerging = false
-                // Retry into a folder this job made: what is there already stays (files of the same size count as done).
-                if merging, let existing = try destinationTree.item(at: childTarget) {
-                    if child.kind == .folder, existing.kind == .folder {
-                        childMerging = true
-                    } else {
-                        if child.kind == .file, existing.kind == .file, existing.size == child.size {
-                            addBytesDone(child.size)
-                        } else {
-                            record(relative + "/" + child.name, .skipped)
-                        }
-                        continue
-                    }
-                }
-                try copy(child, from: join(source, child.name, tree: sourceTree), in: sourceTree, to: childTarget,
-                         in: destinationTree, relative: relative + "/" + child.name, merging: childMerging)
+                try copyChild(child, of: source, in: sourceTree, into: target, in: destinationTree, relative: relative,
+                              merging: merging)
             }
             destinationTree.setAttributes(target, modified: item.modified, permissions: nil)
         case .symlink:
-            do {
-                let linkTarget = try sourceTree.readLink(source)
-                try destinationTree.makeLink(target, target: linkTarget)
-                if !isTopLevel { record(relative, .copied) }
-            } catch let error as SFTPError {
-                if case .disconnected = error { throw error }
-                record(relative, .failed(error.description))
-            } catch {
-                record(relative, .failed("\(error)"))
+            let copied = try attempt(relative) {
+                try destinationTree.makeLink(target, target: try sourceTree.readLink(source))
             }
+            if copied, !isTopLevel { record(relative, .copied) }
         case .other:
             record(relative, .notCopied)
         }
     }
 
+    /// One item of a folder being copied. Retry into a folder this job made (`merging`): what is there already stays
+    /// (files of the same size count as done).
+    private func copyChild(_ child: FileItem, of folder: String, in sourceTree: FileTree, into target: String,
+                           in destinationTree: FileTree, relative: String, merging: Bool) throws {
+        let childTarget = destinationTree.paths.join(target, child.name)
+        let childRelative = relative + "/" + child.name
+        var childMerging = false
+        if merging, let existing = try destinationTree.item(at: childTarget) {
+            guard child.kind == .folder, existing.kind == .folder else {
+                if child.kind == .file, existing.kind == .file, existing.size == child.size {
+                    addBytesDone(child.size)
+                } else {
+                    record(childRelative, .skipped)
+                }
+                return
+            }
+            childMerging = true
+        }
+        try copy(child, from: sourceTree.paths.join(folder, child.name), in: sourceTree, to: childTarget,
+                 in: destinationTree, relative: childRelative, merging: childMerging)
+    }
+
     /// Streams a file into a temporary name next to `target`, then renames it into place.
     private func copyFile(_ item: FileItem, from source: String, in sourceTree: FileTree, to target: String,
                           in destinationTree: FileTree, relative: String) throws {
-        let folder = parentPath(target, tree: destinationTree)
+        let folder = destinationTree.paths.parent(target)
         let finalName = target.split(separator: "/").last.map(String.init) ?? relative
-        let part = join(folder, TransferNames.part(for: finalName), tree: destinationTree)
+        let part = destinationTree.paths.join(folder, TransferNames.part(for: finalName))
         update { $0.progress.current = relative }
         let reader = try sourceTree.openForReading(source)
         defer { reader.close() }

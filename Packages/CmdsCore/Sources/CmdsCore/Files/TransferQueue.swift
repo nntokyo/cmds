@@ -173,20 +173,15 @@ public struct TransferInfo: Codable, Equatable, Sendable {
         current = job.progress.current
         error = job.error
         asking = job.asking
-        var copied = 0, moved = 0, skipped = 0
-        var failures: [Failure] = []
-        for entry in job.log {
+        let counts = job.counts
+        copied = counts.copied
+        moved = counts.moved
+        skipped = counts.skipped
+        failures = Array(job.log.lazy.compactMap { entry -> Failure? in
             switch entry.outcome {
-            case .copied, .replaced, .keptBoth, .merged: copied += 1
-            case .moved: moved += 1
-            case .skipped, .notCopied: skipped += 1
-            case .failed(let message), .originalKept(let message):
-                if failures.count < Self.failuresListed { failures.append(Failure(path: entry.path, message: message)) }
+            case .failed(let message), .originalKept(let message): return Failure(path: entry.path, message: message)
+            default: return nil
             }
-        }
-        self.copied = copied
-        self.moved = moved
-        self.skipped = skipped
-        self.failures = failures
+        }.prefix(Self.failuresListed))
     }
 }

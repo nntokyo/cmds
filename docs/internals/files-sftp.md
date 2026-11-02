@@ -65,7 +65,9 @@ next use. Quitting cancels transfers and closes every connection.
 
 `FileTree` (`CmdsCore/Files/FileTree.swift`) is what a transfer needs on either side: item, list, make folder,
 read, create (exclusive), rename (never overwriting), trash, remove a part file, links, set times and permissions.
-`LocalFileTree` uses POSIX calls (`renamex_np(RENAME_EXCL)`, `O_EXCL`), `SFTPFileTree` the client.
+`LocalFileTree` uses POSIX calls (`renamex_np(RENAME_EXCL)`, `O_EXCL`), `SFTPFileTree` the client. Each tree says how
+its paths are joined and compared (`FilePathStyle`: the Mac's, or `RemotePath` on a server), so a transfer never
+checks which kind of tree it has.
 
 `TransferJob` (rules in its header comment) copies or moves top-level items into a folder:
 
@@ -96,9 +98,9 @@ list and restore these items.
 
 ## Remote panes (app)
 
-`FilesPane` with a `host` (`FilesPane+Remote.swift`): the listing resolves `~`, `~/…` and relative paths with
-`realpath`, follows a path that names a file to its folder (selecting it), and `stat`s symbolic links to know whether
-they open like folders. Kinds come from the extension (`UTType`). There is no Git column, no folder watching (⌘R,
+`FilesPane` with a `host` (`FilesPane+Remote.swift`): the listing resolves `~`, `~/…` and relative paths against
+the login folder (`RemotePath.absolute`) and then with `realpath`, follows a path that names a file to its folder
+(selecting it), and `stat`s symbolic links to know whether they open like folders. Kinds come from the extension (`UTType`). There is no Git column, no folder watching (⌘R,
 the pane's own commands and finished transfers list it again) and no Follow Terminal. Open and Space download a copy
 into `~/Library/Caches/tokyo.n-n.cmds/remote-files/<host>-<hash>/` (in the support folder for isolated instances),
 read only. Restored remote panes wait for Connect. `PaneInfo.remote = {host, connected}`; the workspace's location

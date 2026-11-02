@@ -198,19 +198,25 @@ public final class SSHFileConnection: @unchecked Sendable {
             done.signal()
         }
 
+        /// How long to wait for ssh to exit once its stdout has closed.
+        static let exitWait: TimeInterval = 3
+        /// Then up to `stderrPolls` × `stderrPollMicroseconds` (0.5 s) for the rest of its stderr.
+        static let stderrPolls = 20
+        static let stderrPollMicroseconds: useconds_t = 25_000
+
         func reason() -> String { failure().description }
 
         /// Waits briefly for ssh to exit (its stdout closes first), then classifies what it printed.
         func failure() -> SSHFailure {
-            _ = done.wait(timeout: .now() + 3)
+            _ = done.wait(timeout: .now() + Self.exitWait)
             done.signal()
             // stderr may still be draining right after the exit.
-            for _ in 0..<20 {
+            for _ in 0..<Self.stderrPolls {
                 lock.lock()
                 let finished = stderrDone
                 lock.unlock()
                 if finished { break }
-                usleep(25_000)
+                usleep(Self.stderrPollMicroseconds)
             }
             lock.lock()
             defer { lock.unlock() }
