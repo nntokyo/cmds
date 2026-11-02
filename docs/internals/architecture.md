@@ -19,7 +19,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
 | `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `+Remote` folders on SSH hosts; `GitStatusReader`), `RemoteConnections` (one SFTP connection per host), `TransferCenter` (the transfer queue, `transfer.*`) and the Transfers window. Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git; `FileLocation`, `SFTPPacket`/`SFTPClient`, `SSHFileConnection`, `FileTree`, `RemoteTrash`, `TransferJob`/`TransferQueue`; [files-sftp.md](files-sftp.md)). |
-| `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`). |
+| `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs, the 1-minute notice), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), pane tags, the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`, `ScheduleTarget`). |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
@@ -178,24 +178,39 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
 
 Code: `CmdsCore/Schedule.swift` (model, file format), `ScheduleValidation.swift`, `ScheduleStore.swift` (`schedules.json` /
 `schedule-runs.json`, history retention, API results), `ScheduleCalendar.swift` (next firing, `ScheduleCatchUp`),
-`ScheduleRunTiming.swift` (when a run may type); app: `Schedule/ScheduleRunner.swift` (+`Runs`), `ScheduleAPI.swift`,
+`ScheduleRunTiming.swift` (when a run may type), `ScheduleTarget.swift` (`sendText` targets, `ScheduleNotice`); app:
+`Schedule/ScheduleRunner.swift` (+`Runs`, +`Notice`), `PaneTags.swift`, `ScheduleAPI.swift`,
 `SchedulesWindowController.swift`, `ScheduleEditorController.swift`, `ContinueAtReset.swift`, `ScheduleText.swift`;
 CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/schedules.md); design: issue #45.
 
 - **Store**: `<support dir>/schedules.json` and `schedule-runs.json`, loaded through `StoredFile` (a damaged file is
-  moved aside, never overwritten; a read error or `version > 1` makes the runner read only), written atomically with
-  mode 600. Decoding is lenient: a schedule that fails to decode or validate is dropped, not the file.
+  moved aside, never overwritten; a read error or a `version` above `ScheduleFile.currentVersion` makes the runner read
+  only), written atomically with mode 600. Decoding is lenient: a schedule that fails to decode or validate is
+  dropped, not the file. The version written is the lowest that runs every schedule (`Schedule.requiredVersion`):
+  1 for phase-1 schedules, 2 once one uses `sendText`, Codex, `codexLimitReset` or `repeats`, so an older cmds opens
+  such a file read only instead of running a repeating trigger once or dropping what it cannot decode.
+  `schedule-runs.json` stays at version 1 (unknown reason codes decode as `other`).
+- **Pane tags**: a `sendText` target given as a pane id becomes that pane's `Pane.scheduleTag` (`t` + 8 hex), saved
+  per workspace as `paneTags` in `session.json` and restored (duplicates dropped, `ScheduleTarget.uniqueTags`); a run
+  resolves the tag, or a workspace title, with `ScheduleTarget.resolve` and is skipped when no pane or several match.
 - **Firing**: one `Timer` (`.common` mode, 1 s tolerance) for the earliest `nextFireAt`, re-armed on every change, on
-  `NSWorkspace.didWakeNotification`, clock / zone / day changes and account changes (`limitReset` follows the
-  account's limit), plus a 60 s safety check while anything is enabled. `ScheduleCatchUp.decide` turns a due time into
+  `NSWorkspace.didWakeNotification`, clock / zone / day changes and account or Codex limit changes (limit triggers
+  follow `ScheduleCalendar.recomputed`: a one-shot moves with the limit, a repeating one fires for a reset after
+  `lastDueAt`, unknown Codex limits keep the stored time), plus a 60 s safety check while anything is enabled. A second
+  timer shows the "starts in 1 minute" notice (`ScheduleNotice`, once per firing time) whose Skip calls
+  `ScheduleRunner.skip(id:dueAt:)`. `ScheduleCatchUp.decide` turns a due time into
   one on-time or catch-up run, or a missed entry; then `nextFireAt` moves on from now (one-shots are disabled).
   DEBUG builds move the runner's clock with `debug.schedule_clock`.
 - **Runs** (`ActiveScheduleRun`): `waitingForAccount` → (`begin`: create the background workspace with
-  `createWorkspace(select: false)`, or find the pane holding the session id) → `waitingForPane` (shell stage: the
+  `createWorkspace(select: false)`, find the pane holding the session id, or resolve a `sendText` target) →
+  `waitingForPane` (shell stage: the
   command or `AgentResume.command`) → `waitingForAgent` → paste (`sendText`, bracketed) → `typing` → Return →
   `confirming` → ended. A 0.3 s tick builds a `ScheduleRunTiming.Observation` of the pane (the `PaneObservation` of
-  "Typing into panes by itself" above, plus the reported session id, account switch,
-  queued resume, a numbered choice on screen) and does what `ScheduleRunTiming.step` says. Each typing step moves the
+  "Typing into panes by itself" above, plus the agent kind of the foreground process, the reported session id,
+  account switch, queued resume, a numbered choice or a working line on screen) and does what
+  `ScheduleRunTiming.step` says. Claude Code is idle by `PaneReadiness.isAgentIdle`; Codex, which has no hooks in
+  cmds, only by the stricter `PaneReadiness.isCodexIdle` (its session file matched and quiet for 90 s, the screen
+  unchanged for 5 s, no `esc to interrupt` in the bottom lines). Each typing step moves the
   run on, so nothing is typed twice. Ended runs go to the history (50 per schedule, 300 in all, 90 days).
 - **Events**: `ScheduleRunner.changes` (separate from `AppController.changes`) → socket events `schedule.changed`,
   `schedule.run`. `schedule.*` is not in `RemoteAPIPolicy.allowedMethods`.
