@@ -155,6 +155,8 @@ public struct TransferInfo: Codable, Equatable, Sendable {
     public var copied: Int
     public var moved: Int
     public var skipped: Int
+    /// Failed items in the log (all of them; `failures` lists the first ones). Nil from an app that did not send it.
+    public var failed: Int?
     /// Failed items (at most `failuresListed`).
     public var failures: [Failure]
 
@@ -171,15 +173,17 @@ public struct TransferInfo: Codable, Equatable, Sendable {
         bytesDone = job.progress.bytesDone
         bytesTotal = job.progress.bytesTotal
         current = job.progress.current
-        error = job.error
+        error = job.error?.description
         asking = job.asking
         let counts = job.counts
         copied = counts.copied
         moved = counts.moved
         skipped = counts.skipped
+        failed = counts.failed
         failures = Array(job.log.lazy.compactMap { entry -> Failure? in
             switch entry.outcome {
-            case .failed(let message), .originalKept(let message): return Failure(path: entry.path, message: message)
+            case .failed(let reason), .originalKept(let reason):
+                return Failure(path: entry.path, message: reason.description)
             default: return nil
             }
         }.prefix(Self.failuresListed))

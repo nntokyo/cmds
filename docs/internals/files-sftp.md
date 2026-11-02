@@ -72,7 +72,12 @@ checks which kind of tree it has.
 `TransferJob` (rules in its header comment) copies or moves top-level items into a folder:
 
 - Files are written to `.cmds-part-<8 hex>-<name>` next to the target, then renamed into place; cancel or failure
-  removes that file only.
+  removes that file only. Each part file is recorded in `transfer-parts.json` in the support folder
+  (`TransferPartJournal`) until it is renamed or removed. Ones an earlier run left (quit, crash, or a removal that
+  failed with the connection) are removed at launch on this Mac and when a host is connected; only recorded paths with
+  a part name are ever removed, and an entry that is not a part name is dropped without touching the file.
+- Failures are `TransferFailure` cases: `description` is the English text of the API, CLI and logs; the app shows its
+  own text for each (`localizedText`), so only a server's or ssh's own message reaches the UI as it came.
 - Name conflicts: the policy, or `onConflict` (the pane's Keep Both / Replace / Skip / Stop alert). Replace moves the
   existing item to the Trash of its side first and is refused when that fails.
 - Moves within one tree are renames (a failed rename, e.g. another file system on the server, falls back to copy and

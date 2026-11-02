@@ -38,10 +38,10 @@ public final class TransferJob: @unchecked Sendable {
         /// Copied into a folder this job had created before (retry).
         case merged
         /// Copied, but the original could not go to the Trash (it is still there).
-        case originalKept(String)
+        case originalKept(TransferFailure)
         /// A special file (device, socket, FIFO) is not copied.
         case notCopied
-        case failed(String)
+        case failed(TransferFailure)
 
         public var isFailure: Bool {
             switch self {
@@ -79,7 +79,7 @@ public final class TransferJob: @unchecked Sendable {
         public var progress: Progress
         public var log: [LogEntry]
         /// Why the job failed as a whole (a connection), or nil.
-        public var error: String?
+        public var error: TransferFailure?
         public var started: Date?
         public var finished: Date?
         /// Waiting for an answer to a conflict about this name.
@@ -122,6 +122,8 @@ public final class TransferJob: @unchecked Sendable {
     /// A name is taken and the policy is `ask`: call `reply` once (any thread) with the choice and whether it applies
     /// to every further conflict of this job. Called on the job's thread.
     public var onConflict: ((_ name: String, _ isFolder: Bool, _ reply: @escaping @Sendable (Resolution, Bool) -> Void) -> Void)?
+    /// Records the part files the job is writing (the app's journal in the support folder).
+    public var partJournal: TransferPartJournal?
 
     /// Log entries kept per job (the oldest are dropped beyond).
     public static let logLimit = 2000
@@ -131,7 +133,7 @@ public final class TransferJob: @unchecked Sendable {
     private var state: State = .queued
     private var progress = Progress()
     private var log: [LogEntry] = []
-    private var error: String?
+    private var error: TransferFailure?
     private var started: Date?
     private var finished: Date?
     private var asking: String?
@@ -253,7 +255,7 @@ public final class TransferJob: @unchecked Sendable {
             sourceTree = try tree(sources.first ?? destination)
             destinationTree = try tree(destination)
         } catch {
-            return finish(.failed, error: "\(error)")
+            return finish(.failed, error: TransferFailure(error))
         }
         let failuresBefore = failureCount()
         do {
@@ -268,11 +270,11 @@ public final class TransferJob: @unchecked Sendable {
         } catch is Cancelled, is StopRequested {
             finish(.cancelled)
         } catch {
-            finish(.failed, error: "\(error)")
+            finish(.failed, error: TransferFailure(error))
         }
     }
 
-    private func finish(_ final: State, error message: String? = nil) {
+    private func finish(_ final: State, error message: TransferFailure? = nil) {
         update {
             $0.state = final
             $0.finished = Date()
@@ -375,7 +377,7 @@ public final class TransferJob: @unchecked Sendable {
         let name = source.name
         defer { update { $0.progress.itemsDone += 1 } }
         guard let item = try sourceTree.item(at: source.path) else {
-            record(name, .failed("No such file or folder"))
+            record(name, .failed(.noSuchItem))
             return false
         }
         if item.kind == .other {
@@ -384,7 +386,7 @@ public final class TransferJob: @unchecked Sendable {
         }
         let sameTree = source.isSameTree(as: destination)
         if sameTree, destinationTree.paths.isSameOrInside(destination.path, source.path) {
-            record(name, .failed("A folder cannot be copied or moved into itself."))
+            record(name, .failed(.intoItself))
             return true
         }
         guard let target = try self.target(for: item, at: source, from: sourceTree, to: destinationTree) else { return true }
@@ -403,7 +405,7 @@ public final class TransferJob: @unchecked Sendable {
                 do {
                     try sourceTree.trash(source.path)
                 } catch {
-                    record(name, .originalKept("\(error)"))
+                    record(name, .originalKept(TransferFailure(error)))
                     return true
                 }
             }
@@ -450,13 +452,13 @@ public final class TransferJob: @unchecked Sendable {
             return Target(path: paths.join(folder, newName), outcome: .keptBoth(newName))
         case .replace:
             if sameTree, sourceTree.paths.isSameOrInside(source.path, path) {
-                record(name, .failed("The item to replace contains the item being moved."))
+                record(name, .failed(.replaceContainsSource))
                 return nil
             }
             do {
                 try destinationTree.trash(path)
             } catch {
-                record(name, .failed("The existing item could not be moved to the Trash: \(error)"))
+                record(name, .failed(.existingNotTrashed(TransferFailure(error))))
                 return nil
             }
             return Target(path: path, outcome: .replaced)
@@ -533,10 +535,10 @@ public final class TransferJob: @unchecked Sendable {
             throw Cancelled()
         } catch let error as SFTPError {
             if case .disconnected = error { throw error }
-            record(relative, .failed(error.description))
+            record(relative, .failed(.sftp(error)))
             return false
         } catch {
-            record(relative, .failed("\(error)"))
+            record(relative, .failed(TransferFailure(error)))
             return false
         }
     }
@@ -609,6 +611,9 @@ public final class TransferJob: @unchecked Sendable {
         let reader = try sourceTree.openForReading(source)
         defer { reader.close() }
         let writer = try destinationTree.createFile(part, permissions: (item.permissions ?? 0o644) | 0o600)
+        // Recorded until it is renamed or removed, so one left by a quit or crash is removed later.
+        let partEntry = TransferPartJournal.Entry(host: destination.host, path: part)
+        partJournal?.add(partEntry)
         var written: Int64 = 0
         do {
             while true {
@@ -622,7 +627,7 @@ public final class TransferJob: @unchecked Sendable {
             try writer.finish()
         } catch {
             writer.abandon()
-            try? destinationTree.removePart(part)
+            removePart(partEntry, from: destinationTree)
             // Bytes of a file that did not arrive do not count.
             addBytesDone(-written)
             if !(error is Cancelled) { addBytesDone(item.size) }
@@ -631,9 +636,16 @@ public final class TransferJob: @unchecked Sendable {
         destinationTree.setAttributes(part, modified: item.modified, permissions: item.permissions)
         do {
             try destinationTree.rename(part, to: target)
+            partJournal?.remove(partEntry)
         } catch {
-            try? destinationTree.removePart(part)
-            throw FileTreeError("“\(finalName)” appeared in the destination during the copy; it was left as it is (\(error))")
+            removePart(partEntry, from: destinationTree)
+            throw TransferFailure.appeared(name: finalName, TransferFailure(error))
         }
+    }
+
+    /// Removes this job's part file; it stays in the journal when that fails (e.g. the connection is gone).
+    private func removePart(_ entry: TransferPartJournal.Entry, from tree: FileTree) {
+        guard (try? tree.removePart(entry.path)) != nil else { return }
+        partJournal?.remove(entry)
     }
 }

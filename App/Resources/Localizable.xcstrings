@@ -1083,6 +1083,16 @@
         }
       }
     },
+    "An item with this name already exists.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この名前の項目はすでにあります。"
+          }
+        }
+      }
+    },
     "Another run was using the pane.": {
       "localizations": {
         "ja": {
@@ -2161,6 +2171,22 @@
         }
       }
     },
+    "Could not move “%@” to the server's Trash (%@). Nothing was deleted.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Could not move “%1$@” to the server's Trash (%2$@). Nothing was deleted."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”をサーバのゴミ箱に移動できませんでした（%2$@）。何も削除されていません。"
+          }
+        }
+      }
+    },
     "Could not rename “%@”.": {
       "localizations": {
         "ja": {
@@ -2474,6 +2500,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "暗号化（TLS 1.3）。iPhone/iPadはこのMacの識別情報だけを信頼します。"
+          }
+        }
+      }
+    },
+    "End of file.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの終わりです。"
           }
         }
       }
@@ -3976,6 +4012,16 @@
         }
       }
     },
+    "No such file or folder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのファイルまたはフォルダはありません。"
+          }
+        }
+      }
+    },
     "No transfers. Copies and moves to and from SSH hosts appear here.": {
       "localizations": {
         "ja": {
@@ -4062,6 +4108,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "共有なし"
+          }
+        }
+      }
+    },
+    "Not supported by the server.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバが対応していません。"
           }
         }
       }
@@ -4414,6 +4470,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバでアクセスが拒否されました。"
+          }
+        }
+      }
+    },
+    "Permission denied.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセスが拒否されました。"
           }
         }
       }
@@ -5035,6 +5101,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "お使いのssh（~/.ssh/configを使用）を実行し、このペインのcmdsソケットをサーバーに転送します。サーバー上のcmds-remote.shから通知やエージェントの使用状況を送れるようになります。サーバーには何もインストールしません。"
+          }
+        }
+      }
+    },
+    "SFTP protocol error: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SFTPのプロトコルエラー: %@"
           }
         }
       }
@@ -5941,6 +6017,16 @@
         }
       }
     },
+    "The Trash itself, or a folder containing it, cannot be moved to the Trash.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱自体や、ゴミ箱を含むフォルダはゴミ箱に移動できません。"
+          }
+        }
+      }
+    },
     "The account was removed.": {
       "localizations": {
         "ja": {
@@ -6111,12 +6197,32 @@
         }
       }
     },
+    "The disk is read-only.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクは読み出し専用です。"
+          }
+        }
+      }
+    },
     "The existing %@ will be replaced.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "既存の%@は置き換えられます。"
+          }
+        }
+      }
+    },
+    "The existing item could not be moved to the Trash: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "既存の項目をゴミ箱に移動できませんでした: %@"
           }
         }
       }
@@ -6177,6 +6283,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "置き換える項目の中に、移動する項目があります。"
+          }
+        }
+      }
+    },
+    "The name is too long.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前が長すぎます。"
           }
         }
       }
@@ -6381,6 +6497,16 @@
         }
       }
     },
+    "The server reported a failure.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバでエラーが起きました。"
+          }
+        }
+      }
+    },
     "The session cannot be reached from “%@”: share sessions in Settings › Claude Accounts first.": {
       "localizations": {
         "ja": {
@@ -6521,6 +6647,16 @@
         }
       }
     },
+    "There is not enough space on the disk.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスクの空き領域が足りません。"
+          }
+        }
+      }
+    },
     "This Mac is on battery power right now.": {
       "localizations": {
         "ja": {
@@ -6573,6 +6709,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このフォルダはまだありません。そのアカウントでワークスペースを開き、claudeでサインインしてください。"
+          }
+        }
+      }
+    },
+    "This item is already in the Trash.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この項目はすでにゴミ箱にあります。"
           }
         }
       }
@@ -7730,6 +7876,22 @@
         }
       }
     },
+    "“%@” appeared in the destination during the copy and was left as it is (%@).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "“%1$@” appeared in the destination during the copy and was left as it is (%2$@)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー中に移動先に“%1$@”ができたため、そのままにしました（%2$@）。"
+          }
+        }
+      }
+    },
     "“%@” has no limit now.": {
       "localizations": {
         "ja": {
@@ -7810,6 +7972,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%1$@”が上限に達しました。Claude Codeが待機状態になったら“%2$@”で続けます。"
+          }
+        }
+      }
+    },
+    "“%@” is not a folder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”はフォルダではありません。"
           }
         }
       }

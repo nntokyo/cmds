@@ -22,10 +22,10 @@ public struct RemoteTrash {
     public func trash(_ path: String, date: Date) throws -> String {
         let source = RemotePath.normalized(path)
         guard !RemotePath.isSameOrInside(folder, source) else {
-            throw FileTreeError("The Trash itself, or a folder containing it, cannot be moved to the Trash.")
+            throw TransferFailure.trashItself
         }
         guard !RemotePath.isSameOrInside(source, folder) else {
-            throw FileTreeError("This item is already in the Trash.")
+            throw TransferFailure.alreadyInTrash
         }
         let files = RemotePath.join(folder, "files")
         let info = RemotePath.join(folder, "info")
@@ -52,7 +52,7 @@ public struct RemoteTrash {
         } catch {
             // Our own .trashinfo, written a moment ago; the item itself was not touched.
             try? tree.client.remove(infoPath)
-            throw FileTreeError("Could not move “\(original)” to the server's Trash (\(error)). Nothing was deleted.")
+            throw TransferFailure.serverTrashFailed(name: original, TransferFailure(error))
         }
         return candidate
     }
@@ -61,7 +61,7 @@ public struct RemoteTrash {
         for path in paths {
             if let item = try tree.item(at: path) {
                 guard item.kind == .folder || item.kind == .symlink else {
-                    throw FileTreeError("\(path) is not a folder")
+                    throw TransferFailure.trashNotAFolder(path)
                 }
                 continue
             }

@@ -125,7 +125,7 @@ final class TransfersWindowController: NSWindowController, NSTableViewDataSource
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
         var lines = job.log.map { "\(formatter.string(from: $0.date))  \($0.path): \($0.outcome.localizedText)" }
-        if let error = job.error { lines.append(String(localized: "Stopped: \(error)")) }
+        if let error = job.error { lines.append(String(localized: "Stopped: \(error.localizedText)")) }
         if lines.isEmpty { lines = [job.localizedStatus(bytes: bytes)] }
         let text = NSTextView(frame: NSRect(x: 0, y: 0, width: 480, height: 220))
         text.isEditable = false
@@ -224,9 +224,12 @@ private final class TransferRowView: NSTableCellView {
         let active = !job.state.isFinished
         pauseIsResume = job.state == .paused
         pauseButton.isHidden = !active || job.state == .waiting
+        let pauseLabel = pauseIsResume ? String(localized: "Resume") : String(localized: "Pause")
         pauseButton.image = NSImage(systemSymbolName: pauseIsResume ? "play.fill" : "pause.fill",
-                                    accessibilityDescription: pauseIsResume ? String(localized: "Resume") : String(localized: "Pause"))
-        pauseButton.toolTip = pauseIsResume ? String(localized: "Resume") : String(localized: "Pause")
+                                    accessibilityDescription: pauseLabel)
+        pauseButton.toolTip = pauseLabel
+        // VoiceOver reads the label set when the button was made unless it follows the state too (#64).
+        pauseButton.setAccessibilityLabel(pauseLabel)
         cancelButton.isHidden = !active
         retryButton.isHidden = !(job.state == .failed || job.state == .cancelled)
         logButton.isHidden = job.log.isEmpty && job.error == nil
