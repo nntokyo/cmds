@@ -458,6 +458,16 @@
         }
       }
     },
+    "%lld copied": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件コピー"
+          }
+        }
+      }
+    },
     "%lld d ago": {
       "comment": "age of agent figures",
       "localizations": {
@@ -465,6 +475,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld日前"
+          }
+        }
+      }
+    },
+    "%lld failed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件失敗"
           }
         }
       }
@@ -519,6 +539,16 @@
         }
       }
     },
+    "%lld moved": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件移動"
+          }
+        }
+      }
+    },
     "%lld of %lld selected": {
       "localizations": {
         "en": {
@@ -559,6 +589,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このワークスペースのターミナルのプロセス%lld個"
+          }
+        }
+      }
+    },
+    "%lld skipped": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件スキップ"
           }
         }
       }
@@ -1370,6 +1410,16 @@
         }
       }
     },
+    "Cannot open the remote folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモートのフォルダを開けません"
+          }
+        }
+      }
+    },
     "Catch-up": {
       "localizations": {
         "ja": {
@@ -1626,6 +1676,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claudeアカウント："
+          }
+        }
+      }
+    },
+    "Clear Finished": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了したものを消去"
           }
         }
       }
@@ -1948,6 +2008,22 @@
         }
       }
     },
+    "Copy %@ to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Copy %1$@ to %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@を%2$@にコピー"
+          }
+        }
+      }
+    },
     "Copy Path": {
       "localizations": {
         "ja": {
@@ -2025,6 +2101,16 @@
         }
       }
     },
+    "Could not download “%@”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”をダウンロードできませんでした。"
+          }
+        }
+      }
+    },
     "Could not install the command line tool: %@": {
       "localizations": {
         "ja": {
@@ -2041,6 +2127,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ゴミ箱に入れられませんでした。"
+          }
+        }
+      }
+    },
+    "Could not move to the server's Trash. Nothing was deleted.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバのゴミ箱に移動できませんでした。何も削除されていません。"
           }
         }
       }
@@ -2252,12 +2348,32 @@
         }
       }
     },
+    "Done — %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了 — %@"
+          }
+        }
+      }
+    },
     "Download and install updates automatically": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "アップデートを自動的にダウンロードしてインストール"
+          }
+        }
+      }
+    },
+    "Downloading “%@”…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”をダウンロード中…"
           }
         }
       }
@@ -2449,6 +2565,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "失敗"
+          }
+        }
+      }
+    },
+    "Failed — %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "失敗 — %@"
           }
         }
       }
@@ -3269,6 +3395,16 @@
         }
       }
     },
+    "Lists a folder on an SSH host over SFTP with your ssh (~/.ssh/config, keys, agent). cmds never asks for or stores passwords, and only connects to hosts whose key is already in known_hosts.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSHホストのフォルダを、お使いのssh（~/.ssh/config、鍵、エージェント）でSFTP経由で一覧表示します。cmdsはパスワードを尋ねることも保存することもなく、ホスト鍵がknown_hostsにあるホストにだけ接続します。"
+          }
+        }
+      }
+    },
     "Mac identity: %@": {
       "localizations": {
         "ja": {
@@ -3397,6 +3533,22 @@
         }
       }
     },
+    "Move %@ to %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Move %1$@ to %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@を%2$@に移動"
+          }
+        }
+      }
+    },
     "Move Down": {
       "localizations": {
         "ja": {
@@ -3503,6 +3655,16 @@
         }
       }
     },
+    "Moving to the server's Trash…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバのゴミ箱に移動中…"
+          }
+        }
+      }
+    },
     "Name": {
       "localizations": {
         "ja": {
@@ -3570,6 +3732,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "新規フォルダ"
+          }
+        }
+      }
+    },
+    "New Remote Files Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規リモートファイルパネル"
+          }
+        }
+      }
+    },
+    "New Remote Files Pane…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規リモートファイルパネル…"
           }
         }
       }
@@ -3694,6 +3876,26 @@
         }
       }
     },
+    "No such file or folder on the server.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバにそのファイルまたはフォルダはありません。"
+          }
+        }
+      }
+    },
+    "No transfers. Copies and moves to and from SSH hosts appear here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "転送はありません。SSHホストとの間のコピーと移動がここに表示されます。"
+          }
+        }
+      }
+    },
     "No workspaces": {
       "localizations": {
         "ja": {
@@ -3734,12 +3936,32 @@
         }
       }
     },
+    "Not connected — Connect (⌘R)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続 — 接続（⌘R）"
+          }
+        }
+      }
+    },
     "Not connected — ssh %@": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "未接続 — ssh %@"
+          }
+        }
+      }
+    },
+    "Not connected. Click Connect or press ⌘R to list this folder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続です。このフォルダを表示するには「接続」をクリックするか⌘Rを押してください。"
           }
         }
       }
@@ -3871,6 +4093,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ブラウザを分割して開く"
+          }
+        }
+      }
+    },
+    "Open SSH Terminal Here": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ここでSSHターミナルを開く"
           }
         }
       }
@@ -4032,6 +4264,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペースト"
+          }
+        }
+      }
+    },
+    "Pause": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止"
+          }
+        }
+      }
+    },
+    "Paused": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止中"
+          }
+        }
+      }
+    },
+    "Paused — %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止中 — %@"
+          }
+        }
+      }
+    },
+    "Permission denied on the server.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバでアクセスが拒否されました。"
+          }
+        }
+      }
+    },
+    "Preparing…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "準備中…"
           }
         }
       }
@@ -4527,6 +4809,26 @@
         }
       }
     },
+    "Retry": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再試行"
+          }
+        }
+      }
+    },
+    "Retry it in Window › Transfers.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ウインドウ」›「転送」で再試行できます。"
+          }
+        }
+      }
+    },
     "Reveal in Finder": {
       "localizations": {
         "ja": {
@@ -4623,16 +4925,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "お使いのssh（~/.ssh/configを使用）を実行し、このペインのcmdsソケットをサーバーに転送します。サーバー上のcmds-remote.shから通知やエージェントの使用状況を送れるようになります。サーバーには何もインストールしません。"
-          }
-        }
-      }
-    },
-    "Several panes hold the session.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "複数のペインがこのセッションを持っています。"
           }
         }
       }
@@ -4849,6 +5141,16 @@
         }
       }
     },
+    "Several panes hold the session.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複数のペインがこのセッションを持っています。"
+          }
+        }
+      }
+    },
     "Share": {
       "localizations": {
         "ja": {
@@ -4925,6 +5227,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "非表示ファイルを表示"
+          }
+        }
+      }
+    },
+    "Show Log": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログを表示"
           }
         }
       }
@@ -5289,6 +5601,16 @@
         }
       }
     },
+    "Stopped: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止: %@"
+          }
+        }
+      }
+    },
     "Sub %lld": {
       "comment": "sidebar: running subagents",
       "localizations": {
@@ -5517,6 +5839,26 @@
         }
       }
     },
+    "The connection timed out.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続がタイムアウトしました。"
+          }
+        }
+      }
+    },
+    "The connection to the server was closed: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバとの接続が切れました: %@"
+          }
+        }
+      }
+    },
     "The damaged file was kept as %@ in the cmds support folder, and cmds started with an empty one.": {
       "localizations": {
         "ja": {
@@ -5583,6 +5925,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ホストの先頭に「-」は使えません。"
+          }
+        }
+      }
+    },
+    "The host name could not be resolved.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホスト名を解決できませんでした。"
           }
         }
       }
@@ -5743,6 +6095,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "スケジュールの名前"
+          }
+        }
+      }
+    },
+    "The server did not accept your SSH keys or agent. cmds never asks for passwords: add a key for this host (e.g. ssh-copy-id), or add a key with a passphrase to the agent (ssh-add).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバがSSH鍵やエージェントを受け付けませんでした。cmdsはパスワードを尋ねません。このホストに鍵を登録するか（ssh-copy-idなど）、パスフレーズ付きの鍵をエージェントに追加してください（ssh-add）。"
+          }
+        }
+      }
+    },
+    "The server does not offer SFTP.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバがSFTPを提供していません。"
+          }
+        }
+      }
+    },
+    "The server refused the connection.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバが接続を拒否しました。"
           }
         }
       }
@@ -5933,6 +6315,26 @@
         }
       }
     },
+    "This server's host key has changed since it was saved in known_hosts. Someone may be intercepting the connection; check the key before connecting again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバのホスト鍵がknown_hostsに保存されたものから変わっています。接続が傍受されているおそれがあります。もう一度接続する前に鍵を確認してください。"
+          }
+        }
+      }
+    },
+    "This server's host key is not known yet. Connect to it once in an SSH workspace or a terminal to check and accept the key; cmds never adds host keys by itself.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このサーバのホスト鍵はまだ登録されていません。SSHワークスペースかターミナルで一度接続して、鍵を確認して受け入れてください。cmdsがホスト鍵を自動で追加することはありません。"
+          }
+        }
+      }
+    },
     "Tile All Workspaces": {
       "localizations": {
         "ja": {
@@ -6040,6 +6442,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "実行中の処理が多すぎました。"
+          }
+        }
+      }
+    },
+    "Transfers": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "転送"
           }
         }
       }
@@ -6244,6 +6656,16 @@
         }
       }
     },
+    "Waiting": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
+          }
+        }
+      }
+    },
     "Waiting for Claude Code": {
       "localizations": {
         "ja": {
@@ -6280,6 +6702,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "シェルを待機中"
+          }
+        }
+      }
+    },
+    "Waiting for your answer about “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”についての回答を待っています"
           }
         }
       }
@@ -6633,12 +7065,52 @@
         }
       }
     },
+    "completed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "完了"
+          }
+        }
+      }
+    },
     "connected (%@)": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "接続中（%@）"
+          }
+        }
+      }
+    },
+    "copied": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー済み"
+          }
+        }
+      }
+    },
+    "copied as “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”としてコピー済み"
+          }
+        }
+      }
+    },
+    "copied, but the original could not be moved to the Trash: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピー済み。ただし元の項目をゴミ箱に移動できませんでした: %@"
           }
         }
       }
@@ -6650,6 +7122,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "危険"
+          }
+        }
+      }
+    },
+    "failed: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "失敗: %@"
+          }
+        }
+      }
+    },
+    "folder (optional, e.g. ~/src/app; default: home)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ（省略可、例: ~/src/app。省略時はホーム）"
           }
         }
       }
@@ -6715,6 +7207,16 @@
         }
       }
     },
+    "moved": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移動済み"
+          }
+        }
+      }
+    },
     "normal": {
       "comment": "memory pressure",
       "localizations": {
@@ -6732,6 +7234,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "未接続"
+          }
+        }
+      }
+    },
+    "not copied (special file)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーしていません（特殊ファイル）"
           }
         }
       }
@@ -6767,6 +7279,16 @@
         }
       }
     },
+    "replaced (the old item is in the Trash)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "置き換え済み（古い項目はゴミ箱にあります）"
+          }
+        }
+      }
+    },
     "resets %@": {
       "localizations": {
         "ja": {
@@ -6783,6 +7305,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ごろリセット"
+          }
+        }
+      }
+    },
+    "skipped (the name is taken)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキップ（同じ名前があります）"
           }
         }
       }

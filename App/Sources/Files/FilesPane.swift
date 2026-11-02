@@ -89,6 +89,8 @@ final class FilesPane: NSView {
     let progressIndicator = NSProgressIndicator()
     let cancelButton = NSButton(title: String(localized: "Cancel"), target: nil, action: nil)
     let connectButton = NSButton(title: String(localized: "Connect"), target: nil, action: nil)
+    /// Over the empty list of a remote pane: why it could not be listed, in full (the status line is one line).
+    let messageLabel = NSTextField(wrappingLabelWithString: "")
 
     lazy var byteFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
@@ -570,7 +572,13 @@ final class FilesPane: NSView {
         bottomSeparator.boxType = .separator
         bottomSeparator.translatesAutoresizingMaskIntoConstraints = false
 
-        for view in [header, topSeparator, scrollView, bottomSeparator, footer] { addSubview(view) }
+        messageLabel.alignment = .center
+        messageLabel.textColor = .secondaryLabelColor
+        messageLabel.font = .systemFont(ofSize: 12)
+        messageLabel.isHidden = true
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.setAccessibilityIdentifier("files.message")
+        for view in [header, topSeparator, scrollView, messageLabel, bottomSeparator, footer] { addSubview(view) }
         NSLayoutConstraint.activate([
             header.leadingAnchor.constraint(equalTo: leadingAnchor),
             header.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -591,6 +599,9 @@ final class FilesPane: NSView {
             footer.bottomAnchor.constraint(equalTo: bottomAnchor),
             footer.heightAnchor.constraint(equalToConstant: 22),
             progressIndicator.widthAnchor.constraint(equalToConstant: 120),
+            messageLabel.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor),
+            messageLabel.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor),
+            messageLabel.widthAnchor.constraint(lessThanOrEqualTo: scrollView.widthAnchor, constant: -32),
         ])
     }
 
@@ -632,6 +643,11 @@ final class FilesPane: NSView {
         guard operation == nil else { return }
         if showActiveTransfer() { return }
         connectButton.isHidden = !(isRemote && (waitingForConnect || connectionError != nil))
+        let message = !isRemote || !rows.isEmpty ? nil
+            : waitingForConnect ? String(localized: "Not connected. Click Connect or press ⌘R to list this folder.")
+            : loadError
+        messageLabel.stringValue = message ?? ""
+        messageLabel.isHidden = message == nil
         if waitingForConnect {
             statusLabel.stringValue = String(localized: "Not connected — Connect (⌘R)")
             return
