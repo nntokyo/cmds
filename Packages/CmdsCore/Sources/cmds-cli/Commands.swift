@@ -291,6 +291,8 @@ extension CLI {
         Command(name: "read", usage: "read [--pane P] [--scrollback N]",
                 summary: "Print a terminal pane's visible text, or the last N lines including scrollback.",
                 options: ["pane", "scrollback"], aliases: ["n": "scrollback"]) { ctx in
+            // A pane id must come with --pane: a bare one used to be ignored, so the focused pane was read (#61).
+            try ctx.args.expectPositionals(0...0, usage: "cmds read [--pane P] [--scrollback N]")
             let result = try ctx.call("pane.read_text", [
                 "pane": ctx.pane.json,
                 "scrollback": try ctx.args.int("scrollback").map { .number(Double($0)) },
@@ -364,6 +366,7 @@ extension CLI {
         },
         Command(name: "browser url", usage: "browser url [--pane P]",
                 summary: "Print the URL and title of a browser pane.", details: browserPaneNote, options: ["pane"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds browser url [--pane P]")
             let result = try ctx.call("browser.get_url", browserTarget(ctx))
             if ctx.json { return ctx.printJSON(result) }
             print(result["url"]?.stringValue ?? "")
@@ -385,6 +388,7 @@ extension CLI {
                 summary: "Save a PNG of a browser pane's visible page.",
                 details: "Without -o the PNG is written to stdout when it is not a terminal.\n" + browserPaneNote,
                 options: ["pane", "output"], aliases: ["o": "output"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds browser snapshot [--pane P] [-o file.png]")
             let result = try ctx.call("browser.snapshot", browserTarget(ctx), timeout: 120)
             if ctx.json { return ctx.printJSON(result) }
             guard let base64 = result["png_base64"]?.stringValue, let png = Data(base64Encoded: base64) else {
