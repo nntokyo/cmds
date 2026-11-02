@@ -166,10 +166,9 @@ Static files in `site/public` (no build step), Firebase Hosting in project `star
 `cmds` → site `cmds-n-n-tokyo` (`site/firebase.json`, `site/.firebaserc`), custom domain `cmds.n-n.tokyo`.
 
 - Preview: `python3 -m http.server 8765 -d site/public` (or `firebase emulators:start --only hosting` in `site/`).
-- Deploy: merging to `master` deploys through GitHub Actions
-  ([ci.md](ci.md#website-deploy-githubworkflowsdeploy-siteyml)); from a Mac, `scripts/ci/deploy-site.sh` (checks,
-  writes `latest.json` / `SHA256SUMS`, deploys, checks the live site). By hand: `cd site && firebase deploy --only
-  hosting:cmds`. One-time, before the first deploy:
+- Deploy: from master on a Mac with `scripts/ci/deploy-site.sh` ([ci.md](ci.md#website-deploy-from-a-mac): checks,
+  writes `latest.json` / `SHA256SUMS`, deploys, checks the live site; `--offline` while GitHub is down). One-time,
+  before the first deploy:
   `firebase hosting:sites:create cmds-n-n-tokyo --project startup-project-4f8f8`, then add the custom domain in the
   Firebase console and its DNS records.
 - `firebase.json` sets the security headers (CSP allowing only `/assets/*.js` and the Google Analytics endpoints, HSTS, nosniff, Referrer-Policy,

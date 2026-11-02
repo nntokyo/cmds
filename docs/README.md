@@ -36,7 +36,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 | [internals/localization.md](internals/localization.md) | String Catalogs, adding strings, what stays English, Japanese style |
 | [internals/testing.md](internals/testing.md) | Unit tests, isolated instances, sync and SSH end-to-end tests, device driver, UI tests, machine load |
 | [internals/release.md](internals/release.md) | Versions, signing, building a release |
-| [internals/ci.md](internals/ci.md) | GitHub Actions checks, website deploys, running both locally |
+| [internals/ci.md](internals/ci.md) | GitHub Actions checks and running them locally, website deploys from a Mac |
 
 ## Elsewhere in the repository
 
