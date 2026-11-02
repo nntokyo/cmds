@@ -155,12 +155,12 @@ extension AppController {
         try reportAgentUsage(paneID: paneID, usage: usage, pid: nil)
     }
 
-    /// Applies a metadata scan: drops usage of agents that exited, marks idle ones stale, takes Codex usage from its
-    /// session files (a pane reporting through `agent.report` keeps that) and the newest Codex limits.
-    /// The caller sends the usage update (`applyResourceUsage`) right after.
     /// Codex's used-up windows changed (`AgentLimits.exhaustedReset`).
     static let codexLimitsDidChange = Notification.Name("cmdsCodexLimitsDidChange")
 
+    /// Applies a metadata scan: drops usage of agents that exited, marks idle ones stale, takes Codex usage from its
+    /// session files (a pane reporting through `agent.report` keeps that) and the newest Codex limits.
+    /// The caller sends the usage update (`applyResourceUsage`) right after.
     func applyAgentScan(_ codex: CodexWatchResult, now: Date = Date()) {
         if let limits = codex.limits, limits.updatedAt > (agentLimitsByKind[.codex]?.updatedAt ?? .distantPast) {
             let resetChanged = limits.exhaustedReset != agentLimitsByKind[.codex]?.exhaustedReset

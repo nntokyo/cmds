@@ -205,10 +205,13 @@ enum ScheduleText {
         var tooltip: String
     }
 
+    /// How many next runs the sidebar's tooltip lists.
+    private static let nextRunHintCount = 3
+
     /// The earliest next run of an enabled schedule (`Morning tests · 09:00`); the next three in the tooltip.
     static func nextRunHint(_ schedules: [Schedule], now: Date = Date()) -> NextRunHint? {
         let upcoming = schedules.filter(\.enabled).compactMap { schedule in schedule.nextFireAt.map { (schedule, $0) } }
-            .sorted { $0.1 < $1.1 }.prefix(3)
+            .sorted { $0.1 < $1.1 }.prefix(nextRunHintCount)
         guard let first = upcoming.first else { return nil }
         let lines = upcoming.map { "\(time($0.1, now: now))  \($0.0.name)" }
         return NextRunHint(title: "\(first.0.name) · \(time(first.1, now: now))",

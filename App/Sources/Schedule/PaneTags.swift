@@ -40,8 +40,9 @@ extension AppController {
         guard let saved, !saved.isEmpty, let root = workspace.root else { return }
         let ids = root.paneIDs
         let entries = saved.compactMap { entry -> (Pane, String)? in
-            guard let pane = ids[safe: entry.paneIndex].flatMap({ workspace.panes[$0] }), pane.kind == .terminal,
-                  pane.ssh == nil else { return nil }
+            guard let pane = ids[safe: entry.paneIndex].flatMap({ workspace.panes[$0] }), Self.isScheduleTarget(pane) else {
+                return nil
+            }
             return (pane, entry.tag)
         }
         let taken = Set(workspaces.filter { $0 !== workspace }.flatMap(\.orderedPanes).compactMap(\.scheduleTag))
