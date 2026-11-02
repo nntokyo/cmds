@@ -52,6 +52,11 @@ extension AppController {
     /// The title of the notifications about a limit.
     private static var accountLimitTitle: String { String(localized: "Claude account limit") }
 
+    /// The account whose limit the pane is about: the one a switch started from, else the pane's current account.
+    func limitedAccount(of pane: Pane) -> String? {
+        pane.accountSwitch?.from ?? currentAccount(of: pane)
+    }
+
     /// The Claude Code session to continue: the one seen in the pane now, else the one an earlier offer kept (Claude
     /// Code may have exited since), else one offered for resuming.
     private func switchableSession(_ pane: Pane) -> AgentSession? {
@@ -79,7 +84,7 @@ extension AppController {
     func requestAccountSwitch(paneID: String?, to name: String?) throws -> String {
         let pane = try resolvePane(paneID)
         guard pane.kind == .terminal else { throw RPCError.invalidParams("pane \(pane.id) is not a terminal") }
-        let from = pane.accountSwitch?.from ?? currentAccount(of: pane)
+        let from = limitedAccount(of: pane)
         let target: ClaudeAccount?
         if let name {
             target = try account(named: name)

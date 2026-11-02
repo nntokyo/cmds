@@ -25,6 +25,8 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
     private var editor: ScheduleEditorController?
     /// While the window is open: relative times and limits change.
     private static let refreshInterval: TimeInterval = 30
+    /// Runs listed when no schedule is selected (all schedules, newest first).
+    private static let recentRunsLimit = 100
 
     private enum Column: String, CaseIterable {
         case enabled, name, when, action, next, last
@@ -222,11 +224,11 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
             table.selectRowIndexes([row], byExtendingSelection: false)
         }
         if runner.readOnly {
-            note.stringValue = runner.readOnlyReason?.hasPrefix("version") == true
+            note.stringValue = runner.readOnlyReason == .newerVersion
                 ? String(localized: "The schedules were saved by a newer version of cmds. They are shown, but not run or changed here.")
                 : String(localized: "The schedules file could not be read. Nothing is changed until it can be.")
         } else if !runner.movedAside.isEmpty {
-            let names = runner.movedAside.map(\.lastPathComponent).joined(separator: ", ")
+            let names = runner.movedAsideNames
             note.stringValue = String(localized: "A damaged schedules file was kept as \(names) in the cmds support folder.")
         } else {
             note.stringValue = ""
@@ -241,13 +243,13 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
 
     private func selectionChanged() {
         let entry = selectedEntry
-        runs = entry.map { runner.runs(scheduleID: $0.schedule.id, limit: ScheduleLimits.maxRunsPerSchedule) } ?? runner.runs(scheduleID: nil, limit: 100)
+        runs = entry.map { runner.runs(scheduleID: $0.schedule.id, limit: ScheduleLimits.maxRunsPerSchedule) } ?? runner.runs(scheduleID: nil, limit: Self.recentRunsLimit)
         historyTable.reloadData()
         let writable = !runner.readOnly
         addRemove.setEnabled(writable, forSegment: 0)
         addRemove.setEnabled(writable && entry != nil, forSegment: 1)
         editButton.isEnabled = writable && entry != nil
-        runButton.isEnabled = !runner.readOnly && entry != nil && entry?.activeRun == nil
+        runButton.isEnabled = writable && entry != nil && entry?.activeRun == nil
         cancelButton.isEnabled = entry?.activeRun != nil
         if let entry {
             var parts = [ScheduleText.origin(entry.schedule.origin)]
@@ -286,7 +288,7 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
         let accounts = AppController.shared.claudeAccounts.accounts
         switch column {
         case .enabled:
-            break
+            break // the checkbox above
         case .name:
             field.stringValue = entry.schedule.name
             field.toolTip = ScheduleText.origin(entry.schedule.origin)
@@ -317,10 +319,10 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
                 field.stringValue = "–"
                 field.textColor = .secondaryLabelColor
             }
-            if runner.problem(of: entry.schedule) != nil {
+            if let problem = runner.problem(of: entry.schedule) {
                 field.stringValue = String(localized: "Invalid")
                 field.textColor = .systemRed
-                field.toolTip = runner.problem(of: entry.schedule).map(ScheduleText.problem)
+                field.toolTip = ScheduleText.problem(problem)
             }
         }
         return cell
@@ -434,7 +436,7 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
     }
 
     private func showError(_ error: Error) {
-        showMessage((error as? RPCError)?.message ?? "\(error)")
+        showMessage(ScheduleText.error(error))
     }
 
     private func showMessage(_ text: String) {

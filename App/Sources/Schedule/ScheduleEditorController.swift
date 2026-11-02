@@ -136,38 +136,60 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         }
         zoneBox.widthAnchor.constraint(equalToConstant: 220).isActive = true
 
-        let grid = NSGridView(views: [
-            [Self.label(String(localized: "Name:")), nameField],
-            [Self.label(String(localized: "When:")), triggerPopup],
-            [Self.label(String(localized: "Date and time:")), datePicker],
+        // The grid's rows by section; the trigger and action sections are shown or hidden as a whole (`update`).
+        let nameSection = [[Self.label(String(localized: "Name:")), nameField]]
+        let triggerSection = [[Self.label(String(localized: "When:")), triggerPopup]]
+        let onceSection = [[Self.label(String(localized: "Date and time:")), datePicker]]
+        let weeklySection = [
             [Self.label(String(localized: "Days:")), days],
             [Self.label(String(localized: "Times:")), timesField],
             [Self.label(String(localized: "Time zone:")), zoneBox],
+        ]
+        let limitSection = [
             [Self.label(String(localized: "Account:")), limitAccountPopup],
             [Self.label(String(localized: "Delay:")), delayRow],
-            [Self.label(String(localized: "Action:")), actionPopup],
+        ]
+        let actionSection = [[Self.label(String(localized: "Action:")), actionPopup]]
+        let startSection = [
             [Self.label(String(localized: "Folder:")), folderRow],
             [Self.label(String(localized: "Account:")), startAccountPopup],
             [Self.label(String(localized: "Title:")), titleField],
             [Self.label(String(localized: "Command:")), commandField],
             [Self.label(String(localized: "First prompt:")), promptScroll],
+        ]
+        let resumeSection = [
             [Self.label(String(localized: "Session:")), sessionPopup],
             [Self.label(String(localized: "Prompt:")), continuePromptField],
+        ]
+        let lateSection = [
             [Self.label(String(localized: "If late:")), lateRow],
             [Self.label(String(localized: "Notify:")), notifyPopup],
-        ])
+        ]
+        var views: [[NSView]] = []
+        /// Adds a section's rows; returns their indices in the grid.
+        func add(_ section: [[NSView]]) -> Range<Int> {
+            defer { views += section }
+            return views.count..<views.count + section.count
+        }
+        _ = add(nameSection)
+        let triggerIndex = add(triggerSection).lowerBound
+        let onceIndices = add(onceSection), weeklyIndices = add(weeklySection), limitIndices = add(limitSection)
+        let actionIndex = add(actionSection).lowerBound
+        let startIndices = add(startSection), resumeIndices = add(resumeSection)
+        let lateIndex = add(lateSection).lowerBound
+        let grid = NSGridView(views: views)
         grid.rowSpacing = 8
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        onceRows = [grid.row(at: 2)]
-        weeklyRows = [3, 4, 5].map(grid.row(at:))
-        limitRows = [6, 7].map(grid.row(at:))
-        startRows = [9, 10, 11, 12, 13].map(grid.row(at:))
-        continueRows = [14, 15].map(grid.row(at:))
-        grid.row(at: 1).topPadding = 6
-        grid.row(at: 8).topPadding = 10
-        grid.row(at: 16).topPadding = 10
+        onceRows = onceIndices.map(grid.row(at:))
+        weeklyRows = weeklyIndices.map(grid.row(at:))
+        limitRows = limitIndices.map(grid.row(at:))
+        startRows = startIndices.map(grid.row(at:))
+        continueRows = resumeIndices.map(grid.row(at:))
+        grid.row(at: triggerIndex).topPadding = 6
+        grid.row(at: actionIndex).topPadding = 10
+        grid.row(at: lateIndex).topPadding = 10
 
         let commandNote = Self.note(String(localized: """
             The command is typed at the new workspace’s shell prompt. The first prompt needs a command that starts \
@@ -385,11 +407,11 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         promptView.isEditable = !commandField.stringValue.trimmingCharacters(in: .whitespaces).isEmpty
         promptView.textColor = promptView.isEditable ? .labelColor : .disabledControlTextColor
         lateField.isEnabled = latePopup.indexOfSelectedItem == 1
-        if lateField.isEnabled, lateField.stringValue.isEmpty, case (let draft?, _) = draft(),
+        let (draft, parseProblems) = draft()
+        if lateField.isEnabled, lateField.stringValue.isEmpty, let draft,
            case .runIfWithin(let seconds) = ScheduleLatePolicy.defaultPolicy(for: draft.trigger) {
             lateField.placeholderString = String(Int(seconds / 60))
         }
-        let (draft, parseProblems) = draft()
         var problems = parseProblems
         if let draft {
             let full = original.map { draft.trigger != $0.trigger || (draft.enabled && !$0.enabled) || $0.nextFireAt == nil } ?? true
@@ -438,7 +460,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             }
             close()
         } catch {
-            problemsLabel.stringValue = (error as? RPCError)?.message ?? "\(error)"
+            problemsLabel.stringValue = ScheduleText.error(error)
             problemsLabel.isHidden = false
         }
     }
