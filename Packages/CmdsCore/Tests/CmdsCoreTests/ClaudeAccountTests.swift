@@ -264,10 +264,44 @@ final class ClaudeAccountTests: XCTestCase {
     func testStoreFile() throws {
         let dir = try temporaryDirectory()
         let url = ClaudeAccountStore.url(supportDirectory: dir)
-        XCTAssertEqual(ClaudeAccountStore.load(from: url), ClaudeAccountSettings())
+        let missing = ClaudeAccountStore.load(from: url)
+        XCTAssertEqual(missing.settings, ClaudeAccountSettings())
+        XCTAssertNil(missing.error)
+        XCTAssertFalse(missing.saveBlocked)
         let settings = ClaudeAccountSettings(accounts: [ClaudeAccount(name: "a", configDir: "/a")], autoSwitch: false)
         try ClaudeAccountStore.save(settings, to: url)
-        XCTAssertEqual(ClaudeAccountStore.load(from: url), settings)
+        XCTAssertEqual(ClaudeAccountStore.load(from: url).settings, settings)
+    }
+
+    /// #46: a damaged file is moved aside and kept, so the next save does not replace the user's accounts.
+    func testDamagedStoreFileIsMovedAsideNotOverwritten() throws {
+        let dir = try temporaryDirectory()
+        let url = ClaudeAccountStore.url(supportDirectory: dir)
+        let damaged = Data(#"{"accounts":[{"name":"work","configDir":"/w"}"#.utf8)
+        try damaged.write(to: url)
+
+        let loaded = ClaudeAccountStore.load(from: url, now: Date(timeIntervalSince1970: 1_800_000_000))
+        XCTAssertEqual(loaded.settings, ClaudeAccountSettings())
+        XCTAssertNotNil(loaded.error)
+        XCTAssertFalse(loaded.saveBlocked)
+        let moved = try XCTUnwrap(loaded.movedAside)
+        XCTAssertTrue(moved.lastPathComponent.hasPrefix("claude-accounts.json.corrupt-"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+
+        try ClaudeAccountStore.save(ClaudeAccountSettings(accounts: [ClaudeAccount(name: "new", configDir: "/n")]), to: url)
+        XCTAssertEqual(try Data(contentsOf: moved), damaged)
+    }
+
+    /// #46: a file that cannot be read stays where it is, and saving is blocked.
+    func testUnreadableStoreFileBlocksSaving() throws {
+        let dir = try temporaryDirectory()
+        let url = ClaudeAccountStore.url(supportDirectory: dir)
+        try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true) // a directory cannot be read
+        let loaded = ClaudeAccountStore.load(from: url)
+        XCTAssertNotNil(loaded.error)
+        XCTAssertNil(loaded.movedAside)
+        XCTAssertTrue(loaded.saveBlocked)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
     }
 
     // MARK: Resume commands

@@ -213,11 +213,31 @@ public enum ClaudeAccountStore {
         supportDirectory.appendingPathComponent(fileName)
     }
 
-    /// Empty settings when the file is missing or unreadable.
-    public static func load(from url: URL) -> ClaudeAccountSettings {
-        guard let data = try? Data(contentsOf: url),
-              let settings = try? JSONDecoder().decode(ClaudeAccountSettings.self, from: data) else { return ClaudeAccountSettings() }
-        return settings
+    /// What `load` found.
+    public struct Loaded {
+        /// Empty when the file is missing or could not be read.
+        public var settings: ClaudeAccountSettings
+        /// Why the file could not be read or decoded; nil when it was missing or fine.
+        public var error: Error?
+        /// Where an undecodable file was moved (kept, `StoredFile.moveAside`).
+        public var movedAside: URL?
+        /// The file could not be read and is still in place: saving would overwrite the user's accounts.
+        public var saveBlocked: Bool { error != nil && movedAside == nil }
+    }
+
+    /// Through `StoredFile` (#46): a damaged file is moved aside to `claude-accounts.json.corrupt-<date>` (kept) and
+    /// the settings start empty; a file that cannot be read stays in place and must not be saved over (`saveBlocked`).
+    public static func load(from url: URL, now: Date = Date()) -> Loaded {
+        switch StoredFile.load(ClaudeAccountSettings.self, from: url, now: now) {
+        case .missing:
+            return Loaded(settings: ClaudeAccountSettings())
+        case .loaded(let settings):
+            return Loaded(settings: settings)
+        case .unreadable(let error, .success(let moved)):
+            return Loaded(settings: ClaudeAccountSettings(), error: error, movedAside: moved)
+        case .unreadable(let error, .failure):
+            return Loaded(settings: ClaudeAccountSettings(), error: error)
+        }
     }
 
     public static func save(_ settings: ClaudeAccountSettings, to url: URL) throws {
