@@ -19,7 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   dropping from the Finder, ⌘C / ⌘V): progress in the pane, Window › Transfers (⌥⌘T) with Pause, Cancel, Retry and a
   log per transfer, and the usual Keep Both / Replace / Skip conflicts (Replace moves the existing item to the Trash
   of its side). Files arrive under a temporary name and get theirs only when complete; Cancel removes only what the
-  transfer wrote. `cmds transfers` and `transfer.*` on the socket (#26).
+  transfer wrote, and a temporary file left by quitting mid-transfer is removed at the next launch (on the Mac) or the
+  next connection (on a host). `cmds transfers` and `transfer.*` on the socket (#26, #64).
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 - Mac: schedules can type into an existing pane (`--send TEXT --to shell|agent`, Type into a pane in the editor): a

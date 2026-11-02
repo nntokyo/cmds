@@ -46,7 +46,19 @@ final class RemoteConnections: @unchecked Sendable {
         lastUsed[host] = Date()
         lock.unlock()
         startTimer()
+        removeLeftoverParts(host: host, connection: connection)
         return connection
+    }
+
+    /// A new connection: part files an earlier run left on this host (quit or crash mid-transfer) are removed in the
+    /// background, so the pane's listing does not wait for it.
+    private func removeLeftoverParts(host: String, connection: SSHFileConnection) {
+        let journal = TransferCenter.partJournal
+        guard !journal.leftovers(host: host).isEmpty else { return }
+        DispatchQueue.global(qos: .utility).async {
+            let removed = journal.clean(host: host, tree: SFTPFileTree(client: connection.client, home: connection.home))
+            if removed > 0 { remoteLog.notice("removed \(removed) leftover part files on \(host, privacy: .public)") }
+        }
     }
 
     /// The host's files as a `FileTree` (connects if needed).

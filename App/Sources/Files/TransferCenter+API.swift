@@ -34,7 +34,7 @@ extension TransferCenter {
             .object([
                 "id": .number(Double(job.id)),
                 "state": .string(job.state.rawValue),
-                "error": job.error.map(JSONValue.string) ?? .null,
+                "error": job.error.map { .string($0.description) } ?? .null,
                 "log": .array(job.log.map { .string("\($0.path): \($0.outcome)") }),
             ])
         })

@@ -150,8 +150,9 @@ remote pane, ⌘C / ⌘V) are queued and run in the background:
 - A move within one host is a rename. Otherwise the items are copied and the originals then go to the Trash of their
   side; if that fails, the copy stays and the log says so.
 - Dates and permissions are kept; symbolic links are copied as links.
-- If the connection drops, the transfer fails and can be retried. Quitting cmds stops running transfers (a
-  `.cmds-part-…` file may stay behind).
+- If the connection drops, the transfer fails and can be retried. Quitting cmds stops running transfers; a
+  `.cmds-part-…` file they leave is removed the next time cmds starts (on this Mac) or connects to that host. cmds
+  removes only the temporary files it recorded writing, nothing else.
 
 Copies between two folders on this Mac do not use the queue (see [Copying and moving](#copying-and-moving)).
 

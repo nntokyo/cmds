@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SyncRemoteAccess.shared.activate()
         KeepAwakeManager.shared.start()
         Updater.shared.start()
+        TransferCenter.removeLeftoverParts()
         // An isolated test instance (CMDS_SUPPORT_DIR) must not take keyboard focus from the app in use.
         if CmdsEnv.supportDirectoryOverride() == nil { NSApp.activate() }
     }

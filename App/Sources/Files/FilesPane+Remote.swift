@@ -106,12 +106,25 @@ extension FilesPane {
             case .permissionDenied: return String(localized: "Permission denied on the server.")
             default: break
             }
-            if case .disconnected(let reason) = error {
-                return String(localized: "The connection to the server was closed: \(reason)")
+            switch error {
+            case .disconnected(let reason):
+                // ssh's failure, classified, in the app's words; ssh's own last line as it came.
+                let text = SSHFailure(description: reason)?.localizedText ?? reason
+                return String(localized: "The connection to the server was closed: \(text)")
+            case .protocolError(let message):
+                return String(localized: "SFTP protocol error: \(message)")
+            case .status(let code, let message):
+                // The server's own message, else the app's text for the code.
+                if !message.isEmpty, message.lowercased() != "failure" { return message }
+                switch SFTP.StatusCode(rawValue: code) {
+                case .unsupported: return String(localized: "Not supported by the server.")
+                case .eof: return String(localized: "End of file.")
+                default: return String(localized: "The server reported a failure.")
+                }
             }
-            return error.description
         }
-        return "\(error)"
+        if let failure = error as? TransferFailure { return failure.localizedText }
+        return TransferFailure(error).localizedText
     }
 
     // MARK: - Running work on the server
@@ -321,7 +334,7 @@ extension FilesPane {
         if job.state == .failed, startedTransfers.contains(job.id) {
             let failures = job.log.filter { $0.outcome.isFailure }.map { "\($0.path): \($0.outcome.localizedText)" }
             showError(String(localized: "Some items could not be copied or moved."),
-                      detail: Self.failureList(failures, extra: job.error.map { [$0] } ?? []) + "\n\n"
+                      detail: Self.failureList(failures, extra: job.error.map { [$0.localizedText] } ?? []) + "\n\n"
                           + String(localized: "Retry it in Window › Transfers."))
         }
     }
@@ -386,6 +399,46 @@ extension SSHFailure {
         case .timedOut: return String(localized: "The connection timed out.")
         case .noSFTP: return String(localized: "The server does not offer SFTP.")
         case .other(let message): return message
+        }
+    }
+}
+
+extension TransferFailure {
+    /// The app's text for each failure (`description` stays English for the API, CLI and logs). Only what a server
+    /// or ssh said itself is shown as it came.
+    nonisolated var localizedText: String {
+        switch self {
+        case .noSuchItem: return String(localized: "No such file or folder.")
+        case .intoItself: return String(localized: "A folder cannot be copied or moved into itself.")
+        case .replaceContainsSource: return String(localized: "The item to replace contains the item being moved.")
+        case .existingNotTrashed(let reason):
+            return String(localized: "The existing item could not be moved to the Trash: \(reason.localizedText)")
+        case .appeared(let name, let reason):
+            return String(localized: "“\(name)” appeared in the destination during the copy and was left as it is (\(reason.localizedText)).")
+        case .trashItself:
+            return String(localized: "The Trash itself, or a folder containing it, cannot be moved to the Trash.")
+        case .alreadyInTrash: return String(localized: "This item is already in the Trash.")
+        case .trashNotAFolder(let path): return String(localized: "“\(path)” is not a folder.")
+        case .serverTrashFailed(let name, let reason):
+            return String(localized: "Could not move “\(name)” to the server's Trash (\(reason.localizedText)). Nothing was deleted.")
+        case .sftp(let error): return FilesPane.remoteErrorText(error)
+        case .connect(let failure): return failure.localizedText
+        case .posix(let code, let name): return "\(Self.posixText(code)) (\(name))"
+        case .system(_, let localized): return localized
+        case .other(let text): return text
+        }
+    }
+
+    /// The common `errno` values in the app's words; others as the system names them (English).
+    private nonisolated static func posixText(_ code: Int32) -> String {
+        switch code {
+        case ENOENT: return String(localized: "No such file or folder.")
+        case EACCES, EPERM: return String(localized: "Permission denied.")
+        case ENOSPC, EDQUOT: return String(localized: "There is not enough space on the disk.")
+        case EEXIST: return String(localized: "An item with this name already exists.")
+        case EROFS: return String(localized: "The disk is read-only.")
+        case ENAMETOOLONG: return String(localized: "The name is too long.")
+        default: return String(cString: strerror(code))
         }
     }
 }

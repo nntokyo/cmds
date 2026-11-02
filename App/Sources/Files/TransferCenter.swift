@@ -1,5 +1,8 @@
 import AppKit
 import CmdsCore
+import os
+
+let transferLog = Logger(subsystem: "tokyo.n-n.cmds", category: "transfers")
 
 extension Notification.Name {
     /// The transfer queue changed (posted on main, throttled).
@@ -37,12 +40,26 @@ final class TransferCenter {
         }
     }
 
+    /// The part files transfers are writing (`transfer-parts.json` in the support folder). Ones an earlier run left
+    /// (quit or crash mid-transfer) are removed at launch on this Mac (`removeLeftoverParts`) and when a host is
+    /// connected (`RemoteConnections`).
+    nonisolated static let partJournal = TransferPartJournal(url: TransferPartJournal.url())
+
+    /// Launch: removes this Mac's part files left by an earlier run, off the main thread.
+    nonisolated static func removeLeftoverParts() {
+        DispatchQueue.global(qos: .utility).async {
+            let removed = partJournal.clean(host: nil, tree: LocalFileTree())
+            if removed > 0 { transferLog.notice("removed \(removed) leftover part files on this Mac") }
+        }
+    }
+
     /// Queues a copy or move; conflicts are asked in `pane`'s window.
     @discardableResult
     func start(_ mode: TransferJob.Mode, sources: [FileLocation], destination: FileLocation,
                from pane: FilesPane?) -> TransferJob {
         let job = TransferJob(id: queue.makeID(), mode: mode, sources: sources, destination: destination)
         job.tree = { location in try RemoteConnections.shared.tree(for: location) }
+        job.partJournal = Self.partJournal
         askers[job.id] = { [weak pane] in pane }
         let id = job.id
         job.onConflict = { name, isFolder, reply in
@@ -140,7 +157,7 @@ extension TransferJob.Snapshot {
         case .done:
             return summary.isEmpty ? String(localized: "Done") : String(localized: "Done — \(summary)")
         case .failed:
-            if let error { return String(localized: "Failed: \(error)") }
+            if let error { return String(localized: "Failed: \(error.localizedText)") }
             return String(localized: "Failed — \(summary)")
         }
     }
@@ -166,9 +183,9 @@ extension TransferJob.Outcome {
         case .replaced: return String(localized: "replaced (the old item is in the Trash)")
         case .keptBoth(let name): return String(localized: "copied as “\(name)”")
         case .merged: return String(localized: "completed")
-        case .originalKept(let message): return String(localized: "copied, but the original could not be moved to the Trash: \(message)")
+        case .originalKept(let reason): return String(localized: "copied, but the original could not be moved to the Trash: \(reason.localizedText)")
         case .notCopied: return String(localized: "not copied (special file)")
-        case .failed(let message): return String(localized: "failed: \(message)")
+        case .failed(let reason): return String(localized: "failed: \(reason.localizedText)")
         }
     }
 }
