@@ -216,6 +216,8 @@ enum MainMenu {
         menu.addItem(item("Minimize", #selector(NSWindow.performMiniaturize(_:)), "m"))
         menu.addItem(item("Zoom", #selector(NSWindow.performZoom(_:)), ""))
         menu.addItem(.separator())
+        menu.addItem(item("Schedules…", #selector(SchedulesWindowController.showSchedules(_:)), "", target: SchedulesWindowController.shared))
+        menu.addItem(.separator())
         menu.addItem(item("Bring All to Front", #selector(NSApplication.arrangeInFront(_:)), "", target: NSApp))
         return menu
     }

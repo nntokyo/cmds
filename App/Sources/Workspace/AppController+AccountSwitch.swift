@@ -8,6 +8,9 @@ import CmdsCore
 extension AppController {
     static let accountNotificationCategory = "cmds.accountLimit"
     static let accountSwitchAction = "cmds.switchAccount"
+    /// Every other account is limited: "Continue When It Resets" schedules a `continue` (App/Sources/Schedule).
+    static let accountLimitLaterCategory = "cmds.accountLimitLater"
+    static let continueAtResetAction = "cmds.continueAtReset"
 
     // MARK: Offering
 
@@ -37,8 +40,13 @@ extension AppController {
         } else {
             body = String(localized: "“\(fromName)” hit its limit. Continue with “\(target?.name ?? "")”?")
         }
-        raiseAttention(pane: pane, title: Self.accountLimitTitle, body: body,
-                       category: problem == nil ? Self.accountNotificationCategory : nil)
+        let category: String?
+        if problem == nil {
+            category = Self.accountNotificationCategory
+        } else {
+            category = continueAtResetTime(pane) != nil ? Self.accountLimitLaterCategory : nil
+        }
+        raiseAttention(pane: pane, title: Self.accountLimitTitle, body: body, category: category)
     }
 
     /// The title of the notifications about a limit.
@@ -229,7 +237,9 @@ extension AppController {
         let banner: AccountSwitchBannerView
         switch change.phase {
         case .offered(let problem?):
-            banner = AccountSwitchBannerView(state: .problem(text: "\(lead) \(problem.localized)", canShare: problem.needsSharing))
+            let later = problem == .noOtherAccount ? continueAtResetTime(pane).map { $0.formatted(date: .omitted, time: .shortened) } : nil
+            banner = AccountSwitchBannerView(state: .problem(text: "\(lead) \(problem.localized)", canShare: problem.needsSharing,
+                                                             continueAt: later))
         case .offered(nil):
             banner = AccountSwitchBannerView(state: .offered(text: lead, target: change.to ?? ""))
         case .waitingForIdle:
@@ -240,6 +250,10 @@ extension AppController {
         banner.onSwitch = { [weak self, weak pane] in
             guard let self, let pane else { return }
             self.continueAccountSwitch(pane)
+        }
+        banner.onContinueLater = { [weak self, weak pane] in
+            guard let self, let pane else { return }
+            self.continueWhenLimitResets(pane)
         }
         banner.onDismiss = { [weak self, weak pane] in
             guard let self, let pane else { return }
