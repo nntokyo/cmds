@@ -7,26 +7,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.5.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.5.0</link>
-      <sparkle:version>9</sparkle:version>
-      <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
+      <title>cmds 0.6.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.6.0</link>
+      <sparkle:version>10</sparkle:version>
+      <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 01 Nov 2026 23:46:39 GMT</pubDate>
+      <pubDate>Mon, 02 Nov 2026 02:22:57 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
-<p>ファイルペイン：ローカルのフォルダをターミナルの隣に一覧で表示します。名前・サイズ・変更日・種類・Git の状態の列、並べ替え、隠しファイルの表示、プレビュー。2 つのファイルペインの間でコピー・移動（F5 / F6、ドラッグ＆ドロップ）、名前の変更、新規フォルダ、ゴミ箱に入れる。ファイル › 新規ファイルペイン（⇧⌘E）または <code>cmds files</code> で開きます。</p>
-<p>自分の複数の Claude アカウント：アカウントごとに Claude Code の設定フォルダを指定し、ペインをアカウントを選んで起動できます。利用上限に達すると、次のアカウントで同じセッションを続けるよう提案します（自動にもできます）。セッションの共有で、どのアカウントからも同じセッション履歴を使えます。cmds が保存するのは名前とパスだけで、認証情報は保存しません。</p>
+<p>スケジュール：ワークスペースを決まった時刻にバックグラウンドで始めたり（フォルダ、アカウント、最初に入力するコマンドや Claude Code への最初のプロンプト）、覚えている Claude Code のセッションを続けたりできます。1 回だけ、曜日と時刻、アカウントの利用上限のリセット時から選べます。作業中のエージェントや、スケジュールが作っていないペインには何も入力せず、同じ入力を 2 回することもありません。ウィンドウ › スケジュール… または <code>cmds schedule</code> で設定し、実行履歴で結果を確認できます。cmds の起動中に実行されます。</p>
+<p>すべてのアカウントが利用上限に達したとき、ペインのバーから「15:01 に続ける」を選ぶと、リセット後にセッションへ <code>continue</code> を入力します。</p>
+<h3>修正</h3>
+<p>覚えているセッションのタイトルに、起動に使ったコマンドラインが表示されなくなりました。</p>
+<p>ファイルペインの Git の列が、コミットや他のアプリでの編集の後も古い表示のままになることがなくなりました。</p>
+<p>Claude アカウントを削除すると、そのアカウントのペインからも外れるようになりました。<code>claude-accounts.json</code> が壊れていたときに上書きせず、別名で残すようにしました。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
 <h3>Added</h3>
-<p>Files panes: a local folder as a list next to your terminals, with columns for name, size, date modified, kind and Git state, sorting, hidden files and preview. Copy and move between two files panes (F5 / F6, drag and drop), rename, new folder and Move to Trash. Open one with File › New Files Pane (⇧⌘E) or <code>cmds files</code>.</p>
-<p>Several Claude accounts of your own: give each account its Claude Code config folder and start a pane under it. When an account hits its usage limit, cmds offers to continue the same session with the next account (or does it by itself). Share Sessions lets every account reach the same session history. cmds stores only names and paths, never credentials.</p>
+<p>Schedules: start a workspace in the background at set times (folder, account, a command typed at its prompt or a first prompt for Claude Code), or continue a remembered Claude Code session. Run once, on chosen weekdays and times, or when an account's limit resets. Nothing is typed into a busy agent or a pane the schedule did not create, and nothing is typed twice. Set them up in Window › Schedules… or with <code>cmds schedule</code>; a history shows how each run ended. Schedules run while cmds runs.</p>
+<p>When every account has hit its limit, the bar in the pane offers Continue at 15:01: <code>continue</code> is typed into the session after the reset.</p>
+<h3>Fixed</h3>
+<p>Remembered sessions no longer show the command line that started them as their title.</p>
+<p>The files pane's Git column no longer keeps old marks after a commit or after files were edited in another app.</p>
+<p>Removing a Claude account takes it off its panes, and a damaged <code>claude-accounts.json</code> is kept under another name instead of being overwritten.</p>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.5.0/cmds-0.5.0.dmg" length="13145862" type="application/octet-stream" sparkle:edSignature="CGiPGcVXt8ip2ao5Eqrdc3lnuHnBzM47UYhIEt1RqBB0kmN6/rb3dlSYZTeX+9sih2+SxTKZ4pwYHf+Xnv1EDA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.6.0/cmds-0.6.0.dmg" length="13480081" type="application/octet-stream" sparkle:edSignature="Ryyk1LHvpfG707gg4MXNme1PLdhv0y3fAq6QcvAitpwtUNc0uxwI86IqQQcL9ZI+o8VUwAjdYqhmAaIiJgXPAw=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: H3BxOhXtBZ7SsGlqKcHJ6t95pGDXChmdFC+R0tqLpG6yxo+zPQEY+67hoZRIBMJDLo31YjGEHqJoMv3stV2nDQ==
-length: 3181
+edSignature: 6pB1W2FBrJwS5pWavxj6MdSW8gJFrLuuPgxo5vMCbw5zybQdzDFJSexZqGvLCjdCyvq8u/xXhBG8xj8J1fPLBA==
+length: 4033
 -->
