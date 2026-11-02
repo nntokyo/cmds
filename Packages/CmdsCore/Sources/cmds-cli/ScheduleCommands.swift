@@ -261,20 +261,7 @@ extension CLI {
             }
         }
         if let send {
-            for option in ["account", "title", "prompt", "session"] where args[option: option] != nil {
-                throw CLIError.usage("--\(option) does not go with --send")
-            }
-            if args.rest != nil { throw CLIError.usage("--send takes no command after --") }
-            guard let raw = args[option: "to"] else { throw CLIError.usage("--send needs --to shell or --to agent") }
-            guard let to = SendText.Destination(rawValue: raw) else { throw CLIError.usage("--to must be shell or agent") }
-            let target: PaneTarget?
-            switch (args[option: "pane"], args[option: "workspace"]) {
-            case (let pane?, nil): target = .pane(pane)
-            case (nil, let title?): target = .workspace(title: title)
-            case (nil, nil): target = nil
-            default: throw CLIError.usage("give either --pane or --workspace")
-            }
-            options.send = SendOptions(text: send == "-" ? readStandardInput() : send, to: to, target: target)
+            options.send = try parseSend(send, args: args, readStandardInput: readStandardInput)
         } else if let start {
             if args[option: "pane"] != nil || args[option: "session"] != nil {
                 throw CLIError.usage("--pane and --session go with --continue or --send")
@@ -303,6 +290,24 @@ extension CLI {
         return options
     }
 
+    /// `--send TEXT` with `--to` and `--pane` / `--workspace` (neither: this pane, `sendAction`).
+    private static func parseSend(_ send: String, args: Arguments, readStandardInput: () -> String) throws -> SendOptions {
+        for option in ["account", "title", "prompt", "session"] where args[option: option] != nil {
+            throw CLIError.usage("--\(option) does not go with --send")
+        }
+        if args.rest != nil { throw CLIError.usage("--send takes no command after --") }
+        guard let raw = args[option: "to"] else { throw CLIError.usage("--send needs --to shell or --to agent") }
+        guard let to = SendText.Destination(rawValue: raw) else { throw CLIError.usage("--to must be shell or agent") }
+        let target: PaneTarget?
+        switch (args[option: "pane"], args[option: "workspace"]) {
+        case (let pane?, nil): target = .pane(pane)
+        case (nil, let title?): target = .workspace(title: title)
+        case (nil, nil): target = nil
+        default: throw CLIError.usage("give either --pane or --workspace")
+        }
+        return SendOptions(text: send == "-" ? readStandardInput() : send, to: to, target: target)
+    }
+
     /// `--at`, `--in`, `--every` (+ `--time`, `--tz`), `--after-limit` or `--after-codex-limit` (+ `--delay`,
     /// `--repeat`); nil when none is given.
     static func parseTrigger(_ args: Arguments, now: Date, timeZone: TimeZone) throws -> JSONValue? {
@@ -317,11 +322,8 @@ extension CLI {
         if !limit, args[option: "delay"] != nil { throw CLIError.usage("--delay goes with --after-limit or --after-codex-limit") }
         if !limit, args.has("repeat") { throw CLIError.usage("--repeat goes with --after-limit or --after-codex-limit") }
         let delay = try args[option: "delay"].map { try parseDuration($0, option: "delay") } ?? ScheduleLimits.defaultDelay
-        if codex {
-            var trigger: [String: JSONValue] = ["type": "codexLimitReset", "delay": .number(delay)]
-            if args.has("repeat") { trigger["repeats"] = .bool(true) }
-            return .object(trigger)
-        }
+        let repeats = args.has("repeat")
+        if codex { return try .from(ScheduleTrigger.codexLimitReset(delay: delay, repeats: repeats)) }
         if let at = args[option: "at"] {
             return ["type": "once", "at": .number(try parseAt(at, now: now, timeZone: timeZone).timeIntervalSince1970)]
         }
@@ -347,9 +349,7 @@ extension CLI {
             return .object(trigger)
         }
         if let account = args[option: "after-limit"] {
-            var trigger: [String: JSONValue] = ["type": "limitReset", "account": .string(account), "delay": .number(delay)]
-            if args.has("repeat") { trigger["repeats"] = .bool(true) }
-            return .object(trigger)
+            return try .from(ScheduleTrigger.limitReset(account: account, delay: delay, repeats: repeats))
         }
         return nil
     }
@@ -597,10 +597,15 @@ extension Format {
             else { days = rule.weekdays.sorted().map(\.rawValue).joined(separator: ",") }
             return "\(days) \(rule.times.map(\.text).joined(separator: ", "))" + (rule.timeZone.map { " (\($0))" } ?? "")
         case .limitReset(let account, let delay, let repeats):
-            return (repeats ? "every time \(account) resets" : "when \(account) resets") + (delay > 0 ? " + \(duration(delay))" : "")
+            return limitTrigger(account, delay: delay, repeats: repeats)
         case .codexLimitReset(let delay, let repeats):
-            return (repeats ? "every time Codex resets" : "when Codex resets") + (delay > 0 ? " + \(duration(delay))" : "")
+            return limitTrigger("Codex", delay: delay, repeats: repeats)
         }
+    }
+
+    /// `when work resets + 1m`, `every time Codex resets`.
+    private static func limitTrigger(_ name: String, delay: TimeInterval, repeats: Bool) -> String {
+        (repeats ? "every time \(name) resets" : "when \(name) resets") + (delay > 0 ? " + \(duration(delay))" : "")
     }
 
     /// `pane t1a2b3c4d`, `workspace "API"`.
