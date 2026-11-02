@@ -7,34 +7,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.6.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.6.0</link>
-      <sparkle:version>10</sparkle:version>
-      <sparkle:shortVersionString>0.6.0</sparkle:shortVersionString>
+      <title>cmds 0.7.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.7.0</link>
+      <sparkle:version>11</sparkle:version>
+      <sparkle:shortVersionString>0.7.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Mon, 02 Nov 2026 02:22:57 GMT</pubDate>
+      <pubDate>Mon, 02 Nov 2026 03:54:47 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
-<p>スケジュール：ワークスペースを決まった時刻にバックグラウンドで始めたり（フォルダ、アカウント、最初に入力するコマンドや Claude Code への最初のプロンプト）、覚えている Claude Code のセッションを続けたりできます。1 回だけ、曜日と時刻、アカウントの利用上限のリセット時から選べます。作業中のエージェントや、スケジュールが作っていないペインには何も入力せず、同じ入力を 2 回することもありません。ウィンドウ › スケジュール… または <code>cmds schedule</code> で設定し、実行履歴で結果を確認できます。cmds の起動中に実行されます。</p>
-<p>すべてのアカウントが利用上限に達したとき、ペインのバーから「15:01 に続ける」を選ぶと、リセット後にセッションへ <code>continue</code> を入力します。</p>
+<p>SSH ホストのファイルペイン：ファイル › 新規リモートファイルペイン…（⌥⇧⌘E）、SSH ペインで ⇧⌘E、または <code>cmds files HOST:PATH</code> で、ホストのフォルダを SFTP で開きます。接続にはお使いの <code>ssh</code> の設定と鍵をそのまま使い、パスワードを尋ねたり保存したりはしません。名前の変更、新規フォルダ、開く・プレビュー、ここでターミナルを開く、ゴミ箱に入れる（サーバー側のゴミ箱へ移すだけで削除はしません）ができます。</p>
+<p>転送キュー：Mac と SSH ホストの間、またはホスト同士で、コピーと移動ができます（F5 / F6、ドラッグ＆ドロップ、Finder からのドロップ、⌘C / ⌘V）。進み具合はペインと ウィンドウ › 転送（⌥⌘T）で確認でき、一時停止・キャンセル・再試行ができます。ファイルは転送が終わってから本来の名前になり、キャンセルしても転送が書いたものしか消しません。</p>
+<p>スケジュール：既存のペインへの入力（空のシェルへのコマンド、待機中の Claude Code や Codex へのプロンプト）、Codex のセッションの継続と Codex の利用上限のリセット時の実行、リセットのたびの繰り返し、実行 1 分前の通知（スキップ可）とサイドバーでの次回表示に対応しました。</p>
 <h3>修正</h3>
-<p>覚えているセッションのタイトルに、起動に使ったコマンドラインが表示されなくなりました。</p>
-<p>ファイルペインの Git の列が、コミットや他のアプリでの編集の後も古い表示のままになることがなくなりました。</p>
-<p>Claude アカウントを削除すると、そのアカウントのペインからも外れるようになりました。<code>claude-accounts.json</code> が壊れていたときに上書きせず、別名で残すようにしました。</p>
+<p><code>cmds read p2</code> がフォーカス中のペインを読んでいた問題を直しました。<code>--pane P</code> で指定してください。</p>
+<p>転送の失敗メッセージがアプリの言葉（日本語・英語）で表示されるようになり、途中でやめた転送の一時ファイルは次回の起動時または接続時に削除されます。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
 <h3>Added</h3>
-<p>Schedules: start a workspace in the background at set times (folder, account, a command typed at its prompt or a first prompt for Claude Code), or continue a remembered Claude Code session. Run once, on chosen weekdays and times, or when an account's limit resets. Nothing is typed into a busy agent or a pane the schedule did not create, and nothing is typed twice. Set them up in Window › Schedules… or with <code>cmds schedule</code>; a history shows how each run ended. Schedules run while cmds runs.</p>
-<p>When every account has hit its limit, the bar in the pane offers Continue at 15:01: <code>continue</code> is typed into the session after the reset.</p>
+<p>Files panes on SSH hosts: File › New Remote Files Pane… (⌥⇧⌘E), ⇧⌘E in an SSH pane, or <code>cmds files HOST:PATH</code> lists a folder on a host over SFTP with your own <code>ssh</code> setup and keys; cmds never asks for or stores a password. Rename, New Folder, Open and preview, Open Terminal Here, and Move to Trash (to the server's own Trash, never deleted).</p>
+<p>A transfer queue for copies and moves between the Mac and SSH hosts, or two hosts (F5 / F6, drag and drop, dropping from the Finder, ⌘C / ⌘V), with progress in the pane and in Window › Transfers (⌥⌘T): Pause, Cancel, Retry. Files get their name only when complete, and Cancel removes only what the transfer wrote.</p>
+<p>Schedules can type into an existing pane (a command at an empty shell prompt, or a prompt into an idle Claude Code or Codex), continue Codex sessions and run when Codex's limit resets, repeat on every reset, and warn a minute before a run (with Skip); the next run shows in the sidebar.</p>
 <h3>Fixed</h3>
-<p>Remembered sessions no longer show the command line that started them as their title.</p>
-<p>The files pane's Git column no longer keeps old marks after a commit or after files were edited in another app.</p>
-<p>Removing a Claude account takes it off its panes, and a damaged <code>claude-accounts.json</code> is kept under another name instead of being overwritten.</p>
+<p><code>cmds read p2</code> read the focused pane instead of p2; use <code>--pane P</code>.</p>
+<p>Transfer failures are described in the app's words (English and Japanese), and temporary files left by an interrupted transfer are removed at the next launch or connection.</p>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.6.0/cmds-0.6.0.dmg" length="13480081" type="application/octet-stream" sparkle:edSignature="Ryyk1LHvpfG707gg4MXNme1PLdhv0y3fAq6QcvAitpwtUNc0uxwI86IqQQcL9ZI+o8VUwAjdYqhmAaIiJgXPAw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.7.0/cmds-0.7.0.dmg" length="13854444" type="application/octet-stream" sparkle:edSignature="wEQvvYgxqfXlyDReoM6QwKyyzY9cpbnCVHr68gb/D6KvZ2BV49Y+uniZDrlw+Z4BdDmkHko6v8hIxSVagnCrAA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 6pB1W2FBrJwS5pWavxj6MdSW8gJFrLuuPgxo5vMCbw5zybQdzDFJSexZqGvLCjdCyvq8u/xXhBG8xj8J1fPLBA==
-length: 4033
+edSignature: 8sa4hGteRdfWMwjfFwejzUo0Ikae6MifIFBUpGIN/XLQ4UwNVWzC4baBhPkiRyFnDGSFXPHJj6bnyNwSjeB8Aw==
+length: 4648
 -->
