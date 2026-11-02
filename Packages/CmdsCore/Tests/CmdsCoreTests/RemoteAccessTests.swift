@@ -49,6 +49,19 @@ final class RemoteAPIPolicyTests: XCTestCase {
         XCTAssertEqual(params?["pane"]?.stringValue, "p7")
     }
 
+    /// Schedules can start workspaces and type into panes later: local socket only (#45).
+    func testRefusesSchedules() {
+        let methods = ["schedule.list", "schedule.add", "schedule.update", "schedule.remove", "schedule.run",
+                       "schedule.cancel", "schedule.history", "debug.schedule_clock"]
+        for method in methods {
+            XCTAssertFalse(RemoteAPIPolicy.allowedMethods.contains(method), method)
+            XCTAssertThrowsError(try RemoteAPIPolicy.authorize(method: method, params: [:], scope: scope), method) { error in
+                XCTAssertEqual((error as? RPCError)?.code, 403)
+            }
+        }
+        XCTAssertFalse(RemoteAPIPolicy.allowedMethods.contains { $0.hasPrefix("schedule.") })
+    }
+
     func testFiltersResults() {
         let workspaces: JSONValue = [
             ["id": "w1", "panes": [["id": "p1"]]],
