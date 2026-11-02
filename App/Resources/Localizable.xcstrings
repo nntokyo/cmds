@@ -3837,7 +3837,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新規リモートファイルパネル"
+            "value": "新規リモートファイル一覧ペイン"
           }
         }
       }
@@ -3847,7 +3847,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新規リモートファイルパネル…"
+            "value": "新規リモートファイル一覧ペイン…"
           }
         }
       }
