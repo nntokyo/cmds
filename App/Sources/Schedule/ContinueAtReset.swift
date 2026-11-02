@@ -12,7 +12,7 @@ extension AppController {
     /// is not one of the user's, or it is not limited).
     func continueAtResetTime(_ pane: Pane, now: Date = Date()) -> Date? {
         guard pane.ssh == nil, continuableSession(pane) != nil,
-              let name = pane.accountSwitch?.from ?? currentAccount(of: pane),
+              let name = limitedAccount(of: pane),
               let limit = claudeAccounts.account(named: name)?.limit, limit.isActive(at: now) else { return nil }
         return limit.resetsAt.addingTimeInterval(Self.continueAtResetDelay)
     }
@@ -20,7 +20,7 @@ extension AppController {
     /// Creates the schedule (once per session and account), dismisses the banner and says when it runs.
     func continueWhenLimitResets(_ pane: Pane) {
         guard let session = continuableSession(pane), let at = continueAtResetTime(pane),
-              let account = pane.accountSwitch?.from ?? currentAccount(of: pane) else { return }
+              let account = limitedAccount(of: pane) else { return }
         let runner = scheduleRunner
         let existing = runner.schedules.first { schedule in
             guard schedule.enabled, case .limitReset(let name, _) = schedule.trigger,
@@ -36,7 +36,7 @@ extension AppController {
                 try runner.add(draft, origin: .app)
             } catch {
                 raiseAttention(pane: pane, title: String(localized: "Schedules"),
-                               body: (error as? RPCError)?.message ?? "\(error)")
+                               body: ScheduleText.error(error))
                 return
             }
         }

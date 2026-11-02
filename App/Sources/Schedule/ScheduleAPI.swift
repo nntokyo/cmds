@@ -39,7 +39,7 @@ enum ScheduleAPI {
             try runner.cancel(runID: try params.required("run"))
             return nil
         case "schedule.history":
-            let limit = min(try params.int("limit") ?? 20, ScheduleLimits.maxRuns)
+            let limit = min(try params.int("limit") ?? ScheduleLimits.defaultHistoryLimit, ScheduleLimits.maxRuns)
             let id = try params.string("id")
             if let id, runner.schedule(id: id) == nil, !runner.history.contains(where: { $0.scheduleID == id }) {
                 throw RPCError.notFound("schedule not found: \(id)")

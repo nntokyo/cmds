@@ -71,6 +71,11 @@ enum ScheduleText {
         }
     }
 
+    /// A refused change: the runner's message (English, as for the API), else the error itself.
+    static func error(_ error: Error) -> String {
+        (error as? RPCError)?.message ?? "\(error)"
+    }
+
     static func problem(_ problem: ScheduleProblem) -> String {
         switch problem {
         case .nameInvalid: return String(localized: "Give a name of up to 64 characters.")

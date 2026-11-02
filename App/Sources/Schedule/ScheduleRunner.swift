@@ -26,6 +26,21 @@ enum ScheduleChange {
 /// - Never logs prompts or commands.
 @MainActor
 final class ScheduleRunner {
+    /// Why the schedule files are not written.
+    enum ReadOnlyReason: Equatable {
+        /// A file was written by a newer cmds: shown, never run or saved over.
+        case newerVersion
+        /// A file could not be read and is still in place: never overwritten.
+        case unreadable
+
+        var english: String {
+            switch self {
+            case .newerVersion: return "the file was made by a newer cmds"
+            case .unreadable: return "the file could not be read"
+            }
+        }
+    }
+
     unowned let controller: AppController
     private let url: URL
     private let runsURL: URL
@@ -35,9 +50,9 @@ final class ScheduleRunner {
     private(set) var history: [ScheduleRun] = []
     /// Runs in progress.
     var active: [ActiveScheduleRun] = []
-    /// Nothing is saved: the files are from a newer cmds, or could not be read (`readOnlyReason`).
-    private(set) var readOnly = false
-    private(set) var readOnlyReason: String?
+    /// Why nothing is saved (nil: the files can be written).
+    private(set) var readOnlyReason: ReadOnlyReason?
+    var readOnly: Bool { readOnlyReason != nil }
     /// A damaged file was moved aside to here at launch (shown once, and in the window).
     private(set) var movedAside: [URL] = []
 
@@ -105,7 +120,7 @@ final class ScheduleRunner {
         case .loaded(let file):
             schedules = file.schedules
             if file.dropped > 0 { scheduleLog.error("dropped \(file.dropped) invalid schedules from \(ScheduleStore.fileName, privacy: .public)") }
-            if file.isFromNewerVersion { setReadOnly("version \(file.version)") }
+            if file.isFromNewerVersion { readOnlyReason = .newerVersion }
         case .unreadable(let error, let movedTo):
             noteUnreadable(ScheduleStore.fileName, error: error, movedTo: movedTo)
         }
@@ -114,7 +129,7 @@ final class ScheduleRunner {
             break
         case .loaded(let file):
             history = ScheduleHistory.trimmed(file.runs, now: now())
-            if file.isFromNewerVersion { setReadOnly("version \(file.version)") }
+            if file.isFromNewerVersion { readOnlyReason = .newerVersion }
         case .unreadable(let error, let movedTo):
             noteUnreadable(ScheduleStore.runsFileName, error: error, movedTo: movedTo)
         }
@@ -130,17 +145,15 @@ final class ScheduleRunner {
         case .failure:
             // Still in place (unreadable, or the move failed): never overwrite it.
             scheduleLog.error("\(name, privacy: .public) could not be read: \(String(describing: error), privacy: .public)")
-            setReadOnly("unreadable \(name)")
+            readOnlyReason = .unreadable
         }
     }
 
-    private func setReadOnly(_ reason: String) {
-        readOnly = true
-        readOnlyReason = reason
-    }
+    /// The files moved aside, by name, for the alert and the window.
+    var movedAsideNames: String { movedAside.map(\.lastPathComponent).joined(separator: ", ") }
 
     private func showMovedAsideAlert() {
-        let names = movedAside.map(\.lastPathComponent).joined(separator: ", ")
+        let names = movedAsideNames
         DispatchQueue.main.async {
             let alert = NSAlert()
             alert.messageText = String(localized: "Schedules could not be read")
@@ -186,7 +199,7 @@ final class ScheduleRunner {
         for index in schedules.indices where schedules[index].enabled {
             let schedule = schedules[index]
             let decision = ScheduleCatchUp.decide(nextFireAt: schedule.nextFireAt, now: now, late: schedule.late)
-            guard let due = schedule.nextFireAt, decision != .notDue else { continue }
+            guard let due = schedule.nextFireAt else { continue }
             switch decision {
             case .notDue: continue
             case .run(let cause): startRun(schedule, cause: cause, dueAt: due)
@@ -333,10 +346,12 @@ final class ScheduleRunner {
     // MARK: Changes (API, window)
 
     private func requireWritable() throws {
-        guard !readOnly else {
-            throw RPCError.invalidParams("schedules are read only: "
-                + (readOnlyReason?.hasPrefix("version") == true ? "the file was made by a newer cmds" : "the file could not be read"))
-        }
+        if let readOnlyReason { throw RPCError.invalidParams("schedules are read only: \(readOnlyReason.english)") }
+    }
+
+    private func index(of id: String) throws -> Int {
+        guard let index = schedules.firstIndex(where: { $0.id == id }) else { throw RPCError.notFound("schedule not found: \(id)") }
+        return index
     }
 
     /// What is wrong with a new or changed schedule. `full` false: editing other parts of a schedule whose time has
@@ -380,7 +395,7 @@ final class ScheduleRunner {
     @discardableResult
     func update(id: String, _ change: (inout ScheduleDraft) -> Void) throws -> Schedule {
         try requireWritable()
-        guard let index = schedules.firstIndex(where: { $0.id == id }) else { throw RPCError.notFound("schedule not found: \(id)") }
+        let index = try index(of: id)
         let old = schedules[index]
         var draft = old.draft
         change(&draft)
@@ -402,7 +417,7 @@ final class ScheduleRunner {
     /// Removes a schedule; its active run is cancelled, its history kept.
     func remove(id: String) throws {
         try requireWritable()
-        guard let index = schedules.firstIndex(where: { $0.id == id }) else { throw RPCError.notFound("schedule not found: \(id)") }
+        let index = try index(of: id)
         for run in active where run.record.scheduleID == id { finish(run, .cancelled, .scheduleRemoved, notify: false) }
         schedules.remove(at: index)
         scheduleLog.info("removed schedule \(id, privacy: .public)")

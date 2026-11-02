@@ -4,8 +4,9 @@ import Foundation
 /// unit-tested; the app's ScheduleRunner builds an `Observation` of the pane on every tick and does what `step` says.
 ///
 /// Safety rules kept here:
-/// - Shell input only at an empty prompt of a shell in the foreground, with no agent on the terminal.
-/// - A prompt goes into Claude Code only when it is idle (`ClaudeAccountSwitchTiming.isIdle`), not asking for input or
+/// - Shell input only at a settled empty prompt of a shell in the foreground (`PaneReadiness.isShellReady`), with no
+///   agent on the terminal.
+/// - A prompt goes into Claude Code only when it is idle (`PaneReadiness.isAgentIdle`), not asking for input or
 ///   permission, with no account switch in progress and no resume queued, and only into the expected session.
 /// - Type once: every typing step moves the run on; nothing is retried.
 public enum ScheduleRunTiming {
@@ -22,35 +23,23 @@ public enum ScheduleRunTiming {
     /// Waiting to see Claude Code start working after Return.
     public static let confirmTimeout: TimeInterval = 20
     /// The prompt's screen must not change for this long before typing a command.
-    public static let shellSettleTime: TimeInterval = 0.4
+    public static let shellSettleTime: TimeInterval = PaneReadiness.promptSettleTime
     /// Between pasting a prompt and pressing Return.
     public static let enterDelay: TimeInterval = 0.4
     /// A pane the run did not create that runs another program this long is left alone (skipped).
     public static let otherProgramGrace: TimeInterval = 3
 
     /// What runs in the foreground of the pane's terminal.
-    public enum Foreground: Equatable, Sendable {
-        /// Not known yet (the terminal is starting, or the process could not be read).
-        case unknown
-        case shell
-        /// Claude Code or Codex.
-        case agent
-        case other
-    }
+    public typealias Foreground = PaneForeground
 
-    /// What the app sees in the run's pane.
+    /// What the app sees in the run's pane: the `PaneObservation` every typing check uses (its fields are read and
+    /// written as the observation's own, `o.foreground`), plus what only a run looks at.
+    @dynamicMemberLookup
     public struct Observation: Equatable, Sendable {
+        public var pane = PaneObservation()
         public var paneExists = true
-        public var foreground: Foreground = .unknown
-        /// Any Claude Code / Codex process on the pane's terminal (also in the background).
-        public var agentOnTerminal = false
         /// The agent reports itself as Codex (prompts go to Claude Code only).
         public var otherAgent = false
-        public var activity: AgentActivity = .none
-        public var subagentRunning = false
-        public var screenUnchangedFor: TimeInterval = 0
-        /// The cursor sits right after a prompt with nothing typed (`AgentResume.isAtEmptyPrompt`).
-        public var atEmptyPrompt = false
         /// The session id Claude Code reports in the pane (status line), if any.
         public var sessionID: String?
         /// The run's account is limited now; `accountFreeIn` is how long until its (or, with `auto`, the earliest)
@@ -65,6 +54,11 @@ public enum ScheduleRunTiming {
         public var promptSubmitted = false
 
         public init() {}
+
+        public subscript<Value>(dynamicMember keyPath: WritableKeyPath<PaneObservation, Value>) -> Value {
+            get { pane[keyPath: keyPath] }
+            set { pane[keyPath: keyPath] = newValue }
+        }
     }
 
     /// What the run expects of its pane.
@@ -138,8 +132,7 @@ public enum ScheduleRunTiming {
         case .agent:
             return .skip(.agentRunning)
         case .shell:
-            let ready = o.atEmptyPrompt && o.screenUnchangedFor >= shellSettleTime && !o.resumeQueued
-                && !o.accountSwitchInProgress
+            let ready = PaneReadiness.isShellReady(o.pane) && !o.resumeQueued && !o.accountSwitchInProgress
             if ready { return .type }
             return timedOut ? (expect.ownsPane ? .fail(.shellNotReady) : .skip(.otherProgram)) : .wait
         }
@@ -164,10 +157,7 @@ public enum ScheduleRunTiming {
                 return elapsed >= agentStartTimeout ? .fail(.agentDidNotStart) : .wait
             }
         }
-        let idle = ClaudeAccountSwitchTiming.isIdle(agentInForeground: true, busy: o.activity == .busy,
-                                                    subagentRunning: o.subagentRunning,
-                                                    screenUnchangedFor: o.screenUnchangedFor)
-        if idle, o.activity != .needsInput, !o.choiceOnScreen, !o.accountSwitchInProgress, !o.resumeQueued { return .paste }
+        if PaneReadiness.isAgentIdle(o.pane), o.activity != .needsInput, !o.choiceOnScreen, !o.accountSwitchInProgress, !o.resumeQueued { return .paste }
         return elapsed >= idleWait ? .fail(.agentBusy) : .wait
     }
 

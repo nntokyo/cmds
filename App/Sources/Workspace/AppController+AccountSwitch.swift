@@ -52,6 +52,11 @@ extension AppController {
     /// The title of the notifications about a limit.
     private static var accountLimitTitle: String { String(localized: "Claude account limit") }
 
+    /// The account whose limit the pane is about: the one a switch started from, else the pane's current account.
+    func limitedAccount(of pane: Pane) -> String? {
+        pane.accountSwitch?.from ?? currentAccount(of: pane)
+    }
+
     /// The Claude Code session to continue: the one seen in the pane now, else the one an earlier offer kept (Claude
     /// Code may have exited since), else one offered for resuming.
     private func switchableSession(_ pane: Pane) -> AgentSession? {
@@ -79,7 +84,7 @@ extension AppController {
     func requestAccountSwitch(paneID: String?, to name: String?) throws -> String {
         let pane = try resolvePane(paneID)
         guard pane.kind == .terminal else { throw RPCError.invalidParams("pane \(pane.id) is not a terminal") }
-        let from = pane.accountSwitch?.from ?? currentAccount(of: pane)
+        let from = limitedAccount(of: pane)
         let target: ClaudeAccount?
         if let name {
             target = try account(named: name)
@@ -131,11 +136,11 @@ extension AppController {
             guard let change = pane.accountSwitch, change.isInProgress else { continue }
             active = true
             guard !pane.isClosing, let terminal = pane.terminal, let group = terminal.foregroundProcessGroupID else { continue }
-            let foreground = PaneProcessProbe.classify(pid: group)
+            let foreground = PaneProcessProbe.foreground(of: group)
             if foreground == .shell, !PaneProcessProbe.agentOnTerminal(of: group) {
                 finishAccountSwitch(pane, change, now: now)
             } else if change.phase == .waitingForIdle {
-                quitWhenIdle(pane, change, terminal: terminal, agentInForeground: foreground == .agent, now: now)
+                quitWhenIdle(pane, change, terminal: terminal, foreground: foreground, now: now)
             } else if change.phase == .quitting {
                 keepQuitting(pane, change, terminal: terminal, agentInForeground: foreground == .agent, now: now)
             }
@@ -147,18 +152,12 @@ extension AppController {
     }
 
     /// `waitingForIdle`: never mid-turn. Once Claude Code is idle, the first Ctrl-C.
-    private func quitWhenIdle(_ pane: Pane, _ change: AccountSwitch, terminal: TerminalSurface, agentInForeground: Bool,
-                              now: Date) {
+    private func quitWhenIdle(_ pane: Pane, _ change: AccountSwitch, terminal: TerminalSurface,
+                              foreground: PaneForeground, now: Date) {
         var change = change
-        let screen = terminal.visibleText()
-        if screen != change.screen {
-            change.screen = screen
-            change.screenSince = now
-        }
-        let idle = ClaudeAccountSwitchTiming.isIdle(
-            agentInForeground: agentInForeground, busy: pane.agentActivity == .busy,
-            subagentRunning: pane.subagents.contains { $0.info.state == .running },
-            screenUnchangedFor: now.timeIntervalSince(change.screenSince ?? now))
+        let observation = pane.inputObservation(terminal, screen: terminal.visibleText(), foreground: foreground,
+                                                stability: &change.screen, now: now)
+        let idle = PaneReadiness.isAgentIdle(observation)
         if idle {
             terminal.sendText(ClaudeAccountSwitchTiming.interrupt)
             change.phase = .quitting

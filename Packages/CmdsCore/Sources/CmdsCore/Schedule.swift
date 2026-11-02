@@ -540,6 +540,9 @@ public struct ScheduleRun: Codable, Equatable, Sendable {
         self.account = account
     }
 
+    /// When it ended, else (still active) when it started: the order and age of the history.
+    public var lastActivityAt: Date { endedAt ?? startedAt }
+
     private enum CodingKeys: String, CodingKey {
         case id, scheduleID, scheduleName, cause, dueAt, startedAt, endedAt, state, reason, workspace, pane, account
     }
@@ -670,15 +673,20 @@ public enum ScheduleLimits {
     public static let minTimeGap: TimeInterval = 5 * 60
     public static let maxDelay: TimeInterval = 3600
     public static let defaultDelay: TimeInterval = 60
-    /// A late policy of at most a week.
+    /// A late policy of a minute to a week.
+    public static let minLateWindow: TimeInterval = 60
     public static let maxLateWindow: TimeInterval = 7 * 86400
     public static let maxActiveRuns = 5
     public static let maxPromptBytes = 8 * 1024
     public static let maxCommandBytes = 1024
     public static let maxTitleLength = 64
+    /// A folder path (`StartWorkspace.cwd`, `ContinueSession.cwd`), in characters.
+    public static let maxPathLength = 1024
     /// History: per schedule, in total, and age.
     public static let maxRunsPerSchedule = 50
     public static let maxRuns = 300
+    /// `schedule.history` without a limit.
+    public static let defaultHistoryLimit = 20
     public static let runRetention: TimeInterval = 90 * 86400
 }
 
