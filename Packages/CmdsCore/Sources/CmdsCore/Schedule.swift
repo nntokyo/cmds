@@ -110,30 +110,60 @@ public struct WeeklyRule: Codable, Equatable, Sendable {
 public enum ScheduleTrigger: Equatable, Sendable {
     case once(at: Date)
     case weekly(WeeklyRule)
-    /// When the account's current limit resets, plus `delay` (0…3600 s). Fires once.
-    case limitReset(account: String, delay: TimeInterval)
+    /// When the Claude account's current limit resets, plus `delay` (0…3600 s). Once, or with `repeats` every time
+    /// one of its limits resets (phase 2).
+    case limitReset(account: String, delay: TimeInterval, repeats: Bool = false)
+    /// When Codex's limit resets (`AgentLimits` of `.codex`: the latest reset of a window at 100 %), plus `delay`
+    /// (phase 2).
+    case codexLimitReset(delay: TimeInterval, repeats: Bool = false)
 
     public var type: String {
         switch self {
         case .once: return "once"
         case .weekly: return "weekly"
         case .limitReset: return "limitReset"
+        case .codexLimitReset: return "codexLimitReset"
         }
     }
 
-    /// `once` and `limitReset` fire one time; the schedule is then disabled (and kept).
+    /// `once` and a limit trigger without `repeats` fire one time; the schedule is then disabled (and kept).
     public var isOneShot: Bool {
-        if case .weekly = self { return false }
-        return true
+        switch self {
+        case .once: return true
+        case .weekly: return false
+        case .limitReset(_, _, let repeats), .codexLimitReset(_, let repeats): return !repeats
+        }
+    }
+
+    /// A limit trigger (its time follows a limit, `ScheduleCalendar.recomputed`).
+    public var followsLimit: Bool {
+        switch self {
+        case .once, .weekly: return false
+        case .limitReset, .codexLimitReset: return true
+        }
+    }
+
+    /// A limit trigger that fires every time.
+    public var repeats: Bool { followsLimit && !isOneShot }
+
+    /// The schema version a build needs to run this trigger (`ScheduleFile.version`).
+    var requiredVersion: Int {
+        switch self {
+        case .once, .weekly: return 1
+        case .limitReset(_, _, let repeats): return repeats ? 2 : 1
+        case .codexLimitReset: return 2
+        }
     }
 }
 
 extension ScheduleTrigger: Codable {
-    private enum CodingKeys: String, CodingKey { case type, at, weekdays, times, timeZone, account, delay }
+    private enum CodingKeys: String, CodingKey { case type, at, weekdays, times, timeZone, account, delay, repeats }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let type = try c.decode(String.self, forKey: .type)
+        let delay = c.lenientDouble(.delay) ?? ScheduleLimits.defaultDelay
+        let repeats = c.lenientBool(.repeats) ?? false
         switch type {
         case "once":
             guard let at = c.lenientDate(.at) else {
@@ -146,7 +176,9 @@ extension ScheduleTrigger: Codable {
             guard let account = c.lenientString(.account) else {
                 throw DecodingError.dataCorruptedError(forKey: .account, in: c, debugDescription: "missing account")
             }
-            self = .limitReset(account: account, delay: c.lenientDouble(.delay) ?? ScheduleLimits.defaultDelay)
+            self = .limitReset(account: account, delay: delay, repeats: repeats)
+        case "codexLimitReset":
+            self = .codexLimitReset(delay: delay, repeats: repeats)
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown trigger type \(type)")
         }
@@ -160,9 +192,13 @@ extension ScheduleTrigger: Codable {
             try c.encode(at.timeIntervalSince1970, forKey: .at)
         case .weekly(let rule):
             try rule.encode(to: encoder)
-        case .limitReset(let account, let delay):
+        case .limitReset(let account, let delay, let repeats):
             try c.encode(account, forKey: .account)
             try c.encode(delay, forKey: .delay)
+            if repeats { try c.encode(true, forKey: .repeats) }
+        case .codexLimitReset(let delay, let repeats):
+            try c.encode(delay, forKey: .delay)
+            if repeats { try c.encode(true, forKey: .repeats) }
         }
     }
 }
@@ -203,14 +239,14 @@ public struct StartWorkspace: Codable, Equatable, Sendable {
     }
 }
 
-/// `continueSession`: a remembered Claude Code session gets a prompt; resumed first when it is not running.
+/// `continueSession`: a remembered Claude Code or Codex session gets a prompt; resumed first when it is not running.
 public struct ContinueSession: Codable, Equatable, Sendable {
-    /// `.claude` only in phase 1.
+    /// `.claude`, or `.codex` (phase 2).
     public var agent: AgentKind
     public var sessionID: String
     /// Where to resume it in a new workspace when no pane holds it.
     public var cwd: String?
-    /// nil = the session's account.
+    /// nil = the session's account. Claude Code only (cmds has no Codex accounts).
     public var account: String?
     public var prompt: String
     /// The pane the schedule was made for (`--pane`, the limit bar's pane): used when it still holds the session
@@ -245,15 +281,96 @@ public struct ContinueSession: Codable, Equatable, Sendable {
     }
 }
 
+/// Where `sendText` types: a pane by its tag (kept in `session.json`, so it survives a relaunch), or the only terminal
+/// pane of the workspace with a title. `pane` (a current pane id) is accepted by `schedule.add` / `update` only: the
+/// app gives that pane a tag and stores the tag instead (`ScheduleRunner`).
+public enum PaneTarget: Equatable, Sendable {
+    case tag(String)
+    case workspace(title: String)
+    /// Input only, never stored.
+    case pane(String)
+}
+
+extension PaneTarget: Codable {
+    private enum CodingKeys: String, CodingKey { case tag, workspace, pane }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let given: [PaneTarget] = [c.lenientString(.tag).map(PaneTarget.tag),
+                                   c.lenientString(.workspace).map { PaneTarget.workspace(title: $0) },
+                                   c.lenientString(.pane).map(PaneTarget.pane)].compactMap { $0 }
+        guard given.count == 1, let target = given.first else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath,
+                                                    debugDescription: "give one of tag, workspace or pane"))
+        }
+        self = target
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .tag(let tag): try c.encode(tag, forKey: .tag)
+        case .workspace(let title): try c.encode(title, forKey: .workspace)
+        case .pane(let pane): try c.encode(pane, forKey: .pane)
+        }
+    }
+}
+
+/// `sendText`: text typed into an existing pane (phase 2). `shell`: a one-line command typed at an empty prompt, with
+/// Return; `agent`: a prompt pasted into idle Claude Code or Codex, then Return.
+public struct SendText: Codable, Equatable, Sendable {
+    public enum Destination: String, Codable, CaseIterable, Sendable {
+        case shell
+        case agent
+    }
+
+    public var target: PaneTarget
+    public var text: String
+    public var to: Destination
+
+    public init(target: PaneTarget, text: String, to: Destination) {
+        self.target = target
+        self.text = text
+        self.to = to
+    }
+
+    private enum CodingKeys: String, CodingKey { case target, text, to }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        target = try c.decode(PaneTarget.self, forKey: .target)
+        guard let text = c.lenientString(.text) else {
+            throw DecodingError.dataCorruptedError(forKey: .text, in: c, debugDescription: "missing text")
+        }
+        self.text = text
+        guard let to = c.lenientString(.to).flatMap(Destination.init(rawValue:)) else {
+            throw DecodingError.dataCorruptedError(forKey: .to, in: c, debugDescription: "to must be shell or agent")
+        }
+        self.to = to
+    }
+}
+
 /// What a schedule does.
 public enum ScheduleAction: Equatable, Sendable {
     case startWorkspace(StartWorkspace)
     case continueSession(ContinueSession)
+    /// Phase 2.
+    case sendText(SendText)
 
     public var type: String {
         switch self {
         case .startWorkspace: return "startWorkspace"
         case .continueSession: return "continueSession"
+        case .sendText: return "sendText"
+        }
+    }
+
+    /// The schema version a build needs to run this action (`ScheduleFile.version`).
+    var requiredVersion: Int {
+        switch self {
+        case .startWorkspace: return 1
+        case .continueSession(let action): return action.agent == .claude ? 1 : 2
+        case .sendText: return 2
         }
     }
 }
@@ -267,6 +384,7 @@ extension ScheduleAction: Codable {
         switch type {
         case "startWorkspace": self = .startWorkspace(try StartWorkspace(from: decoder))
         case "continueSession": self = .continueSession(try ContinueSession(from: decoder))
+        case "sendText": self = .sendText(try SendText(from: decoder))
         default: throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown action type \(type)")
         }
     }
@@ -277,6 +395,7 @@ extension ScheduleAction: Codable {
         switch self {
         case .startWorkspace(let action): try action.encode(to: encoder)
         case .continueSession(let action): try action.encode(to: encoder)
+        case .sendText(let action): try action.encode(to: encoder)
         }
     }
 }
@@ -382,18 +501,21 @@ public struct ScheduleDraft: Codable, Equatable, Sendable {
     public var action: ScheduleAction
     public var late: ScheduleLatePolicy
     public var notify: ScheduleNotify
+    /// A notification "starts in 1 minute" with Skip before each scheduled firing (phase 2; on when absent).
+    public var warn: Bool
 
     public init(name: String, enabled: Bool = true, trigger: ScheduleTrigger, action: ScheduleAction,
-                late: ScheduleLatePolicy? = nil, notify: ScheduleNotify = .failures) {
+                late: ScheduleLatePolicy? = nil, notify: ScheduleNotify = .failures, warn: Bool = true) {
         self.name = name
         self.enabled = enabled
         self.trigger = trigger
         self.action = action
         self.late = late ?? .defaultPolicy(for: trigger)
         self.notify = notify
+        self.warn = warn
     }
 
-    private enum CodingKeys: String, CodingKey { case name, enabled, trigger, action, late, notify }
+    private enum CodingKeys: String, CodingKey { case name, enabled, trigger, action, late, notify, warn }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -403,6 +525,7 @@ public struct ScheduleDraft: Codable, Equatable, Sendable {
         action = try c.decode(ScheduleAction.self, forKey: .action)
         late = (try? c.decodeIfPresent(ScheduleLatePolicy.self, forKey: .late)) ?? .defaultPolicy(for: trigger)
         notify = (try? c.decodeIfPresent(ScheduleNotify.self, forKey: .notify)) ?? .failures
+        warn = c.lenientBool(.warn) ?? true
     }
 }
 
@@ -416,10 +539,15 @@ public struct Schedule: Codable, Equatable, Sendable {
     public var action: ScheduleAction
     public var late: ScheduleLatePolicy
     public var notify: ScheduleNotify
+    public var warn: Bool
     public var origin: ScheduleOrigin
     public var createdAt: Date
-    /// nil = no further firing (a one-shot that is done, or a disabled schedule).
+    /// nil = no further firing (a one-shot that is done, a disabled schedule, a repeating limit trigger waiting for
+    /// the next limit).
     public var nextFireAt: Date?
+    /// The last firing time that was handled (run, missed or skipped): a repeating limit trigger never fires the same
+    /// reset twice (`ScheduleCalendar.recomputed`).
+    public var lastDueAt: Date?
 
     public init(id: String, draft: ScheduleDraft, origin: ScheduleOrigin, createdAt: Date, nextFireAt: Date? = nil) {
         self.id = id
@@ -429,6 +557,7 @@ public struct Schedule: Codable, Equatable, Sendable {
         action = draft.action
         late = draft.late
         notify = draft.notify
+        warn = draft.warn
         self.origin = origin
         self.createdAt = createdAt
         self.nextFireAt = nextFireAt
@@ -436,7 +565,9 @@ public struct Schedule: Codable, Equatable, Sendable {
 
     /// The parts the user chose.
     public var draft: ScheduleDraft {
-        get { ScheduleDraft(name: name, enabled: enabled, trigger: trigger, action: action, late: late, notify: notify) }
+        get {
+            ScheduleDraft(name: name, enabled: enabled, trigger: trigger, action: action, late: late, notify: notify, warn: warn)
+        }
         set {
             name = newValue.name
             enabled = newValue.enabled
@@ -444,11 +575,16 @@ public struct Schedule: Codable, Equatable, Sendable {
             action = newValue.action
             late = newValue.late
             notify = newValue.notify
+            warn = newValue.warn
         }
     }
 
+    /// The lowest `schedules.json` version whose builds run this schedule as meant (`ScheduleFile`): 2 for the phase-2
+    /// actions and triggers. Fields older builds can ignore (`warn`, `lastDueAt`) do not count.
+    public var requiredVersion: Int { max(trigger.requiredVersion, action.requiredVersion) }
+
     private enum CodingKeys: String, CodingKey {
-        case id, name, enabled, trigger, action, late, notify, origin, createdAt, nextFireAt
+        case id, name, enabled, trigger, action, late, notify, warn, origin, createdAt, nextFireAt, lastDueAt
     }
 
     public init(from decoder: Decoder) throws {
@@ -464,9 +600,11 @@ public struct Schedule: Codable, Equatable, Sendable {
         action = draft.action
         late = draft.late
         notify = draft.notify
+        warn = draft.warn
         origin = (try? c.decodeIfPresent(ScheduleOrigin.self, forKey: .origin)) ?? .app
         createdAt = c.lenientDate(.createdAt) ?? Date(timeIntervalSince1970: 0)
         nextFireAt = c.lenientDate(.nextFireAt)
+        lastDueAt = c.lenientDate(.lastDueAt)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -478,9 +616,11 @@ public struct Schedule: Codable, Equatable, Sendable {
         try c.encode(action, forKey: .action)
         try c.encode(late, forKey: .late)
         try c.encode(notify, forKey: .notify)
+        try c.encode(warn, forKey: .warn)
         try c.encode(origin, forKey: .origin)
         try c.encode(createdAt.timeIntervalSince1970, forKey: .createdAt)
         try c.encodeIfPresent(nextFireAt?.timeIntervalSince1970, forKey: .nextFireAt)
+        try c.encodeIfPresent(lastDueAt?.timeIntervalSince1970, forKey: .lastDueAt)
     }
 }
 
@@ -488,7 +628,7 @@ extension Schedule {
     /// Already continues `sessionID` when `account`'s limit resets, and will run (the limit bar's "Continue at" makes
     /// one such schedule per session and account). One without a next firing does not count.
     public func continuesAtReset(sessionID: String, account: String) -> Bool {
-        guard enabled, nextFireAt != nil, case .limitReset(let name, _) = trigger,
+        guard enabled, nextFireAt != nil, case .limitReset(let name, _, _) = trigger,
               case .continueSession(let action) = action else { return false }
         return name.caseInsensitiveCompare(account) == .orderedSame && action.sessionID == sessionID
     }
@@ -502,11 +642,11 @@ public enum ScheduleRunState: String, Codable, CaseIterable, Sendable {
     case waitingForAccount
     /// Waits for the pane's shell to sit at an empty prompt.
     case waitingForPane
-    /// The prompt was pasted into Claude Code; Return follows.
+    /// The prompt was pasted into the agent; Return follows.
     case typing
-    /// Waits for Claude Code to be idle (not busy, not asking, no subagent, screen settled).
+    /// Waits for the agent (Claude Code or Codex) to be idle (not busy, not asking, no subagent, screen settled).
     case waitingForAgent
-    /// Return was sent; waits for Claude Code to start working.
+    /// Return was sent; waits for the agent to start working.
     case confirming
     case succeeded
     case failed
@@ -618,9 +758,9 @@ public struct ScheduleRun: Codable, Equatable, Sendable {
 /// localizes its own.
 public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
     // Succeeded
-    /// Claude Code started working on the prompt.
+    /// The agent started working on the prompt.
     case confirmed
-    /// The prompt was sent but Claude Code was not seen working within `confirmTimeout`.
+    /// The prompt was sent but the agent was not seen working within `confirmTimeout`.
     case unconfirmed
     /// The command was typed (no prompt).
     case commandTyped
@@ -639,6 +779,13 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
     case ambiguousSession
     case movedToOtherAccount
     case notClaude
+    case notCodex
+    /// `sendText`: no pane has the tag, or no workspace has the title (or it has no terminal pane).
+    case paneNotFound
+    /// `sendText`: several workspaces have the title, or it has several terminal panes.
+    case ambiguousTarget
+    /// Skip on the "starts in 1 minute" notice, `schedule.skip`.
+    case skippedByUser
     // Failed
     case accountRemoved
     case accountStillLimited
@@ -660,8 +807,8 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
 
     public var english: String {
         switch self {
-        case .confirmed: return "Claude Code started working on the prompt"
-        case .unconfirmed: return "the prompt was sent, but Claude Code was not seen working"
+        case .confirmed: return "the agent started working on the prompt"
+        case .unconfirmed: return "the prompt was sent, but the agent was not seen working"
         case .commandTyped: return "the command was typed"
         case .workspaceOpened: return "the workspace was opened"
         case .previousRunActive: return "the previous run was still active"
@@ -670,17 +817,21 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
         case .allAccountsLimited: return "every account has hit its limit"
         case .agentRunning: return "an agent was running in the pane"
         case .otherProgram: return "the pane was running another program"
-        case .agentNotRunning: return "Claude Code was no longer running in the pane"
+        case .agentNotRunning: return "no agent was running in the pane"
         case .differentSession: return "the pane was running a different session"
         case .ambiguousSession: return "several panes hold the session"
         case .movedToOtherAccount: return "the session had moved to another account"
         case .notClaude: return "the agent in the pane is not Claude Code"
+        case .notCodex: return "the agent in the pane is not Codex"
+        case .paneNotFound: return "the target pane was not found"
+        case .ambiguousTarget: return "several panes match the target"
+        case .skippedByUser: return "skipped"
         case .accountRemoved: return "the account was removed"
         case .accountStillLimited: return "the account was still limited"
         case .paneClosed: return "the pane was closed"
         case .shellNotReady: return "the shell prompt did not become ready"
-        case .agentDidNotStart: return "Claude Code did not start"
-        case .agentBusy: return "Claude Code stayed busy"
+        case .agentDidNotStart: return "the agent did not start"
+        case .agentBusy: return "the agent stayed busy"
         case .sessionNotFound: return "no pane holds the session and its folder is not known"
         case .folderMissing: return "the folder does not exist"
         case .invalidSchedule: return "the schedule is not valid any more"
@@ -724,6 +875,8 @@ public enum ScheduleLimits {
 public enum ScheduleIDs {
     public static let schedulePrefix = "s"
     public static let runPrefix = "r"
+    /// A pane's schedule tag (`PaneTarget.tag`, saved in `session.json`).
+    public static let paneTagPrefix = "t"
 
     /// `prefix` + 8 random lowercase hex digits, not in `taken`.
     public static func make(prefix: String, taken: Set<String> = []) -> String {

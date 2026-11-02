@@ -129,6 +129,86 @@ final class ScheduleCalendarTests: XCTestCase {
         XCTAssertNil(ScheduleCalendar.nextFire(trigger, after: now, accounts: []))
     }
 
+    func testRepeatingLimitResetFiresOncePerReset() {
+        let created = date("2026-11-04T10:00:00Z")
+        let reset = date("2026-11-04T15:00:00Z")
+        var account = ClaudeAccount(name: "work", configDir: "~/.claude-work",
+                                    limit: ClaudeAccountLimit(kind: .usageLimit, resetsAt: reset, detectedAt: created))
+        let trigger = ScheduleTrigger.limitReset(account: "work", delay: 60, repeats: true)
+        var schedule = Schedule(id: "s00000001", draft: ScheduleDraft(name: "again", trigger: trigger,
+                                                                      action: .continueSession(ContinueSession(sessionID: "abc"))),
+                                origin: .app, createdAt: created)
+        XCTAssertEqual(ScheduleCalendar.recomputed(schedule, now: created, accounts: [account], codex: nil), reset.addingTimeInterval(60))
+        // Fired (handled): the same reset never fires again, the schedule waits for the next limit.
+        schedule.lastDueAt = reset.addingTimeInterval(60)
+        schedule.nextFireAt = nil
+        XCTAssertNil(ScheduleCalendar.recomputed(schedule, now: reset.addingTimeInterval(120), accounts: [account], codex: nil))
+        // A cleared limit does not fire a repeating trigger.
+        account.limit = nil
+        XCTAssertNil(ScheduleCalendar.recomputed(schedule, now: reset.addingTimeInterval(120), accounts: [account], codex: nil))
+        // The next limit: its reset.
+        let next = date("2026-11-04T23:00:00Z")
+        account.limit = ClaudeAccountLimit(kind: .usageLimit, resetsAt: next, detectedAt: next.addingTimeInterval(-3600))
+        XCTAssertEqual(ScheduleCalendar.recomputed(schedule, now: next.addingTimeInterval(-3600), accounts: [account], codex: nil),
+                       next.addingTimeInterval(60))
+        // A pending firing is kept when the limit is cleared before it, and dropped with the account.
+        schedule.nextFireAt = next.addingTimeInterval(60)
+        account.limit = nil
+        XCTAssertEqual(ScheduleCalendar.recomputed(schedule, now: next, accounts: [account], codex: nil), next.addingTimeInterval(60))
+        XCTAssertNil(ScheduleCalendar.recomputed(schedule, now: next, accounts: [], codex: nil))
+        // A reset that was over before the schedule existed is not run (a stale limit).
+        let stale = Schedule(id: "s00000002", draft: schedule.draft, origin: .app, createdAt: next.addingTimeInterval(3600))
+        account.limit = ClaudeAccountLimit(kind: .usageLimit, resetsAt: next, detectedAt: next.addingTimeInterval(-3600))
+        XCTAssertNil(ScheduleCalendar.recomputed(stale, now: next.addingTimeInterval(3600), accounts: [account], codex: nil))
+        // One-shot triggers keep the phase-1 rule (cleared: due now).
+        var once = schedule
+        once.trigger = .limitReset(account: "work", delay: 60)
+        account.limit = nil
+        XCTAssertEqual(ScheduleCalendar.recomputed(once, now: next, accounts: [account], codex: nil), next)
+    }
+
+    func testCodexLimitReset() {
+        let now = date("2026-11-04T11:40:00Z")
+        let fiveHour = date("2026-11-04T15:00:00Z")
+        let sevenDay = date("2026-11-06T09:00:00Z")
+        func limits(_ windows: [(Double, Date?)]) -> AgentLimits {
+            AgentLimits(agent: .codex, limits: windows.enumerated().map { index, window in
+                UsageLimit(id: index == 0 ? UsageLimit.fiveHour : UsageLimit.sevenDay, usedPercent: window.0, resetsAt: window.1)
+            }, updatedAt: now)
+        }
+        // The latest reset among the windows used up.
+        XCTAssertEqual(limits([(100, fiveHour), (40, sevenDay)]).exhaustedReset, fiveHour)
+        XCTAssertEqual(limits([(100, fiveHour), (100, sevenDay)]).exhaustedReset, sevenDay)
+        XCTAssertNil(limits([(99.5, fiveHour)]).exhaustedReset)
+        XCTAssertNil(limits([(100, nil)]).exhaustedReset)
+
+        let once = ScheduleTrigger.codexLimitReset(delay: 60)
+        XCTAssertEqual(ScheduleCalendar.nextFire(once, after: now, accounts: [], codex: limits([(100, fiveHour)])),
+                       fiveHour.addingTimeInterval(60))
+        // Usable again: due now. Not known: nil (and `recomputed` keeps the stored time).
+        XCTAssertEqual(ScheduleCalendar.nextFire(once, after: now, accounts: [], codex: limits([(3, fiveHour)])), now)
+        XCTAssertNil(ScheduleCalendar.nextFire(once, after: now, accounts: [], codex: nil))
+        var schedule = Schedule(id: "s00000001", draft: ScheduleDraft(name: "codex", trigger: once,
+                                                                      action: .continueSession(ContinueSession(agent: .codex, sessionID: "abc"))),
+                                origin: .app, createdAt: now, nextFireAt: fiveHour.addingTimeInterval(60))
+        XCTAssertEqual(ScheduleCalendar.recomputed(schedule, now: now, accounts: [], codex: nil), fiveHour.addingTimeInterval(60))
+        // Repeating: a later reset after the last handled one.
+        schedule.trigger = .codexLimitReset(delay: 60, repeats: true)
+        schedule.lastDueAt = fiveHour.addingTimeInterval(60)
+        schedule.nextFireAt = nil
+        XCTAssertNil(ScheduleCalendar.recomputed(schedule, now: fiveHour, accounts: [], codex: limits([(100, fiveHour)])))
+        XCTAssertNil(ScheduleCalendar.recomputed(schedule, now: fiveHour, accounts: [], codex: limits([(2, sevenDay)])))
+        XCTAssertEqual(ScheduleCalendar.recomputed(schedule, now: fiveHour, accounts: [], codex: limits([(100, sevenDay)])),
+                       sevenDay.addingTimeInterval(60))
+        // New figures after the reset (no window used up) never drop a pending firing.
+        schedule.nextFireAt = sevenDay.addingTimeInterval(60)
+        XCTAssertEqual(ScheduleCalendar.recomputed(schedule, now: sevenDay, accounts: [], codex: limits([(1, nil)])),
+                       sevenDay.addingTimeInterval(60))
+        // Weekly and once triggers are not recomputed from limits.
+        schedule.trigger = .once(at: sevenDay)
+        XCTAssertEqual(ScheduleCalendar.recomputed(schedule, now: now, accounts: [], codex: nil), schedule.nextFireAt)
+    }
+
     // MARK: catch-up
 
     func testCatchUp() {

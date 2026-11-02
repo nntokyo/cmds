@@ -2,10 +2,15 @@ import Foundation
 
 // MARK: - Files
 
-/// `schedules.json`: `{"version": 1, "schedules": [...]}`. Decoding is lenient: a schedule that cannot be decoded or
+/// `schedules.json`: `{"version": N, "schedules": [...]}`. Decoding is lenient: a schedule that cannot be decoded or
 /// is invalid is dropped (and counted), not the whole file; unknown keys are ignored.
+///
+/// `version` is the lowest version whose builds run every schedule in the file as meant (`Schedule.requiredVersion`):
+/// 1 while it holds only phase-1 schedules, 2 once one uses a phase-2 action or trigger. A build opens a file of a
+/// higher version than `currentVersion` read only (shown, never run or saved over), so a phase-1 build never runs a
+/// repeating trigger as a one-shot or drops a `sendText` schedule.
 public struct ScheduleFile: Codable, Equatable, Sendable {
-    public static let currentVersion = 1
+    public static let currentVersion = 2
 
     public var version: Int
     public var schedules: [Schedule]
@@ -15,9 +20,14 @@ public struct ScheduleFile: Codable, Equatable, Sendable {
     /// Written by a newer cmds: read only (never saved over).
     public var isFromNewerVersion: Bool { version > Self.currentVersion }
 
-    public init(schedules: [Schedule] = [], version: Int = ScheduleFile.currentVersion) {
-        self.version = version
+    public init(schedules: [Schedule] = [], version: Int? = nil) {
+        self.version = version ?? Self.version(for: schedules)
         self.schedules = schedules
+    }
+
+    /// The version to write for `schedules`.
+    public static func version(for schedules: [Schedule]) -> Int {
+        schedules.map(\.requiredVersion).max() ?? 1
     }
 
     private enum CodingKeys: String, CodingKey { case version, schedules }
@@ -44,14 +54,17 @@ public struct ScheduleFile: Codable, Equatable, Sendable {
     }
 }
 
-/// `schedule-runs.json`: `{"version": 1, "runs": [...]}`, newest first.
+/// `schedule-runs.json`: `{"version": 1, "runs": [...]}`, newest first. Stays at version 1: older builds read reason
+/// codes they do not know as `other`.
 public struct ScheduleRunsFile: Codable, Equatable, Sendable {
+    public static let currentVersion = 1
+
     public var version: Int
     public var runs: [ScheduleRun]
 
-    public var isFromNewerVersion: Bool { version > ScheduleFile.currentVersion }
+    public var isFromNewerVersion: Bool { version > Self.currentVersion }
 
-    public init(runs: [ScheduleRun] = [], version: Int = ScheduleFile.currentVersion) {
+    public init(runs: [ScheduleRun] = [], version: Int = ScheduleRunsFile.currentVersion) {
         self.version = version
         self.runs = runs
     }
@@ -125,17 +138,20 @@ public struct ScheduleListEntry: Codable, Equatable, Sendable {
     public var lastRun: ScheduleRun?
     /// Why it cannot run as it is (e.g. its account was removed); nil when fine.
     public var problem: String?
+    /// `sendText`: the pane its target is now (`p3`), if it resolves to one.
+    public var targetPane: String?
 
     public init(schedule: Schedule, nextFireAt: Date? = nil, activeRun: ScheduleRun? = nil, lastRun: ScheduleRun? = nil,
-                problem: String? = nil) {
+                problem: String? = nil, targetPane: String? = nil) {
         self.schedule = schedule
         self.nextFireAt = nextFireAt
         self.activeRun = activeRun
         self.lastRun = lastRun
         self.problem = problem
+        self.targetPane = targetPane
     }
 
-    private enum CodingKeys: String, CodingKey { case schedule, nextFireAt, activeRun, lastRun, problem }
+    private enum CodingKeys: String, CodingKey { case schedule, nextFireAt, activeRun, lastRun, problem, targetPane }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -144,6 +160,7 @@ public struct ScheduleListEntry: Codable, Equatable, Sendable {
         activeRun = try? c.decodeIfPresent(ScheduleRun.self, forKey: .activeRun)
         lastRun = try? c.decodeIfPresent(ScheduleRun.self, forKey: .lastRun)
         problem = c.lenientString(.problem)
+        targetPane = c.lenientString(.targetPane)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -153,6 +170,7 @@ public struct ScheduleListEntry: Codable, Equatable, Sendable {
         try c.encodeIfPresent(activeRun, forKey: .activeRun)
         try c.encodeIfPresent(lastRun, forKey: .lastRun)
         try c.encodeIfPresent(problem, forKey: .problem)
+        try c.encodeIfPresent(targetPane, forKey: .targetPane)
     }
 }
 

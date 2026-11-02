@@ -20,12 +20,96 @@ final class ScheduleRunTimingTests: XCTestCase {
         o.agentOnTerminal = true
         o.activity = .idle
         o.screenUnchangedFor = 3
+        o.agent = .claude
+        o.agentReported = session != nil
         o.sessionID = session
         return o
     }
 
     private let owned = T.Expectation(startsAgent: true, ownsPane: true)
     private let session = T.Expectation(sessionID: "abc")
+
+    /// Codex idle at its prompt: its session file matched, quiet, screen unchanged for 5 s.
+    private func codex() -> T.Observation {
+        var o = T.Observation()
+        o.foreground = .agent
+        o.agentOnTerminal = true
+        o.activity = .idle
+        o.screenUnchangedFor = PaneReadiness.codexIdleTime
+        o.agent = .codex
+        o.agentReported = true
+        o.sessionID = "019a"
+        return o
+    }
+
+    /// `sendText` to an agent: Claude Code or Codex, the user's pane.
+    private let anyAgent = T.Expectation(agent: nil, startsAgent: false, ownsPane: false)
+
+    // MARK: Codex (phase 2)
+
+    func testCodexIdleNeedsEveryCondition() {
+        let codexSession = T.Expectation(agent: .codex, sessionID: "019a")
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: codex(), elapsed: 1, expect: codexSession), .paste)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: codex(), elapsed: 1, expect: anyAgent), .paste)
+        let blockers: [(String, (inout T.Observation) -> Void)] = [
+            ("session file not matched", { $0.agentReported = false }),
+            ("writing to its session file", { $0.activity = .busy }),
+            ("screen changed within 5 s", { $0.screenUnchangedFor = 4.9 }),
+            ("working line on screen", { $0.workingOnScreen = true }),
+            ("a choice on screen", { $0.choiceOnScreen = true }),
+            ("asks for input", { $0.activity = .needsInput }),
+            ("resume queued", { $0.resumeQueued = true }),
+            ("not in the foreground", { $0.foreground = .unknown }),
+        ]
+        for (name, block) in blockers {
+            var o = codex()
+            block(&o)
+            let step = T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: anyAgent)
+            XCTAssertNotEqual(step, .paste, name)
+            XCTAssertFalse([T.Step.type, .enter].contains(step), name)
+        }
+        // Busy for 30 minutes: the run fails, nothing is typed.
+        var busy = codex()
+        busy.workingOnScreen = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: busy, elapsed: T.idleWait, expect: anyAgent), .fail(.agentBusy))
+        // Claude Code's rules stay as they were (2 s), plus the working line.
+        var claude = agent()
+        claude.screenUnchangedFor = 2
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: claude, elapsed: 1, expect: session), .paste)
+        claude.workingOnScreen = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: claude, elapsed: 1, expect: session), .wait)
+    }
+
+    func testOnlyTheExpectedAgent() {
+        let codexSession = T.Expectation(agent: .codex, sessionID: "019a")
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(), elapsed: 1, expect: codexSession), .skip(.notCodex))
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: codex(), elapsed: 1, expect: session), .skip(.notClaude))
+        var other = codex()
+        other.sessionID = "019b"
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: other, elapsed: 1, expect: codexSession), .skip(.differentSession))
+        // An agent of unknown kind is never typed into.
+        var unknown = agent()
+        unknown.agent = nil
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: unknown, elapsed: 1, expect: anyAgent), .wait)
+    }
+
+    func testSendTextToTheUsersPane() {
+        // To an agent: a shell or another program in the pane skips the run.
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 1, expect: anyAgent), .skip(.agentNotRunning))
+        var program = shell
+        program.foreground = .other
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: program, elapsed: 1, expect: anyAgent), .skip(.otherProgram))
+        // To a shell: only at an empty prompt; an agent or a program (e.g. `sleep 60`) skips it.
+        let shellText = T.Expectation(agent: nil, startsAgent: false, ownsPane: false)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: shell, elapsed: 1, expect: shellText), .type)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: codex(), elapsed: 1, expect: shellText), .skip(.agentRunning))
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: program, elapsed: 1, expect: shellText), .wait)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: program, elapsed: T.otherProgramGrace, expect: shellText),
+                       .skip(.otherProgram))
+        var backgrounded = shell
+        backgrounded.agentOnTerminal = true
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: backgrounded, elapsed: 1, expect: shellText), .skip(.agentRunning))
+    }
 
     // MARK: waitingForAccount
 
@@ -136,7 +220,7 @@ final class ScheduleRunTimingTests: XCTestCase {
         XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(nil), elapsed: 5, expect: resumed), .wait)
         XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(nil), elapsed: 120, expect: resumed), .fail(.agentDidNotStart))
         var codex = agent()
-        codex.otherAgent = true
+        codex.agent = .codex
         XCTAssertEqual(T.step(state: .waitingForAgent, observation: codex, elapsed: 1, expect: session), .skip(.notClaude))
     }
 

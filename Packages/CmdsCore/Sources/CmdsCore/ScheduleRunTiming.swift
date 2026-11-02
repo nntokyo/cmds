@@ -6,8 +6,9 @@ import Foundation
 /// Safety rules kept here:
 /// - Shell input only at a settled empty prompt of a shell in the foreground (`PaneReadiness.isShellReady`), with no
 ///   agent on the terminal.
-/// - A prompt goes into Claude Code only when it is idle (`PaneReadiness.isAgentIdle`), not asking for input or
-///   permission, with no account switch in progress and no resume queued, and only into the expected session.
+/// - A prompt goes into Claude Code only when it is idle (`PaneReadiness.isAgentIdle`), into Codex only by the stricter
+///   `PaneReadiness.isCodexIdle`; never when it asks for input or permission, shows a choice or its working line, with
+///   an account switch in progress or a resume queued; only into the expected agent and session.
 /// - Type once: every typing step moves the run on; nothing is retried.
 public enum ScheduleRunTiming {
     /// How often active runs are checked.
@@ -16,7 +17,7 @@ public enum ScheduleRunTiming {
     public static let shellReadyTimeout: TimeInterval = 60
     /// Waiting for Claude Code to start after its command was typed.
     public static let agentStartTimeout: TimeInterval = 120
-    /// Waiting for a busy Claude Code to become idle.
+    /// Waiting for a busy agent to become idle.
     public static let idleWait: TimeInterval = 30 * 60
     /// Waiting for a limited account's reset.
     public static let accountWait: TimeInterval = 8 * 3600
@@ -38,9 +39,11 @@ public enum ScheduleRunTiming {
     public struct Observation: Equatable, Sendable {
         public var pane = PaneObservation()
         public var paneExists = true
-        /// The agent reports itself as Codex (prompts go to Claude Code only).
-        public var otherAgent = false
-        /// The session id Claude Code reports in the pane (status line), if any.
+        /// The agent running in the foreground (its process), if known.
+        public var agent: AgentKind?
+        /// The pane reports usage of that agent (Claude Code's status line, Codex's session file).
+        public var agentReported = false
+        /// The session id that agent reports in the pane, if any.
         public var sessionID: String?
         /// The run's account is limited now; `accountFreeIn` is how long until its (or, with `auto`, the earliest)
         /// reset.
@@ -48,8 +51,10 @@ public enum ScheduleRunTiming {
         public var accountFreeIn: TimeInterval?
         public var accountSwitchInProgress = false
         public var resumeQueued = false
-        /// Claude Code shows a choice (a permission prompt, the folder trust question): `showsChoice(screen:)`.
+        /// The agent shows a choice (a permission prompt, the folder trust question): `showsChoice(screen:)`.
         public var choiceOnScreen = false
+        /// The agent's working line is on screen (`PaneReadiness.showsWorking`).
+        public var workingOnScreen = false
         /// After Return: Claude Code was seen working (busy, or its `UserPromptSubmit` hook).
         public var promptSubmitted = false
 
@@ -63,7 +68,9 @@ public enum ScheduleRunTiming {
 
     /// What the run expects of its pane.
     public struct Expectation: Equatable, Sendable {
-        /// The session the prompt is for; nil = whatever Claude Code the run started.
+        /// The agent the prompt is for; nil = Claude Code or Codex (`sendText`).
+        public var agent: AgentKind?
+        /// The session the prompt is for; nil = whatever agent the run started (or the pane runs).
         public var sessionID: String?
         /// The run typed (or a queued resume will type) the command that starts the agent, so it may take
         /// `agentStartTimeout` to appear.
@@ -71,7 +78,8 @@ public enum ScheduleRunTiming {
         /// The run created the pane (else it is the user's pane holding the session).
         public var ownsPane: Bool
 
-        public init(sessionID: String? = nil, startsAgent: Bool = false, ownsPane: Bool = false) {
+        public init(agent: AgentKind? = .claude, sessionID: String? = nil, startsAgent: Bool = false, ownsPane: Bool = false) {
+            self.agent = agent
             self.sessionID = sessionID
             self.startsAgent = startsAgent
             self.ownsPane = ownsPane
@@ -140,7 +148,9 @@ public enum ScheduleRunTiming {
 
     private static func agentStep(_ o: Observation, elapsed: TimeInterval, expect: Expectation) -> Step {
         guard o.paneExists else { return .fail(.paneClosed) }
-        if o.otherAgent { return .skip(.notClaude) }
+        if let wanted = expect.agent, let seen = o.agent, seen != wanted {
+            return .skip(wanted == .codex ? .notCodex : .notClaude)
+        }
         let agentUp = o.foreground == .agent
         guard agentUp else {
             // Still starting (or a queued resume has not typed yet).
@@ -157,7 +167,15 @@ public enum ScheduleRunTiming {
                 return elapsed >= agentStartTimeout ? .fail(.agentDidNotStart) : .wait
             }
         }
-        if PaneReadiness.isAgentIdle(o.pane), o.activity != .needsInput, !o.choiceOnScreen, !o.accountSwitchInProgress, !o.resumeQueued { return .paste }
+        let idle: Bool
+        switch o.agent {
+        case .claude?: idle = PaneReadiness.isAgentIdle(o.pane)
+        case .codex?: idle = PaneReadiness.isCodexIdle(o.pane, sessionReported: o.agentReported)
+        // Not known which agent runs: never typed into.
+        case .other?, nil: idle = false
+        }
+        if idle, o.activity != .needsInput, !o.choiceOnScreen, !o.workingOnScreen, !o.accountSwitchInProgress,
+           !o.resumeQueued { return .paste }
         return elapsed >= idleWait ? .fail(.agentBusy) : .wait
     }
 
@@ -182,7 +200,7 @@ public enum ScheduleRunTiming {
         case ambiguous
     }
 
-    /// The pane a `continueSession` run uses. `running`: panes where Claude Code runs the session now; `remembering`:
+    /// The pane a `continueSession` run uses. `running`: panes where the agent runs the session now; `remembering`:
     /// other panes that remember or offer it; `preferred`: the schedule's own pane (`ContinueSession.pane`). A pane
     /// running the session wins over one remembering it (never a second copy of a running session); among them the
     /// preferred pane, else the only one.

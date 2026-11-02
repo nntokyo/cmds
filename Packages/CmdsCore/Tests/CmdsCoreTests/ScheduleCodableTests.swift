@@ -109,10 +109,83 @@ final class ScheduleCodableTests: XCTestCase {
     }
 
     func testNewerVersionIsReadOnly() throws {
-        let text = #"{"version": 2, "schedules": [], "runs": []}"#
+        let text = #"{"version": 3, "schedules": [], "runs": []}"#
         XCTAssertTrue(try JSONDecoder().decode(ScheduleFile.self, from: Data(text.utf8)).isFromNewerVersion)
         XCTAssertTrue(try JSONDecoder().decode(ScheduleRunsFile.self, from: Data(text.utf8)).isFromNewerVersion)
         XCTAssertFalse(try JSONDecoder().decode(ScheduleFile.self, from: Data(#"{"schedules": []}"#.utf8)).isFromNewerVersion)
+        // Version 2 (phase 2) is this build's; the history stays at version 1.
+        XCTAssertFalse(try JSONDecoder().decode(ScheduleFile.self, from: Data(#"{"version": 2, "schedules": []}"#.utf8)).isFromNewerVersion)
+        XCTAssertTrue(try JSONDecoder().decode(ScheduleRunsFile.self, from: Data(#"{"version": 2, "runs": []}"#.utf8)).isFromNewerVersion)
+        XCTAssertEqual(try json(ScheduleRunsFile())["version"] as? Int, 1)
+    }
+
+    // MARK: Phase 2: versioning
+
+    private func phase2(_ trigger: ScheduleTrigger, _ action: ScheduleAction) -> Schedule {
+        Schedule(id: "s0000000a", draft: ScheduleDraft(name: "p2", trigger: trigger, action: action), origin: .app,
+                 createdAt: created)
+    }
+
+    private let send = ScheduleAction.sendText(SendText(target: .tag("t1a2b3c4d"), text: "continue", to: .agent))
+
+    func testVersionIsTheLowestThatRunsEverySchedule() throws {
+        // Only phase-1 schedules: version 1, so a phase-1 build keeps running them.
+        XCTAssertEqual(ScheduleFile(schedules: [morning, continuing]).version, 1)
+        XCTAssertEqual(try json(ScheduleFile(schedules: [])).count, 2)
+        XCTAssertEqual(try json(ScheduleFile(schedules: [morning]))["version"] as? Int, 1)
+        // Any phase-2 action or trigger: version 2, which a phase-1 build (currentVersion 1) opens read only.
+        let codex = ContinueSession(agent: .codex, sessionID: "019a-codex")
+        for schedule in [phase2(.once(at: created), send),
+                         phase2(.once(at: created), .continueSession(codex)),
+                         phase2(.limitReset(account: "work", delay: 60, repeats: true), continuing.action),
+                         phase2(.codexLimitReset(delay: 60), continuing.action)] {
+            let file = ScheduleFile(schedules: [morning, schedule])
+            XCTAssertEqual(file.version, 2, "\(schedule.trigger) \(schedule.action)")
+            XCTAssertGreaterThan(file.version, 1)
+            let decoded = try JSONDecoder().decode(ScheduleFile.self, from: JSONEncoder().encode(file))
+            XCTAssertEqual(decoded.schedules, file.schedules)
+            XCTAssertFalse(decoded.isFromNewerVersion)
+        }
+        // Fields an older build may ignore do not raise it.
+        var quiet = morning
+        quiet.warn = false
+        quiet.lastDueAt = created
+        XCTAssertEqual(ScheduleFile(schedules: [quiet]).version, 1)
+    }
+
+    func testPhase2Format() throws {
+        let object = try json(phase2(.limitReset(account: "work", delay: 60, repeats: true), send))
+        XCTAssertEqual((object["trigger"] as? [String: Any])?["repeats"] as? Bool, true)
+        let action = object["action"] as? [String: Any]
+        XCTAssertEqual(action?["type"] as? String, "sendText")
+        XCTAssertEqual(action?["to"] as? String, "agent")
+        XCTAssertEqual(action?["target"] as? [String: String], ["tag": "t1a2b3c4d"])
+        XCTAssertEqual(object["warn"] as? Bool, true)
+        // A one-shot limit trigger is written as in phase 1 (no `repeats`).
+        XCTAssertNil((try json(continuing)["trigger"] as? [String: Any])?["repeats"])
+        let codex = try json(phase2(.codexLimitReset(delay: 0), send))["trigger"] as? [String: Any]
+        XCTAssertEqual(codex?["type"] as? String, "codexLimitReset")
+        // Read back: targets by workspace title; `warn` absent = on (phase-1 files).
+        let text = """
+            {"version": 2, "schedules": [
+              {"id": "s00000002", "name": "x", "trigger": {"type": "codexLimitReset", "delay": 30, "repeats": true},
+               "action": {"type": "sendText", "target": {"workspace": "API"}, "text": "make test", "to": "shell"}},
+              {"id": "s00000003", "name": "bad target", "trigger": {"type": "once", "at": 1793000000},
+               "action": {"type": "sendText", "target": {"tag": "t1", "workspace": "API"}, "text": "x", "to": "shell"}},
+              {"id": "s00000004", "name": "pane ids are not stored", "trigger": {"type": "once", "at": 1793000000},
+               "action": {"type": "sendText", "target": {"pane": "p3"}, "text": "x", "to": "shell"}},
+              {"id": "s00000005", "name": "bad to", "trigger": {"type": "once", "at": 1793000000},
+               "action": {"type": "sendText", "target": {"workspace": "API"}, "text": "x", "to": "both"}}
+            ]}
+            """
+        let file = try JSONDecoder().decode(ScheduleFile.self, from: Data(text.utf8))
+        XCTAssertEqual(file.dropped, 3)
+        let kept = try XCTUnwrap(file.schedules.first)
+        XCTAssertEqual(kept.trigger, .codexLimitReset(delay: 30, repeats: true))
+        XCTAssertEqual(kept.action, .sendText(SendText(target: .workspace(title: "API"), text: "make test", to: .shell)))
+        XCTAssertTrue(kept.warn)
+        XCTAssertTrue(kept.trigger.repeats)
+        XCTAssertFalse(kept.trigger.isOneShot)
     }
 
     func testRuns() throws {
@@ -355,7 +428,9 @@ final class ScheduleValidationTests: XCTestCase {
             ScheduleValidation.problems(draft(.once(at: now), .continueSession(action)))
         }
         XCTAssertEqual(problems(ContinueSession(sessionID: "abc-123")), [])
-        XCTAssertEqual(problems(ContinueSession(agent: .codex, sessionID: "abc")), [.agentUnsupported])
+        XCTAssertEqual(problems(ContinueSession(agent: .codex, sessionID: "abc")), [])
+        XCTAssertEqual(problems(ContinueSession(agent: .codex, sessionID: "abc", account: "work")), [.accountWithCodex])
+        XCTAssertEqual(problems(ContinueSession(agent: .other, sessionID: "abc")), [.agentUnsupported])
         XCTAssertEqual(problems(ContinueSession(sessionID: "abc; rm -rf ~")), [.sessionIDInvalid])
         XCTAssertEqual(problems(ContinueSession(sessionID: "abc", cwd: "relative")), [.folderInvalid])
         XCTAssertEqual(problems(ContinueSession(sessionID: "abc", account: "auto")), [.accountInvalid("auto")])
@@ -381,5 +456,38 @@ final class ScheduleValidationTests: XCTestCase {
         XCTAssertEqual(problems(draft(weekly(["09:00"]), auto), accounts: []), [.noAccounts])
         let named = ScheduleAction.continueSession(ContinueSession(sessionID: "abc", account: "gone"))
         XCTAssertEqual(problems(draft(weekly(["09:00"]), named)), [.accountUnknown("gone")])
+    }
+
+    func testSendTextValidation() {
+        func problems(_ target: PaneTarget, _ text: String, _ to: SendText.Destination) -> [ScheduleProblem] {
+            ScheduleValidation.problems(draft(.once(at: now), .sendText(SendText(target: target, text: text, to: to))))
+        }
+        XCTAssertEqual(problems(.tag("t1a2b3c4d"), "make test", .shell), [])
+        XCTAssertEqual(problems(.workspace(title: "API"), "continue\nand then this", .agent), [])
+        XCTAssertEqual(problems(.tag("p3"), "x", .shell), [.targetInvalid])
+        XCTAssertEqual(problems(.pane("p3"), "x", .shell), [.targetInvalid])
+        XCTAssertEqual(problems(.workspace(title: "  "), "x", .shell), [.targetInvalid])
+        // A shell gets one line; an agent a prompt (line breaks fine, no escape sequences).
+        XCTAssertEqual(problems(.tag("t1a2b3c4d"), "make\ntest", .shell), [.commandInvalid])
+        XCTAssertEqual(problems(.tag("t1a2b3c4d"), "x\u{1b}[201~rm -rf ~", .agent), [.promptInvalid])
+        XCTAssertEqual(problems(.tag("t1a2b3c4d"), String(repeating: "a", count: 8 * 1024 + 1), .agent), [.promptTooLong])
+    }
+
+    func testPhase2Creation() {
+        let free = ClaudeAccount(name: "me", configDir: "~/.claude")
+        let send = ScheduleAction.sendText(SendText(target: .tag("t1a2b3c4d"), text: "continue", to: .agent))
+        func problems(_ trigger: ScheduleTrigger, codex: AgentLimits? = nil) -> [ScheduleProblem] {
+            ScheduleValidation.problems(draft(trigger, send), accounts: [free], codex: codex, existing: 0, now: now)
+        }
+        // "Every time it resets" needs no limit now; once does.
+        XCTAssertEqual(problems(.limitReset(account: "me", delay: 60)), [.accountNotLimited("me")])
+        XCTAssertEqual(problems(.limitReset(account: "me", delay: 60, repeats: true)), [])
+        XCTAssertEqual(problems(.limitReset(account: "gone", delay: 60, repeats: true)), [.accountUnknown("gone")])
+        let limited = AgentLimits(agent: .codex, limits: [UsageLimit(id: UsageLimit.fiveHour, usedPercent: 100,
+                                                                     resetsAt: now.addingTimeInterval(600))], updatedAt: now)
+        XCTAssertEqual(problems(.codexLimitReset(delay: 60)), [.codexNotLimited])
+        XCTAssertEqual(problems(.codexLimitReset(delay: 60), codex: limited), [])
+        XCTAssertEqual(problems(.codexLimitReset(delay: 60, repeats: true)), [])
+        XCTAssertEqual(problems(.codexLimitReset(delay: 7200, repeats: true)), [.delayOutOfRange])
     }
 }

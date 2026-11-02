@@ -123,4 +123,34 @@ final class PaneReadinessTests: XCTestCase {
         XCTAssertEqual(s.update("b", at: t0.addingTimeInterval(3)), 0) // the same text counts as new after a reset
         XCTAssertEqual(s.since, t0.addingTimeInterval(3))
     }
+
+    func testWorkingLineOnlyAtTheBottom() {
+        let working = """
+            › fix the login test
+
+            • Working (12s • esc to interrupt)
+
+            ▌ Ask Codex to do anything
+            """
+        XCTAssertTrue(PaneReadiness.showsWorking(screen: working))
+        XCTAssertTrue(PaneReadiness.showsWorking(screen: "✻ Thinking… (esc to interrupt)\n> \n"))
+        XCTAssertFalse(PaneReadiness.showsWorking(screen: "› done\n\n▌ Ask Codex to do anything\n"))
+        // Old output higher up that quotes the words does not count.
+        let quoted = "press esc to interrupt it\n" + (1...10).map { "line \($0)" }.joined(separator: "\n")
+        XCTAssertFalse(PaneReadiness.showsWorking(screen: quoted))
+    }
+
+    func testCodexIdleIsStricterThanClaude() {
+        var o = PaneObservation(foreground: .agent, agentOnTerminal: true, activity: .idle, screenUnchangedFor: 2)
+        XCTAssertTrue(PaneReadiness.isAgentIdle(o))
+        XCTAssertFalse(PaneReadiness.isCodexIdle(o, sessionReported: true))
+        o.screenUnchangedFor = PaneReadiness.codexIdleTime
+        XCTAssertTrue(PaneReadiness.isCodexIdle(o, sessionReported: true))
+        XCTAssertFalse(PaneReadiness.isCodexIdle(o, sessionReported: false))
+        o.activity = .busy
+        XCTAssertFalse(PaneReadiness.isCodexIdle(o, sessionReported: true))
+        o.activity = .idle
+        o.foreground = .shell
+        XCTAssertFalse(PaneReadiness.isCodexIdle(o, sessionReported: true))
+    }
 }
