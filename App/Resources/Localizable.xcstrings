@@ -693,6 +693,16 @@
         }
       }
     },
+    "A damaged schedules file was kept as %@ in the cmds support folder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "壊れたスケジュールのファイルは、cmdsのサポートフォルダに%@として残してあります。"
+          }
+        }
+      }
+    },
     "A folder cannot be copied or moved into itself.": {
       "localizations": {
         "ja": {
@@ -723,6 +733,16 @@
         }
       }
     },
+    "A late run must be allowed for 1 minute to 7 days.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遅れて実行できる時間は1分から7日までにしてください。"
+          }
+        }
+      }
+    },
     "A new workspace whose shell uses this account (CLAUDE_CONFIG_DIR); run claude there, and /login the first time": {
       "localizations": {
         "ja": {
@@ -743,12 +763,32 @@
         }
       }
     },
+    "A prompt needs a command that starts Claude Code.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプトには、Claude Codeを起動するコマンドが必要です。"
+          }
+        }
+      }
+    },
     "About cmds": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "cmdsについて"
+          }
+        }
+      }
+    },
+    "Account:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウント："
           }
         }
       }
@@ -769,6 +809,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "アカウントはこのMacのターミナルペーン用です。SSHペーンでは使えません。"
+          }
+        }
+      }
+    },
+    "Action": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動作"
+          }
+        }
+      }
+    },
+    "Action:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動作："
           }
         }
       }
@@ -809,6 +869,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claudeアカウントを追加"
+          }
+        }
+      }
+    },
+    "Add Claude accounts first (Settings › Agents).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先にClaudeアカウントを追加してください（設定 › エージェント）。"
+          }
+        }
+      }
+    },
+    "Add Schedule": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールを追加"
           }
         }
       }
@@ -903,12 +983,32 @@
         }
       }
     },
+    "An agent was running in the pane.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインでエージェントが動いていました。"
+          }
+        }
+      }
+    },
     "An item named “%@” already exists in the destination.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "移動先に“%@”という名前の項目がすでにあります。"
+          }
+        }
+      }
+    },
+    "Another run was using the pane.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別の実行がペインを使っていました。"
           }
         }
       }
@@ -955,6 +1055,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "確認する"
+          }
+        }
+      }
+    },
+    "Auto (the first without a limit)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動（上限に達していない最初のアカウント）"
           }
         }
       }
@@ -1100,6 +1210,17 @@
         }
       }
     },
+    "CLI": {
+      "comment": "a schedule made with the command line or socket API",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLI"
+          }
+        }
+      }
+    },
     "CPU": {
       "comment": "sidebar meter title",
       "localizations": {
@@ -1189,6 +1310,26 @@
         }
       }
     },
+    "Cancel Run": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行を中止"
+          }
+        }
+      }
+    },
+    "Cancelled": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中止"
+          }
+        }
+      }
+    },
     "Cancelled.": {
       "localizations": {
         "ja": {
@@ -1225,6 +1366,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "SSHワークスペースを開けません"
+          }
+        }
+      }
+    },
+    "Catch-up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遅れて実行"
+          }
+        }
+      }
+    },
+    "Cause": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "きっかけ"
           }
         }
       }
@@ -1279,12 +1440,32 @@
         }
       }
     },
+    "Choose a Claude Code session.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeのセッションを選んでください。"
+          }
+        }
+      }
+    },
     "Choose a file to preview": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "プレビューするファイルを選択"
+          }
+        }
+      }
+    },
+    "Choose a folder (an absolute path or ~/…).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを選んでください（絶対パスか ~/…）。"
           }
         }
       }
@@ -1305,6 +1486,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsから書き出したワークスペースのファイルを選択してください"
+          }
+        }
+      }
+    },
+    "Choose at least one weekday.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曜日を1つ以上選んでください。"
           }
         }
       }
@@ -1339,6 +1530,16 @@
         }
       }
     },
+    "Claude Code did not start.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeが起動しませんでした。"
+          }
+        }
+      }
+    },
     "Claude Code keeps each session in its config folder’s projects folder. To continue a session under another account, every account’s projects folder becomes a symbolic link to the first account’s. Sessions kept only in a renamed folder are not resumable from there until you move them back yourself.": {
       "localizations": {
         "ja": {
@@ -1349,12 +1550,42 @@
         }
       }
     },
+    "Claude Code started working on the prompt.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeがプロンプトの作業を始めました。"
+          }
+        }
+      }
+    },
+    "Claude Code stayed busy.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeが作業中のままでした。"
+          }
+        }
+      }
+    },
     "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Claude Code のサブエージェントを、各ワークスペースの下にカードで表示します（現在の操作つき）。SubagentStart / SubagentStop フックが必要です。"
+          }
+        }
+      }
+    },
+    "Claude Code was no longer running in the pane.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインでClaude Codeが動いていませんでした。"
           }
         }
       }
@@ -1469,6 +1700,16 @@
         }
       }
     },
+    "Command:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンド："
+          }
+        }
+      }
+    },
     "Compact Sidebar": {
       "localizations": {
         "ja": {
@@ -1505,6 +1746,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定フォルダ："
+          }
+        }
+      }
+    },
+    "Confirming": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認中"
           }
         }
       }
@@ -1571,6 +1822,46 @@
         }
       }
     },
+    "Continue When It Resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リセット後に続ける"
+          }
+        }
+      }
+    },
+    "Continue a Claude Code session": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeのセッションを続ける"
+          }
+        }
+      }
+    },
+    "Continue at %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に続ける"
+          }
+        }
+      }
+    },
+    "Continue session %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション%@を続ける"
+          }
+        }
+      }
+    },
     "Continue with Next Account": {
       "localizations": {
         "ja": {
@@ -1587,6 +1878,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”で続ける"
+          }
+        }
+      }
+    },
+    "Continue “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を続ける"
+          }
+        }
+      }
+    },
+    "Continues at %@ (Window › Schedules)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に続けます（ウインドウ › スケジュール）"
           }
         }
       }
@@ -1734,6 +2045,36 @@
         }
       }
     },
+    "Created from the command line or an agent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドラインまたはエージェントが作成"
+          }
+        }
+      }
+    },
+    "Created from the command line or an agent (pane %@)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドラインまたはエージェントが作成（ペイン%@）"
+          }
+        }
+      }
+    },
+    "Created in cmds": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsで作成"
+          }
+        }
+      }
+    },
     "Custom size:": {
       "localizations": {
         "ja": {
@@ -1764,12 +2105,42 @@
         }
       }
     },
+    "Date and time:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日時："
+          }
+        }
+      }
+    },
+    "Days:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "曜日："
+          }
+        }
+      }
+    },
     "Debug": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "デバッグ"
+          }
+        }
+      }
+    },
+    "Delay:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遅らせる時間："
           }
         }
       }
@@ -1790,6 +2161,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "デバイス"
+          }
+        }
+      }
+    },
+    "Did not run at %@: the Mac was asleep or cmds was not running.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に実行されませんでした：Macがスリープしていたか、cmdsが起動していませんでした。"
           }
         }
       }
@@ -1891,6 +2272,26 @@
         }
       }
     },
+    "Edit Schedule": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールを編集"
+          }
+        }
+      }
+    },
+    "Edit…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集…"
+          }
+        }
+      }
+    },
     "Enable iOS Sync": {
       "localizations": {
         "ja": {
@@ -1947,6 +2348,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "ホストを入力してください。"
+          }
+        }
+      }
+    },
+    "Every account has hit its limit.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのアカウントが上限に達しています。"
+          }
+        }
+      }
+    },
+    "Every day": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎日"
           }
         }
       }
@@ -2012,6 +2433,16 @@
         }
       }
     },
+    "Failed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "失敗"
+          }
+        }
+      }
+    },
     "Failed: %@": {
       "localizations": {
         "ja": {
@@ -2072,6 +2503,16 @@
         }
       }
     },
+    "First prompt:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初のプロンプト："
+          }
+        }
+      }
+    },
     "Focus Address Bar": {
       "localizations": {
         "ja": {
@@ -2118,6 +2559,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "上のペインにフォーカス"
+          }
+        }
+      }
+    },
+    "Folder:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ："
           }
         }
       }
@@ -2228,6 +2679,26 @@
         }
       }
     },
+    "Give 1 to 24 times of day (HH:MM, separated by commas).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時刻を1〜24個指定してください（HH:MM、カンマ区切り）。"
+          }
+        }
+      }
+    },
+    "Give a name of up to 64 characters.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "64文字以内の名前を付けてください。"
+          }
+        }
+      }
+    },
     "Go": {
       "localizations": {
         "ja": {
@@ -2308,6 +2779,16 @@
         }
       }
     },
+    "History": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "履歴"
+          }
+        }
+      }
+    },
     "Host from ~/.ssh/config": {
       "localizations": {
         "ja": {
@@ -2335,6 +2816,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "待機"
+          }
+        }
+      }
+    },
+    "If late:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遅れたとき："
           }
         }
       }
@@ -2450,12 +2941,42 @@
         }
       }
     },
+    "Invalid": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "無効"
+          }
+        }
+      }
+    },
+    "Its active run is cancelled. Its history is kept.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行中の処理は中止されます。履歴は残ります。"
+          }
+        }
+      }
+    },
     "Its folder %@ and everything in it stay as they are. Panes using it keep running.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "フォルダ%@とその中身はそのまま残ります。このアカウントを使っているペーンも動き続けます。"
+          }
+        }
+      }
+    },
+    "Its history is kept.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "履歴は残ります。"
           }
         }
       }
@@ -2607,6 +3128,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "大"
+          }
+        }
+      }
+    },
+    "Last Result": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回の結果"
           }
         }
       }
@@ -2826,6 +3357,16 @@
         }
       }
     },
+    "Missed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見送り"
+          }
+        }
+      }
+    },
     "Modified": {
       "localizations": {
         "ja": {
@@ -3033,6 +3574,16 @@
         }
       }
     },
+    "New Schedule": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規スケジュール"
+          }
+        }
+      }
+    },
     "New Workspace": {
       "localizations": {
         "ja": {
@@ -3073,12 +3624,32 @@
         }
       }
     },
+    "Next Run": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次回の実行"
+          }
+        }
+      }
+    },
     "Next Workspace": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "次のワークスペース"
+          }
+        }
+      }
+    },
+    "No Claude Code session is known": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeのセッションが見つかりません"
           }
         }
       }
@@ -3093,12 +3664,32 @@
         }
       }
     },
+    "No pane holds the session, and its folder is not known.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを持つペインがなく、フォルダも分かりません。"
+          }
+        }
+      }
+    },
     "No workspaces": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースがありません"
+          }
+        }
+      }
+    },
+    "None (the shell’s own)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "なし（シェルの設定のまま）"
           }
         }
       }
@@ -3173,6 +3764,26 @@
         }
       }
     },
+    "Notify:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知："
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
     "Off": {
       "comment": "show subagents",
       "localizations": {
@@ -3180,6 +3791,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "オフ"
+          }
+        }
+      }
+    },
+    "On": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オン"
+          }
+        }
+      }
+    },
+    "Once": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1回"
+          }
+        }
+      }
+    },
+    "Once, %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1回、%@"
+          }
+        }
+      }
+    },
+    "Only Claude Code sessions can be continued.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "続けられるのはClaude Codeのセッションだけです。"
           }
         }
       }
@@ -3200,6 +3851,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ブラウザを分割して開く"
+          }
+        }
+      }
+    },
+    "Open Schedules": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールを開く"
           }
         }
       }
@@ -3240,6 +3901,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "ファイル › 新規ファイル一覧ペイン（⇧⌘E）で開くと、2つのペインの間でコピーや移動ができます。"
+          }
+        }
+      }
+    },
+    "Open “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を開く"
+          }
+        }
+      }
+    },
+    "Open…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開く…"
           }
         }
       }
@@ -3396,6 +4077,16 @@
         }
       }
     },
+    "Prompt:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプト："
+          }
+        }
+      }
+    },
     "Quit": {
       "localizations": {
         "ja": {
@@ -3422,6 +4113,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmds を終了しますか？"
+          }
+        }
+      }
+    },
+    "Recent runs of all schedules:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのスケジュールの最近の実行："
           }
         }
       }
@@ -3586,12 +4287,32 @@
         }
       }
     },
+    "Remove Schedule": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールを削除"
+          }
+        }
+      }
+    },
     "Remove “%@” from cmds?": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "“%@”をcmdsから削除しますか？"
+          }
+        }
+      }
+    },
+    "Remove “%@”?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を削除しますか？"
           }
         }
       }
@@ -3702,6 +4423,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "スリープを元に戻す"
+          }
+        }
+      }
+    },
+    "Result": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結果"
           }
         }
       }
@@ -3826,6 +4557,46 @@
         }
       }
     },
+    "Run Now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ実行"
+          }
+        }
+      }
+    },
+    "Run if at most this late:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この時間までの遅れなら実行："
+          }
+        }
+      }
+    },
+    "Run the selected schedule now, also when it is off": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだスケジュールを今すぐ実行します（オフでも実行）"
+          }
+        }
+      }
+    },
+    "Running: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行中：%@"
+          }
+        }
+      }
+    },
     "Runs your ssh (with ~/.ssh/config) and forwards this pane's cmds socket to the server, so cmds-remote.sh there can notify and report agent usage. Nothing is installed on the server.": {
       "localizations": {
         "ja": {
@@ -3852,6 +4623,76 @@
           "stringUnit": {
             "state": "translated",
             "value": "前回のセッションのSSHペインは、指示したときにだけ接続します。"
+          }
+        }
+      }
+    },
+    "Save": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        }
+      }
+    },
+    "Schedule “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュール「%@」"
+          }
+        }
+      }
+    },
+    "Scheduled": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "予定どおり"
+          }
+        }
+      }
+    },
+    "Schedules": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュール"
+          }
+        }
+      }
+    },
+    "Schedules could not be read": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールを読み込めませんでした"
+          }
+        }
+      }
+    },
+    "Schedules:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュール："
+          }
+        }
+      }
+    },
+    "Schedules…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュール…"
           }
         }
       }
@@ -3893,6 +4734,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッション%@"
+          }
+        }
+      }
+    },
+    "Session:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション："
           }
         }
       }
@@ -4175,6 +5026,26 @@
         }
       }
     },
+    "Skip the run": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行しない"
+          }
+        }
+      }
+    },
+    "Skipped": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スキップ"
+          }
+        }
+      }
+    },
     "Sleep is already disabled on this Mac": {
       "localizations": {
         "ja": {
@@ -4267,6 +5138,66 @@
         }
       }
     },
+    "Start a workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを開始"
+          }
+        }
+      }
+    },
+    "Start a workspace or continue a Claude Code session at a set time, on weekdays, or when an account’s limit resets (also Window › Schedules…).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "決めた時刻・曜日、またはアカウントの上限がリセットされたときに、ワークスペースを開始したりClaude Codeのセッションを続けたりします（ウインドウ › スケジュール…からも開けます）。"
+          }
+        }
+      }
+    },
+    "Start a workspace or continue a Claude Code session at a set time, on weekdays, or when an account’s limit resets. Schedules run while cmds runs. Nothing is typed into a busy agent or a pane running another program.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "決めた時刻・曜日、またはアカウントの上限がリセットされたときに、ワークスペースを開始したりClaude Codeのセッションを続けたりします。スケジュールはcmdsの起動中に実行されます。作業中のエージェントや、ほかのプログラムが動いているペインには何も入力しません。"
+          }
+        }
+      }
+    },
+    "Start “%@”: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」を開始：%2$@"
+          }
+        }
+      }
+    },
+    "Start “%@”: %@ + prompt": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」を開始：%2$@＋プロンプト"
+          }
+        }
+      }
+    },
+    "Started": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始"
+          }
+        }
+      }
+    },
     "Starting…": {
       "localizations": {
         "ja": {
@@ -4303,6 +5234,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "中止"
+          }
+        }
+      }
+    },
+    "Stop the active run; nothing more is typed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行中の処理を中止します。それ以上は何も入力しません"
           }
         }
       }
@@ -4345,6 +5286,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サブエージェント"
+          }
+        }
+      }
+    },
+    "Succeeded": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成功"
           }
         }
       }
@@ -4436,12 +5387,62 @@
         }
       }
     },
+    "The Mac was asleep or cmds was not running.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macがスリープしていたか、cmdsが起動していませんでした。"
+          }
+        }
+      }
+    },
+    "The account was removed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントが削除されていました。"
+          }
+        }
+      }
+    },
+    "The account was still limited.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントが上限に達したままでした。"
+          }
+        }
+      }
+    },
+    "The agent in the pane is not Claude Code.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインのエージェントがClaude Codeではありません。"
+          }
+        }
+      }
+    },
     "The code is valid only while this window is open; it changes in %@ and after each pairing.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "コードはこのウインドウを開いている間だけ有効です。%@後と、ペアリングのたびに変わります。"
+          }
+        }
+      }
+    },
+    "The command is typed at the new workspace’s shell prompt. The first prompt needs a command that starts Claude Code; it is pasted once Claude Code is idle.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドは新しいワークスペースのシェルのプロンプトに入力されます。最初のプロンプトにはClaude Codeを起動するコマンドが必要で、Claude Codeが待機状態になってから貼り付けられます。"
           }
         }
       }
@@ -4466,12 +5467,62 @@
         }
       }
     },
+    "The command must be one line of at most 1 KB.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドは1KB以内の1行にしてください。"
+          }
+        }
+      }
+    },
+    "The command was typed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドを入力しました。"
+          }
+        }
+      }
+    },
+    "The damaged file was kept as %@ in the cmds support folder, and cmds started with an empty one.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "壊れたファイルはcmdsのサポートフォルダに%@として残し、空のファイルで開始しました。"
+          }
+        }
+      }
+    },
+    "The delay must be 0 to 60 minutes.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "遅らせる時間は0〜60分にしてください。"
+          }
+        }
+      }
+    },
     "The existing %@ will be replaced.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "既存の%@は置き換えられます。"
+          }
+        }
+      }
+    },
+    "The folder does not exist.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダがありません。"
           }
         }
       }
@@ -4516,6 +5567,76 @@
         }
       }
     },
+    "The pane was closed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインが閉じられていました。"
+          }
+        }
+      }
+    },
+    "The pane was running a different session.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインで別のセッションが動いていました。"
+          }
+        }
+      }
+    },
+    "The pane was running another program.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインでほかのプログラムが動いていました。"
+          }
+        }
+      }
+    },
+    "The previous run was still active.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回の実行がまだ続いていました。"
+          }
+        }
+      }
+    },
+    "The prompt must be at most 8 KB.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプトは8KB以内にしてください。"
+          }
+        }
+      }
+    },
+    "The prompt must not be empty or contain control characters.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプトを空にしたり、制御文字を含めたりすることはできません。"
+          }
+        }
+      }
+    },
+    "The prompt was sent, but Claude Code was not seen working.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロンプトを送りましたが、Claude Codeが作業を始めたことを確認できませんでした。"
+          }
+        }
+      }
+    },
     "The remote directory is too long.": {
       "localizations": {
         "ja": {
@@ -4546,6 +5667,56 @@
         }
       }
     },
+    "The schedule is not valid any more.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールが無効になっています。"
+          }
+        }
+      }
+    },
+    "The schedule was removed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールが削除されました。"
+          }
+        }
+      }
+    },
+    "The schedules file could not be read. Nothing is changed until it can be.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールのファイルを読み込めませんでした。読み込めるまで何も変更しません。"
+          }
+        }
+      }
+    },
+    "The schedules were saved by a newer version of cmds. They are shown, but not run or changed here.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールは新しいバージョンのcmdsで保存されています。表示はしますが、ここでは実行も変更もしません。"
+          }
+        }
+      }
+    },
+    "The schedule’s name": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールの名前"
+          }
+        }
+      }
+    },
     "The session cannot be reached from “%@”: share sessions in Settings › Claude Accounts first.": {
       "localizations": {
         "ja": {
@@ -4556,12 +5727,42 @@
         }
       }
     },
+    "The session cannot be resumed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを再開できません。"
+          }
+        }
+      }
+    },
+    "The session had moved to another account.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションが別のアカウントに移っていました。"
+          }
+        }
+      }
+    },
     "The session id is not known: add cmds hook claude-status to the status line in this account’s settings.json.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "セッションIDが不明です。このアカウントのsettings.jsonでステータスラインにcmds hook claude-statusを追加してください。"
+          }
+        }
+      }
+    },
+    "The shell prompt did not become ready.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェルのプロンプトが入力待ちになりませんでした。"
           }
         }
       }
@@ -4582,6 +5783,56 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペーストするテキストはコマンドを実行する可能性があります（改行または制御文字を含みます）。ペーストしますか？"
+          }
+        }
+      }
+    },
+    "The time has already passed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その時刻はもう過ぎています。"
+          }
+        }
+      }
+    },
+    "The title must be at most 64 characters on one line.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトルは64文字以内の1行にしてください。"
+          }
+        }
+      }
+    },
+    "The workspace was opened.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを開きました。"
+          }
+        }
+      }
+    },
+    "There are already 50 schedules.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スケジュールはすでに50個あります。"
+          }
+        }
+      }
+    },
+    "There is no account named “%@”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」という名前のアカウントはありません。"
           }
         }
       }
@@ -4612,6 +5863,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このMacがバッテリー駆動に切り替わりました。この設定がオンの間は蓋を閉じてもスリープしないため、バッグの中でも動き続け、バッテリーを消耗し、熱くなることがあります。オフにするにはmacOSが管理者パスワードを求めます。"
+          }
+        }
+      }
+    },
+    "This Mac’s time zone": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacのタイムゾーン"
           }
         }
       }
@@ -4658,6 +5919,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "選択したワークスペースを並べて表示"
+          }
+        }
+      }
+    },
+    "Time zone:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイムゾーン："
+          }
+        }
+      }
+    },
+    "Times of day must be at least 5 minutes apart.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時刻は5分以上あけてください。"
+          }
+        }
+      }
+    },
+    "Times:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "時刻："
           }
         }
       }
@@ -4713,6 +6004,16 @@
         }
       }
     },
+    "Too many runs were active.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行中の処理が多すぎました。"
+          }
+        }
+      }
+    },
     "Turn Off": {
       "localizations": {
         "ja": {
@@ -4763,12 +6064,32 @@
         }
       }
     },
+    "Type “continue” into this session when the limit resets (Window › Schedules)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限がリセットされたら、このセッションに「continue」と入力します（ウインドウ › スケジュール）"
+          }
+        }
+      }
+    },
     "Types into this pane's shell:\n%@": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "このペインのシェルに入力します：\n%@"
+          }
+        }
+      }
+    },
+    "Typing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力中"
           }
         }
       }
@@ -4789,6 +6110,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "取り消す"
+          }
+        }
+      }
+    },
+    "Unknown reason.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "理由は不明です。"
+          }
+        }
+      }
+    },
+    "Unknown time zone “%@”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」というタイムゾーンはありません。"
           }
         }
       }
@@ -4873,6 +6214,16 @@
         }
       }
     },
+    "Waiting for Claude Code": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Codeを待機中"
+          }
+        }
+      }
+    },
     "Waiting for iOS Sync": {
       "localizations": {
         "ja": {
@@ -4883,12 +6234,142 @@
         }
       }
     },
+    "Waiting for the account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントを待機中"
+          }
+        }
+      }
+    },
+    "Waiting for the shell": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェルを待機中"
+          }
+        }
+      }
+    },
     "Waiting: %@": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "待機中：%@"
+          }
+        }
+      }
+    },
+    "Weekdays": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平日"
+          }
+        }
+      }
+    },
+    "Weekends": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "週末"
+          }
+        }
+      }
+    },
+    "Weekly": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "毎週"
+          }
+        }
+      }
+    },
+    "When": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイミング"
+          }
+        }
+      }
+    },
+    "When a run fails, is skipped or missed": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行が失敗・スキップ・見送りになったとき"
+          }
+        }
+      }
+    },
+    "When an account’s limit resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントの上限がリセットされたとき"
+          }
+        }
+      }
+    },
+    "When “%@” resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」のリセット時"
+          }
+        }
+      }
+    },
+    "When “%@” resets (%@)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」のリセット時（%2$@）"
+          }
+        }
+      }
+    },
+    "When “%@” resets (%@) + %lld min": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」のリセット時（%2$@）＋%3$lld分"
+          }
+        }
+      }
+    },
+    "When “%@” resets + %lld min": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%1$@」のリセット時＋%2$lld分"
+          }
+        }
+      }
+    },
+    "When:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイミング："
           }
         }
       }
@@ -5092,6 +6573,16 @@
         }
       }
     },
+    "cmds quit during the run.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行中にcmdsが終了しました。"
+          }
+        }
+      }
+    },
     "cmds turned on “Keep Awake With Lid Closed” before and did not turn it off (it quit unexpectedly, or the password dialog was cancelled). Your Mac currently does not sleep when you close the lid. Restore normal sleep now? macOS will ask for your administrator password.": {
       "localizations": {
         "ja": {
@@ -5170,6 +6661,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "最終接続%@"
+          }
+        }
+      }
+    },
+    "minutes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分"
+          }
+        }
+      }
+    },
+    "minutes after the reset": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分（リセット後）"
           }
         }
       }
@@ -5329,6 +6840,16 @@
         }
       }
     },
+    "“%@” has no limit now.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」は現在上限に達していません。"
+          }
+        }
+      }
+    },
     "“%@” hit its limit (%@).": {
       "localizations": {
         "en": {
@@ -5399,6 +6920,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%1$@”が上限に達しました。Claude Codeが待機状態になったら“%2$@”で続けます。"
+          }
+        }
+      }
+    },
+    "“%@” is not a valid account name.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」はアカウント名として使えません。"
           }
         }
       }
