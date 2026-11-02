@@ -4,6 +4,7 @@
     python3 -I scripts/ci/site_check.py                         # offline checks
     python3 -I scripts/ci/site_check.py --release               # also download the release DMG and check it
     python3 -I scripts/ci/site_check.py --release --write-download-files site/public/download
+    python3 -I scripts/ci/site_check.py --dmg build/release/cmds-X.Y.Z.dmg --write-download-files site/public/download
 
 Offline:
 - every page in site/public is well-formed HTML (tags balanced);
@@ -14,10 +15,13 @@ Offline:
 
 --release (network): downloads the DMG from the GitHub release and checks its length and Sparkle signature, and that
 the SHA-256 shown on the pages is the DMG's. --write-download-files DIR then writes latest.json and SHA256SUMS
-(they are not committed; a deploy needs them). Exit status 0 when every check passes, 1 otherwise.
+(they are not committed; a deploy needs them). --dmg FILE does the same with a local copy of the release DMG and
+needs no network (for when GitHub is unavailable); the date in latest.json then comes from the existing latest.json
+of the same version, else today. Exit status 0 when every check passes, 1 otherwise.
 """
 import argparse
 import base64
+import datetime
 import hashlib
 import html.parser
 import json
@@ -148,7 +152,16 @@ def fetch(url, dest):
             out.write(chunk)
 
 
-def release_date(version):
+def release_date(version, offline):
+    existing = SITE / "download" / "latest.json"
+    if offline:
+        try:
+            data = json.loads(existing.read_text(encoding="utf-8"))
+            if data.get("version") == version:
+                return data["date"]
+        except (OSError, ValueError, KeyError):
+            pass
+        return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
     headers = {"User-Agent": "cmds-site-check", "Accept": "application/vnd.github+json"}
     token = os.environ.get("GITHUB_TOKEN")
     if token:
@@ -158,11 +171,14 @@ def release_date(version):
         return json.load(response)["published_at"][:10]
 
 
-def check_release(pages, item, key, write_dir):
-    with tempfile.TemporaryDirectory() as tmp:
-        dmg = Path(tmp) / "cmds.dmg"
-        fetch(item["url"], dmg)
-        data = dmg.read_bytes()
+def check_release(pages, item, key, write_dir, local_dmg=None):
+    if local_dmg:
+        data = Path(local_dmg).read_bytes()
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            dmg = Path(tmp) / "cmds.dmg"
+            fetch(item["url"], dmg)
+            data = dmg.read_bytes()
     if len(data) != item["length"]:
         fail(f"release DMG is {len(data)} bytes, the appcast says {item['length']}")
     if not ed25519.verify(key, data, base64.b64decode(item["signature"])):
@@ -171,7 +187,7 @@ def check_release(pages, item, key, write_dir):
     hashes = page_hashes(pages)
     if hashes != {sha}:
         fail(f"pages show SHA-256 {sorted(hashes)}, the release DMG has {sha}")
-    print(f"release DMG {item['url']}: {len(data)} bytes, sha256 {sha}")
+    print(f"release DMG {local_dmg or item['url']}: {len(data)} bytes, sha256 {sha}")
     if write_dir and not failures:
         out = Path(write_dir)
         out.mkdir(parents=True, exist_ok=True)
@@ -187,7 +203,7 @@ def check_release(pages, item, key, write_dir):
             f'  "minimumSystemVersion": "{item["minimum"]}",\n'
             '  "architectures": ["arm64"],\n'
             '  "notarized": true,\n'
-            f'  "date": "{release_date(item["version"])}"\n'
+            f'  "date": "{release_date(item["version"], bool(local_dmg))}"\n'
             "}\n"
         )
         (out / "latest.json").write_text(latest, encoding="utf-8")
@@ -197,10 +213,11 @@ def check_release(pages, item, key, write_dir):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--release", action="store_true", help="download and check the release DMG")
-    parser.add_argument("--write-download-files", metavar="DIR", help="with --release: write latest.json, SHA256SUMS")
+    parser.add_argument("--dmg", metavar="FILE", help="check this local copy of the release DMG (no network)")
+    parser.add_argument("--write-download-files", metavar="DIR", help="with --release or --dmg: write latest.json, SHA256SUMS")
     args = parser.parse_args()
-    if args.write_download_files and not args.release:
-        parser.error("--write-download-files needs --release")
+    if args.write_download_files and not (args.release or args.dmg):
+        parser.error("--write-download-files needs --release or --dmg")
 
     pages = sorted(p for p in SITE.rglob("*.html"))
     key = public_key()
@@ -208,8 +225,8 @@ def main():
     item = read_appcast(key)
     if item:
         check_pages(pages, item)
-        if args.release and not failures:
-            check_release(pages, item, key, args.write_download_files)
+        if (args.release or args.dmg) and not failures:
+            check_release(pages, item, key, args.write_download_files, args.dmg)
     if failures:
         print(f"{len(failures)} problem(s)")
         return 1
