@@ -59,6 +59,8 @@
         <li><a href="#claude">Claude Code と Codex の設定</a></li>
         <li><a href="#iphone">iPhone/iPad のペアリング</a></li>
         <li><a href="#ssh">SSH ワークスペース</a></li>
+        <li><a href="#files">ファイル一覧ペイン</a></li>
+        <li><a href="#schedules">スケジュール</a></li>
         <li><a href="#shortcuts">キーボードショートカット</a></li>
       </ol>
     </nav>
@@ -258,9 +260,57 @@ cmds stats                                # ワークスペースごとと Mac �
     </div>
   </section>
 
+  <section class="step" id="files">
+    <div class="wrap narrow">
+      <h2><span class="step-num">9</span>ファイル一覧ペイン</h2>
+      <p>Mac や SSH ホストのフォルダを、ターミナルの隣に一覧で表示するペインです。2 つ並べると 2 画面のファイルマネージャーになります。</p>
+      <ul>
+        <li><kbd>⇧⌘E</kbd>（ファイル › 新規ファイル一覧ペイン）で、フォーカス中のターミナルのディレクトリを右に開きます。ターミナルからは <code>cmds files [PATH]</code>。</li>
+        <li><kbd>↩</kbd> で開く、<kbd>Space</kbd> でプレビューペインに表示。Git のリポジトリでは変更の状態（<code>M</code>・<code>A</code>・<code>?</code> など）の列が出ます。「ターミナルに追従」をオンにすると、ターミナルで <code>cd</code> した先へ一緒に移動します。</li>
+        <li><kbd>F5</kbd> / <kbd>F6</kbd> でもう一方のペインにコピー・移動。ドラッグ＆ドロップ、Finder との間、<kbd>⌘C</kbd> / <kbd>⌘V</kbd> も使えます。同じ名前があるときは「両方とも残す」「置き換える」「スキップ」から選べます。</li>
+        <li><kbd>F2</kbd> で名前を変更、<kbd>F7</kbd> で新規フォルダ、<kbd>⌘⌫</kbd> でゴミ箱に入れる。完全に削除することはありません。</li>
+        <li>ファイルをターミナルにドロップすると、シェル用にクォートされたパスが入力されます。</li>
+      </ul>
+      <h3>SSH ホストのフォルダ</h3>
+      <ul>
+        <li><kbd>⌥⇧⌘E</kbd>（ファイル › 新規リモートファイルパネル…）でホストとフォルダを指定します。SSH ペインで <kbd>⇧⌘E</kbd> を押すと、そのペインのリモートのディレクトリが開きます。ターミナルからは <code>cmds files HOST:PATH</code>。サーバーには何もインストールしません（SFTP）。</li>
+        <li>接続にはいつもの <code>ssh</code>（<code>~/.ssh/config</code>、鍵、エージェント、ジャンプホスト）を使います。cmds はパスワードを尋ねたり保存したりせず、ホスト鍵も追加しません。パスワードだけのホストや、<code>known_hosts</code> にない・変わったホスト鍵は、対処方法を添えて断ります。</li>
+        <li>開く・プレビューはダウンロードしたコピー（読み取り専用）で行います。ゴミ箱に入れると、サーバー側のゴミ箱（<code>~/.local/share/Trash</code>）へ移すだけで削除はしません。</li>
+      </ul>
+      <h3>転送</h3>
+      <ul>
+        <li>Mac とホストの間、ホスト同士のコピー・移動は転送キューでバックグラウンドで実行されます。進み具合はペインと ウインドウ › 転送（<kbd>⌥⌘T</kbd>）で確認でき、一時停止・キャンセル・再試行・ログの表示ができます。<code>cmds transfers</code> でも同じ情報を表示します。</li>
+        <li>ファイルは一時的な名前で書き込み、最後まで届いてから本来の名前になります。キャンセルしても、その転送が書いたもの以外は消しません。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="step" id="schedules">
+    <div class="wrap narrow">
+      <h2><span class="step-num">10</span>スケジュール</h2>
+      <p>ウインドウ › スケジュール… または <code>cmds schedule</code> で、あとで実行する作業を登録します。cmds の起動中に実行されます。</p>
+      <ul>
+        <li><strong>いつ</strong>：1 回だけ、曜日と時刻、Claude のアカウントや Codex の利用上限がリセットされたとき（「リセットのたびに」で毎回）。</li>
+        <li><strong>何を</strong>：ワークスペースをバックグラウンドで開始（フォルダ、アカウント、最初のコマンドや Claude Code への最初のプロンプト）、Claude Code / Codex のセッションを続ける、既存のペインに入力する（空のシェルへのコマンド、待機中のエージェントへのプロンプト）。</li>
+        <li><strong>安全に</strong>：作業中や確認待ちのエージェント、別のプログラムが動いているペインには入力しません。同じ実行を 2 回することもなく、実行できないときはスキップして履歴に理由を残します。</li>
+        <li>実行の 1 分前に通知が出て、スキップできます。次回の実行はサイドバーの下に表示されます。Mac がスリープしていた・cmds が起動していなかった場合は、許容範囲内なら 1 回だけ実行します。</li>
+        <li>利用上限に達してほかのアカウントも使えないときは、ペインのバーの「15:01 に続ける」で、リセット後に <code>continue</code> を入力するスケジュールを作れます。</li>
+      </ul>
+<pre><code># アカウント work の上限がリセットされたら、このペインのセッションを続ける
+cmds schedule add --name "リセット後に続ける" --after-limit work --continue
+
+# 平日 9:00 に ~/src/app で Claude Code を起動して作業を渡す
+cmds schedule add --name "朝のテスト" --every weekdays --time 09:00 \
+  --start ~/src/app --account auto --prompt "テストを実行して失敗をまとめて" -- claude
+
+cmds schedule list      # 一覧
+cmds schedule history   # 実行履歴</code></pre>
+    </div>
+  </section>
+
   <section class="step" id="shortcuts">
     <div class="wrap narrow">
-      <h2><span class="step-num">9</span>キーボードショートカット</h2>
+      <h2><span class="step-num">11</span>キーボードショートカット</h2>
       <div class="table-wrap">
         <table>
           <thead><tr><th scope="col">操作</th><th scope="col">キー</th></tr></thead>
@@ -275,6 +325,9 @@ cmds stats                                # ワークスペースごとと Mac �
             <tr><td>すべてのワークスペースを並べて表示</td><td><kbd>⌃⌘T</kbd></td></tr>
             <tr><td>最新の通知へジャンプ</td><td><kbd>⇧⌘U</kbd></td></tr>
             <tr><td>ブラウザで分割 / プレビューで開く</td><td><kbd>⇧⌘B</kbd> / <kbd>⇧⌘O</kbd></td></tr>
+            <tr><td>ファイル一覧ペイン / リモートファイルパネル</td><td><kbd>⇧⌘E</kbd> / <kbd>⌥⇧⌘E</kbd></td></tr>
+            <tr><td>もう一方のペインにコピー / 移動</td><td><kbd>F5</kbd> / <kbd>F6</kbd></td></tr>
+            <tr><td>転送</td><td><kbd>⌥⌘T</kbd></td></tr>
             <tr><td>アドレスバー / 再読み込み（SSH は再接続） / 戻る / 進む</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>
             <tr><td>ペインを閉じる / ワークスペースを閉じる</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
             <tr><td>サイドバーの表示 / コンパクト表示</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>
