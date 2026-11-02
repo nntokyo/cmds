@@ -24,8 +24,8 @@ Builds and test runs are heavy (Swift compiler, Xcode, the iOS simulator). On a 
 
 | Package | Command | Covers |
 |---|---|---|
-| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script, the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
-| `Packages/CmdsCore` | `swift test --filter CmdsCLITests` | the CLI's English output |
+| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
+| `Packages/CmdsCore` | `swift test --filter CmdsCLITests` | the CLI's English output, `cmds schedule` argument mapping (`ScheduleCLITests`) |
 | `Packages/CmdsSSH` | `swift test` (in that directory; fetches swift-nio-ssh and friends on first run) | the SSH tunnel; the end-to-end part needs a throwaway sshd ([below](#remote-access-via-ssh)) |
 
 The app targets have no unit test target; logic that needs tests lives in CmdsCore.
@@ -62,6 +62,26 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
   `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. Point it only at folders the test created.
+
+### Schedules end to end
+
+In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the CLI called as
+`env -u CMDS_PANE_ID -u CMDS_WORKSPACE_ID -u CMDS_SOCKET_PATH CMDS_SUPPORT_DIR=… <app>/Contents/Resources/bin/cmds`:
+
+- `cmds schedule add --name t --in 5s --start <tmp dir> -- echo scheduled-ok`, then `cmds read` on the new pane and
+  `cmds schedule history` (succeeded; the selected workspace stays selected).
+- A pane of a workspace the test created, with a session reported through `cmds rpc agent.claude_status` and
+  `sleep 60` running: a `--continue --pane` schedule is skipped (`otherProgram`) and nothing is typed.
+- Catch-up: schedules `--in 1h` (default late policy) and `--in 1h --late skip`, then
+  `cmds rpc debug.schedule_clock '{"offset": 3720}'` (DEBUG builds): one catch-up run and one missed entry.
+- `continueSession` with a stub `claude` script first on `PATH` (start the instance with `ZDOTDIR` pointing at a
+  temporary `.zshrc` that puts it there, so the real `claude` is never run) that reports a session with
+  `cmds hook claude-status` / `cmds hook claude`, and accounts whose `CLAUDE_CONFIG_DIR`s are temporary folders
+  (never `~/.claude`): a running session (also waiting while the stub reports busy, and `--after-limit` with a
+  status-line window at 100 %), an offered session after a relaunch (resumed, then the prompt), and a session no pane
+  holds (resumed in a new workspace under the schedule's account).
+
+Quit the instance (`cmds quit`) and delete the temporary folders afterwards.
 
 All switches: [reference/environment.md](../reference/environment.md#app-switches-isolated-and-test-instances).
 

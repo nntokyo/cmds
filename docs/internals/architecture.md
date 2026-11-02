@@ -19,6 +19,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
 | `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `GitStatusReader`). Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git). |
+| `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`). |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
@@ -161,6 +162,33 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   `projects` folder renamed `projects.before-cmds-<yyyyMMdd-HHmm>` first; a rename whose target exists fails, and a
   link that cannot be made after the rename moves the folder back. `transcriptReachable` checks
   `<dir>/projects/*/<id>.jsonl` by name before a switch.
+
+### Schedules
+
+Code: `CmdsCore/Schedule.swift` (model, file format), `ScheduleStore.swift` (validation, `schedules.json` /
+`schedule-runs.json`, history retention, API results), `ScheduleCalendar.swift` (next firing, `ScheduleCatchUp`),
+`ScheduleRunTiming.swift` (when a run may type); app: `Schedule/ScheduleRunner.swift` (+`Runs`), `ScheduleAPI.swift`,
+`SchedulesWindowController.swift`, `ScheduleEditorController.swift`, `ContinueAtReset.swift`, `ScheduleText.swift`;
+CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/schedules.md); design: issue #45.
+
+- **Store**: `<support dir>/schedules.json` and `schedule-runs.json`, loaded through `StoredFile` (a damaged file is
+  moved aside, never overwritten; a read error or `version > 1` makes the runner read only), written atomically with
+  mode 600. Decoding is lenient: a schedule that fails to decode or validate is dropped, not the file.
+- **Firing**: one `Timer` (`.common` mode, 1 s tolerance) for the earliest `nextFireAt`, re-armed on every change, on
+  `NSWorkspace.didWakeNotification`, clock / zone / day changes and account changes (`limitReset` follows the
+  account's limit), plus a 60 s safety check while anything is enabled. `ScheduleCatchUp.decide` turns a due time into
+  one on-time or catch-up run, or a missed entry; then `nextFireAt` moves on from now (one-shots are disabled).
+  DEBUG builds move the runner's clock with `debug.schedule_clock`.
+- **Runs** (`ActiveScheduleRun`): `waitingForAccount` → (`begin`: create the background workspace with
+  `createWorkspace(select: false)`, or find the pane holding the session id) → `waitingForPane` (shell stage: the
+  command or `AgentResume.command`) → `waitingForAgent` → paste (`sendText`, bracketed) → `typing` → Return →
+  `confirming` → ended. A 0.3 s tick builds a `ScheduleRunTiming.Observation` of the pane (foreground process via
+  `PaneProcessProbe`, agent activity, subagents, screen stability, empty prompt, reported session id, account switch,
+  queued resume, a numbered choice on screen) and does what `ScheduleRunTiming.step` says. Each typing step moves the
+  run on, so nothing is typed twice. Ended runs go to the history (50 per schedule, 300 in all, 90 days).
+- **Events**: `ScheduleRunner.changes` (separate from `AppController.changes`) → socket events `schedule.changed`,
+  `schedule.run`. `schedule.*` is not in `RemoteAPIPolicy.allowedMethods`.
+- **Logging**: `Logger` category `schedule` with ids, states and reason codes only; prompts and commands never.
 
 ## Keeping the Mac awake
 

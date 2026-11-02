@@ -2,7 +2,7 @@ import AppKit
 import CmdsCore
 
 /// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards, Claude
-/// accounts (their own window), automatic updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
+/// accounts and schedules (their own windows), automatic updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
@@ -21,6 +21,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
     private let updatesNote = SettingsWindowController.note("")
     private let accountsButton = NSButton(title: String(localized: "Manage…"), target: nil, action: nil)
+    private let schedulesButton = NSButton(title: String(localized: "Open…"), target: nil, action: nil)
     private var observer: NSObjectProtocol?
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
@@ -106,6 +107,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         accountsButton.bezelStyle = .rounded
         accountsButton.target = self
         accountsButton.action = #selector(manageAccounts)
+        schedulesButton.bezelStyle = .rounded
+        schedulesButton.target = self
+        schedulesButton.action = #selector(openSchedules)
 
         checkUpdatesCheckbox.target = self
         checkUpdatesCheckbox.action = #selector(checkUpdatesToggled)
@@ -127,6 +131,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
+            [Self.label(String(localized: "Schedules:")), schedulesButton],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Start a workspace or continue a Claude Code session at a set time, on weekdays, or when an account’s limit resets (also Window › Schedules…)."))],
             [Self.header(String(localized: "Updates")), NSGridCell.emptyContentView],
             [NSGridCell.emptyContentView, checkUpdatesCheckbox],
             [NSGridCell.emptyContentView, installUpdatesCheckbox],
@@ -136,7 +142,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        for row in [0, 4, 6, 9, 14] {
+        for row in [0, 4, 6, 9, 16] {
             grid.row(at: row).mergeCells(in: NSRange(location: 0, length: 2))
             grid.row(at: row).topPadding = row == 0 ? 0 : 10
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
@@ -305,6 +311,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func manageAccounts() {
         ClaudeAccountsWindowController.shared.showWindow(nil)
+    }
+
+    @objc private func openSchedules() {
+        SchedulesWindowController.shared.showWindow(nil)
     }
 
     @objc private func checkUpdatesToggled() {

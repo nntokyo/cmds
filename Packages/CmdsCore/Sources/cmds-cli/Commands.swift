@@ -171,6 +171,7 @@ extension CLI {
         },
         exportCommand,  // TransferCommands.swift
         importCommand,
+    ] + scheduleCommands + [  // ScheduleCommands.swift
         Command(name: "stats", usage: "stats [--watch [seconds]]",
                 summary: "Show CPU and memory use of the Mac and of each workspace's processes.",
                 details: """
@@ -510,7 +511,7 @@ extension CLI {
         },
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",
-                details: "Events: notification, workspace.changed, pane.changed, workspaces.changed.") { ctx in
+                details: "Events: notification, workspace.changed, pane.changed, workspaces.changed, schedule.changed, schedule.run.") { ctx in
             let client = try ctx.connect(timeout: 30)
             _ = try perform { try client.call("events.subscribe") }
             client.setTimeout(nil)

@@ -61,6 +61,13 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `account.clear_limit` | `name` | – |
 | `account.share` | `apply?` (default false: only the plan) | `[{"account", "projects", "action": "none"/"link"/"moveAside"/"skip", "backup"?, "reason"?}]` ([Sharing sessions](../guide/ai-agents.md#sharing-sessions-between-accounts)) |
 | `account.switch` | `pane?`, `account?` (default: the next without a limit) | `{"account"}`; the switch waits for Claude Code's idle prompt; refused when the session id is unknown, not reachable from the account, or the pane is an SSH pane |
+| `schedule.list` | – | `ScheduleList` `{"schedules": [{"schedule": Schedule, "nextFireAt"?, "activeRun"?: ScheduleRun, "lastRun"?: ScheduleRun, "problem"?}], "readOnly"}` (`readOnly`: the files were written by a newer cmds or could not be read; nothing is run or saved). All `schedule.*` methods: local socket only ([Schedules](../guide/schedules.md)) |
+| `schedule.add` | `schedule` (a `Schedule` without `id`, `origin`, `createdAt`, `nextFireAt`; `enabled` default true, `late` and `notify` default as below), `pane?` (the caller's pane, recorded as the origin) | the new entry as in `schedule.list`; `invalidParams` listing every problem (`; `-separated) |
+| `schedule.update` | `id`, and any of `name`, `enabled`, `trigger`, `action`, `late`, `notify` to replace | the entry; a new trigger or turning it on recomputes `nextFireAt` from now |
+| `schedule.remove` | `id` | – (an active run is cancelled; its history is kept) |
+| `schedule.run` | `id` | `{"run": ScheduleRun}` (cause `manual`; also for a schedule that is off) |
+| `schedule.cancel` | `run` (run id) | – (nothing more is typed) |
+| `schedule.history` | `id?`, `limit?` (default 20, at most 300) | `{"runs": [ScheduleRun]}`, active runs first, then newest first |
 | `state.export` | – | `WorkspaceBundle` (workspaces, layout, per-pane agent sessions; [bundle format](cli.md#moving-workspaces-to-another-cmds)); local socket only |
 | `state.import` | `bundle` (object or JSON text), `mode?` (`append` default / `replace`), `resume?` (`ask`/`always`/`never`, default: the app setting) | `{"workspaces": [id], "panes", "closed", "resume", "offers": [{"workspace", "pane", "agent", "sessionID", "command"?}]}`; validates the bundle first; local socket only |
 | `remote.location` | `pane?`, `cwd?`, `branch?` | – (SSH panes: remote cwd/branch from `cmds-remote.sh prompt`) |
@@ -89,6 +96,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `events.subscribe` | – | `{"subscribed": true}`, then events (below) on the same connection |
 | `debug.preview_snapshot` | `pane` (a preview pane) | `{"png_base64"}`; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
 | `debug.show_settings` | – | `{"window"}` (window number); opens cmds › Settings…; DEBUG builds only, for tests |
+| `debug.schedule_clock` | `offset` (seconds) | `{"now"}`: moves the schedule runner's clock by `offset` (a simulated sleep) and checks what fell due, as after a wake; DEBUG builds only, for tests |
 
 ## Events
 
@@ -101,6 +109,8 @@ connection closes:
 | `workspace.changed` | `workspace` (id), `info`: `WorkspaceInfo` |
 | `pane.changed` | `workspace`, `pane` (ids), `info`: `PaneInfo` |
 | `notification` | `workspace`, `pane`, `title` (or `null`), `body` |
+| `schedule.changed` | `id?` (one schedule added, changed or removed; absent: several). Re-read with `schedule.list` |
+| `schedule.run` | `run`: `ScheduleRun` (started, moved to another state, or ended) |
 
 CPU/memory and agent-usage updates do not produce events (they would fire every few seconds); poll `system.stats` /
 `agent.list` instead. `cmds events` prints the stream.
@@ -126,5 +136,18 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `inputTokens`, `cachedInputTokens`, `outputTokens`, `reasoningTokens`, `plan`, `stale` (only when true).
 - `UsageLimit` = `id` (`five_hour`, `seven_day`, `spend`, …), `usedPercent`, optional `resetsAt`, `windowMinutes`,
   `usedUSD`, `limitUSD`, `period`. `AgentLimits` = `agent`, `limits`, `plan?`, `updatedAt`.
+- `Schedule` = `id` (`s` + 8 hex digits), `name`, `enabled`, `trigger`, `action`, `late`, `notify`, `origin`,
+  `createdAt`, `nextFireAt?`. `trigger`: `{"type": "once", "at"}`, `{"type": "weekly", "weekdays": ["mon"…"sun"],
+  "times": ["09:00"], "timeZone"?}` (no zone: the Mac's), `{"type": "limitReset", "account", "delay"}` (seconds,
+  0–3600). `action`: `{"type": "startWorkspace", "cwd", "title"?, "account"?` (name or `auto`), `"command"?, "prompt"?}`
+  or `{"type": "continueSession", "agent": "claude", "sessionID", "cwd"?, "account"?, "prompt"}`. `late`:
+  `{"type": "skip"}` or `{"type": "runIfWithin", "seconds"}` (default 21600 for `once`/`limitReset`, 900 for
+  `weekly`). `notify`: `failures` (default), `always`, `never`. `origin`: `{"type": "app"}` or
+  `{"type": "api", "pane"?}`. The same format is stored in `schedules.json`.
+- `ScheduleRun` = `id` (`r` + 8 hex digits), `scheduleID`, `scheduleName`, `cause` (`scheduled`/`catchUp`/`manual`),
+  `dueAt`, `startedAt`, `endedAt?`, `state` (active: `waitingForAccount`, `waitingForPane`, `typing`,
+  `waitingForAgent`, `confirming`; ended: `succeeded`, `failed`, `skipped`, `missed`, `cancelled`), `reason?` (a code
+  such as `confirmed`, `unconfirmed`, `commandTyped`, `otherProgram`, `agentBusy`, `missed`; `cmds schedule history`
+  prints its English text), `workspace?`, `pane?`, `account?`.
 - Dates are Unix epoch seconds (decoding also takes milliseconds and ISO 8601); unknown agent names decode as
   `other`, malformed fields are dropped instead of failing.

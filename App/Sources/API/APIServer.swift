@@ -100,6 +100,15 @@ final class APIServer {
                     throw RPCError.invalidParams("not a files pane")
                 }
                 connection.reply(id: id, result: ["png_base64": .string(try files.debugSnapshot().base64EncodedString())])
+            case "debug.schedule_clock":
+                // Tests only: move the schedule runner's clock by `offset` seconds (a simulated sleep), then check what
+                // fell due as after a wake (catch-up or missed).
+                guard case .number(let offset)? = params.value?["offset"], offset.isFinite, abs(offset) < 30 * 86400 else {
+                    throw RPCError.invalidParams("offset must be a number of seconds")
+                }
+                controller.scheduleRunner.clockOffset = offset
+                controller.scheduleRunner.checkDue()
+                connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970)])
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 SettingsWindowController.shared.showSettings(nil)
@@ -281,6 +290,10 @@ final class APIServer {
             let location = try controller.browserLocation(paneID: try browserPaneID(params))
             return ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
 
+        case let method where method.hasPrefix("schedule."):
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods; RemoteAccessTests keeps it so).
+            return try ScheduleAPI.perform(method, params, runner: controller.scheduleRunner)
+
         default:
             throw RPCError.methodNotFound(method)
         }
@@ -361,13 +374,36 @@ final class APIServer {
 
     private func subscribe(_ connection: SocketConnection) {
         guard subscriptions[connection.id] == nil else { return }
-        subscriptions[connection.id] = controller.changes.sink { [weak self, weak connection] change in
+        let state = controller.changes.sink { [weak self, weak connection] change in
             guard let self, let connection else { return }
             if connection.closed {
                 self.subscriptions[connection.id] = nil
                 return
             }
             connection.send(self.event(for: change))
+        }
+        // Schedules have their own publisher, so the `changes` consumers (UI, session saves, sync) are unaffected.
+        let schedules = controller.scheduleRunner.changes.sink { [weak self, weak connection] change in
+            guard let self, let connection else { return }
+            if connection.closed {
+                self.subscriptions[connection.id] = nil
+                return
+            }
+            connection.send(Self.event(for: change))
+        }
+        subscriptions[connection.id] = AnyCancellable {
+            state.cancel()
+            schedules.cancel()
+        }
+    }
+
+    /// `schedule.changed` `{id?}` (re-read with schedule.list) and `schedule.run` `{run}`.
+    private static func event(for change: ScheduleChange) -> RPCEvent {
+        switch change {
+        case .schedules(let id):
+            return RPCEvent(event: "schedule.changed", params: .object(id.map { ["id": .string($0)] } ?? [:]))
+        case .run(let run):
+            return RPCEvent(event: "schedule.run", params: ["run": (try? .from(run)) ?? .null])
         }
     }
 
@@ -409,8 +445,8 @@ final class APIServer {
     }
 }
 
-/// Typed access to request params. `null` counts as absent; wrong types are `invalidParams`.
-private struct Params {
+/// Typed access to request params (also ScheduleAPI). `null` counts as absent; wrong types are `invalidParams`.
+struct Params {
     let value: JSONValue?
 
     init(_ value: JSONValue?) { self.value = value }

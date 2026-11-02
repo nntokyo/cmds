@@ -53,7 +53,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds browser url [--pane P]` | Print URL and title |
 | `cmds browser eval [--pane P] <script\|->` | Run JavaScript and print the JSON result. Promises are awaited; an expression may use `await`; statements with top-level `await` must `return` their value |
 | `cmds browser snapshot [--pane P] [-o file.png]` | PNG of the visible page (to stdout when piped) |
-| `cmds events` | Stream `notification`, `workspace.changed`, `pane.changed`, `workspaces.changed` events as JSON lines |
+| `cmds events` | Stream `notification`, `workspace.changed`, `pane.changed`, `workspaces.changed`, `schedule.changed`, `schedule.run` events as JSON lines |
 | `cmds rpc <method> [json-params\|-]` | Raw API call, e.g. `cmds rpc pane.split '{"direction":"down"}'` |
 | `cmds agents` | Coding agents in cmds panes: per pane the figures of Claude Code's status line (`ctx 53% 527k/1M │ $117.99 ($34.53/h) │ ⏱ 3h25m api 3h40m(107%) │ +17642 -330 │ cache ●98%`) or Codex context/tokens, then account limits per agent (5h / 7d / spend, reset times). `cmds ls` shows a short agent summary per pane, `cmds stats` the limits |
 | `cmds agents --subagents [--pane P]` | Claude Code subagents (running and just finished): pane, state, elapsed time, type · description, current action, tokens ([ai-agents.md](../guide/ai-agents.md#subagents)) |
@@ -65,6 +65,13 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds accounts switch [--pane P] [--to NAME]` | Continue the pane's Claude Code session under another account (default: the next without a limit): waits for the idle prompt, quits Claude Code with Ctrl-C, types `env CLAUDE_CONFIG_DIR='<dir>' claude --resume <id>`; prints the account |
 | `cmds accounts auto [on\|off]` | Show or set automatic switching at the limit (default off: ask in the pane and a notification) |
 | `cmds resume [--pane P \| --all]` | Resume the session offered in a pane after a restart (default: the current pane) or in all panes: types `claude --resume <id>` / `codex resume <id>` into the pane's shell once its prompt is ready |
+| `cmds schedule [list]` | Schedules, one per line: id, `on`/`off`, name, trigger (`weekdays 09:00 (Asia/Tokyo)`, `once 2026-11-04 02:00`, `when work resets + 1m`), action, the next run (or the active run's state) and the last result; `! …` when it cannot run as it is (e.g. its account was removed) ([Schedules](../guide/schedules.md)) |
+| `cmds schedule add --name NAME TRIGGER ACTION [--late skip\|MINUTES] [--notify failures\|always\|never] [--disabled]` | Add a schedule; prints its id and next run. TRIGGER: `--at "YYYY-MM-DD HH:MM"`, `--at HH:MM` (the next such time), `--in 90m` (`45s`, `2h`, `1h30m`); `--every weekdays\|daily\|weekends\|mon,wed,fri --time 09:00[,13:30] [--tz Asia/Tokyo]`; `--after-limit ACCOUNT [--delay 2m]` (once, when the account's current limit resets). ACTION: `--start DIR [--account NAME\|auto] [--title T] [--prompt TEXT\|-] [-- command…]` (a new background workspace; the command is typed at its prompt, the prompt pasted into the Claude Code it starts) or `--continue [--pane P \| --session ID] [--account NAME] [--prompt TEXT\|-]` (default: this pane's Claude Code session, prompt `continue`). Times are local and sent as epoch seconds |
+| `cmds schedule edit <id> [add options]` | Change a schedule: `--name`, `--late`, `--notify`, `--disabled`/`--enabled`; any trigger option replaces the trigger, any action option the whole action |
+| `cmds schedule show <id>` | A schedule's details, next run and last five runs |
+| `cmds schedule enable\|disable\|remove\|run <id>` | Turn on / off; remove (an active run is cancelled, the history kept); run now (also when off; prints the run) |
+| `cmds schedule cancel <run>` | Cancel an active run: nothing more is typed |
+| `cmds schedule history [id] [--limit N]` | Past runs, newest first (default 20, at most 300): time, `catch-up`/`manual`, result and reason, workspace and pane, account |
 | `cmds export [-o file] [--legacy]` | Workspaces and their agent sessions as a JSON bundle (stdout, or `-o` file created mode 600); for `cmds import` in another (newer) cmds. Falls back to a legacy export from `workspace.list` / `agent.list` when the app has no `state.export` ([below](#moving-workspaces-to-another-cmds)) |
 | `cmds import <file\|-> [--append \| --replace] [--resume ask\|always\|never]` | Recreate a bundle's workspaces (after the open ones, or replacing them) and offer each pane's agent session for resuming (default: the app's resume setting) |
 | `cmds hook claude` | Claude Code `Notification` / `Stop` / `UserPromptSubmit` hook ([setup](../guide/ai-agents.md#claude-code)) |
@@ -87,6 +94,9 @@ cmds browser snapshot -o /tmp/page.png
 cmds send --pane p2 --enter 'make test'
 cmds read --pane p2 --scrollback 200 | tail -20
 long-task; cmds notify --title "long-task" "finished with $?"
+cmds schedule add --name "Continue after reset" --after-limit work --continue
+cmds schedule add --name "Morning tests" --every weekdays --time 09:00 \
+  --start ~/src/app --account auto --prompt "Run the tests and summarise failures" -- claude
 cmds stats --json | jq '.system.memoryPressure'   # 1 normal, 2 warning, 4 critical
 cmds stats --watch 5
 ```

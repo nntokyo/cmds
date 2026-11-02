@@ -1,0 +1,198 @@
+import XCTest
+@testable import CmdsCore
+
+final class ScheduleRunTimingTests: XCTestCase {
+    private typealias T = ScheduleRunTiming
+
+    /// A shell sitting at an empty, settled prompt.
+    private var shell: T.Observation {
+        var o = T.Observation()
+        o.foreground = .shell
+        o.atEmptyPrompt = true
+        o.screenUnchangedFor = 1
+        return o
+    }
+
+    /// Claude Code idle at its prompt, reporting `session`.
+    private func agent(_ session: String? = "abc") -> T.Observation {
+        var o = T.Observation()
+        o.foreground = .agent
+        o.agentOnTerminal = true
+        o.activity = .idle
+        o.screenUnchangedFor = 3
+        o.sessionID = session
+        return o
+    }
+
+    private let owned = T.Expectation(startsAgent: true, ownsPane: true)
+    private let session = T.Expectation(sessionID: "abc")
+
+    // MARK: waitingForAccount
+
+    func testAccountWait() {
+        var o = T.Observation()
+        XCTAssertEqual(T.step(state: .waitingForAccount, observation: o, elapsed: 0), .proceed)
+        o.accountLimited = true
+        o.accountFreeIn = 3600
+        XCTAssertEqual(T.step(state: .waitingForAccount, observation: o, elapsed: 0), .wait)
+        // The reset is beyond the 8 h wait (counted from when the run started waiting).
+        o.accountFreeIn = 2 * 3600
+        XCTAssertEqual(T.step(state: .waitingForAccount, observation: o, elapsed: 7 * 3600), .fail(.accountStillLimited))
+        o.accountFreeIn = nil
+        XCTAssertEqual(T.step(state: .waitingForAccount, observation: o, elapsed: 0), .fail(.accountStillLimited))
+        XCTAssertEqual(T.autoAccountFreeIn(resets: [Date(timeIntervalSince1970: 7200), Date(timeIntervalSince1970: 3600)],
+                                           now: Date(timeIntervalSince1970: 0)), 3600)
+        XCTAssertNil(T.autoAccountFreeIn(resets: [Date(timeIntervalSince1970: 9 * 3600)], now: Date(timeIntervalSince1970: 0)))
+        XCTAssertNil(T.autoAccountFreeIn(resets: [], now: Date()))
+    }
+
+    // MARK: waitingForPane (shell)
+
+    func testShellReadyTypesOnce() {
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: shell, elapsed: 1, expect: owned), .type)
+        var o = shell
+        o.screenUnchangedFor = 0.1
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 1, expect: owned), .wait)
+        o = shell
+        o.atEmptyPrompt = false // something typed after the prompt, or a password question
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 1, expect: owned), .wait)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 60, expect: owned), .fail(.shellNotReady))
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 60, expect: session), .skip(.otherProgram))
+    }
+
+    func testShellWaitsForAQueuedResumeOrSwitch() {
+        var o = shell
+        o.resumeQueued = true
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 1, expect: owned), .wait)
+        o = shell
+        o.accountSwitchInProgress = true
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 1, expect: owned), .wait)
+    }
+
+    func testNeverTypesIntoAnAgentOrAnotherProgram() {
+        var o = shell
+        o.agentOnTerminal = true // backgrounded Claude Code
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 1, expect: owned), .skip(.agentRunning))
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: agent(), elapsed: 1, expect: session), .skip(.agentRunning))
+        // `sleep 60` in the user's pane: left alone after a short grace.
+        o = T.Observation()
+        o.foreground = .other
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 1, expect: session), .wait)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 3, expect: session), .skip(.otherProgram))
+        // In the run's own pane (a slow shell startup) it waits up to the timeout.
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 30, expect: owned), .wait)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 60, expect: owned), .fail(.shellNotReady))
+        // Not known yet.
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: T.Observation(), elapsed: 1, expect: owned), .wait)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: T.Observation(), elapsed: 61, expect: owned), .fail(.shellNotReady))
+    }
+
+    func testPaneClosed() {
+        var o = shell
+        o.paneExists = false
+        for state in [ScheduleRunState.waitingForPane, .waitingForAgent, .typing] {
+            XCTAssertEqual(T.step(state: state, observation: o, elapsed: 1, expect: owned), .fail(.paneClosed), "\(state)")
+        }
+    }
+
+    // MARK: waitingForAgent
+
+    func testPastesIntoIdleClaudeCode() {
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(), elapsed: 1, expect: session), .paste)
+        // Any Claude Code the run started, whatever its session.
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(nil), elapsed: 1, expect: owned), .paste)
+    }
+
+    func testNeverPastesIntoABusyAgent() {
+        var o = agent()
+        o.activity = .busy
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: session), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 30 * 60, expect: session), .fail(.agentBusy))
+        o = agent()
+        o.activity = .needsInput // typing would answer a permission prompt
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: session), .wait)
+        o = agent()
+        o.subagentRunning = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: session), .wait)
+        o = agent()
+        o.screenUnchangedFor = 1.9
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: session), .wait)
+        o = agent()
+        o.accountSwitchInProgress = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: session), .wait)
+        o = agent()
+        o.resumeQueued = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: session), .wait)
+        o = agent()
+        o.choiceOnScreen = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: o, elapsed: 1, expect: session), .wait)
+    }
+
+    func testOnlyTheExpectedSession() {
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent("other"), elapsed: 1, expect: session),
+                       .skip(.differentSession))
+        // Not reported yet (just resumed): wait for it, never paste blind.
+        let resumed = T.Expectation(sessionID: "abc", startsAgent: true, ownsPane: false)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(nil), elapsed: 5, expect: resumed), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(nil), elapsed: 120, expect: resumed), .fail(.agentDidNotStart))
+        var codex = agent()
+        codex.otherAgent = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: codex, elapsed: 1, expect: session), .skip(.notClaude))
+    }
+
+    func testAgentStartingOrGone() {
+        // After typing `claude`: the shell is still in front for a moment.
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 2, expect: owned), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 120, expect: owned), .fail(.agentDidNotStart))
+        // A queued resume will start it.
+        var queued = shell
+        queued.resumeQueued = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: queued, elapsed: 2, expect: session), .wait)
+        // The session's Claude Code quit before the run could type.
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 2, expect: session), .skip(.agentNotRunning))
+        var other = T.Observation()
+        other.foreground = .other
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: other, elapsed: 2, expect: session), .skip(.otherProgram))
+    }
+
+    // MARK: typing, confirming
+
+    func testReturnFollowsThePaste() {
+        XCTAssertEqual(T.step(state: .typing, observation: agent(), elapsed: 0.1), .wait)
+        XCTAssertEqual(T.step(state: .typing, observation: agent(), elapsed: 0.4), .enter)
+        // Never Return into a shell: Claude Code quit after the paste.
+        XCTAssertEqual(T.step(state: .typing, observation: shell, elapsed: 0.4), .fail(.agentNotRunning))
+    }
+
+    func testConfirming() {
+        var o = agent()
+        XCTAssertEqual(T.step(state: .confirming, observation: o, elapsed: 1), .wait)
+        o.promptSubmitted = true
+        XCTAssertEqual(T.step(state: .confirming, observation: o, elapsed: 1), .succeed(.confirmed))
+        XCTAssertEqual(T.step(state: .confirming, observation: agent(), elapsed: 20), .succeed(.unconfirmed))
+        var closed = agent()
+        closed.paneExists = false
+        XCTAssertEqual(T.step(state: .confirming, observation: closed, elapsed: 1), .succeed(.unconfirmed))
+    }
+
+    func testFinalStatesDoNothing() {
+        for state in ScheduleRunState.allCases where !state.isActive {
+            XCTAssertEqual(T.step(state: state, observation: shell, elapsed: 100), .wait)
+        }
+    }
+
+    // MARK: screen
+
+    func testChoiceOnScreen() {
+        XCTAssertTrue(T.showsChoice(screen: """
+             Do you trust the files in this folder?
+
+             ❯ 1. Yes, proceed
+               2. No, exit
+            """))
+        XCTAssertTrue(T.showsChoice(screen: "│ ❯ 1. Yes\n│   2. Yes, and don't ask again\n│   3. No"))
+        XCTAssertFalse(T.showsChoice(screen: "╭────╮\n│ >  │\n╰────╯\n  ? for shortcuts"))
+        XCTAssertFalse(T.showsChoice(screen: "> 1+1 is 2"))
+        XCTAssertFalse(T.showsChoice(screen: "user@mac ~ % "))
+    }
+}

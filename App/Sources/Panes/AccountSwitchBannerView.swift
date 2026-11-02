@@ -3,17 +3,19 @@ import AppKit
 /// Slim bar at the top of a terminal pane whose Claude account hit its limit (AppController+Accounts):
 /// "“work” hit its limit (resets 15:00)." with Continue with “personal” / Dismiss; while switching
 /// "Switching to “personal” once Claude Code is idle…" with Cancel; when it cannot switch, why (and Settings… when
-/// the sessions are not shared yet). Same look as `AgentResumeBannerView`; never takes the keyboard.
+/// the sessions are not shared yet, Continue at 15:01 when every account is limited: a schedule). Same look as `AgentResumeBannerView`; never takes the keyboard.
 final class AccountSwitchBannerView: NSVisualEffectView {
     enum State {
         case offered(text: String, target: String)
         case switching(text: String)
-        case problem(text: String, canShare: Bool)
+        /// `continueAt`: the time a "continue" schedule would run (every other account is limited too).
+        case problem(text: String, canShare: Bool, continueAt: String? = nil)
     }
 
     var onSwitch: (() -> Void)?
     var onDismiss: (() -> Void)?
     var onSettings: (() -> Void)?
+    var onContinueLater: (() -> Void)?
 
     private let label = NSTextField(labelWithString: "")
     private let stack = NSStackView()
@@ -51,8 +53,13 @@ final class AccountSwitchBannerView: NSVisualEffectView {
         case .switching(let text):
             label.stringValue = text
             stack.addArrangedSubview(button(String(localized: "Cancel"), #selector(dismissClicked)))
-        case .problem(let text, let canShare):
+        case .problem(let text, let canShare, let continueAt):
             label.stringValue = text
+            if let continueAt {
+                let later = button(String(localized: "Continue at \(continueAt)"), #selector(continueLaterClicked), primary: true)
+                later.toolTip = String(localized: "Type “continue” into this session when the limit resets (Window › Schedules)")
+                stack.addArrangedSubview(later)
+            }
             if canShare { stack.addArrangedSubview(button(String(localized: "Settings…"), #selector(settingsClicked))) }
             stack.addArrangedSubview(button(String(localized: "Dismiss"), #selector(dismissClicked)))
         }
@@ -87,4 +94,5 @@ final class AccountSwitchBannerView: NSVisualEffectView {
     @objc private func switchClicked() { onSwitch?() }
     @objc private func dismissClicked() { onDismiss?() }
     @objc private func settingsClicked() { onSettings?() }
+    @objc private func continueLaterClicked() { onContinueLater?() }
 }
