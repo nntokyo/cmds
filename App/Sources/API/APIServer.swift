@@ -95,6 +95,9 @@ final class APIServer {
                     throw RPCError.invalidParams("not a files pane")
                 }
                 connection.reply(id: id, result: try files.debugPerform(params.value))
+            case "debug.transfers":
+                // Tests only: the queue with every job's log (TransferCenter+API).
+                connection.reply(id: id, result: TransferCenter.shared.debugState())
             case "debug.files_snapshot":
                 guard let files = controller.pane(id: try params.required("pane"))?.files else {
                     throw RPCError.invalidParams("not a files pane")
@@ -262,7 +265,10 @@ final class APIServer {
                                                  direction: direction, focus: try params.bool("focus") ?? true,
                                                  format: format))
         case "files.open":
-            return try .from(controller.openFolder(paneID: try params.string("pane"), path: try params.required("path"),
+            return try .from(controller.openFolder(paneID: try params.string("pane"),
+                                                   path: try params.string("path") ?? (try params.string("host") == nil
+                                                       ? try params.required("path") : ""),
+                                                   host: try params.string("host"),
                                                    direction: try splitDirection(params),
                                                    focus: try params.bool("focus") ?? true))
         case "pane.reconnect":
@@ -289,6 +295,10 @@ final class APIServer {
         case "browser.get_url":
             let location = try controller.browserLocation(paneID: try browserPaneID(params))
             return ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
+
+        case let method where method.hasPrefix("transfer."):
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods).
+            return try TransferCenter.shared.perform(method, params)
 
         case let method where method.hasPrefix("schedule."):
             // Local socket only (not in RemoteAPIPolicy.allowedMethods; RemoteAccessTests keeps it so).

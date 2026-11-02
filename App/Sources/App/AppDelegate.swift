@@ -58,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         metadataMonitor?.stop()
         apiServer?.stop()
         controller.scheduleRunner.stop()
+        TransferCenter.shared.shutdown()
         SyncRemoteAccess.shared.shutdown()
         SyncServer.shared.stop()
         controller.saveSession()

@@ -56,7 +56,8 @@ final class Workspace {
 
     var hasTerminal: Bool { panes.values.contains { $0.kind == .terminal } }
 
-    /// The focused pane is an SSH pane: `workingDirectory`/`gitBranch` are on its host.
+    /// The focused pane is an SSH pane: `workingDirectory`/`gitBranch` are on its host. (Files panes, also those on an
+    /// SSH host, never change the workspace's location.)
     var isRemote: Bool { focusedPane?.ssh != nil }
 
     /// Host of the focused SSH pane (nil when the focused pane is local).

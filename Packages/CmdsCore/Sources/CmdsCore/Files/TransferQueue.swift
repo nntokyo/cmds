@@ -128,3 +128,65 @@ public final class TransferQueue: @unchecked Sendable {
         }
     }
 }
+
+/// A transfer as the socket API reports it (`transfer.list`, `cmds transfers`). Locations are `HOST:PATH` for SSH
+/// hosts, paths for this Mac.
+public struct TransferInfo: Codable, Equatable, Sendable {
+    public struct Failure: Codable, Equatable, Sendable {
+        public var path: String
+        public var message: String
+    }
+
+    public var id: Int
+    public var mode: TransferJob.Mode
+    public var state: TransferJob.State
+    public var sources: [String]
+    public var destination: String
+    public var itemsDone: Int
+    public var itemsTotal: Int
+    public var bytesDone: Int64
+    public var bytesTotal: Int64
+    public var current: String?
+    /// Why the job stopped as a whole (a connection), or nil.
+    public var error: String?
+    /// Waiting for an answer about this name (a name conflict).
+    public var asking: String?
+    /// Log counts: copied (also replaced, kept both, completed), moved, skipped.
+    public var copied: Int
+    public var moved: Int
+    public var skipped: Int
+    /// Failed items (at most `failuresListed`).
+    public var failures: [Failure]
+
+    public static let failuresListed = 50
+
+    public init(_ job: TransferJob.Snapshot) {
+        id = job.id
+        mode = job.mode
+        state = job.state
+        sources = job.sources.map(\.description)
+        destination = job.destination.description
+        itemsDone = job.progress.itemsDone
+        itemsTotal = job.progress.itemsTotal
+        bytesDone = job.progress.bytesDone
+        bytesTotal = job.progress.bytesTotal
+        current = job.progress.current
+        error = job.error
+        asking = job.asking
+        var copied = 0, moved = 0, skipped = 0
+        var failures: [Failure] = []
+        for entry in job.log {
+            switch entry.outcome {
+            case .copied, .replaced, .keptBoth, .merged: copied += 1
+            case .moved: moved += 1
+            case .skipped, .notCopied: skipped += 1
+            case .failed(let message), .originalKept(let message):
+                if failures.count < Self.failuresListed { failures.append(Failure(path: entry.path, message: message)) }
+            }
+        }
+        self.copied = copied
+        self.moved = moved
+        self.skipped = skipped
+        self.failures = failures
+    }
+}

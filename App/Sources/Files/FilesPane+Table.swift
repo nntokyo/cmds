@@ -64,7 +64,7 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
             tableView.addTableColumn(tableColumn)
         }
         tableView.sortDescriptors = [NSSortDescriptor(key: sortKey.rawValue, ascending: ascending)]
-        tableView.registerForDraggedTypes([.fileURL])
+        tableView.registerForDraggedTypes([.fileURL, Self.remoteFileType])
         tableView.setDraggingSourceOperationMask([.copy, .move, .generic, .link], forLocal: true)
         tableView.setDraggingSourceOperationMask([.copy, .move, .generic, .link], forLocal: false)
         tableView.draggingDestinationFeedbackStyle = .regular
@@ -90,7 +90,7 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
         switch column {
         case .name:
             field?.stringValue = entry.name
-            cell.imageView?.image = NSWorkspace.shared.icon(forFile: url(of: entry).path)
+            cell.imageView?.image = isRemote ? remoteIcon(entry) : NSWorkspace.shared.icon(forFile: url(of: entry).path)
             cell.imageView?.alphaValue = entry.isHidden ? 0.5 : 1
         case .git:
             let state = gitStates?[entry.name]
@@ -244,6 +244,11 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
             NSSound.beep()
             return false
         }
+        if isRemote {
+            // Checked and done on the server; the list shows the result.
+            renameRemote(entry, to: newName)
+            return true
+        }
         let source = url(of: entry)
         let target = folderURL.appendingPathComponent(newName)
         // A case-only change is allowed on case-insensitive volumes (the "existing" item is the same file).
@@ -266,20 +271,27 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
 
     func tableView(_ tableView: NSTableView, pasteboardWriterForRow row: Int) -> NSPasteboardWriting? {
         guard let entry = rows[safe: row] else { return nil }
-        return url(of: entry) as NSURL
+        return isRemote ? pasteboardItem(for: entry) : url(of: entry) as NSURL
     }
 
     // MARK: - Drop target
 
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int,
                    proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
-        guard let sources = Self.fileURLs(info.draggingPasteboard), !sources.isEmpty else { return [] }
-        var destination = folderURL
-        if dropOperation == .on, let entry = rows[safe: row], entry.isFolder {
-            destination = url(of: entry)
-        } else {
-            tableView.setDropRow(-1, dropOperation: .on) // the whole list: into this folder
+        guard let locations = Self.locations(info.draggingPasteboard), !locations.isEmpty else { return [] }
+        let ontoFolder = dropOperation == .on && rows[safe: row]?.isFolder == true
+        if !ontoFolder { tableView.setDropRow(-1, dropOperation: .on) } // the whole list: into this folder
+        if isRemote || locations.contains(where: \.isRemote) {
+            let destination = ontoFolder ? location(of: rows[row]) : location
+            if locations.contains(where: { $0 == destination || ($0.isSameTree(as: destination) && $0.parent == destination
+                && Self.remoteDropOperation(info, sources: locations, destination: destination) == .move) }) {
+                return []
+            }
+            return Self.remoteDropOperation(info, sources: locations, destination: destination)
         }
+        let sources = locations.map { URL(fileURLWithPath: $0.path) }
+        var destination = folderURL
+        if ontoFolder, let entry = rows[safe: row] { destination = url(of: entry) }
         // Onto one of the dragged items, or into the folder they are already in: nothing to do.
         let destinationPath = destination.standardizedFileURL.path
         if sources.contains(where: { FileNames.isSameOrInside(destinationPath, $0.standardizedFileURL.path) }) { return [] }
@@ -292,7 +304,15 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
 
     func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int,
                    dropOperation: NSTableView.DropOperation) -> Bool {
-        guard let sources = Self.fileURLs(info.draggingPasteboard), !sources.isEmpty else { return false }
+        guard let locations = Self.locations(info.draggingPasteboard), !locations.isEmpty else { return false }
+        if isRemote || locations.contains(where: \.isRemote) {
+            var destination = location
+            if row >= 0, dropOperation == .on, let entry = rows[safe: row], entry.isFolder { destination = location(of: entry) }
+            let operation = Self.remoteDropOperation(info, sources: locations, destination: destination)
+            startTransfer(operation == .move ? .move : .copy, sources: locations, destination: destination)
+            return true
+        }
+        let sources = locations.map { URL(fileURLWithPath: $0.path) }
         var destination = folderURL
         if row >= 0, dropOperation == .on, let entry = rows[safe: row], entry.isFolder { destination = url(of: entry) }
         let operation = Self.dropOperation(info, sources: sources, destination: destination)
@@ -308,6 +328,16 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
         let volume = FileOperation.volume(of: destination)
         let sameVolume = volume != nil && sources.allSatisfy { FileOperation.volume(of: $0) == volume }
         return sameVolume ? .move : .copy
+    }
+
+    /// Drops that involve a server: ⌥ copies, ⌘ moves; otherwise items move within one host and are copied between
+    /// this Mac and a host or two hosts.
+    static func remoteDropOperation(_ info: NSDraggingInfo, sources: [FileLocation], destination: FileLocation) -> NSDragOperation {
+        let mask = info.draggingSourceOperationMask
+        if mask == .copy { return .copy }
+        if mask == .generic || mask == .move { return .move }
+        guard mask.contains(.move) || mask.contains(.generic) else { return mask.contains(.copy) ? .copy : [] }
+        return sources.allSatisfy { $0.isSameTree(as: destination) } ? .move : .copy
     }
 
     static func fileURLs(_ pasteboard: NSPasteboard) -> [URL]? {
@@ -390,7 +420,7 @@ final class FilesTableView: NSTableView, NSMenuItemValidation {
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
         case #selector(copy(_:)): return selectedRow >= 0
-        case #selector(paste(_:)): return FilesPane.fileURLs(.general)?.isEmpty == false
+        case #selector(paste(_:)): return FilesPane.locations(.general)?.isEmpty == false
         default: return true
         }
     }

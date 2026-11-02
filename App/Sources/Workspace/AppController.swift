@@ -281,7 +281,8 @@ final class AppController {
     @discardableResult
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
                url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
-               ssh: SSHLaunch? = nil, file: PreviewTarget? = nil, account: ClaudeAccount? = nil) throws -> PaneInfo {
+               ssh: SSHLaunch? = nil, file: PreviewTarget? = nil, account: ClaudeAccount? = nil,
+               filesHost: String? = nil) throws -> PaneInfo {
         let source = try resolvePane(paneID)
         if account != nil, kind != .terminal || ssh != nil || (source.ssh != nil && cwd == nil && command == nil) {
             throw RPCError.invalidParams("an account is for local terminal panes (its config directory is on this Mac)")
@@ -299,10 +300,12 @@ final class AppController {
         if let ssh, kind == .terminal {
             pane = makeSSHPane(ssh, in: workspace)
             try connectSSH(pane: pane, emitChange: false)
+        } else if let filesHost, kind == .files {
+            pane = makeRemoteFilesPane(host: filesHost, path: cwd ?? "", in: workspace)
         } else {
             // Remote paths mean nothing here: local terminals split from an SSH pane start in the workspace's
             // local directory (else home).
-            let localSource = source.ssh == nil ? source.workingDirectory : nil
+            let localSource = source.ssh == nil && source.files?.isRemote != true ? source.workingDirectory : nil
             let localWorkspace = workspace.isRemote ? nil : workspace.workingDirectory
             let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? localSource ?? localWorkspace ?? NSHomeDirectory()
             pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account)
@@ -476,10 +479,15 @@ final class AppController {
 
     /// `files.open`: lists a local folder in a files pane split off `paneID` (default: focused pane). When `paneID` is
     /// a files pane, it shows the folder instead. A file's folder is listed with the file selected. `path` must be
-    /// absolute (the CLI resolves relative paths against its cwd).
+    /// absolute (the CLI resolves relative paths against its cwd). With `host`, a folder on that SSH host: `path` may
+    /// also be `~/…`, relative to the remote home or empty (home); it is checked by the listing, which shows errors in
+    /// the pane.
     @discardableResult
-    func openFolder(paneID: String? = nil, path raw: String, direction: SplitDirection = .right,
-                    focus: Bool = true) throws -> PaneInfo {
+    func openFolder(paneID: String? = nil, path raw: String, host rawHost: String? = nil,
+                    direction: SplitDirection = .right, focus: Bool = true) throws -> PaneInfo {
+        if let rawHost {
+            return try openRemoteFolder(paneID: paneID, host: rawHost, path: raw, direction: direction, focus: focus)
+        }
         guard raw.hasPrefix("/") else { throw RPCError.invalidParams("path must be absolute: \(raw)") }
         let path = (raw as NSString).standardizingPath
         guard FileManager.default.fileExists(atPath: path) else { throw RPCError.notFound("no such file or folder: \(path)") }
@@ -490,7 +498,7 @@ final class AppController {
             select = [(path as NSString).lastPathComponent]
         }
         let source = try resolvePane(paneID)
-        if let files = source.files {
+        if let files = source.files, !files.isRemote {
             files.navigate(to: folder, select: select)
             if focus { try focusPane(id: source.id) }
             return try paneInfo(id: source.id)
@@ -498,6 +506,28 @@ final class AppController {
         let info = try split(paneID: source.id, direction: direction, kind: .files, cwd: folder, focus: focus)
         if let select { pane(id: info.id)?.files?.navigate(to: folder, select: select) }
         return info
+    }
+
+    private func openRemoteFolder(paneID: String?, host rawHost: String, path raw: String, direction: SplitDirection,
+                                  focus: Bool) throws -> PaneInfo {
+        let host: String
+        let path: String
+        do {
+            host = try SSHLaunch.validateHost(rawHost)
+            path = try RemotePath.checked(raw)
+        } catch let error as SSHLaunch.InvalidInput {
+            throw RPCError.invalidParams(error.description)
+        } catch let error as RemotePath.Invalid {
+            throw RPCError.invalidParams(error.description)
+        }
+        let source = try resolvePane(paneID)
+        if let files = source.files, files.host == host {
+            files.waitingForConnect = false
+            files.navigate(to: path.isEmpty ? "~" : path)
+            if focus { try focusPane(id: source.id) }
+            return try paneInfo(id: source.id)
+        }
+        return try split(paneID: source.id, direction: direction, kind: .files, cwd: path, focus: focus, filesHost: host)
     }
 
     /// The files pane that Copy / Move to Other Pane of `pane` goes to: of the workspace's other files panes, the one
@@ -739,7 +769,7 @@ final class AppController {
                 if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
                 if let files = pane?.files {
                     return .files(path: files.folder, showHidden: files.showHidden ? true : nil,
-                                  follow: files.followsTerminal ? true : nil)
+                                  follow: files.followsTerminal ? true : nil, host: files.host)
                 }
                 if let pane, let ssh = pane.ssh {
                     let cwd = (try? SSHLaunch.validateRemoteCwd(pane.workingDirectory)) ?? ssh.launch.remoteCwd
@@ -806,8 +836,11 @@ final class AppController {
                 // A missing file shows a placeholder (and appears when it is created again).
                 let target = PreviewTarget(path: path, format: format.flatMap(PreviewFormat.init(rawValue:)))
                 return SplitNode(paneID: makePane(kind: .preview, in: workspace, cwd: nil, command: nil, url: nil, file: target).id)
-            case .files(let path, let showHidden, let follow):
-                let pane = makePane(kind: .files, in: workspace, cwd: existing(path), command: nil, url: nil)
+            case .files(let path, let showHidden, let follow, let host):
+                // A folder on an SSH host never connects on launch: the pane offers Connect (⌘R).
+                let remote = host.flatMap { try? SSHLaunch.validateHost($0) }
+                let pane = remote.map { makeRemoteFilesPane(host: $0, path: path, in: workspace, connect: false) }
+                    ?? makePane(kind: .files, in: workspace, cwd: existing(path), command: nil, url: nil)
                 pane.files?.restore(showHidden: showHidden ?? false, followsTerminal: follow ?? false)
                 return SplitNode(paneID: pane.id)
             case .ssh(let host, let remoteCwd):
@@ -836,7 +869,8 @@ final class AppController {
             if let focused = workspace.focusedPane, focused.ssh != nil {
                 updateLocation(of: workspace, from: focused)
             } else {
-                workspace.workingDirectory = workspace.focusedPane?.workingDirectory ?? existing(saved.workingDirectory)
+                let focusedLocal = workspace.focusedPane?.files?.isRemote == true ? nil : workspace.focusedPane?.workingDirectory
+                workspace.workingDirectory = focusedLocal ?? existing(saved.workingDirectory)
                 workspace.gitBranch = workspace.workingDirectory.flatMap(GitInfo.branch(at:))
             }
             workspaces.append(workspace)
@@ -907,6 +941,15 @@ final class AppController {
             environment[CmdsEnv.supportDirectory] = supportDirectory
         }
         return environment
+    }
+
+    /// A files pane on an SSH host (docs/guide/files.md "Folders on SSH hosts"); `connect` false waits for Connect.
+    func makeRemoteFilesPane(host: String, path: String, in workspace: Workspace, connect: Bool = true) -> Pane {
+        let id = makePaneID()
+        let pane = Pane(id: id, workspaceID: workspace.id, files: FilesPane(folder: path, host: host, connect: connect))
+        pane.controller = self
+        workspace.panes[id] = pane
+        return pane
     }
 
     /// An SSH pane, not connected yet (`connectSSH`).

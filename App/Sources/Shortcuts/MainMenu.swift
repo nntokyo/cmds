@@ -12,7 +12,7 @@ enum MainMenu {
         main.addItem(submenu(viewMenu(router)))
         main.addItem(submenu(paneMenu(router)))
         main.addItem(submenu(workspaceMenu(router)))
-        let window = windowMenu()
+        let window = windowMenu(router)
         main.addItem(submenu(window))
         NSApp.windowsMenu = window
         let help = helpMenu(router)
@@ -62,6 +62,7 @@ enum MainMenu {
         menu.addItem(item("Open Browser Split", #selector(CommandRouter.openBrowser(_:)), "b", [.command, .shift], target: router))
         menu.addItem(item("Open in Preview…", #selector(CommandRouter.openInPreview(_:)), "o", [.command, .shift], target: router))
         menu.addItem(item("New Files Pane", #selector(CommandRouter.openFilesPane(_:)), "e", [.command, .shift], target: router))
+        menu.addItem(item("New Remote Files Pane…", #selector(CommandRouter.openRemoteFilesPane(_:)), "e", [.command, .shift, .option], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Export Workspaces…", #selector(CommandRouter.exportWorkspaces(_:)), "", target: router))
         menu.addItem(item("Import Workspaces…", #selector(CommandRouter.importWorkspaces(_:)), "", target: router))
@@ -211,12 +212,13 @@ enum MainMenu {
         return menu
     }
 
-    private static func windowMenu() -> NSMenu {
+    private static func windowMenu(_ router: CommandRouter) -> NSMenu {
         let menu = NSMenu(title: String(localized: "Window"))
         menu.addItem(item("Minimize", #selector(NSWindow.performMiniaturize(_:)), "m"))
         menu.addItem(item("Zoom", #selector(NSWindow.performZoom(_:)), ""))
         menu.addItem(.separator())
         menu.addItem(item("Schedules…", #selector(SchedulesWindowController.showSchedules(_:)), "", target: SchedulesWindowController.shared))
+        menu.addItem(item("Transfers", #selector(CommandRouter.showTransfers(_:)), "t", [.command, .option], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Bring All to Front", #selector(NSApplication.arrangeInFront(_:)), "", target: NSApp))
         return menu

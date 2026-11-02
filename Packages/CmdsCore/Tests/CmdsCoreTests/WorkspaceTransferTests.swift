@@ -147,3 +147,18 @@ final class WorkspaceTransferTests: XCTestCase {
         XCTAssertEqual(withSessions.agentSessionCount, 3)
     }
 }
+
+final class WorkspaceTransferRemoteFilesTests: XCTestCase {
+    func testRemoteFilesPane() throws {
+        func bundle(_ pane: WorkspaceBundle.Pane) -> WorkspaceBundle {
+            WorkspaceBundle(workspaces: [.init(layout: .pane(pane))])
+        }
+        let checked = try bundle(WorkspaceBundle.Pane(kind: .files, host: "home", path: "~/srv")).validated()
+        XCTAssertEqual(checked.workspaces[0].panes[0], WorkspaceBundle.Pane(kind: .files, host: "home", path: "~/srv"))
+        // No path: the remote home.
+        XCTAssertNil(try bundle(WorkspaceBundle.Pane(kind: .files, host: "home")).validated().workspaces[0].panes[0].path)
+        XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .files, host: "-oProxyCommand=x", path: "/")).validated())
+        XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .files, host: "home", path: "srv")).validated())
+        XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .files, host: "home", remoteCwd: "/x", path: "/")).validated())
+    }
+}

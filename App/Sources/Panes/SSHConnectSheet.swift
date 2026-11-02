@@ -57,6 +57,57 @@ enum SSHConnectSheet {
     }
 }
 
+/// "New Remote Files Pane…": a folder on an SSH host (docs/guide/files.md "Folders on SSH hosts"), split to the right
+/// of the focused pane. Host completion as for SSH workspaces; nothing is asked for but the host and folder (cmds
+/// uses the keys and agent of your ssh, never a password).
+@MainActor
+enum RemoteFilesSheet {
+    private static let lastHostKey = "RemoteFilesLastHost"
+
+    static func present(in window: NSWindow?, controller: AppController) {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "New Remote Files Pane")
+        alert.informativeText = String(localized: "Lists a folder on an SSH host over SFTP with your ssh (~/.ssh/config, keys, agent). cmds never asks for or stores passwords, and only connects to hosts whose key is already in known_hosts.")
+        alert.addButton(withTitle: String(localized: "Open"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        let host = NSComboBox()
+        host.completes = true
+        host.usesDataSource = false
+        host.addItems(withObjectValues: CmdsEnv.filesSSHConfig() == nil ? SSHConfigHosts.load() : [])
+        host.placeholderString = String(localized: "host, user@host or ~/.ssh/config alias")
+        host.stringValue = UserDefaults.standard.string(forKey: lastHostKey)
+            ?? controller.focusedPane?.ssh?.launch.host ?? ""
+        let directory = NSTextField()
+        directory.placeholderString = String(localized: "folder (optional, e.g. ~/src/app; default: home)")
+        let grid = NSGridView(views: [
+            [NSTextField(labelWithString: String(localized: "Host:")), host],
+            [NSTextField(labelWithString: String(localized: "Folder:")), directory],
+        ])
+        grid.rowSpacing = 8
+        grid.column(at: 0).xPlacement = .trailing
+        for field in [host, directory] as [NSView] {
+            field.widthAnchor.constraint(equalToConstant: 280).isActive = true
+        }
+        grid.frame = NSRect(x: 0, y: 0, width: 360, height: 54)
+        alert.accessoryView = grid
+        alert.window.initialFirstResponder = host
+        alert.present(in: window) { response in
+            guard response == .alertFirstButtonReturn else { return }
+            do {
+                if controller.focusedPane == nil { controller.createWorkspace() }
+                let info = try controller.openFolder(path: directory.stringValue.trimmingCharacters(in: .whitespaces),
+                                                     host: host.stringValue.trimmingCharacters(in: .whitespaces))
+                if let pane = controller.pane(id: info.id), let files = pane.files { UserDefaults.standard.set(files.host, forKey: lastHostKey) }
+            } catch {
+                let failure = NSAlert()
+                failure.messageText = String(localized: "Cannot open the remote folder")
+                failure.informativeText = (error as? RPCError)?.message ?? error.localizedDescription
+                failure.runModal()
+            }
+        }
+    }
+}
+
 /// "Install Remote Helper…": types a one-line installer into the focused SSH pane's remote shell, only after the
 /// user confirms. Installs `~/.local/bin/cmds-remote.sh` and, when the server has no `cmds`, a `cmds` link to it
 /// (so the same Claude Code hook lines work there).
