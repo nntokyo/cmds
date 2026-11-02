@@ -261,6 +261,17 @@ final class ClaudeAccountTests: XCTestCase {
         XCTAssertEqual(decoded.account(named: "OK")?.name, "ok")
     }
 
+    /// #44: a position beyond the end is refused like position 0, not clamped.
+    func testMovePositions() {
+        XCTAssertNil(ClaudeAccounts.positionProblem(0, count: 3))
+        XCTAssertNil(ClaudeAccounts.positionProblem(2, count: 3))
+        XCTAssertEqual(ClaudeAccounts.positionProblem(3, count: 3), "the position must be 1 to 3")
+        XCTAssertEqual(ClaudeAccounts.positionProblem(8, count: 3), "the position must be 1 to 3")
+        XCTAssertEqual(ClaudeAccounts.positionProblem(-1, count: 3), "the position must be 1 to 3")
+        XCTAssertNil(ClaudeAccounts.positionProblem(0, count: 1))
+        XCTAssertEqual(ClaudeAccounts.positionProblem(1, count: 1), "the position must be 1")
+    }
+
     func testStoreFile() throws {
         let dir = try temporaryDirectory()
         let url = ClaudeAccountStore.url(supportDirectory: dir)

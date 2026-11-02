@@ -21,6 +21,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- Mac: removing a Claude account takes it off the panes that had it; `cmds ls` and the sidebar no longer show
+  `account <name>` for an account `cmds accounts` does not list (#44).
+- `cmds accounts move NAME 9` with fewer accounts is refused (exit 1, `the position must be 1 to 3`) instead of moving
+  the account to the end (#44).
+- Docs: a split without `--account` does not take the account of the pane it splits (#44).
+
 ## [0.5.0] - 2026-11-02
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.

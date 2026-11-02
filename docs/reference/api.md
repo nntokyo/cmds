@@ -55,8 +55,8 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `agent.resume` | `pane?` or `all: true` | `{"queued": [pane], "skipped": [{"pane", "reason"}]}` (types the resume command once the pane's prompt is ready; [Resuming sessions](../guide/ai-agents.md#resuming-sessions)) |
 | `account.list` | – | `ClaudeAccountList` `{"accounts": [{"name", "configDir", "exists", "limit"?: {"kind": "usageLimit"/"rateLimit", "resetsAt", "estimated", "detectedAt", "message"?}, "sessions": "shared"/"missing"/"separate"/"elsewhere"/"noConfigDir", "panes": [id]}], "autoSwitch"}` (`limit` only while active). All `account.*` methods: local socket only |
 | `account.add` | `name`, `configDir` (absolute or `~/…`) | `ClaudeAccountList` |
-| `account.remove` | `name` | – (the folder is left as it is) |
-| `account.move` | `name`, `index` (0-based) | – |
+| `account.remove` | `name` | – (the folder is left as it is; panes using the account no longer have one) |
+| `account.move` | `name`, `index` (0-based, less than the number of accounts; others are refused) | – |
 | `account.set` | `autoSwitch?` (bool) | `ClaudeAccountList` |
 | `account.clear_limit` | `name` | – |
 | `account.share` | `apply?` (default false: only the plan) | `[{"account", "projects", "action": "none"/"link"/"moveAside"/"skip", "backup"?, "reason"?}]` ([Sharing sessions](../guide/ai-agents.md#sharing-sessions-between-accounts)) |

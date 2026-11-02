@@ -215,7 +215,9 @@ signs in for you.
 `cmds new --account work -- claude` (or `cmds split --account work -- claude`) opens a pane whose shell has
 `CLAUDE_CONFIG_DIR` set to the account's folder, so `claude` and everything started from it uses that account.
 `--account auto` takes the first account in order that has not hit its limit. The pane keeps its account after a
-restart. The sidebar shows it after the agent and model (`Claude Opus @work`), its tooltip says `Account: work`, `cmds ls` and
+restart. A split without `--account` (also **Split Right** / **Split Down** in the menu) does not take the account of
+the pane it splits: its shell has no `CLAUDE_CONFIG_DIR`, so `claude` there uses `~/.claude`. Removing an account takes
+it off the panes that had it (their shells keep the folder they were started with). The sidebar shows it after the agent and model (`Claude Opus @work`), its tooltip says `Account: work`, `cmds ls` and
 `cmds sessions` print `account work`. A pane where you start `claude` yourself gets the account whose folder matches
 the `CLAUDE_CONFIG_DIR` Claude Code reports through the status line (none set: the account using `~/.claude`, if
 any).

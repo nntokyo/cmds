@@ -68,13 +68,23 @@ extension AppController {
         for pane in workspaces.flatMap(\.orderedPanes) where pane.accountSwitch?.to == account.name && pane.accountSwitch?.isInProgress == false {
             dismissAccountSwitch(pane)
         }
+        // Panes no longer show (or save) an account cmds does not know (#44). Their shells keep the config directory
+        // they were started with; `cmds hook claude-status` reports it again if the account is added back.
+        for pane in workspaces.flatMap(\.orderedPanes) where pane.claudeAccount.map(account.hasName) ?? false {
+            pane.claudeAccount = nil
+            emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))
+            scheduleSave()
+        }
         saveClaudeAccounts()
     }
 
     func moveAccount(name: String, to index: Int) throws {
         let account = try account(named: name)
+        if let problem = ClaudeAccounts.positionProblem(index, count: claudeAccounts.accounts.count) {
+            throw RPCError.invalidParams(problem)
+        }
         claudeAccounts.accounts.removeAll { $0.name == account.name }
-        claudeAccounts.accounts.insert(account, at: max(0, min(index, claudeAccounts.accounts.count)))
+        claudeAccounts.accounts.insert(account, at: index)
         saveClaudeAccounts()
     }
 
