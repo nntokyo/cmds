@@ -16,6 +16,7 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
     private let editButton = NSButton(title: String(localized: "Edit…"), target: nil, action: nil)
     private let runButton = NSButton(title: String(localized: "Run Now"), target: nil, action: nil)
     private let cancelButton = NSButton(title: String(localized: "Cancel Run"), target: nil, action: nil)
+    private let skipButton = NSButton(title: String(localized: "Skip Next Run"), target: nil, action: nil)
     private let note = NSTextField(wrappingLabelWithString: "")
     private let detail = NSTextField(wrappingLabelWithString: "")
     private var entries: [ScheduleListEntry] = []
@@ -160,14 +161,16 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
         addRemove.segmentStyle = .smallSquare
         addRemove.target = self
         addRemove.action = #selector(addRemoveClicked)
-        for (button, action) in [(editButton, #selector(editSchedule)), (runButton, #selector(runNow)), (cancelButton, #selector(cancelRun))] {
+        for (button, action) in [(editButton, #selector(editSchedule)), (runButton, #selector(runNow)), (cancelButton, #selector(cancelRun)),
+                                 (skipButton, #selector(skipNext))] {
             button.bezelStyle = .rounded
             button.target = self
             button.action = action
         }
         runButton.toolTip = String(localized: "Run the selected schedule now, also when it is off")
         cancelButton.toolTip = String(localized: "Stop the active run; nothing more is typed")
-        let buttons = NSStackView(views: [addRemove, NSView(), editButton, runButton, cancelButton])
+        skipButton.toolTip = String(localized: "Do not run the selected schedule next time; it goes on after that")
+        let buttons = NSStackView(views: [addRemove, NSView(), editButton, skipButton, runButton, cancelButton])
         buttons.spacing = 6
         buttons.setHuggingPriority(.defaultLow, for: .horizontal)
 
@@ -251,6 +254,7 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
         editButton.isEnabled = writable && entry != nil
         runButton.isEnabled = writable && entry != nil && entry?.activeRun == nil
         cancelButton.isEnabled = entry?.activeRun != nil
+        skipButton.isEnabled = writable && entry?.schedule.enabled == true && entry?.nextFireAt != nil
         if let entry {
             var parts = [ScheduleText.origin(entry.schedule.origin)]
             if let problem = runner.problem(of: entry.schedule) { parts.append(ScheduleText.problem(problem)) }
@@ -428,6 +432,11 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
     @objc private func runNow() {
         guard let entry = selectedEntry else { return }
         do { try runner.runNow(id: entry.schedule.id) } catch { showError(error) }
+    }
+
+    @objc private func skipNext() {
+        guard let entry = selectedEntry else { return }
+        do { try runner.skip(id: entry.schedule.id) } catch { showError(error) }
     }
 
     @objc private func cancelRun() {

@@ -22,7 +22,9 @@ enum ScheduleChange {
 ///   plus a 60 s safety check. A firing time that passed while the Mac slept or cmds was not running gets one
 ///   catch-up run within the late policy, else a missed entry (`ScheduleCatchUp`).
 /// - Runs (ScheduleRunner+Runs.swift): a state machine per run, driven every 0.3 s by `ScheduleRunTiming`. Only the
-///   run's own pane or the pane holding the targeted Claude Code session is typed into, once.
+///   run's own pane, the pane holding the targeted Claude Code / Codex session, or the pane a `sendText` target names
+///   (`PaneTags.swift`) is typed into, once.
+/// - Notices (ScheduleRunner+Notice.swift): "starts in 1 minute" with Skip before a scheduled firing.
 /// - Never logs prompts or commands.
 @MainActor
 final class ScheduleRunner {
@@ -60,6 +62,9 @@ final class ScheduleRunner {
     var changes: AnyPublisher<ScheduleChange, Never> { subject.eraseToAnyPublisher() }
 
     private var fireTimer: Timer?
+    var noticeTimer: Timer?
+    /// The firing time each schedule's notice was shown for (once per firing).
+    var noticeShownFor: [String: Date] = [:]
     private var safetyTimer: Timer?
     var tickTimer: Timer?
     private var observers: [NSObjectProtocol] = []
@@ -94,9 +99,11 @@ final class ScheduleRunner {
                 MainActor.assumeIsolated { self?.timeDidChange(zone: notification.name == .NSSystemTimeZoneDidChange) }
             })
         }
-        observers.append(center.addObserver(forName: AppController.accountsDidChange, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.accountsDidChange() }
-        })
+        for name in [AppController.accountsDidChange, AppController.codexLimitsDidChange] {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.limitsDidChange() }
+            })
+        }
         workspaceObservers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
                 // Timers stopped during sleep: what fell due is caught up (or missed) now.
@@ -108,7 +115,7 @@ final class ScheduleRunner {
     /// cmds quits: active runs end (nothing more will be typed), the history is saved.
     func stop() {
         for run in active { finish(run, .cancelled, .appQuit, notify: false) }
-        [fireTimer, safetyTimer, tickTimer].forEach { $0?.invalidate() }
+        [fireTimer, safetyTimer, tickTimer, noticeTimer].forEach { $0?.invalidate() }
         observers.forEach(NotificationCenter.default.removeObserver)
         workspaceObservers.forEach(NSWorkspace.shared.notificationCenter.removeObserver)
     }
@@ -170,6 +177,7 @@ final class ScheduleRunner {
     func save() {
         guard !readOnly else { return }
         do {
+            // The lowest version that runs them all (a phase-1 build keeps running phase-1 schedules).
             try ScheduleStore.save(ScheduleFile(schedules: schedules), to: url)
         } catch {
             scheduleLog.error("could not save schedules: \(String(describing: error), privacy: .public)")
@@ -205,7 +213,8 @@ final class ScheduleRunner {
             case .run(let cause): startRun(schedule, cause: cause, dueAt: due)
             case .missed: recordMissed(schedule, dueAt: due)
             }
-            advance(&schedules[index], after: max(now, due.addingTimeInterval(1)))
+            withdrawNotice(of: schedule.id)
+            advance(&schedules[index], due: due, now: now)
             changed = true
         }
         if changed {
@@ -215,19 +224,32 @@ final class ScheduleRunner {
         arm()
     }
 
-    /// The next firing after `date`; a one-shot that fired is disabled.
-    private func advance(_ schedule: inout Schedule, after date: Date) {
+    /// The firing due at `due` was handled (run, missed or skipped): a one-shot is disabled; a weekly schedule moves to
+    /// its next time; a repeating limit trigger waits for a reset after `due`.
+    func advance(_ schedule: inout Schedule, due: Date, now: Date) {
+        schedule.lastDueAt = due
         if schedule.trigger.isOneShot {
             schedule.enabled = false
             schedule.nextFireAt = nil
+        } else if schedule.trigger.followsLimit {
+            schedule.nextFireAt = nil
+            schedule.nextFireAt = recomputed(schedule, now: now)
         } else {
-            schedule.nextFireAt = nextFire(schedule, after: date)
+            schedule.nextFireAt = nextFire(schedule, after: max(now, due.addingTimeInterval(1)))
         }
     }
 
     func nextFire(_ schedule: Schedule, after date: Date) -> Date? {
-        ScheduleCalendar.nextFire(schedule.trigger, after: date, accounts: controller.claudeAccounts.accounts, timeZone: .current)
+        ScheduleCalendar.nextFire(schedule.trigger, after: date, accounts: controller.claudeAccounts.accounts,
+                                  codex: codexLimits, timeZone: .current)
     }
+
+    private func recomputed(_ schedule: Schedule, now: Date) -> Date? {
+        ScheduleCalendar.recomputed(schedule, now: now, accounts: controller.claudeAccounts.accounts, codex: codexLimits)
+    }
+
+    /// Codex's limits as last seen in a Codex session file (nil: none seen since cmds started).
+    var codexLimits: AgentLimits? { controller.agentLimitsByKind[.codex] }
 
     /// One timer for the earliest firing; a 60 s check while anything is enabled.
     func arm() {
@@ -242,6 +264,7 @@ final class ScheduleRunner {
             RunLoop.main.add(timer, forMode: .common)
             fireTimer = timer
         }
+        armNotice()
         if enabled.isEmpty {
             safetyTimer?.invalidate()
             safetyTimer = nil
@@ -268,13 +291,13 @@ final class ScheduleRunner {
         arm()
     }
 
-    /// Limits changed: a `limitReset` schedule follows its account's current limit.
-    private func accountsDidChange() {
+    /// Claude accounts or Codex limits changed: a limit trigger follows the current limit
+    /// (`ScheduleCalendar.recomputed`).
+    private func limitsDidChange() {
         let now = now()
         var changed = false
-        for index in schedules.indices where schedules[index].enabled {
-            guard case .limitReset = schedules[index].trigger else { continue }
-            let next = nextFire(schedules[index], after: now)
+        for index in schedules.indices where schedules[index].enabled && schedules[index].trigger.followsLimit {
+            let next = recomputed(schedules[index], now: now)
             if next != schedules[index].nextFireAt {
                 schedules[index].nextFireAt = next
                 changed = true
@@ -318,20 +341,27 @@ final class ScheduleRunner {
                   !accounts.contains(where: { $0.hasName(name) }) else { return nil }
             return .accountUnknown(name)
         }
-        if case .limitReset(let account, _) = schedule.trigger, let problem = missing(account) { return problem }
+        if case .limitReset(let account, _, _) = schedule.trigger, let problem = missing(account) { return problem }
         switch schedule.action {
         case .startWorkspace(let action):
             if action.account?.lowercased() == ClaudeAccounts.automatic, accounts.isEmpty { return .noAccounts }
             return missing(action.account)
         case .continueSession(let action):
             return missing(action.account)
+        case .sendText:
+            return nil
         }
     }
 
     func entry(_ schedule: Schedule) -> ScheduleListEntry {
-        ScheduleListEntry(schedule: schedule, nextFireAt: schedule.enabled ? schedule.nextFireAt : nil,
-                          activeRun: active.first { $0.record.scheduleID == schedule.id }?.record,
-                          lastRun: history.first { $0.scheduleID == schedule.id }, problem: problem(of: schedule)?.english)
+        var targetPane: String?
+        if case .sendText(let action) = schedule.action, case .pane(let pane) = controller.resolveScheduleTarget(action.target) {
+            targetPane = pane
+        }
+        return ScheduleListEntry(schedule: schedule, nextFireAt: schedule.enabled ? schedule.nextFireAt : nil,
+                                 activeRun: active.first { $0.record.scheduleID == schedule.id }?.record,
+                                 lastRun: history.first { $0.scheduleID == schedule.id }, problem: problem(of: schedule)?.english,
+                                 targetPane: targetPane)
     }
 
     func list() -> ScheduleList {
@@ -345,11 +375,11 @@ final class ScheduleRunner {
 
     // MARK: Changes (API, window)
 
-    private func requireWritable() throws {
+    func requireWritable() throws {
         if let readOnlyReason { throw RPCError.invalidParams("schedules are read only: \(readOnlyReason.english)") }
     }
 
-    private func index(of id: String) throws -> Int {
+    func index(of id: String) throws -> Int {
         guard let index = schedules.firstIndex(where: { $0.id == id }) else { throw RPCError.notFound("schedule not found: \(id)") }
         return index
     }
@@ -357,7 +387,14 @@ final class ScheduleRunner {
     /// What is wrong with a new or changed schedule. `full` false: editing other parts of a schedule whose time has
     /// passed (or whose limit is gone) is fine.
     func problems(_ draft: ScheduleDraft, excluding id: String?, full: Bool) -> [ScheduleProblem] {
-        var problems = ScheduleValidation.problems(draft, accounts: controller.claudeAccounts.accounts,
+        var draft = draft
+        // A pane target (the editor's choice) is checked as the tag it will be stored as.
+        if case .sendText(var action) = draft.action, case .pane(let paneID) = action.target,
+           let pane = controller.pane(id: paneID), AppController.isScheduleTarget(pane) {
+            action.target = .tag(pane.scheduleTag ?? ScheduleIDs.make(prefix: ScheduleIDs.paneTagPrefix))
+            draft.action = .sendText(action)
+        }
+        var problems = ScheduleValidation.problems(draft, accounts: controller.claudeAccounts.accounts, codex: codexLimits,
                                                    existing: schedules.filter { $0.id != id }.count, now: now())
         if !full { problems.removeAll(where: Self.dependsOnNow) }
         return problems
@@ -370,14 +407,27 @@ final class ScheduleRunner {
 
     private static func dependsOnNow(_ problem: ScheduleProblem) -> Bool {
         switch problem {
-        case .onceInPast, .accountNotLimited: return true
+        case .onceInPast, .accountNotLimited, .codexNotLimited: return true
         default: return false
         }
+    }
+
+    /// A `sendText` target given as a pane (`{"pane": "p3"}`) is stored as that pane's tag (given now if it has none):
+    /// pane ids change when cmds restarts, tags do not. Only a local terminal pane can be a target.
+    func storingTarget(_ draft: ScheduleDraft) throws -> ScheduleDraft {
+        guard case .sendText(var action) = draft.action, case .pane(let id) = action.target else { return draft }
+        guard let pane = controller.pane(id: id) else { throw RPCError.notFound("pane not found: \(id)") }
+        guard AppController.isScheduleTarget(pane) else { throw RPCError.invalidParams(ScheduleProblem.targetInvalid.english) }
+        action.target = .tag(controller.scheduleTag(for: pane))
+        var stored = draft
+        stored.action = .sendText(action)
+        return stored
     }
 
     @discardableResult
     func add(_ draft: ScheduleDraft, origin: ScheduleOrigin) throws -> Schedule {
         try requireWritable()
+        let draft = try storingTarget(draft)
         try validate(draft, excluding: nil, full: true)
         let now = now()
         var schedule = Schedule(id: ScheduleIDs.make(prefix: ScheduleIDs.schedulePrefix, taken: Set(schedules.map(\.id))),
@@ -399,6 +449,7 @@ final class ScheduleRunner {
         let old = schedules[index]
         var draft = old.draft
         change(&draft)
+        draft = try storingTarget(draft)
         let rearm = ScheduleValidation.needsFullCheck(old: old.draft, new: draft)
         try validate(draft, excluding: id, full: rearm)
         schedules[index].draft = draft
@@ -432,6 +483,34 @@ final class ScheduleRunner {
         try requireWritable()
         guard let schedule = schedule(id: id) else { throw RPCError.notFound("schedule not found: \(id)") }
         return startRun(schedule, cause: .manual, dueAt: now())
+    }
+
+    /// Skips the next firing (the notice's Skip, `schedule.skip`, the window): a `skipped` run is noted and the
+    /// schedule moves on as if it had run (a one-shot is turned off). `dueAt`: the firing the notice was about; a Skip
+    /// that comes after that firing moved (it ran, or the limit changed) does nothing.
+    @discardableResult
+    func skip(id: String, dueAt expected: Date? = nil) throws -> ScheduleRun {
+        try requireWritable()
+        let index = try index(of: id)
+        let schedule = schedules[index]
+        guard schedule.enabled, let due = schedule.nextFireAt else {
+            throw RPCError.invalidParams("schedule \(id) has no next run to skip")
+        }
+        if let expected, abs(expected.timeIntervalSince(due)) > 1 {
+            throw RPCError.invalidParams("the run of schedule \(id) has already moved")
+        }
+        let now = now()
+        let run = ScheduleRun(id: newRunID(), scheduleID: schedule.id, scheduleName: schedule.name, cause: .scheduled,
+                              dueAt: due, startedAt: now, endedAt: now, state: .skipped, reason: .skippedByUser)
+        scheduleLog.info("schedule \(id, privacy: .public) skipped its run due \(due.timeIntervalSince1970)")
+        addToHistory(run)
+        emit(.run(run))
+        advance(&schedules[index], due: due, now: now)
+        withdrawNotice(of: id)
+        save()
+        emit(.schedules(id: id))
+        arm()
+        return run
     }
 
     func cancel(runID: String) throws {

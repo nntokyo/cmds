@@ -27,10 +27,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // A schedule's run failed, was skipped or missed.
         let openSchedules = UNNotificationAction(identifier: ScheduleRunner.openSchedulesAction,
                                                  title: String(localized: "Open Schedules"), options: [.foreground])
+        // A schedule starts in a minute: Skip leaves cmds in the background.
+        let skipRun = UNNotificationAction(identifier: ScheduleRunner.skipAction, title: String(localized: "Skip"), options: [])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: AppController.accountNotificationCategory, actions: [switchAccount], intentIdentifiers: []),
             UNNotificationCategory(identifier: AppController.accountLimitLaterCategory, actions: [continueLater], intentIdentifiers: []),
             UNNotificationCategory(identifier: ScheduleRunner.notificationCategory, actions: [openSchedules], intentIdentifiers: []),
+            UNNotificationCategory(identifier: ScheduleRunner.noticeCategory, actions: [skipRun, openSchedules], intentIdentifiers: []),
         ])
 
         windowController.showWindow(nil)
@@ -97,11 +100,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 extension AppDelegate: UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                             withCompletionHandler completionHandler: @escaping () -> Void) {
-        let paneID = response.notification.request.content.userInfo["paneID"] as? String
-        let aboutSchedules = response.notification.request.content.userInfo["schedules"] as? Bool == true
+        let userInfo = response.notification.request.content.userInfo
+        let paneID = userInfo["paneID"] as? String
+        let aboutSchedules = userInfo["schedules"] as? Bool == true
         let action = response.actionIdentifier
+        let noticeSchedule = userInfo[ScheduleRunner.noticeScheduleKey] as? String
+        let noticeDue = userInfo[ScheduleRunner.noticeDueKey] as? Double
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
+                if action == ScheduleRunner.skipAction {
+                    if let noticeSchedule, let noticeDue {
+                        self.controller.scheduleRunner.skipFromNotice(id: noticeSchedule, dueAt: Date(timeIntervalSince1970: noticeDue))
+                    }
+                    completionHandler()
+                    return
+                }
                 if action == AppController.accountSwitchAction, let paneID, let pane = self.controller.pane(id: paneID) {
                     // The banner's Continue: the offered account, or the offer worked out again.
                     self.controller.continueAccountSwitch(pane)

@@ -66,6 +66,10 @@ final class Pane {
     /// An account switch offered or in progress.
     var accountSwitch: AccountSwitch?
 
+    /// The tag a `sendText` schedule targets this pane by (`PaneTarget.tag`; local terminal panes only). Given when a
+    /// schedule first targets the pane; saved in the session, so it survives a relaunch (pane ids do not).
+    var scheduleTag: String?
+
     /// Last time the pane took focus (the "other" files pane is the one used most recently).
     var focusedAt = Date.distantPast
 

@@ -30,6 +30,15 @@ struct SessionState: Codable {
         /// Claude account of each terminal pane that has one (its shell gets the account's `CLAUDE_CONFIG_DIR` again).
         /// Added later; an account removed meanwhile is ignored.
         var paneAccounts: [PaneAccount]? = nil
+        /// Schedule tag of each terminal pane that has one (`Pane.scheduleTag`). Added later (schedules phase 2): older
+        /// versions ignore it and drop it when they save, so a schedule then finds no pane and skips its run.
+        var paneTags: [PaneTag]? = nil
+    }
+
+    /// The schedule tag of the pane at `paneIndex` (reading order of `layout`).
+    struct PaneTag: Codable {
+        var paneIndex: Int
+        var tag: String
     }
 
     /// The Claude account of the pane at `paneIndex` (reading order of `layout`).
@@ -110,7 +119,7 @@ enum SessionStore {
 
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
-        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts
+        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags
     }
 
     init(from decoder: Decoder) throws {
@@ -124,6 +133,8 @@ extension SessionState.WorkspaceState {
         agentSessions = sessions.isEmpty ? nil : sessions
         let accounts = (try? c.decodeIfPresent([Lossy<SessionState.PaneAccount>].self, forKey: .paneAccounts))?.compactMap(\.value) ?? []
         paneAccounts = accounts.isEmpty ? nil : accounts
+        let tags = (try? c.decodeIfPresent([Lossy<SessionState.PaneTag>].self, forKey: .paneTags))?.compactMap(\.value) ?? []
+        paneTags = tags.isEmpty ? nil : tags
     }
 }
 

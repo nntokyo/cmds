@@ -21,6 +21,7 @@ enum ScheduleAPI {
             let action = try optional("action", params, as: ScheduleAction.self)
             let late = try optional("late", params, as: ScheduleLatePolicy.self)
             let notify = try params.value("notify", as: ScheduleNotify.self, invalid: "notify must be failures, always or never")
+            let warn = try params.bool("warn")
             let schedule = try runner.update(id: id) { draft in
                 if let name { draft.name = name }
                 if let enabled { draft.enabled = enabled }
@@ -28,6 +29,7 @@ enum ScheduleAPI {
                 if let action { draft.action = action }
                 if let late { draft.late = late }
                 if let notify { draft.notify = notify }
+                if let warn { draft.warn = warn }
             }
             return try .from(runner.entry(schedule))
         case "schedule.remove":
@@ -35,6 +37,8 @@ enum ScheduleAPI {
             return nil
         case "schedule.run":
             return ["run": try .from(try runner.runNow(id: try params.required("id")))]
+        case "schedule.skip":
+            return ["run": try .from(try runner.skip(id: try params.required("id")))]
         case "schedule.cancel":
             try runner.cancel(runID: try params.required("run"))
             return nil
