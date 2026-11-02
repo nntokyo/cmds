@@ -11,6 +11,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
+- cmds skill: inside cmds, agents open and check web pages in a cmds browser pane (`cmds browser open/eval/snapshot`)
+  instead of Chrome; the same skill installs for Codex (`~/.codex/skills/cmds/`) (#74).
 
 ### Fixed
 

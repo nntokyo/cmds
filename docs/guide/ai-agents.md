@@ -1,6 +1,6 @@
 # Using AI coding agents in cmds
 
-> How to connect Claude Code, Codex and other agents to cmds: notifications, usage and limits, the Claude skill,
+> How to connect Claude Code, Codex and other agents to cmds: notifications, usage and limits, the cmds skill,
 > session resume, several Claude accounts and agents on SSH servers.
 
 Each terminal has `cmds` on `PATH` (the copy inside the app bundle) and `CMDS_SOCKET_PATH`, `CMDS_WORKSPACE_ID`,
@@ -115,13 +115,16 @@ needs.
 ### Skill
 
 `integrations/claude/skills/cmds/SKILL.md` (written in Japanese) teaches Claude to open helper panes without stealing
-focus (`--no-focus`), run dev servers in a split and read their output, check web UIs with
-`cmds browser snapshot/eval`, show generated files with `cmds open`, show progress with `cmds status`, and never type
-into panes it did not create. It is used only when `CMDS_PANE_ID` is set. Install:
+focus (`--no-focus`), run dev servers in a split and read their output, open and check web pages in a cmds browser
+pane (`cmds browser open/snapshot/eval`) instead of Chrome, show generated files with `cmds open`, show progress with
+`cmds status`, and never type into panes it did not create. It keeps Chrome for pages that need your Chrome sign-ins
+or when you ask for Chrome. It is used only when `CMDS_PANE_ID` is set. Install:
 
 ```sh
 mkdir -p ~/.claude/skills/cmds && cp integrations/claude/skills/cmds/SKILL.md ~/.claude/skills/cmds/
 ```
+
+The same file works as a [Codex skill](#codex-cli).
 
 ## Codex CLI
 
@@ -136,6 +139,12 @@ notification_condition = "always"   # cmds keeps the ring off for the pane you a
 
 The sidebar then shows Codex's last message when a turn ends or an approval is needed. (`notify = [...]` is left
 alone; it may already be used by other tools.)
+
+The [cmds skill](#skill) works for Codex too (browser panes instead of Chrome, helper panes, previews). Install:
+
+```sh
+mkdir -p ~/.codex/skills/cmds && cp integrations/claude/skills/cmds/SKILL.md ~/.codex/skills/cmds/
+```
 
 [Schedules](schedules.md) can continue a Codex session, type into a Codex pane, or run when Codex's limit resets;
 cmds types into Codex only when its stricter idle rules hold.
