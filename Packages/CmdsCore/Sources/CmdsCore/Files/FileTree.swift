@@ -42,6 +42,8 @@ public protocol FileTreeWriter: AnyObject {
 /// Nothing here deletes the user's data: `trash` moves an item to the tree's Trash, and `removePart` removes only a
 /// transfer's own temporary file (`TransferNames.isPart`).
 public protocol FileTree: AnyObject {
+    /// How this tree's paths are joined and compared.
+    var paths: FilePathStyle { get }
     /// The item (not following a final symbolic link), or nil when nothing is there.
     func item(at path: String) throws -> FileItem?
     func list(_ path: String) throws -> [FileItem]
@@ -67,6 +69,34 @@ extension FileTree {
     public func exists(_ path: String) -> Bool { (try? item(at: path)) != nil }
 }
 
+/// How a tree's paths are written: this Mac's (`NSString` path functions, `FileNames`) or a server's (`RemotePath`:
+/// always `/`, never standardized against the Mac's file system).
+public enum FilePathStyle: Sendable {
+    case mac, server
+
+    public func join(_ folder: String, _ name: String) -> String {
+        switch self {
+        case .mac: return (folder as NSString).appendingPathComponent(name)
+        case .server: return RemotePath.join(folder, name)
+        }
+    }
+
+    public func parent(_ path: String) -> String {
+        switch self {
+        case .mac: return (path as NSString).deletingLastPathComponent
+        case .server: return RemotePath.parent(path)
+        }
+    }
+
+    /// `path` is `folder` or inside it.
+    public func isSameOrInside(_ path: String, _ folder: String) -> Bool {
+        switch self {
+        case .mac: return FileNames.isSameOrInside(path, folder)
+        case .server: return RemotePath.isSameOrInside(path, folder)
+        }
+    }
+}
+
 public struct FileTreeError: Error, CustomStringConvertible, Equatable {
     public var description: String
     public init(_ description: String) { self.description = description }
@@ -76,21 +106,25 @@ public struct FileTreeError: Error, CustomStringConvertible, Equatable {
 /// half-written file never carries the real name and a cancelled transfer removes only what it wrote.
 public enum TransferNames {
     public static let partPrefix = ".cmds-part-"
+    /// Random hex digits after the prefix.
+    static let randomDigits = 8
+    /// Longest file name (in UTF-8 bytes) on the file systems cmds writes to.
+    static let maxNameLength = 255
 
     public static func part(for name: String) -> String {
-        let random = (0..<4).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
-        // Keep within 255 bytes.
+        let random = (0..<randomDigits / 2).map { _ in String(format: "%02x", UInt8.random(in: .min ... .max)) }.joined()
         var base = name
-        while (partPrefix + random + "-" + base).utf8.count > 255 { base.removeFirst() }
+        while (partPrefix + random + "-" + base).utf8.count > maxNameLength { base.removeFirst() }
         return partPrefix + random + "-" + base
     }
 
     public static func isPart(_ name: String) -> Bool {
         guard name.hasPrefix(partPrefix) else { return false }
         let rest = name.dropFirst(partPrefix.count)
-        guard rest.count > 9 else { return false }
-        let hex = rest.prefix(8)
-        return hex.allSatisfy(\.isHexDigit) && rest[rest.index(rest.startIndex, offsetBy: 8)] == "-"
+        // The digits, a dash and at least one character of the name.
+        guard rest.count > randomDigits + 1 else { return false }
+        return rest.prefix(randomDigits).allSatisfy(\.isHexDigit)
+            && rest[rest.index(rest.startIndex, offsetBy: randomDigits)] == "-"
     }
 }
 
@@ -105,6 +139,8 @@ public final class LocalFileTree: FileTree {
     public static let chunkSize = 256 * 1024
 
     public init() {}
+
+    public var paths: FilePathStyle { .mac }
 
     public func item(at path: String) throws -> FileItem? {
         var info = stat()
@@ -224,6 +260,8 @@ public final class SFTPFileTree: FileTree {
         self.client = client
         self.home = home
     }
+
+    public var paths: FilePathStyle { .server }
 
     public func item(at path: String) throws -> FileItem? {
         do {
