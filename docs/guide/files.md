@@ -38,7 +38,9 @@ Files panes list folders on this Mac only, so `cmds files` is not available from
 - **Git column**: `M` modified, `A` added, `R` renamed, `D` deleted, `?` untracked, `U` conflict. A folder shows the
   most pressing state of what changed inside it. It comes from `git status` run in the background (without taking
   Git's index lock) and is left out for very large repositories that take more than a few seconds, or when Git is not
-  installed.
+  installed. It is read again when the folder changes, when Git changes the repository (commit, `git add`, checkout,
+  also from a terminal) and when the window becomes active again. Editing a tracked file inside a subfolder from the
+  same window shows up at the next of those (or ⌘R).
 
 ## Opening and previewing files
 

@@ -59,6 +59,15 @@ public enum GitStatus {
         }
     }
 
+    /// From `git rev-parse --show-prefix --absolute-git-dir`: the folder's path inside the repository (`""` at the
+    /// top, else ending in `/`) and the repository's git directory, which the files pane watches (its `index` and
+    /// `HEAD` are replaced there by commits, staging and checkouts, #43). nil when the output is not like that.
+    public static func repository(fromRevParse output: String) -> (prefix: String, gitDirectory: String)? {
+        let lines = output.split(separator: "\n", omittingEmptySubsequences: false)
+        guard lines.count >= 2, lines[1].hasPrefix("/") else { return nil }
+        return (String(lines[0]), String(lines[1]))
+    }
+
     /// The state per name of the entries of one folder. `prefix` is the folder's path inside the repository as
     /// `git rev-parse --show-prefix` prints it (`""` at the top, else ending in `/`). A folder gets the most
     /// pressing state of what changed inside it.

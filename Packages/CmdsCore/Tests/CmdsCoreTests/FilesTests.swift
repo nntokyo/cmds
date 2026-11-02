@@ -158,6 +158,20 @@ final class GitStatusTests: XCTestCase {
         XCTAssertEqual(GitStatus.states(changes, prefix: "App/Sources/"), ["a.swift": .modified, "new.swift": .untracked])
         XCTAssertEqual(GitStatus.states(changes, prefix: "Other/"), [:])
     }
+
+    /// #43: the folder's prefix and the git directory to watch, from one `git rev-parse`.
+    func testRepositoryFromRevParse() {
+        XCTAssertEqual(GitStatus.repository(fromRevParse: "App/Sources/\n/Users/me/src/app/.git\n")?.prefix, "App/Sources/")
+        XCTAssertEqual(GitStatus.repository(fromRevParse: "App/Sources/\n/Users/me/src/app/.git\n")?.gitDirectory,
+                       "/Users/me/src/app/.git")
+        // At the top the prefix line is empty; a linked worktree has its own git directory.
+        let top = GitStatus.repository(fromRevParse: "\n/Users/me/src/app/.git/worktrees/fix\n")
+        XCTAssertEqual(top?.prefix, "")
+        XCTAssertEqual(top?.gitDirectory, "/Users/me/src/app/.git/worktrees/fix")
+        XCTAssertNil(GitStatus.repository(fromRevParse: ""))
+        XCTAssertNil(GitStatus.repository(fromRevParse: "App/\n"))
+        XCTAssertNil(GitStatus.repository(fromRevParse: "--absolute-git-dir\n"))
+    }
 }
 
 final class FilesSyncTests: XCTestCase {

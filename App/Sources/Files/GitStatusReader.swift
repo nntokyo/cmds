@@ -10,14 +10,21 @@ import CmdsCore
 enum GitStatusReader {
     static let timeout: TimeInterval = 4
 
-    /// Per entry name; nil outside a repository or when git is missing or too slow.
-    static func states(folder: String) -> [String: GitFileState]? {
+    /// The state per entry name, and the repository's git directory (the files pane watches it, #43).
+    struct Result: Equatable {
+        var states: [String: GitFileState]
+        var gitDirectory: String
+    }
+
+    /// nil outside a repository or when git is missing or too slow.
+    static func read(folder: String) -> Result? {
         guard GitInfo.branch(at: folder) != nil, let git = gitPath else { return nil }
-        guard let prefixData = run(git, ["-C", folder, "rev-parse", "--show-prefix"]),
-              let prefix = String(data: prefixData, encoding: .utf8)?.trimmingCharacters(in: .newlines) else { return nil }
+        guard let revParse = run(git, ["-C", folder, "rev-parse", "--show-prefix", "--absolute-git-dir"]),
+              let repository = GitStatus.repository(fromRevParse: String(decoding: revParse, as: UTF8.self)) else { return nil }
         guard let output = run(git, ["--no-optional-locks", "-C", folder, "status", "--porcelain=v1", "-z",
                                      "--untracked-files=normal", "--", "."]) else { return nil }
-        return GitStatus.states(GitStatus.parse(output), prefix: prefix)
+        return Result(states: GitStatus.states(GitStatus.parse(output), prefix: repository.prefix),
+                      gitDirectory: repository.gitDirectory)
     }
 
     private static let gitPath: String? = {
