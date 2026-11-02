@@ -1,0 +1,49 @@
+# Deploys cmds.n-n.tokyo when master changes the website (docs/internals/ci.md). latest.json and SHA256SUMS are not
+# committed: they are written from the appcast's release DMG after it has been checked. Without the deploy
+# identity (repository variables GCP_WORKLOAD_IDENTITY_PROVIDER, GCP_DEPLOY_SERVICE_ACCOUNT) the job only checks and
+# says so; deploy from a Mac with scripts/ci/deploy-site.sh instead.
+name: Deploy website
+
+on:
+  push:
+    branches: [master]
+    paths: ['site/**', 'scripts/ci/**', '.github/workflows/deploy-site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: website
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the site and write latest.json / SHA256SUMS
+        run: python3 -I scripts/ci/site_check.py --release --write-download-files site/public/download
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: No DMG on Firebase Hosting
+        run: rm -f site/public/download/*.dmg
+      - name: Authenticate to Google Cloud
+        if: vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+      - name: Deploy
+        if: vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        working-directory: site
+        run: npx --yes firebase-tools@15 deploy --only hosting:cmds --project startup-project-4f8f8 --non-interactive
+      - name: Check the live site
+        if: vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+        run: scripts/ci/check-live.sh
+      - name: Not deployed
+        if: vars.GCP_WORKLOAD_IDENTITY_PROVIDER == ''
+        run: echo "::warning::The site was checked but not deployed (no deploy identity configured). Deploy with scripts/ci/deploy-site.sh."

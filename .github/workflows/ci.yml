@@ -1,0 +1,47 @@
+# Checks for every pull request and for master (docs/internals/ci.md). The same jobs run locally with
+# scripts/ci/run-local.sh when GitHub Actions is unavailable or out of minutes.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  site:
+    name: Website and update feed
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pages, appcast signature, download links and the release DMG
+        run: python3 -I scripts/ci/site_check.py --release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Markdown links
+        run: python3 -I scripts/check-links.py
+
+  swift:
+    name: Swift packages and String Catalogs
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: xcodebuild -version && swift --version
+      - name: String Catalogs compile
+        run: scripts/ci/run-local.sh strings
+      - name: CmdsCore (library, CLI and their tests)
+        working-directory: Packages/CmdsCore
+        run: swift test
+      - name: CmdsSSH (unit tests)
+        working-directory: Packages/CmdsSSH
+        run: swift test
