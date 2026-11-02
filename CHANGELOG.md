@@ -21,6 +21,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- Mac: the files pane's Git column no longer keeps old `M` / `A` / `?` marks after a commit, `git add` or checkout, or
+  after files were edited in another app. It is read again when Git changes the repository and when the window becomes
+  active, not only when files are added to or removed from the shown folder (#43).
+
 ## [0.5.0] - 2026-11-02
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.

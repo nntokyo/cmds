@@ -4,7 +4,8 @@ import CmdsCore
 /// Files pane (docs/guide/files.md): a local folder as a list (name, Git state, size, date modified, kind) under a
 /// bar with back / forward / up, the path, and the hidden-files, follow-terminal and terminal-here toggles. Two of them
 /// side by side (an ordinary split) copy and move between each other. Listing and Git state are read off the main
-/// thread; the folder is watched and listed again when it changes. Table, drag and drop: FilesPane+Table.swift; file
+/// thread; the folder is watched and listed again when it changes, and the repository's git directory is watched for
+/// the Git column. Table, drag and drop: FilesPane+Table.swift; file
 /// operations and commands: FilesPane+Actions.swift.
 @MainActor
 final class FilesPane: NSView {
@@ -47,9 +48,13 @@ final class FilesPane: NSView {
     #endif
 
     private var watcher: FileWatcher?
+    /// The repository's git directory while the folder is in one (`watchGitDirectory`).
+    private var gitWatcher: FileWatcher?
+    private var keyObserver: NSObjectProtocol?
     private var generation = 0
     private var gitGeneration = 0
     private var reloadScheduled = false
+    private var gitReloadScheduled = false
 
     // Header
     let backButton = FilesPane.barButton("chevron.left", label: String(localized: "Back"))
@@ -114,6 +119,10 @@ final class FilesPane: NSView {
     func tearDown() {
         watcher?.cancel()
         watcher = nil
+        gitWatcher?.cancel()
+        gitWatcher = nil
+        if let keyObserver { NotificationCenter.default.removeObserver(keyObserver) }
+        keyObserver = nil
         operation?.cancel()
         generation += 1
         gitGeneration += 1
@@ -348,16 +357,59 @@ final class FilesPane: NSView {
         let token = gitGeneration
         let path = folder
         DispatchQueue.global(qos: .utility).async {
-            let states = GitStatusReader.states(folder: path)
+            let result = GitStatusReader.read(folder: path)
             DispatchQueue.main.async {
                 MainActor.assumeIsolated { [weak self] in
                     guard let self, token == self.gitGeneration, path == self.folder else { return }
+                    self.watchGitDirectory(result?.gitDirectory)
+                    let states = result?.states
                     guard states != self.gitStates else { return }
                     self.gitStates = states
                     self.updateGitColumn()
                 }
             }
         }
+    }
+
+    /// Git state changes without the shown folder changing (a commit, staging, a checkout, #43): git then replaces
+    /// `index` or `HEAD` in the repository's git directory, which is watched while the folder is in a repository.
+    /// Edits to tracked files are seen when the folder changes or the window becomes key again (`windowDidBecomeKey`).
+    private func watchGitDirectory(_ directory: String?) {
+        guard directory != gitWatcher?.path else { return }
+        gitWatcher?.cancel()
+        gitWatcher = directory.map { FileWatcher(path: $0) { [weak self] in self?.scheduleGitReload() } }
+    }
+
+    /// Like `scheduleReload`, for the Git column only.
+    private func scheduleGitReload() {
+        guard !gitReloadScheduled else { return }
+        gitReloadScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.gitReloadScheduled = false
+                guard self.gitWatcher != nil else { return } // closed, or out of the repository meanwhile
+                self.gitWatcher?.rearm()
+                self.loadGitStatus()
+            }
+        }
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let keyObserver { NotificationCenter.default.removeObserver(keyObserver) }
+        keyObserver = window.map { window in
+            NotificationCenter.default.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window,
+                                                   queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.windowDidBecomeKey() }
+            }
+        }
+    }
+
+    /// Back in the window (perhaps after editing files elsewhere): read the Git state again, off the main thread.
+    private func windowDidBecomeKey() {
+        guard gitStates != nil, !isHiddenOrHasHiddenAncestor else { return }
+        loadGitStatus()
     }
 
     // MARK: - Header and footer
