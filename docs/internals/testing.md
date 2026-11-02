@@ -22,6 +22,9 @@ Builds and test runs are heavy (Swift compiler, Xcode, the iOS simulator). On a 
 
 ## Unit tests
 
+GitHub Actions runs the package tests and String Catalog checks on every pull request; `scripts/ci/run-local.sh` runs
+the same jobs here ([ci.md](ci.md)).
+
 | Package | Command | Covers |
 |---|---|---|
 | `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
