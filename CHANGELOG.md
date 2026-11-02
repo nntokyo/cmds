@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
+  versions see them as browser panes (#26).
+
+## [0.7.0] - 2026-11-02
+
+Mac only; the iPhone/iPad app is unchanged from 0.4.0.
+
+### Added
+
 - Mac: files panes on SSH hosts. File › New Remote Files Pane… (⌥⇧⌘E), ⇧⌘E in an SSH pane, or
   `cmds files HOST:PATH` lists a folder on a host over SFTP with your own `ssh` (`~/.ssh/config`, keys, agent, an open
   `ControlMaster`). cmds never asks for or stores a password and never adds host keys: password-only hosts, unknown and
@@ -21,8 +30,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   of its side). Files arrive under a temporary name and get theirs only when complete; Cancel removes only what the
   transfer wrote, and a temporary file left by quitting mid-transfer is removed at the next launch (on the Mac) or the
   next connection (on a host). `cmds transfers` and `transfer.*` on the socket (#26, #64).
-- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
-  versions see them as browser panes (#26).
 - Mac: schedules can type into an existing pane (`--send TEXT --to shell|agent`, Type into a pane in the editor): a
   one-line command at an empty shell prompt, or a prompt into an idle Claude Code or Codex. The pane is chosen by a tag
   kept in the saved session (it survives a relaunch) or by the title of a one-pane workspace; when no pane or several
@@ -280,7 +287,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.6.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.7.0...master
+[0.7.0]: https://github.com/nntokyo/cmds/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nntokyo/cmds/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nntokyo/cmds/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nntokyo/cmds/compare/v0.3.0...v0.4.0
