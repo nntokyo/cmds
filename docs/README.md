@@ -14,7 +14,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 | [guide/files.md](guide/files.md) | Files panes: browsing a folder, preview, copy and move between two panes, conflicts, rename, Trash, Follow Terminal, dropping files on a terminal, folders on SSH hosts, the transfer queue |
 | [guide/iphone.md](guide/iphone.md) | The iPhone/iPad companion: pairing (QR or manual), what it shows, local network / Bluetooth / SSH relay, troubleshooting |
 | [guide/schedules.md](guide/schedules.md) | Schedules: start a workspace or continue a Claude Code session at a time, on weekdays or when a limit resets; safety rules, missed runs, history |
-| [guide/ai-agents.md](guide/ai-agents.md) | Claude Code hooks and status line, the Claude skill, Codex, usage and limits, resuming sessions, moving to a new version, agents on servers |
+| [guide/ai-agents.md](guide/ai-agents.md) | Claude Code hooks and status line, the cmds skill, Codex, usage and limits, resuming sessions, moving to a new version, agents on servers |
 
 ## Reference
 
@@ -41,7 +41,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 ## Elsewhere in the repository
 
 - [CHANGELOG.md](../CHANGELOG.md): what changed, per version.
-- [integrations/claude/skills/cmds/SKILL.md](../integrations/claude/skills/cmds/SKILL.md): Claude Code skill (Japanese).
+- [integrations/claude/skills/cmds/SKILL.md](../integrations/claude/skills/cmds/SKILL.md): Claude Code / Codex skill (Japanese).
 - [design/icon/README.md](../design/icon/README.md): app icon artwork and how to regenerate the icons.
 - `scripts/check-links.py`: checks every relative link and anchor in the Markdown files
   (`python3 scripts/check-links.py`).

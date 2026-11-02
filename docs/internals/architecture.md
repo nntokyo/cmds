@@ -27,7 +27,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `Shared/Sources` | Localized UI text for CmdsCore values, compiled into both apps. |
 | `iOS/Sources` | SwiftUI iOS/iPadOS companion (`Connection/` transports and client, `Views/`, `Support/`). |
 | `iOS/UITests` | `CmdsDeviceDriver` UI test target: `DeviceDriverTests` (scripted driver) and `TerminalScreenTests`. |
-| `integrations/claude` | Claude Code skill for working inside cmds. |
+| `integrations/claude` | Skill for Claude Code and Codex working inside cmds. |
 | `design/icon` | App icon artwork and the scripts that generate every icon size ([README](../../design/icon/README.md)). |
 | `scripts` | `build-ghostty.sh` (GhosttyKit with cmds' libghostty patches), `l10n-sync.sh` (String Catalog sync), `check-links.py` (Markdown link check). |
 | `vendor/ghostty` | Ghostty source (submodule, pinned upstream revision). `vendor/GhosttyKit.xcframework` is a symlink/copy of `vendor/ghostty/macos/GhosttyKit.xcframework` (ignored); build steps in the [README](../../README.md#build-from-source). |

@@ -194,7 +194,7 @@ cmds stats                                # CPU and memory per workspace and for
       <p>Without a status-line script, <code>"statusLine": {"type": "command", "command": "cmds hook claude-status"}</code> works as well (the status line then stays empty).</p>
       <h3>Skill and Codex</h3>
       <ul>
-        <li>Claude Code skill: copy <code>integrations/claude/skills/cmds/SKILL.md</code> to <code>~/.claude/skills/cmds/</code>, and Claude uses helper panes, the browser and previews without stealing your focus.</li>
+        <li>Skill: copy <code>integrations/claude/skills/cmds/SKILL.md</code> to <code>~/.claude/skills/cmds/</code> (Claude Code) or <code>~/.codex/skills/cmds/</code> (Codex), and the agent uses helper panes and previews without stealing your focus, and opens web pages in a cmds browser pane instead of Chrome.</li>
         <li>Codex: usage needs no setup. For notifications set <code>notifications = true</code>, <code>notification_method = "osc9"</code> and <code>notification_condition = "always"</code> under <code>[tui]</code> in <code>~/.codex/config.toml</code>.</li>
       </ul>
       <div class="split">

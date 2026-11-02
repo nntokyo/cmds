@@ -195,7 +195,7 @@ cmds stats                                # ワークスペースごとと Mac �
       <p>ステータスラインのスクリプトがなければ、<code>"statusLine": {"type": "command", "command": "cmds hook claude-status"}</code> だけでも動きます（表示は空になります）。</p>
       <h3>スキルと Codex</h3>
       <ul>
-        <li>Claude Code のスキル：<code>integrations/claude/skills/cmds/SKILL.md</code> を <code>~/.claude/skills/cmds/</code> にコピーすると、Claude がフォーカスを奪わずに補助ペインやブラウザ、プレビューを使うようになります。</li>
+        <li>スキル：<code>integrations/claude/skills/cmds/SKILL.md</code> を <code>~/.claude/skills/cmds/</code>（Claude Code）や <code>~/.codex/skills/cmds/</code>（Codex）にコピーすると、エージェントがフォーカスを奪わずに補助ペインやプレビューを使い、Web ページを Chrome ではなく cmds のブラウザペインで開くようになります。</li>
         <li>Codex：使用量は設定不要です。通知は <code>~/.codex/config.toml</code> の <code>[tui]</code> に <code>notifications = true</code>、<code>notification_method = "osc9"</code>、<code>notification_condition = "always"</code> を設定します。</li>
       </ul>
       <div class="split">

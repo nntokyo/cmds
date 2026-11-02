@@ -50,7 +50,7 @@ cmds stats                                # CPU and memory per workspace and for
 
 ## Next steps
 
-- Coding agents: set up Claude Code's hooks and status line, Codex notifications and the Claude skill:
+- Coding agents: set up Claude Code's hooks and status line, Codex notifications and the cmds skill:
   [ai-agents.md](ai-agents.md).
 - iPhone/iPad: pair the companion with **cmds › Pair iPhone/iPad…**: [iphone.md](iphone.md).
 - Long agent runs: cmds keeps the Mac from idle sleep while it runs; for a closed lid see
