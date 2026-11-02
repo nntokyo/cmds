@@ -117,7 +117,7 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
     }
 
     /// One pane. `kind` terminal: `cwd`, or `host` (+ `remoteCwd`) for an SSH pane; browser: `url`; preview: `path`
-    /// (+ `format`); files: `path` (the folder). `agentSession` only on terminal panes (on an SSH pane its `host` is
+    /// (+ `format`); files: `path` (the folder; with `host` a folder on that SSH host). `agentSession` only on terminal panes (on an SSH pane its `host` is
     /// the pane's).
     public struct Pane: Codable, Equatable, Sendable {
         public var kind: PaneKind
@@ -321,9 +321,19 @@ extension WorkspaceBundle {
                 throw TransferError("\(label): unknown preview format \"\(format.prefix(20))\"")
             }
         case .files:
-            guard pane.cwd == nil, pane.host == nil, pane.remoteCwd == nil, pane.url == nil, pane.format == nil,
+            guard pane.cwd == nil, pane.remoteCwd == nil, pane.url == nil, pane.format == nil,
                   pane.agentSession == nil else {
                 throw TransferError("\(label): files pane with terminal/browser/preview fields")
+            }
+            if let host = pane.host {
+                // A folder on an SSH host: absolute or `~/…`; none = the remote home.
+                do {
+                    pane.host = try SSHLaunch.validateHost(host)
+                } catch {
+                    throw TransferError("\(label): files pane: \(error)")
+                }
+                pane.path = try path(pane.path, "\(label) files path", remote: true)
+                return pane
             }
             guard let raw = pane.path, let checked = try path(raw, "\(label) files path", remote: false) else {
                 throw TransferError("\(label): files pane needs a folder path")

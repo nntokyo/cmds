@@ -43,7 +43,9 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Open browser split | ⇧⌘B | File |
 | Open in Preview… (file picker) | ⇧⌘O | File |
 | Preview a file path shown in a terminal | ⌘-click the path | – |
-| New files pane (lists the focused pane's folder) | ⇧⌘E | File |
+| New files pane (lists the focused pane's folder; an SSH pane's remote folder on its host) | ⇧⌘E | File |
+| New remote files pane (a folder on an SSH host) | ⌥⇧⌘E | File |
+| Transfers window | ⌥⌘T | Window |
 
 ## Browser, preview and SSH panes
 

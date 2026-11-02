@@ -73,6 +73,9 @@ public enum CmdsEnv {
     /// ssh config file for remote access via SSH (`ssh -F`); honoured only by isolated instances
     /// (`CMDS_SUPPORT_DIR`), so tests point ssh at a throwaway relay and never read ~/.ssh/config.
     public static let syncRemoteSSHConfig = "CMDS_SYNC_REMOTE_SSH_CONFIG"
+    /// ssh config file for files panes on SSH hosts (`ssh -F`); honoured only by isolated instances, so tests use a
+    /// throwaway sshd and never read ~/.ssh/config.
+    public static let filesSSHConfig = "CMDS_FILES_SSH_CONFIG"
 
     public enum SyncPortSetting: Equatable, Sendable {
         case unset
@@ -119,8 +122,17 @@ public enum CmdsEnv {
 
     /// `CMDS_SYNC_REMOTE_SSH_CONFIG` when running isolated, else nil (ssh uses ~/.ssh/config).
     public static func remoteSSHConfig(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        isolatedPath(syncRemoteSSHConfig, environment: environment)
+    }
+
+    /// `CMDS_FILES_SSH_CONFIG` when running isolated, else nil (ssh uses ~/.ssh/config).
+    public static func filesSSHConfig(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
+        isolatedPath(filesSSHConfig, environment: environment)
+    }
+
+    private static func isolatedPath(_ variable: String, environment: [String: String]) -> String? {
         guard supportDirectoryOverride(environment: environment) != nil,
-              let raw = environment[syncRemoteSSHConfig]?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return nil }
+              let raw = environment[variable]?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return nil }
         return (raw as NSString).expandingTildeInPath
     }
 

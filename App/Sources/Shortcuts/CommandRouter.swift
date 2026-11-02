@@ -77,11 +77,32 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: open) } else { open(panel.runModal()) }
     }
 
-    /// ⇧⌘E: a files pane split to the right of the focused pane, in its folder (docs/guide/files.md).
+    /// ⇧⌘E: a files pane split to the right of the focused pane, in its folder (docs/guide/files.md). From an SSH pane
+    /// it lists that pane's remote folder on its host.
     @objc func openFilesPane(_ sender: Any?) {
         windowController?.showWindow(nil)
         if controller.focusedPane == nil { controller.createWorkspace() }
+        if let pane = controller.focusedPane, let ssh = pane.ssh {
+            let folder = pane.workingDirectory ?? ssh.launch.remoteCwd ?? ""
+            _ = try? controller.openFolder(paneID: pane.id, path: folder, host: ssh.launch.host)
+            return
+        }
+        if let files = controller.focusedPane?.files, let host = files.host {
+            _ = try? controller.split(direction: .right, kind: .files, cwd: files.folder, filesHost: host)
+            return
+        }
         _ = try? controller.split(direction: .right, kind: .files)
+    }
+
+    /// File › New Remote Files Pane…: a folder on an SSH host.
+    @objc func openRemoteFilesPane(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        RemoteFilesSheet.present(in: windowController?.window, controller: controller)
+    }
+
+    /// Window › Transfers.
+    @objc func showTransfers(_ sender: Any?) {
+        TransfersWindowController.shared.showWindow(nil)
     }
 
     // Pane › Files (the focused files pane; its list also takes the keys in docs/reference/shortcuts.md).

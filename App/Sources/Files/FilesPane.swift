@@ -1,7 +1,7 @@
 import AppKit
 import CmdsCore
 
-/// Files pane (docs/guide/files.md): a local folder as a list (name, Git state, size, date modified, kind) under a
+/// Files pane (docs/guide/files.md): a folder on this Mac or on an SSH host (`host`, FilesPane+Remote.swift) as a list (name, Git state, size, date modified, kind) under a
 /// bar with back / forward / up, the path, and the hidden-files, follow-terminal and terminal-here toggles. Two of them
 /// side by side (an ordinary split) copy and move between each other. Listing and Git state are read off the main
 /// thread; the folder is watched and listed again when it changes, and the repository's git directory is watched for
@@ -21,7 +21,13 @@ final class FilesPane: NSView {
     var onPreview: ((String) -> Void)?
     /// Open a terminal pane in a folder.
     var onOpenTerminal: ((String) -> Void)?
+    /// Open an SSH terminal pane in a folder of `host` (remote panes).
+    var onOpenSSHTerminal: ((_ host: String, _ folder: String) -> Void)?
 
+    /// nil: a folder on this Mac. Else the SSH host (as for `cmds new --ssh`) whose folder this pane lists over SFTP.
+    let host: String?
+    /// Absolute. A remote pane may start with `~/…`, a path relative to the home folder or "" (home) until the server
+    /// has resolved it.
     private(set) var folder: String
     private(set) var showHidden = false
     private(set) var followsTerminal = false
@@ -42,6 +48,15 @@ final class FilesPane: NSView {
     var pendingRename: String?
     /// The copy or move this pane started (progress in its footer).
     var operation: FileOperation?
+    /// Remote panes restored from the session wait for Connect (⌘R) instead of connecting at launch.
+    var waitingForConnect = false
+    /// Remote: the last listing failed because the connection could not be made (the footer offers Connect).
+    var connectionError: String?
+    /// Remote: a download for Open / Preview, a rename… is running (status line).
+    var remoteActivity: String?
+    /// Transfer jobs this pane started (the footer shows the one running).
+    var startedTransfers = Set<Int>()
+    var transferObservers: [NSObjectProtocol] = []
     #if DEBUG
     /// Tests: the answer to name conflicts instead of asking (`debug.files`).
     var debugConflictAnswer: FileOperation.Resolution?
@@ -64,6 +79,8 @@ final class FilesPane: NSView {
     let hiddenButton = FilesPane.barButton("eye", label: String(localized: "Show Hidden Files"))
     let followButton = FilesPane.barButton("link", label: String(localized: "Follow Terminal"))
     let terminalButton = FilesPane.barButton("terminal", label: String(localized: "Open Terminal Here"))
+    /// Remote panes show `host:/path` here instead of the path control.
+    let remotePathLabel = NSTextField(labelWithString: "")
     // List
     let tableView = FilesTableView()
     let scrollView = NSScrollView()
@@ -71,6 +88,9 @@ final class FilesPane: NSView {
     let statusLabel = NSTextField(labelWithString: "")
     let progressIndicator = NSProgressIndicator()
     let cancelButton = NSButton(title: String(localized: "Cancel"), target: nil, action: nil)
+    let connectButton = NSButton(title: String(localized: "Connect"), target: nil, action: nil)
+    /// Over the empty list of a remote pane: why it could not be listed, in full (the status line is one line).
+    let messageLabel = NSTextField(wrappingLabelWithString: "")
 
     lazy var byteFormatter: ByteCountFormatter = {
         let formatter = ByteCountFormatter()
@@ -86,8 +106,10 @@ final class FilesPane: NSView {
         return formatter
     }()
 
-    init(folder: String) {
-        self.folder = (folder as NSString).standardizingPath
+    /// `host` nil: `folder` on this Mac. Else a folder on that host; `connect` false waits for Connect (⌘R).
+    init(folder: String, host: String? = nil, connect: Bool = true) {
+        self.host = host
+        self.folder = host == nil ? (folder as NSString).standardizingPath : Self.remoteFolder(folder)
         super.init(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
         wantsLayer = true
         layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
@@ -95,15 +117,33 @@ final class FilesPane: NSView {
         configureTable()
         updateHeader()
         startWatching()
-        load()
+        observeTransfers()
+        if host != nil, !connect {
+            waitingForConnect = true
+            updateStatus()
+        } else {
+            load()
+        }
+    }
+
+    var isRemote: Bool { host != nil }
+
+    /// Where the shown folder is (this Mac or `host:folder`).
+    var location: FileLocation { host.map { .remote(host: $0, path: folder) } ?? .local(folder) }
+
+    func location(of entry: FileEntry) -> FileLocation { location.appending(entry.name) }
+
+    nonisolated static func remoteFolder(_ path: String) -> String {
+        path.hasPrefix("/") ? RemotePath.normalized(path) : path
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    /// The pane's title: the folder's name (`/` for the root).
+    /// The pane's title: the folder's name (`/` for the root); `host:name` for remote panes.
     var title: String {
-        folder == "/" ? "/" : FileManager.default.displayName(atPath: folder)
+        if let host { return folder.isEmpty ? host : "\(host):\(RemotePath.name(folder))" }
+        return folder == "/" ? "/" : FileManager.default.displayName(atPath: folder)
     }
 
     var folderURL: URL { URL(fileURLWithPath: folder, isDirectory: true) }
@@ -123,6 +163,8 @@ final class FilesPane: NSView {
         gitWatcher = nil
         if let keyObserver { NotificationCenter.default.removeObserver(keyObserver) }
         keyObserver = nil
+        transferObservers.forEach(NotificationCenter.default.removeObserver)
+        transferObservers = []
         operation?.cancel()
         generation += 1
         gitGeneration += 1
@@ -133,8 +175,9 @@ final class FilesPane: NSView {
     /// Shows another folder. A path that is not a folder is refused (false). `record` adds the current folder to Back.
     @discardableResult
     func navigate(to path: String, record: Bool = true, select names: [String]? = nil) -> Bool {
-        let target = (path as NSString).standardizingPath
-        guard Self.isFolder(target) else { return false }
+        let target = isRemote ? Self.remoteFolder(path) : (path as NSString).standardizingPath
+        // Remote folders are checked by the listing (off the main thread); a file there selects it in its folder.
+        guard isRemote || Self.isFolder(target) else { return false }
         if target == folder {
             if let names {
                 // The listing may still be on its way: select once it is (re)read.
@@ -152,7 +195,9 @@ final class FilesPane: NSView {
         // Going up selects the folder we came from.
         if let names {
             pendingSelection = names
-        } else if (previous as NSString).deletingLastPathComponent == target {
+        } else if isRemote, previous.hasPrefix("/"), RemotePath.parent(previous) == target {
+            pendingSelection = [RemotePath.name(previous)]
+        } else if !isRemote, (previous as NSString).deletingLastPathComponent == target {
             pendingSelection = [(previous as NSString).lastPathComponent]
         } else {
             pendingSelection = []
@@ -188,13 +233,13 @@ final class FilesPane: NSView {
     }
 
     @objc func goUp() {
-        guard folder != "/" else { return NSSound.beep() }
-        navigate(to: (folder as NSString).deletingLastPathComponent)
+        guard folder != "/", !(isRemote && !folder.hasPrefix("/")) else { return NSSound.beep() }
+        navigate(to: isRemote ? RemotePath.parent(folder) : (folder as NSString).deletingLastPathComponent)
     }
 
     /// Follow terminal: the workspace's terminal changed directory.
     func follow(_ path: String) {
-        guard followsTerminal, path != folder else { return }
+        guard followsTerminal, !isRemote, path != folder else { return }
         navigate(to: path)
     }
 
@@ -229,10 +274,17 @@ final class FilesPane: NSView {
 
     // MARK: - Loading
 
-    /// Lists the folder again (⌘R; also when it changes on disk).
-    @objc func reload() { load() }
+    /// Lists the folder again (⌘R; also when it changes on disk). A remote pane waiting for Connect connects.
+    @objc func reload() {
+        waitingForConnect = false
+        load()
+    }
 
     func load() {
+        if isRemote {
+            guard !waitingForConnect else { return updateStatus() }
+            return loadRemote()
+        }
         generation += 1
         let token = generation
         let path = folder
@@ -248,13 +300,13 @@ final class FilesPane: NSView {
         loadGitStatus()
     }
 
-    private func apply(_ result: Result<[FileEntry], Error>) {
+    func apply(_ result: Result<[FileEntry], Error>) {
         switch result {
         case .success(let entries):
             loadError = nil
             allEntries = entries
         case .failure(let error):
-            if !Self.isFolder(folder) {
+            if !isRemote, !Self.isFolder(folder) {
                 // Deleted or moved away: go to the nearest folder that is still there.
                 navigate(to: FileNames.nearestFolder(above: folder, isFolder: Self.isFolder), record: false)
                 return
@@ -331,7 +383,24 @@ final class FilesPane: NSView {
                          modified: values?.contentModificationDate, kind: values?.localizedTypeDescription ?? "")
     }
 
+    /// Invalidates listings on their way (a remote listing that comes back after a navigation is dropped).
+    func nextGeneration() -> Int {
+        generation += 1
+        return generation
+    }
+
+    func isCurrent(_ token: Int) -> Bool { token == generation }
+
+    /// A remote listing resolved the folder (`~/x` → `/home/me/x`), or found a file: shown without a Back entry.
+    func setResolvedFolder(_ resolved: String) {
+        guard resolved != folder else { return }
+        folder = resolved
+        updateHeader()
+        onStateChange?()
+    }
+
     private func startWatching() {
+        guard !isRemote else { return }
         watcher?.cancel()
         watcher = FileWatcher(path: folder) { [weak self] in self?.scheduleReload() }
     }
@@ -353,6 +422,7 @@ final class FilesPane: NSView {
     // MARK: - Git
 
     private func loadGitStatus() {
+        guard !isRemote else { return }
         gitGeneration += 1
         let token = gitGeneration
         let path = folder
@@ -445,13 +515,19 @@ final class FilesPane: NSView {
         pathControl.setContentHuggingPriority(.defaultLow, for: .horizontal)
         pathControl.setAccessibilityIdentifier("files.path")
 
-        let header = NSStackView(views: [backButton, forwardButton, upButton, pathControl, hiddenButton, followButton,
-                                         terminalButton])
+        remotePathLabel.font = .systemFont(ofSize: 11)
+        remotePathLabel.lineBreakMode = .byTruncatingHead
+        remotePathLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        remotePathLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        remotePathLabel.setAccessibilityIdentifier("files.remotePath")
+        let header = NSStackView(views: [backButton, forwardButton, upButton, pathControl, remotePathLabel, hiddenButton,
+                                         followButton, terminalButton])
         header.orientation = .horizontal
         header.spacing = 4
         header.edgeInsets = NSEdgeInsets(top: 4, left: 6, bottom: 4, right: 8)
         header.setCustomSpacing(8, after: upButton)
         header.setCustomSpacing(8, after: pathControl)
+        header.setCustomSpacing(8, after: remotePathLabel)
         header.translatesAutoresizingMaskIntoConstraints = false
         let topSeparator = NSBox()
         topSeparator.boxType = .separator
@@ -480,7 +556,14 @@ final class FilesPane: NSView {
         cancelButton.target = self
         cancelButton.action = #selector(cancelFileOperation(_:))
         cancelButton.isHidden = true
-        let footer = NSStackView(views: [statusLabel, progressIndicator, cancelButton])
+        connectButton.bezelStyle = .accessoryBarAction
+        connectButton.controlSize = .small
+        connectButton.font = .systemFont(ofSize: 11)
+        connectButton.target = self
+        connectButton.action = #selector(reload)
+        connectButton.isHidden = true
+        connectButton.setAccessibilityIdentifier("files.connect")
+        let footer = NSStackView(views: [statusLabel, progressIndicator, cancelButton, connectButton])
         footer.orientation = .horizontal
         footer.spacing = 8
         footer.edgeInsets = NSEdgeInsets(top: 2, left: 8, bottom: 2, right: 8)
@@ -489,7 +572,13 @@ final class FilesPane: NSView {
         bottomSeparator.boxType = .separator
         bottomSeparator.translatesAutoresizingMaskIntoConstraints = false
 
-        for view in [header, topSeparator, scrollView, bottomSeparator, footer] { addSubview(view) }
+        messageLabel.alignment = .center
+        messageLabel.textColor = .secondaryLabelColor
+        messageLabel.font = .systemFont(ofSize: 12)
+        messageLabel.isHidden = true
+        messageLabel.translatesAutoresizingMaskIntoConstraints = false
+        messageLabel.setAccessibilityIdentifier("files.message")
+        for view in [header, topSeparator, scrollView, messageLabel, bottomSeparator, footer] { addSubview(view) }
         NSLayoutConstraint.activate([
             header.leadingAnchor.constraint(equalTo: leadingAnchor),
             header.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -510,14 +599,26 @@ final class FilesPane: NSView {
             footer.bottomAnchor.constraint(equalTo: bottomAnchor),
             footer.heightAnchor.constraint(equalToConstant: 22),
             progressIndicator.widthAnchor.constraint(equalToConstant: 120),
+            messageLabel.centerXAnchor.constraint(equalTo: scrollView.centerXAnchor),
+            messageLabel.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor),
+            messageLabel.widthAnchor.constraint(lessThanOrEqualTo: scrollView.widthAnchor, constant: -32),
         ])
     }
 
     func updateHeader() {
         backButton.isEnabled = !backStack.isEmpty
         forwardButton.isEnabled = !forwardStack.isEmpty
-        upButton.isEnabled = folder != "/"
-        pathControl.url = folderURL
+        upButton.isEnabled = folder != "/" && !(isRemote && !folder.hasPrefix("/"))
+        pathControl.isHidden = isRemote
+        remotePathLabel.isHidden = !isRemote
+        followButton.isHidden = isRemote
+        if let host {
+            remotePathLabel.stringValue = "\(host):\(folder)"
+            remotePathLabel.toolTip = remotePathLabel.stringValue
+            terminalButton.toolTip = String(localized: "Open SSH Terminal Here")
+        } else {
+            pathControl.url = folderURL
+        }
         hiddenButton.state = showHidden ? .on : .off
         hiddenButton.image = NSImage(systemSymbolName: showHidden ? "eye.fill" : "eye",
                                      accessibilityDescription: String(localized: "Show Hidden Files"))
@@ -540,6 +641,21 @@ final class FilesPane: NSView {
 
     func updateStatus() {
         guard operation == nil else { return }
+        if showActiveTransfer() { return }
+        connectButton.isHidden = !(isRemote && (waitingForConnect || connectionError != nil))
+        let message = !isRemote || !rows.isEmpty ? nil
+            : waitingForConnect ? String(localized: "Not connected. Click Connect or press ⌘R to list this folder.")
+            : loadError
+        messageLabel.stringValue = message ?? ""
+        messageLabel.isHidden = message == nil
+        if waitingForConnect {
+            statusLabel.stringValue = String(localized: "Not connected — Connect (⌘R)")
+            return
+        }
+        if let remoteActivity {
+            statusLabel.stringValue = remoteActivity
+            return
+        }
         if let loadError {
             statusLabel.stringValue = loadError
             return

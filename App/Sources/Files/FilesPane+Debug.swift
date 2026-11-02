@@ -6,8 +6,8 @@ import CmdsCore
 /// scripting.
 extension FilesPane {
     /// `state` (default) reports; `select` (names), `copyToOther`, `moveToOther`, `newFolder`, `rename` (name,
-    /// newName), `paste` (paths, move), `hidden` (on), `follow` (on), `preview`, `terminal`,
-    /// `back`, `forward`, `up`. `conflict` answers
+    /// newName), `paste` (paths, move; `host:/path` for remote items), `trash`, `reload` (also Connect), `goto` (path),
+    /// `hidden` (on), `follow` (on), `preview`, `terminal`, `back`, `forward`, `up`. `conflict` answers
     /// name conflicts of later operations without asking (keepBoth, replace, skip, stop).
     func debugPerform(_ params: JSONValue?) throws -> JSONValue {
         let action = params?["action"]?.stringValue ?? "state"
@@ -29,7 +29,19 @@ extension FilesPane {
         case "paste":
             let paths = (params?["paths"]?.arrayValue ?? []).compactMap(\.stringValue)
             let move = params?["move"]?.boolValue ?? false
-            startOperation(move ? .move : .copy, sources: paths.map { URL(fileURLWithPath: $0) }, destination: folderURL)
+            let sources = try paths.map { path -> FileLocation in
+                do { return try FileLocation.parse(path) } catch { throw RPCError.invalidParams("\(error)") }
+            }
+            if isRemote || sources.contains(where: \.isRemote) {
+                startTransfer(move ? .move : .copy, sources: sources, destination: location)
+            } else {
+                startOperation(move ? .move : .copy, sources: paths.map { URL(fileURLWithPath: $0) }, destination: folderURL)
+            }
+        case "trash": moveToTrash()
+        case "reload": reload()
+        case "goto":
+            guard let path = params?["path"]?.stringValue else { throw RPCError.invalidParams("path") }
+            navigate(to: isRemote ? RemotePath.resolve(typed: path, in: folder) : FileNames.resolve(typed: path, in: folder))
         case "hidden": setShowHidden(params?["on"] != .bool(false))
         case "follow": setFollowsTerminal(params?["on"] != .bool(false))
         case "preview": previewSelection()
@@ -44,7 +56,11 @@ extension FilesPane {
             "rows": .array(rows.map { .string($0.name) }),
             "selected": .array(selectedEntries.map { .string($0.name) }),
             "git": gitStates.map { states in .object(states.mapValues { .string($0.rawValue) }) } ?? .null,
-            "busy": .bool(operation != nil),
+            "busy": .bool(operation != nil || activeTransfer != nil || remoteActivity != nil),
+            "host": host.map(JSONValue.string) ?? .null,
+            "connectionError": connectionError.map(JSONValue.string) ?? .null,
+            "loadError": loadError.map(JSONValue.string) ?? .null,
+            "waitingForConnect": .bool(waitingForConnect),
             "status": .string(statusLabel.stringValue),
             "back": .number(Double(backStack.count)),
             "forward": .number(Double(forwardStack.count)),

@@ -2,7 +2,8 @@ import AppKit
 import CmdsCore
 
 /// Commands of a files pane: open, preview, rename, new folder, Move to Trash, copy and move (between panes, by
-/// pasteboard, by drag and drop) with their progress and name conflicts, and the context menu.
+/// pasteboard, by drag and drop) with their progress and name conflicts, and the context menu. Remote panes run the
+/// server's side of each command in FilesPane+Remote.swift.
 extension FilesPane {
     // MARK: - Open
 
@@ -11,8 +12,12 @@ extension FilesPane {
         let entries = targetEntries
         guard !entries.isEmpty else { return }
         if entries.count == 1, let entry = entries.first, entry.isFolder {
-            navigate(to: url(of: entry).path)
+            navigate(to: isRemote ? remotePath(entry) : url(of: entry).path)
             return
+        }
+        if isRemote {
+            guard entries.contains(where: { !$0.isFolder }) else { return NSSound.beep() }
+            return openRemoteFiles(entries)
         }
         let files = entries.filter { !$0.isFolder }.map(url(of:))
         if files.isEmpty { return NSSound.beep() }
@@ -26,6 +31,7 @@ extension FilesPane {
     }
 
     @objc func openWithDefaultApp() {
+        if isRemote { return openRemoteFiles(targetEntries) }
         let urls = targetEntries.map(url(of:))
         guard !urls.isEmpty else { return NSSound.beep() }
         urls.forEach { NSWorkspace.shared.open($0) }
@@ -34,24 +40,31 @@ extension FilesPane {
     /// Space: the selected file in the workspace's preview pane (images, PDF, Markdown, diffs, Quick Look).
     @objc func previewSelection() {
         guard let entry = targetEntries.first(where: { !$0.isFolder }) else { return NSSound.beep() }
+        if isRemote { return previewRemote(entry) }
         onPreview?(url(of: entry).path)
     }
 
     @objc func revealInFinder() {
+        guard !isRemote else { return NSSound.beep() }
         let urls = targetEntries.map(url(of:))
         NSWorkspace.shared.activateFileViewerSelecting(urls.isEmpty ? [folderURL] : urls)
     }
 
     @objc func copyPaths() {
-        let paths = targetEntries.map { url(of: $0).path }
+        // Remote items as `host:/path`, as `cmds files` takes them.
+        let paths = targetEntries.map { location(of: $0).description }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString((paths.isEmpty ? [folder] : paths).joined(separator: "\n"), forType: .string)
+        pasteboard.setString((paths.isEmpty ? [location.description] : paths).joined(separator: "\n"), forType: .string)
     }
 
     /// The selected folder (one), else the shown folder, in a new terminal pane.
     @objc func openTerminalHere() {
         let entries = targetEntries
+        if let host {
+            let target = entries.count == 1 && entries[0].isFolder ? remotePath(entries[0]) : folder
+            return onOpenSSHTerminal?(host, target) ?? ()
+        }
         let target = entries.count == 1 && entries[0].isFolder ? url(of: entries[0]).path : folder
         onOpenTerminal?(target)
     }
@@ -61,13 +74,18 @@ extension FilesPane {
         let alert = NSAlert()
         alert.messageText = String(localized: "Go to Folder")
         let field = NSTextField(frame: NSRect(x: 0, y: 0, width: 320, height: 24))
-        field.stringValue = folder.abbreviatingHome
+        field.stringValue = isRemote ? folder : folder.abbreviatingHome
         alert.accessoryView = field
         alert.addButton(withTitle: String(localized: "Go"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.window.initialFirstResponder = field
         present(alert) { [weak self] response in
             guard let self, response == .alertFirstButtonReturn else { return }
+            if self.isRemote {
+                // Checked by the listing: a file is selected in its folder, a missing path shows an error.
+                self.navigate(to: RemotePath.resolve(typed: field.stringValue, in: self.folder))
+                return self.focus()
+            }
             let path = FileNames.resolve(typed: field.stringValue, in: self.folder)
             if Self.isFolder(path) {
                 self.navigate(to: path)
@@ -89,6 +107,7 @@ extension FilesPane {
     }
 
     @objc func newFolder() {
+        if isRemote { return newRemoteFolder() }
         let base = String(localized: "untitled folder")
         let taken = { (name: String) in FileOperation.exists(self.folderURL.appendingPathComponent(name)) }
         let name = taken(base) ? FileNames.keepBoth(base, isFolder: true, taken: taken) : base
@@ -106,6 +125,7 @@ extension FilesPane {
     @objc func moveToTrash() {
         let entries = targetEntries
         guard !entries.isEmpty else { return NSSound.beep() }
+        if isRemote { return trashRemote(entries) }
         // Keep the keyboard near where the items were.
         let next = FileSelection.afterRemoving(Set(entries.map(\.name)), from: rows.map(\.name))
         NSWorkspace.shared.recycle(entries.map(url(of:))) { [weak self] _, error in
@@ -128,14 +148,18 @@ extension FilesPane {
     @objc func moveToOtherPane() { transferToOtherPane(.move) }
 
     private func transferToOtherPane(_ mode: FileOperation.Mode) {
-        let sources = targetEntries.map(url(of:))
-        guard !sources.isEmpty else { return NSSound.beep() }
+        let entries = targetEntries
+        guard !entries.isEmpty else { return NSSound.beep() }
         guard let other = otherPane?() else {
             return showError(String(localized: "There is no other files pane in this workspace."),
                              detail: String(localized: "Open one with File › New Files Pane (⇧⌘E), then copy or move between the two."))
         }
-        guard other.folder != folder else { return NSSound.beep() }
-        startOperation(mode, sources: sources, destination: other.folderURL)
+        guard other.location != location else { return NSSound.beep() }
+        if isRemote || other.isRemote {
+            return startTransfer(mode == .move ? .move : .copy, sources: entries.map(location(of:)),
+                                 destination: other.location)
+        }
+        startOperation(mode, sources: entries.map(url(of:)), destination: other.folderURL)
     }
 
     func focusOtherPane() {
@@ -145,17 +169,24 @@ extension FilesPane {
 
     /// ⌘C: the selected items as files on the pasteboard (paste them in the Finder or another files pane).
     func copyToPasteboard() {
-        let urls = selectedEntries.map(url(of:))
-        guard !urls.isEmpty else { return NSSound.beep() }
+        let entries = selectedEntries
+        guard !entries.isEmpty else { return NSSound.beep() }
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.writeObjects(urls as [NSURL])
+        if isRemote {
+            pasteboard.writeObjects(entries.map(pasteboardItem(for:)))
+        } else {
+            pasteboard.writeObjects(entries.map(url(of:)) as [NSURL])
+        }
     }
 
     /// ⌘V copies the files on the pasteboard into the shown folder; ⌥⌘V moves them.
     func paste(move: Bool) {
-        guard let sources = Self.fileURLs(.general), !sources.isEmpty else { return NSSound.beep() }
-        startOperation(move ? .move : .copy, sources: sources, destination: folderURL)
+        guard let sources = Self.locations(.general), !sources.isEmpty else { return NSSound.beep() }
+        if isRemote || sources.contains(where: \.isRemote) {
+            return startTransfer(move ? .move : .copy, sources: sources, destination: location)
+        }
+        startOperation(move ? .move : .copy, sources: sources.map { URL(fileURLWithPath: $0.path) }, destination: folderURL)
     }
 
     /// Runs a copy or move with progress in this pane's footer. False when one is already running here.
@@ -183,7 +214,8 @@ extension FilesPane {
     }
 
     @objc func cancelFileOperation(_ sender: Any?) {
-        operation?.cancel()
+        if let operation { return operation.cancel() }
+        if let job = activeTransfer { try? TransferCenter.shared.cancel(id: job.id) }
     }
 
     private func show(_ status: FileOperation.Status) {
@@ -239,11 +271,19 @@ extension FilesPane {
         }
     }
 
-    private func askConflict(name: String, isFolder: Bool, several: Bool,
-                             reply: @escaping @Sendable (FileOperation.Resolution, Bool) -> Void) {
+    func askConflict(name: String, isFolder: Bool, several: Bool,
+                     reply: @escaping @Sendable (FileOperation.Resolution, Bool) -> Void) {
         #if DEBUG
         if let answer = debugConflictAnswer { return reply(answer, true) }
         #endif
+        let alert = Self.conflictAlert(name: name, isFolder: isFolder, several: several)
+        present(alert) { response in
+            reply(Self.resolution(for: response), alert.suppressionButton?.state == .on)
+        }
+    }
+
+    /// Keep Both / Replace / Skip / Stop, with Apply to all when several items are copied.
+    static func conflictAlert(name: String, isFolder: Bool, several: Bool) -> NSAlert {
         let alert = NSAlert()
         alert.messageText = isFolder
             ? String(localized: "A folder named “\(name)” already exists in the destination.")
@@ -257,14 +297,15 @@ extension FilesPane {
             alert.showsSuppressionButton = true
             alert.suppressionButton?.title = String(localized: "Apply to all")
         }
-        present(alert) { response in
-            let all = alert.suppressionButton?.state == .on
-            switch response {
-            case .alertFirstButtonReturn: reply(.keepBoth, all)
-            case .alertSecondButtonReturn: reply(.replace, all)
-            case .alertThirdButtonReturn: reply(.skip, all)
-            default: reply(.stop, false)
-            }
+        return alert
+    }
+
+    static func resolution(for response: NSApplication.ModalResponse) -> FileOperation.Resolution {
+        switch response {
+        case .alertFirstButtonReturn: return .keepBoth
+        case .alertSecondButtonReturn: return .replace
+        case .alertThirdButtonReturn: return .skip
+        default: return .stop
         }
     }
 
@@ -291,13 +332,16 @@ extension FilesPane {
             add(String(localized: "Move to Trash"), #selector(moveToTrash))
             menu.addItem(.separator())
             add(String(localized: "Copy Path"), #selector(copyPaths))
-            add(String(localized: "Reveal in Finder"), #selector(revealInFinder))
+            add(String(localized: "Reveal in Finder"), #selector(revealInFinder), enabled: !isRemote)
             menu.addItem(.separator())
         }
         add(String(localized: "New Folder"), #selector(newFolder))
-        add(String(localized: "Open Terminal Here"), #selector(openTerminalHere))
+        add(isRemote ? String(localized: "Open SSH Terminal Here") : String(localized: "Open Terminal Here"),
+            #selector(openTerminalHere))
         add(String(localized: "Show Hidden Files"), #selector(toggleHiddenFiles), checked: showHidden)
-        add(String(localized: "Follow Terminal"), #selector(toggleFollowTerminal), checked: followsTerminal)
+        if !isRemote {
+            add(String(localized: "Follow Terminal"), #selector(toggleFollowTerminal), checked: followsTerminal)
+        }
         return menu
     }
 

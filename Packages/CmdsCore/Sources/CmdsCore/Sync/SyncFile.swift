@@ -131,7 +131,9 @@ extension WorkspaceInfo {
     /// For phones without `SyncFeature.filesPanes`: files panes shown as browser panes with the folder's `file://` URL.
     public var withoutFilesPanes: WorkspaceInfo {
         asBrowserPanes(.files) { pane in
-            pane.url = pane.workingDirectory.map { URL(fileURLWithPath: $0, isDirectory: true).absoluteString }
+            // A folder on an SSH host has no file:// URL on the phone.
+            pane.url = pane.remote != nil ? nil
+                : pane.workingDirectory.map { URL(fileURLWithPath: $0, isDirectory: true).absoluteString }
             pane.workingDirectory = nil
         }
     }

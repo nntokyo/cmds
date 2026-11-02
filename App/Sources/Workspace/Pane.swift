@@ -13,7 +13,7 @@ final class Pane {
     let browser: BrowserPane?
     /// Set for preview panes (a local file).
     let preview: PreviewPane?
-    /// Set for files panes (a local folder); `workingDirectory` is the folder.
+    /// Set for files panes (a folder on this Mac or an SSH host); `workingDirectory` is the folder.
     let files: FilesPane?
     /// Set for SSH panes (docs/internals/ssh.md); `workingDirectory` is then a path on the remote host.
     let ssh: SSHSession?
@@ -139,8 +139,12 @@ final class Pane {
         container.setOverlay(overlay)
     }
 
+    /// SSH panes, and files panes on an SSH host (`workingDirectory` is then a path there).
     var remoteInfo: RemoteInfo? {
-        ssh.map { RemoteInfo(host: $0.launch.host, connected: $0.connected, branch: $0.remoteBranch) }
+        if let files, let host = files.host {
+            return RemoteInfo(host: host, connected: !files.waitingForConnect && files.connectionError == nil)
+        }
+        return ssh.map { RemoteInfo(host: $0.launch.host, connected: $0.connected, branch: $0.remoteBranch) }
     }
 
     init(id: String, workspaceID: String, browser: BrowserPane) {
@@ -220,6 +224,10 @@ final class Pane {
         files.onOpenTerminal = { [weak self] folder in
             guard let self else { return }
             _ = try? self.controller?.split(paneID: self.id, direction: .down, kind: .terminal, cwd: folder)
+        }
+        files.onOpenSSHTerminal = { [weak self] host, folder in
+            guard let self, let launch = try? SSHLaunch(host: host, remoteCwd: folder) else { return NSSound.beep() }
+            _ = try? self.controller?.split(paneID: self.id, direction: .down, kind: .terminal, ssh: launch)
         }
     }
 

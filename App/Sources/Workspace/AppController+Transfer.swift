@@ -29,9 +29,9 @@ extension AppController {
             case .preview(let path, let format):
                 defer { next += 1 }
                 return .pane(WorkspaceBundle.Pane(kind: .preview, path: path, format: format))
-            case .files(let path, _, _):
+            case .files(let path, _, _, let host):
                 defer { next += 1 }
-                return .pane(WorkspaceBundle.Pane(kind: .files, path: path))
+                return .pane(WorkspaceBundle.Pane(kind: .files, host: host, path: path))
             }
         }
         let workspaces = state.workspaces.map { saved -> WorkspaceBundle.Workspace in
@@ -104,7 +104,8 @@ extension SessionState {
                 case .preview:
                     return .preview(path: pane.path ?? NSHomeDirectory(), format: pane.format)
                 case .files:
-                    return .files(path: local(pane.path) ?? NSHomeDirectory(), showHidden: nil, follow: nil)
+                    if let host = pane.host { return .files(path: pane.path ?? "", showHidden: nil, follow: nil, host: host) }
+                    return .files(path: local(pane.path) ?? NSHomeDirectory(), showHidden: nil, follow: nil, host: nil)
                 }
             }
         }
@@ -112,7 +113,8 @@ extension SessionState {
             var sessions: [PaneAgentSession] = []
             var next = 0
             let layout = node(workspace.layout, sessions: &sessions, next: &next)
-            let isRemote = workspace.panes[safe: workspace.focusedPaneIndex ?? 0]?.host != nil
+            let focused = workspace.panes[safe: workspace.focusedPaneIndex ?? 0]
+            let isRemote = focused?.kind == .terminal && focused?.host != nil
             return WorkspaceState(title: workspace.title,
                                   workingDirectory: isRemote ? workspace.workingDirectory : local(workspace.workingDirectory),
                                   layout: layout, focusedPaneIndex: workspace.focusedPaneIndex,

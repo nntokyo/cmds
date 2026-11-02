@@ -10,7 +10,9 @@ struct SessionState: Codable {
         /// Preview pane (file path; `format` = forced rendering such as `diff`). Added later: older sessions lack it.
         case preview(path: String, format: String?)
         /// Files pane (folder; `showHidden`/`follow` only when on). Added later: older versions cannot read it.
-        case files(path: String, showHidden: Bool?, follow: Bool?)
+        /// `host`: a folder on that SSH host, reconnected only when the user clicks Connect (added later; older
+        /// versions open the path on the Mac, or the home folder).
+        case files(path: String, showHidden: Bool?, follow: Bool?, host: String?)
         /// SSH pane: reconnected only when the user clicks Connect (never on launch).
         case ssh(host: String, remoteCwd: String?)
         case split(axis: SplitAxis, ratio: Double, first: Node, second: Node)

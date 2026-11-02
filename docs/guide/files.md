@@ -1,12 +1,13 @@
 # Files panes
 
-> A local folder as a list next to your terminals: browse, preview, copy and move between two panes, rename, new
-> folder, Move to Trash, follow a terminal's `cd`, and drop files on a terminal to type their paths.
+> A folder on this Mac or on an SSH host as a list next to your terminals: browse, preview, copy and move between
+> two panes (also to and from servers, through a transfer queue), rename, new folder, Move to Trash, follow a
+> terminal's `cd`, and drop files on a terminal to type their paths.
 
 A files pane is one more kind of pane, like a browser or preview pane: split it, zoom it, close it with ⌘W, and it
-comes back after a relaunch. Two of them side by side give a two-pane file manager. Folders on SSH hosts (SFTP),
-transfer queues and folder sync are planned for later phases of
-[#26](https://github.com/nntokyo/cmds/issues/26).
+comes back after a relaunch. Two of them side by side give a two-pane file manager. A files pane can also list a
+folder on an SSH host ([below](#folders-on-ssh-hosts)). Folder compare and sync, and editing remote files, are planned
+for later phases of [#26](https://github.com/nntokyo/cmds/issues/26).
 
 ## Opening one
 
@@ -20,9 +21,11 @@ transfer queues and folder sync are planned for later phases of
 ```sh
 cmds files                    # this directory, to the right
 cmds files --down ~/Downloads
+cmds files home:/var/www      # a folder on the SSH host "home"
 ```
 
-Files panes list folders on this Mac only, so `cmds files` is not available from SSH panes.
+`cmds files` is not available from SSH panes (a script on the server cannot open panes on the Mac); press ⇧⌘E in the
+SSH pane instead.
 
 ## The list
 
@@ -98,6 +101,59 @@ paths are on the server). The setting is saved with the session.
 - Dropping files on a terminal pane types their paths, quoted for the shell (`My\ File\ \(1\).txt`), with spaces
   between them. This works for files dragged from a files pane, the Finder or anywhere else, and for file URLs pasted
   with ⌘V.
+
+## Folders on SSH hosts
+
+A files pane can list a folder on any host you reach with `ssh`, over SFTP. Nothing is installed on the server.
+
+- **Opening**: File › New Remote Files Pane… (⌥⇧⌘E) asks for the host (the `Host` entries of `~/.ssh/config` are
+  offered) and a folder (default: your home folder there). ⇧⌘E in an SSH pane opens its host at the pane's remote
+  directory. From a terminal: `cmds files HOST:PATH`, with `PATH` absolute, `~/…`, relative to the remote home, or
+  empty. As with `scp`, a colon before any `/` makes it remote; write `./a:b` for a local name with a colon.
+- **Your ssh, never a password**: cmds runs your own `ssh`, so `~/.ssh/config`, keys, the agent, jump hosts and an
+  open `ControlMaster` connection apply. It never asks for, types or stores a password, and never prompts: a host that
+  wants a password, or a key whose passphrase is not in the agent, is refused with a note (add a key with
+  `ssh-copy-id`, or the key to the agent with `ssh-add`). Host keys are always checked: a host whose key is not in
+  `known_hosts` yet is refused (connect once in an SSH workspace or a terminal to check and accept it; cmds never adds
+  host keys), and a changed key is refused with a warning.
+- **The list**: like a local one, without the Git column and Follow Terminal. The bar shows `host:/path`. It is read in
+  the background; ⌘R reads it again (the server's folder is not watched; the pane's own changes and finished
+  transfers show up by themselves). Connection problems show in the list with **Connect** to try again.
+- **Open and Space** download a copy of the file (read only, in cmds' cache) and open it in its default app or show it
+  in the preview pane. Editing that copy does not change the server's file.
+- **Rename** (F2), **New Folder** (F7) and **Copy Path** (`host:/path`) work as locally. **Open Terminal Here** opens
+  an SSH pane at the folder.
+- **Move to Trash** (⌘⌫) never deletes anything on the server: items go to your Trash there,
+  `~/.local/share/Trash` (the freedesktop.org Trash that `gio trash`, `trash-cli` and Linux file managers use, so
+  they can be restored there). An item on another file system than your home folder cannot be moved there; cmds then
+  leaves it where it is and says so.
+- A pane restored after a relaunch does not connect by itself; it shows **Connect** (⌘R).
+
+Copying and moving between a remote pane and a local one, or two hosts, goes through the transfer queue.
+
+## Transfers
+
+Copies and moves that involve an SSH host (F5 / F6, drag and drop between panes, dropping files from the Finder on a
+remote pane, ⌘C / ⌘V) are queued and run in the background:
+
+- The pane that started a transfer shows its progress and **Cancel** below the list. **Window › Transfers** (⌥⌘T)
+  lists every transfer with **Pause** / **Resume**, **Cancel**, **Retry** and **Show Log** (what happened to each
+  item); **Clear Finished** removes the finished ones. `cmds transfers` shows the same.
+- Two transfers run at a time; more wait their turn.
+- Name conflicts ask as for local copies (Keep Both, Replace, Skip, Stop, Apply to all). Replace moves the existing
+  item to the Trash of its side (this Mac's or the server's) first, and is refused if it cannot.
+- A file is written under a temporary name (`.cmds-part-…`) and gets its real name only when it is complete, so a
+  half-copied file never looks finished. **Cancel** removes that temporary file, and a folder the interrupted item had
+  created goes to the Trash; nothing that was there before is touched. **Pause** holds the transfer at the next chunk.
+- **Retry** runs the items that did not finish, and fills in folders the transfer had created (files already there with
+  the same size are kept).
+- A move within one host is a rename. Otherwise the items are copied and the originals then go to the Trash of their
+  side; if that fails, the copy stays and the log says so.
+- Dates and permissions are kept; symbolic links are copied as links.
+- If the connection drops, the transfer fails and can be retried. Quitting cmds stops running transfers (a
+  `.cmds-part-…` file may stay behind).
+
+Copies between two folders on this Mac do not use the queue (see [Copying and moving](#copying-and-moving)).
 
 ## iPhone and iPad
 

@@ -49,6 +49,7 @@ environment reliably. How to use them together: [internals/testing.md](../intern
 | `CMDS_SYNC_NO_BONJOUR=1` | Run the sync server without the Bonjour advert, so no phone discovers the instance. |
 | `CMDS_SYNC_NO_BLUETOOTH=1` | No Bluetooth peripheral (no advertising, no L2CAP channel). Use it for every test instance that does not test Bluetooth. |
 | `CMDS_SYNC_REMOTE_SSH_CONFIG=<file>` | Isolated instances only: remote access via SSH runs `ssh -F <file>`, so a test never reads `~/.ssh`. |
+| `CMDS_FILES_SSH_CONFIG=<file>` | Isolated instances only: files panes on SSH hosts run `ssh -F <file>` (and New Remote Files Pane… offers no hosts from `~/.ssh/config`), so a test never reads `~/.ssh`. |
 | `CMDS_SYNC_TEST_PAIRING=1` | DEBUG builds with `CMDS_SUPPORT_DIR` only: listen on 127.0.0.1 only, keep pairing open without the window and write the pairing QR payload to `$CMDS_SUPPORT_DIR/sync-test-pairing.txt` (0600). |
 | `CMDS_SIDEBAR_COMPACT=1` | Isolated instances only (they never read the saved `UserDefaults` key `SidebarCompact`): start with the compact sidebar. |
 | `CMDS_AGENT_RESUME=ask\|always\|never` | Isolated instances only: initial "Resume Agent Sessions on Launch" mode (default `ask`). |
