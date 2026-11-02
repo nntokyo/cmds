@@ -296,3 +296,63 @@ public enum ScheduleHistory {
         return kept
     }
 }
+
+// MARK: - API results
+
+/// One schedule in `schedule.list` (`cmds schedule`).
+public struct ScheduleListEntry: Codable, Equatable, Sendable {
+    public var schedule: Schedule
+    public var nextFireAt: Date?
+    public var activeRun: ScheduleRun?
+    public var lastRun: ScheduleRun?
+    /// Why it cannot run as it is (e.g. its account was removed); nil when fine.
+    public var problem: String?
+
+    public init(schedule: Schedule, nextFireAt: Date? = nil, activeRun: ScheduleRun? = nil, lastRun: ScheduleRun? = nil,
+                problem: String? = nil) {
+        self.schedule = schedule
+        self.nextFireAt = nextFireAt
+        self.activeRun = activeRun
+        self.lastRun = lastRun
+        self.problem = problem
+    }
+
+    private enum CodingKeys: String, CodingKey { case schedule, nextFireAt, activeRun, lastRun, problem }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schedule = try c.decode(Schedule.self, forKey: .schedule)
+        nextFireAt = c.lenientDate(.nextFireAt)
+        activeRun = try? c.decodeIfPresent(ScheduleRun.self, forKey: .activeRun)
+        lastRun = try? c.decodeIfPresent(ScheduleRun.self, forKey: .lastRun)
+        problem = c.lenientString(.problem)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schedule, forKey: .schedule)
+        try c.encodeIfPresent(nextFireAt?.timeIntervalSince1970, forKey: .nextFireAt)
+        try c.encodeIfPresent(activeRun, forKey: .activeRun)
+        try c.encodeIfPresent(lastRun, forKey: .lastRun)
+        try c.encodeIfPresent(problem, forKey: .problem)
+    }
+}
+
+/// Result of `schedule.list`.
+public struct ScheduleList: Codable, Equatable, Sendable {
+    public var schedules: [ScheduleListEntry]
+    /// The files were written by a newer cmds (or could not be read): nothing is saved.
+    public var readOnly: Bool
+
+    public init(schedules: [ScheduleListEntry], readOnly: Bool = false) {
+        self.schedules = schedules
+        self.readOnly = readOnly
+    }
+}
+
+/// Result of `schedule.history`.
+public struct ScheduleHistoryList: Codable, Equatable, Sendable {
+    public var runs: [ScheduleRun]
+
+    public init(runs: [ScheduleRun]) { self.runs = runs }
+}
