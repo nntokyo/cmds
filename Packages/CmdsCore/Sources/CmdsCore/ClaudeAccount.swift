@@ -155,6 +155,13 @@ public enum ClaudeAccounts {
         return nil
     }
 
+    /// `account.move` (`cmds accounts move`): the 0-based `index` must be a position in the list of `count` accounts;
+    /// one beyond the end is refused, not clamped (#44). The message counts from 1, as the CLI does. nil when fine.
+    public static func positionProblem(_ index: Int, count: Int) -> String? {
+        guard !(0..<count).contains(index) else { return nil }
+        return count == 1 ? "the position must be 1" : "the position must be 1 to \(count)"
+    }
+
     /// Absolute, without `~`, `.`/`..` or a trailing slash.
     public static func expandedPath(_ path: String, home: String = NSHomeDirectory()) -> String {
         var expanded = path

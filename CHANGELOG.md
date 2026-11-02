@@ -29,6 +29,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: the files pane's Git column no longer keeps old `M` / `A` / `?` marks after a commit, `git add` or checkout, or
   after files were edited in another app. It is read again when Git changes the repository and when the window becomes
   active, not only when files are added to or removed from the shown folder (#43).
+- Mac: removing a Claude account takes it off the panes that had it; `cmds ls` and the sidebar no longer show
+  `account <name>` for an account `cmds accounts` does not list (#44).
+- `cmds accounts move NAME 9` with fewer accounts is refused (exit 1, `the position must be 1 to 3`) instead of moving
+  the account to the end (#44).
+- Docs: a split without `--account` does not take the account of the pane it splits (#44).
 - Mac: a damaged `claude-accounts.json` is no longer replaced by the next change to the accounts. It is kept as
   `claude-accounts.json.corrupt-<time>` in the cmds support folder and cmds says so; a file it cannot read at all is
   left alone and not saved over (#46).
