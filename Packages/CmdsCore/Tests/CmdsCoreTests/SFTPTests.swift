@@ -81,6 +81,12 @@ final class FileLocationTests: XCTestCase {
         XCTAssertFalse(RemotePath.isSameOrInside("/ab", "/a"))
         XCTAssertEqual(RemotePath.resolve(typed: "../x", in: "/a/b"), "/a/x")
         XCTAssertEqual(RemotePath.resolve(typed: "~/x", in: "/a/b"), "~/x")
+        XCTAssertEqual(RemotePath.absolute("", home: "/home/me"), "/home/me")
+        XCTAssertEqual(RemotePath.absolute("~", home: "/home/me"), "/home/me")
+        XCTAssertEqual(RemotePath.absolute("~/src", home: "/home/me"), "/home/me/src")
+        XCTAssertEqual(RemotePath.absolute("src/x", home: "/home/me"), "/home/me/src/x")
+        XCTAssertEqual(RemotePath.absolute("/var/../www", home: "/home/me"), "/var/../www")
+        XCTAssertEqual(RemotePath.absolute("~other", home: "/home/me"), "/home/me/~other")
     }
 }
 
