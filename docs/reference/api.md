@@ -137,7 +137,7 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `failed`, `cancelled`), `sources` and `destination` (`HOST:PATH` on SSH hosts, else paths), `itemsDone`,
   `itemsTotal`, `bytesDone`, `bytesTotal`, `current?` (the file being written), `error?` (why the whole transfer
   stopped, e.g. the connection), `asking?` (a name conflict waiting for an answer in the app), `copied`, `moved`,
-  `skipped` (counts of the log) and `failures` (`[{path, message}]`, at most 50).
+  `skipped`, `failed` (counts of the log) and `failures` (`[{path, message}]`, the first 50).
 - `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`, `memoryTotalBytes`, `memoryPressure` (1 normal,
   2 warning, 4 critical; optional).
 - `AgentUsage` = `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`, `effort`,

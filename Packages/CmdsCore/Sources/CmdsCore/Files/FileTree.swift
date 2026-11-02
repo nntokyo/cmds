@@ -81,6 +81,13 @@ public enum FilePathStyle: Sendable {
         }
     }
 
+    public func name(_ path: String) -> String {
+        switch self {
+        case .mac: return (path as NSString).lastPathComponent
+        case .server: return RemotePath.name(path)
+        }
+    }
+
     public func parent(_ path: String) -> String {
         switch self {
         case .mac: return (path as NSString).deletingLastPathComponent
@@ -146,7 +153,7 @@ public final class LocalFileTree: FileTree {
         var info = stat()
         guard lstat(path, &info) == 0 else {
             if errno == ENOENT || errno == ENOTDIR { return nil }
-            throw FileTreeError(Self.errnoText(path))
+            throw Self.errnoFailure(path)
         }
         return Self.item(name: (path as NSString).lastPathComponent, info)
     }
@@ -171,7 +178,7 @@ public final class LocalFileTree: FileTree {
     }
 
     public func makeFolder(_ path: String, permissions: UInt32?) throws {
-        guard mkdir(path, mode_t(permissions ?? 0o755)) == 0 else { throw FileTreeError(Self.errnoText(path)) }
+        guard mkdir(path, mode_t(permissions ?? 0o755)) == 0 else { throw Self.errnoFailure(path) }
     }
 
     public func openForReading(_ path: String) throws -> FileTreeReader {
@@ -181,13 +188,13 @@ public final class LocalFileTree: FileTree {
 
     public func createFile(_ path: String, permissions: UInt32?) throws -> FileTreeWriter {
         let fd = open(path, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, mode_t(permissions ?? 0o644))
-        guard fd >= 0 else { throw FileTreeError(Self.errnoText(path)) }
+        guard fd >= 0 else { throw Self.errnoFailure(path) }
         return Writer(FileHandle(fileDescriptor: fd, closeOnDealloc: true))
     }
 
     public func rename(_ path: String, to newPath: String) throws {
         // renamex_np with RENAME_EXCL: fails instead of replacing.
-        guard renamex_np(path, newPath, UInt32(RENAME_EXCL)) == 0 else { throw FileTreeError(Self.errnoText(newPath)) }
+        guard renamex_np(path, newPath, UInt32(RENAME_EXCL)) == 0 else { throw Self.errnoFailure(newPath) }
     }
 
     public func trash(_ path: String) throws {
@@ -198,7 +205,7 @@ public final class LocalFileTree: FileTree {
         guard TransferNames.isPart((path as NSString).lastPathComponent) else {
             throw FileTreeError("refusing to remove \(path)")
         }
-        guard unlink(path) == 0 || errno == ENOENT else { throw FileTreeError(Self.errnoText(path)) }
+        guard unlink(path) == 0 || errno == ENOENT else { throw Self.errnoFailure(path) }
     }
 
     public func readLink(_ path: String) throws -> String {
@@ -206,7 +213,7 @@ public final class LocalFileTree: FileTree {
     }
 
     public func makeLink(_ path: String, target: String) throws {
-        guard symlink(target, path) == 0 else { throw FileTreeError(Self.errnoText(path)) }
+        guard symlink(target, path) == 0 else { throw Self.errnoFailure(path) }
     }
 
     public func setAttributes(_ path: String, modified: Date?, permissions: UInt32?) {
@@ -217,8 +224,9 @@ public final class LocalFileTree: FileTree {
         try? FileManager.default.setAttributes(attributes, ofItemAtPath: path)
     }
 
-    static func errnoText(_ path: String) -> String {
-        "\(String(cString: strerror(errno))) (\((path as NSString).lastPathComponent))"
+    /// The failed system call's `errno`, about the item at `path`.
+    static func errnoFailure(_ path: String) -> TransferFailure {
+        .posix(code: errno, name: (path as NSString).lastPathComponent)
     }
 
     private final class Reader: FileTreeReader {

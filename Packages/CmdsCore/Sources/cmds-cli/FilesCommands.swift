@@ -89,7 +89,9 @@ extension Format {
         if job.copied > 0 { counts.append("\(job.copied) copied") }
         if job.moved > 0 { counts.append("\(job.moved) moved") }
         if job.skipped > 0 { counts.append("\(job.skipped) skipped") }
-        if !job.failures.isEmpty { counts.append("\(job.failures.count) failed") }
+        // `failures` lists at most 50; `failed` counts them all (nil from an app that does not send it).
+        let failed = job.failed ?? job.failures.count
+        if failed > 0 { counts.append("\(failed) failed") }
         if !counts.isEmpty { line += "  " + counts.joined(separator: ", ") }
         if let error = job.error { line += "\n    error: \(oneLine(error))" }
         for failure in job.failures { line += "\n    \(failure.path): \(oneLine(failure.message))" }

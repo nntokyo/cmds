@@ -76,6 +76,15 @@ public enum SSHFailure: Equatable, Sendable {
         return .other(status.map { "ssh exited with status \($0)" } ?? "ssh exited")
     }
 
+    /// The classified failure whose `description` this is (a dropped connection's reason, `SFTPError.disconnected`),
+    /// so the app can show its own text; nil for anything else (ssh's own last line).
+    public init?(description: String) {
+        let known: [SSHFailure] = [.authentication, .unknownHostKey, .changedHostKey, .unresolvedHost, .refused,
+                                   .timedOut, .noSFTP]
+        guard let failure = known.first(where: { $0.description == description }) else { return nil }
+        self = failure
+    }
+
     /// English text (API, CLI, logs); the app shows its own localized text for each case.
     public var description: String {
         switch self {

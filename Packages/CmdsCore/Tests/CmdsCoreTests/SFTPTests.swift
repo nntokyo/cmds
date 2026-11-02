@@ -382,7 +382,7 @@ final class SFTPTransferTests: XCTestCase {
         // Into itself is refused.
         let into = self.job(.move, [r(home + "/b")], to: r(home + "/b"))
         into.run()
-        XCTAssertEqual(into.snapshot.log.first?.outcome, .failed("A folder cannot be copied or moved into itself."))
+        XCTAssertEqual(into.snapshot.log.first?.outcome, .failed(.intoItself))
     }
 
     func testCopyWithinSameFolderKeepsBoth() throws {
@@ -461,7 +461,77 @@ final class SFTPTransferTests: XCTestCase {
         let job = job(.copy, [.local(mac + "/a.txt")], to: r(home))
         job.run()
         XCTAssertEqual(job.snapshot.state, .failed)
-        XCTAssertEqual(job.snapshot.error, "test server closed the connection")
+        XCTAssertEqual(job.snapshot.error, .sftp(.disconnected("test server closed the connection")))
+    }
+
+    // MARK: - Part files left behind (#64)
+
+    func testPartFileLeftByADroppedConnectionIsRemovedOnTheNextConnect() throws {
+        try write(mac + "/a.bin", String(repeating: "a", count: 100_000))
+        try write(home + "/keep.txt", "mine")
+        let journalURL = root.appendingPathComponent("support/transfer-parts.json")
+        // After the handshake's realpath: the lstat of the target and the OPEN of the part file are answered.
+        server.dropAfterRequests = 3
+        let job = job(.copy, [.local(mac + "/a.bin")], to: r(home))
+        job.partJournal = TransferPartJournal(url: journalURL)
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .failed)
+        let left = names(home).filter(TransferNames.isPart)
+        XCTAssertEqual(left.count, 1, "the part file could not be removed without a connection")
+
+        // The next run of the app reads the journal; connecting to the host removes the part file, and nothing else.
+        let journal = TransferPartJournal(url: journalURL)
+        XCTAssertEqual(journal.leftovers(host: "test").map(\.path), [home + "/" + left[0]])
+        XCTAssertEqual(journal.leftovers(host: nil), [])
+        let again = SFTPTestServer(home: home)
+        defer { again.client.disconnect(); again.stop() }
+        XCTAssertEqual(journal.clean(host: "test", tree: try again.connect()), 1)
+        XCTAssertEqual(names(home), ["keep.txt"])
+        XCTAssertEqual(again.removed, [home + "/" + left[0]])
+        XCTAssertEqual(TransferPartJournal(url: journalURL).leftovers(host: "test"), [])
+    }
+
+    func testFinishedTransfersLeaveNothingInTheJournal() throws {
+        try write(mac + "/a.txt", "a")
+        try write(home + "/b.txt", "b")
+        let journal = TransferPartJournal(url: root.appendingPathComponent("support/transfer-parts.json"))
+        let up = job(.copy, [.local(mac + "/a.txt")], to: r(home))
+        up.partJournal = journal
+        up.run()
+        let down = job(.copy, [r(home + "/b.txt")], to: .local(mac))
+        down.partJournal = journal
+        down.run()
+        XCTAssertEqual([up.snapshot.state, down.snapshot.state], [.done, .done])
+        let reloaded = TransferPartJournal(url: root.appendingPathComponent("support/transfer-parts.json"))
+        XCTAssertEqual(reloaded.leftovers(host: "test") + reloaded.leftovers(host: nil), [])
+    }
+
+    func testJournalCleansOnlyRecordedPartFilesOfEarlierRuns() throws {
+        let url = root.appendingPathComponent("support/transfer-parts.json")
+        let stale = mac + "/" + TransferNames.part(for: "a.txt")
+        let gone = mac + "/" + TransferNames.part(for: "b.txt")
+        try write(stale, "partial")
+        try write(mac + "/notes.txt", "user's")
+        let unrecorded = mac + "/" + TransferNames.part(for: "c.txt")
+        try write(unrecorded, "another run's, not recorded")
+        let earlier = TransferPartJournal(url: url)
+        earlier.add(.init(host: nil, path: stale))
+        earlier.add(.init(host: nil, path: gone))
+        // A damaged entry naming a user's file is never removed, and is dropped.
+        earlier.add(.init(host: nil, path: mac + "/notes.txt"))
+        earlier.add(.init(host: "server", path: "/srv/" + TransferNames.part(for: "x")))
+
+        let journal = TransferPartJournal(url: url)
+        // A part file of this run is not a leftover.
+        let current = TransferPartJournal.Entry(host: nil, path: mac + "/" + TransferNames.part(for: "d.txt"))
+        try write(current.path, "being written")
+        journal.add(current)
+        XCTAssertEqual(journal.clean(host: nil, tree: local), 2)
+        XCTAssertEqual(names(mac), [(current.path as NSString).lastPathComponent, (unrecorded as NSString).lastPathComponent,
+                                    "notes.txt"].sorted())
+        XCTAssertEqual(journal.leftovers(host: nil), [])
+        XCTAssertEqual(journal.leftovers(host: "server").count, 1)
+        XCTAssertEqual(Set(TransferPartJournal(url: url).leftovers(host: nil).map(\.path)), [current.path])
     }
 
     func testQueueRunsJobsAndRetries() throws {
@@ -516,7 +586,7 @@ final class SFTPTransferTests: XCTestCase {
         job.run()
         XCTAssertEqual(job.snapshot.state, .failed)
         XCTAssertEqual(job.snapshot.log.map(\.outcome),
-                       [.failed("The existing item could not be moved to the Trash: no Trash here")])
+                       [.failed(.existingNotTrashed(.other("no Trash here")))])
         XCTAssertEqual(read(mac + "/a.txt"), "old")
     }
 
@@ -524,7 +594,7 @@ final class SFTPTransferTests: XCTestCase {
         try write(home + "/x/x", "inner")
         let job = job(.move, [r(home + "/x/x")], to: r(home), policy: .replace)
         job.run()
-        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed("The item to replace contains the item being moved.")])
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed(.replaceContainsSource)])
         XCTAssertEqual(read(home + "/x/x"), "inner")
         XCTAssertFalse(FileManager.default.fileExists(atPath: home + "/.local/share/Trash"))
     }
@@ -535,7 +605,7 @@ final class SFTPTransferTests: XCTestCase {
         let job = job(.move, [.local(mac + "/a.txt")], to: r(home))
         job.run()
         XCTAssertEqual(job.snapshot.state, .failed)
-        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.originalKept("no Trash here")])
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.originalKept(.other("no Trash here"))])
         XCTAssertEqual(read(home + "/a.txt"), "a")
         XCTAssertEqual(read(mac + "/a.txt"), "a")
     }
@@ -558,7 +628,7 @@ final class SFTPTransferTests: XCTestCase {
         try write(home + "/a/b/c.txt", "c")
         let job = job(.copy, [r(home + "/a")], to: r(home + "/a/b"))
         job.run()
-        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed("A folder cannot be copied or moved into itself.")])
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed(.intoItself)])
         XCTAssertEqual(names(home + "/a/b"), ["c.txt"])
     }
 
@@ -569,7 +639,7 @@ final class SFTPTransferTests: XCTestCase {
         let job = job(.copy, [.local(mac + "/dir")], to: r(home))
         job.run()
         XCTAssertEqual(job.snapshot.state, .failed)
-        XCTAssertEqual(job.snapshot.error, "test server closed the connection")
+        XCTAssertEqual(job.snapshot.error, .sftp(.disconnected("test server closed the connection")))
         XCTAssertEqual(job.snapshot.log, [])
     }
 
@@ -577,7 +647,7 @@ final class SFTPTransferTests: XCTestCase {
         let job = job(.copy, [.local(mac + "/later.txt")], to: r(home))
         job.run()
         XCTAssertEqual(job.snapshot.state, .failed)
-        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed("No such file or folder")])
+        XCTAssertEqual(job.snapshot.log.map(\.outcome), [.failed(.noSuchItem)])
         try write(mac + "/later.txt", "now")
         XCTAssertTrue(job.prepareRetry())
         job.run()
@@ -629,7 +699,7 @@ final class SFTPTransferTests: XCTestCase {
 }
 
 final class TransferTextTests: XCTestCase {
-    private func snapshot(_ outcomes: [TransferJob.Outcome], error: String? = nil) -> TransferJob.Snapshot {
+    private func snapshot(_ outcomes: [TransferJob.Outcome], error: TransferFailure? = nil) -> TransferJob.Snapshot {
         let date = Date(timeIntervalSince1970: 0)
         return TransferJob.Snapshot(
             id: 4, mode: .copy, sources: [.local("/a"), .remote(host: "h", path: "/b")],
@@ -641,7 +711,7 @@ final class TransferTextTests: XCTestCase {
 
     func testTransferInfoCountsTheLog() {
         let info = TransferInfo(snapshot([.copied, .replaced, .keptBoth("k 2"), .merged, .moved, .skipped, .notCopied,
-                                          .failed("bad"), .originalKept("kept")], error: "gone"))
+                                          .failed(.other("bad")), .originalKept(.other("kept"))], error: .other("gone")))
         XCTAssertEqual(info.id, 4)
         XCTAssertEqual(info.sources, ["/a", "h:/b"])
         XCTAssertEqual(info.destination, "h:/srv")
@@ -656,14 +726,58 @@ final class TransferTextTests: XCTestCase {
     }
 
     func testTransferInfoListsAtMostFiftyFailures() {
-        let info = TransferInfo(snapshot(Array(repeating: .failed("x"), count: 60)))
+        let info = TransferInfo(snapshot(Array(repeating: .failed(.other("x")), count: 60)))
         XCTAssertEqual(info.failures.count, 50)
         XCTAssertEqual(info.failures.last?.path, "p49")
+        // The count is not capped (#64).
+        XCTAssertEqual(info.failed, 60)
+        XCTAssertEqual(TransferInfo(snapshot([.copied])).failed, 0)
+    }
+
+    func testTransferInfoFromAnOlderAppHasNoFailedCount() throws {
+        var object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(TransferInfo(snapshot([.failed(.noSuchItem)]))))
+            as! [String: Any]
+        object["failed"] = nil
+        let info = try JSONDecoder().decode(TransferInfo.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertNil(info.failed)
+        XCTAssertEqual(info.failures.map(\.message), ["No such file or folder"])
+    }
+
+    /// The API, CLI and logs keep the English texts they had before failures were structured (#64).
+    func testFailureDescriptionsStayEnglish() {
+        let lost = TransferFailure.sftp(.disconnected("gone"))
+        XCTAssertEqual(TransferFailure.noSuchItem.description, "No such file or folder")
+        XCTAssertEqual(TransferFailure.intoItself.description, "A folder cannot be copied or moved into itself.")
+        XCTAssertEqual(TransferFailure.replaceContainsSource.description, "The item to replace contains the item being moved.")
+        XCTAssertEqual(TransferFailure.existingNotTrashed(.other("x")).description,
+                       "The existing item could not be moved to the Trash: x")
+        XCTAssertEqual(TransferFailure.appeared(name: "a", lost).description,
+                       "“a” appeared in the destination during the copy; it was left as it is (gone)")
+        XCTAssertEqual(TransferFailure.trashItself.description,
+                       "The Trash itself, or a folder containing it, cannot be moved to the Trash.")
+        XCTAssertEqual(TransferFailure.alreadyInTrash.description, "This item is already in the Trash.")
+        XCTAssertEqual(TransferFailure.trashNotAFolder("/h/.local").description, "/h/.local is not a folder")
+        XCTAssertEqual(TransferFailure.serverTrashFailed(name: "a", lost).description,
+                       "Could not move “a” to the server's Trash (gone). Nothing was deleted.")
+        XCTAssertEqual(TransferFailure.posix(code: ENOENT, name: "a").description, "No such file or directory (a)")
+        XCTAssertEqual(TransferFailure.connect(.refused).description, SSHFailure.refused.description)
+        XCTAssertEqual(lost.description, "gone")
+    }
+
+    func testFailureFromErrors() {
+        XCTAssertEqual(TransferFailure(SFTPError.status(code: 3, message: "")), .sftp(.status(code: 3, message: "")))
+        XCTAssertEqual(TransferFailure(SSHConnectError(failure: .timedOut)), .connect(.timedOut))
+        XCTAssertEqual(TransferFailure(FileTreeError("x")), .other("x"))
+        XCTAssertEqual(TransferFailure(TransferFailure.alreadyInTrash), .alreadyInTrash)
+        let cocoa = CocoaError(.fileNoSuchFile)
+        XCTAssertEqual(TransferFailure(cocoa), .system("\(cocoa as Error)", localized: (cocoa as NSError).localizedDescription))
+        XCTAssertEqual(SSHFailure(description: SSHFailure.unknownHostKey.description), .unknownHostKey)
+        XCTAssertNil(SSHFailure(description: "ssh exited with status 255"))
     }
 
     func testOutcomeFailures() {
         XCTAssertEqual([TransferJob.Outcome.copied, .moved, .skipped, .replaced, .keptBoth("a"), .merged, .notCopied,
-                        .failed("f"), .originalKept("o")].map(\.isFailure),
+                        .failed(.other("f")), .originalKept(.other("o"))].map(\.isFailure),
                        [false, false, false, false, false, false, false, true, true])
     }
 
