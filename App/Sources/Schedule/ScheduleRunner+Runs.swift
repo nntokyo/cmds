@@ -19,9 +19,8 @@ final class ActiveScheduleRun {
     var expect = ScheduleRunTiming.Expectation()
     /// `startWorkspace` with `account: auto` (the account is chosen when the run gets past waitingForAccount).
     var automaticAccount = false
-    /// The pane's screen and since when it has looked like that.
-    var screen: String?
-    var screenSince: Date?
+    /// The pane's screen and since when it has looked like that (reset on every state change).
+    var screen = ScreenStability()
     var enterAt: Date?
 
     init(record: ScheduleRun, schedule: Schedule, now: Date) {
@@ -141,8 +140,7 @@ extension ScheduleRunner {
     private func move(_ run: ActiveScheduleRun, to state: ScheduleRunState, now: Date) {
         run.record.state = state
         run.stateSince = now
-        run.screen = nil
-        run.screenSince = nil
+        run.screen.reset()
         log(run.record)
         emit(.run(run.record))
     }
@@ -159,35 +157,16 @@ extension ScheduleRunner {
             o.paneExists = false
             return o
         }
-        var group: pid_t?
-        if pane.ssh == nil, now.timeIntervalSince(pane.terminalStartedAt) >= 0.8, let pgid = terminal.foregroundProcessGroupID {
-            group = pgid
-            switch PaneProcessProbe.classify(pid: pgid) {
-            case .shell?: o.foreground = .shell
-            case .agent?: o.foreground = .agent
-            case .other?: o.foreground = .other
-            case nil: o.foreground = .unknown
-            }
-        }
+        let (foreground, group) = pane.inputForeground(terminal, now: now)
+        let screen = terminal.visibleText()
+        o.pane = pane.inputObservation(terminal, screen: screen, foreground: foreground, stability: &run.screen, now: now)
         // Looked up only where it decides something (it lists every process): before typing into a shell, and to
         // tell a quit agent from a backgrounded one.
-        if o.foreground == .shell, let group,
+        if foreground == .shell, let group,
            run.record.state == .waitingForPane || run.record.state == .waitingForAgent {
             o.agentOnTerminal = PaneProcessProbe.agentOnTerminal(of: group)
         }
         o.otherAgent = pane.agentUsage?.agent == .codex
-        o.activity = pane.agentActivity
-        o.subagentRunning = pane.subagents.contains { $0.info.state == .running }
-        let screen = terminal.visibleText()
-        if screen != run.screen {
-            run.screen = screen
-            run.screenSince = now
-        }
-        o.screenUnchangedFor = now.timeIntervalSince(run.screenSince ?? now)
-        if o.foreground == .shell {
-            o.atEmptyPrompt = !screen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                && AgentResume.isAtEmptyPrompt(screen: screen, cursor: terminal.cursorPosition)
-        }
         o.choiceOnScreen = o.foreground == .agent && ScheduleRunTiming.showsChoice(screen: screen)
         if pane.agentUsage?.agent == .claude { o.sessionID = pane.agentUsage?.sessionID }
         o.accountSwitchInProgress = pane.accountSwitch?.isInProgress == true

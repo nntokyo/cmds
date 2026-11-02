@@ -1,6 +1,5 @@
 import AppKit
 import CmdsCore
-import Darwin
 
 /// View › Resume Agent Sessions on Launch. Kept in `UserDefaults` (`AgentResumeMode`); an isolated instance
 /// (`CMDS_SUPPORT_DIR`) never touches the defaults of the app in use: it starts from `CMDS_AGENT_RESUME`
@@ -205,8 +204,7 @@ extension AppController {
     func clearResumeOffer(_ pane: Pane) {
         pane.resumeOffer = nil
         pane.resumeRequestedAt = nil
-        pane.resumeScreen = nil
-        pane.resumeScreenSince = nil
+        pane.resumeScreen.reset()
         updateResumeBanner(pane)
         // The number of offers in the workspace changed: refresh the other banners' Resume All.
         workspace(id: pane.workspaceID)?.panes.values.filter { $0 !== pane && $0.resumeOffer != nil }.forEach(updateResumeBanner)
@@ -287,41 +285,26 @@ extension AppController {
         }
     }
 
-    private enum Readiness { case wait, ready, agentRunning }
-
-    private func resumeReadiness(_ pane: Pane, now: Date) -> Readiness {
+    /// Rules: `PaneReadiness.resumeGate` / `resumeStep` (always at an empty prompt: never into an editor, a password
+    /// question or a half-typed command).
+    private func resumeReadiness(_ pane: Pane, now: Date) -> PaneReadiness.ResumeStep {
         guard !pane.isClosing, let terminal = pane.terminal else { return .wait } // SSH pane not connected yet
-        if pane.agentUsage != nil { return .agentRunning }
-        let isSSH = pane.ssh != nil
-        if let ssh = pane.ssh {
-            guard ssh.connected, now.timeIntervalSince(pane.terminalStartedAt) >= 1.5 else { return .wait }
-        } else {
-            guard now.timeIntervalSince(pane.terminalStartedAt) >= 0.8,
-                  let group = terminal.foregroundProcessGroupID else { return .wait }
-            switch PaneProcessProbe.classify(pid: group) {
-            case .agent: return .agentRunning
-            case .other, nil:
-                pane.resumeScreen = nil
-                return .wait
-            case .shell: break
-            }
+        let remote = pane.ssh.map { ssh in
+            PaneReadiness.Remote(connected: ssh.connected, sinceStart: now.timeIntervalSince(pane.terminalStartedAt),
+                                 promptReported: (pane.lastPromptReportAt ?? .distantPast) > pane.terminalStartedAt)
+        }
+        let (foreground, group) = pane.inputForeground(terminal, now: now) // not read for SSH panes
+        if let gate = PaneReadiness.resumeGate(foreground: foreground, agentReported: pane.agentUsage != nil,
+                                               remote: remote) {
+            // Another program in front: its prompt counts as new once the shell is back.
+            if group != nil, gate == .wait { pane.resumeScreen.reset() }
+            return gate
         }
         let screen = terminal.visibleText()
-        guard !screen.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .wait }
-        if screen != pane.resumeScreen {
-            pane.resumeScreen = screen
-            pane.resumeScreenSince = now
-            return .wait
-        }
-        let stable = now.timeIntervalSince(pane.resumeScreenSince ?? now)
-        // Always: the cursor sits right after a prompt with nothing typed (never into an editor, a password
-        // question or a half-typed command). A remote prompt report only shortens the wait.
-        guard AgentResume.isAtEmptyPrompt(screen: screen, cursor: terminal.cursorPosition) else { return .wait }
-        if isSSH {
-            let prompted = (pane.lastPromptReportAt ?? .distantPast) > pane.terminalStartedAt
-            return stable >= (prompted ? 0.4 : 1.5) ? .ready : .wait
-        }
-        return stable >= 0.4 ? .ready : .wait
+        guard !PaneReadiness.isBlank(screen) else { return .wait }
+        let observation = pane.inputObservation(terminal, screen: screen, foreground: foreground,
+                                                stability: &pane.resumeScreen, now: now)
+        return PaneReadiness.resumeStep(observation, remote: remote)
     }
 
     /// Types the resume command once. A local pane is checked for agent processes on its tty first.
@@ -340,70 +323,5 @@ extension AppController {
         pane.resumedSessionID = offer.sessionID
         terminal.typeText(command + "\r")
         scheduleSave()
-    }
-}
-
-/// What runs in the foreground of a local pane's terminal.
-enum PaneProcessProbe {
-    enum Kind { case shell, agent, other }
-
-    /// The process group leader `pid`: a shell, a coding agent (Claude Code / Codex) or something else.
-    static func classify(pid: pid_t) -> Kind? {
-        guard let info = bsdInfo(pid) else { return nil }
-        if isAgent(pid) { return .agent }
-        let name = withUnsafeBytes(of: info.pbi_comm) { raw in
-            String(cString: raw.bindMemory(to: CChar.self).baseAddress!)
-        }
-        let shells = AgentProcessClassifier.shells.subtracting(["env", "timeout", "nice", "nohup"])
-        let base = name.hasPrefix("-") ? String(name.dropFirst()) : name // login shells: `-zsh`
-        return shells.contains(base) ? .shell : .other
-    }
-
-    /// Any Claude Code / Codex process on the same terminal as `pid` (also backgrounded ones).
-    static func agentOnTerminal(of pid: pid_t) -> Bool {
-        guard let info = kinfo(pid), info.kp_eproc.e_tdev != -1 else { return false }
-        let tty = info.kp_eproc.e_tdev
-        let estimate = proc_listallpids(nil, 0)
-        guard estimate > 0 else { return false }
-        var pids = [pid_t](repeating: 0, count: Int(estimate) + 64)
-        let count = pids.withUnsafeMutableBytes { proc_listallpids($0.baseAddress, Int32($0.count)) }
-        for candidate in pids.prefix(Int(max(0, count))) where candidate > 0 {
-            guard let other = kinfo(candidate), other.kp_eproc.e_tdev == tty else { continue }
-            if isAgent(candidate) { return true }
-        }
-        return false
-    }
-
-    private static func isAgent(_ pid: pid_t) -> Bool {
-        var path = [CChar](repeating: 0, count: Int(MAXPATHLEN) * 4)
-        let executable = proc_pidpath(pid, &path, UInt32(path.count)) > 0 ? String(cString: path) : ""
-        let agent = AgentProcessClassifier.agent(executablePath: executable, arguments: arguments(pid))
-        if agent == .codex { return AgentProcessClassifier.codexRole(arguments: arguments(pid)) == .session }
-        return agent == .claude
-    }
-
-    private static func bsdInfo(_ pid: pid_t) -> proc_bsdinfo? {
-        var info = proc_bsdinfo()
-        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
-        guard pid > 0, proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
-        return info
-    }
-
-    private static func kinfo(_ pid: pid_t) -> kinfo_proc? {
-        var info = kinfo_proc()
-        var size = MemoryLayout<kinfo_proc>.stride
-        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
-        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
-        return info
-    }
-
-    private static func arguments(_ pid: pid_t) -> [String] {
-        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
-        var size = 64 * 1024
-        var buffer = [UInt8](repeating: 0, count: size)
-        guard sysctl(&mib, 3, &buffer, &size, nil, 0) == 0 else { return [] }
-        return buffer.withUnsafeBytes { raw in
-            ProcessArguments.parse(UnsafeRawBufferPointer(rebasing: raw[0..<size]))?.arguments ?? []
-        }
     }
 }

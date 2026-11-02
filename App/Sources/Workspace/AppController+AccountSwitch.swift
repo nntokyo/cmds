@@ -131,11 +131,11 @@ extension AppController {
             guard let change = pane.accountSwitch, change.isInProgress else { continue }
             active = true
             guard !pane.isClosing, let terminal = pane.terminal, let group = terminal.foregroundProcessGroupID else { continue }
-            let foreground = PaneProcessProbe.classify(pid: group)
+            let foreground = PaneProcessProbe.foreground(of: group)
             if foreground == .shell, !PaneProcessProbe.agentOnTerminal(of: group) {
                 finishAccountSwitch(pane, change, now: now)
             } else if change.phase == .waitingForIdle {
-                quitWhenIdle(pane, change, terminal: terminal, agentInForeground: foreground == .agent, now: now)
+                quitWhenIdle(pane, change, terminal: terminal, foreground: foreground, now: now)
             } else if change.phase == .quitting {
                 keepQuitting(pane, change, terminal: terminal, agentInForeground: foreground == .agent, now: now)
             }
@@ -147,18 +147,12 @@ extension AppController {
     }
 
     /// `waitingForIdle`: never mid-turn. Once Claude Code is idle, the first Ctrl-C.
-    private func quitWhenIdle(_ pane: Pane, _ change: AccountSwitch, terminal: TerminalSurface, agentInForeground: Bool,
-                              now: Date) {
+    private func quitWhenIdle(_ pane: Pane, _ change: AccountSwitch, terminal: TerminalSurface,
+                              foreground: PaneForeground, now: Date) {
         var change = change
-        let screen = terminal.visibleText()
-        if screen != change.screen {
-            change.screen = screen
-            change.screenSince = now
-        }
-        let idle = ClaudeAccountSwitchTiming.isIdle(
-            agentInForeground: agentInForeground, busy: pane.agentActivity == .busy,
-            subagentRunning: pane.subagents.contains { $0.info.state == .running },
-            screenUnchangedFor: now.timeIntervalSince(change.screenSince ?? now))
+        let observation = pane.inputObservation(terminal, screen: terminal.visibleText(), foreground: foreground,
+                                                stability: &change.screen, now: now)
+        let idle = PaneReadiness.isAgentIdle(observation)
         if idle {
             terminal.sendText(ClaudeAccountSwitchTiming.interrupt)
             change.phase = .quitting

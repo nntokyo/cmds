@@ -128,6 +128,12 @@ Code: `CmdsCore/AgentUsage.swift`, `AgentFormat.swift`, `ClaudeStatusLine.swift`
   `pane` changes (row height).
 - Session resume (`AppController+AgentSessions.swift`, `CmdsCore/AgentSession.swift`) remembers the session id per
   pane in `session.json`; behaviour: [guide/ai-agents.md](../guide/ai-agents.md#resuming-sessions).
+- **Typing into panes by itself** (a resume command, an account switch's Ctrl-C, a schedule run): one readiness check.
+  `Workspace/PaneInput.swift` looks at the pane (`PaneProcessProbe` for the foreground process of a local terminal,
+  read 0.8 s after it starts; agent activity, subagents, the screen through `ScreenStability`) and builds a
+  `PaneObservation`; the rules are `CmdsCore/PaneReadiness.swift` (unit-tested): shell input only at a settled empty
+  prompt (0.4 s; SSH panes 1.5 s unless the remote shell reported its prompt), agent input only when it is idle
+  (`ClaudeAccountSwitchTiming.isIdle`).
 
 ### Claude accounts
 
@@ -154,8 +160,8 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   (`ClaudeAccounts.merge`) and saved.
 - **Switch** (`Pane.accountSwitch`, `AccountSwitch.Phase`): `offered(problem?)` → `waitingForIdle` → `quitting` →
   handed to the resume machinery (`resumeOffer` + `resumeRequestedAt`). A 0.3 s timer runs while a switch is in
-  progress; the rules are `ClaudeAccountSwitchTiming` (unit-tested): idle = Claude Code is the foreground process
-  (`PaneProcessProbe`), activity not busy, no running subagent, screen unchanged for 2 s; then Ctrl-C (`\u{3}` through
+  progress; the rules are `ClaudeAccountSwitchTiming` (unit-tested): idle (`PaneReadiness.isAgentIdle`) = Claude Code
+  is the foreground process (`PaneProcessProbe`), activity not busy, no running subagent, screen unchanged for 2 s; then Ctrl-C (`\u{3}` through
   `sendText`) twice 0.4 s apart, then every 2.5 s up to four, giving up 5 s after the last; once the shell is the foreground process with no agent on the tty, the pane's usage is dropped and the
   session is queued under the new account. The banner shares the pane's bar with the resume banner and wins.
 - **Sharing**: `ClaudeSessionSharing.plan/apply` (unit-tested on temporary folders): the store is the first account
@@ -184,8 +190,8 @@ CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/
 - **Runs** (`ActiveScheduleRun`): `waitingForAccount` → (`begin`: create the background workspace with
   `createWorkspace(select: false)`, or find the pane holding the session id) → `waitingForPane` (shell stage: the
   command or `AgentResume.command`) → `waitingForAgent` → paste (`sendText`, bracketed) → `typing` → Return →
-  `confirming` → ended. A 0.3 s tick builds a `ScheduleRunTiming.Observation` of the pane (foreground process via
-  `PaneProcessProbe`, agent activity, subagents, screen stability, empty prompt, reported session id, account switch,
+  `confirming` → ended. A 0.3 s tick builds a `ScheduleRunTiming.Observation` of the pane (the `PaneObservation` of
+  "Typing into panes by itself" above, plus the reported session id, account switch,
   queued resume, a numbered choice on screen) and does what `ScheduleRunTiming.step` says. Each typing step moves the
   run on, so nothing is typed twice. Ended runs go to the history (50 per schedule, 300 in all, 90 days).
 - **Events**: `ScheduleRunner.changes` (separate from `AppController.changes`) → socket events `schedule.changed`,

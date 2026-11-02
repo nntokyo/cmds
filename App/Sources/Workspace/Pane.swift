@@ -49,8 +49,7 @@ final class Pane {
     /// Session typed into this pane in this run (never typed twice).
     var resumedSessionID: String?
     /// Readiness check: the screen text and since when it has not changed.
-    var resumeScreen: String?
-    var resumeScreenSince: Date?
+    var resumeScreen = ScreenStability()
     /// When the pane's terminal was created (the shell needs a moment to print its prompt).
     var terminalStartedAt = Date()
     /// Last `remote.location` from the remote shell's prompt hook (SSH panes).
@@ -113,8 +112,7 @@ final class Pane {
         }
         terminal = newTerminal
         terminalStartedAt = Date()
-        resumeScreen = nil
-        resumeScreenSince = nil
+        resumeScreen.reset()
         newTerminal.delegate = self
         container.setContent(newTerminal.view)
     }

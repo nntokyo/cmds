@@ -22,8 +22,7 @@ struct AccountSwitch {
     var interrupts = 0
     var lastInterruptAt: Date?
     /// The pane's screen while waiting for idle, and since when it has looked like that.
-    var screen: String?
-    var screenSince: Date?
+    var screen = ScreenStability()
 
     var isInProgress: Bool { phase == .waitingForIdle || phase == .quitting }
 
