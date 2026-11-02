@@ -28,6 +28,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `cmds accounts move NAME 9` with fewer accounts is refused (exit 1, `the position must be 1 to 3`) instead of moving
   the account to the end (#44).
 - Docs: a split without `--account` does not take the account of the pane it splits (#44).
+- Mac: a damaged `claude-accounts.json` is no longer replaced by the next change to the accounts. It is kept as
+  `claude-accounts.json.corrupt-<time>` in the cmds support folder and cmds says so; a file it cannot read at all is
+  left alone and not saved over (#46).
 
 ## [0.5.0] - 2026-11-02
 
