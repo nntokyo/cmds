@@ -75,7 +75,7 @@ final class TransfersWindowController: NSWindowController, NSTableViewDataSource
     }
 
     private func reload() {
-        let new = TransferCenter.shared.queue.snapshots.reversed().map { $0 }
+        let new = Array(TransferCenter.shared.queue.snapshots.reversed())
         let sameJobs = new.map(\.id) == jobs.map(\.id)
         jobs = new
         if sameJobs {
@@ -99,8 +99,6 @@ final class TransfersWindowController: NSWindowController, NSTableViewDataSource
         view.show(jobs[row], bytes: bytes)
         return view
     }
-
-    func tableView(_ tableView: NSTableView, shouldSelectRow row: Int) -> Bool { true }
 
     private func perform(_ action: TransferRowView.Action, id: Int) {
         let center = TransferCenter.shared

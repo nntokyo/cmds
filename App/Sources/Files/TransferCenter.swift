@@ -37,7 +37,6 @@ final class TransferCenter {
         }
     }
 
-
     /// Queues a copy or move; conflicts are asked in `pane`'s window.
     @discardableResult
     func start(_ mode: TransferJob.Mode, sources: [FileLocation], destination: FileLocation,
@@ -148,20 +147,12 @@ extension TransferJob.Snapshot {
 
     /// "3 copied, 1 skipped, 2 failed" (counts of the log, UI).
     var summary: String {
-        var copied = 0, moved = 0, skipped = 0, failed = 0
-        for entry in log {
-            switch entry.outcome {
-            case .copied, .replaced, .keptBoth, .merged: copied += 1
-            case .moved: moved += 1
-            case .skipped, .notCopied: skipped += 1
-            case .failed, .originalKept: failed += 1
-            }
-        }
+        let counts = counts
         var parts: [String] = []
-        if copied > 0 { parts.append(String(localized: "\(copied) copied")) }
-        if moved > 0 { parts.append(String(localized: "\(moved) moved")) }
-        if skipped > 0 { parts.append(String(localized: "\(skipped) skipped")) }
-        if failed > 0 { parts.append(String(localized: "\(failed) failed")) }
+        if counts.copied > 0 { parts.append(String(localized: "\(counts.copied) copied")) }
+        if counts.moved > 0 { parts.append(String(localized: "\(counts.moved) moved")) }
+        if counts.skipped > 0 { parts.append(String(localized: "\(counts.skipped) skipped")) }
+        if counts.failed > 0 { parts.append(String(localized: "\(counts.failed) failed")) }
         return parts.joined(separator: ", ")
     }
 }
