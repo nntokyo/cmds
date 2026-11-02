@@ -21,6 +21,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- Mac: a remembered Claude Code or Codex session no longer takes the command line typed to start it (e.g.
+  `cd '…' && env CLAUDE_CONFIG_DIR=… claude --resume …`) as its title. `cmds sessions`, the resume banners and
+  schedules show the session's own title, or none, also for sessions remembered before (#49).
+
 ## [0.5.0] - 2026-11-02
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.

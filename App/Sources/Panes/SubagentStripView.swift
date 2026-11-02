@@ -108,7 +108,8 @@ private final class SubagentCardView: NSView {
         spinner.controlSize = .mini
         spinner.isIndeterminate = true
         spinner.isDisplayedWhenStopped = false
-        doneIcon.image = NSImage(systemSymbolName: "checkmark.circle.fill", accessibilityDescription: String(localized: "Done"))?
+        doneIcon.image = NSImage(systemSymbolName: "checkmark.circle.fill",
+                                 accessibilityDescription: String(localized: "Done", comment: "an agent or subagent finished"))?
             .withSymbolConfiguration(.init(pointSize: 11, weight: .regular))
         doneIcon.contentTintColor = .systemGreen
         titleLabel.font = .systemFont(ofSize: 11, weight: .semibold)
@@ -153,7 +154,7 @@ private final class SubagentCardView: NSView {
         if running {
             parts.append(agent.action ?? String(localized: "Working…", comment: "subagent without a current tool call"))
         } else {
-            parts.append(String(localized: "Done", comment: "subagent finished"))
+            parts.append(String(localized: "Done", comment: "an agent or subagent finished"))
         }
         parts.append(AgentFormat.duration(milliseconds: agent.elapsedSeconds * 1000, strings: .localized))
         if let tokens = agent.tokens { parts.append(String(localized: "\(AgentFormat.tokens(tokens)) tokens")) }
