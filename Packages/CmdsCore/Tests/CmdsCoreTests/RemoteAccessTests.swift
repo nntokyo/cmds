@@ -52,7 +52,7 @@ final class RemoteAPIPolicyTests: XCTestCase {
     /// Schedules can start workspaces and type into panes later: local socket only (#45).
     func testRefusesSchedules() {
         let methods = ["schedule.list", "schedule.add", "schedule.update", "schedule.remove", "schedule.run",
-                       "schedule.cancel", "schedule.history", "debug.schedule_clock"]
+                       "schedule.cancel", "schedule.history", "schedule.skip", "debug.schedule_clock"]
         for method in methods {
             XCTAssertFalse(RemoteAPIPolicy.allowedMethods.contains(method), method)
             XCTAssertThrowsError(try RemoteAPIPolicy.authorize(method: method, params: [:], scope: scope), method) { error in

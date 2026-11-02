@@ -82,6 +82,23 @@ In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the C
   status-line window at 100 %), an offered session after a relaunch (resumed, then the prompt), and a session no pane
   holds (resumed in a new workspace under the schedule's account).
 
+- Phase 2 (#45), with a stub `codex` script first on `PATH` (via the `ZDOTDIR` `.zshrc`, with `CODEX_HOME` a
+  temporary folder) that opens `$CODEX_HOME/sessions/…/rollout-…-<uuid>.jsonl` like Codex, writes `session_meta`
+  and `token_count` lines, shows `• Working (Ns • esc to interrupt)` for a while, then logs what it reads:
+  - `--send "echo …" --to shell --pane P` types at the empty prompt; into a pane running `sleep 60` the run is
+    skipped (`otherProgram`) and nothing is typed; `--workspace TITLE` types into a one-pane workspace, and is skipped
+    with `ambiguousTarget` / `paneNotFound` for a two-pane or missing one.
+  - `--send … --to agent` into the stub while it shows its working line: the run waits and pastes once, 5 s after
+    the line is gone.
+  - `token_count` lines appended to the rollout file with `used_percent` 100 and a `resets_at` a few seconds ahead:
+    `--after-codex-limit --delay 0 --continue --pane P` continues the Codex session after the reset;
+    `--after-codex-limit --repeat --send …` runs once per new reset and not again for the same reset.
+  - `cmds schedule skip ID`; a schedule `--in 70s` logs its notice after 10 s (`log show --info` for the instance's
+    pid, category `schedule`).
+  - Quit and relaunch: the tag still names the same pane (`schedule show` prints `(now pN)`); check the command ran
+    on that pane's tty (`tty > file`), because `cmds read` of a restored pane currently returns the focused pane's
+    screen (also on master).
+
 Quit the instance (`cmds quit`) and delete the temporary folders afterwards.
 
 All switches: [reference/environment.md](../reference/environment.md#app-switches-isolated-and-test-instances).

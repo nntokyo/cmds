@@ -352,6 +352,14 @@ extension Array where Element == AgentLimits {
     public func limits(for agent: AgentKind) -> AgentLimits? { first { $0.agent == agent } }
 }
 
+extension AgentLimits {
+    /// When the agent can be used again after hitting its limit: the latest known reset among the windows used up
+    /// (100 % or more); nil when none is (a schedule's `codexLimitReset`). It may have passed already.
+    public var exhaustedReset: Date? {
+        limits.filter { $0.usedPercent >= 100 }.compactMap(\.resetsAt).max()
+    }
+}
+
 // MARK: - Lenient decoding helpers
 
 /// Epoch seconds (or milliseconds when > 1e11), a numeric string or an ISO 8601 date.

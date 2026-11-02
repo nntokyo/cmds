@@ -59,6 +59,7 @@ cmds status ""                                     # 消す
 - 入力待ち・完了の通知は Claude Code のフック（`cmds hook claude`）が自動で出す。自分で `cmds notify` を使うのは、
   途中でユーザーの判断が要る出来事（長いビルドの失敗など）があるときだけにする。
 - ユーザーに頼まれて、上限のリセット後にこのセッションを続けるとき: `cmds schedule add --name "上限後に続ける" --after-limit <アカウント> --continue`
-  （`cmds schedule` で一覧、`cmds schedule history` で結果）。
+  （Codex は `--after-codex-limit --continue`。リセットのたびに続けるなら `--repeat`。既存のペインに後で入力するなら
+  `--send TEXT --to shell|agent`。`cmds schedule` で一覧、`cmds schedule history` で結果）。
 - 状態を機械的に読むときは `--json` を付ける（例: `cmds ls --json`、`cmds stats --json`）。
 - 詳しい使い方: `cmds --help`、`cmds <command> --help`。

@@ -7,8 +7,8 @@ import CmdsCore
 enum ScheduleText {
     static func reason(_ reason: ScheduleReason) -> String {
         switch reason {
-        case .confirmed: return String(localized: "Claude Code started working on the prompt.")
-        case .unconfirmed: return String(localized: "The prompt was sent, but Claude Code was not seen working.")
+        case .confirmed: return String(localized: "The agent started working on the prompt.")
+        case .unconfirmed: return String(localized: "The prompt was sent, but the agent was not seen working.")
         case .commandTyped: return String(localized: "The command was typed.")
         case .workspaceOpened: return String(localized: "The workspace was opened.")
         case .previousRunActive: return String(localized: "The previous run was still active.")
@@ -17,17 +17,21 @@ enum ScheduleText {
         case .allAccountsLimited: return String(localized: "Every account has hit its limit.")
         case .agentRunning: return String(localized: "An agent was running in the pane.")
         case .otherProgram: return String(localized: "The pane was running another program.")
-        case .agentNotRunning: return String(localized: "Claude Code was no longer running in the pane.")
+        case .agentNotRunning: return String(localized: "No agent was running in the pane.")
         case .differentSession: return String(localized: "The pane was running a different session.")
         case .ambiguousSession: return String(localized: "Several panes hold the session.")
         case .movedToOtherAccount: return String(localized: "The session had moved to another account.")
         case .notClaude: return String(localized: "The agent in the pane is not Claude Code.")
+        case .notCodex: return String(localized: "The agent in the pane is not Codex.")
+        case .paneNotFound: return String(localized: "The target pane was not found.")
+        case .ambiguousTarget: return String(localized: "Several panes match the target.")
+        case .skippedByUser: return String(localized: "Skipped on request.")
         case .accountRemoved: return String(localized: "The account was removed.")
         case .accountStillLimited: return String(localized: "The account was still limited.")
         case .paneClosed: return String(localized: "The pane was closed.")
         case .shellNotReady: return String(localized: "The shell prompt did not become ready.")
-        case .agentDidNotStart: return String(localized: "Claude Code did not start.")
-        case .agentBusy: return String(localized: "Claude Code stayed busy.")
+        case .agentDidNotStart: return String(localized: "The agent did not start.")
+        case .agentBusy: return String(localized: "The agent stayed busy.")
         case .sessionNotFound: return String(localized: "No pane holds the session, and its folder is not known.")
         case .folderMissing: return String(localized: "The folder does not exist.")
         case .invalidSchedule: return String(localized: "The schedule is not valid any more.")
@@ -45,7 +49,7 @@ enum ScheduleText {
         case .waitingForAccount: return String(localized: "Waiting for the account")
         case .waitingForPane: return String(localized: "Waiting for the shell")
         case .typing: return String(localized: "Typing")
-        case .waitingForAgent: return String(localized: "Waiting for Claude Code")
+        case .waitingForAgent: return String(localized: "Waiting for the agent")
         case .confirming: return String(localized: "Confirming")
         case .succeeded: return String(localized: "Succeeded")
         case .failed: return String(localized: "Failed")
@@ -99,8 +103,11 @@ enum ScheduleText {
         case .promptWithoutCommand: return String(localized: "A prompt needs a command that starts Claude Code.")
         case .promptInvalid: return String(localized: "The prompt must not be empty or contain control characters.")
         case .promptTooLong: return String(localized: "The prompt must be at most 8 KB.")
-        case .agentUnsupported: return String(localized: "Only Claude Code sessions can be continued.")
-        case .sessionIDInvalid: return String(localized: "Choose a Claude Code session.")
+        case .agentUnsupported: return String(localized: "Only Claude Code and Codex sessions can be continued.")
+        case .sessionIDInvalid: return String(localized: "Choose a session.")
+        case .accountWithCodex: return String(localized: "A Codex session has no account.")
+        case .codexNotLimited: return String(localized: "Codex has no limit now.")
+        case .targetInvalid: return String(localized: "Choose a terminal pane or give a workspace title.")
         }
     }
 
@@ -114,16 +121,24 @@ enum ScheduleText {
             var text = "\(days(rule.weekdays)) \(times)"
             if let zone = rule.timeZone { text += " (\(zone))" }
             return text
-        case .limitReset(let name, let delay):
+        case .limitReset(let name, let delay, let repeats):
             let reset = accounts.first { $0.hasName(name) }?.limit.flatMap { $0.isActive() ? time($0.resetsAt) : nil }
-            let minutes = Int((delay / 60).rounded())
-            switch (reset, minutes > 0) {
-            case (let reset?, true): return String(localized: "When “\(name)” resets (\(reset)) + \(minutes) min")
-            case (let reset?, false): return String(localized: "When “\(name)” resets (\(reset))")
-            case (nil, true): return String(localized: "When “\(name)” resets + \(minutes) min")
-            case (nil, false): return String(localized: "When “\(name)” resets")
-            }
+            let base = repeats ? String(localized: "Every time “\(name)” resets") : String(localized: "When “\(name)” resets")
+            return limitText(base, reset: reset, delay: delay)
+        case .codexLimitReset(let delay, let repeats):
+            let reset = AppController.shared.agentLimitsByKind[.codex]?.exhaustedReset.flatMap { $0 > Date() ? time($0) : nil }
+            let base = repeats ? String(localized: "Every time Codex resets") : String(localized: "When Codex resets")
+            return limitText(base, reset: reset, delay: delay)
         }
+    }
+
+    /// `When “work” resets (15:00) + 1 min`.
+    private static func limitText(_ base: String, reset: String?, delay: TimeInterval) -> String {
+        let minutes = Int((delay / 60).rounded())
+        var text = base
+        if let reset { text += " (\(reset))" }
+        if minutes > 0 { text += String(localized: " + \(minutes) min") }
+        return text
     }
 
     static func days(_ weekdays: Set<Weekday>) -> String {
@@ -148,7 +163,32 @@ enum ScheduleText {
                 .compactMap { $0.agentSession ?? $0.resumeOffer }.first { $0.sessionID == session.sessionID }
             if let title = AgentResume.cleanTitle(known?.title) { return String(localized: "Continue “\(title)”") }
             return String(localized: "Continue session \(String(session.sessionID.prefix(8)))")
+        case .sendText(let send):
+            let place = target(send.target)
+            switch send.to {
+            case .shell: return String(localized: "Type “\(short(send.text))” in \(place)")
+            case .agent: return String(localized: "Send “\(short(send.text))” to the agent in \(place)")
+            }
         }
+    }
+
+    /// `pane “Fix login” in “API”`, `workspace “API”`; a tag no pane has: `a closed pane`.
+    static func target(_ target: PaneTarget) -> String {
+        let controller = AppController.shared
+        switch target {
+        case .workspace(let title):
+            return String(localized: "workspace “\(title)”")
+        case .tag, .pane:
+            guard case .pane(let id) = controller.resolveScheduleTarget(target), let pane = controller.pane(id: id),
+                  let workspace = controller.workspace(id: pane.workspaceID) else { return String(localized: "a closed pane") }
+            return String(localized: "a pane of “\(workspace.displayTitle)”")
+        }
+    }
+
+    /// One line of at most 24 characters.
+    static func short(_ text: String) -> String {
+        let line = text.split(whereSeparator: \.isNewline).joined(separator: " ")
+        return line.count > 24 ? String(line.prefix(23)) + "…" : line
     }
 
     static func origin(_ origin: ScheduleOrigin) -> String {
@@ -157,6 +197,22 @@ enum ScheduleText {
         case .api(let pane?): return String(localized: "Created from the command line or an agent (pane \(pane))")
         case .api(nil): return String(localized: "Created from the command line or an agent")
         }
+    }
+
+    /// The sidebar's next-run line.
+    struct NextRunHint: Equatable {
+        var title: String
+        var tooltip: String
+    }
+
+    /// The earliest next run of an enabled schedule (`Morning tests · 09:00`); the next three in the tooltip.
+    static func nextRunHint(_ schedules: [Schedule], now: Date = Date()) -> NextRunHint? {
+        let upcoming = schedules.filter(\.enabled).compactMap { schedule in schedule.nextFireAt.map { (schedule, $0) } }
+            .sorted { $0.1 < $1.1 }.prefix(3)
+        guard let first = upcoming.first else { return nil }
+        let lines = upcoming.map { "\(time($0.1, now: now))  \($0.0.name)" }
+        return NextRunHint(title: "\(first.0.name) · \(time(first.1, now: now))",
+                           tooltip: String(localized: "Next schedules (Window › Schedules):") + "\n" + lines.joined(separator: "\n"))
     }
 
     /// `15:00` today, `Thu 09:00` this week, else `Nov 12 09:00`.

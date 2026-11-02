@@ -53,6 +53,7 @@ final class ScheduleCLITests: XCTestCase {
     func testAfterLimit() throws {
         XCTAssertEqual(try options(["--after-limit", "work"]).trigger, ["type": "limitReset", "account": "work", "delay": 60])
         XCTAssertEqual(try options(["--after-limit", "work", "--delay", "2m"]).trigger?["delay"], 120)
+        XCTAssertEqual(try options(["--after-limit", "work", "--delay", "0"]).trigger?["delay"], 0)
         usageError(["--delay", "2m"])
     }
 
@@ -109,7 +110,7 @@ final class ScheduleCLITests: XCTestCase {
 
     func testCommandsAreRegistered() {
         for name in ["schedule", "schedule add", "schedule edit", "schedule show", "schedule enable", "schedule disable",
-                     "schedule remove", "schedule run", "schedule cancel", "schedule history", "schedule list"] {
+                     "schedule remove", "schedule run", "schedule cancel", "schedule history", "schedule list", "schedule skip"] {
             XCTAssertTrue(CLI.commands.contains { $0.name == name }, name)
         }
         XCTAssertEqual(CLI.lookup(["schedule"])?.0.name, "schedule")
@@ -143,8 +144,17 @@ final class ScheduleCLITests: XCTestCase {
 
     func testRunAndTriggerOutput() {
         XCTAssertEqual(Format.scheduleRun(entry.lastRun!, timeZone: tokyo),
-                       "r00000001  2026-11-04 08:00  catch-up  succeeded — Claude Code started working on the prompt  w3 p7 (work)")
+                       "r00000001  2026-11-04 08:00  catch-up  succeeded — the agent started working on the prompt  w3 p7 (work)")
         XCTAssertEqual(Format.scheduleTrigger(.limitReset(account: "work", delay: 60)), "when work resets + 1m")
+        XCTAssertEqual(Format.scheduleTrigger(.limitReset(account: "work", delay: 0, repeats: true)), "every time work resets")
+        XCTAssertEqual(Format.scheduleTrigger(.codexLimitReset(delay: 120)), "when Codex resets + 2m")
+        XCTAssertEqual(Format.scheduleTrigger(.codexLimitReset(delay: 60, repeats: true)), "every time Codex resets + 1m")
+        XCTAssertEqual(Format.scheduleAction(.sendText(SendText(target: .tag("t1a2b3c4d"), text: "make test", to: .shell))),
+                       "send \"make test\" to the shell in pane t1a2b3c4d")
+        XCTAssertEqual(Format.scheduleAction(.sendText(SendText(target: .workspace(title: "API"), text: "continue", to: .agent))),
+                       "send \"continue\" to the agent in workspace \"API\"")
+        XCTAssertEqual(Format.scheduleAction(.continueSession(ContinueSession(agent: .codex, sessionID: "019a2b3c-dddd"))),
+                       "continue Codex session 019a2b3c with \"continue\"")
         XCTAssertEqual(Format.scheduleTrigger(.once(at: now), timeZone: tokyo), "once 2026-11-04 10:00")
         XCTAssertEqual(Format.scheduleTrigger(.weekly(WeeklyRule(weekdays: [.fri, .mon], times: [TimeOfDay("13:30")!, TimeOfDay("09:00")!]))),
                        "mon,fri 09:00, 13:30")
@@ -161,5 +171,62 @@ final class ScheduleCLITests: XCTestCase {
         XCTAssertTrue(text.hasPrefix("s1a2b3c4d  Morning tests  (on)\nwhen     weekdays 09:00 (Asia/Tokyo)\n"), text)
         XCTAssertTrue(text.contains("command  claude\nprompt   Run the tests\nif late  run when at most 15m late\n"), text)
         XCTAssertTrue(text.contains("origin   api (pane p3)\n"), text)
+        XCTAssertTrue(text.contains("notify   failures, 1 minute before\n"), text)
+        var send = entry
+        send.schedule.action = .sendText(SendText(target: .tag("t1a2b3c4d"), text: "make test", to: .shell))
+        send.schedule.warn = false
+        send.targetPane = "p4"
+        let sendText = Format.scheduleDetails(send, runs: [], now: now, timeZone: tokyo)
+        XCTAssertTrue(sendText.contains("target   pane t1a2b3c4d (now p4)\ntext     make test\n"), sendText)
+        XCTAssertTrue(sendText.contains("notify   failures\n"), sendText)
+    }
+
+    // MARK: Phase 2
+
+    func testSend() throws {
+        let parsed = try options(["--send", "make test", "--to", "shell", "--pane", "p3"])
+        XCTAssertEqual(parsed.send, CLI.SendOptions(text: "make test", to: .shell, target: .pane("p3")))
+        XCTAssertEqual(try CLI.sendAction(parsed.send!, envPane: "p1"), [
+            "type": "sendText", "target": ["pane": "p3"], "text": "make test", "to": "shell",
+        ])
+        // No target: this pane; outside cmds one is required.
+        let here = try options(["--send", "-", "--to", "agent"], stdin: "continue\nplease")
+        XCTAssertEqual(here.send, CLI.SendOptions(text: "continue\nplease", to: .agent, target: nil))
+        XCTAssertEqual(try CLI.sendAction(here.send!, envPane: "p1")["target"], ["pane": "p1"])
+        XCTAssertThrowsError(try CLI.sendAction(here.send!, envPane: nil))
+        XCTAssertEqual(try options(["--send", "go", "--to", "agent", "--workspace", "API"]).send?.target, .workspace(title: "API"))
+        usageError(["--send", "x"])
+        usageError(["--send", "x", "--to", "both"])
+        usageError(["--send", "x", "--to", "shell", "--pane", "p3", "--workspace", "API"])
+        usageError(["--send", "x", "--to", "shell", "--continue"])
+        usageError(["--send", "x", "--to", "shell", "--prompt", "y"])
+        usageError(["--send", "x", "--to", "shell", "--", "make"])
+        usageError(["--to", "shell"])
+        usageError(["--workspace", "API", "--continue"])
+    }
+
+    func testCodexAndRepeatingTriggers() throws {
+        XCTAssertEqual(try options(["--after-codex-limit"]).trigger, ["type": "codexLimitReset", "delay": 60])
+        XCTAssertEqual(try options(["--after-codex-limit", "--delay", "5m", "--repeat"]).trigger,
+                       ["type": "codexLimitReset", "delay": 300, "repeats": true])
+        XCTAssertEqual(try options(["--after-limit", "work", "--repeat"]).trigger,
+                       ["type": "limitReset", "account": "work", "delay": 60, "repeats": true])
+        usageError(["--repeat"])
+        usageError(["--at", "09:00", "--repeat"])
+        usageError(["--after-codex-limit", "--after-limit", "work"])
+        XCTAssertEqual(try options(["--no-warn"]).warn, false)
+        XCTAssertNil(try options([]).warn)
+    }
+
+    func testContinueCodex() throws {
+        let codex = AgentSession(agent: .codex, sessionID: "019a2b3c-dddd", cwd: "/Users/me/src/app")
+        let sessions = AgentSessionList(mode: .ask, sessions: [
+            AgentSessionEntry(workspace: "w1", pane: "p3", state: .running, session: codex, command: nil),
+        ])
+        XCTAssertEqual(try CLI.continueAction(target: .pane("p3"), pane: "p3", sessions: sessions, account: nil, prompt: nil), [
+            "type": "continueSession", "agent": "codex", "sessionID": "019a2b3c-dddd", "cwd": "/Users/me/src/app", "pane": "p3",
+        ])
+        // Codex has no accounts in cmds.
+        XCTAssertThrowsError(try CLI.continueAction(target: .pane("p3"), pane: "p3", sessions: sessions, account: "work", prompt: nil))
     }
 }

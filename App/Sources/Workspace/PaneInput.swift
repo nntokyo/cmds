@@ -69,12 +69,18 @@ enum PaneProcessProbe {
         return false
     }
 
-    private static func isAgent(_ pid: pid_t) -> Bool {
+    private static func isAgent(_ pid: pid_t) -> Bool { agentKind(of: pid) != nil }
+
+    /// The coding agent `pid` is: Claude Code, a Codex session (not one of its helper commands), or nil.
+    static func agentKind(of pid: pid_t) -> AgentKind? {
         var path = [CChar](repeating: 0, count: Int(MAXPATHLEN) * 4)
         let executable = proc_pidpath(pid, &path, UInt32(path.count)) > 0 ? String(cString: path) : ""
-        let agent = AgentProcessClassifier.agent(executablePath: executable, arguments: arguments(pid))
-        if agent == .codex { return AgentProcessClassifier.codexRole(arguments: arguments(pid)) == .session }
-        return agent == .claude
+        let arguments = arguments(pid)
+        switch AgentProcessClassifier.agent(executablePath: executable, arguments: arguments) {
+        case .claude?: return .claude
+        case .codex?: return AgentProcessClassifier.codexRole(arguments: arguments) == .session ? .codex : nil
+        default: return nil
+        }
     }
 
     private static func bsdInfo(_ pid: pid_t) -> proc_bsdinfo? {

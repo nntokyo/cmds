@@ -61,11 +61,12 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `account.clear_limit` | `name` | – |
 | `account.share` | `apply?` (default false: only the plan) | `[{"account", "projects", "action": "none"/"link"/"moveAside"/"skip", "backup"?, "reason"?}]` ([Sharing sessions](../guide/ai-agents.md#sharing-sessions-between-accounts)) |
 | `account.switch` | `pane?`, `account?` (default: the next without a limit) | `{"account"}`; the switch waits for Claude Code's idle prompt; refused when the session id is unknown, not reachable from the account, or the pane is an SSH pane |
-| `schedule.list` | – | `ScheduleList` `{"schedules": [{"schedule": Schedule, "nextFireAt"?, "activeRun"?: ScheduleRun, "lastRun"?: ScheduleRun, "problem"?}], "readOnly"}` (`readOnly`: the files were written by a newer cmds or could not be read; nothing is run or saved). All `schedule.*` methods: local socket only ([Schedules](../guide/schedules.md)) |
-| `schedule.add` | `schedule` (a `Schedule` without `id`, `origin`, `createdAt`, `nextFireAt`; `enabled` default true, `late` and `notify` default as below), `pane?` (the caller's pane, recorded as the origin) | the new entry as in `schedule.list`; `invalidParams` listing every problem (`; `-separated) |
-| `schedule.update` | `id`, and any of `name`, `enabled`, `trigger`, `action`, `late`, `notify` to replace | the entry; a new trigger or turning it on recomputes `nextFireAt` from now |
+| `schedule.list` | – | `ScheduleList` `{"schedules": [{"schedule": Schedule, "nextFireAt"?, "activeRun"?: ScheduleRun, "lastRun"?: ScheduleRun, "problem"?, "targetPane"?}], "readOnly"}` (`targetPane`: the pane a `sendText` target names now) (`readOnly`: the files were written by a newer cmds or could not be read; nothing is run or saved). All `schedule.*` methods: local socket only ([Schedules](../guide/schedules.md)) |
+| `schedule.add` | `schedule` (a `Schedule` without `id`, `origin`, `createdAt`, `nextFireAt`, `lastDueAt`; `enabled` and `warn` default true, `late` and `notify` default as below; a `sendText` target may be `{"pane": "p3"}`, stored as that pane's tag), `pane?` (the caller's pane, recorded as the origin) | the new entry as in `schedule.list`; `invalidParams` listing every problem (`; `-separated) |
+| `schedule.update` | `id`, and any of `name`, `enabled`, `trigger`, `action`, `late`, `notify`, `warn` to replace | the entry; a new trigger or turning it on recomputes `nextFireAt` from now |
 | `schedule.remove` | `id` | – (an active run is cancelled; its history is kept) |
 | `schedule.run` | `id` | `{"run": ScheduleRun}` (cause `manual`; also for a schedule that is off) |
+| `schedule.skip` | `id` | `{"run": ScheduleRun}` (`skipped`, reason `skippedByUser`): the next run is not made and the schedule moves on (a one-shot is turned off); `invalidParams` when it has no next run |
 | `schedule.cancel` | `run` (run id) | – (nothing more is typed) |
 | `schedule.history` | `id?`, `limit?` (default 20, at most 300) | `{"runs": [ScheduleRun]}`, active runs first, then newest first |
 | `state.export` | – | `WorkspaceBundle` (workspaces, layout, per-pane agent sessions; [bundle format](cli.md#moving-workspaces-to-another-cmds)); local socket only |
@@ -145,20 +146,28 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `inputTokens`, `cachedInputTokens`, `outputTokens`, `reasoningTokens`, `plan`, `stale` (only when true).
 - `UsageLimit` = `id` (`five_hour`, `seven_day`, `spend`, …), `usedPercent`, optional `resetsAt`, `windowMinutes`,
   `usedUSD`, `limitUSD`, `period`. `AgentLimits` = `agent`, `limits`, `plan?`, `updatedAt`.
-- `Schedule` = `id` (`s` + 8 hex digits), `name`, `enabled`, `trigger`, `action`, `late`, `notify`, `origin`,
-  `createdAt`, `nextFireAt?`. `trigger`: `{"type": "once", "at"}`, `{"type": "weekly", "weekdays": ["mon"…"sun"],
-  "times": ["09:00"], "timeZone"?}` (no zone: the Mac's), `{"type": "limitReset", "account", "delay"}` (seconds,
-  0–3600). `action`: `{"type": "startWorkspace", "cwd", "title"?, "account"?` (name or `auto`), `"command"?, "prompt"?}`
-  or `{"type": "continueSession", "agent": "claude", "sessionID", "cwd"?, "account"?, "prompt", "pane"?}` (`pane`:
-  the pane to use when several hold the session; without it, or when it no longer holds it, such a run is skipped
-  with `ambiguousSession`). `late`:
+- `Schedule` = `id` (`s` + 8 hex digits), `name`, `enabled`, `trigger`, `action`, `late`, `notify`, `warn` (the
+  "starts in 1 minute" notice; absent = true), `origin`, `createdAt`, `nextFireAt?`, `lastDueAt?` (the last firing
+  handled; a repeating limit trigger never fires the same reset twice). `trigger`: `{"type": "once", "at"}`,
+  `{"type": "weekly", "weekdays": ["mon"…"sun"], "times": ["09:00"], "timeZone"?}` (no zone: the Mac's),
+  `{"type": "limitReset", "account", "delay", "repeats"?}` (seconds, 0–3600; `repeats`: every time a limit of the
+  account resets, else once), `{"type": "codexLimitReset", "delay", "repeats"?}` (Codex's limit: the latest reset of
+  a window at 100 % in its session files). `action`: `{"type": "startWorkspace", "cwd", "title"?, "account"?` (name or
+  `auto`), `"command"?, "prompt"?}`; `{"type": "continueSession", "agent": "claude"|"codex", "sessionID", "cwd"?,
+  "account"?, "prompt", "pane"?}` (`pane`: the pane to use when several hold the session; without it, or when it no
+  longer holds it, such a run is skipped with `ambiguousSession`; no `account` for Codex); or `{"type": "sendText",
+  "target": {"tag"} | {"workspace"}, "text", "to": "shell"|"agent"}` (`tag`: `t` + 8 hex digits, a pane's tag kept in
+  `session.json`; `workspace`: the only terminal pane of the workspace with that title). `late`:
   `{"type": "skip"}` or `{"type": "runIfWithin", "seconds"}` (default 21600 for `once`/`limitReset`, 900 for
   `weekly`). `notify`: `failures` (default), `always`, `never`. `origin`: `{"type": "app"}` or
-  `{"type": "api", "pane"?}`. The same format is stored in `schedules.json`.
+  `{"type": "api", "pane"?}`. The same format is stored in `schedules.json`, whose `version` is 1 while it holds
+  only schedules that cmds 0.6 can run, else 2 (`sendText`, Codex, `codexLimitReset`, `repeats`): a cmds that knows
+  an older version opens it read only.
 - `ScheduleRun` = `id` (`r` + 8 hex digits), `scheduleID`, `scheduleName`, `cause` (`scheduled`/`catchUp`/`manual`),
   `dueAt`, `startedAt`, `endedAt?`, `state` (active: `waitingForAccount`, `waitingForPane`, `typing`,
   `waitingForAgent`, `confirming`; ended: `succeeded`, `failed`, `skipped`, `missed`, `cancelled`), `reason?` (a code
-  such as `confirmed`, `unconfirmed`, `commandTyped`, `otherProgram`, `agentBusy`, `missed`; `cmds schedule history`
+  such as `confirmed`, `unconfirmed`, `commandTyped`, `otherProgram`, `agentBusy`, `paneNotFound`, `ambiguousTarget`,
+  `notCodex`, `skippedByUser`, `missed`; `cmds schedule history`
   prints its English text), `workspace?`, `pane?`, `account?`.
 - Dates are Unix epoch seconds (decoding also takes milliseconds and ISO 8601); unknown agent names decode as
   `other`, malformed fields are dropped instead of failing.

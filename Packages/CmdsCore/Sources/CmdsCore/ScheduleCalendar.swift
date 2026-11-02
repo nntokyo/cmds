@@ -6,20 +6,50 @@ public enum ScheduleCalendar {
     /// - `once`: `at` while it is still ahead.
     /// - `weekly`: the earliest of its weekdays × times in the rule's zone (`timeZone` when it has none). A time in a
     ///   spring-forward gap fires at the first instant after the gap; a time repeated by a fall-back fires once.
-    /// - `limitReset`: the account's `resetsAt + delay` while it has a limit (it may already have passed: the run is
-    ///   then due at once, or late); `date` when the limit was cleared; nil when the account is gone.
+    /// - `limitReset` (once): the account's `resetsAt + delay` while it has a limit (it may already have passed: the
+    ///   run is then due at once, or late); `date` when the limit was cleared; nil when the account is gone.
+    /// - `codexLimitReset` (once): `codex.exhaustedReset + delay`; `date` when no window is used up (Codex is usable);
+    ///   nil when Codex limits are not known (`recomputed` keeps the stored time then).
+    /// - Repeating limit triggers: the reset + delay only when it is after `date` (the last firing handled, so one
+    ///   reset never fires twice); nil otherwise, also when there is no limit (it waits for the next one).
     public static func nextFire(_ trigger: ScheduleTrigger, after date: Date, accounts: [ClaudeAccount],
-                                timeZone: TimeZone = .current) -> Date? {
+                                codex: AgentLimits? = nil, timeZone: TimeZone = .current) -> Date? {
         switch trigger {
         case .once(let at):
             return at > date ? at : nil
         case .weekly(let rule):
             return nextWeekly(rule, after: date, timeZone: timeZone)
-        case .limitReset(let name, let delay):
+        case .limitReset(let name, let delay, let repeats):
             guard let account = accounts.first(where: { $0.hasName(name) }) else { return nil }
-            guard let limit = account.limit else { return date }
-            return limit.resetsAt.addingTimeInterval(delay)
+            return limitFire(reset: account.limit?.resetsAt, delay: delay, repeats: repeats, after: date)
+        case .codexLimitReset(let delay, let repeats):
+            guard let codex else { return nil }
+            return limitFire(reset: codex.exhaustedReset, delay: delay, repeats: repeats, after: date)
         }
+    }
+
+    private static func limitFire(reset: Date?, delay: TimeInterval, repeats: Bool, after date: Date) -> Date? {
+        guard let reset else { return repeats ? nil : date }
+        let fire = reset.addingTimeInterval(delay)
+        return !repeats || fire > date ? fire : nil
+    }
+
+    /// A limit trigger's `nextFireAt` after its account's or Codex's limits changed (other triggers keep theirs):
+    /// - a one-shot follows the limit (`nextFire` after `now`);
+    /// - a repeating one fires for a reset after the last firing handled (`lastDueAt`, else when it was created);
+    /// - Codex limits that are not known (after a relaunch, before a Codex session reported them) keep the stored
+    ///   time, and a repeating trigger never drops a pending firing it has not handled yet.
+    public static func recomputed(_ schedule: Schedule, now: Date, accounts: [ClaudeAccount], codex: AgentLimits?,
+                                  timeZone: TimeZone = .current) -> Date? {
+        let trigger = schedule.trigger
+        guard trigger.followsLimit else { return schedule.nextFireAt }
+        if case .codexLimitReset = trigger, codex == nil { return schedule.nextFireAt }
+        if case .limitReset(let name, _, _) = trigger, !accounts.contains(where: { $0.hasName(name) }) { return nil }
+        guard trigger.repeats else { return nextFire(trigger, after: now, accounts: accounts, codex: codex, timeZone: timeZone) }
+        let handled = schedule.lastDueAt ?? schedule.createdAt
+        let next = nextFire(trigger, after: handled, accounts: accounts, codex: codex, timeZone: timeZone)
+        if next == nil, let pending = schedule.nextFireAt, pending > handled { return pending }
+        return next
     }
 
     /// The zone a weekly rule runs in: its own, else `fallback` (the Mac's).

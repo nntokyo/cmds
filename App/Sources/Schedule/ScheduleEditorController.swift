@@ -1,8 +1,9 @@
 import AppKit
 import CmdsCore
 
-/// The Schedules window's add / edit sheet: name, trigger (once, weekly, when an account's limit resets), action
-/// (start a workspace, continue a Claude Code session), if late, notify. Problems are listed as you type and Save stays
+/// The Schedules window's add / edit sheet: name, trigger (once, weekly, when an account's or Codex's limit resets, once
+/// or every time), action (start a workspace, continue a Claude Code or Codex session, type into a pane), if late,
+/// notify, the notice before a run. Problems are listed as you type and Save stays
 /// disabled until there are none (`ScheduleRunner.problems`, the same rules as the API).
 @MainActor
 final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, NSComboBoxDelegate, NSTextViewDelegate {
@@ -20,6 +21,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     private let zoneBox = NSComboBox()
     private let limitAccountPopup = NSPopUpButton()
     private let delayField = NSTextField()
+    private let repeatBox = NSButton(checkboxWithTitle: String(localized: "Every time it resets"), target: nil, action: nil)
     private let actionPopup = NSPopUpButton()
     private let folderField = NSTextField()
     private let startAccountPopup = NSPopUpButton()
@@ -28,6 +30,12 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     private let promptView = NSTextView()
     private let sessionPopup = NSPopUpButton()
     private let continuePromptField = NSTextField()
+    private let targetPopup = NSPopUpButton()
+    private let targetTitleField = NSTextField()
+    private let sendToPopup = NSPopUpButton()
+    private let sendTextField = NSTextField()
+    private let warnBox = NSButton(checkboxWithTitle: String(localized: "Notify 1 minute before, with Skip"), target: nil,
+                                   action: nil)
     private let latePopup = NSPopUpButton()
     private let lateField = NSTextField()
     private let notifyPopup = NSPopUpButton()
@@ -36,13 +44,17 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     private var onceRows: [NSGridRow] = []
     private var weeklyRows: [NSGridRow] = []
     private var limitRows: [NSGridRow] = []
+    private var limitAccountRow: NSGridRow?
     private var startRows: [NSGridRow] = []
     private var continueRows: [NSGridRow] = []
-    /// Claude Code sessions offered in the session popup (`representedObject` is the index).
+    private var sendRows: [NSGridRow] = []
+    /// Claude Code and Codex sessions offered in the session popup, by item index.
     private var sessions: [ContinueSession] = []
+    /// Targets offered in the target popup, by item index; nil = the workspace title typed next to it.
+    private var targets: [PaneTarget?] = []
 
-    private enum TriggerKind: Int { case once, weekly, limit }
-    private enum ActionKind: Int { case start, resume }
+    private enum TriggerKind: Int { case once, weekly, limit, codexLimit }
+    private enum ActionKind: Int { case start, resume, send }
 
     init(schedule: Schedule?) {
         original = schedule
@@ -68,7 +80,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
 
     private func buildContent() {
         triggerPopup.addItems(withTitles: [String(localized: "Once"), String(localized: "Weekly"),
-                                           String(localized: "When an account’s limit resets")])
+                                           String(localized: "When an account’s limit resets"),
+                                           String(localized: "When Codex’s limit resets")])
         datePicker.datePickerElements = [.yearMonthDay, .hourMinute]
         datePicker.datePickerStyle = .textFieldAndStepper
         datePicker.dateValue = Date().addingTimeInterval(3600)
@@ -86,10 +99,21 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         zoneBox.placeholderString = String(localized: "This Mac’s time zone")
         zoneBox.completes = true
         delayField.placeholderString = "1"
-        let delayRow = NSStackView(views: [delayField, NSTextField(labelWithString: String(localized: "minutes after the reset"))])
+        repeatBox.target = self
+        repeatBox.action = #selector(changed)
+        let delayRow = NSStackView(views: [delayField, NSTextField(labelWithString: String(localized: "minutes after the reset")),
+                                           repeatBox])
         delayRow.spacing = 6
 
-        actionPopup.addItems(withTitles: [String(localized: "Start a workspace"), String(localized: "Continue a Claude Code session")])
+        actionPopup.addItems(withTitles: [String(localized: "Start a workspace"), String(localized: "Continue an agent session"),
+                                          String(localized: "Type into a pane")])
+        targetTitleField.placeholderString = String(localized: "Workspace title")
+        let targetRow = NSStackView(views: [targetPopup, targetTitleField])
+        targetRow.spacing = 6
+        sendToPopup.addItems(withTitles: [String(localized: "Agent prompt (Claude Code or Codex, when idle)"),
+                                          String(localized: "Shell command (at an empty prompt)")])
+        warnBox.target = self
+        warnBox.action = #selector(changed)
         folderField.placeholderString = "~/src/app"
         let choose = NSButton(title: String(localized: "Choose…"), target: self, action: #selector(chooseFolder))
         choose.bezelStyle = .rounded
@@ -118,22 +142,25 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         notifyPopup.addItems(withTitles: [String(localized: "When a run fails, is skipped or missed"), String(localized: "Always"),
                                           String(localized: "Never")])
 
-        for popup in [triggerPopup, limitAccountPopup, actionPopup, startAccountPopup, sessionPopup, latePopup, notifyPopup] {
+        for popup in [triggerPopup, limitAccountPopup, actionPopup, startAccountPopup, sessionPopup, targetPopup, sendToPopup,
+                      latePopup, notifyPopup] {
             popup.target = self
             popup.action = #selector(changed)
         }
         datePicker.target = self
         datePicker.action = #selector(changed)
-        for field in [nameField, timesField, delayField, folderField, titleField, commandField, continuePromptField, lateField] {
+        for field in [nameField, timesField, delayField, folderField, titleField, commandField, continuePromptField, lateField,
+                      targetTitleField, sendTextField] {
             field.delegate = self
         }
         zoneBox.target = self
         zoneBox.action = #selector(changed)
         zoneBox.delegate = self
         for field in [delayField, lateField] { field.widthAnchor.constraint(equalToConstant: 60).isActive = true }
-        for field in [nameField, timesField, folderField, titleField, commandField, continuePromptField] {
+        for field in [nameField, timesField, folderField, titleField, commandField, continuePromptField, sendTextField] {
             field.widthAnchor.constraint(greaterThanOrEqualToConstant: 300).isActive = true
         }
+        targetTitleField.widthAnchor.constraint(greaterThanOrEqualToConstant: 140).isActive = true
         zoneBox.widthAnchor.constraint(equalToConstant: 220).isActive = true
 
         // The grid's rows by section; the trigger and action sections are shown or hidden as a whole (`update`).
@@ -161,9 +188,15 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             [Self.label(String(localized: "Session:")), sessionPopup],
             [Self.label(String(localized: "Prompt:")), continuePromptField],
         ]
+        let sendSection = [
+            [Self.label(String(localized: "Pane:")), targetRow],
+            [Self.label(String(localized: "Type as:")), sendToPopup],
+            [Self.label(String(localized: "Text:")), sendTextField],
+        ]
         let lateSection = [
             [Self.label(String(localized: "If late:")), lateRow],
             [Self.label(String(localized: "Notify:")), notifyPopup],
+            [NSView(), warnBox],
         ]
         var views: [[NSView]] = []
         /// Adds a section's rows; returns their indices in the grid.
@@ -175,7 +208,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         let triggerIndex = add(triggerSection).lowerBound
         let onceIndices = add(onceSection), weeklyIndices = add(weeklySection), limitIndices = add(limitSection)
         let actionIndex = add(actionSection).lowerBound
-        let startIndices = add(startSection), resumeIndices = add(resumeSection)
+        let startIndices = add(startSection), resumeIndices = add(resumeSection), sendIndices = add(sendSection)
         let lateIndex = add(lateSection).lowerBound
         let grid = NSGridView(views: views)
         grid.rowSpacing = 8
@@ -185,6 +218,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         onceRows = onceIndices.map(grid.row(at:))
         weeklyRows = weeklyIndices.map(grid.row(at:))
         limitRows = limitIndices.map(grid.row(at:))
+        limitAccountRow = grid.row(at: limitIndices.lowerBound)
+        sendRows = sendIndices.map(grid.row(at:))
         startRows = startIndices.map(grid.row(at:))
         continueRows = resumeIndices.map(grid.row(at:))
         grid.row(at: triggerIndex).topPadding = 6
@@ -195,6 +230,11 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             The command is typed at the new workspace’s shell prompt. The first prompt needs a command that starts \
             Claude Code; it is pasted once Claude Code is idle.
             """))
+        let sendNote = Self.note(String(localized: """
+            The pane keeps a tag, so the schedule finds it after cmds restarts. A shell command is typed only at an \
+            empty prompt, a prompt only into an idle agent that asks nothing; otherwise the run is skipped.
+            """))
+        self.sendNote = sendNote
         problemsLabel.textColor = .systemRed
         problemsLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         saveButton.bezelStyle = .rounded
@@ -207,7 +247,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         let buttons = NSStackView(views: [NSView(), cancel, saveButton])
         buttons.spacing = 8
 
-        let stack = NSStackView(views: [grid, commandNote, problemsLabel, buttons])
+        let stack = NSStackView(views: [grid, commandNote, sendNote, problemsLabel, buttons])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
@@ -222,12 +262,14 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             buttons.widthAnchor.constraint(equalTo: stack.widthAnchor),
             problemsLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
             commandNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
+            sendNote.widthAnchor.constraint(equalTo: stack.widthAnchor),
         ])
         self.commandNote = commandNote
         window?.contentView = content
     }
 
     private var commandNote: NSTextField?
+    private var sendNote: NSTextField?
 
     private static func label(_ text: String) -> NSTextField { NSTextField(labelWithString: text) }
 
@@ -251,6 +293,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
                                                 String(localized: "Auto (the first without a limit)")])
         for account in accounts { startAccountPopup.addItem(withTitle: account.name) }
         fillSessions(including: draft.flatMap { if case .continueSession(let session) = $0.action { return session }; return nil })
+        fillTargets(including: draft.flatMap { if case .sendText(let send) = $0.action { return send.target }; return nil })
+        warnBox.state = draft?.warn ?? true ? .on : .off
         delayField.stringValue = "1"
         lateField.stringValue = ""
         switch draft?.trigger {
@@ -262,11 +306,16 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             for (day, box) in dayBoxes { box.state = rule.weekdays.contains(day) ? .on : .off }
             timesField.stringValue = rule.times.map(\.text).joined(separator: ", ")
             zoneBox.stringValue = rule.timeZone ?? ""
-        case .limitReset(let account, let delay)?:
+        case .limitReset(let account, let delay, let repeats)?:
             triggerPopup.selectItem(at: TriggerKind.limit.rawValue)
             if limitAccountPopup.item(withTitle: account) == nil { limitAccountPopup.addItem(withTitle: account) }
             limitAccountPopup.selectItem(withTitle: account)
             delayField.stringValue = String(Int((delay / 60).rounded()))
+            repeatBox.state = repeats ? .on : .off
+        case .codexLimitReset(let delay, let repeats)?:
+            triggerPopup.selectItem(at: TriggerKind.codexLimit.rawValue)
+            delayField.stringValue = String(Int((delay / 60).rounded()))
+            repeatBox.state = repeats ? .on : .off
         case nil:
             triggerPopup.selectItem(at: TriggerKind.once.rawValue)
             for (day, box) in dayBoxes { box.state = Weekday.workdays.contains(day) ? .on : .off }
@@ -289,6 +338,10 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         case .continueSession(let session)?:
             actionPopup.selectItem(at: ActionKind.resume.rawValue)
             continuePromptField.stringValue = session.prompt
+        case .sendText(let send)?:
+            actionPopup.selectItem(at: ActionKind.send.rawValue)
+            sendToPopup.selectItem(at: send.to == .agent ? 0 : 1)
+            sendTextField.stringValue = send.text
         case nil:
             actionPopup.selectItem(at: ActionKind.start.rawValue)
             continuePromptField.stringValue = ContinueSession.defaultPrompt
@@ -306,15 +359,16 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         if continuePromptField.stringValue.isEmpty { continuePromptField.stringValue = ContinueSession.defaultPrompt }
     }
 
-    /// The Claude Code sessions cmds remembers (local panes), plus the one being edited.
+    /// The Claude Code and Codex sessions cmds remembers (local panes), plus the one being edited.
     private func fillSessions(including current: ContinueSession?) {
         sessionPopup.removeAllItems()
         sessions = []
         let list = (try? AppController.shared.agentSessionList(paneID: nil))?.sessions ?? []
         // One item per session and pane: with the same session in two panes, the chosen pane is the run's target.
-        for entry in list where entry.session.agent == .claude && entry.session.host == nil {
+        for entry in list where [.claude, .codex].contains(entry.session.agent) && entry.session.host == nil {
             guard !sessions.contains(where: { $0.sessionID == entry.session.sessionID && $0.pane == entry.pane }) else { continue }
-            sessions.append(ContinueSession(sessionID: entry.session.sessionID, cwd: entry.session.cwd, pane: entry.pane))
+            sessions.append(ContinueSession(agent: entry.session.agent, sessionID: entry.session.sessionID,
+                                            cwd: entry.session.cwd, pane: entry.pane))
             sessionPopup.addItem(withTitle: "\(AppController.localizedSummary(entry.session)) — \(entry.pane)")
         }
         if let current, !sessions.contains(where: { $0.sessionID == current.sessionID }) {
@@ -322,7 +376,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             sessionPopup.insertItem(withTitle: String(localized: "Session \(String(current.sessionID.prefix(8)))"), at: 0)
         }
         if sessions.isEmpty {
-            sessionPopup.addItem(withTitle: String(localized: "No Claude Code session is known"))
+            sessionPopup.addItem(withTitle: String(localized: "No agent session is known"))
             sessionPopup.isEnabled = false
         } else {
             sessionPopup.isEnabled = true
@@ -332,6 +386,34 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             } ?? 0
             sessionPopup.selectItem(at: index)
         }
+    }
+
+    /// The local terminal panes (`Workspace — pane`), the edited target if no pane has it now, and "Workspace titled".
+    private func fillTargets(including current: PaneTarget?) {
+        targetPopup.removeAllItems()
+        targets = []
+        let controller = AppController.shared
+        var selected: Int?
+        for workspace in controller.workspaces {
+            for pane in workspace.orderedPanes where AppController.isScheduleTarget(pane) {
+                if case .tag(let tag) = current, pane.scheduleTag == tag { selected = targets.count }
+                targets.append(pane.scheduleTag.map(PaneTarget.tag) ?? .pane(pane.id))
+                let paneTitle = pane.title.isEmpty ? ((pane.workingDirectory ?? "") as NSString).lastPathComponent : pane.title
+                targetPopup.addItem(withTitle: "\(workspace.displayTitle) — \(paneTitle) (\(pane.id))")
+            }
+        }
+        if case .tag = current, selected == nil {
+            selected = targets.count
+            targets.append(current)
+            targetPopup.addItem(withTitle: String(localized: "A closed pane"))
+        }
+        targets.append(nil)
+        targetPopup.addItem(withTitle: String(localized: "The only pane of the workspace titled:"))
+        if case .workspace(let title) = current {
+            selected = targets.count - 1
+            targetTitleField.stringValue = title
+        }
+        targetPopup.selectItem(at: selected ?? 0)
     }
 
     // MARK: - Draft and validation
@@ -353,11 +435,16 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             let zone = zoneBox.stringValue.trimmingCharacters(in: .whitespaces)
             trigger = .weekly(WeeklyRule(weekdays: Set(dayBoxes.filter { $0.1.state == .on }.map(\.0)), times: times,
                                          timeZone: zone.isEmpty ? nil : zone))
-        case .limit:
+        case .limit, .codexLimit:
             let minutes = Double(delayField.stringValue.trimmingCharacters(in: .whitespaces)) ?? -1
             if minutes < 0 { problems.append(.delayOutOfRange) }
-            guard let account = limitAccountPopup.titleOfSelectedItem else { return (nil, problems + [.noAccounts]) }
-            trigger = .limitReset(account: account, delay: max(0, minutes) * 60)
+            let repeats = repeatBox.state == .on
+            if triggerKind == .codexLimit {
+                trigger = .codexLimitReset(delay: max(0, minutes) * 60, repeats: repeats)
+            } else {
+                guard let account = limitAccountPopup.titleOfSelectedItem else { return (nil, problems + [.noAccounts]) }
+                trigger = .limitReset(account: account, delay: max(0, minutes) * 60, repeats: repeats)
+            }
         }
         let action: ScheduleAction
         switch actionKind {
@@ -378,6 +465,12 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             }
             session.prompt = continuePromptField.stringValue
             action = .continueSession(session)
+        case .send:
+            let index = targetPopup.indexOfSelectedItem
+            guard index >= 0, index < targets.count else { return (nil, problems + [.targetInvalid]) }
+            let target = targets[index] ?? .workspace(title: targetTitleField.stringValue.trimmingCharacters(in: .whitespaces))
+            action = .sendText(SendText(target: target, text: sendTextField.stringValue,
+                                        to: sendToPopup.indexOfSelectedItem == 1 ? .shell : .agent))
         }
         let late: ScheduleLatePolicy
         if latePopup.indexOfSelectedItem == 0 {
@@ -390,7 +483,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         }
         let notify = ScheduleNotify.allCases[safe: notifyPopup.indexOfSelectedItem] ?? .failures
         let draft = ScheduleDraft(name: nameField.stringValue.trimmingCharacters(in: .whitespaces),
-                                  enabled: original?.enabled ?? true, trigger: trigger, action: action, late: late, notify: notify)
+                                  enabled: original?.enabled ?? true, trigger: trigger, action: action, late: late, notify: notify,
+                                  warn: warnBox.state == .on)
         return (draft, problems)
     }
 
@@ -403,10 +497,14 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     private func update() {
         onceRows.forEach { $0.isHidden = triggerKind != .once }
         weeklyRows.forEach { $0.isHidden = triggerKind != .weekly }
-        limitRows.forEach { $0.isHidden = triggerKind != .limit }
+        limitRows.forEach { $0.isHidden = triggerKind != .limit && triggerKind != .codexLimit }
+        limitAccountRow?.isHidden = triggerKind != .limit
         startRows.forEach { $0.isHidden = actionKind != .start }
         continueRows.forEach { $0.isHidden = actionKind != .resume }
+        sendRows.forEach { $0.isHidden = actionKind != .send }
         commandNote?.isHidden = actionKind != .start
+        sendNote?.isHidden = actionKind != .send
+        targetTitleField.isHidden = targets[safe: targetPopup.indexOfSelectedItem] != .some(nil)
         promptView.isEditable = !commandField.stringValue.trimmingCharacters(in: .whitespaces).isEmpty
         promptView.textColor = promptView.isEditable ? .labelColor : .disabledControlTextColor
         lateField.isEnabled = latePopup.indexOfSelectedItem == 1

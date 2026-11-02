@@ -1,24 +1,25 @@
 import CmdsCore
 import Foundation
 
-// `cmds schedule …`: schedules that start a workspace or continue a Claude Code session later
-// (docs/guide/schedules.md, docs/reference/cli.md). Times are parsed here, in the Mac's zone, and sent as epoch seconds.
+// `cmds schedule …`: schedules that start a workspace, continue a Claude Code or Codex session, or type into a pane
+// later (docs/guide/schedules.md, docs/reference/cli.md). Times are parsed here, in the Mac's zone, and sent as epoch seconds.
 extension CLI {
     static let scheduleUsage = """
-        schedule add --name NAME TRIGGER ACTION [--late skip|MINUTES] [--notify failures|always|never] [--disabled]
+        schedule add --name NAME TRIGGER ACTION [--late skip|MINUTES] [--notify failures|always|never] [--no-warn] [--disabled]
           TRIGGER  --at "YYYY-MM-DD HH:MM" | --at HH:MM | --in 90m
                    --every weekdays|daily|weekends|mon,wed,fri --time 09:00[,13:30] [--tz Asia/Tokyo]
-                   --after-limit ACCOUNT [--delay 2m]
+                   --after-limit ACCOUNT | --after-codex-limit  [--delay 2m] [--repeat]
           ACTION   --start DIR [--account NAME|auto] [--title T] [--prompt TEXT|-] [-- command…]
                    --continue [--pane P | --session ID] [--account NAME] [--prompt TEXT|-]
+                   --send TEXT|- --to shell|agent [--pane P | --workspace TITLE]
         """
 
     static let scheduleCommands: [Command] = [
         Command(name: "schedule", usage: "schedule [list]",
                 summary: "List schedules: when they run next and how the last run ended.",
                 details: """
-                    Schedules start a workspace or continue a Claude Code session at a time, on weekdays, or when an
-                    account's limit resets; they run while cmds runs. `cmds schedule add --help` for the options.
+                    Schedules start a workspace, continue a Claude Code or Codex session, or type into a pane at a
+                    time, on weekdays, or when a limit resets; they run while cmds runs. `cmds schedule add --help` for the options.
                     See docs/guide/schedules.md.
                     """) { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds schedule [list]")
@@ -36,17 +37,24 @@ extension CLI {
                 details: scheduleUsage + "\n\n" + """
                     --at is a local date and time (or the next HH:MM); --in a delay (90m, 2h, 1h30m, 45s).
                     --every runs on those weekdays at each --time (5 minutes apart at least), in --tz or the Mac's zone.
-                    --after-limit runs once when the account's current limit resets, plus --delay (default 1m).
+                    --after-limit runs once when the Claude account's current limit resets, plus --delay (default 1m);
+                    --after-codex-limit when Codex's limit resets. With --repeat: every time a limit resets.
                     --start opens a new background workspace in DIR (never selected) and types the command at its
                     prompt; --prompt is pasted into the Claude Code that command starts, once it is idle.
-                    --continue sends --prompt (default "continue") to a remembered Claude Code session: the one in
-                    --pane (default: this pane) or --session. If the session is not running it is resumed first.
+                    --continue sends --prompt (default "continue") to a remembered Claude Code or Codex session: the one
+                    in --pane (default: this pane) or --session. If the session is not running it is resumed first.
+                    --send types TEXT into an existing pane (--pane, default this pane; it keeps a tag, so the
+                    schedule finds it after cmds restarts) or the only terminal pane of the workspace titled --workspace:
+                    --to shell types it as a command at an empty shell prompt; --to agent pastes it into Claude Code or
+                    Codex once it is idle. Otherwise the run is skipped.
+                    A notification "starts in 1 minute" with Skip comes before each run (--no-warn: none).
                     --late: what to do when the time passed while the Mac slept or cmds was not running: skip, or run
                     when at most MINUTES late (default 360 for one-time schedules, 15 for weekly ones).
                     Nothing is typed into a busy agent, a pane running another program, or a pane the schedule did not
                     create or target. Examples:
                       cmds schedule add --name "Continue after reset" --after-limit work --continue
                       cmds schedule add --name bench --at "2026-11-04 02:00" --start ~/src/app -- make bench
+                      cmds schedule add --name "Codex goes on" --after-codex-limit --repeat --send continue --to agent
                     """,
                 options: scheduleValueOptions, flags: scheduleFlags) { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds schedule add --name NAME TRIGGER ACTION (see --help)")
@@ -56,18 +64,20 @@ extension CLI {
                 throw CLIError.usage("give a trigger: --at, --in, --every or --after-limit")
             }
             guard let action = try scheduleAction(options, ctx: ctx) else {
-                throw CLIError.usage("give an action: --start DIR or --continue")
+                throw CLIError.usage("give an action: --start DIR, --continue or --send TEXT")
             }
             var draft: [String: JSONValue] = ["name": .string(name), "trigger": trigger, "action": action]
             if let late = options.late { draft["late"] = late }
             if let notify = options.notify { draft["notify"] = .string(notify) }
             if let enabled = options.enabled { draft["enabled"] = .bool(enabled) }
+            if let warn = options.warn { draft["warn"] = .bool(warn) }
             let result = try ctx.call("schedule.add", ["schedule": .object(draft), "pane": ctx.envPane.json])
             try printEntry(result, ctx)
         },
         Command(name: "schedule edit", usage: "schedule edit <id> [add options]",
                 summary: "Change a schedule: a trigger option replaces the trigger, an action option the action.",
-                details: scheduleUsage, options: scheduleValueOptions, flags: scheduleFlags.union(["enabled"])) { ctx in
+                details: scheduleUsage + "\n  --enabled turns it on, --warn turns the notice on.", options: scheduleValueOptions,
+                flags: scheduleFlags.union(["enabled", "warn"])) { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds schedule edit <id> [add options]")
             let options = try parseScheduleOptions(ctx)
             var params: [String: JSONValue?] = ["id": .string(ctx.args.positionals[0])]
@@ -77,6 +87,7 @@ extension CLI {
             params["late"] = options.late
             params["notify"] = options.notify.json
             params["enabled"] = ctx.args.has("enabled") ? .bool(true) : options.enabled.map { .bool($0) }
+            params["warn"] = ctx.args.has("warn") ? .bool(true) : options.warn.map { .bool($0) }
             guard params.values.compactMap({ $0 }).count > 1 else { throw CLIError.usage("nothing to change") }
             let result = try ctx.call("schedule.update", params)
             try printEntry(result, ctx)
@@ -113,6 +124,14 @@ extension CLI {
             let run = try perform { try result["run"]?.decode(ScheduleRun.self) }
             if let run { print(Format.scheduleRun(run)) }
         },
+        Command(name: "schedule skip", usage: "schedule skip <id>",
+                summary: "Skip a schedule's next run (as the notice's Skip does); a one-time schedule is turned off.") { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds schedule skip <id>")
+            let result = try ctx.call("schedule.skip", ["id": .string(ctx.args.positionals[0])])
+            if ctx.json { return ctx.printJSON(result) }
+            let run = try perform { try result["run"]?.decode(ScheduleRun.self) }
+            if let run { print(Format.scheduleRun(run)) }
+        },
         Command(name: "schedule cancel", usage: "schedule cancel <run>", summary: "Cancel an active run (nothing more is typed).") { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds schedule cancel <run>")
             let result = try ctx.call("schedule.cancel", ["run": .string(ctx.args.positionals[0])])
@@ -131,9 +150,9 @@ extension CLI {
 
     static let scheduleValueOptions: Set<String> = [
         "name", "at", "in", "every", "time", "tz", "after-limit", "delay", "start", "account", "title", "prompt", "pane",
-        "session", "late", "notify",
+        "session", "late", "notify", "send", "to", "workspace",
     ]
-    static let scheduleFlags: Set<String> = ["continue", "disabled"]
+    static let scheduleFlags: Set<String> = ["continue", "disabled", "after-codex-limit", "repeat", "no-warn"]
     /// Last runs in `schedule show`.
     private static let showRunsLimit = 5
 
@@ -155,9 +174,13 @@ extension CLI {
         print(Format.scheduleAdded(try perform { try result.decode(ScheduleListEntry.self) }), terminator: "")
     }
 
-    /// The action from the options: `--start` as parsed, `--continue` with the session looked up in `agent.sessions`.
+    /// The action from the options: `--start` as parsed, `--continue` with the session looked up in `agent.sessions`,
+    /// `--send` with this pane when no target is given.
     private static func scheduleAction(_ options: ScheduleOptions, ctx: Context) throws -> JSONValue? {
         if let start = options.start { return start }
+        if let send = options.send {
+            return try sendAction(send, envPane: ctx.envPane)
+        }
         guard let target = options.continueTarget else { return nil }
         let pane: String?
         switch target {
@@ -183,17 +206,26 @@ extension CLI {
         case session(String)
     }
 
+    /// `--send`: what and where (nil target: this pane).
+    struct SendOptions: Equatable {
+        var text: String
+        var to: SendText.Destination
+        var target: PaneTarget?
+    }
+
     struct ScheduleOptions {
         var name: String?
         var trigger: JSONValue?
         /// A complete `startWorkspace` action.
         var start: JSONValue?
         var continueTarget: ContinueTarget?
+        var send: SendOptions?
         var account: String?
         var prompt: String?
         var late: JSONValue?
         var notify: String?
         var enabled: Bool?
+        var warn: Bool?
     }
 
     /// The options as typed now, in the Mac's zone and the current directory.
@@ -207,6 +239,7 @@ extension CLI {
         var options = ScheduleOptions()
         options.name = args[option: "name"]
         if args.has("disabled") { options.enabled = false }
+        if args.has("no-warn") { options.warn = false }
         options.notify = try args[option: "notify"].map { raw in
             guard ScheduleNotify(rawValue: raw) != nil else { throw CLIError.usage("--notify must be failures, always or never") }
             return raw
@@ -218,10 +251,33 @@ extension CLI {
 
         let start = args[option: "start"]
         let continuing = args.has("continue")
-        if start != nil, continuing { throw CLIError.usage("give either --start or --continue") }
-        if let start {
+        let send = args[option: "send"]
+        if [start != nil, continuing, send != nil].filter({ $0 }).count > 1 {
+            throw CLIError.usage("give one of --start, --continue or --send")
+        }
+        if send == nil {
+            for option in ["to", "workspace"] where args[option: option] != nil {
+                throw CLIError.usage("--\(option) goes with --send")
+            }
+        }
+        if let send {
+            for option in ["account", "title", "prompt", "session"] where args[option: option] != nil {
+                throw CLIError.usage("--\(option) does not go with --send")
+            }
+            if args.rest != nil { throw CLIError.usage("--send takes no command after --") }
+            guard let raw = args[option: "to"] else { throw CLIError.usage("--send needs --to shell or --to agent") }
+            guard let to = SendText.Destination(rawValue: raw) else { throw CLIError.usage("--to must be shell or agent") }
+            let target: PaneTarget?
+            switch (args[option: "pane"], args[option: "workspace"]) {
+            case (let pane?, nil): target = .pane(pane)
+            case (nil, let title?): target = .workspace(title: title)
+            case (nil, nil): target = nil
+            default: throw CLIError.usage("give either --pane or --workspace")
+            }
+            options.send = SendOptions(text: send == "-" ? readStandardInput() : send, to: to, target: target)
+        } else if let start {
             if args[option: "pane"] != nil || args[option: "session"] != nil {
-                throw CLIError.usage("--pane and --session go with --continue")
+                throw CLIError.usage("--pane and --session go with --continue or --send")
             }
             var action: [String: JSONValue] = ["type": "startWorkspace", "cwd": .string(absolute(start, base: cwd))]
             action["title"] = args[option: "title"].json
@@ -240,21 +296,32 @@ extension CLI {
             }
         } else {
             for option in ["account", "title", "prompt", "pane", "session"] where args[option: option] != nil {
-                throw CLIError.usage("--\(option) goes with --start or --continue")
+                throw CLIError.usage("--\(option) goes with --start, --continue or --send")
             }
             if args.rest != nil { throw CLIError.usage("a command goes with --start") }
         }
         return options
     }
 
-    /// `--at`, `--in`, `--every` (+ `--time`, `--tz`) or `--after-limit` (+ `--delay`); nil when none is given.
+    /// `--at`, `--in`, `--every` (+ `--time`, `--tz`), `--after-limit` or `--after-codex-limit` (+ `--delay`,
+    /// `--repeat`); nil when none is given.
     static func parseTrigger(_ args: Arguments, now: Date, timeZone: TimeZone) throws -> JSONValue? {
-        let given = ["at", "in", "every", "after-limit"].filter { args[option: $0] != nil }
+        var given = ["at", "in", "every", "after-limit"].filter { args[option: $0] != nil }
+        let codex = args.has("after-codex-limit")
+        if codex { given.append("after-codex-limit") }
         if given.count > 1 { throw CLIError.usage("give one trigger: " + given.map { "--\($0)" }.joined(separator: ", ")) }
         if args[option: "every"] == nil, args[option: "time"] != nil || args[option: "tz"] != nil {
             throw CLIError.usage("--time and --tz go with --every")
         }
-        if args[option: "after-limit"] == nil, args[option: "delay"] != nil { throw CLIError.usage("--delay goes with --after-limit") }
+        let limit = args[option: "after-limit"] != nil || codex
+        if !limit, args[option: "delay"] != nil { throw CLIError.usage("--delay goes with --after-limit or --after-codex-limit") }
+        if !limit, args.has("repeat") { throw CLIError.usage("--repeat goes with --after-limit or --after-codex-limit") }
+        let delay = try args[option: "delay"].map { try parseDuration($0, option: "delay") } ?? ScheduleLimits.defaultDelay
+        if codex {
+            var trigger: [String: JSONValue] = ["type": "codexLimitReset", "delay": .number(delay)]
+            if args.has("repeat") { trigger["repeats"] = .bool(true) }
+            return .object(trigger)
+        }
         if let at = args[option: "at"] {
             return ["type": "once", "at": .number(try parseAt(at, now: now, timeZone: timeZone).timeIntervalSince1970)]
         }
@@ -280,8 +347,9 @@ extension CLI {
             return .object(trigger)
         }
         if let account = args[option: "after-limit"] {
-            let delay = try args[option: "delay"].map { try parseDuration($0, option: "delay") } ?? ScheduleLimits.defaultDelay
-            return ["type": "limitReset", "account": .string(account), "delay": .number(delay)]
+            var trigger: [String: JSONValue] = ["type": "limitReset", "account": .string(account), "delay": .number(delay)]
+            if args.has("repeat") { trigger["repeats"] = .bool(true) }
+            return .object(trigger)
         }
         return nil
     }
@@ -309,8 +377,9 @@ extension CLI {
         throw CLIError.usage("--at expects \"YYYY-MM-DD HH:MM\" or HH:MM, got \(raw)")
     }
 
-    /// `90m`, `2h`, `1h30m`, `45s`, `1d`.
+    /// `90m`, `2h`, `1h30m`, `45s`, `1d`; `0` (e.g. `--delay 0`).
     static func parseDuration(_ raw: String, option: String) throws -> TimeInterval {
+        if raw == "0" { return 0 }
         let units: [Character: TimeInterval] = ["s": 1, "m": 60, "h": 3600, "d": 86400]
         let invalid = CLIError.usage("--\(option) expects a duration like 90m, 2h, 1h30m or 45s, got \(raw)")
         var total: TimeInterval = 0
@@ -361,7 +430,20 @@ extension CLI {
         return ["type": "runIfWithin", "seconds": .number(Double(minutes) * 60)]
     }
 
-    /// `--continue`: the Claude Code session in `pane` (or the one with the given id) from `agent.sessions`.
+    /// `--send`: `target`, else this pane (`CMDS_PANE_ID`), which the app turns into a tag.
+    static func sendAction(_ send: SendOptions, envPane: String?) throws -> JSONValue {
+        let target: PaneTarget
+        if let given = send.target {
+            target = given
+        } else if let envPane {
+            target = .pane(envPane)
+        } else {
+            throw CLIError.usage("--send needs --pane P or --workspace TITLE outside a cmds terminal")
+        }
+        return try .from(ScheduleAction.sendText(SendText(target: target, text: send.text, to: send.to)))
+    }
+
+    /// `--continue`: the Claude Code or Codex session in `pane` (or the one with the given id) from `agent.sessions`.
     static func continueAction(target: ContinueTarget, pane: String?, sessions: AgentSessionList, account: String?,
                                prompt: String?) throws -> JSONValue {
         let entry: AgentSessionEntry?
@@ -371,20 +453,25 @@ extension CLI {
             entry = sessions.sessions.first { $0.session.sessionID == id }
             sessionID = id
         case .pane, .current:
-            guard let found = sessions.sessions.first(where: { $0.pane == pane && $0.session.agent == .claude }) else {
-                throw CLIError.failure("pane \(pane ?? "?") has no known Claude Code session "
-                    + "(add `cmds hook claude-status` to Claude Code's status line)")
+            let continuable: Set<AgentKind> = [.claude, .codex]
+            guard let found = sessions.sessions.first(where: { $0.pane == pane && continuable.contains($0.session.agent) }) else {
+                throw CLIError.failure("pane \(pane ?? "?") has no known Claude Code or Codex session "
+                    + "(for Claude Code, add `cmds hook claude-status` to its status line)")
             }
             entry = found
             sessionID = found.session.sessionID
         }
+        let agent = entry?.session.agent ?? .claude
         if let entry {
-            guard entry.session.agent == .claude else { throw CLIError.failure("only Claude Code sessions can be continued") }
+            guard agent == .claude || agent == .codex else {
+                throw CLIError.failure("only Claude Code and Codex sessions can be continued")
+            }
             guard entry.session.host == nil else {
                 throw CLIError.failure("the session runs on \(entry.session.host ?? "a server"); only local sessions can be continued")
             }
         }
-        var action: [String: JSONValue] = ["type": "continueSession", "agent": "claude", "sessionID": .string(sessionID)]
+        if agent == .codex, account != nil { throw CLIError.usage("--account goes with Claude Code sessions only") }
+        var action: [String: JSONValue] = ["type": "continueSession", "agent": .string(agent.rawValue), "sessionID": .string(sessionID)]
         if let cwd = entry?.session.cwd { action["cwd"] = .string(cwd) }
         if let account { action["account"] = .string(account) }
         if let prompt { action["prompt"] = .string(prompt) }
@@ -454,12 +541,15 @@ extension Format {
             if let prompt = action.prompt { out += "prompt   \(oneLine(prompt))\n" }
         case .continueSession(let action):
             out += "prompt   \(oneLine(action.prompt))\n"
+        case .sendText(let action):
+            out += "target   \(sendTarget(action.target))" + (entry.targetPane.map { " (now \($0))" } ?? "") + "\n"
+            out += "text     \(oneLine(action.text))\n"
         }
         switch schedule.late {
         case .skip: out += "if late  skip\n"
         case .runIfWithin(let seconds): out += "if late  run when at most \(duration(seconds)) late\n"
         }
-        out += "notify   \(schedule.notify.rawValue)\n"
+        out += "notify   \(schedule.notify.rawValue)\(schedule.warn ? ", 1 minute before" : "")\n"
         switch schedule.origin {
         case .app: out += "origin   app\n"
         case .api(let pane): out += "origin   api" + (pane.map { " (pane \($0))" } ?? "") + "\n"
@@ -506,8 +596,19 @@ extension Format {
             else if rule.weekdays == [.sat, .sun] { days = "weekends" }
             else { days = rule.weekdays.sorted().map(\.rawValue).joined(separator: ",") }
             return "\(days) \(rule.times.map(\.text).joined(separator: ", "))" + (rule.timeZone.map { " (\($0))" } ?? "")
-        case .limitReset(let account, let delay):
-            return "when \(account) resets" + (delay > 0 ? " + \(duration(delay))" : "")
+        case .limitReset(let account, let delay, let repeats):
+            return (repeats ? "every time \(account) resets" : "when \(account) resets") + (delay > 0 ? " + \(duration(delay))" : "")
+        case .codexLimitReset(let delay, let repeats):
+            return (repeats ? "every time Codex resets" : "when Codex resets") + (delay > 0 ? " + \(duration(delay))" : "")
+        }
+    }
+
+    /// `pane t1a2b3c4d`, `workspace "API"`.
+    static func sendTarget(_ target: PaneTarget) -> String {
+        switch target {
+        case .tag(let tag): return "pane \(tag)"
+        case .pane(let pane): return "pane \(pane)"
+        case .workspace(let title): return "workspace \"\(oneLine(title))\""
         }
     }
 
@@ -520,11 +621,18 @@ extension Format {
             if let command = start.command { text += ": \(oneLine(command))" + (start.prompt != nil ? " + prompt" : "") }
             return text
         case .continueSession(let session):
-            var text = "continue session \(session.sessionID.prefix(8))"
+            var text = "continue \(session.agent == .codex ? "Codex " : "")session \(session.sessionID.prefix(8))"
             if let account = session.account { text += " (\(account))" }
-            let prompt = oneLine(session.prompt)
-            return text + " with \"" + (prompt.count > 24 ? String(prompt.prefix(23)) + "…" : prompt) + "\""
+            return text + " with \"" + short(session.prompt) + "\""
+        case .sendText(let send):
+            return "send \"\(short(send.text))\" to the \(send.to.rawValue) in \(sendTarget(send.target))"
         }
+    }
+
+    /// One line of at most 24 characters.
+    private static func short(_ text: String) -> String {
+        let line = oneLine(text)
+        return line.count > 24 ? String(line.prefix(23)) + "…" : line
     }
 
     /// `2026-11-04 02:00` in the Mac's zone.

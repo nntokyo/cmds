@@ -25,6 +25,12 @@ public enum ScheduleProblem: Equatable, Sendable {
     case promptTooLong
     case agentUnsupported
     case sessionIDInvalid
+    /// A Codex session with an account (cmds has Claude accounts only).
+    case accountWithCodex
+    /// `codexLimitReset` (once) while Codex has no limit, or none is known.
+    case codexNotLimited
+    /// `sendText`: a stored target that is not a tag or a workspace title, or a pane that cannot be targeted.
+    case targetInvalid
 
     public var english: String {
         switch self {
@@ -48,8 +54,11 @@ public enum ScheduleProblem: Equatable, Sendable {
         case .promptWithoutCommand: return "a prompt needs a command that starts Claude Code"
         case .promptInvalid: return "the prompt must not be empty or contain control characters other than line breaks and tabs"
         case .promptTooLong: return "the prompt must be at most \(ScheduleLimits.maxPromptBytes / 1024) KB"
-        case .agentUnsupported: return "only Claude Code sessions can be continued"
+        case .agentUnsupported: return "only Claude Code and Codex sessions can be continued"
         case .sessionIDInvalid: return "the session id is not valid"
+        case .accountWithCodex: return "a Codex session has no account"
+        case .codexNotLimited: return "Codex has no limit now"
+        case .targetInvalid: return "the target must be a local terminal pane or a workspace title"
         }
     }
 }
@@ -70,8 +79,10 @@ public enum ScheduleValidation {
             if !(1...ScheduleLimits.maxTimesPerDay).contains(rule.times.count) { problems.append(.timesCount) }
             if !timesApart(rule.times) { problems.append(.timesTooClose) }
             if let zone = rule.timeZone, TimeZone(identifier: zone) == nil { problems.append(.unknownTimeZone(zone)) }
-        case .limitReset(let account, let delay):
+        case .limitReset(let account, let delay, _):
             if ClaudeAccounts.nameProblem(account) != nil { problems.append(.accountInvalid(account)) }
+            if !(0...ScheduleLimits.maxDelay).contains(delay) { problems.append(.delayOutOfRange) }
+        case .codexLimitReset(let delay, _):
             if !(0...ScheduleLimits.maxDelay).contains(delay) { problems.append(.delayOutOfRange) }
         }
         if case .runIfWithin(let seconds) = draft.late, !(ScheduleLimits.minLateWindow...ScheduleLimits.maxLateWindow).contains(seconds) {
@@ -93,15 +104,36 @@ public enum ScheduleValidation {
                 problems += promptProblems(prompt)
             }
         case .continueSession(let action):
-            if action.agent != .claude { problems.append(.agentUnsupported) }
+            if action.agent != .claude, action.agent != .codex { problems.append(.agentUnsupported) }
             if !AgentResume.isValidSessionID(action.sessionID) { problems.append(.sessionIDInvalid) }
             if let cwd = action.cwd, !isFolder(cwd) { problems.append(.folderInvalid) }
-            if let account = action.account, ClaudeAccounts.nameProblem(account) != nil {
-                problems.append(.accountInvalid(account))
+            if let account = action.account {
+                if action.agent == .codex {
+                    problems.append(.accountWithCodex)
+                } else if ClaudeAccounts.nameProblem(account) != nil {
+                    problems.append(.accountInvalid(account))
+                }
             }
             problems += promptProblems(action.prompt)
+        case .sendText(let action):
+            if !isStoredTarget(action.target) { problems.append(.targetInvalid) }
+            switch action.to {
+            case .shell: if !isCommand(action.text) { problems.append(.commandInvalid) }
+            case .agent: problems += promptProblems(action.text)
+            }
         }
         return problems
+    }
+
+    /// A target as stored: a pane tag (`t` + 8 hex) or a workspace title of 1…64 characters on one line.
+    static func isStoredTarget(_ target: PaneTarget) -> Bool {
+        switch target {
+        case .tag(let tag): return ScheduleIDs.isValid(tag, prefix: ScheduleIDs.paneTagPrefix)
+        case .workspace(let title):
+            let trimmed = title.trimmingCharacters(in: .whitespaces)
+            return !trimmed.isEmpty && title.count <= ScheduleLimits.maxTitleLength && !hasControlCharacters(title)
+        case .pane: return false
+        }
     }
 
     /// Whether a change is checked with `problems(_:accounts:existing:now:)` in full (also a time that is still ahead
@@ -115,8 +147,8 @@ public enum ScheduleValidation {
     /// Everything checked when a schedule is created or changed: `problems(_:)` plus the accounts it names, a time
     /// that is still ahead, an account limit for `limitReset`, and the number of schedules (`existing`, without this
     /// one).
-    public static func problems(_ draft: ScheduleDraft, accounts: [ClaudeAccount], existing: Int,
-                                now: Date = Date()) -> [ScheduleProblem] {
+    public static func problems(_ draft: ScheduleDraft, accounts: [ClaudeAccount], codex: AgentLimits? = nil,
+                                existing: Int, now: Date = Date()) -> [ScheduleProblem] {
         var problems = problems(draft)
         if existing >= ScheduleLimits.maxSchedules { problems.append(.tooManySchedules) }
         func checkAccount(_ name: String?) {
@@ -135,20 +167,25 @@ public enum ScheduleValidation {
             if at <= now { problems.append(.onceInPast) }
         case .weekly:
             break
-        case .limitReset(let account, _):
+        case .limitReset(let account, _, let repeats):
             if ClaudeAccounts.nameProblem(account) == nil {
                 if let found = accounts.first(where: { $0.hasName(account) }) {
-                    if !found.isLimited(at: now) { problems.append(.accountNotLimited(found.name)) }
+                    // "Every time it resets" does not need a limit now.
+                    if !repeats, !found.isLimited(at: now) { problems.append(.accountNotLimited(found.name)) }
                 } else {
                     problems.append(.accountUnknown(account))
                 }
             }
+        case .codexLimitReset(_, let repeats):
+            if !repeats, !(codex?.exhaustedReset.map { $0 > now } ?? false) { problems.append(.codexNotLimited) }
         }
         switch draft.action {
         case .startWorkspace(let action): checkAccount(action.account)
         case .continueSession(let action):
-            // `auto` is not an account for a session (already reported as invalid).
-            if action.account?.lowercased() != ClaudeAccounts.automatic { checkAccount(action.account) }
+            // `auto` is not an account for a session (already reported as invalid); Codex has none.
+            if action.agent == .claude, action.account?.lowercased() != ClaudeAccounts.automatic { checkAccount(action.account) }
+        case .sendText:
+            break
         }
         return problems
     }

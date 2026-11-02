@@ -66,6 +66,16 @@
         }
       }
     },
+    " + %lld min": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "＋%lld分"
+          }
+        }
+      }
+    },
     " daily": {
       "comment": "after a spend limit: its period",
       "localizations": {
@@ -723,6 +733,26 @@
         }
       }
     },
+    "A Codex session has no account.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codexのセッションにはアカウントを指定できません。"
+          }
+        }
+      }
+    },
+    "A closed pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じたペイン"
+          }
+        }
+      }
+    },
     "A coding agent is running in this workspace. Closing it ends the agent and its terminals.": {
       "localizations": {
         "ja": {
@@ -959,6 +989,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アドバタイズ中（PSM %@）"
+          }
+        }
+      }
+    },
+    "Agent prompt (Claude Code or Codex, when idle)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントへのプロンプト（Claude CodeまたはCodexの待機中）"
           }
         }
       }
@@ -1490,16 +1530,6 @@
         }
       }
     },
-    "Choose a Claude Code session.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude Codeのセッションを選んでください。"
-          }
-        }
-      }
-    },
     "Choose a file to preview": {
       "localizations": {
         "ja": {
@@ -1526,6 +1556,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "中継ホストを選んでください"
+          }
+        }
+      }
+    },
+    "Choose a session.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを選んでください。"
+          }
+        }
+      }
+    },
+    "Choose a terminal pane or give a workspace title.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルのペインを選ぶか、ワークスペースのタイトルを入力してください。"
           }
         }
       }
@@ -1580,16 +1630,6 @@
         }
       }
     },
-    "Claude Code did not start.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude Codeが起動しませんでした。"
-          }
-        }
-      }
-    },
     "Claude Code keeps each session in its config folder’s projects folder. To continue a session under another account, every account’s projects folder becomes a symbolic link to the first account’s. Sessions kept only in a renamed folder are not resumable from there until you move them back yourself.": {
       "localizations": {
         "ja": {
@@ -1600,42 +1640,12 @@
         }
       }
     },
-    "Claude Code started working on the prompt.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude Codeがプロンプトの作業を始めました。"
-          }
-        }
-      }
-    },
-    "Claude Code stayed busy.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude Codeが作業中のままでした。"
-          }
-        }
-      }
-    },
     "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Claude Code のサブエージェントを、各ワークスペースの下にカードで表示します（現在の操作つき）。SubagentStart / SubagentStop フックが必要です。"
-          }
-        }
-      }
-    },
-    "Claude Code was no longer running in the pane.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ペインでClaude Codeが動いていませんでした。"
           }
         }
       }
@@ -1766,6 +1776,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このMacはすでに蓋を閉じてもスリープしない設定ですが、cmdsが行った設定ではないため変更しません。通常のスリープに戻すには、次を実行してください：\n%@"
+          }
+        }
+      }
+    },
+    "Codex has no limit now.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codexは今、上限に達していません。"
           }
         }
       }
@@ -1902,12 +1922,12 @@
         }
       }
     },
-    "Continue a Claude Code session": {
+    "Continue an agent session": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Codeのセッションを続ける"
+            "value": "エージェントのセッションを続ける"
           }
         }
       }
@@ -2337,6 +2357,16 @@
         }
       }
     },
+    "Do not run the selected schedule next time; it goes on after that": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだスケジュールの次回の実行だけを取りやめます。その後の実行は続きます"
+          }
+        }
+      }
+    },
     "Done": {
       "comment": "an agent or subagent finished",
       "localizations": {
@@ -2514,6 +2544,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "ほかのアカウントもすべて上限に達しています。"
+          }
+        }
+      }
+    },
+    "Every time Codex resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codexがリセットされるたび"
+          }
+        }
+      }
+    },
+    "Every time it resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リセットのたびに"
+          }
+        }
+      }
+    },
+    "Every time “%@” resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」がリセットされるたび"
           }
         }
       }
@@ -3846,12 +3906,42 @@
         }
       }
     },
-    "No Claude Code session is known": {
+    "Next schedule": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Codeのセッションが見つかりません"
+            "value": "次のスケジュール"
+          }
+        }
+      }
+    },
+    "Next schedules (Window › Schedules):": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のスケジュール（ウインドウ › スケジュール）："
+          }
+        }
+      }
+    },
+    "No agent session is known": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントのセッションが見つかりません"
+          }
+        }
+      }
+    },
+    "No agent was running in the pane.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインでエージェントが動いていませんでした。"
           }
         }
       }
@@ -3986,6 +4076,16 @@
         }
       }
     },
+    "Notify 1 minute before, with Skip": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1分前に通知（スキップ可）"
+          }
+        }
+      }
+    },
     "Notify Another Pane": {
       "localizations": {
         "ja": {
@@ -4067,12 +4167,12 @@
         }
       }
     },
-    "Only Claude Code sessions can be continued.": {
+    "Only Claude Code and Codex sessions can be continued.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "続けられるのはClaude Codeのセッションだけです。"
+            "value": "続けられるのはClaude CodeとCodexのセッションだけです。"
           }
         }
       }
@@ -4254,6 +4354,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペイン%@（表示中）"
+          }
+        }
+      }
+    },
+    "Pane:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペイン："
           }
         }
       }
@@ -5039,6 +5149,22 @@
         }
       }
     },
+    "Send “%@” to the agent in %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Send “%1$@” to the agent in %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@のエージェントに「%1$@」を送る"
+          }
+        }
+      }
+    },
     "Services": {
       "localizations": {
         "ja": {
@@ -5151,6 +5277,16 @@
         }
       }
     },
+    "Several panes match the target.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対象に当てはまるペインが複数あります。"
+          }
+        }
+      }
+    },
     "Share": {
       "localizations": {
         "ja": {
@@ -5187,6 +5323,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "共有"
+          }
+        }
+      }
+    },
+    "Shell command (at an empty prompt)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェルのコマンド（空のプロンプトで）"
           }
         }
       }
@@ -5368,6 +5514,16 @@
         }
       }
     },
+    "Skip Next Run": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次回をスキップ"
+          }
+        }
+      }
+    },
     "Skip the run": {
       "localizations": {
         "ja": {
@@ -5384,6 +5540,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "スキップ"
+          }
+        }
+      }
+    },
+    "Skipped on request.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指示によりスキップしました。"
           }
         }
       }
@@ -5546,6 +5712,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "開始中…"
+          }
+        }
+      }
+    },
+    "Starts at %@: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Starts at %1$@: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@に開始：%2$@"
           }
         }
       }
@@ -5739,6 +5921,16 @@
         }
       }
     },
+    "Text:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト："
+          }
+        }
+      }
+    },
     "The Mac was asleep or cmds was not running.": {
       "localizations": {
         "ja": {
@@ -5769,12 +5961,52 @@
         }
       }
     },
+    "The agent did not start.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントが起動しませんでした。"
+          }
+        }
+      }
+    },
     "The agent in the pane is not Claude Code.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ペインのエージェントがClaude Codeではありません。"
+          }
+        }
+      }
+    },
+    "The agent in the pane is not Codex.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインのエージェントがCodexではありません。"
+          }
+        }
+      }
+    },
+    "The agent started working on the prompt.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントがプロンプトの作業を始めました。"
+          }
+        }
+      }
+    },
+    "The agent stayed busy.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントが作業中のままでした。"
           }
         }
       }
@@ -5949,6 +6181,26 @@
         }
       }
     },
+    "The only pane of the workspace titled:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のタイトルのワークスペースの唯一のペイン："
+          }
+        }
+      }
+    },
+    "The pane keeps a tag, so the schedule finds it after cmds restarts. A shell command is typed only at an empty prompt, a prompt only into an idle agent that asks nothing; otherwise the run is skipped.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインには目印が付くので、cmdsを再起動してもスケジュールはそのペインを見つけられます。シェルのコマンドは空のプロンプトにだけ、プロンプトは何も尋ねていない待機中のエージェントにだけ入力します。そうでなければ実行をスキップします。"
+          }
+        }
+      }
+    },
     "The pane was closed.": {
       "localizations": {
         "ja": {
@@ -6009,12 +6261,12 @@
         }
       }
     },
-    "The prompt was sent, but Claude Code was not seen working.": {
+    "The prompt was sent, but the agent was not seen working.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プロンプトを送りましたが、Claude Codeが作業を始めたことを確認できませんでした。"
+            "value": "プロンプトを送りましたが、エージェントが作業を始めたことを確認できませんでした。"
           }
         }
       }
@@ -6185,6 +6437,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "sshプロセスが終了しました。再接続すると同じコマンドをもう一度実行します。"
+          }
+        }
+      }
+    },
+    "The target pane was not found.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対象のペインが見つかりませんでした。"
           }
         }
       }
@@ -6506,6 +6768,42 @@
         }
       }
     },
+    "Type as:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力先："
+          }
+        }
+      }
+    },
+    "Type into a pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインに入力する"
+          }
+        }
+      }
+    },
+    "Type “%@” in %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Type “%1$@” in %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@に「%1$@」を入力"
+          }
+        }
+      }
+    },
     "Type “continue” into this session when the limit resets (Window › Schedules)": {
       "localizations": {
         "ja": {
@@ -6666,16 +6964,6 @@
         }
       }
     },
-    "Waiting for Claude Code": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude Codeを待機中"
-          }
-        }
-      }
-    },
     "Waiting for iOS Sync": {
       "localizations": {
         "ja": {
@@ -6692,6 +6980,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アカウントを待機中"
+          }
+        }
+      }
+    },
+    "Waiting for the agent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントを待機中"
           }
         }
       }
@@ -6766,6 +7064,26 @@
         }
       }
     },
+    "When Codex resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codexのリセット時"
+          }
+        }
+      }
+    },
+    "When Codex’s limit resets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codexの上限がリセットされたとき"
+          }
+        }
+      }
+    },
     "When a run fails, is skipped or missed": {
       "localizations": {
         "ja": {
@@ -6792,36 +7110,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」のリセット時"
-          }
-        }
-      }
-    },
-    "When “%@” resets (%@)": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「%1$@」のリセット時（%2$@）"
-          }
-        }
-      }
-    },
-    "When “%@” resets (%@) + %lld min": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「%1$@」のリセット時（%2$@）＋%3$lld分"
-          }
-        }
-      }
-    },
-    "When “%@” resets + %lld min": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「%1$@」のリセット時＋%2$lld分"
           }
         }
       }
@@ -6909,6 +7197,16 @@
         }
       }
     },
+    "Workspace title": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースのタイトル"
+          }
+        }
+      }
+    },
     "Workspaces and their agent sessions, to import into another cmds": {
       "localizations": {
         "ja": {
@@ -6991,6 +7289,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイルを拡大（⇧⌘↩）"
+          }
+        }
+      }
+    },
+    "a closed pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じたペイン"
+          }
+        }
+      }
+    },
+    "a pane of “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」のペイン"
           }
         }
       }
@@ -7388,6 +7706,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースのタイトル（省略可）"
+          }
+        }
+      }
+    },
+    "workspace “%@”": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース「%@」"
           }
         }
       }

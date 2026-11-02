@@ -18,6 +18,11 @@ public enum PaneReadiness {
     public static let unreportedPromptSettleTime: TimeInterval = 1.5
     /// The screen must not change for this long before an agent counts as idle.
     public static let agentIdleTime: TimeInterval = ClaudeAccountSwitchTiming.idleTime
+    /// The same for Codex, which raises no hooks in cmds: its working line counts seconds, so a screen that has not
+    /// changed for this long is not working.
+    public static let codexIdleTime: TimeInterval = 5
+    /// How many of the screen's last non-blank lines `showsWorking` looks at (the agent's status and input area).
+    static let workingLines = 8
 
     /// The cursor sits right after a shell prompt with nothing typed (`AgentResume.isAtEmptyPrompt`), on a screen that
     /// is not blank.
@@ -38,6 +43,24 @@ public enum PaneReadiness {
     public static func isAgentIdle(_ o: PaneObservation) -> Bool {
         ClaudeAccountSwitchTiming.isIdle(agentInForeground: o.foreground == .agent, busy: o.activity == .busy,
                                          subagentRunning: o.subagentRunning, screenUnchangedFor: o.screenUnchangedFor)
+    }
+
+    /// Codex may get a prompt (conservative; Codex has no hooks in cmds). All of:
+    /// - Codex is the foreground process and its session file is matched to the pane (`sessionReported`), so its
+    ///   writes are seen;
+    /// - not busy: no write to its session file for `AgentSignals.reportBusyTimeout` (it appends while it works);
+    /// - the screen has not changed for `codexIdleTime`.
+    /// The caller also checks the screen (`showsWorking`, `ScheduleRunTiming.showsChoice`) and `.needsInput`.
+    public static func isCodexIdle(_ o: PaneObservation, sessionReported: Bool) -> Bool {
+        o.foreground == .agent && sessionReported && o.activity != .busy && !o.subagentRunning
+            && o.screenUnchangedFor >= codexIdleTime
+    }
+
+    /// The last lines of an agent's screen show it working: Claude Code and Codex both show "esc to interrupt" next
+    /// to their working indicator. Only the bottom lines count (older output higher up may quote the words).
+    public static func showsWorking(screen: String) -> Bool {
+        let lines = screen.split(separator: "\n").filter { !$0.allSatisfy(\.isWhitespace) }.suffix(workingLines)
+        return lines.contains { $0.lowercased().contains("esc to interrupt") }
     }
 
     // MARK: Resuming a session

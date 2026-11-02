@@ -790,12 +790,17 @@ final class AppController {
                 guard let pane = workspace.panes[id], pane.ssh == nil, let account = pane.claudeAccount else { return nil }
                 return SessionState.PaneAccount(paneIndex: index, account: account)
             }
+            let paneTags = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneTag? in
+                guard let pane = workspace.panes[id], pane.ssh == nil, let tag = pane.scheduleTag else { return nil }
+                return SessionState.PaneTag(paneIndex: index, tag: tag)
+            }
             return SessionState.WorkspaceState(
                 title: workspace.customTitle, workingDirectory: workspace.workingDirectory,
                 layout: node(root, in: workspace),
                 focusedPaneIndex: workspace.focusedPaneID.flatMap { root.paneIDs.firstIndex(of: $0) },
                 agentSessions: agentSessions.isEmpty ? nil : agentSessions,
-                paneAccounts: paneAccounts.isEmpty ? nil : paneAccounts)
+                paneAccounts: paneAccounts.isEmpty ? nil : paneAccounts,
+                paneTags: paneTags.isEmpty ? nil : paneTags)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -876,6 +881,7 @@ final class AppController {
             workspaces.append(workspace)
             restored.append(workspace)
             restoreAgentSessions(saved.agentSessions, in: workspace, mode: resumeMode)
+            restoreScheduleTags(saved.paneTags, in: workspace)
         }
         return restored
     }

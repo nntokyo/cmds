@@ -14,6 +14,8 @@ final class SystemUsageView: NSView {
     private let stack = NSStackView()
     /// "Awake (lid closed OK)" while closing the lid does not sleep the Mac; click to turn it off.
     private let awakeButton = KeepAwakeIndicator.makeButton()
+    /// The next schedule run (`⏱ Morning tests · 09:00`); click opens Window › Schedules. Hidden when none.
+    private let scheduleButton = NextScheduleIndicator.makeButton()
 
     /// Title column: "CPU"/"Mem" alone, wide enough for "Claude"/"Codex" when agent rows show (meters stay aligned).
     /// Grows for longer translations ("メモリ").
@@ -33,6 +35,7 @@ final class SystemUsageView: NSView {
         cpuRow.applyTextSize()
         memoryRow.applyTextSize()
         KeepAwakeIndicator.applyTextSize(to: awakeButton)
+        NextScheduleIndicator.applyTextSize(to: scheduleButton)
         let width = Self.titleWidth
         cpuRow.titleWidth = width
         memoryRow.titleWidth = width
@@ -44,7 +47,7 @@ final class SystemUsageView: NSView {
         agentStack.alignment = .leading
         agentStack.spacing = 5
         agentStack.isHidden = true
-        stack.setViews([awakeButton, agentStack, cpuRow, memoryRow], in: .top)
+        stack.setViews([scheduleButton, awakeButton, agentStack, cpuRow, memoryRow], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 5
@@ -98,6 +101,10 @@ final class SystemUsageView: NSView {
 
     func update(keepAwake: KeepAwakeStatus) {
         KeepAwakeIndicator.apply(keepAwake, to: awakeButton, compact: false)
+    }
+
+    func update(nextSchedule hint: ScheduleText.NextRunHint?) {
+        NextScheduleIndicator.apply(hint, to: scheduleButton)
     }
 
     func update(sample: SystemSample?) {
@@ -539,5 +546,41 @@ private final class MeterView: NSView {
 
     private var fillFrame: CGRect {
         CGRect(x: 0, y: 0, width: (bounds.width * fraction).rounded(), height: bounds.height)
+    }
+}
+
+/// The sidebar footer's next schedule run (schedules phase 2): `⏱ Morning tests · 09:00`, the next three in the tooltip.
+@MainActor
+enum NextScheduleIndicator {
+    static func makeButton() -> NSButton {
+        let button = NSButton(title: "", target: Opener.shared, action: #selector(Opener.open(_:)))
+        button.isBordered = false
+        button.bezelStyle = .inline
+        button.contentTintColor = .secondaryLabelColor
+        applyTextSize(to: button)
+        button.imagePosition = .imageLeading
+        button.imageHugsTitle = true
+        button.lineBreakMode = .byTruncatingTail
+        button.isHidden = true
+        return button
+    }
+
+    /// Opens the Schedules window (created only when clicked).
+    @MainActor final class Opener: NSObject {
+        static let shared = Opener()
+        @objc func open(_ sender: Any?) { SchedulesWindowController.shared.showWindow(sender) }
+    }
+
+    static func applyTextSize(to button: NSButton) {
+        button.font = .systemFont(ofSize: SidebarTextSize.size(10), weight: .medium)
+        button.image = NSImage(systemSymbolName: "clock", accessibilityDescription: String(localized: "Next schedule"))?
+            .withSymbolConfiguration(.init(pointSize: SidebarTextSize.size(10), weight: .medium))
+    }
+
+    static func apply(_ hint: ScheduleText.NextRunHint?, to button: NSButton) {
+        if button.isHidden != (hint == nil) { button.isHidden = hint == nil }
+        guard let hint else { return }
+        if button.title != hint.title { button.title = hint.title }
+        if button.toolTip != hint.tooltip { button.toolTip = hint.tooltip }
     }
 }

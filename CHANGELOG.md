@@ -22,6 +22,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   transfer wrote. `cmds transfers` and `transfer.*` on the socket (#26).
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
+- Mac: schedules can type into an existing pane (`--send TEXT --to shell|agent`, Type into a pane in the editor): a
+  one-line command at an empty shell prompt, or a prompt into an idle Claude Code or Codex. The pane is chosen by a tag
+  kept in the saved session (it survives a relaunch) or by the title of a one-pane workspace; when no pane or several
+  match, the run is skipped (#45).
+- Mac: schedules continue Codex sessions too (`codex resume`), and run when Codex's limit resets
+  (`--after-codex-limit`). Codex is typed into only when its session file has been quiet for 90 s, its screen has not
+  changed for 5 s and shows no working line or choice (#45).
+- Mac: limit schedules can repeat ("Every time it resets", `--repeat`): one run per new reset, never two for the
+  same one (#45).
+- Mac: a notification a minute before a scheduled run, with Skip (`cmds schedule skip`, Skip Next Run in the
+  window; `--no-warn` turns it off), and the next run in the sidebar's footer (#45).
+
+### Changed
+
+- Mac: schedule runs also wait while Claude Code's screen shows its working line (`esc to interrupt`). Reasons that
+  named Claude Code now say "the agent" (#45).
+- Mac: `schedules.json` is written as version 2 once a schedule uses a feature added here; cmds 0.6 then shows such a
+  file read only instead of running it. Files with only 0.6-style schedules stay at version 1 (#45).
 
 ## [0.6.0] - 2026-11-02
 

@@ -490,6 +490,7 @@ final class SidebarViewController: NSViewController {
         let keepAwake = KeepAwakeManager.shared.status
         compactFooter.update(keepAwake: keepAwake)
         usageFooter.update(keepAwake: keepAwake)
+        usageFooter.update(nextSchedule: ScheduleText.nextRunHint(controller.scheduleRunner.schedules))
         if isCompact {
             compactFooter.update(sample: controller.systemSample)
             compactFooter.update(agentLimits: limits)

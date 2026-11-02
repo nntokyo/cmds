@@ -137,6 +137,9 @@ notification_condition = "always"   # cmds keeps the ring off for the pane you a
 The sidebar then shows Codex's last message when a turn ends or an approval is needed. (`notify = [...]` is left
 alone; it may already be used by other tools.)
 
+[Schedules](schedules.md) can continue a Codex session, type into a Codex pane, or run when Codex's limit resets;
+cmds types into Codex only when its stricter idle rules hold.
+
 Usage needs no setup: cmds finds the session file of each `codex` running in a pane (also when the shared app-server
 daemon writes it) and reads only its session id and directory (`session_meta`), usage events (`token_count`) and model
 (`turn_context`) — never the conversation.
