@@ -26,6 +26,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: the files pane's Git column no longer keeps old `M` / `A` / `?` marks after a commit, `git add` or checkout, or
   after files were edited in another app. It is read again when Git changes the repository and when the window becomes
   active, not only when files are added to or removed from the shown folder (#43).
+- Mac: a damaged `claude-accounts.json` is no longer replaced by the next change to the accounts. It is kept as
+  `claude-accounts.json.corrupt-<time>` in the cmds support folder and cmds says so; a file it cannot read at all is
+  left alone and not saved over (#46).
 
 ## [0.5.0] - 2026-11-02
 
