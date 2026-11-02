@@ -295,9 +295,25 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         fillSessions(including: draft.flatMap { if case .continueSession(let session) = $0.action { return session }; return nil })
         fillTargets(including: draft.flatMap { if case .sendText(let send) = $0.action { return send.target }; return nil })
         warnBox.state = draft?.warn ?? true ? .on : .off
-        delayField.stringValue = "1"
         lateField.stringValue = ""
-        switch draft?.trigger {
+        loadTrigger(draft?.trigger)
+        loadAction(draft?.action)
+        switch draft?.late {
+        case .skip?:
+            latePopup.selectItem(at: 0)
+        case .runIfWithin(let seconds)?:
+            latePopup.selectItem(at: 1)
+            lateField.stringValue = ScheduleLatePolicy.minutesText(seconds)
+        case nil:
+            latePopup.selectItem(at: 1)
+        }
+        notifyPopup.selectItem(at: ScheduleNotify.allCases.firstIndex(of: draft?.notify ?? .failures) ?? 0)
+        if continuePromptField.stringValue.isEmpty { continuePromptField.stringValue = ContinueSession.defaultPrompt }
+    }
+
+    private func loadTrigger(_ trigger: ScheduleTrigger?) {
+        delayField.stringValue = "1"
+        switch trigger {
         case .once(let at)?:
             triggerPopup.selectItem(at: TriggerKind.once.rawValue)
             datePicker.dateValue = at
@@ -310,18 +326,21 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             triggerPopup.selectItem(at: TriggerKind.limit.rawValue)
             if limitAccountPopup.item(withTitle: account) == nil { limitAccountPopup.addItem(withTitle: account) }
             limitAccountPopup.selectItem(withTitle: account)
-            delayField.stringValue = String(Int((delay / 60).rounded()))
+            delayField.stringValue = ScheduleLatePolicy.minutesText(delay)
             repeatBox.state = repeats ? .on : .off
         case .codexLimitReset(let delay, let repeats)?:
             triggerPopup.selectItem(at: TriggerKind.codexLimit.rawValue)
-            delayField.stringValue = String(Int((delay / 60).rounded()))
+            delayField.stringValue = ScheduleLatePolicy.minutesText(delay)
             repeatBox.state = repeats ? .on : .off
         case nil:
             triggerPopup.selectItem(at: TriggerKind.once.rawValue)
             for (day, box) in dayBoxes { box.state = Weekday.workdays.contains(day) ? .on : .off }
             timesField.stringValue = "09:00"
         }
-        switch draft?.action {
+    }
+
+    private func loadAction(_ action: ScheduleAction?) {
+        switch action {
         case .startWorkspace(let start)?:
             actionPopup.selectItem(at: ActionKind.start.rawValue)
             folderField.stringValue = start.cwd
@@ -346,17 +365,6 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             actionPopup.selectItem(at: ActionKind.start.rawValue)
             continuePromptField.stringValue = ContinueSession.defaultPrompt
         }
-        switch draft?.late {
-        case .skip?:
-            latePopup.selectItem(at: 0)
-        case .runIfWithin(let seconds)?:
-            latePopup.selectItem(at: 1)
-            lateField.stringValue = ScheduleLatePolicy.minutesText(seconds)
-        case nil:
-            latePopup.selectItem(at: 1)
-        }
-        notifyPopup.selectItem(at: ScheduleNotify.allCases.firstIndex(of: draft?.notify ?? .failures) ?? 0)
-        if continuePromptField.stringValue.isEmpty { continuePromptField.stringValue = ContinueSession.defaultPrompt }
     }
 
     /// The Claude Code and Codex sessions cmds remembers (local panes), plus the one being edited.
@@ -380,9 +388,13 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             sessionPopup.isEnabled = false
         } else {
             sessionPopup.isEnabled = true
+            // The edited schedule's pane is stored by its tag; the items name panes by id.
+            let controller = AppController.shared
             let index = current.flatMap { session in
-                sessions.firstIndex { $0.sessionID == session.sessionID && $0.pane == session.pane }
-                    ?? sessions.firstIndex { $0.sessionID == session.sessionID }
+                sessions.firstIndex { item in
+                    item.sessionID == session.sessionID && session.paneTag != nil
+                        && item.pane.flatMap(controller.pane(id:))?.scheduleTag == session.paneTag
+                } ?? sessions.firstIndex { $0.sessionID == session.sessionID }
             } ?? 0
             sessionPopup.selectItem(at: index)
         }
@@ -424,54 +436,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     /// The schedule as entered, and problems found while reading the fields (unparsable times or numbers).
     private func draft() -> (ScheduleDraft?, [ScheduleProblem]) {
         var problems: [ScheduleProblem] = []
-        let trigger: ScheduleTrigger
-        switch triggerKind {
-        case .once:
-            trigger = .once(at: datePicker.dateValue)
-        case .weekly:
-            let parts = timesField.stringValue.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-            let times = parts.compactMap(TimeOfDay.init)
-            if times.count != parts.count { problems.append(.timesCount) }
-            let zone = zoneBox.stringValue.trimmingCharacters(in: .whitespaces)
-            trigger = .weekly(WeeklyRule(weekdays: Set(dayBoxes.filter { $0.1.state == .on }.map(\.0)), times: times,
-                                         timeZone: zone.isEmpty ? nil : zone))
-        case .limit, .codexLimit:
-            let minutes = Double(delayField.stringValue.trimmingCharacters(in: .whitespaces)) ?? -1
-            if minutes < 0 { problems.append(.delayOutOfRange) }
-            let repeats = repeatBox.state == .on
-            if triggerKind == .codexLimit {
-                trigger = .codexLimitReset(delay: max(0, minutes) * 60, repeats: repeats)
-            } else {
-                guard let account = limitAccountPopup.titleOfSelectedItem else { return (nil, problems + [.noAccounts]) }
-                trigger = .limitReset(account: account, delay: max(0, minutes) * 60, repeats: repeats)
-            }
-        }
-        let action: ScheduleAction
-        switch actionKind {
-        case .start:
-            let account: String?
-            switch startAccountPopup.indexOfSelectedItem {
-            case 0, -1: account = nil
-            case 1: account = ClaudeAccounts.automatic
-            default: account = startAccountPopup.titleOfSelectedItem
-            }
-            action = .startWorkspace(StartWorkspace(cwd: folderField.stringValue.trimmingCharacters(in: .whitespaces),
-                                                    title: Self.nonEmpty(titleField.stringValue), account: account,
-                                                    command: Self.nonEmpty(commandField.stringValue),
-                                                    prompt: Self.nonEmpty(promptView.string)))
-        case .resume:
-            guard sessionPopup.isEnabled, var session = sessions[safe: sessionPopup.indexOfSelectedItem] else {
-                return (nil, problems + [.sessionIDInvalid])
-            }
-            session.prompt = continuePromptField.stringValue
-            action = .continueSession(session)
-        case .send:
-            let index = targetPopup.indexOfSelectedItem
-            guard index >= 0, index < targets.count else { return (nil, problems + [.targetInvalid]) }
-            let target = targets[index] ?? .workspace(title: targetTitleField.stringValue.trimmingCharacters(in: .whitespaces))
-            action = .sendText(SendText(target: target, text: sendTextField.stringValue,
-                                        to: sendToPopup.indexOfSelectedItem == 1 ? .shell : .agent))
-        }
+        guard let trigger = enteredTrigger(&problems), let action = enteredAction(&problems) else { return (nil, problems) }
         let late: ScheduleLatePolicy
         if latePopup.indexOfSelectedItem == 0 {
             late = .skip
@@ -486,6 +451,64 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
                                   enabled: original?.enabled ?? true, trigger: trigger, action: action, late: late, notify: notify,
                                   warn: warnBox.state == .on)
         return (draft, problems)
+    }
+
+    /// The trigger as entered; nil (with a problem) when it cannot be made.
+    private func enteredTrigger(_ problems: inout [ScheduleProblem]) -> ScheduleTrigger? {
+        switch triggerKind {
+        case .once:
+            return .once(at: datePicker.dateValue)
+        case .weekly:
+            let parts = timesField.stringValue.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+            let times = parts.compactMap(TimeOfDay.init)
+            if times.count != parts.count { problems.append(.timesCount) }
+            let zone = zoneBox.stringValue.trimmingCharacters(in: .whitespaces)
+            return .weekly(WeeklyRule(weekdays: Set(dayBoxes.filter { $0.1.state == .on }.map(\.0)), times: times,
+                                      timeZone: zone.isEmpty ? nil : zone))
+        case .limit, .codexLimit:
+            let minutes = Double(delayField.stringValue.trimmingCharacters(in: .whitespaces)) ?? -1
+            if minutes < 0 { problems.append(.delayOutOfRange) }
+            let repeats = repeatBox.state == .on
+            if triggerKind == .codexLimit { return .codexLimitReset(delay: max(0, minutes) * 60, repeats: repeats) }
+            guard let account = limitAccountPopup.titleOfSelectedItem else {
+                problems.append(.noAccounts)
+                return nil
+            }
+            return .limitReset(account: account, delay: max(0, minutes) * 60, repeats: repeats)
+        }
+    }
+
+    /// The action as entered; nil (with a problem) when it cannot be made.
+    private func enteredAction(_ problems: inout [ScheduleProblem]) -> ScheduleAction? {
+        switch actionKind {
+        case .start:
+            let account: String?
+            switch startAccountPopup.indexOfSelectedItem {
+            case 0, -1: account = nil
+            case 1: account = ClaudeAccounts.automatic
+            default: account = startAccountPopup.titleOfSelectedItem
+            }
+            return .startWorkspace(StartWorkspace(cwd: folderField.stringValue.trimmingCharacters(in: .whitespaces),
+                                                  title: Self.nonEmpty(titleField.stringValue), account: account,
+                                                  command: Self.nonEmpty(commandField.stringValue),
+                                                  prompt: Self.nonEmpty(promptView.string)))
+        case .resume:
+            guard sessionPopup.isEnabled, var session = sessions[safe: sessionPopup.indexOfSelectedItem] else {
+                problems.append(.sessionIDInvalid)
+                return nil
+            }
+            session.prompt = continuePromptField.stringValue
+            return .continueSession(session)
+        case .send:
+            let index = targetPopup.indexOfSelectedItem
+            guard index >= 0, index < targets.count else {
+                problems.append(.targetInvalid)
+                return nil
+            }
+            let target = targets[index] ?? .workspace(title: targetTitleField.stringValue.trimmingCharacters(in: .whitespaces))
+            return .sendText(SendText(target: target, text: sendTextField.stringValue,
+                                      to: sendToPopup.indexOfSelectedItem == 1 ? .shell : .agent))
+        }
     }
 
     private static func nonEmpty(_ text: String) -> String? {

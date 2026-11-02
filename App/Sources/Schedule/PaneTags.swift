@@ -1,8 +1,9 @@
 import Foundation
 import CmdsCore
 
-/// Schedule tags of panes (`Pane.scheduleTag`): how a `sendText` schedule finds its pane again after a relaunch, when
-/// pane ids are reassigned. Saved in `session.json` (`paneTags`), given only when a schedule targets a pane.
+/// Schedule tags of panes (`Pane.scheduleTag`): how a `sendText` schedule (and a `continueSession` one,
+/// `ContinueSession.paneTag`) finds its pane again after a relaunch, when pane ids are reassigned. Saved in
+/// `session.json` (`paneTags`), given only when a schedule names a pane.
 extension AppController {
     /// Every pane as a `sendText` target could match it (`ScheduleTarget.resolve`).
     func scheduleTargetCandidates() -> [ScheduleTarget.Candidate] {
@@ -40,8 +41,9 @@ extension AppController {
         guard let saved, !saved.isEmpty, let root = workspace.root else { return }
         let ids = root.paneIDs
         let entries = saved.compactMap { entry -> (Pane, String)? in
-            guard let pane = ids[safe: entry.paneIndex].flatMap({ workspace.panes[$0] }), pane.kind == .terminal,
-                  pane.ssh == nil else { return nil }
+            guard let pane = ids[safe: entry.paneIndex].flatMap({ workspace.panes[$0] }), Self.isScheduleTarget(pane) else {
+                return nil
+            }
             return (pane, entry.tag)
         }
         let taken = Set(workspaces.filter { $0 !== workspace }.flatMap(\.orderedPanes).compactMap(\.scheduleTag))

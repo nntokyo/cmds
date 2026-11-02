@@ -178,8 +178,9 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
 
 Code: `CmdsCore/Schedule.swift` (model, file format), `ScheduleValidation.swift`, `ScheduleStore.swift` (`schedules.json` /
 `schedule-runs.json`, history retention, API results), `ScheduleCalendar.swift` (next firing, `ScheduleCatchUp`),
-`ScheduleRunTiming.swift` (when a run may type), `ScheduleTarget.swift` (`sendText` targets, `ScheduleNotice`); app:
-`Schedule/ScheduleRunner.swift` (+`Runs`, +`Notice`), `PaneTags.swift`, `ScheduleAPI.swift`,
+`ScheduleRunTiming.swift` (when a run may type), `ScheduleTarget.swift` (`sendText` targets), `ScheduleNotice.swift`;
+app: `Schedule/ScheduleRunner.swift` (+`Runs`, one file per action: +`ContinueSession`, +`SendText`; +`Notice`),
+`PaneTags.swift`, `ScheduleAPI.swift`,
 `SchedulesWindowController.swift`, `ScheduleEditorController.swift`, `ContinueAtReset.swift`, `ScheduleText.swift`;
 CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/schedules.md); design: issue #45.
 
@@ -190,9 +191,12 @@ CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/
   1 for phase-1 schedules, 2 once one uses `sendText`, Codex, `codexLimitReset` or `repeats`, so an older cmds opens
   such a file read only instead of running a repeating trigger once or dropping what it cannot decode.
   `schedule-runs.json` stays at version 1 (unknown reason codes decode as `other`).
-- **Pane tags**: a `sendText` target given as a pane id becomes that pane's `Pane.scheduleTag` (`t` + 8 hex), saved
-  per workspace as `paneTags` in `session.json` and restored (duplicates dropped, `ScheduleTarget.uniqueTags`); a run
-  resolves the tag, or a workspace title, with `ScheduleTarget.resolve` and is skipped when no pane or several match.
+- **Pane tags**: a `sendText` target or a `continueSession` pane given as a pane id becomes that pane's
+  `Pane.scheduleTag` (`t` + 8 hex; `ScheduleRunner.storingPaneTags`), saved per workspace as `paneTags` in
+  `session.json` and restored (duplicates dropped, `ScheduleTarget.uniqueTags`); a run resolves the tag, or a workspace
+  title, with `ScheduleTarget.resolve` and is skipped when no pane or several match. A `continueSession` tag only
+  breaks a tie between panes holding the session (`ContinueSession.paneTag`); pane ids saved by cmds 0.6 are dropped
+  when `schedules.json` is read.
 - **Firing**: one `Timer` (`.common` mode, 1 s tolerance) for the earliest `nextFireAt`, re-armed on every change, on
   `NSWorkspace.didWakeNotification`, clock / zone / day changes and account or Codex limit changes (limit triggers
   follow `ScheduleCalendar.recomputed`: a one-shot moves with the limit, a repeating one fires for a reset after

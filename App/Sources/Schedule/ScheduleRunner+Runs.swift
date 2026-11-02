@@ -31,27 +31,24 @@ final class ActiveScheduleRun {
 }
 
 /// Driving runs: `ScheduleRunTiming.step` decides from an `Observation` of the pane; this file only looks and types.
+/// How each action begins: startWorkspace below, `continueSession` in ScheduleRunner+ContinueSession.swift, `sendText`
+/// in ScheduleRunner+SendText.swift.
 extension ScheduleRunner {
     // MARK: Starting
 
     @discardableResult
     func startRun(_ schedule: Schedule, cause: ScheduleRun.Cause, dueAt: Date) -> ScheduleRun {
-        let now = now()
-        var record = ScheduleRun(id: newRunID(), scheduleID: schedule.id, scheduleName: schedule.name, cause: cause,
-                                 dueAt: dueAt, startedAt: now, state: .waitingForAccount)
         if let refusal = refusal(of: schedule) {
-            record.state = refusal == .invalidSchedule ? .failed : .skipped
-            record.reason = refusal
-            record.endedAt = now
+            let record = recordEndedRun(of: schedule, cause: cause, dueAt: dueAt,
+                                        state: refusal == .invalidSchedule ? .failed : .skipped, reason: refusal, notify: true)
             log(record)
-            addToHistory(record)
-            emit(.run(record))
-            notify(record, schedule: schedule)
             return record
         }
+        let now = now()
+        let record = ScheduleRun(id: newRunID(), scheduleID: schedule.id, scheduleName: schedule.name, cause: cause,
+                                 dueAt: dueAt, startedAt: now, state: .waitingForAccount)
         let run = ActiveScheduleRun(record: record, schedule: schedule, now: now)
-        record.account = runAccount(run)
-        run.record.account = record.account
+        run.record.account = runAccount(run)
         active.append(run)
         log(run.record)
         emit(.run(run.record))
@@ -147,7 +144,7 @@ extension ScheduleRunner {
         move(run, to: .waitingForAgent, now: now)
     }
 
-    private func move(_ run: ActiveScheduleRun, to state: ScheduleRunState, now: Date) {
+    func move(_ run: ActiveScheduleRun, to state: ScheduleRunState, now: Date) {
         run.record.state = state
         run.stateSince = now
         run.screen.reset()
@@ -238,9 +235,8 @@ extension ScheduleRunner {
             guard let cwd = existingFolder(action.cwd) else { return finish(run, .failed, .folderMissing) }
             openWorkspace(for: run, title: action.title ?? run.schedule.name, cwd: cwd, account: account)
             guard let command = action.command else { return finish(run, .succeeded, .workspaceOpened) }
-            run.stages = [.shell(command: command, resume: nil)] + (action.prompt.map { [.agent(prompt: $0)] } ?? [])
-            run.expect = ScheduleRunTiming.Expectation(sessionID: nil, startsAgent: true, ownsPane: true)
-            move(run, to: .waitingForPane, now: now)
+            plan(run, [.shell(command: command, resume: nil)] + (action.prompt.map { [.agent(prompt: $0)] } ?? []),
+                 expect: ScheduleRunTiming.Expectation(sessionID: nil, startsAgent: true, ownsPane: true), now: now)
         case .continueSession(let action):
             beginContinue(run, action, account: account, now: now)
         case .sendText(let action):
@@ -248,79 +244,32 @@ extension ScheduleRunner {
         }
     }
 
-    /// `sendText`: the pane its target names now (never a guess), then the shell command or the agent prompt.
-    private func beginSend(_ run: ActiveScheduleRun, _ action: SendText, now: Date) {
-        let resolution = controller.resolveScheduleTarget(action.target)
-        guard case .pane(let paneID) = resolution, let pane = controller.pane(id: paneID) else {
-            return finish(run, .skipped, resolution.problem ?? .paneNotFound)
-        }
-        run.record.workspace = pane.workspaceID
-        run.record.pane = pane.id
-        if active.contains(where: { $0 !== run && $0.record.pane == pane.id }) { return finish(run, .skipped, .paneInUse) }
-        switch action.to {
-        case .shell:
-            run.stages = [.shell(command: action.text, resume: nil)]
-            run.expect = ScheduleRunTiming.Expectation(agent: nil, startsAgent: false, ownsPane: false)
+    /// What the run types, in order, and what it expects of its pane: it waits for an empty shell prompt when the first
+    /// stage is a command, else for the agent.
+    func plan(_ run: ActiveScheduleRun, _ stages: [ActiveScheduleRun.Stage], expect: ScheduleRunTiming.Expectation, now: Date) {
+        run.stages = stages
+        run.expect = expect
+        if case .shell? = stages.first {
             move(run, to: .waitingForPane, now: now)
-        case .agent:
-            run.stages = [.agent(prompt: action.text)]
-            run.expect = ScheduleRunTiming.Expectation(agent: nil, startsAgent: false, ownsPane: false)
+        } else {
             move(run, to: .waitingForAgent, now: now)
         }
     }
 
-    private func beginContinue(_ run: ActiveScheduleRun, _ action: ContinueSession, account: ClaudeAccount?, now: Date) {
-        let id = action.sessionID
-        let pane: Pane
-        switch sessionPane(action) {
-        case .pane(let found):
-            pane = found
-        case .ambiguous:
-            // Several panes hold it and the schedule's own pane is not one of them: never guess.
-            return finish(run, .skipped, .ambiguousSession)
-        case .none:
-            // (c) No pane holds it: resume it in a new background workspace.
-            guard let folder = action.cwd else { return finish(run, .failed, .sessionNotFound) }
-            guard let cwd = existingFolder(folder) else { return finish(run, .failed, .folderMissing) }
-            let session = resumeSession(action, cwd: cwd, account: account, remembered: nil, now: now)
-            guard let command = AgentResume.command(for: session) else { return finish(run, .failed, .resumeNotPossible) }
-            openWorkspace(for: run, title: run.schedule.name, cwd: cwd, account: account)
-            run.stages = [.shell(command: command, resume: session), .agent(prompt: action.prompt)]
-            run.expect = ScheduleRunTiming.Expectation(agent: action.agent, sessionID: id, startsAgent: true, ownsPane: true)
-            return move(run, to: .waitingForPane, now: now)
-        }
+    /// The run uses `pane` (an existing pane: a `sendText` target, the pane holding a session). False when another
+    /// active run uses it: the run is then skipped.
+    func claim(_ pane: Pane, for run: ActiveScheduleRun) -> Bool {
         run.record.workspace = pane.workspaceID
         run.record.pane = pane.id
-        if active.contains(where: { $0 !== run && $0.record.pane == pane.id }) { return finish(run, .skipped, .paneInUse) }
-        if let usage = pane.agentUsage {
-            // (a) Running: only the same session, under the run's account (else an automatic switch moved it).
-            guard usage.agent == action.agent, usage.sessionID == id else { return finish(run, .skipped, .differentSession) }
-            if action.agent == .claude, let wanted = run.record.account, let current = controller.currentAccount(of: pane),
-               current.caseInsensitiveCompare(wanted) != .orderedSame {
-                return finish(run, .skipped, .movedToOtherAccount)
-            }
-            run.stages = [.agent(prompt: action.prompt)]
-            run.expect = ScheduleRunTiming.Expectation(agent: action.agent, sessionID: id, startsAgent: false, ownsPane: false)
-            return move(run, to: .waitingForAgent, now: now)
+        guard !active.contains(where: { $0 !== run && $0.record.pane == pane.id }) else {
+            finish(run, .skipped, .paneInUse)
+            return false
         }
-        if pane.resumeRequestedAt != nil, pane.resumeOffer?.sessionID == id {
-            // A resume is queued already: it starts the agent; the prompt follows.
-            run.stages = [.agent(prompt: action.prompt)]
-            run.expect = ScheduleRunTiming.Expectation(agent: action.agent, sessionID: id, startsAgent: true, ownsPane: false)
-            return move(run, to: .waitingForAgent, now: now)
-        }
-        // (b) At a shell: type the resume command (under the run's account), then the prompt.
-        let remembered = sessionRecord(id, agent: action.agent, in: pane)
-        let cwd = remembered?.cwd ?? action.cwd
-        let session = resumeSession(action, cwd: cwd, account: account, remembered: remembered, now: now)
-        guard let command = AgentResume.command(for: session) else { return finish(run, .failed, .resumeNotPossible) }
-        run.stages = [.shell(command: command, resume: session), .agent(prompt: action.prompt)]
-        run.expect = ScheduleRunTiming.Expectation(agent: action.agent, sessionID: id, startsAgent: true, ownsPane: false)
-        move(run, to: .waitingForPane, now: now)
+        return true
     }
 
     /// A new background workspace for the run (never selected; the keyboard stays where it is); its pane is the run's.
-    private func openWorkspace(for run: ActiveScheduleRun, title: String, cwd: String, account: ClaudeAccount?) {
+    func openWorkspace(for run: ActiveScheduleRun, title: String, cwd: String, account: ClaudeAccount?) {
         let info = controller.createWorkspace(title: title, cwd: cwd, account: account, select: false)
         run.record.workspace = info.id
         run.record.pane = info.panes.first?.id
@@ -383,47 +332,7 @@ extension ScheduleRunner {
         return pane.terminal
     }
 
-    enum SessionPane {
-        case pane(Pane)
-        case none
-        case ambiguous
-    }
-
-    /// The local terminal pane holding the action's session (`ScheduleRunTiming.sessionPane`): running it, else
-    /// remembering or offering it; the schedule's own pane first.
-    func sessionPane(_ action: ContinueSession) -> SessionPane {
-        let id = action.sessionID
-        let panes = controller.workspaces.flatMap(\.orderedPanes).filter(AppController.isScheduleTarget)
-        let running = panes.filter { $0.agentUsage?.agent == action.agent && $0.agentUsage?.sessionID == id }
-        let remembering = panes.filter { pane in
-            !running.contains { $0 === pane } && sessionRecord(id, agent: action.agent, in: pane) != nil
-        }
-        switch ScheduleRunTiming.sessionPane(preferred: action.pane, running: running.map(\.id),
-                                             remembering: remembering.map(\.id)) {
-        case .pane(let paneID): return panes.first { $0.id == paneID }.map(SessionPane.pane) ?? .none
-        case .none: return .none
-        case .ambiguous: return .ambiguous
-        }
-    }
-
-    func sessionRecord(_ id: String, agent: AgentKind, in pane: Pane) -> AgentSession? {
-        [pane.resumeOffer, pane.agentSession].compactMap { $0 }.first { $0.agent == agent && $0.sessionID == id }
-    }
-
-    /// The session to resume: its remembered details, under `account` (else the account it had; Claude Code only).
-    private func resumeSession(_ action: ContinueSession, cwd: String?, account: ClaudeAccount?, remembered: AgentSession?,
-                               now: Date) -> AgentSession {
-        var session = remembered ?? AgentSession(agent: action.agent, sessionID: action.sessionID)
-        session.cwd = cwd.map { ($0 as NSString).expandingTildeInPath } ?? session.cwd
-        session.lastSeen = now
-        if action.agent == .claude, let account {
-            session.account = account.name
-            session.configDir = ClaudeAccounts.expandedPath(account.configDir)
-        }
-        return session
-    }
-
-    private func existingFolder(_ path: String) -> String? {
+    func existingFolder(_ path: String) -> String? {
         let expanded = (path as NSString).expandingTildeInPath
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: expanded, isDirectory: &isDirectory), isDirectory.boolValue else { return nil }

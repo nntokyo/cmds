@@ -21,9 +21,9 @@ enum ScheduleChange {
 /// - Firing: one timer for the earliest `nextFireAt`, re-armed on every change, after wake, clock, zone and day changes,
 ///   plus a 60 s safety check. A firing time that passed while the Mac slept or cmds was not running gets one
 ///   catch-up run within the late policy, else a missed entry (`ScheduleCatchUp`).
-/// - Runs (ScheduleRunner+Runs.swift): a state machine per run, driven every 0.3 s by `ScheduleRunTiming`. Only the
-///   run's own pane, the pane holding the targeted Claude Code / Codex session, or the pane a `sendText` target names
-///   (`PaneTags.swift`) is typed into, once.
+/// - Runs (ScheduleRunner+Runs.swift, +ContinueSession, +SendText): a state machine per run, driven every 0.3 s by
+///   `ScheduleRunTiming`. Only the run's own pane, the pane holding the targeted Claude Code / Codex session, or the
+///   pane a `sendText` target names (`PaneTags.swift`) is typed into, once.
 /// - Notices (ScheduleRunner+Notice.swift): "starts in 1 minute" with Skip before a scheduled firing.
 /// - Never logs prompts or commands.
 @MainActor
@@ -232,6 +232,7 @@ final class ScheduleRunner {
             schedule.enabled = false
             schedule.nextFireAt = nil
         } else if schedule.trigger.followsLimit {
+            // Cleared first: `recomputed` keeps a pending firing it has not handled, and this one has been.
             schedule.nextFireAt = nil
             schedule.nextFireAt = recomputed(schedule, now: now)
         } else {
@@ -311,13 +312,22 @@ final class ScheduleRunner {
     }
 
     private func recordMissed(_ schedule: Schedule, dueAt: Date) {
-        let now = now()
-        let run = ScheduleRun(id: newRunID(), scheduleID: schedule.id, scheduleName: schedule.name, cause: .scheduled,
-                              dueAt: dueAt, startedAt: now, endedAt: now, state: .missed, reason: .missed)
         scheduleLog.info("schedule \(schedule.id, privacy: .public) missed its run due \(dueAt.timeIntervalSince1970)")
+        recordEndedRun(of: schedule, cause: .scheduled, dueAt: dueAt, state: .missed, reason: .missed, notify: true)
+    }
+
+    /// A run that ends as it starts (missed, skipped by the user, refused): added to the history and sent; `notify`
+    /// tells the user as `notify(_:schedule:)` does.
+    @discardableResult
+    func recordEndedRun(of schedule: Schedule, cause: ScheduleRun.Cause, dueAt: Date, state: ScheduleRunState,
+                        reason: ScheduleReason, notify shouldNotify: Bool) -> ScheduleRun {
+        let now = now()
+        let run = ScheduleRun(id: newRunID(), scheduleID: schedule.id, scheduleName: schedule.name, cause: cause,
+                              dueAt: dueAt, startedAt: now, endedAt: now, state: state, reason: reason)
         addToHistory(run)
         emit(.run(run))
-        notify(run, schedule: schedule)
+        if shouldNotify { notify(run, schedule: schedule) }
+        return run
     }
 
     func newRunID() -> String {
@@ -388,9 +398,9 @@ final class ScheduleRunner {
     /// passed (or whose limit is gone) is fine.
     func problems(_ draft: ScheduleDraft, excluding id: String?, full: Bool) -> [ScheduleProblem] {
         var draft = draft
-        // A pane target (the editor's choice) is checked as the tag it will be stored as.
+        // A pane target (the editor's choice) is checked as the tag it will be stored as (none is given yet).
         if case .sendText(var action) = draft.action, case .pane(let paneID) = action.target,
-           let pane = controller.pane(id: paneID), AppController.isScheduleTarget(pane) {
+           let pane = targetablePane(paneID) {
             action.target = .tag(pane.scheduleTag ?? ScheduleIDs.make(prefix: ScheduleIDs.paneTagPrefix))
             draft.action = .sendText(action)
         }
@@ -412,22 +422,38 @@ final class ScheduleRunner {
         }
     }
 
-    /// A `sendText` target given as a pane (`{"pane": "p3"}`) is stored as that pane's tag (given now if it has none):
-    /// pane ids change when cmds restarts, tags do not. Only a local terminal pane can be a target.
-    func storingTarget(_ draft: ScheduleDraft) throws -> ScheduleDraft {
-        guard case .sendText(var action) = draft.action, case .pane(let id) = action.target else { return draft }
-        guard let pane = controller.pane(id: id) else { throw RPCError.notFound("pane not found: \(id)") }
-        guard AppController.isScheduleTarget(pane) else { throw RPCError.invalidParams(ScheduleProblem.targetInvalid.english) }
-        action.target = .tag(controller.scheduleTag(for: pane))
+    /// A pane given by id is stored as that pane's tag (given now if it has none): pane ids change when cmds restarts,
+    /// tags do not. A `sendText` target (`{"pane": "p3"}`) must be a local terminal pane; a `continueSession` pane only
+    /// breaks a tie between panes holding the session, so one that cannot be targeted is dropped.
+    func storingPaneTags(_ draft: ScheduleDraft) throws -> ScheduleDraft {
         var stored = draft
-        stored.action = .sendText(action)
+        switch draft.action {
+        case .sendText(var action):
+            guard case .pane(let id) = action.target else { return draft }
+            guard controller.pane(id: id) != nil else { throw RPCError.notFound("pane not found: \(id)") }
+            guard let pane = targetablePane(id) else { throw RPCError.invalidParams(ScheduleProblem.targetInvalid.english) }
+            action.target = .tag(controller.scheduleTag(for: pane))
+            stored.action = .sendText(action)
+        case .continueSession(var action):
+            guard let id = action.pane else { return draft }
+            action.paneTag = targetablePane(id).map(controller.scheduleTag(for:))
+            action.pane = nil
+            stored.action = .continueSession(action)
+        case .startWorkspace:
+            break
+        }
         return stored
+    }
+
+    /// Pane `id`, if a schedule can target it (`AppController.isScheduleTarget`).
+    private func targetablePane(_ id: String) -> Pane? {
+        controller.pane(id: id).flatMap { AppController.isScheduleTarget($0) ? $0 : nil }
     }
 
     @discardableResult
     func add(_ draft: ScheduleDraft, origin: ScheduleOrigin) throws -> Schedule {
         try requireWritable()
-        let draft = try storingTarget(draft)
+        let draft = try storingPaneTags(draft)
         try validate(draft, excluding: nil, full: true)
         let now = now()
         var schedule = Schedule(id: ScheduleIDs.make(prefix: ScheduleIDs.schedulePrefix, taken: Set(schedules.map(\.id))),
@@ -449,7 +475,7 @@ final class ScheduleRunner {
         let old = schedules[index]
         var draft = old.draft
         change(&draft)
-        draft = try storingTarget(draft)
+        draft = try storingPaneTags(draft)
         let rearm = ScheduleValidation.needsFullCheck(old: old.draft, new: draft)
         try validate(draft, excluding: id, full: rearm)
         schedules[index].draft = draft
@@ -503,13 +529,10 @@ final class ScheduleRunner {
         if let expected, abs(expected.timeIntervalSince(due)) > 1 {
             throw RPCError.invalidParams("the run of schedule \(id) has already moved")
         }
-        let now = now()
-        let run = ScheduleRun(id: newRunID(), scheduleID: schedule.id, scheduleName: schedule.name, cause: .scheduled,
-                              dueAt: due, startedAt: now, endedAt: now, state: .skipped, reason: .skippedByUser)
         scheduleLog.info("schedule \(id, privacy: .public) skipped its run due \(due.timeIntervalSince1970)")
-        addToHistory(run)
-        emit(.run(run))
-        advance(&schedules[index], due: due, now: now)
+        let run = recordEndedRun(of: schedule, cause: .scheduled, dueAt: due, state: .skipped, reason: .skippedByUser,
+                                 notify: false)
+        advance(&schedules[index], due: due, now: now())
         withdrawNotice(of: id)
         save()
         emit(.schedules(id: id))

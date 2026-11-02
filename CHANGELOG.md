@@ -46,6 +46,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - CLI: `cmds read p2` read the focused pane, not p2: a pane id given without `--pane` was ignored. `cmds read`,
   `cmds browser url` and `cmds browser snapshot` now refuse a bare argument with their usage; use `--pane P` (#61).
+- Mac: a schedule that continues a session held by several panes remembered its pane by id, which changes when cmds
+  restarts, so after a relaunch it could prefer another pane holding the same session. It now keeps the pane's tag in
+  the saved session, as Type into a pane does (`paneTag`). A pane remembered by cmds 0.6 is forgotten; such a run uses
+  the only pane holding the session, or is skipped when several do, until you choose the pane again (#58).
 
 ## [0.6.0] - 2026-11-02
 
