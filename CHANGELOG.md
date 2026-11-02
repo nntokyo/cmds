@@ -21,6 +21,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- Mac: a damaged `claude-accounts.json` is no longer replaced by the next change to the accounts. It is kept as
+  `claude-accounts.json.corrupt-<time>` in the cmds support folder and cmds says so; a file it cannot read at all is
+  left alone and not saved over (#46).
+
 ## [0.5.0] - 2026-11-02
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.

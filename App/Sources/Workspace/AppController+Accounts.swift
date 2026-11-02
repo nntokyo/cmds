@@ -22,11 +22,49 @@ extension AppController {
 
     // MARK: Accounts (account.*)
 
+    /// Set when `claude-accounts.json` could not be read and could not be moved aside: saving would overwrite it (#46).
+    private static var claudeAccountsSaveBlocked = false
+
+    /// The accounts in `claude-accounts.json`. A damaged file is moved aside (kept) and reported, and cmds starts
+    /// without accounts; one that cannot be read stays in place and is never saved over this run (#46).
+    static func loadClaudeAccounts() -> ClaudeAccountSettings {
+        let loaded = ClaudeAccountStore.load(from: ClaudeAccountStore.url())
+        if let error = loaded.error {
+            if let moved = loaded.movedAside {
+                NSLog("cmds: could not read Claude accounts (\(error)); moved them to \(moved.path)")
+                showClaudeAccountsMovedAsideAlert(moved)
+            } else {
+                NSLog("cmds: could not read Claude accounts (\(error)); not saving them this run")
+                claudeAccountsSaveBlocked = true
+            }
+        }
+        return loaded.settings
+    }
+
+    private static func showClaudeAccountsMovedAsideAlert(_ moved: URL) {
+        let name = moved.lastPathComponent
+        DispatchQueue.main.async {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Claude accounts could not be read")
+            alert.informativeText = String(localized: "The damaged file was kept as \(name) in the cmds support folder, and cmds started with an empty one.")
+            alert.addButton(withTitle: String(localized: "OK"))
+            if let window = AppController.shared.window, window.isVisible {
+                alert.beginSheetModal(for: window)
+            } else {
+                alert.runModal()
+            }
+        }
+    }
+
     func saveClaudeAccounts() {
-        do {
-            try ClaudeAccountStore.save(claudeAccounts, to: ClaudeAccountStore.url())
-        } catch {
-            NSLog("cmds: could not save Claude accounts: \(error)")
+        if Self.claudeAccountsSaveBlocked {
+            NSLog("cmds: not saving Claude accounts: claude-accounts.json could not be read")
+        } else {
+            do {
+                try ClaudeAccountStore.save(claudeAccounts, to: ClaudeAccountStore.url())
+            } catch {
+                NSLog("cmds: could not save Claude accounts: \(error)")
+            }
         }
         NotificationCenter.default.post(name: Self.accountsDidChange, object: nil)
     }

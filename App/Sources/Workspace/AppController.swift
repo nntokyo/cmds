@@ -98,7 +98,7 @@ final class AppController {
     var subagentTimer: Timer?
     /// The user's Claude Code accounts (AppController+Accounts.swift), from `claude-accounts.json` in the support
     /// directory. Changed only through AppController+Accounts, which saves it.
-    var claudeAccounts = ClaudeAccountStore.load(from: ClaudeAccountStore.url())
+    var claudeAccounts = AppController.loadClaudeAccounts()
     /// Drives account switches in progress (AppController+Accounts).
     var accountSwitchTimer: Timer?
     /// Schedules (App/Sources/Schedule): started by the app delegate after session restore.
