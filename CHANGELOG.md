@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
+  versions see them as browser panes (#26).
+
+## [0.6.0] - 2026-11-02
+
+Mac only; the iPhone/iPad app is unchanged from 0.4.0.
+
+### Added
+
 - Mac: schedules (Window › Schedules…, Settings › Agents, `cmds schedule`, socket `schedule.*`). Start a workspace in
   the background (folder, account or `auto`, a command typed at its prompt, a first prompt for the Claude Code it
   starts) or continue a remembered Claude Code session (resumed first when it is not running) once, on weekdays at
@@ -18,8 +27,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `schedule.*` is refused on SSH panes' sockets (#45).
 - Mac: when every account has hit its limit, the bar in the pane offers Continue at 15:01 (and the notification
   Continue When It Resets): `continue` is typed into the session after the reset (#45).
-- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
-  versions see them as browser panes (#26).
 
 ### Fixed
 
@@ -234,7 +241,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.5.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.6.0...master
+[0.6.0]: https://github.com/nntokyo/cmds/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nntokyo/cmds/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/nntokyo/cmds/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/nntokyo/cmds/compare/v0.2.1...v0.3.0
