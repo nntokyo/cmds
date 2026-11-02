@@ -173,7 +173,7 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
 
 ### Schedules
 
-Code: `CmdsCore/Schedule.swift` (model, file format), `ScheduleStore.swift` (validation, `schedules.json` /
+Code: `CmdsCore/Schedule.swift` (model, file format), `ScheduleValidation.swift`, `ScheduleStore.swift` (`schedules.json` /
 `schedule-runs.json`, history retention, API results), `ScheduleCalendar.swift` (next firing, `ScheduleCatchUp`),
 `ScheduleRunTiming.swift` (when a run may type); app: `Schedule/ScheduleRunner.swift` (+`Runs`), `ScheduleAPI.swift`,
 `SchedulesWindowController.swift`, `ScheduleEditorController.swift`, `ContinueAtReset.swift`, `ScheduleText.swift`;

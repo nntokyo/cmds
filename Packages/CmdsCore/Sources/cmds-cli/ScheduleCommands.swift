@@ -410,7 +410,7 @@ extension Format {
             } else if let next = entry.nextFireAt, schedule.enabled {
                 line += "  next \(scheduleTime(next, timeZone: timeZone))"
             }
-            if let last = entry.lastRun { line += "  last \(last.state.rawValue) \(AgentResume.relative(last.endedAt ?? last.startedAt, now: now))" }
+            if let last = entry.lastRun { line += "  last \(last.state.rawValue) \(AgentResume.relative(last.lastActivityAt, now: now))" }
             if let problem = entry.problem { line += "  ! \(problem)" }
             out += line + "\n"
         }

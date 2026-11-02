@@ -283,6 +283,16 @@ final class ScheduleValidationTests: XCTestCase {
         }
     }
 
+    /// The API's problem texts name the limits (#47: taken from `ScheduleLimits`).
+    func testProblemTextsNameTheLimits() {
+        XCTAssertEqual(ScheduleProblem.timesTooClose.english, "times of day must be at least 5 minutes apart")
+        XCTAssertEqual(ScheduleProblem.delayOutOfRange.english, "the delay must be 0 to 60 minutes")
+        XCTAssertEqual(ScheduleProblem.lateOutOfRange.english, "a late run must be allowed for 1 minute to 7 days")
+        XCTAssertEqual(ScheduleProblem.commandInvalid.english,
+                       "the command must be one line of at most 1 KB without control characters")
+        XCTAssertEqual(ScheduleProblem.promptTooLong.english, "the prompt must be at most 8 KB")
+    }
+
     func testContinueSession() {
         func problems(_ action: ContinueSession) -> [ScheduleProblem] {
             ScheduleValidation.problems(draft(.once(at: now), .continueSession(action)))
