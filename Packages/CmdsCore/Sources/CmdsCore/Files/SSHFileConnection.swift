@@ -165,10 +165,10 @@ public final class SSHFileConnection: @unchecked Sendable {
     /// The process is still running and the client connected.
     public var isConnected: Bool { process.isRunning && client.isConnected }
 
-    /// Ends the connection (terminates ssh).
+    /// Ends the connection (terminates ssh; requests in flight fail).
     public func close() {
-        client.disconnect()
         if process.isRunning { process.terminate() }
+        client.disconnect()
     }
 
     /// ssh's stderr and exit status, collected off the main thread.

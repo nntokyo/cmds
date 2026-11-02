@@ -66,7 +66,8 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
         tableView.sortDescriptors = [NSSortDescriptor(key: sortKey.rawValue, ascending: ascending)]
         tableView.registerForDraggedTypes([.fileURL, Self.remoteFileType])
         tableView.setDraggingSourceOperationMask([.copy, .move, .generic, .link], forLocal: true)
-        tableView.setDraggingSourceOperationMask([.copy, .move, .generic, .link], forLocal: false)
+        // Remote rows are not files on this Mac: other apps (the Finder) would only get their `host:/path` text.
+        tableView.setDraggingSourceOperationMask(isRemote ? [] : [.copy, .move, .generic, .link], forLocal: false)
         tableView.draggingDestinationFeedbackStyle = .regular
     }
 

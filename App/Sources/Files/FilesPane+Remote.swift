@@ -69,7 +69,8 @@ extension FilesPane {
             select = RemotePath.name(folder)
             folder = RemotePath.parent(folder)
         }
-        let entries = try client.list(folder).map { item -> FileEntry in
+        // Names with `/`, `.`, `..` or NUL from the server are left out (they would escape a folder on the Mac).
+        let entries = try client.list(folder).filter { FileNames.isValid($0.name) }.map { item -> FileEntry in
             var isFolder = item.attributes.fileType == .folder
             if item.attributes.fileType == .symlink {
                 // A link to a folder opens like a folder.

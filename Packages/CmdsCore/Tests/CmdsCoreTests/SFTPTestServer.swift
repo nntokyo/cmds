@@ -40,6 +40,7 @@ final class SFTPTestServer: @unchecked Sendable {
         pipe(&toClient)
         readFD = toServer[0]
         writeFD = toClient[1]
+        _ = fcntl(writeFD, F_SETNOSIGPIPE, 1)
         let transport = FileDescriptorTransport(readFD: toClient[0], writeFD: toServer[1])
         transport.reasonProvider = { "test server closed the connection" }
         client = SFTPClient(transport: transport)

@@ -245,8 +245,10 @@ public final class SFTPFileTree: FileTree {
                         modified: attributes.modified, permissions: attributes.permissions.map { $0 & 0o7777 })
     }
 
+    /// Names the server sends are not trusted: one with a `/`, `.`/`..` or NUL (which would reach outside the folder
+    /// once joined to a path on the Mac) is left out.
     public func list(_ path: String) throws -> [FileItem] {
-        try client.list(path).map { Self.item(name: $0.name, $0.attributes) }
+        try client.list(path).filter { FileNames.isValid($0.name) }.map { Self.item(name: $0.name, $0.attributes) }
     }
 
     public func makeFolder(_ path: String, permissions: UInt32?) throws {

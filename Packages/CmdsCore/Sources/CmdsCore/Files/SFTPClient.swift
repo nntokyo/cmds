@@ -12,7 +12,9 @@ public protocol SFTPTransport: AnyObject, Sendable {
     var closeReason: String? { get }
 }
 
-/// A transport over two file descriptors (pipes). Closing it closes both.
+/// A transport over two file descriptors (pipes). `close` points both at /dev/null (`dup2`) rather than closing them,
+/// so a reader or writer still inside a system call never ends up on a descriptor number the app has reused for
+/// another file; they are closed for good when the transport goes away.
 public final class FileDescriptorTransport: SFTPTransport, @unchecked Sendable {
     private let readFD: Int32
     private let writeFD: Int32
@@ -24,6 +26,8 @@ public final class FileDescriptorTransport: SFTPTransport, @unchecked Sendable {
     public init(readFD: Int32, writeFD: Int32) {
         self.readFD = readFD
         self.writeFD = writeFD
+        // Writing after ssh exited returns EPIPE instead of raising SIGPIPE (which would end the app).
+        _ = fcntl(writeFD, F_SETNOSIGPIPE, 1)
     }
 
     public struct StreamError: Error, CustomStringConvertible {
@@ -69,6 +73,14 @@ public final class FileDescriptorTransport: SFTPTransport, @unchecked Sendable {
         defer { lock.unlock() }
         guard !closed else { return }
         closed = true
+        let null = open("/dev/null", O_RDWR)
+        guard null >= 0 else { return }
+        dup2(null, writeFD)
+        dup2(null, readFD)
+        Darwin.close(null)
+    }
+
+    deinit {
         Darwin.close(writeFD)
         Darwin.close(readFD)
     }
@@ -132,8 +144,13 @@ public final class SFTPClient: @unchecked Sendable {
     private var pending: [UInt32: Pending] = [:]
     private var closedReason: String?
     public private(set) var extensions: [String: String] = [:]
-    /// Called once (on the reader thread) when the connection ends, with the reason for the user.
-    public var onDisconnect: (@Sendable (String) -> Void)?
+    private var disconnectHandler: (@Sendable (String) -> Void)?
+
+    /// Called once (on the thread that noticed) when the connection ends, with the reason for the user.
+    public var onDisconnect: (@Sendable (String) -> Void)? {
+        get { lock.lock(); defer { lock.unlock() }; return disconnectHandler }
+        set { lock.lock(); disconnectHandler = newValue; lock.unlock() }
+    }
 
     public init(transport: SFTPTransport) {
         self.transport = transport
@@ -195,14 +212,12 @@ public final class SFTPClient: @unchecked Sendable {
             body(&writer)
         }
         writeLock.lock()
-        defer { writeLock.unlock() }
-        do {
-            try transport.write(packet)
-        } catch {
-            lock.lock()
-            let removed = pending.removeValue(forKey: id)
-            lock.unlock()
-            removed?.finish(.failure(.disconnected(transport.closeReason ?? "\(error)")))
+        let written = Result { try transport.write(packet) }
+        writeLock.unlock()
+        if case .failure(let error) = written {
+            // The stream is broken (ssh exited): this request and every other one fails.
+            transport.close()
+            fail(transport.closeReason ?? "\(error)")
         }
         return request
     }
@@ -249,9 +264,10 @@ public final class SFTPClient: @unchecked Sendable {
         closedReason = reason
         let waiting = pending
         pending.removeAll()
+        let handler = disconnectHandler
         lock.unlock()
         for request in waiting.values { request.finish(.failure(.disconnected(reason))) }
-        onDisconnect?(reason)
+        handler?(reason)
     }
 
     // MARK: - Operations
