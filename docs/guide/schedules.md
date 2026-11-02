@@ -21,7 +21,7 @@ A schedule has a **trigger** and an **action**.
 | Action | What happens |
 |---|---|
 | Start a workspace | A new workspace opens in a folder, in the background: it is not selected and does not take the keyboard. Optionally under an account (or `auto`, the first account without a limit), with a title, a **command** typed at its shell prompt (e.g. `claude`), and a **first prompt** pasted into the Claude Code that command starts, once it is idle. A weekly schedule opens a new workspace each time |
-| Continue a session | A remembered Claude Code or Codex session gets a prompt (default `continue`). If the agent is running it in a pane, the prompt is pasted there once it is idle. If the pane is at its shell prompt, the session is resumed first (`claude --resume <id>` under the account, or `codex resume <id>`). If no pane holds it any more, it is resumed in a new background workspace in its folder. If several panes hold it, the pane the schedule was made for is used; when that is not one of them, the run is skipped. Codex sessions have no account |
+| Continue a session | A remembered Claude Code or Codex session gets a prompt (default `continue`). If the agent is running it in a pane, the prompt is pasted there once it is idle. If the pane is at its shell prompt, the session is resumed first (`claude --resume <id>` under the account, or `codex resume <id>`). If no pane holds it any more, it is resumed in a new background workspace in its folder. If several panes hold it, the pane the schedule was made for is used (it keeps a tag in the saved session, so this works after cmds restarts too); when that is not one of them, the run is skipped. Codex sessions have no account |
 | Type into a pane | Text goes into a pane you choose (`--send TEXT --to shell\|agent`): **as a shell command** (one line, typed at an empty prompt with Return) or **as an agent prompt** (pasted into Claude Code or Codex once it is idle, then Return). The pane is `--pane P` (default: the pane you run `cmds` in) — it keeps a tag in the saved session, so the schedule finds it again after cmds restarts — or `--workspace TITLE`, the only terminal pane of the workspace with that title. When no pane or several panes match, the run is skipped |
 
 Examples:
@@ -121,4 +121,5 @@ Going back to an older cmds: as long as your schedules only start workspaces and
 cmds 0.6 keeps running them. Once one types into a pane, continues Codex, follows Codex's limit or repeats, the file
 says so (`version` 2) and cmds 0.6 shows the schedules but runs and changes none of them. Pane tags live in
 `session.json`; an older cmds drops them when it saves, and a schedule that targets a pane then skips its runs
-(`the target pane was not found`) until you choose the pane again.
+(`the target pane was not found`) until you choose the pane again (a session schedule then uses the only pane holding
+its session).

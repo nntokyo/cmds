@@ -1,8 +1,9 @@
 import Foundation
 import CmdsCore
 
-/// Schedule tags of panes (`Pane.scheduleTag`): how a `sendText` schedule finds its pane again after a relaunch, when
-/// pane ids are reassigned. Saved in `session.json` (`paneTags`), given only when a schedule targets a pane.
+/// Schedule tags of panes (`Pane.scheduleTag`): how a `sendText` schedule (and a `continueSession` one,
+/// `ContinueSession.paneTag`) finds its pane again after a relaunch, when pane ids are reassigned. Saved in
+/// `session.json` (`paneTags`), given only when a schedule names a pane.
 extension AppController {
     /// Every pane as a `sendText` target could match it (`ScheduleTarget.resolve`).
     func scheduleTargetCandidates() -> [ScheduleTarget.Candidate] {

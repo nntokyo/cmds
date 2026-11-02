@@ -154,8 +154,9 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   account resets, else once), `{"type": "codexLimitReset", "delay", "repeats"?}` (Codex's limit: the latest reset of
   a window at 100 % in its session files). `action`: `{"type": "startWorkspace", "cwd", "title"?, "account"?` (name or
   `auto`), `"command"?, "prompt"?}`; `{"type": "continueSession", "agent": "claude"|"codex", "sessionID", "cwd"?,
-  "account"?, "prompt", "pane"?}` (`pane`: the pane to use when several hold the session; without it, or when it no
-  longer holds it, such a run is skipped with `ambiguousSession`; no `account` for Codex); or `{"type": "sendText",
+  "account"?, "prompt", "pane"?, "paneTag"?}` (`pane`, input only: the pane to use when several hold the session,
+  stored as that pane's tag `paneTag`; without it, or when that pane no longer holds the session, such a run is skipped
+  with `ambiguousSession`; no `account` for Codex); or `{"type": "sendText",
   "target": {"tag"} | {"workspace"}, "text", "to": "shell"|"agent"}` (`tag`: `t` + 8 hex digits, a pane's tag kept in
   `session.json`; `workspace`: the only terminal pane of the workspace with that title). `late`:
   `{"type": "skip"}` or `{"type": "runIfWithin", "seconds"}` (default 21600 for `once`/`limitReset`, 900 for
