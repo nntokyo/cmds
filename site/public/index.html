@@ -52,7 +52,7 @@
       <h1>AIエージェントを、<br><span class="accent">並べて走らせる</span>ターミナル。</h1>
       <p class="lead">cmds は Claude Code や Codex を何本も同時に動かすための、macOS ネイティブのターミナルワークスペースです。どのエージェントが作業中で、どれがあなたの入力を待っているかがサイドバーで分かり、待っているペインはオレンジのリングで光ります。</p>
       <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.7.0/cmds-0.7.0.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
+        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.8.0/cmds-0.8.0.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
         <a class="btn" href="/guide/">使い方を見る</a>
       </div>
       <p class="note">無料・オープンソース（GPL-3.0）。アカウント登録もテレメトリもありません。</p>
@@ -73,7 +73,7 @@
       <div class="grid">
         <div class="card"><h3>縦タブのワークスペース</h3><p>ワークスペースごとに Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態（作業中・入力待ち・完了）とタスク名を表示。フィルタやプロジェクト別のグループ化も。</p></div>
         <div class="card"><h3>通知リング</h3><p>エージェントが許可や入力を求めると、そのペインがオレンジのリングで光り、サイドバーにメッセージが出ます。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。OSC 9/777・ベル・<code>cmds notify</code> に対応。</p></div>
-        <div class="card"><h3>アプリ内ブラウザ</h3><p>WebKit のブラウザをターミナルの隣に。開発サーバーの画面を確認でき、<code>cmds browser eval</code> や <code>snapshot</code> でエージェントからも操作できます。</p></div>
+        <div class="card"><h3>アプリ内ブラウザ</h3><p>WebKit のブラウザをターミナルの隣に。開発サーバーの画面を確認でき、エージェントも Chrome の代わりにここでページを開いて確かめます（MCP サーバー <code>cmds mcp</code> や <code>cmds browser</code>）。</p></div>
         <div class="card"><h3>分割とタイル表示</h3><p>右・下への入れ子の分割、ペインのズーム。複数のワークスペースを最大 9 枚のライブタイルとして並べ、5 つの Claude Code を同時に見ることも。サイドバーからドラッグして配置できます。</p></div>
         <div class="card"><h3>ファイルプレビュー</h3><p>画像、PDF、動画、Office（Quick Look）、GitHub 風の Markdown、色付きの diff。ファイルが変わると自動で再読み込み。ターミナル上のパスを <kbd>⌘</kbd>-クリックでも開けます。</p></div>
         <div class="card"><h3>ファイル一覧ペイン</h3><p>Mac や SSH ホストのフォルダをターミナルの隣に一覧表示。2 つ並べてコピー・移動でき、サーバーとの間のファイルは転送キューで一時停止・再試行も。SSH はいつもの <code>ssh</code> の設定と鍵を使い、パスワードは保存しません。</p></div>
@@ -177,14 +177,14 @@
       <p class="eyebrow">Download</p>
       <h2>ダウンロード</h2>
       <div class="download-box">
-        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.7.0/cmds-0.7.0.dmg">cmds 0.7.0 をダウンロード（DMG、13.9 MB）</a></p>
-        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.7.0">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
+        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.8.0/cmds-0.8.0.dmg">cmds 0.8.0 をダウンロード（DMG、13.9 MB）</a></p>
+        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.8.0">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
         <dl>
-          <dt>ファイル</dt><dd><code>cmds-0.7.0.dmg</code>（13,854,444 バイト、2026-11-02）</dd>
-          <dt>SHA-256</dt><dd><code>c523bc995d68e960a2ca70aea96992f0062c82598c2a540967b55dd5126ead88</code></dd>
+          <dt>ファイル</dt><dd><code>cmds-0.8.0.dmg</code>（13,867,120 バイト、2026-11-03）</dd>
+          <dt>SHA-256</dt><dd><code>bcfe31c12b65150e8f79b4bd434fa6c42c3b8b42299a2d5803d03047eab9c872</code></dd>
           <dt>対応</dt><dd>Apple シリコン、macOS 14 以降</dd>
         </dl>
-        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.7.0.dmg</code> で SHA-256 を照合できます。</p>
+        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.8.0.dmg</code> で SHA-256 を照合できます。</p>
       </div>
     </div>
   </section>

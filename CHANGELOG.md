@@ -9,12 +9,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
+  versions see them as browser panes (#26).
+
+## [0.8.0] - 2026-11-03
+
+Mac only; the iPhone/iPad app is unchanged from 0.4.0.
+
+### Added
+
 - Mac: `cmds mcp`, an MCP server for agents in a cmds terminal (Claude Code, Codex, …): open and check web pages in
   browser panes instead of Chrome (`browser_open`, `browser_eval`, `browser_snapshot` returned as an image, …), show
   files in preview panes, set the sidebar status. Register it with `claude mcp add --scope user cmds -- cmds mcp` or in
   Codex's `config.toml` (#76).
-- iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
-  versions see them as browser panes (#26).
 - cmds skill: inside cmds, agents open and check web pages in a cmds browser pane (`cmds browser open/eval/snapshot`)
   instead of Chrome; the same skill installs for Codex (`~/.codex/skills/cmds/`) (#74).
 
@@ -300,7 +307,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.7.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.8.0...master
+[0.8.0]: https://github.com/nntokyo/cmds/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/nntokyo/cmds/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/nntokyo/cmds/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/nntokyo/cmds/compare/v0.4.0...v0.5.0
