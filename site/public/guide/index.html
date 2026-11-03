@@ -70,7 +70,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>インストールと初回起動</h2>
       <ol>
-        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.7.0/cmds-0.7.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
+        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.8.0/cmds-0.8.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
         <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
         <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
         <li>ウィンドウを閉じても cmds とターミナル（エージェント）は動き続けます。Dock のアイコンか <kbd>⌘N</kbd> でウィンドウが戻ります。エージェントの実行中に終了しようとすると確認が出ます。</li>
@@ -195,6 +195,7 @@ cmds stats                                # ワークスペースごとと Mac �
       <p>ステータスラインのスクリプトがなければ、<code>"statusLine": {"type": "command", "command": "cmds hook claude-status"}</code> だけでも動きます（表示は空になります）。</p>
       <h3>スキルと Codex</h3>
       <ul>
+        <li>MCP サーバー：<code>claude mcp add --scope user cmds -- cmds mcp</code>（Codex は <code>~/.codex/config.toml</code> に <code>[mcp_servers.cmds]</code> <code>command = "cmds"</code> <code>args = ["mcp"]</code>）で登録すると、cmds のターミナルで動くエージェントが Chrome ではなく cmds のブラウザペインで Web ページを開き、スクリーンショットや JavaScript で確認します。ファイルのプレビューやサイドバーの状態表示も使えます。</li>
         <li>スキル：<code>integrations/claude/skills/cmds/SKILL.md</code> を <code>~/.claude/skills/cmds/</code>（Claude Code）や <code>~/.codex/skills/cmds/</code>（Codex）にコピーすると、エージェントがフォーカスを奪わずに補助ペインやプレビューを使い、Web ページを Chrome ではなく cmds のブラウザペインで開くようになります。</li>
         <li>Codex：使用量は設定不要です。通知は <code>~/.codex/config.toml</code> の <code>[tui]</code> に <code>notifications = true</code>、<code>notification_method = "osc9"</code>、<code>notification_condition = "always"</code> を設定します。</li>
       </ul>
@@ -273,7 +274,7 @@ cmds stats                                # ワークスペースごとと Mac �
       </ul>
       <h3>SSH ホストのフォルダ</h3>
       <ul>
-        <li><kbd>⌥⇧⌘E</kbd>（ファイル › 新規リモートファイルパネル…）でホストとフォルダを指定します。SSH ペインで <kbd>⇧⌘E</kbd> を押すと、そのペインのリモートのディレクトリが開きます。ターミナルからは <code>cmds files HOST:PATH</code>。サーバーには何もインストールしません（SFTP）。</li>
+        <li><kbd>⌥⇧⌘E</kbd>（ファイル › 新規リモートファイル一覧ペイン…）でホストとフォルダを指定します。SSH ペインで <kbd>⇧⌘E</kbd> を押すと、そのペインのリモートのディレクトリが開きます。ターミナルからは <code>cmds files HOST:PATH</code>。サーバーには何もインストールしません（SFTP）。</li>
         <li>接続にはいつもの <code>ssh</code>（<code>~/.ssh/config</code>、鍵、エージェント、ジャンプホスト）を使います。cmds はパスワードを尋ねたり保存したりせず、ホスト鍵も追加しません。パスワードだけのホストや、<code>known_hosts</code> にない・変わったホスト鍵は、対処方法を添えて断ります。</li>
         <li>開く・プレビューはダウンロードしたコピー（読み取り専用）で行います。ゴミ箱に入れると、サーバー側のゴミ箱（<code>~/.local/share/Trash</code>）へ移すだけで削除はしません。</li>
       </ul>
@@ -325,7 +326,7 @@ cmds schedule history   # 実行履歴</code></pre>
             <tr><td>すべてのワークスペースを並べて表示</td><td><kbd>⌃⌘T</kbd></td></tr>
             <tr><td>最新の通知へジャンプ</td><td><kbd>⇧⌘U</kbd></td></tr>
             <tr><td>ブラウザで分割 / プレビューで開く</td><td><kbd>⇧⌘B</kbd> / <kbd>⇧⌘O</kbd></td></tr>
-            <tr><td>ファイル一覧ペイン / リモートファイルパネル</td><td><kbd>⇧⌘E</kbd> / <kbd>⌥⇧⌘E</kbd></td></tr>
+            <tr><td>ファイル一覧ペイン / リモートファイル一覧ペイン</td><td><kbd>⇧⌘E</kbd> / <kbd>⌥⇧⌘E</kbd></td></tr>
             <tr><td>もう一方のペインにコピー / 移動</td><td><kbd>F5</kbd> / <kbd>F6</kbd></td></tr>
             <tr><td>転送</td><td><kbd>⌥⌘T</kbd></td></tr>
             <tr><td>アドレスバー / 再読み込み（SSH は再接続） / 戻る / 進む</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>
