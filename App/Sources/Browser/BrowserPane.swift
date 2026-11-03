@@ -110,7 +110,7 @@ final class BrowserPane: NSView {
         // A pane of a workspace that is not shown has no window; render it off screen meanwhile.
         let offscreen = OffscreenRenderHost(hosting: webView)
         defer { offscreen?.release() }
-        if offscreen != nil { try await Task.sleep(for: .milliseconds(500)) }  // let WebKit paint the new size
+        if offscreen != nil { try await Task.sleep(for: OffscreenRenderHost.paintDelay) }
         let image: NSImage = try await withCheckedThrowingContinuation { continuation in
             webView.takeSnapshot(with: nil) { image, error in
                 if let image { continuation.resume(returning: image) } else {

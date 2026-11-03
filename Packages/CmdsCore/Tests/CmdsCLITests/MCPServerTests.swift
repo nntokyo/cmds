@@ -19,12 +19,8 @@ final class MCPServerTests: XCTestCase {
         }
     }
 
-    private func send(_ server: MCPServer, _ line: String) -> JSONValue? {
-        server.handle(line: line)
-    }
-
     private func callTool(_ server: MCPServer, _ name: String, _ arguments: String = "{}") -> JSONValue? {
-        send(server, #"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"\#(name)","arguments":\#(arguments)}}"#)?["result"]
+        server.handle(line: #"{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"\#(name)","arguments":\#(arguments)}}"#)?["result"]
     }
 
     private func text(_ result: JSONValue?) -> String? {
@@ -32,33 +28,33 @@ final class MCPServerTests: XCTestCase {
     }
 
     func testInitializeNegotiatesTheVersionAndGivesInstructions() throws {
-        let response = try XCTUnwrap(send(server(), #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}"#))
+        let response = try XCTUnwrap(server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"t","version":"1"}}}"#))
         XCTAssertEqual(response["id"], .number(1))
         XCTAssertEqual(response["result"]?["protocolVersion"]?.stringValue, "2025-03-26")
         XCTAssertEqual(response["result"]?["serverInfo"]?["name"]?.stringValue, "cmds")
         XCTAssertNotNil(response["result"]?["capabilities"]?["tools"])
         XCTAssertTrue(response["result"]?["instructions"]?.stringValue?.contains("instead of Chrome") == true)
 
-        let unknown = send(server(), #"{"jsonrpc":"2.0","id":"a","method":"initialize","params":{"protocolVersion":"1999-01-01"}}"#)
+        let unknown = server().handle(line: #"{"jsonrpc":"2.0","id":"a","method":"initialize","params":{"protocolVersion":"1999-01-01"}}"#)
         XCTAssertEqual(unknown?["id"], .string("a"))
         XCTAssertEqual(unknown?["result"]?["protocolVersion"]?.stringValue, MCPServer.protocolVersions[0])
     }
 
     func testNotificationsGetNoResponseAndUnknownMethodsAnError() {
         let server = server()
-        XCTAssertNil(send(server, #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#))
-        XCTAssertEqual(send(server, #"{"jsonrpc":"2.0","id":2,"method":"resources/list"}"#)?["error"]?["code"], .number(-32601))
-        XCTAssertEqual(send(server, "not json")?["error"]?["code"], .number(-32700))
-        XCTAssertEqual(send(server, #"{"jsonrpc":"2.0","id":3,"method":"ping"}"#)?["result"], .object([:]))
-        XCTAssertEqual(send(server, #"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"nope"}}"#)?["error"]?["code"], .number(-32602))
+        XCTAssertNil(server.handle(line: #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#))
+        XCTAssertEqual(server.handle(line: #"{"jsonrpc":"2.0","id":2,"method":"resources/list"}"#)?["error"]?["code"], .number(-32601))
+        XCTAssertEqual(server.handle(line: "not json")?["error"]?["code"], .number(-32700))
+        XCTAssertEqual(server.handle(line: #"{"jsonrpc":"2.0","id":3,"method":"ping"}"#)?["result"], .object([:]))
+        XCTAssertEqual(server.handle(line: #"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"nope"}}"#)?["error"]?["code"], .number(-32602))
     }
 
     func testToolsAreListedOnlyInsideCmds() {
-        let inside = send(server(), #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
+        let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot",
                         "open_file", "close_pane", "set_status"])
-        XCTAssertEqual(send(server(inside: false), #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
+        XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
         let result = callTool(server(inside: false), "browser_open", #"{"url":"http://localhost:3000"}"#)
         XCTAssertEqual(result?["isError"], .bool(true))
@@ -123,6 +119,12 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(requests.last?.params["focus"] ?? nil, .bool(false))
         XCTAssertEqual(requests.last?.params["format"] ?? nil, .string("diff"))
         XCTAssertEqual(server.openedPanes, ["p5"])
+    }
+
+    func testSetStatusAcceptsEmptyTextToClear() {
+        XCTAssertEqual(text(callTool(server(), "set_status", #"{"text":""}"#)), "Cleared the status.")
+        XCTAssertEqual(requests.last?.params["workspace"] ?? nil, .string("w1"))
+        XCTAssertEqual(callTool(server(), "set_status")?["isError"], .bool(true))
     }
 
     func testAppErrorsBecomeToolErrors() {

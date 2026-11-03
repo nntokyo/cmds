@@ -7,6 +7,8 @@ import AppKit
 final class OffscreenRenderHost {
     /// Size used when the tree was never laid out (a pane opened while its workspace was hidden).
     static let defaultSize = NSSize(width: 1280, height: 800)
+    /// Time WebKit gets to paint at the new size before the snapshot.
+    static let paintDelay: Duration = .milliseconds(500)
 
     private let root: NSView
     private let window: NSWindow

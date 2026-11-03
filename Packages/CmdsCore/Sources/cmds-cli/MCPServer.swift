@@ -26,6 +26,9 @@ final class MCPServer {
     typealias Call = (_ method: String, _ params: [String: JSONValue?], _ timeout: TimeInterval) throws -> JSONValue
 
     static let protocolVersions = ["2025-06-18", "2025-03-26", "2024-11-05"]
+    /// App API timeouts: most requests, and eval / snapshot, which wait for the page.
+    static let requestTimeout: TimeInterval = 60
+    static let pageTimeout: TimeInterval = 120
 
     static let instructions = """
         You are running inside cmds, a terminal workspace app; these tools act on the cmds window next to your terminal.
@@ -54,8 +57,8 @@ final class MCPServer {
         self.call = call
     }
 
-    var insideCmds: Bool { nonEmpty(environment[CmdsEnv.paneID]) != nil }
     private var envPane: String? { nonEmpty(environment[CmdsEnv.paneID]) }
+    var insideCmds: Bool { envPane != nil }
     private var envWorkspace: String? { nonEmpty(environment[CmdsEnv.workspaceID]) }
 
     /// Reads messages until stdin closes.
@@ -183,9 +186,19 @@ final class MCPServer {
         }
     }
 
-    private func argument(_ arguments: JSONValue, _ key: String) throws -> String {
-        guard let value = nonEmpty(arguments[key]?.stringValue) else { throw ToolError(message: "missing argument: \(key)") }
+    /// A string argument; `allowEmpty` accepts "" (set_status clears with it).
+    private func argument(_ arguments: JSONValue, _ key: String, allowEmpty: Bool = false) throws -> String {
+        guard let value = arguments[key]?.stringValue, allowEmpty || !value.isEmpty else {
+            throw ToolError(message: "missing argument: \(key)")
+        }
         return value
+    }
+
+    /// The id of the pane a request opened, remembered so close_pane accepts it.
+    private func recordOpenedPane(_ result: JSONValue) throws -> String {
+        guard let id = result["id"]?.stringValue else { throw ToolError(message: "the app returned no pane id") }
+        if !openedPanes.contains(id) { openedPanes.append(id) }
+        return id
     }
 
     /// `pane` if given, else the last browser pane we opened, else a workspace hint for the app to pick one.
@@ -198,28 +211,27 @@ final class MCPServer {
         switch name {
         case "browser_open":
             let result = try call("browser.open", ["pane": envPane.json, "url": .string(try argument(arguments, "url")),
-                                                   "focus": .bool(false)], 60)
-            guard let id = result["id"]?.stringValue else { throw ToolError(message: "the app returned no pane id") }
-            openedPanes.append(id)
+                                                   "focus": .bool(false)], Self.requestTimeout)
+            let id = try recordOpenedPane(result)
             lastBrowserPane = id
             return [Self.text("Opened browser pane \(id).")]
         case "browser_navigate":
             let url = try argument(arguments, "url")
-            try call("browser.navigate", browserTarget(arguments).merging(["url": .string(url)]) { $1 }, 60)
+            try call("browser.navigate", browserTarget(arguments).merging(["url": .string(url)]) { $1 }, Self.requestTimeout)
             return [Self.text("Loading \(url).")]
         case "browser_url":
-            let result = try call("browser.get_url", browserTarget(arguments), 60)
+            let result = try call("browser.get_url", browserTarget(arguments), Self.requestTimeout)
             var lines = [result["url"]?.stringValue ?? ""]
             if let title = nonEmpty(result["title"]?.stringValue) { lines.append(title) }
             return [Self.text(lines.joined(separator: "\n"))]
         case "browser_eval":
             let script = try argument(arguments, "script")
-            let result = try call("browser.eval", browserTarget(arguments).merging(["script": .string(script)]) { $1 }, 120)
+            let result = try call("browser.eval", browserTarget(arguments).merging(["script": .string(script)]) { $1 }, Self.pageTimeout)
             let value = result["value"] ?? .null
             if case .string(let string) = value { return [Self.text(string)] }
             return [Self.text(encodeJSON(value, pretty: false))]
         case "browser_snapshot":
-            let result = try call("browser.snapshot", browserTarget(arguments), 120)
+            let result = try call("browser.snapshot", browserTarget(arguments), Self.pageTimeout)
             guard let base64 = result["png_base64"]?.stringValue, !base64.isEmpty else {
                 throw ToolError(message: "the snapshot returned no image")
             }
@@ -234,22 +246,21 @@ final class MCPServer {
             let result = try call("pane.open_file", [
                 "pane": envPane.json, "path": .string(path), "focus": .bool(false),
                 "format": arguments["diff"]?.boolValue == true ? "diff" : nil,
-            ], 60)
-            guard let id = result["id"]?.stringValue else { throw ToolError(message: "the app returned no pane id") }
-            if !openedPanes.contains(id) { openedPanes.append(id) }
+            ], Self.requestTimeout)
+            let id = try recordOpenedPane(result)
             return [Self.text("Showing \(path) in preview pane \(id).")]
         case "close_pane":
             let pane = try argument(arguments, "pane")
             guard openedPanes.contains(pane) else {
                 throw ToolError(message: "\(pane) was not opened by this server; close_pane only closes panes from browser_open or open_file")
             }
-            try call("pane.close", ["pane": .string(pane)], 60)
+            try call("pane.close", ["pane": .string(pane)], Self.requestTimeout)
             openedPanes.removeAll { $0 == pane }
             if lastBrowserPane == pane { lastBrowserPane = nil }
             return [Self.text("Closed \(pane).")]
         case "set_status":
-            guard let text = arguments["text"]?.stringValue else { throw ToolError(message: "missing argument: text") }
-            try call("sidebar.set_status", ["workspace": envWorkspace.json, "text": .string(text)], 60)
+            let text = try argument(arguments, "text", allowEmpty: true)
+            try call("sidebar.set_status", ["workspace": envWorkspace.json, "text": .string(text)], Self.requestTimeout)
             return [Self.text(text.isEmpty ? "Cleared the status." : "Status set.")]
         default:
             throw ToolError(message: "unknown tool: \(name)")
