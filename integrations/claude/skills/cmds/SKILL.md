@@ -22,6 +22,8 @@ cmds のターミナルでは `cmds` CLI が PATH にあり、`CMDS_PANE_ID` / `
 
 cmds の中では、Web ページを開く・確認するときに Chrome（Claude in Chrome、Codex のブラウザ機能、`open <URL>`）を使わず、
 `cmds browser` でブラウザペインを開く。ページがターミナルの隣に出て、ユーザーがエージェントの見ている画面をその場で確かめられる。
+cmds の MCP サーバー（`cmds mcp`。ツール名 `browser_open` / `browser_eval` / `browser_snapshot` / `open_file` / `close_pane` など）が
+使えるなら、同じことをそのツールで行う（スクリーンショットが画像で直接返る）。以下は CLI での手順。
 
 - 開く: `B=$(cmds browser open --no-focus <URL>)`。同じペインで別のページへは `cmds browser navigate --pane "$B" <URL>`。
 - 見る: `cmds browser snapshot --pane "$B" -o /tmp/cmds-page.png`（Read ツールで見る）、`cmds browser url --pane "$B"`。

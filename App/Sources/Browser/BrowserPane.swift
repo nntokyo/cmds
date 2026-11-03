@@ -107,6 +107,10 @@ final class BrowserPane: NSView {
 
     /// PNG of the visible page.
     func snapshot() async throws -> Data {
+        // A pane of a workspace that is not shown has no window; render it off screen meanwhile.
+        let offscreen = OffscreenRenderHost(hosting: webView)
+        defer { offscreen?.release() }
+        if offscreen != nil { try await Task.sleep(for: .milliseconds(500)) }  // let WebKit paint the new size
         let image: NSImage = try await withCheckedThrowingContinuation { continuation in
             webView.takeSnapshot(with: nil) { image, error in
                 if let image { continuation.resume(returning: image) } else {
