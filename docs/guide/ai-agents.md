@@ -1,6 +1,6 @@
 # Using AI coding agents in cmds
 
-> How to connect Claude Code, Codex and other agents to cmds: notifications, usage and limits, the cmds skill,
+> How to connect Claude Code, Codex and other agents to cmds: notifications, usage and limits, the MCP server, the cmds skill,
 > session resume, several Claude accounts and agents on SSH servers.
 
 Each terminal has `cmds` on `PATH` (the copy inside the app bundle) and `CMDS_SOCKET_PATH`, `CMDS_WORKSPACE_ID`,
@@ -125,6 +125,43 @@ mkdir -p ~/.claude/skills/cmds && cp integrations/claude/skills/cmds/SKILL.md ~/
 ```
 
 The same file works as a [Codex skill](#codex-cli).
+
+## MCP server
+
+`cmds mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) for agents that run in a cmds
+terminal. Its tools open and check web pages in cmds browser panes instead of Chrome, show files in preview panes and
+set the sidebar status:
+
+| Tool | Does |
+|---|---|
+| `browser_open` | Open a URL in a browser pane split to the right of the agent's terminal, without taking the focus; returns the pane id |
+| `browser_navigate`, `browser_url` | Load a URL; the URL and title |
+| `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs) |
+| `browser_snapshot` | A PNG of the visible page, returned as an image (also when its workspace is not shown) |
+| `open_file` | Show a file (image, PDF, Markdown, diff, …) in a preview pane |
+| `close_pane` | Close a pane the server opened (never others) |
+| `set_status` | Sidebar status text for the agent's workspace |
+
+The browser tools use the last browser pane the server opened unless given `pane`. The server's instructions tell the
+agent to use these tools rather than Chrome inside cmds, and Chrome only when you ask for it, for pages that need your
+Chrome sign-ins (browser panes do not share them), or for what `browser_eval` cannot do (file uploads). Outside a cmds
+terminal (`CMDS_PANE_ID` not set) the server offers no tools, so registering it for every project is harmless.
+
+Register it once; the agent starts `cmds mcp` itself (`cmds` is on `PATH` in cmds terminals):
+
+```sh
+claude mcp add --scope user cmds -- cmds mcp      # Claude Code
+```
+
+```toml
+# Codex: ~/.codex/config.toml
+[mcp_servers.cmds]
+command = "cmds"
+args = ["mcp"]
+```
+
+Other MCP clients take the same command (`cmds mcp`). The [skill](#skill) adds the working rules around it (helper
+panes, dev servers, when to notify); both can be used together.
 
 ## Codex CLI
 

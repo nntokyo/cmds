@@ -77,6 +77,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds schedule history [id] [--limit N]` | Past runs, newest first (default 20, at most 300): time, `catch-up`/`manual`, result and reason, workspace and pane, account |
 | `cmds export [-o file] [--legacy]` | Workspaces and their agent sessions as a JSON bundle (stdout, or `-o` file created mode 600); for `cmds import` in another (newer) cmds. Falls back to a legacy export from `workspace.list` / `agent.list` when the app has no `state.export` ([below](#moving-workspaces-to-another-cmds)) |
 | `cmds import <file\|-> [--append \| --replace] [--resume ask\|always\|never]` | Recreate a bundle's workspaces (after the open ones, or replacing them) and offer each pane's agent session for resuming (default: the app's resume setting) |
+| `cmds mcp` | MCP server on stdin/stdout for agents: browser panes, previews, sidebar status ([setup](../guide/ai-agents.md#mcp-server)) |
 | `cmds hook claude` | Claude Code `Notification` / `Stop` / `UserPromptSubmit` hook ([setup](../guide/ai-agents.md#claude-code)) |
 | `cmds hook claude-status` | Claude Code status-line reporter ([setup](../guide/ai-agents.md#claude-code)) |
 

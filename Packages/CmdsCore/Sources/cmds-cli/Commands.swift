@@ -85,6 +85,7 @@ extension CLI {
         exportCommand,  // TransferCommands.swift
         importCommand,
     ] + scheduleCommands + filesCommands + [  // ScheduleCommands.swift, FilesCommands.swift
+        mcpCommand,  // MCPServer.swift
         Command(name: "stats", usage: "stats [--watch [seconds]]",
                 summary: "Show CPU and memory use of the Mac and of each workspace's processes.",
                 details: """

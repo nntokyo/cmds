@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: `cmds mcp`, an MCP server for agents in a cmds terminal (Claude Code, Codex, …): open and check web pages in
+  browser panes instead of Chrome (`browser_open`, `browser_eval`, `browser_snapshot` returned as an image, …), show
+  files in preview panes, set the sidebar status. Register it with `claude mcp add --scope user cmds -- cmds mcp` or in
+  Codex's `config.toml` (#76).
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 - cmds skill: inside cmds, agents open and check web pages in a cmds browser pane (`cmds browser open/eval/snapshot`)
@@ -16,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Mac: `cmds browser snapshot` of a browser pane in a workspace that is not shown failed with "PNG encoding failed";
+  the pane is now rendered off screen for the snapshot (#76).
 - Mac (Japanese): File › New Remote Files Pane… is called 新規リモートファイル一覧ペイン…, like 新規ファイル一覧ペイン,
   instead of 新規リモートファイルパネル… (#68).
 
