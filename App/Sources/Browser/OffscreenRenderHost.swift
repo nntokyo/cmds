@@ -20,11 +20,12 @@ final class OffscreenRenderHost {
         while let parent = root.superview { root = parent }
         self.root = root
         let size = root.frame.width >= 1 && root.frame.height >= 1 ? root.frame.size : Self.defaultSize
-        window = NSWindow(contentRect: NSRect(origin: NSPoint(x: -20_000, y: -20_000), size: size),
+        window = RenderOnlyWindow(contentRect: NSRect(origin: NSPoint(x: -20_000, y: -20_000), size: size),
                           styleMask: [.borderless], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.ignoresMouseEvents = true
         window.collectionBehavior = [.transient, .ignoresCycle]
+        window.autorecalculatesKeyViewLoop = false
         root.frame = NSRect(origin: .zero, size: size)
         window.contentView?.addSubview(root)
         window.orderFrontRegardless()
@@ -35,5 +36,17 @@ final class OffscreenRenderHost {
         if root.window === window { root.removeFromSuperview() }
         window.orderOut(nil)
         window.close()
+    }
+}
+
+/// Never key and never gives a view the keyboard: a text field or terminal becoming first responder here would report
+/// focus, and the app would select the hidden workspace (#76).
+private final class RenderOnlyWindow: NSWindow {
+    override var canBecomeKey: Bool { false }
+    override var canBecomeMain: Bool { false }
+
+    override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
+        guard responder == nil || responder === self else { return false }
+        return super.makeFirstResponder(responder)
     }
 }
