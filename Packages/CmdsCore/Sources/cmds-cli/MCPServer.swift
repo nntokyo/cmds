@@ -76,6 +76,7 @@ final class MCPServer {
             return Self.error(id: .null, code: -32700, message: "parse error")
         }
         if case .array(let batch) = message {  // 2025-03-26 batches
+            if batch.isEmpty { return Self.error(id: .null, code: -32600, message: "invalid request: empty batch") }
             let responses = batch.compactMap(handle(message:))
             return responses.isEmpty ? nil : .array(responses)
         }
@@ -201,10 +202,22 @@ final class MCPServer {
         return id
     }
 
-    /// `pane` if given, else the last browser pane we opened, else a workspace hint for the app to pick one.
-    private func browserTarget(_ arguments: JSONValue) -> [String: JSONValue?] {
-        if let pane = nonEmpty(arguments["pane"]?.stringValue) ?? lastBrowserPane { return ["pane": .string(pane)] }
-        return ["workspace": envWorkspace.json]
+    /// A browser_* request to `pane` if given, else the last browser pane we opened, else the workspace's browser pane
+    /// (the app picks it). A last pane the user has meanwhile closed is forgotten and the workspace's pane used instead.
+    private func browserCall(_ method: String, _ arguments: JSONValue, _ params: [String: JSONValue?] = [:],
+                             timeout: TimeInterval) throws -> JSONValue {
+        if let pane = nonEmpty(arguments["pane"]?.stringValue) {
+            return try call(method, params.merging(["pane": .string(pane)]) { $1 }, timeout)
+        }
+        if let pane = lastBrowserPane {
+            do {
+                return try call(method, params.merging(["pane": .string(pane)]) { $1 }, timeout)
+            } catch let error as CLIError where error.message.hasPrefix("pane not found") {
+                lastBrowserPane = nil
+                openedPanes.removeAll { $0 == pane }
+            }
+        }
+        return try call(method, params.merging(["workspace": envWorkspace.json]) { $1 }, timeout)
     }
 
     private func run(_ name: String, _ arguments: JSONValue) throws -> [JSONValue] {
@@ -217,21 +230,21 @@ final class MCPServer {
             return [Self.text("Opened browser pane \(id).")]
         case "browser_navigate":
             let url = try argument(arguments, "url")
-            try call("browser.navigate", browserTarget(arguments).merging(["url": .string(url)]) { $1 }, Self.requestTimeout)
+            try browserCall("browser.navigate", arguments, ["url": .string(url)], timeout: Self.requestTimeout)
             return [Self.text("Loading \(url).")]
         case "browser_url":
-            let result = try call("browser.get_url", browserTarget(arguments), Self.requestTimeout)
+            let result = try browserCall("browser.get_url", arguments, timeout: Self.requestTimeout)
             var lines = [result["url"]?.stringValue ?? ""]
             if let title = nonEmpty(result["title"]?.stringValue) { lines.append(title) }
             return [Self.text(lines.joined(separator: "\n"))]
         case "browser_eval":
             let script = try argument(arguments, "script")
-            let result = try call("browser.eval", browserTarget(arguments).merging(["script": .string(script)]) { $1 }, Self.pageTimeout)
+            let result = try browserCall("browser.eval", arguments, ["script": .string(script)], timeout: Self.pageTimeout)
             let value = result["value"] ?? .null
             if case .string(let string) = value { return [Self.text(string)] }
             return [Self.text(encodeJSON(value, pretty: false))]
         case "browser_snapshot":
-            let result = try call("browser.snapshot", browserTarget(arguments), Self.pageTimeout)
+            let result = try browserCall("browser.snapshot", arguments, timeout: Self.pageTimeout)
             guard let base64 = result["png_base64"]?.stringValue, !base64.isEmpty else {
                 throw ToolError(message: "the snapshot returned no image")
             }
