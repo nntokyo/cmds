@@ -9,12 +9,17 @@ final class MCPServerTests: XCTestCase {
     private var requests: [Request] = []
     private var replies: [String: JSONValue] = [:]
     private var failure: CLIError?
+    /// Panes the stub app no longer has: requests to them fail like the app's "pane not found".
+    private var closedPanes: Set<String> = []
 
     private func server(inside: Bool = true) -> MCPServer {
         let environment = inside ? ["CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1"] : [:]
         return MCPServer(environment: environment) { [unowned self] method, params, _ in
             self.requests.append(Request(method: method, params: params))
             if let failure = self.failure { throw failure }
+            if let pane = params["pane"]??.stringValue, self.closedPanes.contains(pane) {
+                throw CLIError.failure("pane not found: \(pane)")
+            }
             return self.replies[method] ?? .object([:])
         }
     }
@@ -45,6 +50,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertNil(server.handle(line: #"{"jsonrpc":"2.0","method":"notifications/initialized"}"#))
         XCTAssertEqual(server.handle(line: #"{"jsonrpc":"2.0","id":2,"method":"resources/list"}"#)?["error"]?["code"], .number(-32601))
         XCTAssertEqual(server.handle(line: "not json")?["error"]?["code"], .number(-32700))
+        XCTAssertEqual(server.handle(line: "[]")?["error"]?["code"], .number(-32600))
         XCTAssertEqual(server.handle(line: #"{"jsonrpc":"2.0","id":3,"method":"ping"}"#)?["result"], .object([:]))
         XCTAssertEqual(server.handle(line: #"{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"nope"}}"#)?["error"]?["code"], .number(-32602))
     }
@@ -81,6 +87,21 @@ final class MCPServerTests: XCTestCase {
         _ = callTool(server(), "browser_url")
         XCTAssertNil(requests.last?.params["pane"] ?? nil)
         XCTAssertEqual(requests.last?.params["workspace"] ?? nil, .string("w1"))
+    }
+
+    func testAClosedLastPaneFallsBackToTheWorkspace() {
+        let server = server()
+        replies["browser.open"] = .object(["id": "p9"])
+        _ = callTool(server, "browser_open", #"{"url":"https://example.com"}"#)
+        closedPanes = ["p9"]  // the user closed it
+
+        XCTAssertEqual(callTool(server, "browser_url")?["isError"], .bool(false))
+        XCTAssertNil(requests.last?.params["pane"] ?? nil)
+        XCTAssertEqual(requests.last?.params["workspace"] ?? nil, .string("w1"))
+        XCTAssertEqual(server.openedPanes, [])
+
+        // An explicit pane is not replaced: its error is the answer.
+        XCTAssertEqual(callTool(server, "browser_url", #"{"pane":"p9"}"#)?["isError"], .bool(true))
     }
 
     func testSnapshotReturnsAnImage() throws {

@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- `cmds mcp`: after you close the browser pane the server opened, the browser tools use the workspace's browser pane
+  instead of failing, and an empty request batch gets an error (#83).
+- Snapshots of two browser panes in a hidden workspace taken at the same time no longer come out blank (#83).
+
 ## [0.8.0] - 2026-11-03
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.
