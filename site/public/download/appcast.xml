@@ -7,30 +7,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.8.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.8.0</link>
-      <sparkle:version>12</sparkle:version>
-      <sparkle:shortVersionString>0.8.0</sparkle:shortVersionString>
+      <title>cmds 0.8.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.8.1</link>
+      <sparkle:version>13</sparkle:version>
+      <sparkle:shortVersionString>0.8.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Tue, 03 Nov 2026 07:00:05 GMT</pubDate>
+      <pubDate>Wed, 04 Nov 2026 10:16:22 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
-<p>MCP サーバー <code>cmds mcp</code>：cmds のターミナルで動く Claude Code や Codex などのエージェントが、Chrome ではなく cmds のブラウザペインで Web ページを開き、JavaScript やスクリーンショット（画像で返ります）で確認できます。ファイルのプレビュー表示やサイドバーの状態表示もできます。<code>claude mcp add --scope user cmds -- cmds mcp</code>、または Codex の <code>config.toml</code> で登録します。cmds の外では何もしません。</p>
 <h3>修正</h3>
-<p>表示していないワークスペースのブラウザペインで <code>cmds browser snapshot</code> が「PNG encoding failed」で失敗していた問題を直しました。</p>
-<p>日本語のメニュー「新規リモートファイルパネル…」を「新規リモートファイル一覧ペイン…」に改めました。</p>
+<p><code>cmds mcp</code>：MCP サーバーが開いたブラウザペインを閉じた後も、ブラウザの操作がワークスペースのブラウザペインで続けられるようにしました（以前はエラーになっていました）。</p>
+<p>表示していないワークスペースで 2 つのブラウザペインを同時にスナップショットすると、白い画像になることがある問題を直しました。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
-<h3>Added</h3>
-<p>The MCP server <code>cmds mcp</code>: agents in a cmds terminal (Claude Code, Codex, …) open web pages in a cmds browser pane instead of Chrome and check them with JavaScript and screenshots (returned as images). They can also show files in previews and set the sidebar status. Register it with <code>claude mcp add --scope user cmds -- cmds mcp</code> or in Codex's <code>config.toml</code>; outside cmds it does nothing.</p>
 <h3>Fixed</h3>
-<p><code>cmds browser snapshot</code> of a browser pane in a workspace that is not shown failed with "PNG encoding failed".</p>
-<p>Japanese: the menu item for new remote files panes is named like the local one.</p>
+<p><code>cmds mcp</code>: after you close the browser pane the server opened, the browser tools use the workspace's browser pane instead of failing.</p>
+<p>Snapshots of two browser panes in a hidden workspace taken at the same time no longer come out blank.</p>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.8.0/cmds-0.8.0.dmg" length="13867120" type="application/octet-stream" sparkle:edSignature="Z3J9ItVeqMRMCTZ/P0bMmqHJxSlLaae/x/EKEHvS4LiNsPjSeX34OiJh4RP+ZLghfq+8tqG9vU5CUbl7c6P9Cw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.8.1/cmds-0.8.1.dmg" length="13867262" type="application/octet-stream" sparkle:edSignature="XZgvNiniLqEAgZFgiblk4sKABRckkZf80jsxIqzfEPtFvBQm2+gd3w7AgH476sX2pBcAGPWV3RNE2rYhQ4iYDQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: h2a0vUGDKeM69O2L3DvduevBetifq/0rhk2JWveBz/5kuSN0PjC3kljkFZ2iSf2p8t2KMeJ7oTMrZx+bAmHCCQ==
-length: 3022
+edSignature: v2IZvcec/FO8YE28BefgyOUfFNUI2p3G2/MU5RV5qA07imoBGS7xmGroCKQnkAxIcf0SC8KMgNwDYrJBjEqWBg==
+length: 2156
 -->
