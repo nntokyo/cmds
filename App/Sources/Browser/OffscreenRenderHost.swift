@@ -17,16 +17,13 @@ final class OffscreenRenderHost {
     /// Nil when `view` is in a regular window.
     init?(hosting view: NSView) {
         if let shared = view.window as? RenderOnlyWindow {  // another snapshot of this workspace is under way
-            var root = view
-            while let parent = root.superview, parent !== shared.contentView { root = parent }
-            self.root = root
+            root = Self.root(of: view, below: shared.contentView)
             window = shared
             shared.hosts += 1
             return
         }
         guard view.window == nil else { return nil }
-        var root = view
-        while let parent = root.superview { root = parent }
+        let root = Self.root(of: view, below: nil)
         self.root = root
         let size = root.frame.width >= 1 && root.frame.height >= 1 ? root.frame.size : Self.defaultSize
         window = RenderOnlyWindow(contentRect: NSRect(origin: NSPoint(x: -20_000, y: -20_000), size: size),
@@ -40,6 +37,13 @@ final class OffscreenRenderHost {
         window.contentView?.addSubview(root)
         window.orderFrontRegardless()
         root.layoutSubtreeIfNeeded()
+    }
+
+    /// The topmost ancestor of `view` below `container` (nil: the topmost ancestor).
+    private static func root(of view: NSView, below container: NSView?) -> NSView {
+        var root = view
+        while let parent = root.superview, parent !== container { root = parent }
+        return root
     }
 
     func release() {
