@@ -206,18 +206,19 @@ final class MCPServer {
     /// (the app picks it). A last pane the user has meanwhile closed is forgotten and the workspace's pane used instead.
     private func browserCall(_ method: String, _ arguments: JSONValue, _ params: [String: JSONValue?] = [:],
                              timeout: TimeInterval) throws -> JSONValue {
-        if let pane = nonEmpty(arguments["pane"]?.stringValue) {
-            return try call(method, params.merging(["pane": .string(pane)]) { $1 }, timeout)
+        func send(_ target: [String: JSONValue?]) throws -> JSONValue {
+            try call(method, params.merging(target) { $1 }, timeout)
         }
+        if let pane = nonEmpty(arguments["pane"]?.stringValue) { return try send(["pane": .string(pane)]) }
         if let pane = lastBrowserPane {
             do {
-                return try call(method, params.merging(["pane": .string(pane)]) { $1 }, timeout)
+                return try send(["pane": .string(pane)])
             } catch let error as CLIError where error.message.hasPrefix("pane not found") {
                 lastBrowserPane = nil
                 openedPanes.removeAll { $0 == pane }
             }
         }
-        return try call(method, params.merging(["workspace": envWorkspace.json]) { $1 }, timeout)
+        return try send(["workspace": envWorkspace.json])
     }
 
     private func run(_ name: String, _ arguments: JSONValue) throws -> [JSONValue] {
