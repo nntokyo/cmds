@@ -70,6 +70,11 @@ final class BrowserPane: NSView {
         if webView.url == nil || addressField.stringValue.isEmpty { focusAddressBar() } else { window?.makeFirstResponder(webView) }
     }
 
+    /// `userInfo` key of the message of a JavaScript exception in WebKit errors ("Error: …").
+    static let javaScriptExceptionMessageKey = "WKJavaScriptExceptionMessage"
+    /// Script ending of both evaluation paths: `value` as JSON text, null for undefined.
+    private static let returnValueAsJSON = "return value === undefined ? null : JSON.stringify(value);"
+
     /// Runs `script` in the page and returns its JSON form (promises are awaited).
     /// An expression may use `await` (`await fetch("/api").then(r => r.json())`); a statement list keeps
     /// eval's completion value (`const a = 1; a + 1`), or, when it uses top-level `await`, runs as an async
@@ -98,7 +103,7 @@ final class BrowserPane: NSView {
             } else {
               value = await new AsyncFunction(src)();
             }
-            return value === undefined ? null : JSON.stringify(value);
+            \(Self.returnValueAsJSON)
             """
         // The page's eval check comes first, so nothing of the script has run when it falls back.
         let result = try await webView.callAsyncJavaScript(body, arguments: ["__cmdsScript": script], in: nil,
@@ -119,11 +124,11 @@ final class BrowserPane: NSView {
             let result = try await webView.callAsyncJavaScript("""
                 let value;
                 try { value = \(value); } catch (e) { return { cmdsThrew: String(e) }; }
-                return value === undefined ? null : JSON.stringify(value);
+                \(Self.returnValueAsJSON)
                 """, arguments: [:], in: nil, contentWorld: .page)
             if let thrown = result as? [String: Any], let message = thrown["cmdsThrew"] as? String {
                 return .failure(NSError(domain: WKError.errorDomain, code: WKError.javaScriptExceptionOccurred.rawValue,
-                                        userInfo: ["WKJavaScriptExceptionMessage": message]))
+                                        userInfo: [Self.javaScriptExceptionMessageKey: message]))
             }
             return .success(Self.decodeEvaluation(result))
         }
@@ -131,7 +136,7 @@ final class BrowserPane: NSView {
         do {
             result = try await run("await (\n\(script)\n)")
         } catch let error as WKError where error.code == .javaScriptExceptionOccurred
-                    && (error.userInfo["WKJavaScriptExceptionMessage"] as? String)?.hasPrefix("SyntaxError") == true {
+                    && (error.userInfo[Self.javaScriptExceptionMessageKey] as? String)?.hasPrefix("SyntaxError") == true {
             result = try await run("await (async () => {\n\(script)\n})()")
         }
         return try result.get()
