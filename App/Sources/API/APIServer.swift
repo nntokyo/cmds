@@ -448,7 +448,7 @@ final class APIServer {
     private static func rpcError(_ error: Error) -> RPCError {
         if let error = error as? RPCError { return error }
         let nsError = error as NSError
-        if let message = nsError.userInfo["WKJavaScriptExceptionMessage"] as? String {
+        if let message = nsError.userInfo[BrowserPane.javaScriptExceptionMessageKey] as? String {
             return RPCError(code: internalErrorCode, message: "JavaScript exception: \(message)")
         }
         return RPCError(code: internalErrorCode, message: nsError.localizedDescription)
