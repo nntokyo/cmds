@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- Mac: `cmds browser eval` and the MCP `browser_eval` failed with "EvalError: Refused to evaluate a string as
+  JavaScript" on pages whose Content Security Policy forbids `unsafe-eval` (GitHub, many production sites). There
+  the script now runs as an expression, or as a function body whose value is what it `return`s (#88).
+
 ## [0.8.1] - 2026-11-04
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.

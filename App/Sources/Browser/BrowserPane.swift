@@ -73,10 +73,11 @@ final class BrowserPane: NSView {
     /// Runs `script` in the page and returns its JSON form (promises are awaited).
     /// An expression may use `await` (`await fetch("/api").then(r => r.json())`); a statement list keeps
     /// eval's completion value (`const a = 1; a + 1`), or, when it uses top-level `await`, runs as an async
-    /// function body whose value is what it `return`s.
+    /// function body whose value is what it `return`s. Pages that refuse eval: `evaluateWithoutEval`.
     func evaluateJavaScript(_ script: String) async throws -> JSONValue {
         // Parse checks use the Function constructors, which compile without running the script.
         let body = """
+            try { new Function(""); } catch (e) { if (e instanceof EvalError) return { cmdsNoEval: true }; throw e; }
             const AsyncFunction = (async function () {}).constructor;
             const parses = (make) => {
               try { make(); return true; } catch (e) { if (e instanceof SyntaxError) return false; throw e; }
@@ -99,8 +100,44 @@ final class BrowserPane: NSView {
             }
             return value === undefined ? null : JSON.stringify(value);
             """
-        let result = try await webView.callAsyncJavaScript(body, arguments: ["__cmdsScript": script],
-                                                          in: nil, contentWorld: .page)
+        // The page's eval check comes first, so nothing of the script has run when it falls back.
+        let result = try await webView.callAsyncJavaScript(body, arguments: ["__cmdsScript": script], in: nil,
+                                                           contentWorld: .page)
+        if let refused = result as? [String: Any], refused["cmdsNoEval"] as? Bool == true {
+            return try await evaluateWithoutEval(script)
+        }
+        return Self.decodeEvaluation(result)
+    }
+
+    /// For pages whose Content Security Policy refuses eval and the Function constructors (no 'unsafe-eval', #88):
+    /// WebKit compiles the script itself, which the page's policy does not cover. The script runs as an expression,
+    /// else as an async function body whose value is what it `return`s (a statement list's last value is not kept).
+    /// Only a failure to parse moves on to the body form; what the script throws is its result, so it runs once.
+    private func evaluateWithoutEval(_ script: String) async throws -> JSONValue {
+        /// The value, or the message of what the script threw. WebKit throws only when the source does not parse.
+        func run(_ value: String) async throws -> Result<JSONValue, NSError> {
+            let result = try await webView.callAsyncJavaScript("""
+                let value;
+                try { value = \(value); } catch (e) { return { cmdsThrew: String(e) }; }
+                return value === undefined ? null : JSON.stringify(value);
+                """, arguments: [:], in: nil, contentWorld: .page)
+            if let thrown = result as? [String: Any], let message = thrown["cmdsThrew"] as? String {
+                return .failure(NSError(domain: WKError.errorDomain, code: WKError.javaScriptExceptionOccurred.rawValue,
+                                        userInfo: ["WKJavaScriptExceptionMessage": message]))
+            }
+            return .success(Self.decodeEvaluation(result))
+        }
+        let result: Result<JSONValue, NSError>
+        do {
+            result = try await run("await (\n\(script)\n)")
+        } catch let error as WKError where error.code == .javaScriptExceptionOccurred
+                    && (error.userInfo["WKJavaScriptExceptionMessage"] as? String)?.hasPrefix("SyntaxError") == true {
+            result = try await run("await (async () => {\n\(script)\n})()")
+        }
+        return try result.get()
+    }
+
+    private static func decodeEvaluation(_ result: Any?) -> JSONValue {
         guard let json = result as? String, let data = json.data(using: .utf8) else { return .null }
         return (try? JSONDecoder().decode(JSONValue.self, from: data)) ?? .string(json)
     }

@@ -53,7 +53,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds browser open [--pane P] [--no-focus] <url>` | Open a browser split to the right; prints the pane id |
 | `cmds browser navigate [--pane P] <url>` | Load a URL |
 | `cmds browser url [--pane P]` | Print URL and title |
-| `cmds browser eval [--pane P] <script\|->` | Run JavaScript and print the JSON result. Promises are awaited; an expression may use `await`; statements with top-level `await` must `return` their value |
+| `cmds browser eval [--pane P] <script\|->` | Run JavaScript and print the JSON result. Promises are awaited; an expression may use `await`; statements with top-level `await` must `return` their value. Also works on pages whose Content Security Policy forbids `unsafe-eval`; there, statements must always `return` their value |
 | `cmds browser snapshot [--pane P] [-o file.png]` | PNG of the visible page (to stdout when piped) |
 | `cmds events` | Stream `notification`, `workspace.changed`, `pane.changed`, `workspaces.changed`, `schedule.changed`, `schedule.run` events as JSON lines |
 | `cmds rpc <method> [json-params\|-]` | Raw API call, e.g. `cmds rpc pane.split '{"direction":"down"}'` |
