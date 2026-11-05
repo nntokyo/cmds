@@ -7,26 +7,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.8.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.8.1</link>
-      <sparkle:version>13</sparkle:version>
-      <sparkle:shortVersionString>0.8.1</sparkle:shortVersionString>
+      <title>cmds 0.8.2</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.8.2</link>
+      <sparkle:version>14</sparkle:version>
+      <sparkle:shortVersionString>0.8.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Wed, 04 Nov 2026 10:16:22 GMT</pubDate>
+      <pubDate>Thu, 05 Nov 2026 17:26:30 GMT</pubDate>
       <description><![CDATA[
 <h3>修正</h3>
-<p><code>cmds mcp</code>：MCP サーバーが開いたブラウザペインを閉じた後も、ブラウザの操作がワークスペースのブラウザペインで続けられるようにしました（以前はエラーになっていました）。</p>
-<p>表示していないワークスペースで 2 つのブラウザペインを同時にスナップショットすると、白い画像になることがある問題を直しました。</p>
+<p><code>cmds browser eval</code> と MCP の <code>browser_eval</code> が、Content Security Policy で <code>unsafe-eval</code> を禁止しているページ（GitHub や多くの本番サイト）で「EvalError: Refused to evaluate…」となって失敗していた問題を直しました。そうしたページでは、値を <code>return</code> で返してください。</p>
+<p>Codex で <code>cmds mcp</code> のツールが使えなかった問題：Codex は MCP サーバーに cmds の環境変数を渡さないため、<code>~/.codex/config.toml</code> の <code>[mcp_servers.cmds]</code> に <code>env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]</code> を加えてください（ガイドも更新しました）。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
 <h3>Fixed</h3>
-<p><code>cmds mcp</code>: after you close the browser pane the server opened, the browser tools use the workspace's browser pane instead of failing.</p>
-<p>Snapshots of two browser panes in a hidden workspace taken at the same time no longer come out blank.</p>
+<p><code>cmds browser eval</code> and the MCP <code>browser_eval</code> failed with "EvalError: Refused to evaluate…" on pages whose Content Security Policy forbids <code>unsafe-eval</code> (GitHub, many production sites). On such pages, <code>return</code> the value.</p>
+<p>Codex: <code>cmds mcp</code> offered no tools, because Codex does not pass cmds' environment variables to MCP servers. Add <code>env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]</code> to <code>[mcp_servers.cmds]</code> in <code>~/.codex/config.toml</code> (the guide is updated).</p>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.8.1/cmds-0.8.1.dmg" length="13867262" type="application/octet-stream" sparkle:edSignature="XZgvNiniLqEAgZFgiblk4sKABRckkZf80jsxIqzfEPtFvBQm2+gd3w7AgH476sX2pBcAGPWV3RNE2rYhQ4iYDQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.8.2/cmds-0.8.2.dmg" length="13872886" type="application/octet-stream" sparkle:edSignature="rS6HPzniW8QvNFRG3fLyv3iMkvvnvXlxRUambyS5a3pWIEOTcyo9hkHhhrfPx/pTi3v4BQHqcCzrbDntuVGWCA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: v2IZvcec/FO8YE28BefgyOUfFNUI2p3G2/MU5RV5qA07imoBGS7xmGroCKQnkAxIcf0SC8KMgNwDYrJBjEqWBg==
-length: 2156
+edSignature: F3knRIOSjpvoCIHV4hfWYr3Tc9/6AA+GdCnfGJofUmrj4jQvukGb/aSZqPxQvw4cMBF0ALlffWHXnaBd0MLBDw==
+length: 2786
 -->
