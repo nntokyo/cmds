@@ -42,7 +42,9 @@ final class MCPServer {
 
     static let notInsideCmds = """
         Not running inside a cmds terminal (CMDS_PANE_ID is not set), so cmds offers no tools here. Start the agent in \
-        a cmds terminal to use cmds browser panes and previews.
+        a cmds terminal to use cmds browser panes and previews. In a cmds terminal, an agent that starts MCP servers \
+        with a cleaned environment must pass on CMDS_PANE_ID, CMDS_WORKSPACE_ID and CMDS_SOCKET_PATH (Codex: \
+        env_vars in [mcp_servers.cmds]).
         """
 
     private let environment: [String: String]

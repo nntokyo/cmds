@@ -12,6 +12,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- Codex: `cmds mcp` offered no tools, because Codex starts MCP servers without the `CMDS_*` variables. The Codex
+  setup in the guide adds `env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]`, and `cmds mcp`
+  outside a cmds terminal says so (#90).
+
 ## [0.8.1] - 2026-11-04
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.

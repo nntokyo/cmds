@@ -158,6 +158,8 @@ claude mcp add --scope user cmds -- cmds mcp      # Claude Code
 [mcp_servers.cmds]
 command = "cmds"
 args = ["mcp"]
+# Codex starts MCP servers with a cleaned environment; pass on the variables that tell cmds which terminal it runs in.
+env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]
 ```
 
 Other MCP clients take the same command (`cmds mcp`). The [skill](#skill) adds the working rules around it (helper
