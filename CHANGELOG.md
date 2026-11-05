@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: `cmds browser eval` and the MCP `browser_eval` failed with "EvalError: Refused to evaluate a string as
   JavaScript" on pages whose Content Security Policy forbids `unsafe-eval` (GitHub, many production sites). There
   the script now runs as an expression, or as a function body whose value is what it `return`s (#88).
+- Codex: `cmds mcp` offered no tools, because Codex starts MCP servers without the `CMDS_*` variables. The Codex
+  setup in the guide adds `env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]`, and `cmds mcp`
+  outside a cmds terminal says so (#90).
 
 ## [0.8.1] - 2026-11-04
 
