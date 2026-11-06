@@ -7,24 +7,24 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.9.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.9.0</link>
-      <sparkle:version>15</sparkle:version>
-      <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
+      <title>cmds 0.9.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.9.1</link>
+      <sparkle:version>16</sparkle:version>
+      <sparkle:shortVersionString>0.9.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 06 Nov 2026 11:42:56 GMT</pubDate>
+      <pubDate>Fri, 06 Nov 2026 12:58:05 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
-<p>メニューバーに cmds のアイコンが出るようになりました。対応待ちのワークスペースの数をオレンジ、エージェントが作業中の数を青のバッジで示し、作業中はリングが回ります。クリックすると、CPU・メモリと Claude Code / Codex の利用上限をリンググラフで表示し、エージェントが動いたワークスペースの一覧（状態の印と、いまの作業や質問）から、そのペインに移動できます。設定 › エージェント › メニューバーに表示 でオン・オフできます。</p>
+<h3>修正</h3>
+<p>メニューバーのメニューで、ワークスペース名の下の行（エージェントといまの作業）が途切れていた問題を直しました。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
-<h3>Added</h3>
-<p>A cmds icon in the menu bar: an orange badge counts the workspaces that need you, a blue one those with an agent working, with a turning ring while they work. Click it for ring charts of CPU, memory and your Claude Code / Codex limits, and the workspaces where an agent ran, with a state mark and what it is doing or asking; choose one to jump to its pane. Settings › Agents › Show in menu bar.</p>
+<h3>Fixed</h3>
+<p>In the menu bar item's menu, the line under a workspace (the agent and what it is doing) was cut off.</p>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.9.0/cmds-0.9.0.dmg" length="13903218" type="application/octet-stream" sparkle:edSignature="8ut8d6dBtrqeXFSYBCRqcdX04BE2Z3qCTpfttH0AzDbDrC3OzOFprfV5ii0uPY+4TzP+5HnHLypEtJty6bXxBA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.9.1/cmds-0.9.1.dmg" length="13903836" type="application/octet-stream" sparkle:edSignature="5pcJdjSQpmXR0KsgInS31c5OPVz5kngmnnOXAGkXsMf2N0QSIo5ECV5rWMF66bTArlAY4DFmRk3wNPDPK2EaAg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 9ExZq5xB1egCW5mrg0NdaBtkpzD55AgM4hW9K+8qYzQIYR/jCjoM5cG9ClridB9K3BSGn8SBSO6Y2CMogCJOAQ==
-length: 2461
+edSignature: 0AR4aW196UaZYJIhaVpgW8/Cu+dg8wwH2Wl/Zaks2jem7dCPgge1q89mvrYE0B+CSRmsTAojK/TF90ffp4F4Dg==
+length: 1721
 -->
