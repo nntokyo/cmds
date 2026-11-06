@@ -57,7 +57,8 @@ SSH pane instead.
 
 - **Between two files panes**: select items and press F5 to copy or F6 to move them to the other files pane of the
   workspace (or **Pane › Files › Copy to Other Pane / Move to Other Pane**, or the right-click menu). With more than
-  two files panes, "the other" is the one you used last. Tab moves the keyboard to it.
+  two files panes, "the other" is the one you used last; right after cmds restarts, until you use one, it is the first
+  other files pane in the workspace. Tab moves the keyboard to it.
 - **Drag and drop**: drag rows onto the other pane's list, onto a folder in a list, or to and from the Finder. Like
   the Finder, items move within a volume and are copied to another volume; hold ⌥ to copy, ⌘ to move.
 - **Pasteboard**: ⌘C puts the selected items on the pasteboard; ⌘V copies the pasteboard's files into the shown

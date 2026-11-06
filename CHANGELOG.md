@@ -15,6 +15,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- iPhone/iPad: rows with Japanese and other wide characters are laid out on the terminal's cell grid, so the cursor
+  sits right after the text and columns line up; before, the cursor drifted half a cell to the right per wide
+  character (#115).
+- Mac: the 16 px app icon (Finder lists, non-Retina displays) is drawn on the pixel grid, so ">_" reads instead of
+  blurring (#115).
+
 ## [0.10.0] - 2026-11-06
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.

@@ -330,7 +330,7 @@ struct FakeShell {
         if visible.count > rows { visible = Array(visible.suffix(rows)) }
         let cursorRow = visible.count - 1
         while visible.count < rows { visible.append("") }
-        let cursorCol = min(cols - 1, (prompt + current).count)
+        let cursorCol = min(cols - 1, TerminalCells.width(of: prompt + current))  // cells, as the Mac sends it
         return ScreenSnapshot(rows: rows, cols: cols, lines: visible.map { String($0.prefix(cols)) },
                               cursorRow: cursorRow, cursorCol: cursorCol)
     }
@@ -524,6 +524,22 @@ enum MockData {
         ]
         if ProcessInfo.processInfo.arguments.contains("-mockFullScreenTUI") {
             shells["p-agent"]?.fixed = fullScreenTUI()
+        }
+        if ProcessInfo.processInfo.arguments.contains("-mockJapanese") {
+            // Rows with wide (Japanese) characters and the cursor after them, to check the layout on the cell grid
+            // (#115). The dotfiles workspace, like -mockStreamOutput.
+            let prompt = "demo@mac 日本語 % "
+            var shell = FakeShell(prompt: prompt, lines: [
+                prompt + "ls -l",
+                "合計 2",
+                "-rw-r--r--  1 demo  staff  1204 11月  6 14:32 設定メモ.md",
+                "-rw-r--r--  1 demo  staff   880 11月  6 14:30 readme.md",
+                "|名前      |状態    |",
+                "|api-server|作業中  |",
+                "|docs      |完了    |",
+            ])
+            shell.current = "echo こんにちは"
+            shells[streamOutputPaneID] = shell
         }
         if ProcessInfo.processInfo.arguments.contains("-mockStreamOutput") {
             // A command printing numbered lines, 300 of them already, into a full scrollback (a reset every 30 lines).
