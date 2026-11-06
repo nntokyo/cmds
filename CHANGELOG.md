@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Mac: a **cmds** widget for the desktop and Notification Center (small, medium): the badges of the menu bar item,
+  the workspaces that need you (and since when) or are working, and rings for the account limits, CPU and memory.
+  Clicking it opens cmds on that workspace (`cmds://workspace/<id>`) (#96).
+
 ## [0.11.0] - 2026-11-07
 
 Mac and iPhone/iPad. The iPhone/iPad app also brings the 0.4.0 changes that had not reached the App Store (earlier

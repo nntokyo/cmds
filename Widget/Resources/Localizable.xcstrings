@@ -1,0 +1,56 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%lld need you, %lld working" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対応待ち %1$lld・作業中 %2$lld"
+          }
+        }
+      }
+    },
+    "cmds isn't running" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmds が動いていません"
+          }
+        }
+      }
+    },
+    "No agents working" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "作業中のエージェントはありません"
+          }
+        }
+      }
+    },
+    "Open cmds to see your agents here." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmds を開くと、ここにエージェントの様子が出ます。"
+          }
+        }
+      }
+    },
+    "The workspaces that need you, the agents at work, and your limits." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対応待ちのワークスペース、作業中のエージェント、利用上限。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

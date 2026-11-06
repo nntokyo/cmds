@@ -20,6 +20,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
 | `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `+Remote` folders on SSH hosts; `GitStatusReader`), `RemoteConnections` (one SFTP connection per host), `TransferCenter` (the transfer queue, `transfer.*`) and the Transfers window. Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git; `FileLocation`, `SFTPPacket`/`SFTPClient`, `SSHFileConnection`, `FileTree`, `RemoteTrash`, `TransferJob`/`TransferQueue`; [files-sftp.md](files-sftp.md)). |
 | `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs, the 1-minute notice), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), pane tags, the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`, `ScheduleTarget`). |
+| `Widget/Sources` | The cmds widget (#96, WidgetKit extension `CmdsWidget`, embedded at `cmds.app/Contents/PlugIns/CmdsWidget.appex`). It reads `widget.json` (CmdsCore `WidgetSnapshot`), which `WidgetPublisher` in the app writes to the support folder; the extension is sandboxed with a read-only exception for that one file (`Widget/CmdsWidget.entitlements`, resolved from the real home, not the sandbox container). The menu bar item and the widget share `AgentOverview`. Clicks open `cmds://workspace/<id>`. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
@@ -35,7 +36,8 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 
 The Xcode project is generated from `project.yml` with `xcodegen generate` (do not commit `cmds.xcodeproj`).
 Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `cmds.app/Contents/Resources/bin/cmds`),
-`CmdsCompanion` (iOS app; scheme `CmdsCompanion`), `CmdsDeviceDriver` (iOS UI tests; scheme `CmdsDeviceDriver`).
+`CmdsWidget` (the widget extension, embedded in `cmds`), `CmdsCompanion` (iOS app; scheme `CmdsCompanion`),
+`CmdsDeviceDriver` (iOS UI tests; scheme `CmdsDeviceDriver`).
 
 ## Key concepts
 

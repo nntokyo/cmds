@@ -251,6 +251,21 @@ Display › Reduce motion). For the menu: **CPU and memory**, **AI limits (Claud
 agents**. All are on by default; the orange badge always shows. Isolated test instances (`CMDS_SUPPORT_DIR`) leave the
 item off unless their own setting turns it on.
 
+### Widget
+
+The same at a glance on the desktop or in Notification Center: right-click the desktop › **Edit Widgets…** and add
+**cmds** (small or medium).
+
+- **Small**: the badges (orange needs you, blue working, red dot), the workspace that needs you (and since when, else
+  the one working), and the most used account limit.
+- **Medium**: up to four workspaces with their state mark and what the agent does or asks, and three rings (account
+  limits first, then CPU and memory) with the time to their reset.
+
+Clicking the widget, or a workspace in it, brings cmds forward on that workspace. The widget shows what cmds wrote last
+(`~/Library/Application Support/cmds/widget.json`, refreshed within seconds of a change and at least every minute);
+when that is older than five minutes it says "cmds isn't running". Isolated test instances (`CMDS_SUPPORT_DIR`) write
+their own file and never change your widget.
+
 ## Keeping the Mac awake
 
 While cmds runs, the Mac does not go to sleep when idle (**cmds › Prevent Idle Sleep**, on by default, no password).
