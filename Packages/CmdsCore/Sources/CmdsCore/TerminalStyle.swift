@@ -296,3 +296,42 @@ public enum TerminalStyledText {
         }
     }
 }
+
+/// The phone's colours for `TerminalColor`s: its own ANSI 0–15, made for its dark terminal screen (the Mac's theme is
+/// not sent), the xterm 6×6×6 cube for 16–231 and the grey ramp for 232–255; RGB colours as they are.
+public enum TerminalPalette {
+    public struct RGB: Hashable, Sendable {
+        public var r: UInt8, g: UInt8, b: UInt8
+        public init(_ r: UInt8, _ g: UInt8, _ b: UInt8) {
+            self.r = r
+            self.g = g
+            self.b = b
+        }
+    }
+
+    /// ANSI 0–7 and their bright forms 8–15, readable on a near-black background (also black and dark grey, which
+    /// programs use as text colour too).
+    public static let ansi: [RGB] = [
+        RGB(0x4A, 0x4A, 0x4A), RGB(0xEF, 0x5F, 0x58), RGB(0x6B, 0xC4, 0x6D), RGB(0xD9, 0xB5, 0x4A),
+        RGB(0x5A, 0x9C, 0xF5), RGB(0xC6, 0x78, 0xDD), RGB(0x4F, 0xC1, 0xD9), RGB(0xD0, 0xD0, 0xD0),
+        RGB(0x80, 0x80, 0x80), RGB(0xFF, 0x7B, 0x72), RGB(0x8E, 0xE5, 0x9A), RGB(0xF2, 0xD3, 0x6B),
+        RGB(0x82, 0xB6, 0xFF), RGB(0xE0, 0x9C, 0xF0), RGB(0x7F, 0xDD, 0xEE), RGB(0xFF, 0xFF, 0xFF),
+    ]
+
+    public static func rgb(_ color: TerminalColor) -> RGB {
+        switch color {
+        case .rgb(let r, let g, let b): return RGB(r, g, b)
+        case .palette(let index):
+            switch index {
+            case 0..<16: return ansi[Int(index)]
+            case 16..<232:
+                let levels: [UInt8] = [0, 95, 135, 175, 215, 255]
+                let i = Int(index) - 16
+                return RGB(levels[i / 36], levels[i / 6 % 6], levels[i % 6])
+            default:
+                let grey = UInt8(8 + 10 * (Int(index) - 232))
+                return RGB(grey, grey, grey)
+            }
+        }
+    }
+}

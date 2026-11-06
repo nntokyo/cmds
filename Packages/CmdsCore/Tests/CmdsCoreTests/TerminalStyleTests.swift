@@ -100,3 +100,20 @@ final class TerminalStyleTests: XCTestCase {
         XCTAssertThrowsError(try JSONDecoder().decode([StyleRun].self, from: Data("[[1]]".utf8)))
     }
 }
+
+/// The phone's colours for palette indexes and RGB.
+final class TerminalPaletteTests: XCTestCase {
+    func testPaletteIndexes() {
+        typealias RGB = TerminalPalette.RGB
+        XCTAssertEqual(TerminalPalette.rgb(.palette(1)), TerminalPalette.ansi[1])
+        XCTAssertEqual(TerminalPalette.rgb(.palette(15)), RGB(255, 255, 255))
+        XCTAssertEqual(TerminalPalette.rgb(.palette(16)), RGB(0, 0, 0))
+        XCTAssertEqual(TerminalPalette.rgb(.palette(196)), RGB(255, 0, 0))
+        XCTAssertEqual(TerminalPalette.rgb(.palette(208)), RGB(255, 135, 0))
+        XCTAssertEqual(TerminalPalette.rgb(.palette(231)), RGB(255, 255, 255))
+        XCTAssertEqual(TerminalPalette.rgb(.palette(232)), RGB(8, 8, 8))
+        XCTAssertEqual(TerminalPalette.rgb(.palette(255)), RGB(238, 238, 238))
+        XCTAssertEqual(TerminalPalette.rgb(.rgb(1, 2, 3)), RGB(1, 2, 3))
+        XCTAssertEqual(TerminalPalette.ansi.count, 16)
+    }
+}
