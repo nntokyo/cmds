@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+### Fixed
+
+- Mac: in the menu bar item's menu, the line under a workspace (the agent and what it is doing) was cut off (#101).
+
 ## [0.9.0] - 2026-11-06
 
 Mac only; the iPhone/iPad app is unchanged from 0.4.0.
