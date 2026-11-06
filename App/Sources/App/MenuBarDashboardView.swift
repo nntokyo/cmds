@@ -26,7 +26,7 @@ final class MenuBarDashboardView: NSView {
     static let width: CGFloat = 290
     private static let insets = NSEdgeInsets(top: 8, left: 14, bottom: 6, right: 14)
     private static let titleWidth: CGFloat = 56
-    private static let cellWidth: CGFloat = 64
+    private static let cellWidth: CGFloat = 74
     private static let ring: CGFloat = 44
     private static let lineWidth: CGFloat = 5
     private static let rowHeight: CGFloat = 82
