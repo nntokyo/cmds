@@ -4,7 +4,8 @@ import CmdsCore
 /// Top of the menu bar item's menu (#95): ring charts instead of text. A row for the Mac (CPU, memory) and one per
 /// agent with account limits (5-hour, 7-day, …), each ring filled by its share, the percentage inside and the window
 /// and reset time under it. Colours as in the sidebar footer: limits green, orange from 80 %, red from 95 %; memory by
-/// memory pressure.
+/// memory pressure. A ctx row shows the context window of the fullest agents (workspace name, agent under it), coloured
+/// like the limits.
 @MainActor
 final class MenuBarDashboardView: NSView {
     struct Gauge: Equatable {
@@ -14,6 +15,15 @@ final class MenuBarDashboardView: NSView {
         var color: NSColor
         /// Reset time of a limit window; nil for CPU and memory.
         var caption: String?
+    }
+
+    /// One agent's context window (`AgentOverview.contexts`).
+    struct Context: Equatable {
+        var workspace: String
+        var agent: String
+        var percent: Double
+        /// No update for a few minutes (the agent is idle).
+        var stale = false
     }
 
     struct Row: Equatable {
@@ -35,8 +45,13 @@ final class MenuBarDashboardView: NSView {
 
     override var isFlipped: Bool { true }
 
-    /// `showsMachine`: the CPU and memory row (Settings › Menu Bar › Menu, #105).
-    func update(sample: SystemSample?, agentLimits: [AgentLimits], showsMachine: Bool = true, now: Date = Date()) {
+    /// Rings in one row: the cells that fit beside the row title.
+    static let maxGauges = Int((width - insets.left - insets.right - titleWidth) / cellWidth)
+
+    /// `showsMachine`: the CPU and memory row (Settings › Menu Bar › Menu, #105). `contexts`: the agents' context
+    /// windows, fullest first; the first `maxGauges` get a ring.
+    func update(sample: SystemSample?, agentLimits: [AgentLimits], contexts: [Context] = [], showsMachine: Bool = true,
+                now: Date = Date()) {
         var rows = showsMachine ? [Row(title: "Mac", gauges: Self.machineGauges(sample))] : []
         for limits in agentLimits {
             let gauges = limits.ordered.map { limit in
@@ -48,6 +63,15 @@ final class MenuBarDashboardView: NSView {
             }
             rows.append(Row(title: limits.agent.displayName, gauges: gauges,
                             stale: now.timeIntervalSince(limits.updatedAt) > 3600))
+        }
+        if !contexts.isEmpty {
+            let gauges = contexts.prefix(Self.maxGauges).map { context in
+                Gauge(label: context.workspace, fraction: context.percent / 100, value: AgentFormat.percent(context.percent),
+                      color: UsageLevel(percent: context.percent).color.withAlphaComponent(context.stale ? 0.5 : 1),
+                      caption: context.agent)
+            }
+            rows.append(Row(title: String(localized: "ctx", comment: "menu bar ring row: the agents' context windows"),
+                            gauges: Array(gauges)))
         }
         guard rows != self.rows else { return }
         self.rows = rows
@@ -130,7 +154,7 @@ final class MenuBarDashboardView: NSView {
         Self.drawCentered(gauge.value, at: center, size: gauge.value.count > 3 ? 9.5 : 10.5, weight: .semibold,
                           color: NSColor.labelColor.withAlphaComponent(alpha))
         Self.drawCentered(gauge.label, at: NSPoint(x: cell.midX, y: ring.maxY + Self.lineWidth / 2 + 9), size: 10,
-                          weight: .medium, color: NSColor.secondaryLabelColor.withAlphaComponent(alpha))
+                          weight: .medium, color: NSColor.secondaryLabelColor.withAlphaComponent(alpha), maxWidth: cell.width - 2)
         if let caption = gauge.caption {
             Self.drawCentered(caption, at: NSPoint(x: cell.midX, y: ring.maxY + Self.lineWidth / 2 + 22), size: 9,
                               weight: .regular, color: NSColor.tertiaryLabelColor.withAlphaComponent(alpha), maxWidth: cell.width - 2)

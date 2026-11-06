@@ -4,7 +4,7 @@ import CmdsCore
 
 /// The menu bar item (#95), drawn rather than written: the cmds glyph with an orange badge (workspaces that need the
 /// user, orange in the sidebar) and an accent badge circled by a turning arc while agents work. Its menu shows ring
-/// charts for CPU, memory and the agents' account limits, then every workspace with an agent and a mark for what it
+/// charts for CPU, memory, the agents' account limits and their context windows, then every workspace with an agent and a mark for what it
 /// is doing (and, when it needs the user, since when); choosing one (or ⌘1…⌘9) brings cmds forward on it. A red dot
 /// on the icon warns of a limit at 95 % or critical memory pressure (#105). Settings › Menu Bar chooses what shows.
 @MainActor
@@ -153,8 +153,9 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         let settings = AppSettings.shared
         let system = settings.menuBar(.systemRings)
         let limits = settings.menuBar(.limitRings) ? controller.activeAgentLimits() : []
-        dashboard.update(sample: controller.systemSample, agentLimits: limits, showsMachine: system)
-        return system || !limits.isEmpty
+        let contexts = settings.menuBar(.contextRings) ? AgentOverview.contexts(controller) : []
+        dashboard.update(sample: controller.systemSample, agentLimits: limits, contexts: contexts, showsMachine: system)
+        return system || !limits.isEmpty || !contexts.isEmpty
     }
 
     func menuWillOpen(_ menu: NSMenu) { menuIsOpen = true }

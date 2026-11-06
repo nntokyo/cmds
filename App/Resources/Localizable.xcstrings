@@ -1983,6 +1983,17 @@
         }
       }
     },
+    "Context of each agent (ctx)": {
+      "comment": "Settings › Menu Bar › Menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各エージェントのコンテキスト（ctx）"
+          }
+        }
+      }
+    },
     "Continue When It Resets": {
       "localizations": {
         "ja": {
@@ -7894,6 +7905,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "危険"
+          }
+        }
+      }
+    },
+    "ctx": {
+      "comment": "menu bar ring row: the agents' context windows",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ctx"
           }
         }
       }
