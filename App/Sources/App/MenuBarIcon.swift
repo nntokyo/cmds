@@ -45,25 +45,31 @@ enum MenuBarIcon {
     }
 
     /// A workspace's state mark in the menu (16 pt): turning arc while working, orange "!", green check, grey dot.
-    static func stateImage(_ state: State, phase: Double) -> NSImage {
+    /// `highlighted`: the item under the pointer, on the accent-coloured selection, where the marks are drawn in white
+    /// (a blue arc would vanish there).
+    static func stateImage(_ state: State, phase: Double, highlighted: Bool = false) -> NSImage {
         let size = NSSize(width: 16, height: 16)
+        let ink: NSColor? = highlighted ? .white : nil
         return NSImage(size: size, flipped: false) { rect in
             switch state {
             case .working:
-                NSColor.controlAccentColor.withAlphaComponent(0.2).setStroke()
+                let color = ink ?? .controlAccentColor
+                color.withAlphaComponent(highlighted ? 0.35 : 0.2).setStroke()
                 let track = NSBezierPath(ovalIn: rect.insetBy(dx: 2, dy: 2))
                 track.lineWidth = 2
                 track.stroke()
-                drawArc(in: rect.insetBy(dx: 2, dy: 2), phase: phase, color: .controlAccentColor, lineWidth: 2)
+                drawArc(in: rect.insetBy(dx: 2, dy: 2), phase: phase, color: color, lineWidth: 2)
             case .needsUser:
-                symbol("exclamationmark.circle.fill", colors: [.white, .systemOrange])?.draw(in: rect)
+                symbol("exclamationmark.circle.fill", colors: highlighted ? [.systemOrange, .white] : [.white, .systemOrange])?
+                    .draw(in: rect)
             case .done:
-                symbol("checkmark.circle.fill", colors: [.white, .systemGreen])?.draw(in: rect)
+                symbol("checkmark.circle.fill", colors: highlighted ? [.systemGreen, .white] : [.white, .systemGreen])?
+                    .draw(in: rect)
             case .idle:
-                NSColor.secondaryLabelColor.setFill()
+                (ink ?? .secondaryLabelColor).setFill()
                 NSBezierPath(ovalIn: NSRect(x: rect.midX - 3, y: rect.midY - 3, width: 6, height: 6)).fill()
             case .stopped:
-                NSColor.tertiaryLabelColor.setStroke()
+                (ink ?? .tertiaryLabelColor).setStroke()
                 let ring = NSBezierPath(ovalIn: NSRect(x: rect.midX - 3.5, y: rect.midY - 3.5, width: 7, height: 7))
                 ring.lineWidth = 1.2
                 ring.stroke()

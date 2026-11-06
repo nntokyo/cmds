@@ -25,6 +25,9 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private var spinner: Timer?
     private var phase = 0.0
     private var workingMenuItems: [NSMenuItem] = []
+    /// State of each workspace item in the open menu, to redraw its mark when it is highlighted.
+    private var itemStates: [ObjectIdentifier: MenuBarIcon.State] = [:]
+    private weak var highlightedItem: NSMenuItem?
 
     private struct Counts: Equatable {
         var needingUser: Int
@@ -121,7 +124,9 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private func advanceSpinner() {
         phase = (phase + 1 / Double(Self.steps)).truncatingRemainder(dividingBy: 1)
         drawStatusImage()
-        for item in workingMenuItems { item.image = MenuBarIcon.stateImage(.working, phase: phase) }
+        for item in workingMenuItems {
+            item.image = MenuBarIcon.stateImage(.working, phase: phase, highlighted: item === highlightedItem)
+        }
     }
 
     /// Tooltip and VoiceOver label.
@@ -142,6 +147,18 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     func menuDidClose(_ menu: NSMenu) {
         menuIsOpen = false
         workingMenuItems = []
+        itemStates = [:]
+        highlightedItem = nil
+    }
+
+    /// The highlighted workspace's mark turns white, the one left behind gets its colours back.
+    func menu(_ menu: NSMenu, willHighlight item: NSMenuItem?) {
+        let previous = highlightedItem
+        highlightedItem = item
+        for changed in [previous, item].compactMap({ $0 }) {
+            guard let state = itemStates[ObjectIdentifier(changed)] else { continue }
+            changed.image = MenuBarIcon.stateImage(state, phase: phase, highlighted: changed === item)
+        }
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {
@@ -150,10 +167,13 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         menu.addItem(dashboardItem)
         menu.addItem(.separator())
         workingMenuItems = []
+        itemStates = [:]
+        highlightedItem = nil
         let agents = Self.agentWorkspaces(controller.workspaces)
         for (workspace, state) in agents {
             let item = workspaceItem(workspace, state: state)
             if state == .working { workingMenuItems.append(item) }
+            itemStates[ObjectIdentifier(item)] = state
             menu.addItem(item)
         }
         if agents.isEmpty {
