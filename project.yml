@@ -65,6 +65,10 @@ targets:
         copy:
           destination: resources
           subpath: bin
+      # The widget (#96), in cmds.app/Contents/PlugIns.
+      - target: CmdsWidget
+        embed: true
+        codeSign: true
       - framework: vendor/GhosttyKit.xcframework
         embed: false
       - sdk: Carbon.framework
@@ -77,6 +81,7 @@ targets:
       - sdk: Network.framework
       - sdk: CoreBluetooth.framework
       - sdk: UserNotifications.framework
+      - sdk: WidgetKit.framework
       - sdk: libc++.tbd
     info:
       path: App/Info.plist
@@ -110,6 +115,10 @@ targets:
         SUEnableAutomaticChecks: true
         SUAutomaticallyUpdate: true
         SUScheduledCheckInterval: 86400
+        # cmds://workspace/<id>, opened by the widget (#96, AppDelegate.application(_:open:)).
+        CFBundleURLTypes:
+          - CFBundleURLName: tokyo.n-n.cmds
+            CFBundleURLSchemes: [cmds]
     settings:
       base:
         PRODUCT_NAME: cmds
@@ -139,6 +148,49 @@ targets:
           for d in ghostty terminfo; do
             if [ -d "$SRC/$d" ]; then rsync -a --delete "$SRC/$d/" "$DST/$d/"; fi
           done
+  CmdsWidget:
+    # The widget (#96): reads widget.json from cmds' support folder (WidgetSnapshot). Sandboxed, with read access to
+    # that one file only.
+    type: app-extension
+    platform: macOS
+    sources:
+      - Widget/Sources
+      - path: Widget/Resources
+        optional: true
+    dependencies:
+      - package: CmdsCore
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    info:
+      path: Widget/Info.plist
+      properties:
+        CFBundleDisplayName: cmds
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ja]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSMinimumSystemVersion: "14.0"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: Widget/CmdsWidget.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        # Read-only, the one file the app writes for it (paths relative to the real home folder).
+        com.apple.security.temporary-exception.files.home-relative-path.read-only:
+          - /Library/Application Support/cmds/widget.json
+    settings:
+      base:
+        PRODUCT_NAME: CmdsWidget
+        PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.widget
+        DEVELOPMENT_TEAM: LY354RVYHA
+        CODE_SIGN_IDENTITY: "Apple Development"
+        ENABLE_HARDENED_RUNTIME: NO
+        ARCHS: arm64
+        SKIP_INSTALL: YES
+      configs:
+        Release:
+          ENABLE_HARDENED_RUNTIME: YES
   cmds-cli:
     # Same sources as the SwiftPM `cmds` executable, built by Xcode so plain xcodebuild can bundle it.
     type: tool

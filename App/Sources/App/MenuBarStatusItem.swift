@@ -85,23 +85,7 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         update()
     }
 
-    private var summary: MenuBarSummary {
-        MenuBarSummary(controller.workspaces.map { workspace in
-            MenuBarSummary.Entry(id: workspace.id, needsUser: AgentActivityStyle.needsUser(workspace),
-                                 activity: Self.state(AgentActivityStyle.badge(for: workspace)))
-        })
-    }
-
-    private static func state(_ badge: AgentActivityStyle.Badge?) -> MenuBarSummary.State? {
-        switch badge {
-        case .working: return .working
-        case .needsInput: return .needsUser
-        case .done: return .done
-        case .idle: return .idle
-        case .stopped: return .stopped
-        case nil: return nil
-        }
-    }
+    private var summary: MenuBarSummary { AgentOverview.summary(controller) }
 
     private func update() {
         guard let button = item?.button else { return }
@@ -109,7 +93,7 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         let settings = AppSettings.shared
         let counts = Counts(needingUser: summary.needingUserCount,
                             working: settings.menuBar(.workingBadge) ? summary.workingCount : 0,
-                            warning: settings.menuBar(.warningDot) ? warning() : nil)
+                            warning: settings.menuBar(.warningDot) ? AgentOverview.warning(controller) : nil)
         updateSpinner(working: counts.working > 0)
         guard counts != appliedCounts else { return }
         appliedCounts = counts
@@ -123,20 +107,6 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         guard let button = item?.button, let counts = appliedCounts else { return }
         button.image = MenuBarIcon.statusImage(needingUser: counts.needingUser, working: counts.working, phase: phase,
                                                warning: counts.warning != nil)
-    }
-
-    /// An account limit at 95 % or more, or critical memory pressure: what the red dot warns of, for its tooltip.
-    private func warning() -> String? {
-        var reasons: [String] = []
-        for limits in controller.activeAgentLimits() {
-            for limit in limits.ordered where UsageLevel(percent: limit.usedPercent) == .critical {
-                reasons.append("\(limits.agent.displayName) \(AgentFormat.limitLabel(limit, strings: .localized)) \(AgentFormat.percent(limit.usedPercent))")
-            }
-        }
-        if controller.systemSample?.stats.pressure == .critical {
-            reasons.append(String(localized: "Memory pressure critical", comment: "menu bar item tooltip: why the red dot shows"))
-        }
-        return reasons.isEmpty ? nil : reasons.joined(separator: ", ")
     }
 
     /// Runs the spinner timer while agents work, unless the user turned the animation off (Settings › Menu Bar) or asked
@@ -249,20 +219,11 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         item.target = self
         item.representedObject = workspace.id
         item.image = MenuBarIcon.stateImage(state, phase: phase)
-        var detail: [String] = []
-        // How long it has waited (its oldest unanswered call): what to answer first.
-        if state == .needsUser, let since = workspace.panes.values.filter(\.attention).compactMap(\.attentionDate).min() {
-            detail.append(AgentFormat.age(since, strings: .localized))
-        }
-        if let agent = workspace.primaryAgent?.usage.agent { detail.append(agent.displayName) }
-        let doing = state == .needsUser ? workspace.notificationText ?? workspace.agentTopic : workspace.agentTopic
-        if let doing, !doing.isEmpty { detail.append(doing) }
-        let subagents = workspace.runningSubagentCount
-        if subagents > 0 { detail.append("⧉ \(subagents)") }
+        let detail = AgentOverview.detail(workspace, state: state, age: true)
         // The agent and its task under the name, in the menu's own secondary line (a "\n" in the title would be cut
         // off: menus size such rows for one line, #101). Before macOS 14.4 only the name shows.
         if !detail.isEmpty, #available(macOS 14.4, *) {
-            item.subtitle = Self.truncated(detail.joined(separator: " · "), to: 56)
+            item.subtitle = Self.truncated(detail, to: 56)
         }
         return item
     }

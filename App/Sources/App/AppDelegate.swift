@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var metadataMonitor: MetadataMonitor!
     private var apiServer: APIServer?
     private var menuBarItem: MenuBarStatusItem?
+    private var widgetPublisher: WidgetPublisher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         windowController = MainWindowController(controller: controller)
@@ -56,6 +57,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.start()
         menuBarItem = MenuBarStatusItem(controller: controller) { [weak self] id in self?.showWorkspace(id: id) }
         menuBarItem?.start()
+        widgetPublisher = WidgetPublisher(controller: controller)
+        widgetPublisher?.start()
         TransferCenter.removeLeftoverParts()
         // An isolated test instance (CMDS_SUPPORT_DIR) must not take keyboard focus from the app in use.
         if CmdsEnv.supportDirectoryOverride() == nil { NSApp.activate() }
@@ -105,6 +108,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? controller.focusPane(id: pane.id)
         } else {
             try? controller.selectWorkspace(id: id)
+        }
+    }
+
+    /// `cmds://workspace/<id>` (the widget, #96) opens cmds on that workspace; `cmds://` alone just brings it forward.
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls where url.scheme == "cmds" {
+            let parts = url.pathComponents.filter { $0 != "/" }
+            showWorkspace(id: url.host == "workspace" ? parts.first : nil)
         }
     }
 
