@@ -72,9 +72,9 @@ final class AppController {
     /// Latest account limits per agent kind (from whichever pane reported them last). Written only by
     /// AppController+Agents.
     var agentLimitsByKind: [AgentKind: AgentLimits] = [:]
-    /// The last metadata scan's panes running Codex, with its working directory when known ("" when not): where
-    /// Codex hook events may go (`codexHook`).
-    var codexPaneDirectories: [String: String] = [:]
+    /// The last metadata scan's panes running Codex, with its working directory (nil when unknown): where Codex hook
+    /// events may go (`codexHook`).
+    var codexPaneDirectories: [String: String?] = [:]
     /// A usage refresh is pending (`scheduleAgentRefresh`, AppController+Agents).
     var agentRefreshScheduled = false
     /// Agent usage without updates for this long is marked stale (idle agent).
