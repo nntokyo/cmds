@@ -211,17 +211,11 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         if let doing, !doing.isEmpty { detail.append(doing) }
         let subagents = workspace.runningSubagentCount
         if subagents > 0 { detail.append("⧉ \(subagents)") }
-        let title = NSMutableAttributedString(string: workspace.displayTitle, attributes: [.font: NSFont.menuFont(ofSize: 0)])
-        if !detail.isEmpty {
-            let style = NSMutableParagraphStyle()
-            style.lineBreakMode = .byTruncatingTail
-            title.append(NSAttributedString(string: "\n" + Self.truncated(detail.joined(separator: " · "), to: 56), attributes: [
-                .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
-                .foregroundColor: NSColor.secondaryLabelColor,
-                .paragraphStyle: style,
-            ]))
+        // The agent and its task under the name, in the menu's own secondary line (a "\n" in the title would be cut
+        // off: menus size such rows for one line, #101). Before macOS 14.4 only the name shows.
+        if !detail.isEmpty, #available(macOS 14.4, *) {
+            item.subtitle = Self.truncated(detail.joined(separator: " · "), to: 56)
         }
-        item.attributedTitle = title
         return item
     }
 
