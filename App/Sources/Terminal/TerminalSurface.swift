@@ -57,6 +57,10 @@ protocol TerminalSurface: AnyObject {
     func focus()
     /// Plain text of the visible screen (rows joined by "\n").
     func visibleText() -> String
+    /// The visible screen row by row with each row's colours and attributes (`StyleRun`, columns as the phone's grid
+    /// counts them); the rows' text is `visibleText()`'s, except for trailing spaces where styled blank cells are. nil
+    /// when the engine cannot read styles.
+    func visibleStyledRows() -> [(text: String, runs: [StyleRun])]?
     /// Cursor cell, 0-based: `row` indexes the lines of `visibleText()`, `col` counts cells
     /// (a wide character occupies two). nil if unknown or scrolled out of view.
     var cursorPosition: (row: Int, col: Int)? { get }

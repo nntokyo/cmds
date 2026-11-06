@@ -88,6 +88,19 @@ final class GhosttyTerminalSurface: TerminalSurface {
         return (0..<rows).map { readRow(surface, GHOSTTY_POINT_VIEWPORT, $0, cols: cols) ?? "" }.joined(separator: "\n")
     }
 
+    /// `visibleText()`'s rows read as VT text (`ghostty_surface_read_text_vt`, from cmds' libghostty patch: SGR with
+    /// palette indexes, CUF over blank cells) and split into text and style runs by `TerminalStyledText` (CmdsCore).
+    /// Costs about as much as `visibleText()`; only the sync server asks, for phones that draw colours.
+    func visibleStyledRows() -> [(text: String, runs: [StyleRun])]? {
+        guard let surface = surfaceView.surface else { return nil }
+        let size = ghostty_surface_size(surface)
+        let rows = Int(size.rows), cols = Int(size.columns)
+        guard rows > 0, cols > 0 else { return [] }
+        return (0..<rows).map { row in
+            TerminalStyledText.parse(readRowVT(surface, GHOSTTY_POINT_VIEWPORT, row, cols: cols) ?? "")
+        }
+    }
+
     /// `ghostty_surface_scrollbar`, from cmds' libghostty patch (vendor/ghostty-patches): the same figures as the
     /// renderer's scrollbar action, but read now, so they are current while the surface is not drawn too, plus the
     /// rows pruned so far (`PageList.pruned_rows`).
@@ -195,6 +208,18 @@ final class GhosttyTerminalSurface: TerminalSurface {
             rectangle: true)
         guard let text = read(surface, sel)?.text else { return nil }
         return text.contains("\n") ? text.replacingOccurrences(of: "\n", with: " ") : text
+    }
+
+    /// `readRow` as VT text: the row's text with the SGR sequences of its styles (`ghostty_surface_read_text_vt`).
+    private func readRowVT(_ surface: ghostty_surface_t, _ tag: ghostty_point_tag_e, _ row: Int, cols: Int) -> String? {
+        let sel = ghostty_selection_s(
+            top_left: Self.cell(tag, col: 0, row: row),
+            bottom_right: Self.cell(tag, col: cols - 1, row: row),
+            rectangle: true)
+        var text = ghostty_text_s()
+        guard ghostty_surface_read_text_vt(surface, sel, &text) else { return nil }
+        defer { ghostty_surface_free_text(surface, &text) }
+        return Self.string(from: text)
     }
 
     /// Reads a selection's text plus the viewport position (points) of its top-left cell; the position
@@ -315,6 +340,7 @@ private final class FallbackSurface: TerminalSurface {
     func typeText(_ text: String) {}
     func focus() { view.window?.makeFirstResponder(textView) }
     func visibleText() -> String { textView.string }
+    func visibleStyledRows() -> [(text: String, runs: [StyleRun])]? { nil }
     func scrollbackText(maxLines: Int) -> String { textView.string }
     func scrollbar() -> TerminalScrollbar? { nil }
     func historyRows(maxRows: Int) -> [String]? { [] } // `visibleText()` already has all of it

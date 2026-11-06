@@ -45,7 +45,7 @@ extension SyncServer {
             // rows; `screenTick` tries again.
             guard let answer else { return }
             client.pendingScrollback[paneID] = nil
-            let full = client.streamer.full(paneID: paneID, snapshot: answer.screen)
+            let full = client.streamer.full(paneID: paneID, snapshot: answer.screen.for(client))
             send(.screen(full), to: client)
             send(.scrollback(.init(paneID: paneID, seq: full.seq, lines: answer.rows)), to: client)
             if client.streamsHistory, let bar = answer.bar {
@@ -84,6 +84,7 @@ extension SyncServer {
     /// above it gets the rows that left the screen with it (or `historyReset`), also when only those changed, in an
     /// unchanged full screen. `bar`: the viewport while `snapshot` was read, nil when it moved meanwhile.
     func sendUpdate(paneID: String, snapshot: ScreenSnapshot, bar: TerminalScrollbar?, to client: Client) {
+        let snapshot = snapshot.for(client)
         let update = client.streamer.update(paneID: paneID, snapshot: snapshot)
         guard let mark = client.historyMarks[paneID] else {
             if let update { send(update, to: client) }
@@ -124,5 +125,12 @@ extension SyncServer {
     /// Where a pane's viewport is in its whole screen, or nil if unknown / not a terminal.
     func scrollbar(paneID: String) -> TerminalScrollbar? {
         try? AppController.shared.scrollbar(paneID: paneID)
+    }
+}
+
+extension ScreenSnapshot {
+    /// This screen as sent to `client`: without styles unless it draws them (`SyncFeature.styles`).
+    func `for`(_ client: SyncServer.Client) -> ScreenSnapshot {
+        client.drawsStyles ? self : withoutStyles
     }
 }
