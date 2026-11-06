@@ -71,6 +71,7 @@ extension AppController {
             handleSubagentHook(pane: pane, agent: agent, now: now)
             return
         }
+        pane.agentSignals.hookBusyFollowsSpinner = false
         switch event {
         case .needsInput: pane.agentSignals.hook = .needsInput
         case .finished: pane.agentSignals.hook = .finished
@@ -108,6 +109,7 @@ extension AppController {
         guard let target = CodexHook.targetPane(sessionID: payload.sessionID, cwd: payload.cwd, envPane: paneID, panes: panes),
               let pane = pane(id: target) else { return }
         let now = Date()
+        pane.agentSignals.hookBusyFollowsSpinner = true
         switch payload.event {
         case .needsInput: pane.agentSignals.hook = .needsInput
         case .finished, .interrupted: pane.agentSignals.hook = .finished

@@ -107,6 +107,9 @@ public struct AgentSignals: Equatable, Sendable {
     public var hasUsage = false
     /// The agent process was seen exiting (or `SessionEnd`); older title and hook evidence no longer applies.
     public var endedAt: Date?
+    /// Busy from a hook lasts only while the title spinner runs (Codex): a turn that ends without a `Stop` hook (a usage
+    /// limit or an error stops it) shows as idle once the spinner has stopped, not after `busyTimeout`.
+    public var hookBusyFollowsSpinner = false
 
     public init() {}
 
@@ -134,7 +137,13 @@ public struct AgentSignals: Equatable, Sendable {
         if let hook = self.hook, let hookAt {
             switch hook {
             case .needsInput: consider(hookAt, .needsInput)
-            case .busy: consider(hookAt, .busy)
+            case .busy:
+                if hookBusyFollowsSpinner, let animatedAt, animatedAt > hookAt, titleGlyph != .busy,
+                   now.timeIntervalSince(animatedAt) >= Self.animationWindow {
+                    consider(animatedAt, .idle)  // the spinner ran after the hook and has stopped
+                } else {
+                    consider(hookAt, .busy)
+                }
             case .finished: consider(hookAt, .idle)
             }
         }

@@ -40,6 +40,26 @@ final class AgentSignalsTests: XCTestCase {
         XCTAssertEqual(signals.activity(at: t0 + 21), .idle)
     }
 
+    func testCodexTurnWithoutStopEndsWithTheSpinner() {
+        var signals = AgentSignals()
+        signals.hasUsage = true
+        signals.hookBusyFollowsSpinner = true
+        signals.hook = .busy
+        signals.hookAt = t0
+        XCTAssertEqual(signals.activity(at: t0 + 1), .busy)  // no spinner yet
+        signals.titleAnimatedAt = t0 + 2
+        XCTAssertEqual(signals.activity(at: t0 + 3), .busy)  // spinning
+        // A usage limit stopped the turn: no Stop hook, the spinner stopped and the title has no glyph.
+        XCTAssertEqual(signals.activity(at: t0 + 2 + AgentSignals.animationWindow + 1), .idle)
+        // A later hook means working again.
+        signals.hookAt = t0 + 20
+        XCTAssertEqual(signals.activity(at: t0 + 21), .busy)
+        // Claude Code keeps busy from its hook until busyTimeout (its title always carries a glyph).
+        signals.hookBusyFollowsSpinner = false
+        signals.hookAt = t0
+        XCTAssertEqual(signals.activity(at: t0 + 2 + AgentSignals.animationWindow + 1), .busy)
+    }
+
     func testReportAfterNotificationMeansBusyAgain() {
         var signals = AgentSignals()
         signals.hasUsage = true
