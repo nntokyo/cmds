@@ -147,6 +147,15 @@ public enum AgentFormat {
         return parts
     }
 
+    /// `parts` with ` @account` right after the name parts (`Claude Opus @work · ctx …`): the cmds Claude account the
+    /// pane runs under, as the Mac's sidebar and the iPhone show it (#112). `parts` unchanged without an account.
+    public static func withAccount(_ parts: [Part], _ account: String?) -> [Part] {
+        guard let account else { return parts }
+        var parts = parts
+        parts.insert(Part(" @\(account)", .label), at: parts.firstIndex { $0.style != .name } ?? parts.endIndex)
+        return parts
+    }
+
     public static func summary(_ usage: AgentUsage, limits: [UsageLimit]? = nil, strings: Strings = .english) -> String {
         summaryParts(usage, limits: limits, strings: strings).map(\.text).joined()
     }

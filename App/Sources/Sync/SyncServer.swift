@@ -280,16 +280,20 @@ final class SyncServer {
         pruneScreenCache()
     }
 
-    /// Every paired device with the peers it is connected from now (`sync.devices`, the pairing window, #114).
+    /// Every paired device with the peers it is connected from now (`sync.devices`, #114).
     var pairedDeviceReports: [SyncPairedDevice] {
         let iso = ISO8601DateFormatter()
         let connected = connectedDevices
         return store.devices.map { device in
             SyncPairedDevice(id: device.id, name: device.name, pairedAt: iso.string(from: device.pairedAt),
                              lastSeen: device.lastSeen.map { iso.string(from: $0) },
-                             connectedFrom: connected.filter { SyncDeviceStore.digestsEqual($0.tokenHash, device.tokenHash) }
-                                 .map(\.host))
+                             connectedFrom: Self.hosts(of: device, in: connected))
         }
+    }
+
+    /// Peers of `device`'s authenticated connections among `connected` (`connectedDevices`).
+    static func hosts(of device: SyncDeviceStore.Device, in connected: [ConnectedDevice]) -> [String] {
+        connected.filter { SyncDeviceStore.digestsEqual($0.tokenHash, device.tokenHash) }.map(\.host)
     }
 
     /// Forgets one paired device and disconnects it at once; the others stay paired (#114). False when no device has
@@ -298,11 +302,7 @@ final class SyncServer {
     func revokeDevice(id: String) -> Bool {
         guard let device = store.devices.first(where: { $0.id == id }) else { return false }
         store.revoke(id: id)
-        for client in clients.values where client.authenticated {
-            guard let hash = client.tokenHash, SyncDeviceStore.digestsEqual(hash, device.tokenHash) else { continue }
-            revokeSession(of: client, reason: "this device was unpaired on the Mac")
-        }
-        pruneScreenCache()
+        endUnpairedSessions { SyncDeviceStore.digestsEqual($0, device.tokenHash) }
         syncLog.notice("sync device unpaired")
         didChange()
         return true
@@ -311,11 +311,17 @@ final class SyncServer {
     /// Forgets every paired device and disconnects them.
     func revokeAllDevices() {
         store.revokeAll()
+        endUnpairedSessions { _ in true }
+        rotateCode()
+    }
+
+    /// Ends the authenticated sessions whose token hash `matches` (their device was just unpaired).
+    private func endUnpairedSessions(matching matches: (String) -> Bool) {
         for client in clients.values where client.authenticated {
+            guard matches(client.tokenHash ?? "") else { continue }
             revokeSession(of: client, reason: "this device was unpaired on the Mac")
         }
         pruneScreenCache()
-        rotateCode()
     }
 
     /// Stops streaming to an authenticated client at once; the `invalidToken` error is the last frame it gets.

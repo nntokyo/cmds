@@ -59,11 +59,7 @@ struct AgentSummaryLine: View {
     var accountLimit: ServerMessage.State.AccountLimit?
 
     var body: some View {
-        var parts = AgentFormat.summaryParts(usage, limits: limits, strings: .localized)
-        if let account {
-            let afterName = parts.firstIndex { $0.style != .name } ?? parts.endIndex
-            parts.insert(AgentFormat.Part(" @\(account)", .label), at: afterName)
-        }
+        let parts = AgentFormat.withAccount(AgentFormat.summaryParts(usage, limits: limits, strings: .localized), account)
         let line = parts.reduce(Text(verbatim: "")) { text, part in
             var piece = Text(part.text)
             switch part.style {
