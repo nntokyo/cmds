@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
+## [0.9.1] - 2026-11-06
+
+Mac only; the iPhone/iPad app is unchanged from 0.4.0.
+
 ### Fixed
 
 - Mac: in the menu bar item's menu, the line under a workspace (the agent and what it is doing) was cut off (#101).
@@ -345,7 +349,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.9.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.9.1...master
+[0.9.1]: https://github.com/nntokyo/cmds/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/nntokyo/cmds/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/nntokyo/cmds/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/nntokyo/cmds/compare/v0.8.0...v0.8.1
