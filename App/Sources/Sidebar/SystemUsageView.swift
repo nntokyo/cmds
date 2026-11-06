@@ -137,12 +137,7 @@ final class SystemUsageView: NSView {
     private static let cpuColor = NSColor.controlAccentColor
 
     private static func color(for pressure: MemoryPressure) -> NSColor {
-        switch pressure {
-        case .normal: return .systemGreen
-        case .warning: return .systemYellow
-        case .critical: return .systemRed
-        case .unknown: return .secondaryLabelColor
-        }
+        pressure == .unknown ? .secondaryLabelColor : pressure.meterColor
     }
 
     private static func tooltip(for sample: SystemSample) -> String {
@@ -212,8 +207,7 @@ final class CompactUsageView: NSView {
         if let stats = sample?.stats {
             cpuMeter.set(fraction: stats.cpuPercent / 100, color: .controlAccentColor)
             let pressure = stats.pressure
-            memoryMeter.set(fraction: stats.memoryFraction, color: pressure == .critical ? .systemRed
-                            : pressure == .warning ? .systemYellow : .systemGreen)
+            memoryMeter.set(fraction: stats.memoryFraction, color: pressure.meterColor)
             let memory = ResourceFormat.memory(used: stats.memoryUsedBytes, total: stats.memoryTotalBytes)
             systemText = String(localized: "CPU \(ResourceFormat.wholePercent(stats.cpuPercent)) · Mem \(memory) (\(pressure.localizedName))")
         }
@@ -245,7 +239,7 @@ final class CompactUsageView: NSView {
             let top = limits.limits.max { $0.usedPercent < $1.usedPercent }
             let level = UsageLevel(percent: top?.usedPercent)
             meter.set(fraction: (top?.usedPercent ?? 0) / 100,
-                      color: level == .critical ? .systemRed : level == .warning ? .systemOrange : .systemGreen)
+                      color: level.color)
             agentText.append("\(limits.agent.displayName) \(AgentFormat.limitsSummary(limits.limits, strings: .localized))")
         }
         updateTooltip()
@@ -483,12 +477,7 @@ private final class LimitSegment: NSView {
     func set(label text: String, value newValue: String, fraction: Double, level newLevel: UsageLevel) {
         if label.stringValue != text { label.stringValue = text }
         if value.stringValue != newValue { value.stringValue = newValue }
-        let color: NSColor
-        switch newLevel {
-        case .normal: color = .systemGreen
-        case .warning: color = .systemOrange
-        case .critical: color = .systemRed
-        }
+        let color = newLevel.color
         if level != newLevel {
             level = newLevel
             value.textColor = newLevel == .normal ? .secondaryLabelColor : color

@@ -1,30 +1,32 @@
 import XCTest
 @testable import CmdsCore
 
-/// The menu bar item's lists (#95).
+/// The menu bar item's workspace list and badge counts (#95).
 final class MenuBarSummaryTests: XCTestCase {
-    private func entry(_ id: String, needsUser: Bool = false, working: Bool = false) -> MenuBarSummary.Entry {
-        MenuBarSummary.Entry(id: id, title: id, needsUser: needsUser, working: working)
+    private func entry(_ id: String, needsUser: Bool = false, _ activity: MenuBarSummary.State? = nil) -> MenuBarSummary.Entry {
+        MenuBarSummary.Entry(id: id, needsUser: needsUser, activity: activity)
     }
 
-    func testNothingWaitingOrWorkingIsQuiet() {
-        XCTAssertTrue(MenuBarSummary([]).isQuiet)
-        XCTAssertTrue(MenuBarSummary([entry("w1")]).isQuiet)
+    func testWorkspacesWithoutAnAgentAreLeftOut() {
+        let summary = MenuBarSummary([entry("w1"), entry("w2", .idle)])
+        XCTAssertEqual(summary.entries.map(\.id), ["w2"])
+        XCTAssertEqual(summary.needingUserCount, 0)
+        XCTAssertEqual(summary.workingCount, 0)
     }
 
-    func testWorkspacesAreSplitInSidebarOrder() {
+    func testMenuOrderIsByStateThenSidebarOrder() {
         let summary = MenuBarSummary([
-            entry("w1", working: true), entry("w2", needsUser: true), entry("w3"), entry("w4", working: true),
-            entry("w5", needsUser: true),
+            entry("w1", .working), entry("w2", needsUser: true, .idle), entry("w3", .stopped), entry("w4", .working),
+            entry("w5", .done), entry("w6", needsUser: true), entry("w7", .idle),
         ])
-        XCTAssertFalse(summary.isQuiet)
-        XCTAssertEqual(summary.needingUser.map(\.id), ["w2", "w5"])
-        XCTAssertEqual(summary.working.map(\.id), ["w1", "w4"])
+        XCTAssertEqual(summary.entries.map(\.id), ["w2", "w6", "w1", "w4", "w5", "w7", "w3"])
+        XCTAssertEqual(summary.needingUserCount, 2)
+        XCTAssertEqual(summary.workingCount, 2)
     }
 
-    func testAWorkspaceIsListedOnceUnderNeedsUser() {
-        let summary = MenuBarSummary([entry("w1", needsUser: true, working: true)])
-        XCTAssertEqual(summary.needingUser.map(\.id), ["w1"])
-        XCTAssertEqual(summary.working, [])
+    func testNeedingTheUserWinsOverWorking() {
+        let summary = MenuBarSummary([entry("w1", needsUser: true, .working)])
+        XCTAssertEqual(summary.entries.map(\.state), [.needsUser])
+        XCTAssertEqual(summary.workingCount, 0)
     }
 }

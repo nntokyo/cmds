@@ -1,14 +1,10 @@
 import AppKit
+import CmdsCore
 
 /// Drawings of the menu bar item (#95): the status bar icon with its badges, and the state marks of the workspaces in
 /// its menu. `phase` (0..<1) turns the spinners; callers advance it while agents work.
 @MainActor
 enum MenuBarIcon {
-    /// What a workspace's agent is doing, as the sidebar badge shows it.
-    enum State {
-        case needsUser, working, done, idle, stopped
-    }
-
     private static let height: CGFloat = 18
     private static let glyphWidth: CGFloat = 18
     private static let badgeSize: CGFloat = 13
@@ -47,7 +43,7 @@ enum MenuBarIcon {
     /// A workspace's state mark in the menu (16 pt): turning arc while working, orange "!", green check, grey dot.
     /// `highlighted`: the item under the pointer, on the accent-coloured selection, where the marks are drawn in white
     /// (a blue arc would vanish there).
-    static func stateImage(_ state: State, phase: Double, highlighted: Bool = false) -> NSImage {
+    static func stateImage(_ state: MenuBarSummary.State, phase: Double, highlighted: Bool = false) -> NSImage {
         let size = NSSize(width: 16, height: 16)
         let ink: NSColor? = highlighted ? .white : nil
         return NSImage(size: size, flipped: false) { rect in
