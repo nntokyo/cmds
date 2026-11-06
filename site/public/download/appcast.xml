@@ -7,24 +7,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.9.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.9.1</link>
-      <sparkle:version>16</sparkle:version>
-      <sparkle:shortVersionString>0.9.1</sparkle:shortVersionString>
+      <title>cmds 0.10.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.10.0</link>
+      <sparkle:version>17</sparkle:version>
+      <sparkle:shortVersionString>0.10.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 06 Nov 2026 12:58:05 GMT</pubDate>
+      <pubDate>Fri, 06 Nov 2026 13:53:48 GMT</pubDate>
       <description><![CDATA[
-<h3>修正</h3>
-<p>メニューバーのメニューで、ワークスペース名の下の行（エージェントといまの作業）が途切れていた問題を直しました。</p>
+<h3>追加</h3>
+<p>メニューバー：対応待ちの行に待ち時間（「3分前」）を表示し、メニューを開いたまま ⌘1〜⌘9 でそのワークスペースへ移動できます。利用上限のリングは 1 日以内なら「あと2時間10分」とリセットまでの残り時間を表示し、上限が 95% 以上かメモリが逼迫するとアイコンに赤い点が付きます。</p>
+<p>設定 › メニューバー で、アイコンとメニューに出すもの（作業中の数、赤い点、アニメーション、CPU とメモリ、AI の利用上限、ワークスペース）を選べます。メニューの「メニューバーの設定…」からも開けます。</p>
+<p>設定 › サイドバー で、各ワークスペースに出す項目（Git ブランチ、ディレクトリ、待ち受けポート、エージェントのモデル・コンテキスト・料金、最新の通知）と、下部に出すもの（AI の利用上限、CPU とメモリ）を選べます。</p>
+<h3>変更</h3>
+<p>設定をタブ（一般・サイドバー・エージェント・メニューバー・アップデート）に分けました。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
-<h3>Fixed</h3>
-<p>In the menu bar item's menu, the line under a workspace (the agent and what it is doing) was cut off.</p>
+<h3>Added</h3>
+<p>Menu bar: rows that need you show how long they have waited ("3 min ago"); ⌘1–⌘9 jump to a workspace while the menu is open. Limit rings count down to the reset within a day ("in 2h10m"), and a red dot on the icon warns of a limit at 95% or critical memory pressure.</p>
+<p>Settings › Menu Bar chooses what the icon and the menu show (working count, red dot, animation, CPU and memory, AI limits, workspaces); also from Menu Bar Settings… in the menu.</p>
+<p>Settings › Sidebar chooses what each workspace row shows (Git branch, directory, listening ports, agent model/context/cost, latest notification) and what the footer shows (AI limits, CPU and memory).</p>
+<h3>Changed</h3>
+<p>Settings is split into tabs (General, Sidebar, Agents, Menu Bar, Updates).</p>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.9.1/cmds-0.9.1.dmg" length="13903836" type="application/octet-stream" sparkle:edSignature="5pcJdjSQpmXR0KsgInS31c5OPVz5kngmnnOXAGkXsMf2N0QSIo5ECV5rWMF66bTArlAY4DFmRk3wNPDPK2EaAg=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.10.0/cmds-0.10.0.dmg" length="13920699" type="application/octet-stream" sparkle:edSignature="zrAIM6uh1KxTnU58i3U0t8jbQGjOhDCggqTgCvzKB+6eWA78Aa/CGrQr+qYW0jkJNHy0+OgRwiRe37eMNgwnBA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 0AR4aW196UaZYJIhaVpgW8/Cu+dg8wwH2Wl/Zaks2jem7dCPgge1q89mvrYE0B+CSRmsTAojK/TF90ffp4F4Dg==
-length: 1721
+edSignature: UKg3Z+d30yfw7R70hbBGY3ZVPMmEA8yzOT67bvnRudQslgMEFWBKTI565jLWLKHPnKjqPzsxunItfua6SqXQBw==
+length: 3395
 -->
