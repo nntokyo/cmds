@@ -11,6 +11,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
+- Mac: menu bar item — rows that need you say since when; ⌘1…⌘9 choose a workspace while the menu is open; limit
+  rings count down to their reset within a day (`in 2h10m`); a red dot on the icon warns of a limit at 95 % or
+  critical memory pressure; Menu Bar Settings… in the menu. Settings › Menu Bar chooses what the icon and the menu show
+  (working badge, red dot, animation, CPU and memory, AI limits, workspaces) (#105).
+- Mac: Settings is split into tabs (General, Sidebar, Agents, Menu Bar, Updates). Settings › Sidebar chooses what each
+  workspace row shows (Git branch, directory, ports, agent model/context/cost, latest notification) and what the
+  footer shows (AI limits, CPU and memory) (#107).
 
 ## [0.9.1] - 2026-11-06
 

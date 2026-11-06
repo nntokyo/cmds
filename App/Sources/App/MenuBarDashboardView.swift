@@ -26,7 +26,7 @@ final class MenuBarDashboardView: NSView {
     static let width: CGFloat = 290
     private static let insets = NSEdgeInsets(top: 8, left: 14, bottom: 6, right: 14)
     private static let titleWidth: CGFloat = 56
-    private static let cellWidth: CGFloat = 64
+    private static let cellWidth: CGFloat = 74
     private static let ring: CGFloat = 44
     private static let lineWidth: CGFloat = 5
     private static let rowHeight: CGFloat = 82
@@ -35,8 +35,9 @@ final class MenuBarDashboardView: NSView {
 
     override var isFlipped: Bool { true }
 
-    func update(sample: SystemSample?, agentLimits: [AgentLimits], now: Date = Date()) {
-        var rows = [Row(title: "Mac", gauges: Self.machineGauges(sample))]
+    /// `showsMachine`: the CPU and memory row (Settings › Menu Bar › Menu, #105).
+    func update(sample: SystemSample?, agentLimits: [AgentLimits], showsMachine: Bool = true, now: Date = Date()) {
+        var rows = showsMachine ? [Row(title: "Mac", gauges: Self.machineGauges(sample))] : []
         for limits in agentLimits {
             let gauges = limits.ordered.map { limit in
                 let level = UsageLevel(percent: limit.usedPercent)
@@ -58,8 +59,14 @@ final class MenuBarDashboardView: NSView {
         needsDisplay = true
     }
 
-    /// `15:30`, `Fri 09:00`: the reset time without the "(in 2h10m)" the sidebar tooltip adds.
-    private static func shortReset(_ date: Date, now: Date) -> String {
+    /// Within a day, how long until the reset (`in 2h10m`), which needs no clock arithmetic; later, the day and time
+    /// (`Fri 09:00`) (#105).
+    static func shortReset(_ date: Date, now: Date) -> String {
+        let interval = date.timeIntervalSince(now)
+        if interval > 0, interval < 86400 {
+            let duration = AgentFormat.duration(milliseconds: Int(interval * 1000), strings: .localized)
+            return String(localized: "in \(duration)", comment: "menu bar ring: time until an account limit resets")
+        }
         let text = AgentFormat.resetTime(date, now: now, strings: .localized)
         return text.components(separatedBy: " (").first ?? text
     }

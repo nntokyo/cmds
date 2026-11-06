@@ -3,6 +3,11 @@ import CmdsCore
 
 /// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards, Claude
 /// accounts and schedules (their own windows), automatic updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
+/// The tabs of Settings.
+enum SettingsTab: String {
+    case general, sidebar, agents, menuBar, updates
+}
+
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
@@ -18,12 +23,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let previewZoomPopup = NSPopUpButton()
     private let subagentsPopup = NSPopUpButton()
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show in menu bar"), target: nil, action: nil)
+    /// Settings › Sidebar: what the rows and the footer show (#107).
+    private let sidebarItemCheckboxes: [SidebarItem: NSButton] = Dictionary(uniqueKeysWithValues: SidebarItem.allCases.map {
+        ($0, NSButton(checkboxWithTitle: $0.title, target: nil, action: nil))
+    })
+    /// Settings › Menu Bar: one checkbox per part of the item (#105).
+    private let menuBarOptionCheckboxes: [MenuBarOption: NSButton] = Dictionary(uniqueKeysWithValues: MenuBarOption.allCases.map {
+        ($0, NSButton(checkboxWithTitle: $0.title, target: nil, action: nil))
+    })
     private let checkUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Check for updates automatically"), target: nil, action: nil)
     private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
     private let updatesNote = SettingsWindowController.note("")
     private let accountsButton = NSButton(title: String(localized: "Manage…"), target: nil, action: nil)
     private let schedulesButton = NSButton(title: String(localized: "Open…"), target: nil, action: nil)
     private var observer: NSObjectProtocol?
+    private var tabController: NSTabViewController?
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
 
@@ -114,46 +128,100 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         menuBarCheckbox.target = self
         menuBarCheckbox.action = #selector(menuBarToggled)
+        for (option, checkbox) in menuBarOptionCheckboxes {
+            checkbox.target = self
+            checkbox.action = #selector(menuBarOptionToggled(_:))
+            checkbox.identifier = NSUserInterfaceItemIdentifier(option.rawValue)
+        }
+        let option = { (option: MenuBarOption) -> NSView in self.menuBarOptionCheckboxes[option]! }
+        for (item, checkbox) in sidebarItemCheckboxes {
+            checkbox.target = self
+            checkbox.action = #selector(sidebarItemToggled(_:))
+            checkbox.identifier = NSUserInterfaceItemIdentifier(item.rawValue)
+        }
+        let sidebarRows = { (items: [SidebarItem], label: String) -> [[NSView]] in
+            items.enumerated().map { index, item in
+                [index == 0 ? Self.label(label) : NSGridCell.emptyContentView, self.sidebarItemCheckboxes[item]!]
+            }
+        }
         checkUpdatesCheckbox.target = self
         checkUpdatesCheckbox.action = #selector(checkUpdatesToggled)
         installUpdatesCheckbox.target = self
         installUpdatesCheckbox.action = #selector(installUpdatesToggled)
 
-        let grid = NSGridView(views: [
+        // One tab per area, as in other Mac apps' Settings: the window stays short enough for small screens and each
+        // setting is where its name says (#107).
+        let general: [[NSView]] = [
             [Self.header(String(localized: "Terminal")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Font:")), fontPopup],
             [Self.label(String(localized: "Size:")), sizeRow],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Layered over your Ghostty config. View › Bigger / Smaller / Actual Size (⌘+ / ⌘− / ⌘0) change only the focused pane."))],
-            [Self.header(String(localized: "Sidebar")), NSGridCell.emptyContentView],
-            [Self.label(String(localized: "Text size:")), sidebarControl],
             [Self.header(String(localized: "Browser and Preview")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Browser page zoom:")), browserZoomPopup],
             [Self.label(String(localized: "Preview zoom:")), previewZoomPopup],
-            [Self.header(String(localized: "Agents")), NSGridCell.emptyContentView],
+        ]
+        let sidebar: [[NSView]] = [[Self.label(String(localized: "Text size:")), sidebarControl]]
+            + sidebarRows(SidebarItem.rowItems, String(localized: "Show in each workspace:", comment: "Settings › Sidebar"))
+            + sidebarRows(SidebarItem.footerItems, String(localized: "Footer:", comment: "Settings › Sidebar"))
+            + [[NSGridCell.emptyContentView, Self.note(String(localized: "The workspace name, the agent's state and its task always show."))]]
+        let agents: [[NSView]] = [
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
-            [Self.label(String(localized: "Menu bar:")), menuBarCheckbox],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "An orange badge counts the workspaces that need you (orange in the sidebar), a blue one those working. Its menu takes you to them."))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
             [Self.label(String(localized: "Schedules:")), schedulesButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Start a workspace or continue a Claude Code session at a set time, on weekdays, or when an account’s limit resets (also Window › Schedules…)."))],
-            [Self.header(String(localized: "Updates")), NSGridCell.emptyContentView],
+        ]
+        let menuBar: [[NSView]] = [
+            [NSGridCell.emptyContentView, menuBarCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "An orange badge counts the workspaces that need you (orange in the sidebar). Choose what else the icon and its menu show."))],
+            [Self.label(String(localized: "Icon:", comment: "Settings › Menu Bar")), option(.workingBadge)],
+            [NSGridCell.emptyContentView, option(.warningDot)],
+            [NSGridCell.emptyContentView, option(.animation)],
+            [Self.label(String(localized: "Menu:", comment: "Settings › Menu Bar")), option(.systemRings)],
+            [NSGridCell.emptyContentView, option(.limitRings)],
+            [NSGridCell.emptyContentView, option(.workspaces)],
+        ]
+        let updates: [[NSView]] = [
             [NSGridCell.emptyContentView, checkUpdatesCheckbox],
             [NSGridCell.emptyContentView, installUpdatesCheckbox],
             [NSGridCell.emptyContentView, updatesNote],
-        ])
+        ]
+        fontPopup.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true
+
+        let tabs = NSTabViewController()
+        tabs.tabStyle = .toolbar
+        for (tab, title, symbol, rows, headers) in [
+            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4]),
+            (.sidebar, String(localized: "Sidebar"), "sidebar.left", sidebar, []),
+            (.agents, String(localized: "Agents"), "sparkles", agents, []),
+            (.menuBar, String(localized: "Menu Bar"), "menubar.rectangle", menuBar, []),
+            (.updates, String(localized: "Updates"), "arrow.triangle.2.circlepath", updates, []),
+        ] as [(SettingsTab, String, String, [[NSView]], [Int])] {
+            let item = NSTabViewItem(viewController: Self.page(rows, headers: headers))
+            item.label = title
+            item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+            item.identifier = tab.rawValue
+            tabs.addTabViewItem(item)
+        }
+        tabController = tabs
+        window?.contentViewController = tabs
+        window?.toolbarStyle = .preference
+    }
+
+    /// One Settings tab: a grid of label / control rows; `headers` are rows with a bold title across both columns.
+    private static func page(_ rows: [[NSView]], headers: [Int]) -> NSViewController {
+        let grid = NSGridView(views: rows)
         grid.rowSpacing = 8
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        for row in [0, 4, 6, 9, 18] {
+        for row in headers {
             grid.row(at: row).mergeCells(in: NSRange(location: 0, length: 2))
             grid.row(at: row).topPadding = row == 0 ? 0 : 10
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
         }
         grid.translatesAutoresizingMaskIntoConstraints = false
-
         let content = NSView()
         content.addSubview(grid)
         NSLayoutConstraint.activate([
@@ -161,9 +229,20 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             grid.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
             grid.topAnchor.constraint(equalTo: content.topAnchor, constant: 20),
             grid.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -20),
-            fontPopup.widthAnchor.constraint(greaterThanOrEqualToConstant: 240),
+            content.widthAnchor.constraint(greaterThanOrEqualToConstant: 520),
         ])
-        window?.contentView = content
+        let controller = NSViewController()
+        controller.view = content
+        controller.preferredContentSize = content.fittingSize
+        return controller
+    }
+
+    /// Opens Settings on a tab (the menu bar item's "Menu Bar Settings…").
+    func show(tab: SettingsTab) {
+        showSettings(nil)
+        guard let tabs = tabController,
+              let index = tabs.tabViewItems.firstIndex(where: { ($0.identifier as? String) == tab.rawValue }) else { return }
+        tabs.selectedTabViewItemIndex = index
     }
 
     private static func header(_ text: String) -> NSTextField {
@@ -240,6 +319,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         select(settings.previewZoom, in: previewZoomPopup)
         subagentsPopup.selectItem(at: subagentsPopup.indexOfItem(withRepresentedObject: settings.showSubagents.rawValue))
         menuBarCheckbox.state = settings.showInMenuBar ? .on : .off
+        for (item, checkbox) in sidebarItemCheckboxes { checkbox.state = settings.sidebar(item) ? .on : .off }
+        for (option, checkbox) in menuBarOptionCheckboxes {
+            checkbox.state = settings.menuBar(option) ? .on : .off
+            checkbox.isEnabled = settings.showInMenuBar
+                && (option != .animation || settings.menuBar(.workingBadge))  // the arc circles the working badge
+        }
         refreshUpdates()
     }
 
@@ -317,6 +402,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func menuBarToggled() {
         settings.showInMenuBar = menuBarCheckbox.state == .on
+    }
+
+    @objc private func sidebarItemToggled(_ sender: NSButton) {
+        guard let raw = sender.identifier?.rawValue, let item = SidebarItem(rawValue: raw) else { return }
+        settings.setSidebar(item, sender.state == .on)
+    }
+
+    @objc private func menuBarOptionToggled(_ sender: NSButton) {
+        guard let raw = sender.identifier?.rawValue, let option = MenuBarOption(rawValue: raw) else { return }
+        settings.setMenuBar(option, sender.state == .on)
     }
 
     @objc private func manageAccounts() {

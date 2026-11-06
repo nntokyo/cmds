@@ -103,6 +103,12 @@ final class SystemUsageView: NSView {
         KeepAwakeIndicator.apply(keepAwake, to: awakeButton, compact: false)
     }
 
+    /// Settings › Sidebar › Footer › CPU and memory (#107).
+    func setShowsSystem(_ shows: Bool) {
+        cpuRow.isHidden = !shows
+        memoryRow.isHidden = !shows
+    }
+
     func update(nextSchedule hint: ScheduleText.NextRunHint?) {
         NextScheduleIndicator.apply(hint, to: scheduleButton)
     }

@@ -231,16 +231,25 @@ While you work in other apps, the cmds icon in the menu bar shows at a glance wh
 
 - **Orange badge** with a number: workspaces that need you (orange in the sidebar: an agent asks for input or
   permission, or a notification you have not seen).
-- **Blue badge** (your accent colour) with a number, circled by a turning arc: workspaces with an agent working (the
-  arc stands still with System Settings › Accessibility › Display › Reduce motion).
+- **Blue badge** (your accent colour) with a number, circled by a turning arc: workspaces with an agent working.
+- **Red dot** on the icon: an account limit is at 95 % or more, or memory pressure is critical (the tooltip says
+  which).
 - Only the icon: nothing waits or works.
 
 Its menu starts with ring charts: CPU and memory (coloured by memory pressure), then per agent the Claude Code /
-Codex account limits (5-hour, 7-day, …) with their reset times — green, orange from 80 %, red from 95 %. Below them it
-lists every workspace where an agent ran, with a mark for its state (orange "!" needs you, turning arc working, green
-check done, grey dot idle) and, in small type, the agent and what it is doing or asking. Those that need you come
-first; choosing one brings cmds forward on it, at the pane that waits. Turn it off in Settings › Agents › **Show in
-menu bar**. Isolated test instances (`CMDS_SUPPORT_DIR`) leave it off unless their own setting turns it on.
+Codex account limits (5-hour, 7-day, …) with the time to their reset (`in 2h10m`, or the day and time when it is more
+than a day away) — green, orange from 80 %, red from 95 %. Below them it lists every workspace where an agent ran,
+with a mark for its state (orange "!" needs you, turning arc working, green check done, grey dot idle) and, in small
+type, the agent and what it is doing or asking — for those that need you, since when (`3 min ago`). Those that need
+you come first; choosing one (or ⌘1…⌘9 while the menu is open) brings cmds forward on it, at the pane that waits.
+**Menu Bar Settings…** at the bottom opens Settings.
+
+Settings › **Menu Bar** (also **Menu Bar Settings…** in the menu) lets you keep only what you want to see. **Show in
+menu bar** turns the item off. For the icon: **Number of agents working** (the blue badge), **Red dot when a limit or
+memory runs short**, **Animate while agents work** (off keeps the arc still, as does System Settings › Accessibility ›
+Display › Reduce motion). For the menu: **CPU and memory**, **AI limits (Claude Code, Codex)**, **Workspaces with
+agents**. All are on by default; the orange badge always shows. Isolated test instances (`CMDS_SUPPORT_DIR`) leave the
+item off unless their own setting turns it on.
 
 ## Keeping the Mac awake
 
@@ -261,7 +270,8 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
 
 ## Settings
 
-**cmds › Settings…** (⌘,) applies every change at once to all open panes and remembers it:
+**cmds › Settings…** (⌘,) has five tabs — General, Sidebar, Agents, Menu Bar, Updates — and applies every change at
+once to all open panes and remembers it:
 
 - **Terminal font and size**: a font family (installed monospaced fonts) and a custom size in points. Both are
   layered over your Ghostty config (`~/.config/ghostty/config`): left at **Ghostty Default** / unchecked, the config
@@ -270,12 +280,14 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
   (Ghostty's own font-size keys), a browser or preview pane's page zoom. A terminal zoomed this way keeps its size
   when you change the setting; ⌘0 returns it to the Settings size.
 - **Sidebar text size**: Small, Medium (default) or Large. Rows, footer and the compact rail scale together.
+- **Show in each workspace** (Sidebar): Git branch, directory, listening ports, the agent's model, context and cost,
+  the latest notification — turn off what you don't need for shorter rows. The workspace name, the agent's state and
+  its task always show. **Footer**: AI limits (Claude Code, Codex), CPU and memory. All on by default.
 - **Browser page zoom** and **Preview zoom**: the starting zoom of browser panes and of rendered previews
   (Markdown, diffs, text).
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
-- **Show in menu bar** (Agents): badges for the workspaces that need you and those working ([Menu bar](#menu-bar)). On
-  by default.
+- **Menu Bar**: show the item, and what its icon and menu show ([Menu bar](#menu-bar)). All on by default.
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size

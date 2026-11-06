@@ -325,6 +325,12 @@ final class SidebarViewController: NSViewController {
 
     /// Sidebar text size changed (cmds › Settings…): cells re-set their fonts on reload, heights are re-measured.
     @objc private func settingsChanged() {
+        // What the rows and the footer show (Settings › Sidebar): heights change, so reload.
+        let items = Set(SidebarItem.allCases.filter { AppSettings.shared.sidebar($0) })
+        if isViewLoaded, items != appliedSidebarItems {
+            appliedSidebarItems = items
+            reload()
+        }
         // Show Subagents (Settings › Agents): the "Sub n" badges come and go.
         let subagents = AppSettings.shared.showSubagents
         if isViewLoaded, subagents != appliedSubagentDisplay {
@@ -345,6 +351,7 @@ final class SidebarViewController: NSViewController {
     /// nil until the first settings change (the views were built for the size at launch).
     private var appliedTextScale: CGFloat?
     private var appliedSubagentDisplay = AppSettings.shared.showSubagents
+    private var appliedSidebarItems = Set(SidebarItem.allCases.filter { AppSettings.shared.sidebar($0) })
 
     @objc private func keepAwakeChanged() {
         guard isViewLoaded else { return }
@@ -486,7 +493,8 @@ final class SidebarViewController: NSViewController {
             (cell as? WorkspaceCellView)?.updateUsage(with: workspace)
             (cell as? CompactWorkspaceCellView)?.updateUsage(with: workspace)
         }
-        let limits = controller.activeAgentLimits()
+        let limits = AppSettings.shared.sidebar(.footerLimits) ? controller.activeAgentLimits() : []
+        usageFooter.setShowsSystem(AppSettings.shared.sidebar(.footerSystem))
         let keepAwake = KeepAwakeManager.shared.status
         compactFooter.update(keepAwake: keepAwake)
         usageFooter.update(keepAwake: keepAwake)

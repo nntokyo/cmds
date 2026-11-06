@@ -5,7 +5,8 @@ import CmdsCore
 /// The menu bar item (#95), drawn rather than written: the cmds glyph with an orange badge (workspaces that need the
 /// user, orange in the sidebar) and an accent badge circled by a turning arc while agents work. Its menu shows ring
 /// charts for CPU, memory and the agents' account limits, then every workspace with an agent and a mark for what it
-/// is doing; choosing one brings cmds forward on it. Settings › Agents › Show in menu bar.
+/// is doing (and, when it needs the user, since when); choosing one (or ⌘1…⌘9) brings cmds forward on it. A red dot
+/// on the icon warns of a limit at 95 % or critical memory pressure (#105). Settings › Menu Bar chooses what shows.
 @MainActor
 final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private let controller: AppController
@@ -29,9 +30,12 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private var itemStates: [ObjectIdentifier: MenuBarSummary.State] = [:]
     private weak var highlightedItem: NSMenuItem?
 
+    /// What the status bar image shows; it is redrawn only when this changes (or the spinner turns).
     private struct Counts: Equatable {
         var needingUser: Int
         var working: Int
+        /// Why the red warning dot shows, nil when it does not.
+        var warning: String?
     }
 
     /// One spinner turn takes this long, in `steps` frames.
@@ -48,8 +52,9 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     func start() {
         subscription = controller.changes.sink { [weak self] _ in self?.update() }
         usageSubscription = controller.usageChanges.sink { [weak self] in
-            guard let self, self.menuIsOpen else { return }
-            self.updateDashboard()
+            guard let self else { return }
+            self.update()  // the warning dot follows limits and memory pressure
+            if self.menuIsOpen { self.updateDashboard() }
         }
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: AppSettings.didChange, object: nil)
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(motionPreferenceChanged),
@@ -58,21 +63,21 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         settingsChanged()
     }
 
+    /// Shows or removes the item; also when the animation setting changed.
     @objc private func settingsChanged() {
-        if AppSettings.shared.showInMenuBar {
-            guard item == nil else { return }
+        if AppSettings.shared.showInMenuBar, item == nil {
             let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
             let menu = NSMenu()
             menu.delegate = self
             item.menu = menu
             self.item = item
-            appliedCounts = nil
-            update()
-        } else if let item {
+        } else if !AppSettings.shared.showInMenuBar, let item {
             NSStatusBar.system.removeStatusItem(item)
             self.item = nil
-            updateSpinner(working: false)
         }
+        appliedCounts = nil
+        update()
+        if item == nil { updateSpinner(working: false) }
     }
 
     @objc private func motionPreferenceChanged() {
@@ -101,7 +106,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private func update() {
         guard let button = item?.button else { return }
         let summary = summary
-        let counts = Counts(needingUser: summary.needingUserCount, working: summary.workingCount)
+        let settings = AppSettings.shared
+        let counts = Counts(needingUser: summary.needingUserCount,
+                            working: settings.menuBar(.workingBadge) ? summary.workingCount : 0,
+                            warning: settings.menuBar(.warningDot) ? warning() : nil)
         updateSpinner(working: counts.working > 0)
         guard counts != appliedCounts else { return }
         appliedCounts = counts
@@ -113,12 +121,29 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     private func drawStatusImage() {
         guard let button = item?.button, let counts = appliedCounts else { return }
-        button.image = MenuBarIcon.statusImage(needingUser: counts.needingUser, working: counts.working, phase: phase)
+        button.image = MenuBarIcon.statusImage(needingUser: counts.needingUser, working: counts.working, phase: phase,
+                                               warning: counts.warning != nil)
     }
 
-    /// Runs the spinner timer while agents work, unless the user asked for reduced motion (then the arc stands still).
+    /// An account limit at 95 % or more, or critical memory pressure: what the red dot warns of, for its tooltip.
+    private func warning() -> String? {
+        var reasons: [String] = []
+        for limits in controller.activeAgentLimits() {
+            for limit in limits.ordered where UsageLevel(percent: limit.usedPercent) == .critical {
+                reasons.append("\(limits.agent.displayName) \(AgentFormat.limitLabel(limit, strings: .localized)) \(AgentFormat.percent(limit.usedPercent))")
+            }
+        }
+        if controller.systemSample?.stats.pressure == .critical {
+            reasons.append(String(localized: "Memory pressure critical", comment: "menu bar item tooltip: why the red dot shows"))
+        }
+        return reasons.isEmpty ? nil : reasons.joined(separator: ", ")
+    }
+
+    /// Runs the spinner timer while agents work, unless the user turned the animation off (Settings › Menu Bar) or asked
+    /// for reduced motion: then the arc stands still.
     private func updateSpinner(working: Bool) {
-        let animate = working && item != nil && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let animate = working && item != nil && AppSettings.shared.menuBar(.animation)
+            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if animate, spinner == nil {
             let timer = Timer(timeInterval: Self.turn / Double(Self.steps), repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.advanceSpinner() }
@@ -141,15 +166,25 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     /// Tooltip and VoiceOver label.
     private static func description(_ counts: Counts) -> String {
-        guard counts.needingUser > 0 || counts.working > 0 else { return "cmds" }
-        return "cmds — " + String(localized: "\(counts.needingUser) need you, \(counts.working) working",
-                                  comment: "menu bar item: workspaces waiting for the user, and with an agent working")
+        var text = "cmds"
+        if counts.needingUser > 0 || counts.working > 0 {
+            text += " — " + String(localized: "\(counts.needingUser) need you, \(counts.working) working",
+                                   comment: "menu bar item: workspaces waiting for the user, and with an agent working")
+        }
+        if let warning = counts.warning { text += "\n⚠︎ " + warning }
+        return text
     }
 
     // MARK: Menu
 
-    private func updateDashboard() {
-        dashboard.update(sample: controller.systemSample, agentLimits: controller.activeAgentLimits())
+    /// The rings the user chose to see (Settings › Menu Bar); false when none.
+    @discardableResult
+    private func updateDashboard() -> Bool {
+        let settings = AppSettings.shared
+        let system = settings.menuBar(.systemRings)
+        let limits = settings.menuBar(.limitRings) ? controller.activeAgentLimits() : []
+        dashboard.update(sample: controller.systemSample, agentLimits: limits, showsMachine: system)
+        return system || !limits.isEmpty
     }
 
     func menuWillOpen(_ menu: NSMenu) { menuIsOpen = true }
@@ -173,21 +208,26 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        updateDashboard()
-        menu.addItem(dashboardItem)
-        menu.addItem(.separator())
+        if updateDashboard() {
+            menu.addItem(dashboardItem)
+            menu.addItem(.separator())
+        }
         workingMenuItems = []
         itemStates = [:]
         highlightedItem = nil
-        let entries = summary.entries
-        for entry in entries {
+        let entries = AppSettings.shared.menuBar(.workspaces) ? summary.entries : []
+        for (index, entry) in entries.enumerated() {
             guard let workspace = controller.workspace(id: entry.id), let state = entry.state else { continue }
             let item = workspaceItem(workspace, state: state)
+            if index < 9 {  // ⌘1…⌘9 while the menu is open, in menu order
+                item.keyEquivalent = "\(index + 1)"
+                item.keyEquivalentModifierMask = .command
+            }
             if state == .working { workingMenuItems.append(item) }
             itemStates[ObjectIdentifier(item)] = state
             menu.addItem(item)
         }
-        if entries.isEmpty {
+        if entries.isEmpty, AppSettings.shared.menuBar(.workspaces) {
             let none = NSMenuItem(title: String(localized: "No agents working", comment: "menu bar item: nothing waits or works"),
                                   action: nil, keyEquivalent: "")
             none.isEnabled = false
@@ -197,6 +237,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         let open = NSMenuItem(title: String(localized: "Open cmds", comment: "menu bar item"), action: #selector(openApp), keyEquivalent: "")
         open.target = self
         menu.addItem(open)
+        let settings = NSMenuItem(title: String(localized: "Menu Bar Settings…", comment: "menu bar item: opens Settings"),
+                                  action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
     }
 
     /// The workspace name, and under it in small grey type the agent and what it does (or what it asks).
@@ -206,6 +250,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         item.representedObject = workspace.id
         item.image = MenuBarIcon.stateImage(state, phase: phase)
         var detail: [String] = []
+        // How long it has waited (its oldest unanswered call): what to answer first.
+        if state == .needsUser, let since = workspace.panes.values.filter(\.attention).compactMap(\.attentionDate).min() {
+            detail.append(AgentFormat.age(since, strings: .localized))
+        }
         if let agent = workspace.primaryAgent?.usage.agent { detail.append(agent.displayName) }
         let doing = state == .needsUser ? workspace.notificationText ?? workspace.agentTopic : workspace.agentTopic
         if let doing, !doing.isEmpty { detail.append(doing) }
@@ -229,4 +277,9 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     }
 
     @objc private func openApp() { showWorkspace(nil) }
+
+    @objc private func openSettings() {
+        NSApp.activate()
+        SettingsWindowController.shared.show(tab: .menuBar)
+    }
 }

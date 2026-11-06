@@ -271,22 +271,22 @@ final class WorkspaceCellView: NSTableCellView {
         topicLabel.toolTip = [topic, directory].compactMap { $0 }.joined(separator: "\n")
         hostLabel.isHidden = workspace.sshPanes.isEmpty
         hostLabel.attributedStringValue = Self.hostText(workspace)
-        branchLabel.isHidden = workspace.gitBranch == nil
+        branchLabel.isHidden = !Self.showsBranch(workspace)
         branchLabel.attributedStringValue = Self.symbolText("arrow.triangle.branch", workspace.gitBranch ?? "")
         // A remote path is shown as is (`~` abbreviation is for this Mac's home). The agent's task takes its place
         // (the cwd is then in the task's tooltip).
         directoryLabel.path = directory ?? ""
         directoryLabel.toolTip = directory
-        directoryLabel.isHidden = directory == nil || topic != nil
+        directoryLabel.isHidden = directory == nil || topic != nil || !AppSettings.shared.sidebar(.directory)
         statusRow.isHidden = !Self.showsStatusRow(workspace)
-        portsLabel.isHidden = workspace.ports.isEmpty
+        portsLabel.isHidden = !Self.showsPorts(workspace)
         portsLabel.stringValue = workspace.portsText
         usageLabel.isHidden = !Self.showsUsage(workspace)
         agentLabel.isHidden = !Self.showsAgent(workspace)
         agentNameLabel.isHidden = agentLabel.isHidden
         agentKey = nil // reloads (selection changes) redraw the coloured runs for the row's new background
         updateUsage(with: workspace)
-        notificationLabel.isHidden = workspace.notificationText == nil
+        notificationLabel.isHidden = Self.notificationText(workspace) == nil
         notificationLabel.stringValue = workspace.notificationText ?? ""
         notificationLabel.textColor = workspace.attention ? .labelColor : .secondaryLabelColor
     }
@@ -343,11 +343,11 @@ final class WorkspaceCellView: NSTableCellView {
         var lines: [CGFloat] = [titleHeight]
         if showsStatusRow(workspace) { lines.append(detailHeight) }
         if !workspace.sshPanes.isEmpty { lines.append(detailHeight) }
-        if workspace.gitBranch != nil { lines.append(detailHeight) }
-        if !workspace.ports.isEmpty { lines.append(detailHeight) }
+        if showsBranch(workspace) { lines.append(detailHeight) }
+        if showsPorts(workspace) { lines.append(detailHeight) }
         if showsUsage(workspace) { lines.append(detailHeight) }
         if showsAgent(workspace) { lines += [detailHeight, detailHeight] }
-        if let text = workspace.notificationText {
+        if let text = notificationText(workspace) {
             let available = max(width - 2 * horizontalInset - 24, 40) // source-list rows are inset
             let bounds = (text as NSString).boundingRect(
                 with: NSSize(width: available, height: .greatestFiniteMagnitude),
@@ -360,8 +360,24 @@ final class WorkspaceCellView: NSTableCellView {
     /// Second line: agent state + task, else the cwd.
     @MainActor
     private static func showsStatusRow(_ workspace: Workspace) -> Bool {
-        AgentActivityStyle.badge(for: workspace) != nil || workspace.agentTopic != nil || workspace.workingDirectory != nil
-            || subagentCount(workspace) > 0
+        AgentActivityStyle.badge(for: workspace) != nil || workspace.agentTopic != nil
+            || (workspace.workingDirectory != nil && AppSettings.shared.sidebar(.directory)) || subagentCount(workspace) > 0
+    }
+
+    // Lines the user can hide in Settings › Sidebar (#107).
+    @MainActor
+    private static func showsBranch(_ workspace: Workspace) -> Bool {
+        workspace.gitBranch != nil && AppSettings.shared.sidebar(.branch)
+    }
+
+    @MainActor
+    private static func showsPorts(_ workspace: Workspace) -> Bool {
+        !workspace.ports.isEmpty && AppSettings.shared.sidebar(.ports)
+    }
+
+    @MainActor
+    private static func notificationText(_ workspace: Workspace) -> String? {
+        AppSettings.shared.sidebar(.notification) ? workspace.notificationText : nil
     }
 
     /// The usage line depends only on structure (a terminal exists), never on sampled values, so new
@@ -376,7 +392,9 @@ final class WorkspaceCellView: NSTableCellView {
 
     /// The agent line appears/disappears only with structural changes (an agent pane appears or goes away).
     @MainActor
-    private static func showsAgent(_ workspace: Workspace) -> Bool { !workspace.agentPanes.isEmpty }
+    private static func showsAgent(_ workspace: Workspace) -> Bool {
+        !workspace.agentPanes.isEmpty && AppSettings.shared.sidebar(.agentUsage)
+    }
 
     /// Agent line: the focused (else latest) agent pane's model, context and cost; account limits (tooltip only)
     /// come from the newest report of that agent kind. Touches the label only when its text or colours change.
