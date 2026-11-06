@@ -160,6 +160,14 @@ final class APIServer {
         case "sync.status":
             // Local socket only: not in RemoteAPIPolicy.allowedMethods, so SSH-pane sockets get 403.
             return try .from(SyncStatusReport.current())
+        case "sync.devices":
+            // Local socket only, like sync.status (#114).
+            return try .from(SyncServer.shared.pairedDeviceReports)
+        case "sync.revoke":
+            // Local socket only, like sync.status (#114).
+            let id = try params.required("id")
+            guard SyncServer.shared.revokeDevice(id: id) else { throw RPCError.notFound("no paired device \(id)") }
+            return .object(["revoked": .string(id)])
 
         case "agent.list":
             return try .from(controller.agentList())

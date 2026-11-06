@@ -280,6 +280,34 @@ final class SyncServer {
         pruneScreenCache()
     }
 
+    /// Every paired device with the peers it is connected from now (`sync.devices`, the pairing window, #114).
+    var pairedDeviceReports: [SyncPairedDevice] {
+        let iso = ISO8601DateFormatter()
+        let connected = connectedDevices
+        return store.devices.map { device in
+            SyncPairedDevice(id: device.id, name: device.name, pairedAt: iso.string(from: device.pairedAt),
+                             lastSeen: device.lastSeen.map { iso.string(from: $0) },
+                             connectedFrom: connected.filter { SyncDeviceStore.digestsEqual($0.tokenHash, device.tokenHash) }
+                                 .map(\.host))
+        }
+    }
+
+    /// Forgets one paired device and disconnects it at once; the others stay paired (#114). False when no device has
+    /// that id.
+    @discardableResult
+    func revokeDevice(id: String) -> Bool {
+        guard let device = store.devices.first(where: { $0.id == id }) else { return false }
+        store.revoke(id: id)
+        for client in clients.values where client.authenticated {
+            guard let hash = client.tokenHash, SyncDeviceStore.digestsEqual(hash, device.tokenHash) else { continue }
+            revokeSession(of: client, reason: "this device was unpaired on the Mac")
+        }
+        pruneScreenCache()
+        syncLog.notice("sync device unpaired")
+        didChange()
+        return true
+    }
+
     /// Forgets every paired device and disconnects them.
     func revokeAllDevices() {
         store.revokeAll()

@@ -40,7 +40,8 @@ trust ([why](../internals/sync-protocol.md#not-protected)).
 
 ### Managing paired devices
 
-- Mac, pairing window: **Revoke All Devices…** disconnects and unpairs every phone; **Reset Sync Identity…** creates a
+- Mac, pairing window: **Revoke…** next to a device disconnects and unpairs that one (also `cmds sync revoke <id|name>`;
+  `cmds sync devices` lists them); **Revoke All Devices…** disconnects and unpairs every phone; **Reset Sync Identity…** creates a
   new certificate (every phone must pair again); **New Code** rotates the code.
 - Phone, ⋯ menu of a Mac: **Unpair This Mac**, **Switch Mac…**, **Remote Access via SSH…**.
 

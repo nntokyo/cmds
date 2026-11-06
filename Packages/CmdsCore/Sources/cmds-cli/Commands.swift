@@ -145,6 +145,31 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             print(Format.sync(try perform { try result.decode(SyncStatusReport.self) }), terminator: "")
         },
+        Command(name: "sync devices", usage: "sync devices",
+                summary: "List the paired iPhones and iPads: id, name, connection, last seen and when they were paired.") { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds sync devices")
+            let result = try ctx.call("sync.devices")
+            if ctx.json { return ctx.printJSON(result) }
+            print(Format.pairedDevices(try perform { try result.decode([SyncPairedDevice].self) }), terminator: "")
+        },
+        Command(name: "sync revoke", usage: "sync revoke <id|name>",
+                summary: "Unpair one iPhone or iPad (it is disconnected at once and must pair again); the others stay paired.",
+                details: """
+                    Takes the id from `cmds sync devices`, an id prefix of 4 or more characters, or the device's name, when
+                    exactly one device matches. Revoke All Devices… in the pairing window unpairs every device.
+                    """) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds sync revoke <id|name>")
+            let devices = try perform { try ctx.call("sync.devices").decode([SyncPairedDevice].self) }
+            let device: SyncPairedDevice
+            do {
+                device = try SyncPairedDevice.match(ctx.args.positionals[0], in: devices)
+            } catch let error as SyncPairedDevice.MatchError {
+                throw CLIError.failure(error.description)
+            }
+            let result = try ctx.call("sync.revoke", ["id": .string(device.id)])
+            if ctx.json { return ctx.printJSON(result) }
+            print("unpaired \(device.name) (\(device.id))")
+        },
         Command(name: "new", usage:"new [--title T] [--cwd DIR] [--account NAME|auto] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
                 summary: "Create a workspace (in the current directory by default) and select it.",
                 details: """

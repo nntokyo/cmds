@@ -217,6 +217,28 @@ enum Format {
     }
 
     /// `cmds sync`: server, Bonjour, Bluetooth, SSH remote access, then one line per connection.
+    /// `cmds sync devices`: one line per paired device (#114), times in `timeZone` (the Mac's).
+    static func pairedDevices(_ devices: [SyncPairedDevice], timeZone: TimeZone = .current) -> String {
+        guard !devices.isEmpty else { return "no paired devices\n" }
+        let iso = ISO8601DateFormatter()
+        let local = DateFormatter()
+        local.locale = Locale(identifier: "en_US_POSIX")
+        local.timeZone = timeZone
+        func time(_ text: String, _ format: String) -> String {
+            guard let date = iso.date(from: text) else { return text }
+            local.dateFormat = format
+            return local.string(from: date)
+        }
+        let width = devices.map(\.name.count).max() ?? 0
+        return devices.map { device in
+            let name = device.name.padding(toLength: width, withPad: " ", startingAt: 0)
+            let state = device.connectedFrom.isEmpty
+                ? (device.lastSeen.map { "last seen \(time($0, "yyyy-MM-dd HH:mm"))" } ?? "not connected")
+                : "connected (\(device.connectedFrom.joined(separator: ", ")))"
+            return "\(device.id)  \(name)  \(state)  · paired \(time(device.pairedAt, "yyyy-MM-dd"))\n"
+        }.joined()
+    }
+
     static func sync(_ report: SyncStatusReport) -> String {
         func yes(_ flag: Bool) -> String { flag ? "on" : "off" }
         var out = "sync       \(report.enabled ? "enabled" : "disabled") · \(report.state)"

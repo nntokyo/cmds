@@ -17,7 +17,10 @@ final class SyncPairingWindowController: NSWindowController {
     private let codeLabel = NSTextField(labelWithString: "")
     private let identityLabel = NSTextField(labelWithString: "")
     private let detailLabel = NSTextField(wrappingLabelWithString: "")
-    private let devicesLabel = NSTextField(wrappingLabelWithString: "")
+    /// One row per paired device, each with its own Revoke… (#114).
+    private let devicesList = NSStackView()
+    /// What the rows show; they are rebuilt only when it changes (refresh also runs every second for the countdown).
+    private var shownDevices: [String] = []
     private let newCodeButton = NSButton(title: String(localized: "New Code"), target: nil, action: nil)
     private let revokeButton = NSButton(title: String(localized: "Revoke All Devices…"), target: nil, action: nil)
     private let resetIdentityButton = NSButton(title: String(localized: "Reset Sync Identity…"), target: nil, action: nil)
@@ -75,7 +78,9 @@ final class SyncPairingWindowController: NSWindowController {
         detailLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         detailLabel.textColor = .secondaryLabelColor
         detailLabel.preferredMaxLayoutWidth = 340
-        devicesLabel.preferredMaxLayoutWidth = 340
+        devicesList.orientation = .vertical
+        devicesList.alignment = .leading
+        devicesList.spacing = 6
 
         enableCheckbox.target = self
         enableCheckbox.action = #selector(toggleEnabled(_:))
@@ -92,7 +97,7 @@ final class SyncPairingWindowController: NSWindowController {
         devicesHeader.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
 
         let stack = NSStackView(views: [enableCheckbox, title, qrView, codeLabel, identityLabel, detailLabel,
-                                        devicesHeader, devicesLabel, buttons, resetIdentityButton])
+                                        devicesHeader, devicesList, buttons, resetIdentityButton])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
@@ -159,15 +164,39 @@ final class SyncPairingWindowController: NSWindowController {
         }
 
         let connected = server.connectedDevices
-        var lines: [String] = server.store.devices.map { device in
+        let rows: [(id: String, text: String)] = server.store.devices.map { device in
             let hosts = connected.filter { SyncDeviceStore.digestsEqual($0.tokenHash, device.tokenHash) }.map(\.host)
             let state = hosts.isEmpty
                 ? (device.lastSeen.map { String(localized: "last seen \(Self.relative($0))") } ?? String(localized: "not connected"))
                 : String(localized: "connected (\(Set(hosts).sorted().joined(separator: ", ")))")
-            return "• \(device.name) — \(state)"
+            return (device.id, "\(device.name) — \(state)")
         }
-        if lines.isEmpty { lines = [String(localized: "No paired devices.")] }
-        devicesLabel.stringValue = lines.joined(separator: "\n")
+        let shown = rows.map { "\($0.id)\t\($0.text)" }
+        guard shown != shownDevices else { return }
+        shownDevices = shown
+        devicesList.views.forEach { devicesList.removeView($0) }
+        if rows.isEmpty {
+            devicesList.addView(NSTextField(labelWithString: String(localized: "No paired devices.")), in: .top)
+        }
+        for row in rows { devicesList.addView(deviceRow(id: row.id, text: row.text), in: .top) }
+    }
+
+    /// "iPhone — connected (…)  [Revoke…]".
+    private func deviceRow(id: String, text: String) -> NSView {
+        let label = NSTextField(wrappingLabelWithString: text)
+        label.preferredMaxLayoutWidth = 250
+        label.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let revoke = NSButton(title: String(localized: "Revoke…", comment: "pairing window: unpair one device"),
+                              target: self, action: #selector(revokeDevice(_:)))
+        revoke.controlSize = .small
+        revoke.bezelStyle = .rounded
+        revoke.identifier = NSUserInterfaceItemIdentifier(id)
+        revoke.setAccessibilityLabel(String(localized: "Revoke \(text)", comment: "pairing window: unpair one device (VoiceOver)"))
+        let row = NSStackView(views: [label, revoke])
+        row.orientation = .horizontal
+        row.alignment = .firstBaseline
+        row.spacing = 8
+        return row
     }
 
     /// Re-renders the QR code when its payload changed (the code rotates, the address changes).
@@ -225,6 +254,25 @@ final class SyncPairingWindowController: NSWindowController {
 
     @objc private func newCode(_ sender: Any?) {
         server.rotateCode()
+    }
+
+    /// Unpairs one device after asking; the others stay paired (#114).
+    @objc private func revokeDevice(_ sender: NSButton) {
+        guard let id = sender.identifier?.rawValue,
+              let device = server.store.devices.first(where: { $0.id == id }), let window else { return }
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Revoke “\(device.name)”?")
+        alert.informativeText = String(localized: "It is disconnected and must be paired again with a new code. Other devices stay paired.")
+        alert.addButton(withTitle: String(localized: "Revoke", comment: "pairing window: confirm unpairing one device"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        alert.buttons.first?.hasDestructiveAction = true
+        alert.beginSheetModal(for: window) { [weak self] response in
+            guard response == .alertFirstButtonReturn else { return }
+            MainActor.assumeIsolated {
+                self?.server.revokeDevice(id: id)
+                self?.refresh()
+            }
+        }
     }
 
     @objc private func revokeAll(_ sender: Any?) {

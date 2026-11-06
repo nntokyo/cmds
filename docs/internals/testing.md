@@ -120,6 +120,9 @@ In addition to `CMDS_SUPPORT_DIR`, which also selects separate keychain items fo
 - Relay test against an isolated instance: `CMDS_RELAY_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
   swift test --filter SyncRelayTests` (in `Packages/CmdsCore`) pins the instance's certificate and pairs through two
   relays and a simulated L2CAP channel.
+- Unpairing one device against an isolated instance: `CMDS_REVOKE_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
+  swift test --filter SyncRevokeTests` (in `Packages/CmdsCore`) pairs two phones, revokes one through `sync.revoke`
+  and checks that only that one is disconnected and refused (#114). The phones' helpers are in `SyncE2ESupport.swift`.
 - Scrollback test against an isolated instance: `CMDS_SCROLLBACK_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
   swift test --filter SyncScrollbackTests` (in `Packages/CmdsCore`). Each test creates its own workspace through the
   instance's socket (next to that file), prints numbered rows there, pairs and checks:
