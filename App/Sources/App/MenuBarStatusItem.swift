@@ -4,13 +4,19 @@ import CmdsCore
 
 /// The menu bar item (#95), drawn rather than written: the cmds glyph with an orange badge (workspaces that need the
 /// user, orange in the sidebar) and an accent badge (workspaces working), each with its count. Its menu lists those
-/// workspaces; choosing one brings cmds forward on it. Settings › Agents › Show in menu bar.
+/// workspaces, under the sidebar's CPU, memory and agent limit meters; choosing one brings cmds forward on it.
+/// Settings › Agents › Show in menu bar.
 @MainActor
 final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private let controller: AppController
     private let showWorkspace: (String?) -> Void
     private var item: NSStatusItem?
     private var subscription: AnyCancellable?
+    private var usageSubscription: AnyCancellable?
+    /// CPU, memory and the agents' account limits, as in the sidebar footer; at the top of the menu.
+    private let usageView = SystemUsageView()
+    private lazy var usageItem = makeUsageItem()
+    private var menuIsOpen = false
     private var appliedCounts: Counts?
 
     private struct Counts: Equatable {
@@ -27,6 +33,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     func start() {
         subscription = controller.changes.sink { [weak self] _ in self?.update() }
+        usageSubscription = controller.usageChanges.sink { [weak self] in
+            guard let self, self.menuIsOpen else { return }
+            self.updateUsage()
+        }
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: AppSettings.didChange, object: nil)
         settingsChanged()
     }
@@ -117,8 +127,47 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     // MARK: Menu
 
+    /// Width of the usage meters in the menu.
+    private static let usageWidth: CGFloat = 260
+    private static let usageInsets = NSEdgeInsets(top: 6, left: 14, bottom: 8, right: 14)
+
+    private func makeUsageItem() -> NSMenuItem {
+        let container = NSView()
+        usageView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(usageView)
+        let insets = Self.usageInsets
+        NSLayoutConstraint.activate([
+            usageView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: insets.left),
+            usageView.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -insets.right),
+            usageView.topAnchor.constraint(equalTo: container.topAnchor, constant: insets.top),
+            usageView.widthAnchor.constraint(equalToConstant: Self.usageWidth),
+        ])
+        let item = NSMenuItem()
+        item.view = container
+        return item
+    }
+
+    /// New values for the meters; the menu item takes the height they need (agent rows come and go).
+    private func updateUsage() {
+        usageView.update(sample: controller.systemSample)
+        usageView.update(agentLimits: controller.activeAgentLimits())
+        usageView.update(keepAwake: KeepAwakeManager.shared.status)
+        usageView.update(nextSchedule: ScheduleText.nextRunHint(controller.scheduleRunner.schedules))
+        guard let container = usageItem.view else { return }
+        usageView.layoutSubtreeIfNeeded()
+        let insets = Self.usageInsets
+        let height = usageView.fittingSize.height + insets.top + insets.bottom
+        container.setFrameSize(NSSize(width: Self.usageWidth + insets.left + insets.right, height: height))
+    }
+
+    func menuWillOpen(_ menu: NSMenu) { menuIsOpen = true }
+    func menuDidClose(_ menu: NSMenu) { menuIsOpen = false }
+
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
+        updateUsage()
+        menu.addItem(usageItem)
+        menu.addItem(.separator())
         let summary = summary
         if !summary.needingUser.isEmpty {
             menu.addItem(NSMenuItem.sectionHeader(title: String(localized: "Needs You", comment: "menu bar item: workspaces waiting for the user")))
@@ -127,13 +176,13 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
             }
         }
         if !summary.working.isEmpty {
-            if menu.numberOfItems > 0 { menu.addItem(.separator()) }
+            if !summary.needingUser.isEmpty { menu.addItem(.separator()) }
             menu.addItem(NSMenuItem.sectionHeader(title: String(localized: "Working", comment: "sidebar agent state: the agent is busy")))
             for entry in summary.working {
                 menu.addItem(workspaceItem(entry, symbol: "ellipsis.circle.fill", color: .controlAccentColor))
             }
         }
-        if menu.numberOfItems == 0 {
+        if summary.isQuiet {
             let none = NSMenuItem(title: String(localized: "No agents working", comment: "menu bar item: nothing waits or works"),
                                   action: nil, keyEquivalent: "")
             none.isEnabled = false

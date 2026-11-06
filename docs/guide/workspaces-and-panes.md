@@ -234,7 +234,8 @@ While you work in other apps, the cmds icon in the menu bar shows at a glance wh
 - **Blue badge** (your accent colour) with a number: workspaces with an agent working.
 - Only the icon: nothing waits or works.
 
-Its menu lists the workspaces that need you, then those working; choosing one brings cmds forward on it, at the pane
+Its menu starts with the sidebar footer's meters: CPU, memory (coloured by memory pressure) and the Claude Code / Codex
+account limits with their reset times. Below them it lists the workspaces that need you, then those working; choosing one brings cmds forward on it, at the pane
 that waits. Turn it off in Settings › Agents › **Show in menu bar**. Isolated test instances (`CMDS_SUPPORT_DIR`)
 leave it off unless their own setting turns it on.
 
