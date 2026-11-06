@@ -35,8 +35,9 @@ final class MenuBarDashboardView: NSView {
 
     override var isFlipped: Bool { true }
 
-    func update(sample: SystemSample?, agentLimits: [AgentLimits], now: Date = Date()) {
-        var rows = [Row(title: "Mac", gauges: Self.machineGauges(sample))]
+    /// `showsMachine`: the CPU and memory row (Settings › Menu Bar › Menu, #105).
+    func update(sample: SystemSample?, agentLimits: [AgentLimits], showsMachine: Bool = true, now: Date = Date()) {
+        var rows = showsMachine ? [Row(title: "Mac", gauges: Self.machineGauges(sample))] : []
         for limits in agentLimits {
             let gauges = limits.ordered.map { limit in
                 let level = UsageLevel(percent: limit.usedPercent)

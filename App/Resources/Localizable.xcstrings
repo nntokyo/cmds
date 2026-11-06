@@ -854,6 +854,16 @@
         }
       }
     },
+    "AI limits (Claude Code, Codex)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI の利用上限（Claude Code・Codex）"
+          }
+        }
+      }
+    },
     "About cmds": {
       "localizations": {
         "ja": {
@@ -1104,12 +1114,12 @@
         }
       }
     },
-    "An orange badge counts the workspaces that need you (orange in the sidebar), a blue one those working. Its menu takes you to them.": {
+    "An orange badge counts the workspaces that need you (orange in the sidebar). Choose what else the icon and its menu show.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オレンジのバッジはあなたの対応を待っているワークスペース（サイドバーのオレンジ）の数、青のバッジは作業中の数です。メニューからそのワークスペースに移動できます。"
+            "value": "オレンジのバッジは、あなたの対応を待っているワークスペース（サイドバーのオレンジ）の数です。ほかにアイコンとメニューに出すものを選べます。"
           }
         }
       }
@@ -1407,6 +1417,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "CPU %1$@、メモリ%2$@、メモリプレッシャー%3$@"
+          }
+        }
+      }
+    },
+    "CPU and memory": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU とメモリ"
           }
         }
       }
@@ -3082,6 +3102,16 @@
         }
       }
     },
+    "Icon:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アイコン:"
+          }
+        }
+      }
+    },
     "Idle": {
       "comment": "sidebar agent state: waiting for the next prompt",
       "localizations": {
@@ -3641,6 +3671,16 @@
         }
       }
     },
+    "Menu Bar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバー"
+          }
+        }
+      }
+    },
     "Menu Bar Settings…": {
       "comment": "menu bar item: opens Settings",
       "localizations": {
@@ -3652,12 +3692,12 @@
         }
       }
     },
-    "Menu bar:": {
+    "Menu:": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニューバー:"
+            "value": "メニュー:"
           }
         }
       }
@@ -4246,6 +4286,16 @@
         }
       }
     },
+    "Number of agents working": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中のエージェントの数"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "ja": {
@@ -4706,6 +4756,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "SSHに再接続"
+          }
+        }
+      }
+    },
+    "Red dot when a limit or memory runs short": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "利用上限やメモリが足りなくなったら赤い点"
           }
         }
       }
@@ -7454,6 +7514,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースとエージェントのセッション（別のcmdsで読み込めます）"
+          }
+        }
+      }
+    },
+    "Workspaces with agents": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントのワークスペース"
           }
         }
       }

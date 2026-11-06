@@ -13,7 +13,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   versions see them as browser panes (#26).
 - Mac: menu bar item — rows that need you say since when; ⌘1…⌘9 choose a workspace while the menu is open; limit
   rings count down to their reset within a day (`in 2h10m`); a red dot on the icon warns of a limit at 95 % or
-  critical memory pressure; Settings › Agents › Animate while agents work; Menu Bar Settings… in the menu (#105).
+  critical memory pressure; Menu Bar Settings… in the menu. Settings › Menu Bar chooses what the icon and the menu show
+  (working badge, red dot, animation, CPU and memory, AI limits, workspaces) (#105).
 
 ## [0.9.1] - 2026-11-06
 

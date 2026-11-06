@@ -106,7 +106,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private func update() {
         guard let button = item?.button else { return }
         let summary = summary
-        let counts = Counts(needingUser: summary.needingUserCount, working: summary.workingCount, warning: warning())
+        let settings = AppSettings.shared
+        let counts = Counts(needingUser: summary.needingUserCount,
+                            working: settings.menuBar(.workingBadge) ? summary.workingCount : 0,
+                            warning: settings.menuBar(.warningDot) ? warning() : nil)
         updateSpinner(working: counts.working > 0)
         guard counts != appliedCounts else { return }
         appliedCounts = counts
@@ -139,7 +142,7 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     /// Runs the spinner timer while agents work, unless the user turned the animation off (Settings › Agents) or asked
     /// for reduced motion: then the arc stands still.
     private func updateSpinner(working: Bool) {
-        let animate = working && item != nil && AppSettings.shared.animateMenuBar
+        let animate = working && item != nil && AppSettings.shared.menuBar(.animation)
             && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         if animate, spinner == nil {
             let timer = Timer(timeInterval: Self.turn / Double(Self.steps), repeats: true) { [weak self] _ in
@@ -174,8 +177,14 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     // MARK: Menu
 
-    private func updateDashboard() {
-        dashboard.update(sample: controller.systemSample, agentLimits: controller.activeAgentLimits())
+    /// The rings the user chose to see (Settings › Menu Bar); false when none.
+    @discardableResult
+    private func updateDashboard() -> Bool {
+        let settings = AppSettings.shared
+        let system = settings.menuBar(.systemRings)
+        let limits = settings.menuBar(.limitRings) ? controller.activeAgentLimits() : []
+        dashboard.update(sample: controller.systemSample, agentLimits: limits, showsMachine: system)
+        return system || !limits.isEmpty
     }
 
     func menuWillOpen(_ menu: NSMenu) { menuIsOpen = true }
@@ -199,13 +208,14 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        updateDashboard()
-        menu.addItem(dashboardItem)
-        menu.addItem(.separator())
+        if updateDashboard() {
+            menu.addItem(dashboardItem)
+            menu.addItem(.separator())
+        }
         workingMenuItems = []
         itemStates = [:]
         highlightedItem = nil
-        let entries = summary.entries
+        let entries = AppSettings.shared.menuBar(.workspaces) ? summary.entries : []
         for (index, entry) in entries.enumerated() {
             guard let workspace = controller.workspace(id: entry.id), let state = entry.state else { continue }
             let item = workspaceItem(workspace, state: state)
@@ -217,7 +227,7 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
             itemStates[ObjectIdentifier(item)] = state
             menu.addItem(item)
         }
-        if entries.isEmpty {
+        if entries.isEmpty, AppSettings.shared.menuBar(.workspaces) {
             let none = NSMenuItem(title: String(localized: "No agents working", comment: "menu bar item: nothing waits or works"),
                                   action: nil, keyEquivalent: "")
             none.isEnabled = false

@@ -18,7 +18,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let previewZoomPopup = NSPopUpButton()
     private let subagentsPopup = NSPopUpButton()
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show in menu bar"), target: nil, action: nil)
-    private let animateMenuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Animate while agents work"), target: nil, action: nil)
+    /// Settings › Menu Bar: one checkbox per part of the item (#105).
+    private let menuBarOptionCheckboxes: [MenuBarOption: NSButton] = Dictionary(uniqueKeysWithValues: MenuBarOption.allCases.map {
+        ($0, NSButton(checkboxWithTitle: $0.title, target: nil, action: nil))
+    })
     private let checkUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Check for updates automatically"), target: nil, action: nil)
     private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
     private let updatesNote = SettingsWindowController.note("")
@@ -115,8 +118,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         menuBarCheckbox.target = self
         menuBarCheckbox.action = #selector(menuBarToggled)
-        animateMenuBarCheckbox.target = self
-        animateMenuBarCheckbox.action = #selector(animateMenuBarToggled)
+        for (option, checkbox) in menuBarOptionCheckboxes {
+            checkbox.target = self
+            checkbox.action = #selector(menuBarOptionToggled(_:))
+            checkbox.identifier = NSUserInterfaceItemIdentifier(option.rawValue)
+        }
+        let option = { (option: MenuBarOption) -> NSView in self.menuBarOptionCheckboxes[option]! }
         checkUpdatesCheckbox.target = self
         checkUpdatesCheckbox.action = #selector(checkUpdatesToggled)
         installUpdatesCheckbox.target = self
@@ -135,13 +142,19 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.header(String(localized: "Agents")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
-            [Self.label(String(localized: "Menu bar:")), menuBarCheckbox],
-            [NSGridCell.emptyContentView, animateMenuBarCheckbox],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "An orange badge counts the workspaces that need you (orange in the sidebar), a blue one those working. Its menu takes you to them."))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
             [Self.label(String(localized: "Schedules:")), schedulesButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Start a workspace or continue a Claude Code session at a set time, on weekdays, or when an account’s limit resets (also Window › Schedules…)."))],
+            [Self.header(String(localized: "Menu Bar")), NSGridCell.emptyContentView],
+            [NSGridCell.emptyContentView, menuBarCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "An orange badge counts the workspaces that need you (orange in the sidebar). Choose what else the icon and its menu show."))],
+            [Self.label(String(localized: "Icon:", comment: "Settings › Menu Bar")), option(.workingBadge)],
+            [NSGridCell.emptyContentView, option(.warningDot)],
+            [NSGridCell.emptyContentView, option(.animation)],
+            [Self.label(String(localized: "Menu:", comment: "Settings › Menu Bar")), option(.systemRings)],
+            [NSGridCell.emptyContentView, option(.limitRings)],
+            [NSGridCell.emptyContentView, option(.workspaces)],
             [Self.header(String(localized: "Updates")), NSGridCell.emptyContentView],
             [NSGridCell.emptyContentView, checkUpdatesCheckbox],
             [NSGridCell.emptyContentView, installUpdatesCheckbox],
@@ -151,7 +164,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        for row in [0, 4, 6, 9, 19] {
+        for row in [0, 4, 6, 9, 16, 25] {
             grid.row(at: row).mergeCells(in: NSRange(location: 0, length: 2))
             grid.row(at: row).topPadding = row == 0 ? 0 : 10
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
@@ -244,8 +257,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         select(settings.previewZoom, in: previewZoomPopup)
         subagentsPopup.selectItem(at: subagentsPopup.indexOfItem(withRepresentedObject: settings.showSubagents.rawValue))
         menuBarCheckbox.state = settings.showInMenuBar ? .on : .off
-        animateMenuBarCheckbox.state = settings.animateMenuBar ? .on : .off
-        animateMenuBarCheckbox.isEnabled = settings.showInMenuBar
+        for (option, checkbox) in menuBarOptionCheckboxes {
+            checkbox.state = settings.menuBar(option) ? .on : .off
+            checkbox.isEnabled = settings.showInMenuBar
+                && (option != .animation || settings.menuBar(.workingBadge))  // the arc circles the working badge
+        }
         refreshUpdates()
     }
 
@@ -325,8 +341,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         settings.showInMenuBar = menuBarCheckbox.state == .on
     }
 
-    @objc private func animateMenuBarToggled() {
-        settings.animateMenuBar = animateMenuBarCheckbox.state == .on
+    @objc private func menuBarOptionToggled(_ sender: NSButton) {
+        guard let raw = sender.identifier?.rawValue, let option = MenuBarOption(rawValue: raw) else { return }
+        settings.setMenuBar(option, sender.state == .on)
     }
 
     @objc private func manageAccounts() {

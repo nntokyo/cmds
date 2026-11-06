@@ -23,6 +23,34 @@ enum SidebarTextSize: String, CaseIterable {
     }
 }
 
+/// Parts of the menu bar item (#95) the user can turn off in Settings › Menu Bar (#105). The orange badge for the
+/// workspaces that need the user is the item's purpose and always shows. Raw values are the defaults keys.
+enum MenuBarOption: String, CaseIterable {
+    /// Icon: the blue badge with how many agents work.
+    case workingBadge = "MenuBarWorkingBadge"
+    /// Icon: the red dot for a limit at 95 % or critical memory pressure.
+    case warningDot = "MenuBarWarningDot"
+    /// Icon: the arc around the working badge turns.
+    case animation = "AnimateMenuBar"
+    /// Menu: CPU and memory rings.
+    case systemRings = "MenuBarSystemRings"
+    /// Menu: Claude Code / Codex limit rings.
+    case limitRings = "MenuBarLimitRings"
+    /// Menu: the workspaces with an agent.
+    case workspaces = "MenuBarWorkspaces"
+
+    var title: String {
+        switch self {
+        case .workingBadge: return String(localized: "Number of agents working", comment: "Settings › Menu Bar › Icon")
+        case .warningDot: return String(localized: "Red dot when a limit or memory runs short", comment: "Settings › Menu Bar › Icon")
+        case .animation: return String(localized: "Animate while agents work")
+        case .systemRings: return String(localized: "CPU and memory", comment: "Settings › Menu Bar › Menu")
+        case .limitRings: return String(localized: "AI limits (Claude Code, Codex)", comment: "Settings › Menu Bar › Menu")
+        case .workspaces: return String(localized: "Workspaces with agents", comment: "Settings › Menu Bar › Menu")
+        }
+    }
+}
+
 /// User settings (cmds › Settings…). Stored in `UserDefaults.standard`; an isolated instance (`CMDS_SUPPORT_DIR`)
 /// uses its own suite (`isolatedSuiteName`), so tests never change the user's settings. Changes made by another
 /// process (`defaults write <suite> TerminalFontSize -float 18`) are picked up live as well.
@@ -39,9 +67,8 @@ final class AppSettings: NSObject {
     static let previewZoomKey = "PreviewPageZoom"
     static let showSubagentsKey = "ShowSubagents"
     static let showInMenuBarKey = "ShowInMenuBar"
-    static let animateMenuBarKey = "AnimateMenuBar"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
-                               showSubagentsKey, showInMenuBarKey, animateMenuBarKey]
+                               showSubagentsKey, showInMenuBarKey] + MenuBarOption.allCases.map(\.rawValue)
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
     static let zoomRange: ClosedRange<Double> = 0.5...3
@@ -135,10 +162,13 @@ final class AppSettings: NSObject {
         set { set(newValue == (suiteName == nil) ? nil : newValue, forKey: Self.showInMenuBarKey) }
     }
 
-    /// The menu bar item's arc turns while agents work (#105); off, it stands still (as with Reduce motion).
-    var animateMenuBar: Bool {
-        get { defaults.object(forKey: Self.animateMenuBarKey) as? Bool ?? true }
-        set { set(newValue ? nil : false, forKey: Self.animateMenuBarKey) }
+    /// One part of the menu bar item the user can turn off (Settings › Menu Bar, #105); all are on by default.
+    func menuBar(_ option: MenuBarOption) -> Bool {
+        defaults.object(forKey: option.rawValue) as? Bool ?? true
+    }
+
+    func setMenuBar(_ option: MenuBarOption, _ on: Bool) {
+        set(on ? nil : false, forKey: option.rawValue)
     }
 
     private func zoom(forKey key: String) -> Double {

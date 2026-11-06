@@ -244,9 +244,12 @@ type, the agent and what it is doing or asking — for those that need you, sinc
 you come first; choosing one (or ⌘1…⌘9 while the menu is open) brings cmds forward on it, at the pane that waits.
 **Menu Bar Settings…** at the bottom opens Settings.
 
-Settings › Agents › **Show in menu bar** turns the item off; **Animate while agents work** (on by default) keeps the
-arc still, as does System Settings › Accessibility › Display › Reduce motion. Isolated test instances
-(`CMDS_SUPPORT_DIR`) leave the item off unless their own setting turns it on.
+Settings › **Menu Bar** (also **Menu Bar Settings…** in the menu) lets you keep only what you want to see. **Show in
+menu bar** turns the item off. For the icon: **Number of agents working** (the blue badge), **Red dot when a limit or
+memory runs short**, **Animate while agents work** (off keeps the arc still, as does System Settings › Accessibility ›
+Display › Reduce motion). For the menu: **CPU and memory**, **AI limits (Claude Code, Codex)**, **Workspaces with
+agents**. All are on by default; the orange badge always shows. Isolated test instances (`CMDS_SUPPORT_DIR`) leave the
+item off unless their own setting turns it on.
 
 ## Keeping the Mac awake
 
@@ -280,8 +283,7 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
   (Markdown, diffs, text).
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
-- **Show in menu bar** (Agents): badges for the workspaces that need you and those working ([Menu bar](#menu-bar)). On
-  by default. **Animate while agents work**: the turning arc around the working badge (on by default).
+- **Menu Bar**: show the item, and what its icon and menu show ([Menu bar](#menu-bar)). All on by default.
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size
