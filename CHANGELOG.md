@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: a menu bar item shows the workspace that needs you (`● api-server +1`), else how many agents work (`◐3`); its
+  menu takes you to them. Settings › Agents › Show in menu bar (#95).
+
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 

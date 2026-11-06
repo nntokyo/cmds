@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var router: CommandRouter!
     private var metadataMonitor: MetadataMonitor!
     private var apiServer: APIServer?
+    private var menuBarItem: MenuBarStatusItem?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         windowController = MainWindowController(controller: controller)
@@ -53,6 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SyncRemoteAccess.shared.activate()
         KeepAwakeManager.shared.start()
         Updater.shared.start()
+        menuBarItem = MenuBarStatusItem(controller: controller) { [weak self] id in self?.showWorkspace(id: id) }
+        menuBarItem?.start()
         TransferCenter.removeLeftoverParts()
         // An isolated test instance (CMDS_SUPPORT_DIR) must not take keyboard focus from the app in use.
         if CmdsEnv.supportDirectoryOverride() == nil { NSApp.activate() }
@@ -90,6 +93,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: String(localized: "Quit"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         return alert.runModal() == .alertFirstButtonReturn ? .terminateNow : .terminateCancel
+    }
+
+    /// Brings the main window forward (menu bar item); on workspace `id` if given, at its pane that needs the user if
+    /// there is one.
+    private func showWorkspace(id: String?) {
+        NSApp.activate()
+        windowController.showWindow(nil)
+        guard let id, let workspace = controller.workspace(id: id) else { return }
+        if let pane = workspace.orderedPanes.first(where: { $0.attention || $0.agentActivity == .needsInput }) {
+            try? controller.focusPane(id: pane.id)
+        } else {
+            try? controller.selectWorkspace(id: id)
+        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

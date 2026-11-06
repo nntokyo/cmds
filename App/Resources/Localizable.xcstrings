@@ -3599,6 +3599,16 @@
         }
       }
     },
+    "Menu bar:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバー:"
+          }
+        }
+      }
+    },
     "Minimize": {
       "localizations": {
         "ja": {
@@ -3792,6 +3802,17 @@
         }
       }
     },
+    "Needs You": {
+      "comment": "menu bar item: workspaces waiting for the user",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対応待ち"
+          }
+        }
+      }
+    },
     "Never": {
       "localizations": {
         "ja": {
@@ -3978,6 +3999,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペインでエージェントが動いていませんでした。"
+          }
+        }
+      }
+    },
+    "No agents working": {
+      "comment": "menu bar item: nothing waits or works",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中のエージェントはありません"
           }
         }
       }
@@ -4279,6 +4311,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ここでターミナルを開く"
+          }
+        }
+      }
+    },
+    "Open cmds": {
+      "comment": "menu bar item",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds を開く"
           }
         }
       }
@@ -5493,6 +5536,16 @@
         }
       }
     },
+    "Show in menu bar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーに表示"
+          }
+        }
+      }
+    },
     "Show subagents:": {
       "localizations": {
         "ja": {
@@ -6603,6 +6656,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイトルは64文字以内の1行にしてください。"
+          }
+        }
+      }
+    },
+    "The workspace that needs you (orange in the sidebar), else how many agents work. Its menu takes you to them.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あなたの対応を待っているワークスペース（サイドバーのオレンジ）を表示し、なければ作業中のエージェントの数を表示します。メニューからそのワークスペースに移動できます。"
           }
         }
       }

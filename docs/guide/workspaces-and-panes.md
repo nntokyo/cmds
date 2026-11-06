@@ -225,6 +225,19 @@ settings) or SSH host. Terminals start fresh shells in their directories
 ran in a pane are offered for resuming: [ai-agents.md](ai-agents.md#resuming-sessions). To move workspaces to another
 instance or Mac, use File › Export Workspaces… / Import Workspaces… ([ai-agents.md](ai-agents.md#moving-to-a-new-version)).
 
+## Menu bar
+
+While you work in other apps, the cmds item in the menu bar shows the minimum you need:
+
+- **`● api-server +1`**: the workspace that needs you (orange in the sidebar: an agent asks for input or
+  permission, or a notification you have not seen), and how many more do.
+- **`◐3`**: nothing needs you; three workspaces have an agent working.
+- Only the icon: nothing waits or works.
+
+Its menu lists the workspaces that need you, then those working; choosing one brings cmds forward on it, at the pane
+that waits. Turn it off in Settings › Agents › **Show in menu bar**. Isolated test instances (`CMDS_SUPPORT_DIR`)
+leave it off unless their own setting turns it on.
+
 ## Keeping the Mac awake
 
 While cmds runs, the Mac does not go to sleep when idle (**cmds › Prevent Idle Sleep**, on by default, no password).
@@ -257,6 +270,8 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
   (Markdown, diffs, text).
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
+- **Show in menu bar** (Agents): the workspace that needs you, or how many agents work ([Menu bar](#menu-bar)). On by
+  default.
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size
