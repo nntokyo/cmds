@@ -39,8 +39,9 @@ final class AppSettings: NSObject {
     static let previewZoomKey = "PreviewPageZoom"
     static let showSubagentsKey = "ShowSubagents"
     static let showInMenuBarKey = "ShowInMenuBar"
+    static let animateMenuBarKey = "AnimateMenuBar"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
-                               showSubagentsKey, showInMenuBarKey]
+                               showSubagentsKey, showInMenuBarKey, animateMenuBarKey]
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
     static let zoomRange: ClosedRange<Double> = 0.5...3
@@ -132,6 +133,12 @@ final class AppSettings: NSObject {
     var showInMenuBar: Bool {
         get { defaults.object(forKey: Self.showInMenuBarKey) as? Bool ?? (suiteName == nil) }
         set { set(newValue == (suiteName == nil) ? nil : newValue, forKey: Self.showInMenuBarKey) }
+    }
+
+    /// The menu bar item's arc turns while agents work (#105); off, it stands still (as with Reduce motion).
+    var animateMenuBar: Bool {
+        get { defaults.object(forKey: Self.animateMenuBarKey) as? Bool ?? true }
+        set { set(newValue ? nil : false, forKey: Self.animateMenuBarKey) }
     }
 
     private func zoom(forKey key: String) -> Double {

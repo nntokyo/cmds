@@ -13,8 +13,9 @@ enum MenuBarIcon {
     private static let spacing: CGFloat = 2
 
     /// The cmds glyph, an orange badge with how many workspaces need the user and an accent badge with how many work,
-    /// circled by a turning arc. Drawn when shown, so the glyph follows the menu bar's light or dark look.
-    static func statusImage(needingUser: Int, working: Int, phase: Double) -> NSImage {
+    /// circled by a turning arc. `warning` puts a red dot on the glyph's corner (an account limit at 95 % or more, or
+    /// critical memory pressure, #105). Drawn when shown, so the glyph follows the menu bar's light or dark look.
+    static func statusImage(needingUser: Int, working: Int, phase: Double, warning: Bool = false) -> NSImage {
         var width = glyphWidth
         if needingUser > 0 { width += spacing + badgeSize }
         if working > 0 { width += spacing + ringSize }
@@ -24,6 +25,11 @@ enum MenuBarIcon {
                 let size = glyph.size
                 glyph.draw(in: NSRect(x: (glyphWidth - size.width) / 2, y: (height - size.height) / 2,
                                       width: size.width, height: size.height))
+            }
+            if warning {
+                let dot = NSRect(x: glyphWidth - 7, y: height - 8, width: 7, height: 7)
+                NSColor.systemRed.setFill()
+                NSBezierPath(ovalIn: dot).fill()
             }
             var x = glyphWidth + spacing
             if needingUser > 0 {

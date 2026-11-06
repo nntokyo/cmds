@@ -1114,6 +1114,16 @@
         }
       }
     },
+    "Animate while agents work": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中はアイコンを動かす"
+          }
+        }
+      }
+    },
     "Another run was using the pane.": {
       "localizations": {
         "ja": {
@@ -3594,6 +3604,17 @@
         }
       }
     },
+    "Memory pressure critical": {
+      "comment": "menu bar item tooltip: why the red dot shows",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリの逼迫が危険な状態"
+          }
+        }
+      }
+    },
     "Memory pressure: %@": {
       "localizations": {
         "ja": {
@@ -3616,6 +3637,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用メモリ%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "Menu Bar Settings…": {
+      "comment": "menu bar item: opens Settings",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーの設定…"
           }
         }
       }
@@ -7689,6 +7721,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "iOS同期はオフです"
+          }
+        }
+      }
+    },
+    "in %@": {
+      "comment": "menu bar ring: time until an account limit resets",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あと%@"
           }
         }
       }

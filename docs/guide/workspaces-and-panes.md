@@ -231,16 +231,22 @@ While you work in other apps, the cmds icon in the menu bar shows at a glance wh
 
 - **Orange badge** with a number: workspaces that need you (orange in the sidebar: an agent asks for input or
   permission, or a notification you have not seen).
-- **Blue badge** (your accent colour) with a number, circled by a turning arc: workspaces with an agent working (the
-  arc stands still with System Settings › Accessibility › Display › Reduce motion).
+- **Blue badge** (your accent colour) with a number, circled by a turning arc: workspaces with an agent working.
+- **Red dot** on the icon: an account limit is at 95 % or more, or memory pressure is critical (the tooltip says
+  which).
 - Only the icon: nothing waits or works.
 
 Its menu starts with ring charts: CPU and memory (coloured by memory pressure), then per agent the Claude Code /
-Codex account limits (5-hour, 7-day, …) with their reset times — green, orange from 80 %, red from 95 %. Below them it
-lists every workspace where an agent ran, with a mark for its state (orange "!" needs you, turning arc working, green
-check done, grey dot idle) and, in small type, the agent and what it is doing or asking. Those that need you come
-first; choosing one brings cmds forward on it, at the pane that waits. Turn it off in Settings › Agents › **Show in
-menu bar**. Isolated test instances (`CMDS_SUPPORT_DIR`) leave it off unless their own setting turns it on.
+Codex account limits (5-hour, 7-day, …) with the time to their reset (`in 2h10m`, or the day and time when it is more
+than a day away) — green, orange from 80 %, red from 95 %. Below them it lists every workspace where an agent ran,
+with a mark for its state (orange "!" needs you, turning arc working, green check done, grey dot idle) and, in small
+type, the agent and what it is doing or asking — for those that need you, since when (`3 min ago`). Those that need
+you come first; choosing one (or ⌘1…⌘9 while the menu is open) brings cmds forward on it, at the pane that waits.
+**Menu Bar Settings…** at the bottom opens Settings.
+
+Settings › Agents › **Show in menu bar** turns the item off; **Animate while agents work** (on by default) keeps the
+arc still, as does System Settings › Accessibility › Display › Reduce motion. Isolated test instances
+(`CMDS_SUPPORT_DIR`) leave the item off unless their own setting turns it on.
 
 ## Keeping the Mac awake
 
@@ -275,7 +281,7 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
 - **Show in menu bar** (Agents): badges for the workspaces that need you and those working ([Menu bar](#menu-bar)). On
-  by default.
+  by default. **Animate while agents work**: the turning arc around the working badge (on by default).
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size

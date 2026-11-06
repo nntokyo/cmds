@@ -18,6 +18,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let previewZoomPopup = NSPopUpButton()
     private let subagentsPopup = NSPopUpButton()
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show in menu bar"), target: nil, action: nil)
+    private let animateMenuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Animate while agents work"), target: nil, action: nil)
     private let checkUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Check for updates automatically"), target: nil, action: nil)
     private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
     private let updatesNote = SettingsWindowController.note("")
@@ -114,6 +115,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         menuBarCheckbox.target = self
         menuBarCheckbox.action = #selector(menuBarToggled)
+        animateMenuBarCheckbox.target = self
+        animateMenuBarCheckbox.action = #selector(animateMenuBarToggled)
         checkUpdatesCheckbox.target = self
         checkUpdatesCheckbox.action = #selector(checkUpdatesToggled)
         installUpdatesCheckbox.target = self
@@ -133,6 +136,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
             [Self.label(String(localized: "Menu bar:")), menuBarCheckbox],
+            [NSGridCell.emptyContentView, animateMenuBarCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "An orange badge counts the workspaces that need you (orange in the sidebar), a blue one those working. Its menu takes you to them."))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
@@ -147,7 +151,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
         grid.rowAlignment = .firstBaseline
-        for row in [0, 4, 6, 9, 18] {
+        for row in [0, 4, 6, 9, 19] {
             grid.row(at: row).mergeCells(in: NSRange(location: 0, length: 2))
             grid.row(at: row).topPadding = row == 0 ? 0 : 10
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
@@ -240,6 +244,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         select(settings.previewZoom, in: previewZoomPopup)
         subagentsPopup.selectItem(at: subagentsPopup.indexOfItem(withRepresentedObject: settings.showSubagents.rawValue))
         menuBarCheckbox.state = settings.showInMenuBar ? .on : .off
+        animateMenuBarCheckbox.state = settings.animateMenuBar ? .on : .off
+        animateMenuBarCheckbox.isEnabled = settings.showInMenuBar
         refreshUpdates()
     }
 
@@ -317,6 +323,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func menuBarToggled() {
         settings.showInMenuBar = menuBarCheckbox.state == .on
+    }
+
+    @objc private func animateMenuBarToggled() {
+        settings.animateMenuBar = animateMenuBarCheckbox.state == .on
     }
 
     @objc private func manageAccounts() {

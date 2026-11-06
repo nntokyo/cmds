@@ -58,8 +58,14 @@ final class MenuBarDashboardView: NSView {
         needsDisplay = true
     }
 
-    /// `15:30`, `Fri 09:00`: the reset time without the "(in 2h10m)" the sidebar tooltip adds.
-    private static func shortReset(_ date: Date, now: Date) -> String {
+    /// Within a day, how long until the reset (`in 2h10m`), which needs no clock arithmetic; later, the day and time
+    /// (`Fri 09:00`) (#105).
+    static func shortReset(_ date: Date, now: Date) -> String {
+        let interval = date.timeIntervalSince(now)
+        if interval > 0, interval < 86400 {
+            let duration = AgentFormat.duration(milliseconds: Int(interval * 1000), strings: .localized)
+            return String(localized: "in \(duration)", comment: "menu bar ring: time until an account limit resets")
+        }
         let text = AgentFormat.resetTime(date, now: now, strings: .localized)
         return text.components(separatedBy: " (").first ?? text
     }
