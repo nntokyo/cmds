@@ -23,9 +23,15 @@ enum SidebarTextSize: String, CaseIterable {
     }
 }
 
+/// A switch in Settings that stays on until the user turns it off; its raw value is the defaults key (#108).
+protocol OnByDefaultOption: RawRepresentable, CaseIterable, Hashable where RawValue == String {
+    /// The checkbox title in Settings.
+    var title: String { get }
+}
+
 /// Parts of the menu bar item (#95) the user can turn off in Settings › Menu Bar (#105). The orange badge for the
 /// workspaces that need the user is the item's purpose and always shows. Raw values are the defaults keys.
-enum MenuBarOption: String, CaseIterable {
+enum MenuBarOption: String, OnByDefaultOption {
     /// Icon: the blue badge with how many agents work.
     case workingBadge = "MenuBarWorkingBadge"
     /// Icon: the red dot for a limit at 95 % or critical memory pressure.
@@ -53,7 +59,7 @@ enum MenuBarOption: String, CaseIterable {
 
 /// What the sidebar shows, chosen in Settings › Sidebar (#107); all on by default. Raw values are the defaults keys.
 /// The workspace title, its state badge and the agent's task always show.
-enum SidebarItem: String, CaseIterable {
+enum SidebarItem: String, OnByDefaultOption {
     case branch = "SidebarShowsBranch"
     case directory = "SidebarShowsDirectory"
     case ports = "SidebarShowsPorts"
@@ -193,23 +199,20 @@ final class AppSettings: NSObject {
         set { set(newValue == (suiteName == nil) ? nil : newValue, forKey: Self.showInMenuBarKey) }
     }
 
-    /// One part of the sidebar the user can turn off (Settings › Sidebar, #107); all are on by default.
-    func sidebar(_ item: SidebarItem) -> Bool {
-        defaults.object(forKey: item.rawValue) as? Bool ?? true
-    }
-
-    func setSidebar(_ item: SidebarItem, _ on: Bool) {
-        set(on ? nil : false, forKey: item.rawValue)
-    }
-
-    /// One part of the menu bar item the user can turn off (Settings › Menu Bar, #105); all are on by default.
-    func menuBar(_ option: MenuBarOption) -> Bool {
+    /// An on-by-default switch (Settings › Sidebar, Settings › Menu Bar); only "off" is stored.
+    func isOn<Option: OnByDefaultOption>(_ option: Option) -> Bool {
         defaults.object(forKey: option.rawValue) as? Bool ?? true
     }
 
-    func setMenuBar(_ option: MenuBarOption, _ on: Bool) {
+    func set<Option: OnByDefaultOption>(_ option: Option, on: Bool) {
         set(on ? nil : false, forKey: option.rawValue)
     }
+
+    /// One part of the sidebar the user can turn off (Settings › Sidebar, #107).
+    func sidebar(_ item: SidebarItem) -> Bool { isOn(item) }
+
+    /// One part of the menu bar item the user can turn off (Settings › Menu Bar, #105).
+    func menuBar(_ option: MenuBarOption) -> Bool { isOn(option) }
 
     private func zoom(forKey key: String) -> Double {
         guard let value = (defaults.object(forKey: key) as? NSNumber)?.doubleValue, value > 0, value.isFinite else { return 1 }
