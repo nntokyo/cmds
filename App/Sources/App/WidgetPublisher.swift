@@ -112,21 +112,14 @@ final class WidgetPublisher {
         if let stats = controller.systemSample?.stats {
             gauges.append(.init(label: String(localized: "CPU", comment: "sidebar meter title"),
                                 fraction: min(max(stats.cpuPercent / 100, 0), 1), level: .accent))
-            let pressure: WidgetSnapshot.Gauge.Level = stats.pressure == .critical ? .critical
-                : stats.pressure == .warning ? .warning : .normal
             gauges.append(.init(label: String(localized: "Mem", comment: "sidebar meter title (memory)"),
-                                fraction: min(max(stats.memoryFraction, 0), 1), level: pressure))
+                                fraction: min(max(stats.memoryFraction, 0), 1), level: .init(pressure: stats.pressure)))
         }
         for limits in controller.activeAgentLimits(now: now) {
             for limit in limits.ordered where limit.id != UsageLimit.spend {
-                let level: WidgetSnapshot.Gauge.Level
-                switch UsageLevel(percent: limit.usedPercent) {
-                case .normal: level = .normal
-                case .warning: level = .warning
-                case .critical: level = .critical
-                }
                 gauges.append(.init(label: "\(limits.agent.displayName) \(AgentFormat.limitLabel(limit, strings: .localized))",
-                                    fraction: min(max(limit.usedPercent / 100, 0), 1), level: level, resetsAt: limit.resetsAt))
+                                    fraction: min(max(limit.usedPercent / 100, 0), 1),
+                                    level: .init(usage: UsageLevel(percent: limit.usedPercent)), resetsAt: limit.resetsAt))
             }
         }
         return WidgetSnapshot(updatedAt: now, needingUser: summary.needingUserCount, working: summary.workingCount,

@@ -37,7 +37,27 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
         /// The limit's reset, nil for CPU and memory.
         public var resetsAt: Date?
 
-        public enum Level: String, Codable, Sendable { case normal, warning, critical, accent }
+        public enum Level: String, Codable, Sendable {
+            case normal, warning, critical, accent
+
+            /// An account limit's level: green, orange from 80 %, red from 95 %.
+            public init(usage: UsageLevel) {
+                switch usage {
+                case .normal: self = .normal
+                case .warning: self = .warning
+                case .critical: self = .critical
+                }
+            }
+
+            /// Memory by pressure: green, yellow on warning, red on critical (green while unknown).
+            public init(pressure: MemoryPressure) {
+                switch pressure {
+                case .critical: self = .critical
+                case .warning: self = .warning
+                case .normal, .unknown: self = .normal
+                }
+            }
+        }
 
         public init(label: String, fraction: Double, level: Level, resetsAt: Date? = nil) {
             self.label = label
