@@ -70,11 +70,7 @@ struct TerminalScreenView: View {
     private static let minFont: CGFloat = 5
     private static let maxFont: CGFloat = 36
     private static let padding: CGFloat = 6
-    /// Advance width of one monospaced cell per point of font size.
-    private static let cellWidthPerPoint: CGFloat = {
-        let font = UIFont.monospacedSystemFont(ofSize: 100, weight: .regular)
-        return ("M" as NSString).size(withAttributes: [.font: font]).width / 100
-    }()
+    private static var cellWidthPerPoint: CGFloat { TerminalGrid.cellWidthPerPoint }
     private static let lineHeightPerPoint: CGFloat = {
         UIFont.monospacedSystemFont(ofSize: 100, weight: .regular).lineHeight / 100
     }()
@@ -299,7 +295,7 @@ private struct TerminalRow: View {
     let lineH: CGFloat
 
     var body: some View {
-        Text(verbatim: line.isEmpty ? " " : line)
+        TerminalGrid.text(line.isEmpty ? " " : line, fontSize: fontSize)
             .font(.system(size: fontSize, design: .monospaced))
             .foregroundStyle(Color(white: 0.92))
             .lineLimit(1)
@@ -566,4 +562,54 @@ struct TerminalInputBar: View {
         .environment(client)
         .environment(MacBrowser())
         .onAppear { client.connect(to: .mock) }
+}
+
+/// The terminal's cell grid on the phone. The Mac sends a row as its text, without the spacer cell after a wide
+/// character; a monospaced font draws ASCII on the grid, but wide characters (Japanese, Chinese, Korean, emoji) and
+/// symbols from fallback fonts come out narrower or wider than their cells, so the cursor and later columns drifted
+/// (#115). `text` gives every other character an advance of exactly its cells.
+@MainActor
+enum TerminalGrid {
+    /// Advance width of one monospaced cell per point of font size.
+    static let cellWidthPerPoint: CGFloat = {
+        let font = UIFont.monospacedSystemFont(ofSize: 100, weight: .regular)
+        return ("M" as NSString).size(withAttributes: [.font: font]).width / 100
+    }()
+
+    /// Drawn advance per point of font size of characters outside ASCII, measured once each.
+    private static var advances: [Character: CGFloat] = [:]
+    private static let measuringFont = UIFont.monospacedSystemFont(ofSize: 100, weight: .regular)
+
+    private static func advancePerPoint(_ character: Character) -> CGFloat {
+        if let known = advances[character] { return known }
+        let width = (String(character) as NSString).size(withAttributes: [.font: measuringFont]).width / 100
+        advances[character] = width
+        return width
+    }
+
+    /// `line` laid out on the grid: ASCII runs as they are; each run of other characters with the same correction
+    /// gets kerning so every character takes `TerminalCells.width` cells.
+    static func text(_ line: String, fontSize: CGFloat) -> Text {
+        guard line.unicodeScalars.contains(where: { !$0.isASCII }) else { return Text(verbatim: line) }
+        var result = Text(verbatim: "")
+        var run = ""
+        var runKerning: CGFloat?
+        func flush() {
+            guard !run.isEmpty else { return }
+            let segment = Text(verbatim: run)
+            result = result + (runKerning.map { segment.kerning($0) } ?? segment)
+            run = ""
+        }
+        for character in line {
+            let kerning: CGFloat? = character.isASCII ? nil
+                : (CGFloat(TerminalCells.width(of: character)) * cellWidthPerPoint - advancePerPoint(character)) * fontSize
+            if kerning != runKerning {
+                flush()
+                runKerning = kerning
+            }
+            run.append(character)
+        }
+        flush()
+        return result
+    }
 }
