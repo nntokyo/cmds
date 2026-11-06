@@ -38,6 +38,15 @@ final class WidgetSnapshotTests: XCTestCase {
         XCTAssertFalse(snapshot().sameContent(as: other))
     }
 
+    func testLevelsFollowTheMenuBarColours() {
+        XCTAssertEqual(WidgetSnapshot.Gauge.Level(usage: UsageLevel(percent: 40)), .normal)
+        XCTAssertEqual(WidgetSnapshot.Gauge.Level(usage: UsageLevel(percent: 80)), .warning)
+        XCTAssertEqual(WidgetSnapshot.Gauge.Level(usage: UsageLevel(percent: 95)), .critical)
+        XCTAssertEqual(WidgetSnapshot.Gauge.Level(pressure: .warning), .warning)
+        XCTAssertEqual(WidgetSnapshot.Gauge.Level(pressure: .critical), .critical)
+        XCTAssertEqual(WidgetSnapshot.Gauge.Level(pressure: .unknown), .normal)
+    }
+
     func testDefaultFileIsInTheRealHomesSupportFolder() {
         XCTAssertEqual(WidgetSnapshot.defaultURL(home: "/Users/someone").path,
                        "/Users/someone/Library/Application Support/cmds/widget.json")
