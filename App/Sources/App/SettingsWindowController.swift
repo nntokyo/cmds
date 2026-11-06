@@ -24,13 +24,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let subagentsPopup = NSPopUpButton()
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show in menu bar"), target: nil, action: nil)
     /// Settings › Sidebar: what the rows and the footer show (#107).
-    private let sidebarItemCheckboxes: [SidebarItem: NSButton] = Dictionary(uniqueKeysWithValues: SidebarItem.allCases.map {
-        ($0, NSButton(checkboxWithTitle: $0.title, target: nil, action: nil))
-    })
+    private let sidebarItemCheckboxes = SettingsWindowController.checkboxes(for: SidebarItem.self)
     /// Settings › Menu Bar: one checkbox per part of the item (#105).
-    private let menuBarOptionCheckboxes: [MenuBarOption: NSButton] = Dictionary(uniqueKeysWithValues: MenuBarOption.allCases.map {
-        ($0, NSButton(checkboxWithTitle: $0.title, target: nil, action: nil))
-    })
+    private let menuBarOptionCheckboxes = SettingsWindowController.checkboxes(for: MenuBarOption.self)
     private let checkUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Check for updates automatically"), target: nil, action: nil)
     private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
     private let updatesNote = SettingsWindowController.note("")
@@ -128,17 +124,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         menuBarCheckbox.target = self
         menuBarCheckbox.action = #selector(menuBarToggled)
-        for (option, checkbox) in menuBarOptionCheckboxes {
+        for checkbox in Array(menuBarOptionCheckboxes.values) + Array(sidebarItemCheckboxes.values) {
             checkbox.target = self
-            checkbox.action = #selector(menuBarOptionToggled(_:))
-            checkbox.identifier = NSUserInterfaceItemIdentifier(option.rawValue)
+            checkbox.action = #selector(optionToggled(_:))
         }
         let option = { (option: MenuBarOption) -> NSView in self.menuBarOptionCheckboxes[option]! }
-        for (item, checkbox) in sidebarItemCheckboxes {
-            checkbox.target = self
-            checkbox.action = #selector(sidebarItemToggled(_:))
-            checkbox.identifier = NSUserInterfaceItemIdentifier(item.rawValue)
-        }
         let sidebarRows = { (items: [SidebarItem], label: String) -> [[NSView]] in
             items.enumerated().map { index, item in
                 [index == 0 ? Self.label(label) : NSGridCell.emptyContentView, self.sidebarItemCheckboxes[item]!]
@@ -404,14 +394,21 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         settings.showInMenuBar = menuBarCheckbox.state == .on
     }
 
-    @objc private func sidebarItemToggled(_ sender: NSButton) {
-        guard let raw = sender.identifier?.rawValue, let item = SidebarItem(rawValue: raw) else { return }
-        settings.setSidebar(item, sender.state == .on)
+    /// A Settings › Sidebar or Settings › Menu Bar checkbox: its identifier is the option's defaults key.
+    @objc private func optionToggled(_ sender: NSButton) {
+        guard let key = sender.identifier?.rawValue else { return }
+        let on = sender.state == .on
+        if let item = SidebarItem(rawValue: key) { settings.set(item, on: on) }
+        if let option = MenuBarOption(rawValue: key) { settings.set(option, on: on) }
     }
 
-    @objc private func menuBarOptionToggled(_ sender: NSButton) {
-        guard let raw = sender.identifier?.rawValue, let option = MenuBarOption(rawValue: raw) else { return }
-        settings.setMenuBar(option, sender.state == .on)
+    /// One checkbox per option, titled and identified by it.
+    private static func checkboxes<Option: OnByDefaultOption>(for _: Option.Type) -> [Option: NSButton] {
+        Dictionary(uniqueKeysWithValues: Option.allCases.map { option in
+            let checkbox = NSButton(checkboxWithTitle: option.title, target: nil, action: nil)
+            checkbox.identifier = NSUserInterfaceItemIdentifier(option.rawValue)
+            return (option, checkbox)
+        })
     }
 
     @objc private func manageAccounts() {
