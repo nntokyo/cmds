@@ -225,6 +225,23 @@ settings) or SSH host. Terminals start fresh shells in their directories
 ran in a pane are offered for resuming: [ai-agents.md](ai-agents.md#resuming-sessions). To move workspaces to another
 instance or Mac, use File › Export Workspaces… / Import Workspaces… ([ai-agents.md](ai-agents.md#moving-to-a-new-version)).
 
+## Menu bar
+
+While you work in other apps, the cmds icon in the menu bar shows at a glance what needs you, without text:
+
+- **Orange badge** with a number: workspaces that need you (orange in the sidebar: an agent asks for input or
+  permission, or a notification you have not seen).
+- **Blue badge** (your accent colour) with a number, circled by a turning arc: workspaces with an agent working (the
+  arc stands still with System Settings › Accessibility › Display › Reduce motion).
+- Only the icon: nothing waits or works.
+
+Its menu starts with ring charts: CPU and memory (coloured by memory pressure), then per agent the Claude Code /
+Codex account limits (5-hour, 7-day, …) with their reset times — green, orange from 80 %, red from 95 %. Below them it
+lists every workspace where an agent ran, with a mark for its state (orange "!" needs you, turning arc working, green
+check done, grey dot idle) and, in small type, the agent and what it is doing or asking. Those that need you come
+first; choosing one brings cmds forward on it, at the pane that waits. Turn it off in Settings › Agents › **Show in
+menu bar**. Isolated test instances (`CMDS_SUPPORT_DIR`) leave it off unless their own setting turns it on.
+
 ## Keeping the Mac awake
 
 While cmds runs, the Mac does not go to sleep when idle (**cmds › Prevent Idle Sleep**, on by default, no password).
@@ -257,6 +274,8 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
   (Markdown, diffs, text).
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
+- **Show in menu bar** (Agents): badges for the workspaces that need you and those working ([Menu bar](#menu-bar)). On
+  by default.
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size

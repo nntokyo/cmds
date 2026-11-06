@@ -559,6 +559,17 @@
         }
       }
     },
+    "%lld need you, %lld working": {
+      "comment": "menu bar item: workspaces waiting for the user, and with an agent working",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対応待ち %1$lld・作業中 %2$lld"
+          }
+        }
+      }
+    },
     "%lld of %lld selected": {
       "localizations": {
         "en": {
@@ -1089,6 +1100,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "この名前の項目はすでにあります。"
+          }
+        }
+      }
+    },
+    "An orange badge counts the workspaces that need you (orange in the sidebar), a blue one those working. Its menu takes you to them.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オレンジのバッジはあなたの対応を待っているワークスペース（サイドバーのオレンジ）の数、青のバッジは作業中の数です。メニューからそのワークスペースに移動できます。"
           }
         }
       }
@@ -3599,6 +3620,16 @@
         }
       }
     },
+    "Menu bar:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバー:"
+          }
+        }
+      }
+    },
     "Minimize": {
       "localizations": {
         "ja": {
@@ -3982,6 +4013,17 @@
         }
       }
     },
+    "No agents working": {
+      "comment": "menu bar item: nothing waits or works",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中のエージェントはありません"
+          }
+        }
+      }
+    },
     "No paired devices.": {
       "localizations": {
         "ja": {
@@ -4279,6 +4321,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ここでターミナルを開く"
+          }
+        }
+      }
+    },
+    "Open cmds": {
+      "comment": "menu bar item",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds を開く"
           }
         }
       }
@@ -5489,6 +5542,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "プレビューペインで表示"
+          }
+        }
+      }
+    },
+    "Show in menu bar": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーに表示"
           }
         }
       }

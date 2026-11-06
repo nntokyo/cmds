@@ -38,8 +38,9 @@ final class AppSettings: NSObject {
     static let browserZoomKey = "BrowserPageZoom"
     static let previewZoomKey = "PreviewPageZoom"
     static let showSubagentsKey = "ShowSubagents"
+    static let showInMenuBarKey = "ShowInMenuBar"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
-                               showSubagentsKey]
+                               showSubagentsKey, showInMenuBarKey]
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
     static let zoomRange: ClosedRange<Double> = 0.5...3
@@ -124,6 +125,13 @@ final class AppSettings: NSObject {
     var showSubagents: SubagentDisplay {
         get { defaults.string(forKey: Self.showSubagentsKey).flatMap(SubagentDisplay.init(rawValue:)) ?? .tiled }
         set { set(newValue == .tiled ? nil : newValue.rawValue, forKey: Self.showSubagentsKey) }
+    }
+
+    /// The menu bar item with the workspaces waiting for the user (Settings › Agents, #95). On by default, except in
+    /// an isolated instance, whose item would sit next to the user's own.
+    var showInMenuBar: Bool {
+        get { defaults.object(forKey: Self.showInMenuBarKey) as? Bool ?? (suiteName == nil) }
+        set { set(newValue == (suiteName == nil) ? nil : newValue, forKey: Self.showInMenuBarKey) }
     }
 
     private func zoom(forKey key: String) -> Double {
