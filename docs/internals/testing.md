@@ -27,7 +27,7 @@ the same jobs here ([ci.md](ci.md)).
 
 | Package | Command | Covers |
 |---|---|---|
-| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
+| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), cells per character for the phone's grid (`TerminalCellsTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
 | `Packages/CmdsCore` | `swift test --filter 'SFTP\|FileLocation\|SSHFileCommand'` | the SFTP codec and client, ssh arguments and failure classification, `HOST:PATH`, the server Trash and the transfer job and queue (in-process server, no network) |
 | `Packages/CmdsCore` | `swift test --filter CmdsCLITests` | the CLI's English output, `cmds schedule` argument mapping (`ScheduleCLITests`), the `cmds mcp` server with the app API stubbed (`MCPServerTests`) |
 | `Packages/CmdsSSH` | `swift test` (in that directory; fetches swift-nio-ssh and friends on first run) | the SSH tunnel; the end-to-end part needs a throwaway sshd ([below](#remote-access-via-ssh)) |
@@ -287,7 +287,7 @@ Never pick a Mac under "On This Network": that is the instance someone works in.
 ## UI tests in the simulator
 
 `TerminalScreenTests` (same target) launches the companion with `-mock -noNotify` and the demo flags it needs
-(`-mockFullScreenTUI`, `-mockStreamOutput`, `-mockNoHistoryStream`, `-uiTestProbes`;
+(`-mockFullScreenTUI`, `-mockStreamOutput`, `-mockJapanese`, `-mockNoHistoryStream`, `-uiTestProbes`;
 [reference/environment.md](../reference/environment.md#ios-companion-launch-arguments)) and checks rendering against the
 demo data: the zoomed TUI, earlier output, and earlier output that keeps up while it is read (#22: the rows on screen
 must not change, compared as text and as screenshots, and the rows above the screen must have no gap). It skips itself
