@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-07
+
+Mac only; the iPhone/iPad app is unchanged from 0.11.0.
+
 ### Added
 
 - Mac: a **cmds** widget for the desktop and Notification Center (small, medium): the badges of the menu bar item,
@@ -392,7 +396,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.11.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.12.0...master
+[0.12.0]: https://github.com/nntokyo/cmds/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nntokyo/cmds/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nntokyo/cmds/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/nntokyo/cmds/compare/v0.9.0...v0.9.1
