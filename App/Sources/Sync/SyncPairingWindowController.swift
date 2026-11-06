@@ -165,7 +165,7 @@ final class SyncPairingWindowController: NSWindowController {
 
         let connected = server.connectedDevices
         let rows: [(id: String, text: String)] = server.store.devices.map { device in
-            let hosts = connected.filter { SyncDeviceStore.digestsEqual($0.tokenHash, device.tokenHash) }.map(\.host)
+            let hosts = SyncServer.hosts(of: device, in: connected)
             let state = hosts.isEmpty
                 ? (device.lastSeen.map { String(localized: "last seen \(Self.relative($0))") } ?? String(localized: "not connected"))
                 : String(localized: "connected (\(Set(hosts).sorted().joined(separator: ", ")))")

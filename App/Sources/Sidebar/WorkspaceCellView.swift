@@ -413,8 +413,7 @@ final class WorkspaceCellView: NSTableCellView {
         let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)|\(account ?? "")"
         if key != agentKey {
             agentKey = key
-            var name = Array(parts.prefix { $0.style == .name })
-            if let account { name.append(AgentFormat.Part(" @\(account)", .label)) }
+            let name = Array(AgentFormat.withAccount(Array(parts.prefix { $0.style == .name }), account))
             var figures = Array(parts.drop { $0.style == .name })
             if figures.first?.style == .separator { figures.removeFirst() }
             if figures.isEmpty { figures = [AgentFormat.Part("–", .label)] }

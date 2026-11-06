@@ -56,6 +56,17 @@ final class AgentUsageCodableTests: XCTestCase {
         XCTAssertEqual(try JSONValue.from(stats).decode(StatsSnapshot.self), stats)
     }
 
+    /// `@account` right after the model, for the Mac's sidebar and the iPhone (#112).
+    func testAccountGoesAfterTheName() {
+        let usage = AgentUsage(agent: .claude, model: "claude-opus-4-5", contextUsedPercent: 53, costUSD: 1.5)
+        let parts = AgentFormat.summaryParts(usage)
+        XCTAssertEqual(AgentFormat.withAccount(parts, nil), parts)
+        let with = AgentFormat.withAccount(parts, "work")
+        XCTAssertEqual(with.map(\.text).joined(), "claude-opus-4-5 @work · ctx 53% · $1.50")
+        XCTAssertEqual(with.first { $0.text == " @work" }?.style, .label)
+        XCTAssertEqual(AgentFormat.withAccount([AgentFormat.Part("Claude", .name)], "home").map(\.text), ["Claude", " @home"])
+    }
+
     /// `state.accountLimits` (#112): round trip, absent from older Macs, and an older phone's decoding unaffected.
     func testStateCarriesAccountLimitsOptionally() throws {
         let codec = SyncCodec()
