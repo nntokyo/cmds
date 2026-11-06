@@ -63,6 +63,8 @@ final class WidgetPublisher {
         do {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try snapshot.encoded().write(to: url, options: .atomic)
+            // Workspace names and agent messages: readable by this user only, like the other files here.
+            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
             written = snapshot
         } catch {
             return  // the widget keeps the last file; nothing else depends on it
