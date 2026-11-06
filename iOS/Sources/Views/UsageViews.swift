@@ -49,14 +49,22 @@ struct AgentLimitsBar: View {
     }
 }
 
-/// The workspace's agent pane: `Claude Opus 4.5 · ctx 53% · $117.99 · 5h 40%`.
+/// The workspace's agent pane: `Claude Opus 4.5 @work · ctx 53% · $117.99 · 5h 40%`. `account` is the cmds Claude
+/// account the pane runs under, after the model as in the Mac's sidebar; while that account is at a limit, when it
+/// resets follows in orange (#112).
 struct AgentSummaryLine: View {
     let usage: AgentUsage
     let limits: [UsageLimit]?
+    var account: String?
+    var accountLimit: ServerMessage.State.AccountLimit?
 
     var body: some View {
-        let parts = AgentFormat.summaryParts(usage, limits: limits, strings: .localized)
-        parts.reduce(Text(verbatim: "")) { text, part in
+        var parts = AgentFormat.summaryParts(usage, limits: limits, strings: .localized)
+        if let account {
+            let afterName = parts.firstIndex { $0.style != .name } ?? parts.endIndex
+            parts.insert(AgentFormat.Part(" @\(account)", .label), at: afterName)
+        }
+        let line = parts.reduce(Text(verbatim: "")) { text, part in
             var piece = Text(part.text)
             switch part.style {
             case .name: piece = piece.fontWeight(.medium).foregroundColor(.primary.opacity(0.85))
@@ -65,11 +73,31 @@ struct AgentSummaryLine: View {
             }
             return text + piece
         }
+        // The account's limit on a line of its own: the summary line is cut at the row's width.
+        return VStack(alignment: .leading, spacing: 1) {
+            line.lineLimit(1)
+            if let accountLimit, accountLimit.resetsAt > Date() {
+                Text(Self.resetText(accountLimit)).foregroundStyle(.orange).lineLimit(1)
+            }
+        }
         .font(.caption2.monospacedDigit())
-        .lineLimit(1)
         .opacity(usage.isStale ? 0.6 : 1)
-        .accessibilityLabel(usage.isStale ? String(localized: "\(AgentFormat.summary(usage, limits: limits, strings: .localized)), idle")
-                                              : AgentFormat.summary(usage, limits: limits, strings: .localized))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var accessibilityText: String {
+        var text = AgentFormat.summary(usage, limits: limits, strings: .localized)
+        if let account { text += ", " + String(localized: "account \(account)") }
+        if let accountLimit, accountLimit.resetsAt > Date() { text += ", " + Self.resetText(accountLimit) }
+        return usage.isStale ? String(localized: "\(text), idle") : text
+    }
+
+    /// `@work at its limit · resets 15:30 (in 2h10m)` (`~15:30` when estimated).
+    static func resetText(_ limit: ServerMessage.State.AccountLimit) -> String {
+        let time = AgentFormat.resetTime(limit.resetsAt, strings: .localized)
+        return String(localized: "@\(limit.name) at its limit · resets \(limit.estimated ? "~" : "")\(time)",
+                      comment: "iPhone workspace row: the pane's Claude account is at a limit until this time")
     }
 }
 

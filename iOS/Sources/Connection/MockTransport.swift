@@ -21,6 +21,8 @@ final class MockTransport: SyncTransport {
     private var closed = false
     private var system: SystemStats?
     private var agentLimits: [AgentLimits] = []
+    /// `-mockAccounts`: the agent pane runs under the Claude account "work", which is at a limit (#112).
+    private var accountLimits: [ServerMessage.State.AccountLimit] = []
     private let startedAt = Date()
     /// This demo Mac streams scrolled-off rows (not with `-mockNoHistoryStream`), and the phone asked for them.
     private let streamsHistory = !ProcessInfo.processInfo.arguments.contains("-mockNoHistoryStream")
@@ -36,7 +38,10 @@ final class MockTransport: SyncTransport {
         updateUsage()
     }
 
-    private var currentState: ServerMessage.State { .init(workspaces: workspaces, system: system, agentLimits: agentLimits) }
+    private var currentState: ServerMessage.State {
+        .init(workspaces: workspaces, system: system, agentLimits: agentLimits,
+              accountLimits: accountLimits.isEmpty ? nil : accountLimits)
+    }
 
     func start() {
         deliver(after: 0.15, .connected)
@@ -209,6 +214,14 @@ final class MockTransport: SyncTransport {
         }
         agentLimits = [AgentLimits(agent: .claude, limits: claudeLimits, updatedAt: now),
                        AgentLimits(agent: .codex, limits: codexLimits, plan: "plus", updatedAt: now)]
+        if ProcessInfo.processInfo.arguments.contains("-mockAccounts") {
+            for w in workspaces.indices {
+                for p in workspaces[w].panes.indices where workspaces[w].panes[p].id == "p-agent" {
+                    workspaces[w].panes[p].account = "work"
+                }
+            }
+            accountLimits = [.init(name: "work", resetsAt: now.addingTimeInterval(2 * 3600 + 600))]
+        }
     }
 
     private func clearAttention(paneID: String) {
