@@ -177,6 +177,8 @@ about the Codex pane (`agent.codex_hook`):
   hook.
 - `UserPromptSubmit`, `PreToolUse`, `PostToolUse`: working; an older notification of the pane is cleared.
 - `Interrupt` (you pressed Esc): idle, no notification.
+- A turn that a usage limit or an error stops sends no `Stop`: the pane goes back to idle once Codex's title spinner
+  stops.
 
 Other events are ignored, `SessionEnd` too (Codex also sends it after 30 idle minutes). Only the event, session id,
 directory and notification text reach the app, never the prompt, the tool input or its output. Add to
