@@ -167,7 +167,47 @@ panes, dev servers, when to notify); both can be used together.
 
 ## Codex CLI
 
-Codex's TUI emits OSC 9 notifications; enable them for every turn in `~/.codex/config.toml`:
+### Hooks
+
+`cmds hook codex` reads a [Codex hook](https://developers.openai.com/codex/hooks) payload from stdin and tells cmds
+about the Codex pane (`agent.codex_hook`):
+
+- `PermissionRequest`: needs you (orange), notifies with what Codex wants to do (its description, else the command).
+- `Stop`: the turn ended, notifies with the first line of the reply. Prints `{}`, the JSON Codex expects from a `Stop`
+  hook.
+- `UserPromptSubmit`, `PreToolUse`, `PostToolUse`: working; an older notification of the pane is cleared.
+- `Interrupt` (you pressed Esc): idle, no notification.
+
+Other events are ignored, `SessionEnd` too (Codex also sends it after 30 idle minutes). Only the event, session id,
+directory and notification text reach the app, never the prompt, the tool input or its output. Add to
+`~/.codex/hooks.json` (or the same tables in `~/.codex/config.toml`, not both):
+
+```json
+{
+  "hooks": {
+    "PermissionRequest": [{ "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook codex || true" }] }],
+    "Stop":              [{ "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook codex || echo '{}'" }] }],
+    "UserPromptSubmit":  [{ "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook codex || true" }] }],
+    "PreToolUse":        [{ "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook codex || true" }] }],
+    "PostToolUse":       [{ "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook codex || true" }] }],
+    "Interrupt":         [{ "hooks": [{ "type": "command", "command": "command -v cmds >/dev/null && cmds hook codex || true" }] }]
+  }
+}
+```
+
+Then open `/hooks` in Codex once and trust them: Codex runs a new or changed hook only after you do.
+
+- **Which pane**: Codex runs hooks with its own environment, and TUIs on the shared app-server daemon run them in the
+  daemon, whose `CMDS_PANE_ID` may be another pane's. cmds therefore takes the pane whose Codex session (from its
+  session file) has the payload's `session_id`; for a session not matched yet, the pane in `CMDS_PANE_ID` or the only
+  Codex pane in that directory whose session is not known yet. When it cannot tell, the event is dropped rather than
+  shown on another pane. A daemon started outside cmds has no `CMDS_SOCKET_PATH`, and its hooks do nothing.
+- **Local panes only**: Codex in SSH panes keeps using OSC 9 notifications (below).
+- Use the hooks or the OSC 9 notifications below, not both: with both, every turn notifies twice.
+
+### Terminal notifications (OSC 9)
+
+Without hooks, Codex's TUI can emit OSC 9 notifications; enable them for every turn in `~/.codex/config.toml`:
 
 ```toml
 [tui]

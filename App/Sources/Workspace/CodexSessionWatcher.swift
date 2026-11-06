@@ -52,6 +52,8 @@ struct AgentProcessRef: Equatable {
 struct CodexWatchResult: Sendable {
     /// Panes with a running Codex session process (whether or not its file is known yet).
     var panes: Set<String> = []
+    /// Working directory of each such pane's Codex, when known (matches hook payloads to panes).
+    var directories: [String: String] = [:]
     /// Usage per pane, once its session file has a usage event.
     var usage: [String: AgentUsage] = [:]
     /// Newest account limits seen in those files.
@@ -125,7 +127,7 @@ final class CodexSessionWatcher: @unchecked Sendable {
         let known = held.union(shared)
         files = files.filter { known.contains($0.key) }
 
-        var result = CodexWatchResult(panes: Set(panes.keys))
+        var result = CodexWatchResult(panes: Set(panes.keys), directories: panes.compactMapValues(\.cwd))
         for (paneID, path) in CodexSessionMatcher.match(panes: Array(panes.values), files: candidates) {
             guard let state = files[path] else { continue }
             let id = CodexRollout.sessionID(fromPath: path) ?? state.meta?.id

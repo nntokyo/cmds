@@ -186,6 +186,9 @@ final class APIServer {
                                             configDir: try params.string("configDir"))
         case "agent.claude_hook":
             try controller.claudeHook(paneID: try params.string("pane"), input: try params.json("input"))
+        case "agent.codex_hook":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods): Codex panes are matched by local processes.
+            try controller.codexHook(paneID: try params.string("pane"), input: try params.json("input"))
         case "agent.claude_status":
             try controller.claudeStatus(paneID: try params.string("pane"), input: try params.json("input"))
         case "agent.sessions":
