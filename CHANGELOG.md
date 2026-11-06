@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   rings count down to their reset within a day (`in 2h10m`); a red dot on the icon warns of a limit at 95 % or
   critical memory pressure; Menu Bar Settings… in the menu. Settings › Menu Bar chooses what the icon and the menu show
   (working badge, red dot, animation, CPU and memory, AI limits, workspaces) (#105).
+- Mac: Settings is split into tabs (General, Sidebar, Agents, Menu Bar, Updates). Settings › Sidebar chooses what each
+  workspace row shows (Git branch, directory, ports, agent model/context/cost, latest notification) and what the
+  footer shows (AI limits, CPU and memory) (#107).
 
 ## [0.9.1] - 2026-11-06
 

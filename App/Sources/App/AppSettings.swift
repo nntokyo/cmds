@@ -51,6 +51,36 @@ enum MenuBarOption: String, CaseIterable {
     }
 }
 
+/// What the sidebar shows, chosen in Settings › Sidebar (#107); all on by default. Raw values are the defaults keys.
+/// The workspace title, its state badge and the agent's task always show.
+enum SidebarItem: String, CaseIterable {
+    case branch = "SidebarShowsBranch"
+    case directory = "SidebarShowsDirectory"
+    case ports = "SidebarShowsPorts"
+    /// The agent's model, context and cost lines.
+    case agentUsage = "SidebarShowsAgentUsage"
+    case notification = "SidebarShowsNotification"
+    /// Footer: the Claude Code / Codex limit meters.
+    case footerLimits = "SidebarFooterLimits"
+    /// Footer: CPU and memory.
+    case footerSystem = "SidebarFooterSystem"
+
+    static let rowItems: [SidebarItem] = [.branch, .directory, .ports, .agentUsage, .notification]
+    static let footerItems: [SidebarItem] = [.footerLimits, .footerSystem]
+
+    var title: String {
+        switch self {
+        case .branch: return String(localized: "Git branch", comment: "Settings › Sidebar › Show in each workspace")
+        case .directory: return String(localized: "Directory", comment: "Settings › Sidebar › Show in each workspace")
+        case .ports: return String(localized: "Listening ports", comment: "Settings › Sidebar › Show in each workspace")
+        case .agentUsage: return String(localized: "Agent model, context and cost", comment: "Settings › Sidebar › Show in each workspace")
+        case .notification: return String(localized: "Latest notification", comment: "Settings › Sidebar › Show in each workspace")
+        case .footerLimits: return String(localized: "AI limits (Claude Code, Codex)", comment: "Settings › Menu Bar › Menu")
+        case .footerSystem: return String(localized: "CPU and memory", comment: "Settings › Menu Bar › Menu")
+        }
+    }
+}
+
 /// User settings (cmds › Settings…). Stored in `UserDefaults.standard`; an isolated instance (`CMDS_SUPPORT_DIR`)
 /// uses its own suite (`isolatedSuiteName`), so tests never change the user's settings. Changes made by another
 /// process (`defaults write <suite> TerminalFontSize -float 18`) are picked up live as well.
@@ -69,6 +99,7 @@ final class AppSettings: NSObject {
     static let showInMenuBarKey = "ShowInMenuBar"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
                                showSubagentsKey, showInMenuBarKey] + MenuBarOption.allCases.map(\.rawValue)
+        + SidebarItem.allCases.map(\.rawValue)
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
     static let zoomRange: ClosedRange<Double> = 0.5...3
@@ -160,6 +191,15 @@ final class AppSettings: NSObject {
     var showInMenuBar: Bool {
         get { defaults.object(forKey: Self.showInMenuBarKey) as? Bool ?? (suiteName == nil) }
         set { set(newValue == (suiteName == nil) ? nil : newValue, forKey: Self.showInMenuBarKey) }
+    }
+
+    /// One part of the sidebar the user can turn off (Settings › Sidebar, #107); all are on by default.
+    func sidebar(_ item: SidebarItem) -> Bool {
+        defaults.object(forKey: item.rawValue) as? Bool ?? true
+    }
+
+    func setSidebar(_ item: SidebarItem, _ on: Bool) {
+        set(on ? nil : false, forKey: item.rawValue)
     }
 
     /// One part of the menu bar item the user can turn off (Settings › Menu Bar, #105); all are on by default.

@@ -270,7 +270,8 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
 
 ## Settings
 
-**cmds › Settings…** (⌘,) applies every change at once to all open panes and remembers it:
+**cmds › Settings…** (⌘,) has five tabs — General, Sidebar, Agents, Menu Bar, Updates — and applies every change at
+once to all open panes and remembers it:
 
 - **Terminal font and size**: a font family (installed monospaced fonts) and a custom size in points. Both are
   layered over your Ghostty config (`~/.config/ghostty/config`): left at **Ghostty Default** / unchecked, the config
@@ -279,6 +280,9 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
   (Ghostty's own font-size keys), a browser or preview pane's page zoom. A terminal zoomed this way keeps its size
   when you change the setting; ⌘0 returns it to the Settings size.
 - **Sidebar text size**: Small, Medium (default) or Large. Rows, footer and the compact rail scale together.
+- **Show in each workspace** (Sidebar): Git branch, directory, listening ports, the agent's model, context and cost,
+  the latest notification — turn off what you don't need for shorter rows. The workspace name, the agent's state and
+  its task always show. **Footer**: AI limits (Claude Code, Codex), CPU and memory. All on by default.
 - **Browser page zoom** and **Preview zoom**: the starting zoom of browser panes and of rendered previews
   (Markdown, diffs, text).
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),

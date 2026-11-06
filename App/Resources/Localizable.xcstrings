@@ -1014,6 +1014,16 @@
         }
       }
     },
+    "Agent model, context and cost": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントのモデル・コンテキスト・料金"
+          }
+        }
+      }
+    },
     "Agent prompt (Claude Code or Codex, when idle)": {
       "localizations": {
         "ja": {
@@ -2378,6 +2388,16 @@
         }
       }
     },
+    "Directory": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディレクトリ"
+          }
+        }
+      }
+    },
     "Directory:": {
       "localizations": {
         "ja": {
@@ -2896,6 +2916,16 @@
         }
       }
     },
+    "Footer:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下部:"
+          }
+        }
+      }
+    },
     "Forget this account’s limit (e.g. when it has reset early)": {
       "localizations": {
         "ja": {
@@ -2932,6 +2962,16 @@
         }
       }
     },
+    "General": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一般"
+          }
+        }
+      }
+    },
     "Ghostty Default": {
       "localizations": {
         "ja": {
@@ -2948,6 +2988,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Git"
+          }
+        }
+      }
+    },
+    "Git branch": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Git ブランチ"
           }
         }
       }
@@ -3455,6 +3505,16 @@
         }
       }
     },
+    "Latest notification": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最新の通知"
+          }
+        }
+      }
+    },
     "Layered over your Ghostty config. View › Bigger / Smaller / Actual Size (⌘+ / ⌘− / ⌘0) change only the focused pane.": {
       "localizations": {
         "ja": {
@@ -3548,6 +3608,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ポート%@で待ち受け中"
+          }
+        }
+      }
+    },
+    "Listening ports": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待ち受けポート"
           }
         }
       }
@@ -5638,6 +5708,16 @@
         }
       }
     },
+    "Show in each workspace:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各ワークスペースに表示:"
+          }
+        }
+      }
+    },
     "Show in menu bar": {
       "localizations": {
         "ja": {
@@ -6758,6 +6838,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイトルは64文字以内の1行にしてください。"
+          }
+        }
+      }
+    },
+    "The workspace name, the agent's state and its task always show.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース名、エージェントの状態と作業内容は常に表示されます。"
           }
         }
       }

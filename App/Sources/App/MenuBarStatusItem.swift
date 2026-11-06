@@ -280,6 +280,6 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     @objc private func openSettings() {
         NSApp.activate()
-        SettingsWindowController.shared.showWindow(nil)
+        SettingsWindowController.shared.show(tab: .menuBar)
     }
 }
