@@ -7,28 +7,24 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.11.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.11.0</link>
-      <sparkle:version>18</sparkle:version>
-      <sparkle:shortVersionString>0.11.0</sparkle:shortVersionString>
+      <title>cmds 0.12.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.12.0</link>
+      <sparkle:version>19</sparkle:version>
+      <sparkle:shortVersionString>0.12.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 06 Nov 2026 15:16:14 GMT</pubDate>
+      <pubDate>Fri, 06 Nov 2026 17:00:20 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
-<p>iPhone/iPad のペアリングを 1 台ずつ解除できるようになりました。ペアリングのウィンドウで各端末の「取り消す…」を選ぶか、<code>cmds sync revoke</code> を使います。ほかの端末はペアリングされたままです。</p>
-<p>iPhone/iPad アプリ（同時に公開）で、各ワークスペースのエージェントが使っている Claude アカウントと、上限中ならリセット時刻を表示するため、Mac がその情報を送るようになりました。</p>
-<h3>修正</h3>
-<p>16px のアプリアイコン（Finder のリスト表示や Retina でない画面）で「&gt;_」がつぶれていたのを、画素に合わせて描き直しました。</p>
+<p>cmds のウィジェットを追加しました。デスクトップや通知センターに、メニューバーと同じ情報（対応待ちと作業中のバッジ、対応待ちになってからの時間、利用上限と CPU・メモリのリング）を表示します。デスクトップを右クリックして「ウィジェットを編集…」から「cmds」を追加してください。クリックするとそのワークスペースが開きます。</p>
+<p>この版は Mac のみです。iPhone/iPad アプリは 0.11.0 から変わりません。</p>
 <h3>Added</h3>
-<p>Unpair one iPhone or iPad: Revoke… next to each device in the pairing window, or <code>cmds sync revoke</code>. The other devices stay paired.</p>
-<p>The Mac now sends which Claude account each workspace's agent uses, and when a limited account resets, for the iPhone/iPad app released alongside.</p>
-<h3>Fixed</h3>
-<p>The 16 px app icon (Finder lists, non-Retina displays) is drawn on the pixel grid, so "&gt;_" reads.</p>
+<p>A cmds widget for the desktop and Notification Center, with what the menu bar shows: badges for the workspaces that need you and those working, how long they have waited, and rings for your limits, CPU and memory. Right-click the desktop, choose Edit Widgets…, and add cmds. Click it to open that workspace.</p>
+<p>Mac only; the iPhone/iPad app is unchanged from 0.11.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.11.0/cmds-0.11.0.dmg" length="13939037" type="application/octet-stream" sparkle:edSignature="MHIEPP++3yL2DZCXBvNGMwHJlSKNqPcGRdJsrmjEoaAnT7aDTkmkxo+R5YO5cUdgT3MBpHfPXAN6JGX6nHUMCw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.12.0/cmds-0.12.0.dmg" length="14851772" type="application/octet-stream" sparkle:edSignature="HO6MKFH8Z9aEUKkP0Q9j4x2vZpvjwN+SosfyCL3+yNPMZYc5m2nP7Mpk0prA/FtmWfxtAoNV32cuazrSQ1dqAw=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: IkttLwL2WdvumAh036xhiFrlnmDAf2ayDXuekgJG5fKmRcs8Zdr/eWjlBpa5Y93GJqCF4Ji96r5ePDlA5I2uDA==
-length: 2456
+edSignature: oGioPVtKb6SwJ/ExeH82F0hc+XhwCJaAp04CJGR0j0ADIH2qhUIbWsukeGTWPQ9g8DBNV3e3vOgumbI/hRbaCw==
+length: 2240
 -->

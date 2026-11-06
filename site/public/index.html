@@ -52,7 +52,7 @@
       <h1>AIエージェントを、<br><span class="accent">並べて走らせる</span>ターミナル。</h1>
       <p class="lead">cmds は Claude Code や Codex を何本も同時に動かすための、macOS ネイティブのターミナルワークスペースです。どのエージェントが作業中で、どれがあなたの入力を待っているかがサイドバーで分かり、待っているペインはオレンジのリングで光ります。</p>
       <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.11.0/cmds-0.11.0.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
+        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.12.0/cmds-0.12.0.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
         <a class="btn" href="/guide/">使い方を見る</a>
       </div>
       <p class="note">無料・オープンソース（GPL-3.0）。アカウント登録もテレメトリもありません。</p>
@@ -73,7 +73,7 @@
       <div class="grid">
         <div class="card"><h3>縦タブのワークスペース</h3><p>ワークスペースごとに Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態（作業中・入力待ち・完了）とタスク名を表示。フィルタやプロジェクト別のグループ化も。</p></div>
         <div class="card"><h3>通知リング</h3><p>エージェントが許可や入力を求めると、そのペインがオレンジのリングで光り、サイドバーにメッセージが出ます。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。OSC 9/777・ベル・<code>cmds notify</code> に対応。</p></div>
-        <div class="card"><h3>メニューバー</h3><p>ほかのアプリを使っていても、メニューバーのアイコンで対応待ち（オレンジ）と作業中（青、回転するリング）の数がひと目で分かります。メニューには CPU・メモリと AI の利用上限のリンググラフ。表示する項目は自分で選べます。</p></div>
+        <div class="card"><h3>メニューバー</h3><p>ほかのアプリを使っていても、メニューバーのアイコンで対応待ち（オレンジ）と作業中（青、回転するリング）の数がひと目で分かります。メニューには CPU・メモリと AI の利用上限のリンググラフ。同じ情報をウィジェットでも。表示する項目は自分で選べます。</p></div>
         <div class="card"><h3>アプリ内ブラウザ</h3><p>WebKit のブラウザをターミナルの隣に。開発サーバーの画面を確認でき、エージェントも Chrome の代わりにここでページを開いて確かめます（MCP サーバー <code>cmds mcp</code> や <code>cmds browser</code>）。</p></div>
         <div class="card"><h3>分割とタイル表示</h3><p>右・下への入れ子の分割、ペインのズーム。複数のワークスペースを最大 9 枚のライブタイルとして並べ、5 つの Claude Code を同時に見ることも。サイドバーからドラッグして配置できます。</p></div>
         <div class="card"><h3>ファイルプレビュー</h3><p>画像、PDF、動画、Office（Quick Look）、GitHub 風の Markdown、色付きの diff。ファイルが変わると自動で再読み込み。ターミナル上のパスを <kbd>⌘</kbd>-クリックでも開けます。</p></div>
@@ -134,7 +134,7 @@
   <section id="menubar">
     <div class="wrap">
       <p class="eyebrow">Menu bar</p>
-      <h2>メニューバーで、ひと目で</h2>
+      <h2>メニューバーとウィジェットで、ひと目で</h2>
       <div class="split">
         <div>
           <p>ほかのアプリで作業していても、エージェントの様子が文字を読まずに分かります。</p>
@@ -142,6 +142,7 @@
             <li><strong>バッジ</strong>：オレンジは対応待ち、青は作業中のワークスペースの数。作業中はバッジの周りのリングが回ります。利用上限が 95% を超えたりメモリが逼迫すると、アイコンに赤い点。</li>
             <li><strong>リンググラフ</strong>：CPU・メモリと、Claude Code / Codex の 5 時間・7 日間の利用上限。リセットまでの残り時間（「あと2時間10分」）も。80% でオレンジ、95% で赤。</li>
             <li><strong>エージェントの活動</strong>：ワークスペースごとに状態の印と、いまの作業や質問、対応待ちになってからの時間。⌘1〜⌘9 でそのペインに移動します。</li>
+            <li><strong>ウィジェット</strong>：デスクトップや通知センターにも同じ情報を。小サイズはバッジといちばん待たせているワークスペース、中サイズは一覧とリング。クリックでそのワークスペースへ。</li>
             <li><strong>自分に合わせて</strong>：アイコンとメニューに出すものを 設定 › メニューバー で選べます。サイドバーの各行や下部に出す項目も 設定 › サイドバー で。</li>
           </ul>
           <p><a href="/guide/#menubar">使い方を見る →</a></p>
@@ -149,6 +150,8 @@
         <figure>
           <img src="/img/ja-menubar-2.webp" width="1060" height="1148" loading="lazy" class="sidebar-shot" alt="メニューバーの cmds のアイコンに、対応待ち 1（オレンジ）と作業中 2（青、回転するリング）のバッジと、上限間近を示す赤い点。開いたメニューには Mac の CPU 31%・メモリ 63%、Claude の 5 時間 96%（あと2時間10分）・7 日 82%、Codex の 5 時間 21%・7 日 47% のリンググラフと、api-server（3分前から対応待ち）、my-app と billing（作業中）、docs-site（待機）の一覧。各行に ⌘1〜⌘4、下に「メニューバーの設定…」。">
           <figcaption>メニューバー：対応待ちと作業中、CPU・メモリ・利用上限</figcaption>
+          <img src="/img/ja-widgets.webp" width="1260" height="484" loading="lazy" alt="デスクトップの cmds ウィジェット 2 つ。小サイズは対応待ち 1（オレンジ）と作業中 2（青）のバッジ、3 分前から対応待ちの api-server、Claude 7 日 82% のリング（リセットまで 3 日 17 時間）。中サイズは api-server（対応待ち）、my-app と billing（作業中）、docs-site（待機）の一覧と、Claude 7 日 82%・5 時間 46%・CPU 31% のリング。">
+          <figcaption>ウィジェット（小・中）</figcaption>
         </figure>
       </div>
     </div>
@@ -202,14 +205,14 @@
       <p class="eyebrow">Download</p>
       <h2>ダウンロード</h2>
       <div class="download-box">
-        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.11.0/cmds-0.11.0.dmg">cmds 0.11.0 をダウンロード（DMG、13.9 MB）</a></p>
-        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.11.0">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
+        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.12.0/cmds-0.12.0.dmg">cmds 0.12.0 をダウンロード（DMG、14.9 MB）</a></p>
+        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.12.0">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
         <dl>
-          <dt>ファイル</dt><dd><code>cmds-0.11.0.dmg</code>（13,939,037 バイト、2026-11-07）</dd>
-          <dt>SHA-256</dt><dd><code>12d59a6045723137be5fd08697dfc37161ba2776a0ef21ff9979f816f5f4e101</code></dd>
+          <dt>ファイル</dt><dd><code>cmds-0.12.0.dmg</code>（14,851,772 バイト、2026-11-07）</dd>
+          <dt>SHA-256</dt><dd><code>92e45e595520071cf01c05faf9c3b6886c488fc617f399f524fcf16a29d1dde5</code></dd>
           <dt>対応</dt><dd>Apple シリコン、macOS 14 以降</dd>
         </dl>
-        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.11.0.dmg</code> で SHA-256 を照合できます。</p>
+        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.12.0.dmg</code> で SHA-256 を照合できます。</p>
       </div>
     </div>
   </section>
