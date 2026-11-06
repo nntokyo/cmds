@@ -72,14 +72,13 @@ extension AppController {
             return
         }
         pane.agentSignals.hookBusyFollowsSpinner = false
+        let state: AgentSignals.HookState?
         switch event {
-        case .needsInput: pane.agentSignals.hook = .needsInput
-        case .finished: pane.agentSignals.hook = .finished
-        case .working:
-            pane.agentSignals.hook = .busy
-            pane.agentSignals.workingHookAt = now
+        case .needsInput: state = .needsInput
+        case .finished: state = .finished
+        case .working: state = .busy
         case .ended:
-            pane.agentSignals.hook = nil
+            state = nil
             pane.agentSignals.endedAt = now
             // Claude Code exited: its status-line usage goes with it (like a watched process exiting).
             if pane.agentUsage?.agent == .claude {
@@ -93,7 +92,7 @@ extension AppController {
         case .subagent:
             return // handled above
         }
-        noteHook(pane, working: event == .working, notification: event.notification, now: now)
+        noteHook(pane, state: state, notification: event.notification, now: now)
     }
 
     /// `agent.codex_hook`: a Codex hook payload as `cmds hook codex` forwards it. Codex runs hooks with its own
@@ -103,28 +102,31 @@ extension AppController {
     func codexHook(paneID: String?, input: JSONValue) throws {
         guard let payload = CodexHook.payload(fromForwarded: input) else { return }
         let panes = codexPaneDirectories.map { id, cwd in
-            CodexHook.Pane(paneID: id, cwd: cwd.isEmpty ? nil : cwd,
+            CodexHook.Pane(paneID: id, cwd: cwd,
                            sessionID: self.pane(id: id).flatMap { $0.agentUsage?.agent == .codex ? $0.agentUsage?.sessionID : nil })
         }
         guard let target = CodexHook.targetPane(sessionID: payload.sessionID, cwd: payload.cwd, envPane: paneID, panes: panes),
               let pane = pane(id: target) else { return }
         let now = Date()
         pane.agentSignals.hookBusyFollowsSpinner = true
+        let state: AgentSignals.HookState
         switch payload.event {
-        case .needsInput: pane.agentSignals.hook = .needsInput
-        case .finished, .interrupted: pane.agentSignals.hook = .finished
-        case .working:
-            pane.agentSignals.hook = .busy
-            pane.agentSignals.workingHookAt = now
+        case .needsInput: state = .needsInput
+        case .finished, .interrupted: state = .finished
+        case .working: state = .busy
         }
-        noteHook(pane, working: payload.event == .working, notification: payload.event.notification, now: now)
+        noteHook(pane, state: state, notification: payload.event.notification, now: now)
     }
 
-    /// After a hook changed the pane's hook state: working again clears an older notification; a notification
-    /// raises attention.
-    private func noteHook(_ pane: Pane, working: Bool, notification: ClaudeHook.Notification?, now: Date) {
+    /// Records a hook's state for the pane (nil: the agent ended): working again clears an older notification; a
+    /// notification raises attention.
+    private func noteHook(_ pane: Pane, state: AgentSignals.HookState?, notification: ClaudeHook.Notification?, now: Date) {
+        pane.agentSignals.hook = state
         pane.agentSignals.hookAt = now
-        if working { clearNotification(of: pane, before: now) }
+        if state == .busy {
+            pane.agentSignals.workingHookAt = now
+            clearNotification(of: pane, before: now)
+        }
         if let notification {
             updateAgentActivity(pane, now: now, emitChange: false)
             raiseAttention(pane: pane, title: notification.title, body: notification.body)
@@ -199,7 +201,7 @@ extension AppController {
             // Schedules that follow Codex's limit (ScheduleRunner).
             if resetChanged { NotificationCenter.default.post(name: Self.codexLimitsDidChange, object: nil) }
         }
-        codexPaneDirectories = Dictionary(uniqueKeysWithValues: codex.panes.map { ($0, codex.directories[$0] ?? "") })
+        codexPaneDirectories = Dictionary(uniqueKeysWithValues: codex.panes.map { ($0, codex.directories[$0]) })
         for workspace in workspaces {
             for pane in workspace.orderedPanes where pane.kind == .terminal {
                 var usage = pane.agentUsage
