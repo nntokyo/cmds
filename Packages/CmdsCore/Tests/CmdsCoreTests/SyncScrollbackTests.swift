@@ -9,14 +9,14 @@ import XCTest
 /// the pane it created and closes that workspace at the end.
 final class SyncScrollbackTests: XCTestCase {
     func testScrollbackFromIsolatedInstance() throws {
-        let instance = try Instance()
+        let instance = try SyncE2EInstance(pairingVariable: "CMDS_SCROLLBACK_E2E_PAIRING")
         // More lines than SyncScrollback.maxLines fit above any screen.
         let (workspaceID, paneID) = try instance.createWorkspace(title: "scrollback e2e")
         defer { instance.closeWorkspace(workspaceID) }
         try instance.type("seq 1 1500\n", into: paneID)
 
         // A phone without the stream (0.3.0).
-        let phone = try Phone(instance, hello: .init(deviceName: "scrollback test", deviceID: "scrollback-test",
+        let phone = try SyncE2EPhone(instance, hello: .init(deviceName: "scrollback test", deviceID: "scrollback-test",
                                                      pairingCode: instance.payload.code))
         XCTAssertEqual(phone.welcome.features?.contains(SyncFeature.scrollback), true)
         try phone.send(.subscribe(.init(paneIDs: [paneID])))
@@ -65,7 +65,7 @@ final class SyncScrollbackTests: XCTestCase {
     /// and while the screen's text does not change. `historyReset` when the scrollback is cleared (`CSI 3 J`); after it
     /// the phone gets no rows until it asks again. A phone without the feature gets neither field.
     func testScrollbackStreamFromIsolatedInstance() throws {
-        let instance = try Instance()
+        let instance = try SyncE2EInstance(pairingVariable: "CMDS_SCROLLBACK_E2E_PAIRING")
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("cmds-scrollback-e2e-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -94,13 +94,13 @@ final class SyncScrollbackTests: XCTestCase {
         defer { instance.closeWorkspace(workspaceID) }
         try instance.type("sh \(scriptURL.path)\n", into: paneID)
 
-        let phone = try Phone(instance, hello: .init(deviceName: "scrollback stream test",
+        let phone = try SyncE2EPhone(instance, hello: .init(deviceName: "scrollback stream test",
                                                      deviceID: "scrollback-stream-test",
                                                      features: [SyncFeature.scrollbackStream],
                                                      pairingCode: instance.payload.code))
         XCTAssertEqual(phone.welcome.features?.contains(SyncFeature.scrollback), true)
         XCTAssertEqual(phone.welcome.features?.contains(SyncFeature.scrollbackStream), true)
-        let plain = try Phone(instance, hello: .init(deviceName: "scrollback test", token: phone.welcome.token))
+        let plain = try SyncE2EPhone(instance, hello: .init(deviceName: "scrollback test", token: phone.welcome.token))
         for connection in [phone, plain] {
             try connection.send(.subscribe(.init(paneIDs: [paneID])))
             try connection.wait(for: paneID) { $0.lines.contains("1500") }
@@ -160,7 +160,7 @@ final class SyncScrollbackTests: XCTestCase {
     /// request sent while heavy output keeps the screen moving is answered once the output allows it. Needs Ghostty's
     /// default scrollback limit (or a smaller one); skipped when 120 000 rows fit.
     func testScrollbackStreamAcrossPruningFromIsolatedInstance() throws {
-        let instance = try Instance()
+        let instance = try SyncE2EInstance(pairingVariable: "CMDS_SCROLLBACK_E2E_PAIRING")
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("cmds-scrollback-e2e-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -194,7 +194,7 @@ final class SyncScrollbackTests: XCTestCase {
         defer { instance.closeWorkspace(workspaceID) }
         try instance.type("sh \(scriptURL.path)\n", into: paneID)
 
-        let phone = try Phone(instance, hello: .init(deviceName: "scrollback pruning test",
+        let phone = try SyncE2EPhone(instance, hello: .init(deviceName: "scrollback pruning test",
                                                      deviceID: "scrollback-pruning-test",
                                                      features: [SyncFeature.scrollbackStream],
                                                      pairingCode: instance.payload.code))
@@ -236,7 +236,7 @@ final class SyncScrollbackTests: XCTestCase {
 
     /// The answer to a `requestScrollback` already sent: its rows as numbers, consecutive and ending right above its
     /// screen; `rows` = how many there must be (nil: any, also none).
-    private func backfill(_ phone: Phone, _ paneID: String, rows count: Int?,
+    private func backfill(_ phone: SyncE2EPhone, _ paneID: String, rows count: Int?,
                           file: StaticString = #filePath, line: UInt = #line) throws -> [Int]? {
         let (screen, rows) = try phone.scrollback(paneID)
         if let count { XCTAssertEqual(rows.count, count, file: file, line: line) }
@@ -248,14 +248,14 @@ final class SyncScrollbackTests: XCTestCase {
     /// numbers above the screen the phone keeps (nil after `historyReset`, until it asks again): rows that left the
     /// screen (`scrolledOff`) continue them exactly (no gap, no duplicate) and end right above the new screen; updates
     /// without rows may lag behind the screen but never overlap it.
-    private func follow(_ phone: Phone, _ paneID: String, history: inout [Int]?, resets: inout Int,
+    private func follow(_ phone: SyncE2EPhone, _ paneID: String, history: inout [Int]?, resets: inout Int,
                         file: StaticString = #filePath, line: UInt = #line,
                         until done: (ScreenSnapshot, [Int]?) -> Bool) throws {
         let deadline = Date().addingTimeInterval(60)
         while true {
             if let screen = phone.mirror[paneID], done(screen, history) { return }
             guard Date() < deadline else {
-                throw Failure("timed out: screen \(phone.mirror[paneID]?.lines ?? []), rows above end with "
+                throw SyncE2EFailure("timed out: screen \(phone.mirror[paneID]?.lines ?? []), rows above end with "
                               + "\(history?.last.map(String.init) ?? "nothing")")
             }
             let scrolledOff: [String]?
@@ -268,7 +268,7 @@ final class SyncScrollbackTests: XCTestCase {
                 scrolledOff = diff.scrolledOff
                 reset = diff.historyReset == true
             case .scrollback:
-                throw Failure("scrollback without a request")
+                throw SyncE2EFailure("scrollback without a request")
             default:
                 continue
             }
@@ -328,134 +328,5 @@ final class SyncScrollbackTests: XCTestCase {
         XCTAssertEqual(numbers, Array(first...last), "not consecutive", file: file, line: line)
         XCTAssertEqual(screen.lines.first.flatMap { Int($0) }, last + 1,
                        "screen starts with \(screen.lines.prefix(2)), rows end with \(last)", file: file, line: line)
-    }
-
-    // MARK: - Instance and phones
-
-    private struct Failure: Error, CustomStringConvertible {
-        let description: String
-        init(_ description: String) { self.description = description }
-    }
-
-    /// The isolated instance named by `CMDS_SCROLLBACK_E2E_PAIRING` (loopback only, never the live app).
-    private struct Instance {
-        let payload: SyncPairingPayload
-        let api: CmdsClient
-
-        init() throws {
-            guard let path = ProcessInfo.processInfo.environment["CMDS_SCROLLBACK_E2E_PAIRING"] else {
-                throw XCTSkip("set CMDS_SCROLLBACK_E2E_PAIRING to an isolated instance's sync-test-pairing.txt")
-            }
-            payload = try SyncPairingPayload.parse(String(contentsOfFile: path, encoding: .utf8))
-            let socket = ((path as NSString).deletingLastPathComponent as NSString).appendingPathComponent("cmds.sock")
-            let live = CmdsEnv.supportDirectoryURL(environment: [:]).appendingPathComponent("cmds.sock").path
-            guard payload.host == "127.0.0.1", (socket as NSString).standardizingPath != live else {
-                throw Failure("only ever test against a loopback-only isolated instance")
-            }
-            api = try CmdsClient(socketPath: socket, timeout: 10)
-        }
-
-        func createWorkspace(title: String) throws -> (workspaceID: String, paneID: String) {
-            let workspace = try api.call("workspace.create", params: ["title": .string(title), "cwd": "/tmp"])
-            let workspaceID = try XCTUnwrap(workspace["id"]?.stringValue)
-            let paneID = try XCTUnwrap(workspace["panes"]?.arrayValue?.first?["id"]?.stringValue)
-            return (workspaceID, paneID)
-        }
-
-        func closeWorkspace(_ id: String) {
-            _ = try? api.call("workspace.close", params: ["id": .string(id)])
-        }
-
-        func type(_ text: String, into paneID: String) throws {
-            try api.call("pane.send_text", params: ["pane": .string(paneID), "text": .string(text)])
-        }
-
-        /// The first number in the pane's text (its whole scrollback and screen), nil if there is none.
-        func firstNumber(in paneID: String) throws -> Int? {
-            let result = try api.call("pane.read_text",
-                                      params: ["pane": .string(paneID), "scrollback": .number(1_000_000)])
-            let lines = (result["text"]?.stringValue ?? "").split(separator: "\n")
-            return lines.lazy.compactMap { Int($0.trimmingCharacters(in: .whitespaces)) }.first
-        }
-    }
-
-    /// One phone connection (pinned TLS WebSocket) with its copy of the screens.
-    private final class Phone {
-        private let client: WSClient
-        private let codec = SyncCodec()
-        private(set) var welcome = ServerMessage.Welcome(macName: "", token: "")
-        private(set) var mirror = ScreenMirror()
-        /// `screen` / `screenDiff` messages that carried `scrolledOff` or `historyReset`.
-        private(set) var historyMessages = 0
-
-        init(_ instance: Instance, hello: ClientMessage.Hello) throws {
-            let tls = SyncTLS.clientOptions(policy: .pinned(instance.payload.fingerprint), queue: .global()) { _ in }
-            client = WSClient(port: instance.payload.port, tls: tls)
-            client.start()
-            guard client.waitReady() == true else { throw Failure("no connection to the instance") }
-            try send(.hello(hello))
-            guard case .welcome(let welcome) = try next() else { throw Failure("expected welcome") }
-            self.welcome = welcome
-        }
-
-        deinit { client.cancel() }
-
-        func send(_ message: ClientMessage) throws {
-            client.send(try codec.encode(message))
-        }
-
-        /// Next message from the Mac; screens go into `mirror` (a diff that does not fit asks for the screen).
-        func next() throws -> ServerMessage {
-            guard let data = client.receive() else { throw Failure("no message from the Mac") }
-            let message = try codec.decodeServerMessage(data)
-            let result: ScreenMirror.ApplyResult
-            switch message {
-            case .screen(let screen):
-                if screen.scrolledOff != nil || screen.historyReset != nil { historyMessages += 1 }
-                result = mirror.apply(screen)
-            case .screenDiff(let diff):
-                if diff.scrolledOff != nil || diff.historyReset != nil { historyMessages += 1 }
-                result = mirror.apply(diff)
-            default:
-                return message
-            }
-            if case .needsFullScreen(let paneID) = result { try send(.requestScreen(.init(paneID: paneID))) }
-            return message
-        }
-
-        /// Reads messages until the pane's screen satisfies `condition`.
-        func wait(for paneID: String, timeout: TimeInterval = 30, until condition: (ScreenSnapshot) -> Bool) throws {
-            let deadline = Date().addingTimeInterval(timeout)
-            while mirror[paneID].map(condition) != true {
-                guard Date() < deadline else { throw Failure("screen never got there: \(mirror[paneID]?.lines ?? [])") }
-                _ = try next()
-            }
-        }
-
-        /// The answer to a `requestScrollback`: the full screen sent right before the rows, under the same seq.
-        func scrollback(_ paneID: String, within maxMessages: Int = 500) throws -> (ServerMessage.Screen, [String]) {
-            var previous: ServerMessage?
-            for _ in 0..<maxMessages {
-                let message = try next()
-                if case .scrollback(let scrollback) = message {
-                    guard case .screen(let screen)? = previous, screen.paneID == paneID else {
-                        throw Failure("scrollback did not follow a full screen of \(paneID): "
-                                      + String(describing: previous))
-                    }
-                    XCTAssertEqual(scrollback.paneID, paneID)
-                    XCTAssertEqual(scrollback.seq, screen.seq)
-                    return (screen, scrollback.lines)
-                }
-                previous = message
-            }
-            throw Failure("no scrollback from the Mac")
-        }
-
-        func nextError() throws -> SyncErrorCode? {
-            for _ in 0..<20 {
-                if case .error(let info) = try next() { return info.code }
-            }
-            return nil
-        }
     }
 }

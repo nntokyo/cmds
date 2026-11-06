@@ -3304,6 +3304,16 @@
         }
       }
     },
+    "It is disconnected and must be paired again with a new code. Other devices stay paired.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この端末は切断され、使うには新しいコードで再度ペアリングが必要です。ほかの端末はペアリングされたままです。"
+          }
+        }
+      }
+    },
     "Its active run is cancelled. Its history is kept.": {
       "localizations": {
         "ja": {
@@ -5240,6 +5250,28 @@
         }
       }
     },
+    "Revoke": {
+      "comment": "pairing window: confirm unpairing one device",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消す"
+          }
+        }
+      }
+    },
+    "Revoke %@": {
+      "comment": "pairing window: unpair one device (VoiceOver)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ を取り消す"
+          }
+        }
+      }
+    },
     "Revoke All": {
       "localizations": {
         "ja": {
@@ -5266,6 +5298,27 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペアリング済みのデバイスをすべて取り消しますか？"
+          }
+        }
+      }
+    },
+    "Revoke “%@”?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」を取り消しますか？"
+          }
+        }
+      }
+    },
+    "Revoke…": {
+      "comment": "pairing window: unpair one device",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り消す…"
           }
         }
       }

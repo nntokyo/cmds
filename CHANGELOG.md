@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: unpair one iPhone or iPad: **Revoke…** next to each device in the pairing window, `cmds sync devices` and
+  `cmds sync revoke <id|name>` (`sync.devices`, `sync.revoke`, local socket only). The device is disconnected at once;
+  the others stay paired (#114).
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 
