@@ -70,7 +70,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>インストールと初回起動</h2>
       <ol>
-        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.8.2/cmds-0.8.2.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
+        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.9.0/cmds-0.9.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
         <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
         <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
         <li>ウィンドウを閉じても cmds とターミナル（エージェント）は動き続けます。Dock のアイコンか <kbd>⌘N</kbd> でウィンドウが戻ります。エージェントの実行中に終了しようとすると確認が出ます。</li>
@@ -104,6 +104,8 @@
         </picture>
         <figcaption>右のペインで Claude Code が許可を求めているため、リングで光っています。</figcaption>
       </figure>
+      <h3 id="menubar">メニューバー</h3>
+      <p>メニューバーの cmds のアイコンに、対応待ちのワークスペースの数（オレンジ）と、エージェントが作業中の数（青、周りのリングが回転）がバッジで出ます。クリックすると、CPU・メモリと Claude Code / Codex の利用上限のリンググラフ、エージェントが動いたワークスペースの一覧（状態の印と、いまの作業や質問）が開き、選ぶとそのペインに移動します。設定 › エージェント › <strong>メニューバーに表示</strong> でオン・オフできます。</p>
     </div>
   </section>
 

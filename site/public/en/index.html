@@ -51,7 +51,7 @@
       <h1>The terminal for running<br><span class="accent">many AI agents at once.</span></h1>
       <p class="lead">cmds is a native macOS terminal workspace for running Claude Code, Codex and friends side by side. The sidebar shows which agent is working and which one is waiting for you, and the pane that needs you lights up with an orange ring.</p>
       <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.8.2/cmds-0.8.2.dmg">Download for Mac <small>macOS 14+, Apple silicon</small></a>
+        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.9.0/cmds-0.9.0.dmg">Download for Mac <small>macOS 14+, Apple silicon</small></a>
         <a class="btn" href="/en/guide/">How to use</a>
       </div>
       <p class="note">Free and open source (GPL-3.0). No account, no telemetry.</p>
@@ -72,6 +72,7 @@
       <div class="grid">
         <div class="card"><h3>Vertical tabs</h3><p>Every workspace shows its git branch, directory, listening ports, and the agent's state (Working, Needs Input, Done) and task. Filter them, or group them by project.</p></div>
         <div class="card"><h3>Notification ring</h3><p>When an agent asks for permission or input, its pane lights up orange and the sidebar shows the message. <kbd>⇧⌘U</kbd> jumps to the latest. Works with OSC 9/777, the bell and <code>cmds notify</code>.</p></div>
+        <div class="card"><h3>Menu bar</h3><p>While you work in other apps, the menu bar icon shows how many workspaces need you (orange) and how many agents work (blue, with a turning ring). Its menu has ring charts for CPU, memory and your AI limits.</p></div>
         <div class="card"><h3>In-app browser</h3><p>A WebKit browser next to your terminal for your dev server, where agents also open and check pages instead of Chrome (the <code>cmds mcp</code> MCP server, or <code>cmds browser</code>).</p></div>
         <div class="card"><h3>Splits and tiled view</h3><p>Nested right/down splits and pane zoom. Show up to nine workspaces as live tiles, e.g. five Claude Code sessions at once; drag them in from the sidebar.</p></div>
         <div class="card"><h3>File preview</h3><p>Images, PDF, video and Office files (Quick Look), GitHub-style Markdown and coloured diffs, reloaded when the file changes. <kbd>⌘</kbd>-click a path in the terminal to open it.</p></div>
@@ -129,6 +130,28 @@
     </div>
   </section>
 
+  <section id="menubar">
+    <div class="wrap">
+      <p class="eyebrow">Menu bar</p>
+      <h2>Everything at a glance, in the menu bar</h2>
+      <div class="split">
+        <div>
+          <p>Keep an eye on your agents while you work in other apps, without reading a line of text.</p>
+          <ul class="checks">
+            <li><strong>Badges</strong>: orange counts the workspaces that need you, blue those with an agent working; a ring turns around it while they work.</li>
+            <li><strong>Ring charts</strong>: CPU, memory and the Claude Code / Codex 5-hour and 7-day limits with their reset times. Orange from 80%, red from 95%.</li>
+            <li><strong>Agent activity</strong>: every workspace with a state mark (needs you, working, idle) and what the agent is doing or asking. Choose one to jump to its pane.</li>
+          </ul>
+          <p><a href="/en/guide/#menubar">See how it works →</a></p>
+        </div>
+        <figure>
+          <img src="/img/en-menubar.webp" width="1060" height="1088" loading="lazy" class="sidebar-shot" alt="The cmds icon in the menu bar with badges: 1 needs you (orange), 2 working (blue, with a turning ring). The open menu shows ring charts for the Mac's CPU 31% and memory 63%, Claude's 5-hour 38% and 7-day 82%, Codex's 5-hour 21% and 7-day 47%, and the workspaces api-server (needs you), my-app and billing (working), docs-site (idle).">
+          <figcaption>Menu bar: what needs you, what works, CPU, memory and limits</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
   <section id="iphone">
     <div class="wrap">
       <p class="eyebrow">iPhone &amp; iPad</p>
@@ -176,14 +199,14 @@
       <p class="eyebrow">Download</p>
       <h2>Download</h2>
       <div class="download-box">
-        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.8.2/cmds-0.8.2.dmg">Download cmds 0.8.2 (DMG, 13.9 MB)</a></p>
-        <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple. See the <a href="https://github.com/nntokyo/cmds/releases/tag/v0.8.2">GitHub release</a> for the changes. From 0.2.0 on, the app updates itself (from 0.1.x, replace it by hand once).</p>
+        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.9.0/cmds-0.9.0.dmg">Download cmds 0.9.0 (DMG, 13.9 MB)</a></p>
+        <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple. See the <a href="https://github.com/nntokyo/cmds/releases/tag/v0.9.0">GitHub release</a> for the changes. From 0.2.0 on, the app updates itself (from 0.1.x, replace it by hand once).</p>
         <dl>
-          <dt>File</dt><dd><code>cmds-0.8.2.dmg</code> (13,872,886 bytes, 2026-11-06)</dd>
-          <dt>SHA-256</dt><dd><code>cc247603c13385dc4f67c673b37d09f540ecf5dfd1db6bd2582f349e813875f0</code></dd>
+          <dt>File</dt><dd><code>cmds-0.9.0.dmg</code> (13,903,218 bytes, 2026-11-06)</dd>
+          <dt>SHA-256</dt><dd><code>4ba1c44b40c731b8aaf3f5ac1f103773539241fd3f8f11357422026071818815</code></dd>
           <dt>Runs on</dt><dd>Apple silicon, macOS 14 or later</dd>
         </dl>
-        <p class="note">Check the download with <code>shasum -a 256 cmds-0.8.2.dmg</code>.</p>
+        <p class="note">Check the download with <code>shasum -a 256 cmds-0.9.0.dmg</code>.</p>
       </div>
     </div>
   </section>

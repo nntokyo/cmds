@@ -7,26 +7,24 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.8.2</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.8.2</link>
-      <sparkle:version>14</sparkle:version>
-      <sparkle:shortVersionString>0.8.2</sparkle:shortVersionString>
+      <title>cmds 0.9.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.9.0</link>
+      <sparkle:version>15</sparkle:version>
+      <sparkle:shortVersionString>0.9.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Thu, 05 Nov 2026 17:26:30 GMT</pubDate>
+      <pubDate>Fri, 06 Nov 2026 11:42:56 GMT</pubDate>
       <description><![CDATA[
-<h3>修正</h3>
-<p><code>cmds browser eval</code> と MCP の <code>browser_eval</code> が、Content Security Policy で <code>unsafe-eval</code> を禁止しているページ（GitHub や多くの本番サイト）で「EvalError: Refused to evaluate…」となって失敗していた問題を直しました。そうしたページでは、値を <code>return</code> で返してください。</p>
-<p>Codex で <code>cmds mcp</code> のツールが使えなかった問題：Codex は MCP サーバーに cmds の環境変数を渡さないため、<code>~/.codex/config.toml</code> の <code>[mcp_servers.cmds]</code> に <code>env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]</code> を加えてください（ガイドも更新しました）。</p>
+<h3>追加</h3>
+<p>メニューバーに cmds のアイコンが出るようになりました。対応待ちのワークスペースの数をオレンジ、エージェントが作業中の数を青のバッジで示し、作業中はリングが回ります。クリックすると、CPU・メモリと Claude Code / Codex の利用上限をリンググラフで表示し、エージェントが動いたワークスペースの一覧（状態の印と、いまの作業や質問）から、そのペインに移動できます。設定 › エージェント › メニューバーに表示 でオン・オフできます。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.4.0 から変わりません。</p>
-<h3>Fixed</h3>
-<p><code>cmds browser eval</code> and the MCP <code>browser_eval</code> failed with "EvalError: Refused to evaluate…" on pages whose Content Security Policy forbids <code>unsafe-eval</code> (GitHub, many production sites). On such pages, <code>return</code> the value.</p>
-<p>Codex: <code>cmds mcp</code> offered no tools, because Codex does not pass cmds' environment variables to MCP servers. Add <code>env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]</code> to <code>[mcp_servers.cmds]</code> in <code>~/.codex/config.toml</code> (the guide is updated).</p>
+<h3>Added</h3>
+<p>A cmds icon in the menu bar: an orange badge counts the workspaces that need you, a blue one those with an agent working, with a turning ring while they work. Click it for ring charts of CPU, memory and your Claude Code / Codex limits, and the workspaces where an agent ran, with a state mark and what it is doing or asking; choose one to jump to its pane. Settings › Agents › Show in menu bar.</p>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.4.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.8.2/cmds-0.8.2.dmg" length="13872886" type="application/octet-stream" sparkle:edSignature="rS6HPzniW8QvNFRG3fLyv3iMkvvnvXlxRUambyS5a3pWIEOTcyo9hkHhhrfPx/pTi3v4BQHqcCzrbDntuVGWCA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.9.0/cmds-0.9.0.dmg" length="13903218" type="application/octet-stream" sparkle:edSignature="8ut8d6dBtrqeXFSYBCRqcdX04BE2Z3qCTpfttH0AzDbDrC3OzOFprfV5ii0uPY+4TzP+5HnHLypEtJty6bXxBA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: F3knRIOSjpvoCIHV4hfWYr3Tc9/6AA+GdCnfGJofUmrj4jQvukGb/aSZqPxQvw4cMBF0ALlffWHXnaBd0MLBDw==
-length: 2786
+edSignature: 9ExZq5xB1egCW5mrg0NdaBtkpzD55AgM4hW9K+8qYzQIYR/jCjoM5cG9ClridB9K3BSGn8SBSO6Y2CMogCJOAQ==
+length: 2461
 -->
