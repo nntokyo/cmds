@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-07
+
+Mac and iPhone/iPad. The iPhone/iPad app also brings the 0.4.0 changes that had not reached the App Store (earlier
+output that keeps up while you read it, #22): the App Store had 0.3.0.
+
 ### Added
 
 - Mac: unpair one iPhone or iPad: **Revoke…** next to each device in the pairing window, `cmds sync devices` and
@@ -381,7 +386,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.10.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.11.0...master
+[0.11.0]: https://github.com/nntokyo/cmds/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nntokyo/cmds/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/nntokyo/cmds/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/nntokyo/cmds/compare/v0.8.2...v0.9.0
