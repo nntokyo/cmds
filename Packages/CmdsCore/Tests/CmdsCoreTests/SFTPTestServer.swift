@@ -26,6 +26,9 @@ final class SFTPTestServer: @unchecked Sendable {
     private(set) var renamed: [(String, String)] = []
     private var bytesWritten = 0
     private var requests = 0
+    /// Guards `stopped`; stop() is called by tearDown and by the server thread when its input ends.
+    private let stopLock = NSLock()
+    private var stopped = false
 
     enum Handle {
         case file(Int32)
@@ -44,7 +47,13 @@ final class SFTPTestServer: @unchecked Sendable {
         let transport = FileDescriptorTransport(readFD: toClient[0], writeFD: toServer[1])
         transport.reasonProvider = { "test server closed the connection" }
         client = SFTPClient(transport: transport)
-        let thread = Thread { [self] in serve() }
+        let thread = Thread { [self] in
+            serve()
+            stop()
+            // Only this thread uses the descriptors, so it frees them, once, after its last read and write (#122).
+            Darwin.close(readFD)
+            Darwin.close(writeFD)
+        }
         thread.name = "sftp-test-server"
         thread.start()
     }
@@ -55,9 +64,19 @@ final class SFTPTestServer: @unchecked Sendable {
         return SFTPFileTree(client: client, home: try client.realpath("."))
     }
 
+    /// Ends the connection; the client sees it closed. Safe more than once and from any thread: like
+    /// `FileDescriptorTransport.close`, /dev/null takes the place of the pipes, which ends a read blocked in the server
+    /// thread without freeing the numbers. Closing them here let a second stop close descriptors that a later test's
+    /// pipe() had been given ("test server closed the connection" in an unrelated test, #122).
     func stop() {
-        close(writeFD)
-        close(readFD)
+        stopLock.lock()
+        defer { stopLock.unlock() }
+        guard !stopped else { return }
+        stopped = true
+        let null = open("/dev/null", O_RDWR)
+        dup2(null, readFD)
+        dup2(null, writeFD)
+        Darwin.close(null)
     }
 
     // MARK: - Loop

@@ -455,6 +455,25 @@ final class SFTPTransferTests: XCTestCase {
         XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: home + "/a.bin")[.size] as? Int, 1_000_000)
     }
 
+    /// #122: the test server's stop ran twice (tearDown, then its own thread at EOF), so the second close could hit
+    /// descriptor numbers a later test's pipe() had been given meanwhile, which then saw "test server closed the
+    /// connection". Stopped servers must never close a descriptor that is not theirs any more.
+    func testStoppedServerNeverClosesDescriptorsReusedLater() throws {
+        for _ in 0..<40 {
+            let other = SFTPTestServer(home: home)
+            _ = try other.connect()
+            other.client.disconnect()
+            other.stop()
+            var fds: [Int32] = [0, 0]
+            XCTAssertEqual(pipe(&fds), 0)  // usually given the numbers just freed
+            usleep(20_000)  // the stopped server's thread sees the end of its input and finishes
+            XCTAssertNotEqual(fcntl(fds[0], F_GETFD), -1, "a stopped server closed a descriptor it no longer owns")
+            XCTAssertNotEqual(fcntl(fds[1], F_GETFD), -1, "a stopped server closed a descriptor it no longer owns")
+            close(fds[0])
+            close(fds[1])
+        }
+    }
+
     func testConnectionDropFailsJob() throws {
         try write(mac + "/a.txt", "a")
         server.dropAfterRequests = 0
