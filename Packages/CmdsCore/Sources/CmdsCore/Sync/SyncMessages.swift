@@ -171,11 +171,31 @@ public enum ServerMessage: Equatable, Sendable {
         public var system: SystemStats?
         /// Latest account limits of the coding agents (Claude, Codex). Optional, omitted when none is known.
         public var agentLimits: [AgentLimits]?
+        /// The Claude accounts of cmds (Settings › Agents › Claude accounts) that are at a limit now, with its end, so
+        /// the phone can say when the account a pane runs under resets (#112). Names only; omitted when none is
+        /// limited or by older Macs.
+        public var accountLimits: [AccountLimit]?
 
-        public init(workspaces: [WorkspaceInfo], system: SystemStats? = nil, agentLimits: [AgentLimits]? = nil) {
+        public init(workspaces: [WorkspaceInfo], system: SystemStats? = nil, agentLimits: [AgentLimits]? = nil,
+                    accountLimits: [AccountLimit]? = nil) {
             self.workspaces = workspaces
             self.system = system
             self.agentLimits = agentLimits
+            self.accountLimits = accountLimits
+        }
+
+        /// A limited Claude account: `name` matches `PaneInfo.account`.
+        public struct AccountLimit: Codable, Equatable, Sendable {
+            public var name: String
+            public var resetsAt: Date
+            /// The reset time was estimated (no time in the limit message).
+            public var estimated: Bool
+
+            public init(name: String, resetsAt: Date, estimated: Bool = false) {
+                self.name = name
+                self.resetsAt = resetsAt
+                self.estimated = estimated
+            }
         }
     }
 

@@ -434,6 +434,17 @@
         }
       }
     },
+    "@%@ at its limit · resets %@%@" : {
+      "comment" : "iPhone workspace row: the pane's Claude account is at a limit until this time",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "@%1$@ 上限中 · リセット %2$@%3$@"
+          }
+        }
+      }
+    },
     "Active on Mac" : {
       "localizations" : {
         "ja" : {
@@ -2415,6 +2426,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ペアリングコードが違うか、期限切れです。"
+          }
+        }
+      }
+    },
+    "account %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウント %@"
           }
         }
       }

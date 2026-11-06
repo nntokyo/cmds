@@ -51,7 +51,7 @@ struct WorkspaceListView: View {
             ForEach(client.workspaces) { workspace in
                 NavigationLink(value: workspace.id) {
                     WorkspaceRow(workspace: workspace, attention: client.needsAttention(workspace),
-                                 agentLimits: client.agentLimits)
+                                 agentLimits: client.agentLimits, accountLimits: client.accountLimits)
                 }
                 .contextMenu {
                     Button {
@@ -155,6 +155,7 @@ struct WorkspaceRow: View {
     let workspace: WorkspaceInfo
     let attention: Bool
     var agentLimits: [AgentLimits] = []
+    var accountLimits: [ServerMessage.State.AccountLimit] = []
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -207,7 +208,9 @@ struct WorkspaceRow: View {
                     }
                 }
                 if let agent = workspace.primaryAgent {
-                    AgentSummaryLine(usage: agent.usage, limits: agentLimits.limits(for: agent.usage.agent)?.limits)
+                    AgentSummaryLine(usage: agent.usage, limits: agentLimits.limits(for: agent.usage.agent)?.limits,
+                                     account: agent.pane.account,
+                                     accountLimit: accountLimits.first { $0.name == agent.pane.account })
                 }
                 if workspace.cpuPercent != nil || workspace.memoryBytes != nil {
                     WorkspaceUsageLine(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes)

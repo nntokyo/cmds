@@ -12,6 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: unpair one iPhone or iPad: **Revoke…** next to each device in the pairing window, `cmds sync devices` and
   `cmds sync revoke <id|name>` (`sync.devices`, `sync.revoke`, local socket only). The device is disconnected at once;
   the others stay paired (#114).
+- iPhone/iPad: a workspace's agent line shows the Claude account its pane runs under (`@work`, as in the Mac's
+  sidebar) and, while that account is at a limit, when it resets. The Mac sends its limited accounts in `state`
+  (`accountLimits`, names and reset times only; older phones ignore it) (#112).
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
 

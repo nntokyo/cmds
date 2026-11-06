@@ -50,7 +50,8 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
 ## What the companion shows
 
 - **Workspaces**: the same list as the Mac's sidebar with directory, branch, attention, CPU and memory, and the coding
-  agent of each workspace. The bottom bar shows the Mac's CPU, memory and memory pressure and each agent's account
+  agent of each workspace, with the Claude account its pane runs under (`@work`) and, while that account is at a limit,
+  when it resets (Mac 0.11.0 or later). The bottom bar shows the Mac's CPU, memory and memory pressure and each agent's account
   limits. Long-press a workspace for **Show on Mac**.
 - **Panes**: each terminal's live screen, with pinch to zoom; it follows the cursor row. Swipe down for earlier output
   (up to 500 rows above the screen when you open the pane, 200 over Bluetooth; iOS 18 or later, and cmds 0.3.0 or later

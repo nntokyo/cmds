@@ -56,6 +56,24 @@ final class AgentUsageCodableTests: XCTestCase {
         XCTAssertEqual(try JSONValue.from(stats).decode(StatsSnapshot.self), stats)
     }
 
+    /// `state.accountLimits` (#112): round trip, absent from older Macs, and an older phone's decoding unaffected.
+    func testStateCarriesAccountLimitsOptionally() throws {
+        let codec = SyncCodec()
+        let accounts = [ServerMessage.State.AccountLimit(name: "work", resetsAt: Date(timeIntervalSince1970: 1_800_000_000)),
+                        .init(name: "home", resetsAt: Date(timeIntervalSince1970: 1_800_003_600), estimated: true)]
+        let message = ServerMessage.state(.init(workspaces: [], accountLimits: accounts))
+        XCTAssertEqual(try codec.decodeServerMessage(codec.encode(message)), message)
+        let encoded = String(decoding: try codec.encode(message), as: UTF8.self)
+        XCTAssertTrue(encoded.contains(#""accountLimits""#) && encoded.contains(#""name":"work""#), encoded)
+        XCTAssertFalse(encoded.contains("configDir"), "names only, never the config directory")
+        let old = #"{"type":"state","workspaces":[]}"#
+        guard case .state(let state) = try codec.decodeServerMessage(Data(old.utf8)) else { return XCTFail() }
+        XCTAssertNil(state.accountLimits)
+        // An older phone decodes the same message as a state without the field (unknown keys are ignored).
+        struct OldState: Decodable { let workspaces: [WorkspaceInfo] }
+        XCTAssertNoThrow(try JSONDecoder().decode(OldState.self, from: Data(encoded.utf8)))
+    }
+
     func testActiveLimitsDropResetWindows() {
         let now = Date(timeIntervalSince1970: 10_000)
         let limits = AgentLimits(agent: .claude, limits: [

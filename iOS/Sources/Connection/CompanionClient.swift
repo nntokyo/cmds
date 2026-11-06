@@ -21,6 +21,8 @@ final class CompanionClient {
     private(set) var systemStats: SystemStats?
     /// Account limits of the coding agents (Claude, Codex) from the latest `state` (empty for older Macs).
     private(set) var agentLimits: [AgentLimits] = []
+    /// The Mac's Claude accounts at a limit now, with its end (empty for older Macs, #112).
+    private(set) var accountLimits: [ServerMessage.State.AccountLimit] = []
     /// Bumped whenever any screen changes (cheap observation hook).
     private(set) var screens: [String: ScreenSnapshot] = [:]
     /// Rows above each streamed pane's screen (`scrollback`); none for Macs without `SyncFeature.scrollback`. Asked
@@ -222,6 +224,7 @@ final class CompanionClient {
         workspaces = []
         systemStats = nil
         agentLimits = []
+        accountLimits = []
         screens = [:]
         mirror.removeAll()
     }
@@ -412,6 +415,7 @@ final class CompanionClient {
             if workspaces != state.workspaces { workspaces = state.workspaces }
             if systemStats != state.system { systemStats = state.system }
             if agentLimits != state.agentLimits ?? [] { agentLimits = state.agentLimits ?? [] }
+            if accountLimits != state.accountLimits ?? [] { accountLimits = state.accountLimits ?? [] }
             let live = Set(state.workspaces.flatMap { $0.panes.map(\.id) })
             unreadPaneIDs.formIntersection(live)
             unreadWorkspaceIDs.formIntersection(Set(state.workspaces.map(\.id)))

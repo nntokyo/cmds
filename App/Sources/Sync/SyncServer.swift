@@ -853,8 +853,13 @@ final class SyncServer {
 
     private func currentState() -> ServerMessage.State {
         let limits = AppController.shared.activeAgentLimits()
+        let now = Date()
+        let accounts = AppController.shared.claudeAccounts.accounts.compactMap { account -> ServerMessage.State.AccountLimit? in
+            guard let limit = account.limit, limit.isActive(at: now) else { return nil }
+            return .init(name: account.name, resetsAt: limit.resetsAt, estimated: limit.estimated)
+        }
         return ServerMessage.State(workspaces: AppController.shared.listWorkspaces(), system: AppController.shared.systemStats,
-                                   agentLimits: limits.isEmpty ? nil : limits)
+                                   agentLimits: limits.isEmpty ? nil : limits, accountLimits: accounts.isEmpty ? nil : accounts)
     }
 
     /// A usage sample changes CPU/memory figures in nearly every `state`; push them at most every
