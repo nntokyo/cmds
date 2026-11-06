@@ -82,6 +82,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds mcp` | MCP server on stdin/stdout for agents: browser panes, previews, sidebar status ([setup](../guide/ai-agents.md#mcp-server)) |
 | `cmds hook claude` | Claude Code `Notification` / `Stop` / `UserPromptSubmit` hook ([setup](../guide/ai-agents.md#claude-code)) |
 | `cmds hook claude-status` | Claude Code status-line reporter ([setup](../guide/ai-agents.md#claude-code)) |
+| `cmds hook codex` | Codex `PermissionRequest` / `Stop` / `UserPromptSubmit` / tool / `Interrupt` hook ([setup](../guide/ai-agents.md#hooks)) |
 
 Every command accepts `--json` (print the raw result) and `--help` (also `cmds help <command>`); `cmds --version`
 prints the version of the cmds the CLI came with (`dev` when built with SwiftPM). Exit codes: `0` ok, `1` the request failed
@@ -149,7 +150,8 @@ its directory name, and has no preview format. So a new `cmds` CLI can export fr
 
 `cmds hook claude` and `cmds hook claude-status` are meant to be called by Claude Code; the `settings.json` and
 status-line snippets are in [guide/ai-agents.md](../guide/ai-agents.md#claude-code). Both always exit 0, print nothing
-and do nothing outside cmds, so they never block the agent.
+and do nothing outside cmds, so they never block the agent. `cmds hook codex` is the same for Codex
+(`~/.codex/hooks.json`, [guide](../guide/ai-agents.md#hooks)), except that it prints `{}` for `Stop`, as Codex expects.
 
 ## Raw calls
 

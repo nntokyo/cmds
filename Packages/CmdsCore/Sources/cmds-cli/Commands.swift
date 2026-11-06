@@ -482,6 +482,19 @@ extension CLI {
                 }
             }
         },
+        Command(name: "hook codex", usage: "hook codex",
+                summary: "Codex hook: read the hook JSON on stdin; notify (PermissionRequest / Stop) and track the agent's state (UserPromptSubmit, PreToolUse, PostToolUse, Interrupt).",
+                details: "Always exits 0 and prints only what Codex expects (`{}` for Stop), so a missing app never blocks Codex. See docs/guide/ai-agents.md for the hooks.json snippet.") { ctx in
+            let input = FileHandle.standardInput.readDataToEndOfFile()
+            if let output = CodexHook.standardOutput(forHookInput: input) { print(output) }
+            guard let payload = CodexHook.payload(fromHookInput: input) else { return }
+            guard ctx.envPane != nil || ctx.args[option: "socket"] != nil || ctx.environment[CmdsEnv.socketPath] != nil else {
+                return // not running inside cmds
+            }
+            // Quietly: an older app without `agent.codex_hook`, or a session in no pane of ours.
+            _ = try? ctx.call("agent.codex_hook", ["pane": ctx.envPane.json, "input": CodexHook.forwardedInput(payload)],
+                              timeout: 5)
+        },
     ]
 
     static let browserPaneNote = "Without --pane, uses the focused browser pane of the current workspace (or its first browser pane)."

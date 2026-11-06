@@ -92,9 +92,38 @@ extension AppController {
         case .subagent:
             return // handled above
         }
+        noteHook(pane, working: event == .working, notification: event.notification, now: now)
+    }
+
+    /// `agent.codex_hook`: a Codex hook payload as `cmds hook codex` forwards it. Codex runs hooks with its own
+    /// environment, the shared app-server daemon's for most TUIs, so `paneID` (its `CMDS_PANE_ID`) is only a hint:
+    /// the pane is the one running that Codex session (`CodexHook.targetPane`). Events no pane can be told for are
+    /// dropped. PermissionRequest / Stop notify; every event updates the pane's agent state.
+    func codexHook(paneID: String?, input: JSONValue) throws {
+        guard let payload = CodexHook.payload(fromForwarded: input) else { return }
+        let panes = codexPaneDirectories.map { id, cwd in
+            CodexHook.Pane(paneID: id, cwd: cwd.isEmpty ? nil : cwd,
+                           sessionID: self.pane(id: id).flatMap { $0.agentUsage?.agent == .codex ? $0.agentUsage?.sessionID : nil })
+        }
+        guard let target = CodexHook.targetPane(sessionID: payload.sessionID, cwd: payload.cwd, envPane: paneID, panes: panes),
+              let pane = pane(id: target) else { return }
+        let now = Date()
+        switch payload.event {
+        case .needsInput: pane.agentSignals.hook = .needsInput
+        case .finished, .interrupted: pane.agentSignals.hook = .finished
+        case .working:
+            pane.agentSignals.hook = .busy
+            pane.agentSignals.workingHookAt = now
+        }
+        noteHook(pane, working: payload.event == .working, notification: payload.event.notification, now: now)
+    }
+
+    /// After a hook changed the pane's hook state: working again clears an older notification; a notification
+    /// raises attention.
+    private func noteHook(_ pane: Pane, working: Bool, notification: ClaudeHook.Notification?, now: Date) {
         pane.agentSignals.hookAt = now
-        if case .working = event { clearNotification(of: pane, before: now) }
-        if let notification = event.notification {
+        if working { clearNotification(of: pane, before: now) }
+        if let notification {
             updateAgentActivity(pane, now: now, emitChange: false)
             raiseAttention(pane: pane, title: notification.title, body: notification.body)
         } else {
@@ -168,6 +197,7 @@ extension AppController {
             // Schedules that follow Codex's limit (ScheduleRunner).
             if resetChanged { NotificationCenter.default.post(name: Self.codexLimitsDidChange, object: nil) }
         }
+        codexPaneDirectories = Dictionary(uniqueKeysWithValues: codex.panes.map { ($0, codex.directories[$0] ?? "") })
         for workspace in workspaces {
             for pane in workspace.orderedPanes where pane.kind == .terminal {
                 var usage = pane.agentUsage

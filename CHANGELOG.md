@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Mac: Codex hooks. `cmds hook codex` in `~/.codex/hooks.json` shows when Codex works, asks for approval
+  (`PermissionRequest`, with what it wants to run) or finishes a turn, like the Claude Code hooks; also for Codex TUIs
+  on the shared app-server daemon, matched to their pane by session (#128).
+
 ## [0.12.0] - 2026-11-07
 
 Mac only; the iPhone/iPad app is unchanged from 0.11.0.
