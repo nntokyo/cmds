@@ -11,13 +11,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
+
+## [0.10.0] - 2026-11-06
+
+Mac only; the iPhone/iPad app is unchanged from 0.4.0.
+
+### Added
+
 - Mac: menu bar item — rows that need you say since when; ⌘1…⌘9 choose a workspace while the menu is open; limit
   rings count down to their reset within a day (`in 2h10m`); a red dot on the icon warns of a limit at 95 % or
   critical memory pressure; Menu Bar Settings… in the menu. Settings › Menu Bar chooses what the icon and the menu show
   (working badge, red dot, animation, CPU and memory, AI limits, workspaces) (#105).
-- Mac: Settings is split into tabs (General, Sidebar, Agents, Menu Bar, Updates). Settings › Sidebar chooses what each
-  workspace row shows (Git branch, directory, ports, agent model/context/cost, latest notification) and what the
-  footer shows (AI limits, CPU and memory) (#107).
+- Mac: Settings › Sidebar chooses what each workspace row shows (Git branch, directory, ports, agent
+  model/context/cost, latest notification) and what the footer shows (AI limits, CPU and memory) (#107).
+
+### Changed
+
+- Mac: Settings is split into tabs (General, Sidebar, Agents, Menu Bar, Updates), so the window fits small screens and
+  each setting sits under its area (#107).
 
 ## [0.9.1] - 2026-11-06
 
@@ -356,7 +367,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.9.1...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.10.0...master
+[0.10.0]: https://github.com/nntokyo/cmds/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/nntokyo/cmds/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/nntokyo/cmds/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/nntokyo/cmds/compare/v0.8.1...v0.8.2
