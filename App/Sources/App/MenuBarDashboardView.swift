@@ -42,7 +42,7 @@ final class MenuBarDashboardView: NSView {
                 let level = UsageLevel(percent: limit.usedPercent)
                 return Gauge(label: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit, strings: .localized),
                              fraction: limit.usedPercent / 100, value: AgentFormat.percent(limit.usedPercent),
-                             color: Self.color(level),
+                             color: level.color,
                              caption: limit.resetsAt.map { Self.shortReset($0, now: now) })
             }
             rows.append(Row(title: limits.agent.displayName, gauges: gauges,
@@ -71,22 +71,13 @@ final class MenuBarDashboardView: NSView {
                     Gauge(label: String(localized: "Mem", comment: "sidebar meter title (memory)"), fraction: 0, value: "–",
                           color: .systemGreen)]
         }
-        let pressure: NSColor = stats.pressure == .critical ? .systemRed : stats.pressure == .warning ? .systemYellow : .systemGreen
         return [
             Gauge(label: String(localized: "CPU", comment: "sidebar meter title"), fraction: stats.cpuPercent / 100,
                   value: ResourceFormat.wholePercent(stats.cpuPercent), color: .controlAccentColor),
             Gauge(label: String(localized: "Mem", comment: "sidebar meter title (memory)"), fraction: stats.memoryFraction,
-                  value: ResourceFormat.wholePercent(stats.memoryFraction * 100), color: pressure,
+                  value: ResourceFormat.wholePercent(stats.memoryFraction * 100), color: stats.pressure.meterColor,
                   caption: ByteCountFormatter.string(fromByteCount: Int64(stats.memoryUsedBytes), countStyle: .memory)),
         ]
-    }
-
-    private static func color(_ level: UsageLevel) -> NSColor {
-        switch level {
-        case .normal: return .systemGreen
-        case .warning: return .systemOrange
-        case .critical: return .systemRed
-        }
     }
 
     override func draw(_ dirtyRect: NSRect) {

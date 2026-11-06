@@ -26,7 +26,7 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private var phase = 0.0
     private var workingMenuItems: [NSMenuItem] = []
     /// State of each workspace item in the open menu, to redraw its mark when it is highlighted.
-    private var itemStates: [ObjectIdentifier: MenuBarIcon.State] = [:]
+    private var itemStates: [ObjectIdentifier: MenuBarSummary.State] = [:]
     private weak var highlightedItem: NSMenuItem?
 
     private struct Counts: Equatable {
@@ -82,16 +82,26 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     private var summary: MenuBarSummary {
         MenuBarSummary(controller.workspaces.map { workspace in
-            MenuBarSummary.Entry(id: workspace.id, title: workspace.displayTitle,
-                                 needsUser: AgentActivityStyle.needsUser(workspace),
-                                 working: AgentActivityStyle.isWorking(workspace))
+            MenuBarSummary.Entry(id: workspace.id, needsUser: AgentActivityStyle.needsUser(workspace),
+                                 activity: Self.state(AgentActivityStyle.badge(for: workspace)))
         })
+    }
+
+    private static func state(_ badge: AgentActivityStyle.Badge?) -> MenuBarSummary.State? {
+        switch badge {
+        case .working: return .working
+        case .needsInput: return .needsUser
+        case .done: return .done
+        case .idle: return .idle
+        case .stopped: return .stopped
+        case nil: return nil
+        }
     }
 
     private func update() {
         guard let button = item?.button else { return }
         let summary = summary
-        let counts = Counts(needingUser: summary.needingUser.count, working: summary.working.count)
+        let counts = Counts(needingUser: summary.needingUserCount, working: summary.workingCount)
         updateSpinner(working: counts.working > 0)
         guard counts != appliedCounts else { return }
         appliedCounts = counts
@@ -169,14 +179,15 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         workingMenuItems = []
         itemStates = [:]
         highlightedItem = nil
-        let agents = Self.agentWorkspaces(controller.workspaces)
-        for (workspace, state) in agents {
+        let entries = summary.entries
+        for entry in entries {
+            guard let workspace = controller.workspace(id: entry.id), let state = entry.state else { continue }
             let item = workspaceItem(workspace, state: state)
             if state == .working { workingMenuItems.append(item) }
             itemStates[ObjectIdentifier(item)] = state
             menu.addItem(item)
         }
-        if agents.isEmpty {
+        if entries.isEmpty {
             let none = NSMenuItem(title: String(localized: "No agents working", comment: "menu bar item: nothing waits or works"),
                                   action: nil, keyEquivalent: "")
             none.isEnabled = false
@@ -188,26 +199,8 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         menu.addItem(open)
     }
 
-    /// Workspaces where an agent ran in this run, those that need the user first, then working, done, idle, stopped
-    /// (sidebar order within each).
-    private static func agentWorkspaces(_ workspaces: [Workspace]) -> [(Workspace, MenuBarIcon.State)] {
-        let states: [(Workspace, MenuBarIcon.State)] = workspaces.compactMap { workspace in
-            if AgentActivityStyle.needsUser(workspace) { return (workspace, .needsUser) }
-            switch AgentActivityStyle.badge(for: workspace) {
-            case .working: return (workspace, .working)
-            case .needsInput: return (workspace, .needsUser)
-            case .done: return (workspace, .done)
-            case .idle: return (workspace, .idle)
-            case .stopped: return (workspace, .stopped)
-            case nil: return nil
-            }
-        }
-        let order: [MenuBarIcon.State] = [.needsUser, .working, .done, .idle, .stopped]
-        return order.flatMap { state in states.filter { $0.1 == state } }
-    }
-
     /// The workspace name, and under it in small grey type the agent and what it does (or what it asks).
-    private func workspaceItem(_ workspace: Workspace, state: MenuBarIcon.State) -> NSMenuItem {
+    private func workspaceItem(_ workspace: Workspace, state: MenuBarSummary.State) -> NSMenuItem {
         let item = NSMenuItem(title: workspace.displayTitle, action: #selector(openWorkspace(_:)), keyEquivalent: "")
         item.target = self
         item.representedObject = workspace.id
