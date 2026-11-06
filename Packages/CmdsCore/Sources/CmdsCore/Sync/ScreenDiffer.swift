@@ -17,6 +17,27 @@ public enum ScreenDiffer {
         return changes
     }
 
+    /// Rows of `new` whose text or style runs differ from `old`, with their runs. Nil when the row counts differ.
+    public static func diff(from old: ScreenSnapshot, to new: ScreenSnapshot) -> [LineChange]? {
+        guard old.lines.count == new.lines.count else { return nil }
+        guard old.styles != nil || new.styles != nil else { return diff(from: old.lines, to: new.lines) }
+        var changes: [LineChange] = []
+        for row in new.lines.indices {
+            let runs = new.runs(row: row)
+            guard old.lines[row] != new.lines[row] || old.runs(row: row) != runs else { continue }
+            changes.append(LineChange(row: row, text: new.lines[row], runs: runs.isEmpty ? nil : runs))
+        }
+        return changes
+    }
+
+    /// `snapshot` with `changes` applied (text and runs; the cursor is left as it is).
+    public static func apply(_ changes: [LineChange], to snapshot: ScreenSnapshot) throws -> ScreenSnapshot {
+        var result = snapshot
+        result.lines = try apply(changes, to: snapshot.lines)
+        for change in changes { result.setRuns(change.runs, row: change.row) }
+        return result
+    }
+
     /// `lines` with `changes` applied.
     public static func apply(_ changes: [LineChange], to lines: [String]) throws -> [String] {
         var result = lines
@@ -32,8 +53,17 @@ public enum ScreenDiffer {
         lines.reduce(0) { $0 + $1.utf8.count + 3 }
     }
 
+    static func payloadCost(_ snapshot: ScreenSnapshot) -> Int {
+        payloadCost(snapshot.lines) + (snapshot.styles ?? []).reduce(0) { $0 + runsCost($1) }
+    }
+
     static func payloadCost(_ changes: [LineChange]) -> Int {
-        changes.reduce(0) { $0 + $1.text.utf8.count + 20 }
+        changes.reduce(0) { $0 + $1.text.utf8.count + 20 + runsCost($1.runs ?? []) }
+    }
+
+    /// About the JSON of the runs (`[c,l,a,fg,bg]`).
+    private static func runsCost(_ runs: [StyleRun]) -> Int {
+        runs.isEmpty ? 0 : 20 + runs.count * 14
     }
 }
 
@@ -75,8 +105,8 @@ public struct ScreenStreamer: Sendable {
         state.seq += 1
         state.last = snapshot
         if last.rows == snapshot.rows, last.cols == snapshot.cols,
-           let changes = ScreenDiffer.diff(from: last.lines, to: snapshot.lines),
-           Double(ScreenDiffer.payloadCost(changes)) <= Double(ScreenDiffer.payloadCost(snapshot.lines)) * maxDiffRatio {
+           let changes = ScreenDiffer.diff(from: last, to: snapshot),
+           Double(ScreenDiffer.payloadCost(changes)) <= Double(ScreenDiffer.payloadCost(snapshot)) * maxDiffRatio {
             return .screenDiff(.init(paneID: paneID, seq: state.seq, baseSeq: baseSeq, changes: changes,
                                      cursorRow: snapshot.cursorRow, cursorCol: snapshot.cursorCol))
         }
@@ -149,10 +179,10 @@ public struct ScreenMirror: Sendable {
         guard var current = panes[diff.paneID] else { return .needsFullScreen(paneID: diff.paneID) }
         if current.seq >= diff.seq { return .stale }
         guard current.seq == diff.baseSeq,
-              let lines = try? ScreenDiffer.apply(diff.changes, to: current.snapshot.lines)
+              let snapshot = try? ScreenDiffer.apply(diff.changes, to: current.snapshot)
         else { return .needsFullScreen(paneID: diff.paneID) }
         current.seq = diff.seq
-        current.snapshot.lines = lines
+        current.snapshot = snapshot
         current.snapshot.cursorRow = diff.cursorRow
         current.snapshot.cursorCol = diff.cursorCol
         panes[diff.paneID] = current

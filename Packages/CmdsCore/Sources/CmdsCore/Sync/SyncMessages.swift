@@ -214,10 +214,13 @@ public enum ServerMessage: Equatable, Sendable {
         /// `SyncFeature.scrollbackStream`: the rows above this screen do not continue the ones sent before (scrollback
         /// cleared, pane resized, alternate screen, too many rows at once): drop them and ask again.
         public var historyReset: Bool?
+        /// `SyncFeature.styles`: the style runs of the rows that have any (`row` indexes `lines`); nil when every row
+        /// is plain (or for phones without the feature).
+        public var styles: [RowStyle]?
 
         public init(paneID: String, seq: UInt64, rows: Int, cols: Int, lines: [String],
                     cursorRow: Int? = nil, cursorCol: Int? = nil, scrolledOff: [String]? = nil,
-                    historyReset: Bool? = nil) {
+                    historyReset: Bool? = nil, styles: [RowStyle]? = nil) {
             self.paneID = paneID
             self.seq = seq
             self.rows = rows
@@ -227,15 +230,19 @@ public enum ServerMessage: Equatable, Sendable {
             self.cursorCol = cursorCol
             self.scrolledOff = scrolledOff
             self.historyReset = historyReset
+            self.styles = styles
         }
 
         public init(paneID: String, seq: UInt64, snapshot: ScreenSnapshot) {
             self.init(paneID: paneID, seq: seq, rows: snapshot.rows, cols: snapshot.cols, lines: snapshot.lines,
-                      cursorRow: snapshot.cursorRow, cursorCol: snapshot.cursorCol)
+                      cursorRow: snapshot.cursorRow, cursorCol: snapshot.cursorCol, styles: snapshot.rowStyles)
         }
 
         public var snapshot: ScreenSnapshot {
-            ScreenSnapshot(rows: rows, cols: cols, lines: lines, cursorRow: cursorRow, cursorCol: cursorCol)
+            var snapshot = ScreenSnapshot(rows: rows, cols: cols, lines: lines, cursorRow: cursorRow,
+                                          cursorCol: cursorCol)
+            for style in styles ?? [] { snapshot.setRuns(style.runs, row: style.row) }
+            return snapshot
         }
     }
 
