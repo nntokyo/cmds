@@ -1,6 +1,6 @@
 import Foundation
 
-/// What the menu bar item shows (#95): the workspace that needs the user, else how many work.
+/// What the menu bar item shows (#95): how many workspaces need the user and how many work, as coloured badges.
 public struct MenuBarSummary: Equatable, Sendable {
     /// One workspace as the menu bar sees it.
     public struct Entry: Equatable, Sendable {
@@ -19,9 +19,6 @@ public struct MenuBarSummary: Equatable, Sendable {
         }
     }
 
-    /// Longest workspace title in the menu bar; longer ones end in "…".
-    public static let maxTitleLength = 20
-
     /// Workspaces that need the user, in sidebar order.
     public let needingUser: [Entry]
     /// Workspaces whose agent works, in sidebar order.
@@ -32,16 +29,6 @@ public struct MenuBarSummary: Equatable, Sendable {
         working = entries.filter { $0.working && !$0.needsUser }
     }
 
-    /// The text after the icon: `● api-server +1`, `◐3`, or "" when nothing needs the user or works.
-    public var title: String {
-        if let first = needingUser.first {
-            let more = needingUser.count > 1 ? " +\(needingUser.count - 1)" : ""
-            return "● \(Self.shortened(first.title))\(more)"
-        }
-        return working.isEmpty ? "" : "◐\(working.count)"
-    }
-
-    static func shortened(_ title: String) -> String {
-        title.count > maxTitleLength ? String(title.prefix(maxTitleLength - 1)) + "…" : title
-    }
+    /// Nothing needs the user and nothing works: the item shows only its icon.
+    public var isQuiet: Bool { needingUser.isEmpty && working.isEmpty }
 }

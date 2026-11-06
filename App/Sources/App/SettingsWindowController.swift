@@ -133,7 +133,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
             [Self.label(String(localized: "Menu bar:")), menuBarCheckbox],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "The workspace that needs you (orange in the sidebar), else how many agents work. Its menu takes you to them."))],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "An orange badge counts the workspaces that need you (orange in the sidebar), a blue one those working. Its menu takes you to them."))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
             [Self.label(String(localized: "Schedules:")), schedulesButton],

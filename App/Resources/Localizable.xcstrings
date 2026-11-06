@@ -559,6 +559,17 @@
         }
       }
     },
+    "%lld need you, %lld working": {
+      "comment": "menu bar item: workspaces waiting for the user, and with an agent working",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対応待ち %1$lld・作業中 %2$lld"
+          }
+        }
+      }
+    },
     "%lld of %lld selected": {
       "localizations": {
         "en": {
@@ -1089,6 +1100,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "この名前の項目はすでにあります。"
+          }
+        }
+      }
+    },
+    "An orange badge counts the workspaces that need you (orange in the sidebar), a blue one those working. Its menu takes you to them.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オレンジのバッジはあなたの対応を待っているワークスペース（サイドバーのオレンジ）の数、青のバッジは作業中の数です。メニューからそのワークスペースに移動できます。"
           }
         }
       }
@@ -6656,16 +6677,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイトルは64文字以内の1行にしてください。"
-          }
-        }
-      }
-    },
-    "The workspace that needs you (orange in the sidebar), else how many agents work. Its menu takes you to them.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "あなたの対応を待っているワークスペース（サイドバーのオレンジ）を表示し、なければ作業中のエージェントの数を表示します。メニューからそのワークスペースに移動できます。"
           }
         }
       }

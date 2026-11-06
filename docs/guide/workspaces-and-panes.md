@@ -227,11 +227,11 @@ instance or Mac, use File › Export Workspaces… / Import Workspaces… ([ai-a
 
 ## Menu bar
 
-While you work in other apps, the cmds item in the menu bar shows the minimum you need:
+While you work in other apps, the cmds icon in the menu bar shows at a glance what needs you, without text:
 
-- **`● api-server +1`**: the workspace that needs you (orange in the sidebar: an agent asks for input or
-  permission, or a notification you have not seen), and how many more do.
-- **`◐3`**: nothing needs you; three workspaces have an agent working.
+- **Orange badge** with a number: workspaces that need you (orange in the sidebar: an agent asks for input or
+  permission, or a notification you have not seen).
+- **Blue badge** (your accent colour) with a number: workspaces with an agent working.
 - Only the icon: nothing waits or works.
 
 Its menu lists the workspaces that need you, then those working; choosing one brings cmds forward on it, at the pane
@@ -270,8 +270,8 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
   (Markdown, diffs, text).
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
-- **Show in menu bar** (Agents): the workspace that needs you, or how many agents work ([Menu bar](#menu-bar)). On by
-  default.
+- **Show in menu bar** (Agents): badges for the workspaces that need you and those working ([Menu bar](#menu-bar)). On
+  by default.
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size
