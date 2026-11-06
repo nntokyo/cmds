@@ -1,0 +1,173 @@
+From: RYO <info@n-n.tokyo>
+Subject: [PATCH] apprt/embedded: ghostty_surface_read_text_vt, text with its
+ styles
+
+ghostty_surface_read_text returns plain text only, so an embedder that
+mirrors the terminal elsewhere (cmds shows it on a phone) loses every
+color and attribute. The formatter can already write a selection as VT
+(PageFormatter with emit = .vt), but Screen.selectionString hardcodes
+.plain.
+
+SelectionString gets an `emit` option (default .plain, so every caller
+is unchanged), Surface.dumpTextLockedFormat passes it through, and
+ghostty_surface_read_text_vt is ghostty_surface_read_text with
+emit = .vt: the same selection, mutex and result (freed by
+ghostty_surface_free_text), the text with SGR sequences. No palette is
+given to the formatter, so palette colors stay indexes (38;5;N) and the
+embedder maps them to its own palette; default colors are implicit.
+Blank cells are stepped over with CUF, cells that only carry a
+background are erased with ECH, hyperlinks come as OSC 8; no extras
+(cursor, modes, palette) are emitted.
+
+cmds carries this on Ghostty b2c78c9bd9bc after
+0001-embedded-scrollback-rows-and-scrollbar.patch
+(scripts/build-ghostty.sh applies it for the build and reverts it
+afterwards).
+---
+ include/ghostty.h       |  3 +++
+ src/Surface.zig         | 12 ++++++++++++
+ src/apprt/embedded.zig  | 30 ++++++++++++++++++++++++++----
+ src/terminal/Screen.zig |  7 ++++++-
+ 4 files changed, 47 insertions(+), 5 deletions(-)
+
+diff --git a/include/ghostty.h b/include/ghostty.h
+index c0a68f8..a2426bb 100644
+--- a/include/ghostty.h
++++ b/include/ghostty.h
+@@ -1249,6 +1249,9 @@ GHOSTTY_API bool ghostty_surface_read_selection(ghostty_surface_t, ghostty_text_
+ GHOSTTY_API bool ghostty_surface_read_text(ghostty_surface_t,
+                                               ghostty_selection_s,
+                                               ghostty_text_s*);
++GHOSTTY_API bool ghostty_surface_read_text_vt(ghostty_surface_t,
++                                                 ghostty_selection_s,
++                                                 ghostty_text_s*);
+ GHOSTTY_API void ghostty_surface_free_text(ghostty_surface_t, ghostty_text_s*);
+ GHOSTTY_API ghostty_surface_scrollbar_s ghostty_surface_scrollbar(ghostty_surface_t);
+ 
+diff --git a/src/Surface.zig b/src/Surface.zig
+index 369bb23..1cd6523 100644
+--- a/src/Surface.zig
++++ b/src/Surface.zig
+@@ -2043,11 +2043,23 @@ pub fn dumpTextLocked(
+     self: *Surface,
+     alloc: Allocator,
+     sel: terminal.Selection,
++) !Text {
++    return try self.dumpTextLockedFormat(alloc, sel, .plain);
++}
++
++/// Same as `dumpTextLocked` but in the given format: `.vt` keeps the
++/// styles of the text as SGR sequences.
++pub fn dumpTextLockedFormat(
++    self: *Surface,
++    alloc: Allocator,
++    sel: terminal.Selection,
++    emit: terminal.formatter.Format,
+ ) !Text {
+     // Read out the text
+     const text = try self.io.terminal.screens.active.selectionString(alloc, .{
+         .sel = sel,
+         .trim = false,
++        .emit = emit,
+     });
+     errdefer alloc.free(text);
+ 
+diff --git a/src/apprt/embedded.zig b/src/apprt/embedded.zig
+index 0f65de8..e62bca0 100644
+--- a/src/apprt/embedded.zig
++++ b/src/apprt/embedded.zig
+@@ -1932,7 +1932,7 @@ pub const CAPI = struct {
+         const core_sel = core_surface.io.terminal.screens.active.selection orelse return false;
+ 
+         // Read the text from the selection.
+-        return readTextLocked(surface, core_sel, result);
++        return readTextLocked(surface, core_sel, .plain, result);
+     }
+ 
+     /// Read some arbitrary text from the surface.
+@@ -1952,20 +1952,42 @@ pub const CAPI = struct {
+             surface.core_surface.renderer_state.terminal.screens.active,
+         ) orelse return false;
+ 
+-        return readTextLocked(surface, core_sel, result);
++        return readTextLocked(surface, core_sel, .plain, result);
++    }
++
++    /// Same as ghostty_surface_read_text but the text keeps its styles
++    /// as VT sequences: SGR (palette colors as indexes, `38;5;N`), blank
++    /// cells stepped over with CUF, cells that only carry a background
++    /// erased with ECH, hyperlinks as OSC 8. No cursor, modes or other
++    /// terminal state.
++    export fn ghostty_surface_read_text_vt(
++        surface: *Surface,
++        sel: Selection,
++        result: *Text,
++    ) bool {
++        surface.core_surface.renderer_state.mutex.lockUncancelable(global.io());
++        defer surface.core_surface.renderer_state.mutex.unlock(global.io());
++
++        const core_sel = sel.core(
++            surface.core_surface.renderer_state.terminal.screens.active,
++        ) orelse return false;
++
++        return readTextLocked(surface, core_sel, .vt, result);
+     }
+ 
+     fn readTextLocked(
+         surface: *Surface,
+         core_sel: terminal.Selection,
++        emit: terminal.formatter.Format,
+         result: *Text,
+     ) bool {
+         const core_surface = &surface.core_surface;
+ 
+         // Get our text directly from the core surface.
+-        const text = core_surface.dumpTextLocked(
++        const text = core_surface.dumpTextLockedFormat(
+             global.alloc(),
+             core_sel,
++            emit,
+         ) catch |err| {
+             log.warn("error reading text err={}", .{err});
+             return false;
+@@ -2586,7 +2608,7 @@ pub const CAPI = struct {
+             };
+ 
+             // Read the selection
+-            return readTextLocked(ptr, sel, result);
++            return readTextLocked(ptr, sel, .plain, result);
+         }
+ 
+         export fn ghostty_inspector_metal_init(ptr: *Inspector, device: objc.c.id) bool {
+diff --git a/src/terminal/Screen.zig b/src/terminal/Screen.zig
+index 0fd0167..90554e3 100644
+--- a/src/terminal/Screen.zig
++++ b/src/terminal/Screen.zig
+@@ -17,6 +17,7 @@ const PageList = @import("PageList.zig");
+ const selection_codepoints = @import("selection_codepoints.zig");
+ const StringMap = @import("StringMap.zig");
+ const ScreenFormatter = @import("formatter.zig").ScreenFormatter;
++const FormatterFormat = @import("formatter.zig").Format;
+ const PinMap = @import("formatter.zig").PinMap;
+ const osc = @import("osc.zig");
+ const pagepkg = @import("page.zig");
+@@ -3112,6 +3113,10 @@ pub const SelectionString = struct {
+ 
+     /// If true, trim whitespace around the selection.
+     trim: bool = true,
++
++    /// The format of the string: plain text, or text with the VT
++    /// sequences (SGR, ...) that reproduce its styles.
++    emit: FormatterFormat = .plain,
+ };
+ 
+ /// Returns the raw text associated with a selection. This will unwrap
+@@ -3158,7 +3163,7 @@ fn selectionStringImpl(
+     var formatter: ScreenFormatter = .init(
+         self,
+         .{
+-            .emit = .plain,
++            .emit = opts.emit,
+             .unwrap = true,
+             .trim = opts.trim,
+         },
