@@ -12,6 +12,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: Codex hooks. `cmds hook codex` in `~/.codex/hooks.json` shows when Codex works, asks for approval
   (`PermissionRequest`, with what it wants to run) or finishes a turn, like the Claude Code hooks; also for Codex TUIs
   on the shared app-server daemon, matched to their pane by session (#128).
+- Mac: terminal screens go to the iPhone/iPad with their colours and attributes (palette, 256 and RGB colours, bold,
+  faint, italic, underline, inverse, strikethrough), only to phones that ask for them (sync feature `styles`); older
+  phones keep getting plain text. Built on a new libghostty patch, `ghostty_surface_read_text_vt` (#113).
+- iPhone/iPad: terminal screens in colour, with bold, italic, underlined, inverse and faint text and backgrounds on the
+  cell grid, from a Mac that sends them; the 16 ANSI colours use a palette made for the dark terminal screen (#113).
 
 ## [0.12.0] - 2026-11-07
 

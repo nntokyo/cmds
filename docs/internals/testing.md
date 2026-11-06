@@ -139,6 +139,11 @@ In addition to `CMDS_SUPPORT_DIR`, which also selects separate keychain items fo
     sequence; a request sent during heavy output (3.9 million rows) is answered once the rows can be read.
 
   It closes the workspaces when done.
+- Styles test against an isolated instance: `CMDS_STYLES_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
+  swift test --filter SyncStylesE2ETests` (in `Packages/CmdsCore`) prints coloured rows (palette, 256-colour and RGB
+  colours, every attribute, wide characters, a background erased to the right edge) in a workspace it creates and checks
+  the runs a phone with `styles` gets, that the text matches `cmds read`, and that a phone without the feature gets the
+  same text and no styles.
 
 ### Files panes on SSH hosts
 

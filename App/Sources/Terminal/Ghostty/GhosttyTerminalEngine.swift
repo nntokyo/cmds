@@ -90,7 +90,7 @@ final class GhosttyTerminalSurface: TerminalSurface {
 
     /// `visibleText()`'s rows read as VT text (`ghostty_surface_read_text_vt`, from cmds' libghostty patch: SGR with
     /// palette indexes, CUF over blank cells) and split into text and style runs by `TerminalStyledText` (CmdsCore).
-    /// Costs about as much as `visibleText()`; only the sync server asks, for phones that draw colours.
+    /// One read per row like `visibleText()`, plus the parsing; only the sync server asks, for phones that draw colours.
     func visibleStyledRows() -> [(text: String, runs: [StyleRun])]? {
         guard let surface = surfaceView.surface else { return nil }
         let size = ghostty_surface_size(surface)
