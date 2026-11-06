@@ -3823,17 +3823,6 @@
         }
       }
     },
-    "Needs You": {
-      "comment": "menu bar item: workspaces waiting for the user",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "対応待ち"
-          }
-        }
-      }
-    },
     "Never": {
       "localizations": {
         "ja": {

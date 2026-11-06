@@ -9,9 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Mac: a menu bar icon with an orange badge (workspaces that need you) and a blue one (agents working). Its menu shows
-  the CPU, memory and agent limit meters of the sidebar footer and takes you to those workspaces. Settings › Agents ›
-  Show in menu bar (#95).
+- Mac: a menu bar icon with an orange badge (workspaces that need you) and a blue one with a turning arc (agents
+  working). Its menu shows ring charts for CPU, memory and the Claude Code / Codex limits, and each agent workspace
+  with a state mark and what the agent is doing; choosing one takes you there. Settings › Agents › Show in menu bar
+  (#95).
 
 - iPhone/iPad: files panes appear with a folder icon and their folder's path (sync feature `files`). Older companion
   versions see them as browser panes (#26).
