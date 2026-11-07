@@ -72,7 +72,8 @@ read, create (exclusive), rename (never overwriting), trash, remove a part file,
 its paths are joined and compared (`FilePathStyle`: the Mac's, or `RemotePath` on a server), so a transfer never
 checks which kind of tree it has.
 
-`TransferJob` (rules in its header comment) copies or moves top-level items into a folder:
+`TransferJob` (rules in its header comment; the `.save` and `.sync` modes are in `TransferJob+Save.swift` and
+`TransferJob+Sync.swift`) copies or moves top-level items into a folder:
 
 - Files are written to `.cmds-part-<8 hex>-<name>` next to the target, then renamed into place; cancel or failure
   removes that file only. Each part file is recorded in `transfer-parts.json` in the support folder

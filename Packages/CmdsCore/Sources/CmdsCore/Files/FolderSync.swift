@@ -82,9 +82,6 @@ public enum FolderSync {
             }
             return a > b ? .left : .right
         }
-
-        public func item(_ side: Side) -> FileItem? { side == .left ? left : right }
-        public func path(_ side: Side) -> String { side == .left ? leftPath : rightPath }
     }
 
     public struct Comparison: Equatable, Sendable {
@@ -402,6 +399,13 @@ public enum FolderSync {
         /// Conflicts no rule or choice settled (nothing is copied for them).
         public var unsettled = 0
 
+        /// The actions of the `decisions` that `including` keeps (the preview's ticked rows), and the conflicts of all
+        /// of them that nothing settled.
+        public init(decisions: [Decision], including: (Decision) -> Bool = { _ in true }) {
+            self.init(decisions.filter(including).compactMap(\.action),
+                      unsettled: decisions.filter { $0.isConflict && $0.action == nil }.count)
+        }
+
         public init(_ actions: [Action], unsettled: Int = 0) {
             for action in actions {
                 switch action.kind {
@@ -500,8 +504,7 @@ public struct FolderCompareInfo: Codable, Equatable, Sendable {
                          action: decision?.action.map { Action($0.kind) }, conflict: decision?.isConflict ?? false,
                          error: entry.error)
         }
-        let counts = FolderSync.Summary(decisions.compactMap(\.action),
-                                        unsettled: decisions.filter { $0.isConflict && $0.action == nil }.count)
+        let counts = FolderSync.Summary(decisions: decisions)
         summary = Summary(toRight: counts.toRight, toLeft: counts.toLeft, trashLeft: counts.trashLeft,
                           trashRight: counts.trashRight, unsettled: counts.unsettled)
         self.transfer = transfer

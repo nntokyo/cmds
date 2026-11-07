@@ -171,7 +171,8 @@ stay inside `<dir>`). Never point a test at your own hosts, keys or `localhost` 
    `newFolder`, `trash`, `paste {paths}`, `preview`, `reload`, `conflict`, `edit` (no app is opened unless
    `open: true`) and `editing`, then write the copy and check the server's file, `stopEditing`, `compare`, then
    `debug.compare` (`direction`, `delete`, `conflicts`, `path` + `choice`/`exclude`, `action`: `state`, `compare`,
-   `hidden`, `sync` (no confirmation), `snapshot`, `close`)), `cmds files compare` / `cmds files sync` between the
+   `hidden`, `sync` (no confirmation), `snapshot` (`appearance`: `light`/`dark`; take a second one after switching),
+   `close`)), `cmds files compare` / `cmds files sync` between the
    remote folder and the local one, `cmds transfers` (`pause`, `cancel`,
    `retry` on a large file), the refusals in the pane's status, and a relaunch (remote panes wait for Connect).
 4. `test-relay-sshd.sh stop <dir>` and delete `<dir>`.
