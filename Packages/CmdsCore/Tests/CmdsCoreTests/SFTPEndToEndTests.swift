@@ -46,6 +46,59 @@ final class SFTPEndToEndTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: local + "/down/blob.bin")), payload)
     }
 
+    /// Comparing and syncing a folder on this Mac with one on the server, both ways, over real ssh (#26).
+    func testCompareAndSync() throws {
+        let connection = try SSHFileConnection(host: "cmds-test-relay", configFile: config)
+        defer { connection.close() }
+        let remote = SFTPFileTree(client: connection.client, home: connection.home)
+        let work = connection.home + "/sync-\(UUID().uuidString)"
+        try remote.makeFolder(work, permissions: 0o700)
+        let local = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-e2e-sync-\(UUID().uuidString)")
+            .resolvingSymlinksInPath().path
+        defer { try? FileManager.default.removeItem(atPath: local) }
+        let old = Date(timeIntervalSince1970: 1_700_000_000)
+        func write(_ path: String, _ text: String, _ date: Date = old) throws {
+            try FileManager.default.createDirectory(atPath: (path as NSString).deletingLastPathComponent,
+                                                    withIntermediateDirectories: true)
+            try Data(text.utf8).write(to: URL(fileURLWithPath: path))
+            try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: path)
+        }
+        try write(local + "/a.txt", "mac newer", old + 100)
+        try write(work + "/a.txt", "server")
+        try write(local + "/only-mac/x.txt", "m")
+        try write(work + "/b.txt", "server newer", old + 100)
+        try write(local + "/b.txt", "mac")
+        try write(work + "/extra.txt", "extra")
+        let right = FileLocation.remote(host: "cmds-test-relay", path: work)
+
+        let comparison = try FolderSync.compare(left: LocalFileTree(), local, right: remote, work)
+        XCTAssertEqual(Dictionary(uniqueKeysWithValues: comparison.entries.map { ($0.path, $0.status) }),
+                       ["a.txt": .modified, "b.txt": .modified, "extra.txt": .rightOnly, "only-mac": .leftOnly])
+        let actions = FolderSync.plan(comparison.entries, options: .init(direction: .both)).compactMap(\.action)
+        let job = TransferJob(id: 1, syncing: .init(left: .local(local), right: right, direction: .both, actions: actions))
+        let localTrash = local + "-trash"
+        try FileManager.default.createDirectory(atPath: localTrash, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: localTrash) }
+        job.tree = { location in
+            guard !location.isRemote else { return remote }
+            let mac = LocalFileTree()
+            mac.trashItem = { try FileManager.default.moveItem(at: $0, to: URL(fileURLWithPath: localTrash + "/" + $0.lastPathComponent)) }
+            return mac
+        }
+        job.run()
+        XCTAssertEqual(job.snapshot.state, .done, "\(job.snapshot.log)")
+        XCTAssertEqual(String(decoding: try Data(contentsOf: URL(fileURLWithPath: work + "/a.txt")), as: UTF8.self), "mac newer")
+        XCTAssertEqual(String(decoding: try Data(contentsOf: URL(fileURLWithPath: local + "/b.txt")), as: UTF8.self), "server newer")
+        XCTAssertEqual(String(decoding: try Data(contentsOf: URL(fileURLWithPath: local + "/extra.txt")), as: UTF8.self), "extra")
+        XCTAssertEqual(try remote.list(work + "/only-mac").map(\.name), ["x.txt"])
+        // The server's old a.txt is in its Trash, the Mac's old b.txt in "this Mac's" Trash.
+        XCTAssertTrue(FileManager.default.fileExists(atPath: connection.home + "/.local/share/Trash/files/a.txt")
+            || ((try? FileManager.default.contentsOfDirectory(atPath: connection.home + "/.local/share/Trash/files")) ?? [])
+                .contains { $0.hasPrefix("a ") })
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: localTrash), ["b.txt"])
+        XCTAssertEqual(try FolderSync.compare(left: LocalFileTree(), local, right: remote, work).differences, [])
+    }
+
     /// Editing a server's file over real ssh and OpenSSH's sftp server (which offers `posix-rename@openssh.com`).
     func testEditAndSave() throws {
         let connection = try SSHFileConnection(host: "cmds-test-relay", configFile: config)
