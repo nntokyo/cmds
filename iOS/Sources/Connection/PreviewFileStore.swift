@@ -32,6 +32,11 @@ final class PreviewFileStore {
         mime.hasPrefix("image/") || mime == "application/pdf"
     }
 
+    /// The phone fetches and shows the file: images, PDFs, and with `asText` (files panes) text files.
+    static func isShown(name: String, asText: Bool) -> Bool {
+        isViewable(mime: SyncFile.mimeType(forFileName: name)) || (asText && isText(name: name))
+    }
+
     /// Plain text, source code, JSON, logs…: files of a files pane are shown as text (not preview panes, whose Mac view
     /// renders them).
     static func isText(name: String) -> Bool {

@@ -22,8 +22,8 @@ extension SyncServer {
         do {
             pane = try AppController.shared.filesPaneFolder(paneID: request.paneID)
         } catch {
-            let failure: SyncListing.Failure = (error as? RPCError)?.code == 404 ? .paneNotFound : .notFilesPane
-            return send(.listing(.init(paneID: request.paneID, path: request.path ?? "", failure: failure)), to: client)
+            return send(.listing(.init(paneID: request.paneID, path: request.path ?? "", failure: Self.paneFailure(error))),
+                        to: client)
         }
         client.readingListing = true
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -75,6 +75,11 @@ extension SyncServer {
                 }
             }
         }
+    }
+
+    /// Why `filesPaneFolder` refused a pane: gone (`RPCError.notFound`), else not a files pane.
+    private nonisolated static func paneFailure(_ error: Error) -> SyncListing.Failure {
+        (error as? RPCError)?.code == RPCError.notFound("").code ? .paneNotFound : .notFilesPane
     }
 
     /// The `listing` for a request. Blocks (file system, SFTP); never on the main thread.

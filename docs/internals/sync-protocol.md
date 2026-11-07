@@ -195,7 +195,7 @@ kind, so the Mac sends them files panes as `browser` panes with `url` = the fold
 **Browsing** (#26 phase 4). A phone that lists `"filesBrowse"` (`SyncFeature.filesBrowse`) in `hello.features` can ask a
 Mac that lists it in `welcome.features` for the contents of a files pane's folders and for their files. Read only:
 there is no message to write, rename, move, delete or transfer, and the Mac pane does not move (the phone keeps its
-own place). Code: `CmdsCore/Sync/SyncListing.swift` (`SyncFolderReader`, `SyncListing`), `App/Sources/Sync/SyncServer+Files.swift`.
+own place). Code: `CmdsCore/Sync/SyncListing.swift` (messages, `SyncListing`), `SyncFolderReader.swift`, `App/Sources/Sync/SyncServer+Files.swift`.
 
 - **`requestListing {paneID, path?}`**: `path` absolute; absent = the folder the pane shows. The path is standardized
   lexically (`.`/`..` removed, repeated `/` collapsed, `..` stops at `/`; no `~`, no symlink resolution); a relative
