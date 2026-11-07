@@ -8,19 +8,18 @@ import Foundation
 public enum AntigravityStatusLine {
     public static func usage(fromJSON data: Data, now: Date = Date()) -> AgentUsage? {
         guard let root = try? JSONDecoder().decode(JSONValue.self, from: data), case .object = root else { return nil }
-        typealias Read = ClaudeStatusLine
         var usage = AgentUsage(agent: .antigravity, updatedAt: now)
-        usage.model = Read.string(root["model"]?["display_name"]) ?? Read.string(root["model"]?["id"])
-        usage.effort = Read.string(root["model"]?["effort"])
-        usage.sessionID = Read.string(root["conversation_id"]) ?? Read.string(root["session_id"])
+        usage.model = StatusLineJSON.string(root["model"]?["display_name"]) ?? StatusLineJSON.string(root["model"]?["id"])
+        usage.effort = StatusLineJSON.string(root["model"]?["effort"])
+        usage.sessionID = StatusLineJSON.string(root["conversation_id"]) ?? StatusLineJSON.string(root["session_id"])
 
         let context = root["context_window"]
-        usage.contextWindow = Read.int(context?["context_window_size"]).flatMap { $0 > 0 && $0 < 1 << 40 ? $0 : nil }
-        usage.contextUsedPercent = Read.number(context?["used_percentage"]).map { min(max($0, 0), 100) }
-        usage.contextTokens = Read.int(context?["total_input_tokens"])
-        usage.outputTokens = Read.int(context?["total_output_tokens"])
-        usage.costUSD = Read.number(root["cost"]) ?? Read.number(root["cost"]?["total_cost_usd"])
-        usage.plan = Read.string(root["plan_tier"])
+        usage.contextWindow = StatusLineJSON.int(context?["context_window_size"]).flatMap { $0 > 0 && $0 < 1 << 40 ? $0 : nil }
+        usage.contextUsedPercent = StatusLineJSON.number(context?["used_percentage"]).map { min(max($0, 0), 100) }
+        usage.contextTokens = StatusLineJSON.int(context?["total_input_tokens"])
+        usage.outputTokens = StatusLineJSON.int(context?["total_output_tokens"])
+        usage.costUSD = StatusLineJSON.number(root["cost"]) ?? StatusLineJSON.number(root["cost"]?["total_cost_usd"])
+        usage.plan = StatusLineJSON.string(root["plan_tier"])
         usage.limits = limits(root["quota"])
 
         let known = usage.model != nil || usage.contextUsedPercent != nil || !usage.limits.isEmpty
@@ -36,7 +35,7 @@ public enum AntigravityStatusLine {
             return (group, windowMinutes(id) ?? Int.max, id)
         }
         return windows.keys.sorted { rank($0) < rank($1) }.compactMap { key -> UsageLimit? in
-            guard let window = windows[key], let remaining = ClaudeStatusLine.number(window["remaining_fraction"]) else {
+            guard let window = windows[key], let remaining = StatusLineJSON.number(window["remaining_fraction"]) else {
                 return nil
             }
             return UsageLimit(id: key, usedPercent: min(max((1 - remaining) * 100, 0), 100),
