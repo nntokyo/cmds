@@ -384,7 +384,7 @@ final class AppController {
     }
 
     /// `historyRows` with each row's style runs (`TerminalSurface.historyStyledRows`).
-    func historyStyledRows(paneID: String?, maxRows: Int) throws -> [(text: String, runs: [StyleRun])]? {
+    func historyStyledRows(paneID: String?, maxRows: Int) throws -> [StyledRow]? {
         try terminal(for: paneID).historyStyledRows(maxRows: maxRows)
     }
 

@@ -65,7 +65,7 @@ final class SyncE2EPhone {
     /// `styles` of the last `scrollback` (SyncStylesE2ETests).
     private(set) var lastScrollbackStyles: [RowStyle]?
     /// Every `scrolledOff` row received, in order, with its runs from `scrolledOffStyles`.
-    private(set) var scrolledOffRows: [(text: String, runs: [StyleRun])] = []
+    private(set) var scrolledOffRows: [StyledRow] = []
     /// The frame of the last message, as the Mac sent it (SyncSchedulesE2ETests).
     private(set) var lastFrame = Data()
 

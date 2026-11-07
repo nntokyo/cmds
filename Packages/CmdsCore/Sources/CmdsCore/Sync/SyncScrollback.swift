@@ -163,23 +163,6 @@ public struct PaneHistory: Equatable, Sendable {
     }
 }
 
-extension RowStyle {
-    /// The entries of `styles` for rows `range` of the array they index, re-indexed from its start.
-    static func slice(_ styles: [RowStyle]?, _ range: Range<Int>) -> [RowStyle]? {
-        guard let styles else { return nil }
-        let sliced = styles.compactMap {
-            range.contains($0.row) ? RowStyle(row: $0.row - range.lowerBound, runs: $0.runs) : nil
-        }
-        return sliced.isEmpty ? nil : sliced
-    }
-
-    /// The rows of `runs` (one entry per row) that have any; nil when none has.
-    public static func sparse(_ runs: [[StyleRun]]) -> [RowStyle]? {
-        let rows = runs.enumerated().compactMap { $1.isEmpty ? nil : RowStyle(row: $0, runs: $1) }
-        return rows.isEmpty ? nil : rows
-    }
-}
-
 /// Phone side: the rows above each streamed pane's screen (`histories`), from `scrollback` answers and, from a Mac that
 /// streams them (`SyncFeature.scrollbackStream`), the rows that scroll off with every screen update. While a pane's
 /// earlier output is read (`setReading`), the shown rows only grow at the bottom: no rows are dropped below

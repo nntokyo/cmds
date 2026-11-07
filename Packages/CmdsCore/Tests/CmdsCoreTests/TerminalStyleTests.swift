@@ -5,7 +5,7 @@ import XCTest
 /// Ghostty's formatter writes: every style starts with `ESC[0m`, one attribute per SGR, `ESC[0m` back to the default,
 /// CUF over blank cells, ECH + CUF for cells that only carry a background.
 final class TerminalStyleTests: XCTestCase {
-    private func parse(_ vt: String) -> (text: String, runs: [StyleRun]) { TerminalStyledText.parse(vt) }
+    private func parse(_ vt: String) -> StyledRow { TerminalStyledText.parse(vt) }
     private func run(_ column: Int, _ length: Int, _ attributes: TerminalStyle.Attributes = [],
                      fg: TerminalColor? = nil, bg: TerminalColor? = nil) -> StyleRun {
         StyleRun(column: column, length: length, style: TerminalStyle(attributes: attributes, foreground: fg, background: bg))

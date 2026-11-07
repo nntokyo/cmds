@@ -106,6 +106,9 @@ extension StyleRun: Codable {
     }
 }
 
+/// A terminal row's plain text and its style runs.
+public typealias StyledRow = (text: String, runs: [StyleRun])
+
 /// A row read from the terminal as VT text (cmds' libghostty patch `ghostty_surface_read_text_vt`) turned into its
 /// plain text and style runs (pure; the Mac sends both to phones with `SyncFeature.styles`).
 ///
@@ -113,7 +116,7 @@ extension StyleRun: Codable {
 /// ECH for cells that only carry a background, OSC 8 hyperlinks (skipped). Blank cells become spaces, so the text is
 /// the row's plain text (`ghostty_surface_read_text`) plus, at most, trailing spaces where styled blank cells are.
 public enum TerminalStyledText {
-    public static func parse(_ vt: String) -> (text: String, runs: [StyleRun]) {
+    public static func parse(_ vt: String) -> StyledRow {
         var parser = Parser()
         parser.run(vt)
         return (parser.text, parser.runs)
@@ -126,21 +129,17 @@ public enum TerminalStyledText {
         var style = TerminalStyle.plain
         /// Cells that ECH erased at the cursor (with the current background) and that the CUF after it steps over.
         var erased = 0
+        /// Printable characters since the last escape sequence, not yet put on the row.
+        var printable = String.UnicodeScalarView()
 
         mutating func run(_ vt: String) {
             let scalars = Array(vt.unicodeScalars)
             var i = 0
-            var printable = String.UnicodeScalarView()
-            func flush(_ parser: inout Parser) {
-                guard !printable.isEmpty else { return }
-                parser.put(String(printable))
-                printable.removeAll()
-            }
             while i < scalars.count {
                 let scalar = scalars[i]
                 switch scalar.value {
                 case 0x1B:
-                    flush(&self)
+                    flush()
                     i = escape(scalars, at: i)
                 case 0x0A:
                     printable.append(" ")
@@ -152,7 +151,13 @@ public enum TerminalStyledText {
                     i += 1
                 }
             }
-            flush(&self)
+            flush()
+        }
+
+        mutating func flush() {
+            guard !printable.isEmpty else { return }
+            put(String(printable))
+            printable.removeAll()
         }
 
         /// Handles the escape sequence at `start`; returns the index after it.

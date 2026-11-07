@@ -168,6 +168,23 @@ public struct RowStyle: Codable, Equatable, Sendable {
     }
 }
 
+extension RowStyle {
+    /// The entries of `styles` for rows `range` of the array they index, re-indexed from its start.
+    static func slice(_ styles: [RowStyle]?, _ range: Range<Int>) -> [RowStyle]? {
+        guard let styles else { return nil }
+        let sliced = styles.compactMap {
+            range.contains($0.row) ? RowStyle(row: $0.row - range.lowerBound, runs: $0.runs) : nil
+        }
+        return sliced.isEmpty ? nil : sliced
+    }
+
+    /// The rows of `runs` (one entry per row) that have any; nil when none has.
+    public static func sparse(_ runs: [[StyleRun]]) -> [RowStyle]? {
+        let rows = runs.enumerated().compactMap { $1.isEmpty ? nil : RowStyle(row: $0, runs: $1) }
+        return rows.isEmpty ? nil : rows
+    }
+}
+
 /// Screen contents of one terminal pane (what is visible, no scrollback): the rows' text, and their colours and
 /// attributes when the Mac read them (`SyncFeature.styles`).
 public struct ScreenSnapshot: Codable, Equatable, Sendable {

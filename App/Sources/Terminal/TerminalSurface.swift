@@ -60,7 +60,7 @@ protocol TerminalSurface: AnyObject {
     /// The visible screen row by row with each row's colours and attributes (`StyleRun`, columns as the phone's grid
     /// counts them); the rows' text is `visibleText()`'s, except for trailing spaces where styled blank cells are. nil
     /// when the engine cannot read styles.
-    func visibleStyledRows() -> [(text: String, runs: [StyleRun])]?
+    func visibleStyledRows() -> [StyledRow]?
     /// Cursor cell, 0-based: `row` indexes the lines of `visibleText()`, `col` counts cells
     /// (a wide character occupies two). nil if unknown or scrolled out of view.
     var cursorPosition: (row: Int, col: Int)? { get }
@@ -82,7 +82,7 @@ protocol TerminalSurface: AnyObject {
     /// pruned past the scrollback limit): ask again.
     func historyRows(maxRows: Int) -> [String]?
     /// `historyRows` with each row's colours and attributes, as `visibleStyledRows` reads the screen's.
-    func historyStyledRows(maxRows: Int) -> [(text: String, runs: [StyleRun])]?
+    func historyStyledRows(maxRows: Int) -> [StyledRow]?
     func close()
 }
 
