@@ -237,7 +237,8 @@ struct WorkspaceRow: View {
 struct WorkspaceDetailView: View {
     @Environment(CompanionClient.self) private var client
     let workspace: WorkspaceInfo
-    @State private var selectedPaneID: String?
+    /// `-mockPane <id>` preselects a pane (screenshots / UI checks).
+    @State private var selectedPaneID: String? = UserDefaults.standard.string(forKey: "mockPane")
 
     private var orderedPanes: [PaneInfo] {
         let order = workspace.layout?.paneIDsInOrder ?? []

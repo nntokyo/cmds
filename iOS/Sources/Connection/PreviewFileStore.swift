@@ -2,8 +2,9 @@ import CmdsCore
 import Foundation
 import Observation
 
-/// Files of Mac preview panes on the phone (`requestFile` → `file` pieces, docs/internals/sync-protocol.md). One request at a time;
-/// results are kept per pane and file path until the pane's file changes or the user reloads.
+/// Files of Mac preview panes, and files opened while browsing a files pane, on the phone (`requestFile` → `file`
+/// pieces, docs/internals/sync-protocol.md). One request at a time; results are kept per pane (and path, for a files
+/// pane) until the pane's file changes, the pane goes away or the user reloads.
 @MainActor
 @Observable
 final class PreviewFileStore {
@@ -15,52 +16,60 @@ final class PreviewFileStore {
         case failed(String)
     }
 
-    private(set) var entries: [String: Entry] = [:]
+    /// A preview pane's file (`path` nil), or a file of a files pane.
+    struct Key: Hashable {
+        var paneID: String
+        var path: String?
+    }
+
+    private(set) var entries: [Key: Entry] = [:]
     @ObservationIgnored private var assembler = SyncFileAssembler()
-    @ObservationIgnored private var pendingPaneID: String?
+    @ObservationIgnored private var pending: Key?
 
     /// Types the phone shows itself; others get "Open on Mac".
     static func isViewable(mime: String) -> Bool {
         mime.hasPrefix("image/") || mime == "application/pdf"
     }
 
-    func entry(for paneID: String) -> Entry? { entries[paneID] }
+    func entry(for paneID: String, path: String? = nil) -> Entry? { entries[Key(paneID: paneID, path: path)] }
 
-    func begin(paneID: String) {
+    func begin(paneID: String, path: String? = nil) {
+        let key = Key(paneID: paneID, path: path)
         assembler.reset(paneID: paneID)
-        pendingPaneID = paneID
-        entries[paneID] = .loading(received: 0, size: 0)
+        pending = key
+        entries[key] = .loading(received: 0, size: 0)
     }
 
     func receive(_ piece: ServerMessage.File) {
+        let key = Key(paneID: piece.paneID, path: piece.path)
         switch assembler.add(piece) {
         case .partial(let received, let size):
-            entries[piece.paneID] = .loading(received: received, size: size)
+            entries[key] = .loading(received: received, size: size)
             return
         case .complete(let name, let mime, let data):
-            entries[piece.paneID] = .loaded(name: name, mime: mime, data: data)
+            entries[key] = .loaded(name: name, mime: mime, data: data)
         case .truncated(let name, _):
-            entries[piece.paneID] = .tooLarge(name: name)
+            entries[key] = .tooLarge(name: name)
         }
-        if pendingPaneID == piece.paneID { pendingPaneID = nil }
+        if pending == key { pending = nil }
     }
 
     /// An `error` arrived while a request was open (older Macs answer `requestFile` with `badRequest`).
     func requestFailed(_ message: String) {
-        guard let paneID = pendingPaneID else { return }
-        pendingPaneID = nil
-        assembler.reset(paneID: paneID)
-        entries[paneID] = .failed(message)
+        guard let key = pending else { return }
+        pending = nil
+        assembler.reset(paneID: key.paneID)
+        entries[key] = .failed(SyncListing.Failure(rawValue: message).map(FolderBrowserStore.text) ?? message)
     }
 
     /// Drops what is cached for panes that are gone.
     func retain(paneIDs: Set<String>) {
-        for id in entries.keys where !paneIDs.contains(id) { entries[id] = nil }
+        for key in entries.keys where !paneIDs.contains(key.paneID) { entries[key] = nil }
     }
 
     func forget(paneID: String) {
-        entries[paneID] = nil
+        for key in entries.keys where key.paneID == paneID { entries[key] = nil }
         assembler.reset(paneID: paneID)
-        if pendingPaneID == paneID { pendingPaneID = nil }
+        if pending?.paneID == paneID { pending = nil }
     }
 }

@@ -34,11 +34,14 @@ final class CompanionClient {
     /// (`setReadingHistory(paneID:reading:)`) nothing else changes them. Kept by `historyMirror` (CmdsCore), copied here
     /// when they change.
     private(set) var histories: [String: PaneHistory] = [:]
-    /// Files of preview panes fetched with `requestFile` (images/PDFs shown on the phone).
+    /// Files of preview panes, and of files panes browsed here, fetched with `requestFile` (images/PDFs shown on the
+    /// phone).
     let previewFiles = PreviewFileStore()
+    /// The folders of files panes browsed on the phone (`SyncFeature.filesBrowse`, #26).
+    let folders = FolderBrowserStore()
     /// Optional protocol additions this build understands (`hello.features`).
     static let features = [SyncFeature.previewPanes, SyncFeature.scrollbackStream, SyncFeature.filesPanes,
-                           SyncFeature.styles, SyncFeature.schedules]
+                           SyncFeature.styles, SyncFeature.schedules, SyncFeature.filesBrowse]
     /// Panes that raised a `notification` and have not been viewed since.
     private(set) var unreadPaneIDs: Set<String> = []
     private(set) var unreadWorkspaceIDs: Set<String> = []
@@ -87,6 +90,9 @@ final class CompanionClient {
     private var macFeatures: Set<String> = []
     /// The connected Mac sends its schedules (`SyncFeature.schedules`); ⋯ › Schedules is offered only then.
     var macSendsSchedules: Bool { macFeatures.contains(SyncFeature.schedules) }
+    /// The connected Mac lists the folders of files panes (`SyncFeature.filesBrowse`); else a files pane shows its
+    /// folder's path only.
+    var macBrowsesFiles: Bool { macFeatures.contains(SyncFeature.filesBrowse) }
     private var historyRequestedAt: [String: Date] = [:]
     /// A request that waits for the end of `historyInterval` (one per pane); with a streaming Mac also the next try of
     /// an unanswered request.
@@ -429,6 +435,7 @@ final class CompanionClient {
             unreadPaneIDs.formIntersection(live)
             unreadWorkspaceIDs.formIntersection(Set(state.workspaces.map(\.id)))
             previewFiles.retain(paneIDs: live)
+            folders.retain(paneIDs: live)
             for gone in screens.keys where !live.contains(gone) {
                 screens[gone] = nil
                 mirror.remove(paneID: gone)
@@ -478,6 +485,9 @@ final class CompanionClient {
 
         case .schedules(let list):
             if schedules != list { schedules = list }
+
+        case .listing(let listing):
+            folders.receive(listing)
 
         case .pong:
             break // `lastInbound` was updated on arrival; that is all a pong is for
@@ -647,6 +657,58 @@ final class CompanionClient {
         guard status.isLive else { return }
         previewFiles.begin(paneID: paneID)
         send(.requestFile(.init(paneID: paneID)))
+    }
+
+    // MARK: Files panes
+
+    /// Starts browsing a files pane at its folder (again).
+    func browseFolder(of pane: PaneInfo) {
+        requestListing(paneID: pane.id, folders.start(paneID: pane.id, paneFolder: pane.workingDirectory))
+    }
+
+    /// Goes into a subfolder on the phone (the Mac pane stays where it is).
+    func openFolder(named name: String, in paneID: String) {
+        guard let path = folders.push(paneID: paneID, name: name) else { return }
+        guard status.isLive else { return }
+        send(.requestListing(.init(paneID: paneID, path: path)))
+    }
+
+    /// Opens a file of the folder shown with the preview viewer.
+    func openFile(named name: String, in paneID: String) {
+        guard let path = folders.open(paneID: paneID, name: name) else { return }
+        requestFile(paneID: paneID, path: path)
+    }
+
+    /// A file of a files pane (`requestFile` with its path).
+    func requestFile(paneID: String, path: String) {
+        guard status.isLive else { return }
+        previewFiles.begin(paneID: paneID, path: path)
+        send(.requestFile(.init(paneID: paneID, path: path)))
+    }
+
+    func browseBack(in paneID: String) {
+        if let folder = folders.back(paneID: paneID) { requestListing(paneID: paneID, folder) }
+    }
+
+    /// Lists the folder shown again; returns once the answer came (or after a while).
+    func reloadFolder(of pane: PaneInfo) async {
+        guard let browse = folders.browse(for: pane.id) else { return browseFolder(of: pane) }
+        if browse.folders.count == 1 {
+            // At the top: the pane's folder now (the Mac pane may have moved on).
+            browseFolder(of: pane)
+        } else if let folder = folders.reload(paneID: pane.id) {
+            requestListing(paneID: pane.id, folder)
+        }
+        var waited = 0
+        while waited < 100, folders.isLoading(paneID: pane.id), status.isLive {
+            try? await Task.sleep(for: .milliseconds(100))
+            waited += 1
+        }
+    }
+
+    private func requestListing(paneID: String, _ folder: FolderBrowserStore.Folder) {
+        guard status.isLive else { return }
+        send(.requestListing(.init(paneID: paneID, path: folder.requested)))
     }
 
     func sendKey(_ key: SyncKey, to paneID: String) {
