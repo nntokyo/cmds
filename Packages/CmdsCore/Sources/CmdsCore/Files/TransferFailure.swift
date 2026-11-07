@@ -21,6 +21,8 @@ public indirect enum TransferFailure: Error, Equatable, Sendable, CustomStringCo
     case serverTrashFailed(name: String, TransferFailure)
     /// Save of an edited file: what is at the file's path on the server now is not a file (a folder, a link).
     case notAFile(name: String)
+    /// Sync: the item changed after the folders were compared, so it was left as it is.
+    case changedSinceCompare
     case sftp(SFTPError)
     case connect(SSHFailure)
     /// A system call on this Mac failed with `code` (`errno`) on the item `name`.
@@ -59,6 +61,7 @@ public indirect enum TransferFailure: Error, Equatable, Sendable, CustomStringCo
         case .serverTrashFailed(let name, let reason):
             return "Could not move “\(name)” to the server's Trash (\(reason)). Nothing was deleted."
         case .notAFile(let name): return "“\(name)” on the server is not a file any more; nothing was uploaded."
+        case .changedSinceCompare: return "Changed since the folders were compared; left as it is. Compare again to sync it."
         case .sftp(let error): return error.description
         case .connect(let failure): return failure.description
         case .posix(let code, let name): return "\(String(cString: strerror(code))) (\(name))"

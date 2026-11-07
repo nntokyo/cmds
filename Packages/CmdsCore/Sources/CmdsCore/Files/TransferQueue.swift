@@ -157,6 +157,10 @@ public struct TransferInfo: Codable, Equatable, Sendable {
     public var skipped: Int
     /// Failed items in the log (all of them; `failures` lists the first ones). Nil from an app that did not send it.
     public var failed: Int?
+    /// Sync: extra items moved to the Trash (nil for other modes and from older apps).
+    public var trashed: Int?
+    /// Sync: `leftToRight`, `rightToLeft` or `both` (`sources[0]` is the left folder, `destination` the right one).
+    public var direction: FolderSync.Direction?
     /// Failed items (at most `failuresListed`).
     public var failures: [Failure]
 
@@ -180,6 +184,8 @@ public struct TransferInfo: Codable, Equatable, Sendable {
         moved = counts.moved
         skipped = counts.skipped
         failed = counts.failed
+        trashed = job.mode == .sync ? counts.trashed : nil
+        direction = job.syncDirection
         failures = Array(job.log.lazy.compactMap { entry -> Failure? in
             switch entry.outcome {
             case .failed(let reason), .originalKept(let reason):

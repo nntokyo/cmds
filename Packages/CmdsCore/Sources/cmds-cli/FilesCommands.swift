@@ -81,7 +81,13 @@ extension Format {
     /// `3  running  copy  2 items → home:/srv  1.2 MB of 4 MB  (a.txt)`, then a line per failure.
     static func transfer(_ job: TransferInfo) -> String {
         let what = job.sources.count == 1 ? job.sources[0] : "\(job.sources.count) items"
-        var line = "\(job.id)  \(job.state.rawValue)  \(job.mode.rawValue)  \(what) → \(job.destination)"
+        let arrow: String
+        switch job.direction {
+        case .both?: arrow = "↔"
+        case .rightToLeft?: arrow = "←"
+        default: arrow = "→"
+        }
+        var line = "\(job.id)  \(job.state.rawValue)  \(job.mode.rawValue)  \(what) \(arrow) \(job.destination)"
         if job.bytesTotal > 0 { line += "  \(bytes(job.bytesDone)) of \(bytes(job.bytesTotal))" }
         if let current = job.current, job.state == .running { line += "  (\(current))" }
         if let asking = job.asking { line += "  asking about \(asking)" }
@@ -89,6 +95,7 @@ extension Format {
         if job.copied > 0 { counts.append("\(job.copied) copied") }
         if job.moved > 0 { counts.append("\(job.moved) moved") }
         if job.skipped > 0 { counts.append("\(job.skipped) skipped") }
+        if let trashed = job.trashed, trashed > 0 { counts.append("\(trashed) moved to the Trash") }
         // `failures` lists at most 50; `failed` counts them all (nil from an app that does not send it).
         let failed = job.failed ?? job.failures.count
         if failed > 0 { counts.append("\(failed) failed") }
