@@ -554,29 +554,20 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
             start(checkedActions, output)
         case "close": close()
         case "snapshot":
-            // `appearance` (light/dark) draws the window in it. The content view draws no background of its own (the
-            // window does), so it is drawn on the window's background colour, as on screen.
-            guard let window, let view = window.contentView,
-                  let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
+            // The whole window (its frame view, which draws the background and title; the content view has no
+            // background, so its labels came out invisible on a blank picture). `appearance` (light/dark) switches the
+            // window first; title bar and table header redraw asynchronously, so take a second picture after a switch.
+            guard let window, let view = window.contentView?.superview ?? window.contentView else {
                 throw RPCError(code: 500, message: "no window")
             }
             if let name = try params.string("appearance") {
                 window.appearance = NSAppearance(named: name == "dark" ? .darkAqua : .aqua)
-                view.layoutSubtreeIfNeeded()
+            }
+            guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
+                throw RPCError(code: 500, message: "no bitmap")
             }
             view.cacheDisplay(in: view.bounds, to: rep)
-            let image = NSImage(size: view.bounds.size)
-            image.lockFocus()
-            view.effectiveAppearance.performAsCurrentDrawingAppearance {
-                NSColor.windowBackgroundColor.setFill()
-                view.bounds.fill()
-            }
-            rep.draw(in: view.bounds)
-            image.unlockFocus()
-            guard let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff),
-                  let png = bitmap.representation(using: .png, properties: [:]) else {
-                throw RPCError(code: 500, message: "PNG")
-            }
+            guard let png = rep.representation(using: .png, properties: [:]) else { throw RPCError(code: 500, message: "PNG") }
             return ["png_base64": .string(png.base64EncodedString())]
         default: throw RPCError.invalidParams("unknown action")
         }
