@@ -383,6 +383,11 @@ final class AppController {
         try terminal(for: paneID).historyRows(maxRows: maxRows)
     }
 
+    /// `historyRows` with each row's style runs (`TerminalSurface.historyStyledRows`).
+    func historyStyledRows(paneID: String?, maxRows: Int) throws -> [(text: String, runs: [StyleRun])]? {
+        try terminal(for: paneID).historyStyledRows(maxRows: maxRows)
+    }
+
     /// Where the pane's visible screen is in its whole screen (`TerminalSurface.scrollbar`).
     func scrollbar(paneID: String?) throws -> TerminalScrollbar? {
         try terminal(for: paneID).scrollbar()

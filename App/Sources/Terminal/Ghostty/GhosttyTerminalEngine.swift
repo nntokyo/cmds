@@ -117,13 +117,25 @@ final class GhosttyTerminalSurface: TerminalSurface {
     /// height). Only those rows are read: the history can be megabytes, and reading compressed pages inflates them
     /// again.
     func historyRows(maxRows: Int) -> [String]? {
+        readHistory(maxRows: maxRows) { surface, row, cols in readRow(surface, GHOSTTY_POINT_SCREEN, row, cols: cols) }
+    }
+
+    /// `historyRows` read as VT text and split into text and style runs, like `visibleStyledRows`.
+    func historyStyledRows(maxRows: Int) -> [(text: String, runs: [StyleRun])]? {
+        readHistory(maxRows: maxRows) { surface, row, cols in
+            readRowVT(surface, GHOSTTY_POINT_SCREEN, row, cols: cols).map(TerminalStyledText.parse)
+        }
+    }
+
+    private func readHistory<Row>(maxRows: Int,
+                                  read: (ghostty_surface_t, Int, Int) -> Row?) -> [Row]? {
         guard maxRows > 0, let surface = surfaceView.surface, let bar = scrollbar() else { return [] }
         let cols = Int(ghostty_surface_size(surface).columns)
         guard cols > 0, bar.offset > 0 else { return [] }
-        var lines: [String] = []
+        var lines: [Row] = []
         lines.reserveCapacity(min(maxRows, bar.offset))
         for row in max(0, bar.offset - maxRows)..<bar.offset {
-            guard let line = readRow(surface, GHOSTTY_POINT_SCREEN, row, cols: cols) else { return nil }
+            guard let line = read(surface, row, cols) else { return nil }
             lines.append(line)
         }
         // New rows alone would not matter (screen rows count from the top of the history), but rows pruned past the
@@ -344,6 +356,7 @@ private final class FallbackSurface: TerminalSurface {
     func scrollbackText(maxLines: Int) -> String { textView.string }
     func scrollbar() -> TerminalScrollbar? { nil }
     func historyRows(maxRows: Int) -> [String]? { [] } // `visibleText()` already has all of it
+    func historyStyledRows(maxRows: Int) -> [(text: String, runs: [StyleRun])]? { [] }
     var cursorPosition: (row: Int, col: Int)? { nil }
     var gridSize: (rows: Int, cols: Int)? { nil }
     var foregroundProcessGroupID: pid_t? { nil }

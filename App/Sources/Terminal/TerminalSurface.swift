@@ -81,6 +81,8 @@ protocol TerminalSurface: AnyObject {
     /// there are none (alternate screen, e.g. vim); nil when the `scrollbar()` changed during the read (output, rows
     /// pruned past the scrollback limit): ask again.
     func historyRows(maxRows: Int) -> [String]?
+    /// `historyRows` with each row's colours and attributes, as `visibleStyledRows` reads the screen's.
+    func historyStyledRows(maxRows: Int) -> [(text: String, runs: [StyleRun])]?
     func close()
 }
 
