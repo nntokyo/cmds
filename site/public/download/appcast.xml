@@ -7,34 +7,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.13.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.13.0</link>
-      <sparkle:version>20</sparkle:version>
-      <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
+      <title>cmds 0.14.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.14.0</link>
+      <sparkle:version>21</sparkle:version>
+      <sparkle:shortVersionString>0.14.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 07 Nov 2026 04:06:42 GMT</pubDate>
+      <pubDate>Sat, 07 Nov 2026 07:24:09 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
 <ul>
-<li>Codex のフックに対応しました。<code>~/.codex/hooks.json</code> に <code>cmds hook codex</code> を登録すると、Codex の作業中・承認待ち（実行したい内容つき）・ターンの終了がサイドバーと通知に出ます。</li>
-<li>Google Antigravity（<code>agy</code>）に対応しました。ステータスラインに <code>cmds hook agy-status</code> を登録すると、モデル、コンテキスト、利用上限（Gemini 5h / 7d など）が表示されます。</li>
-<li>メニューバーのメニューに、各エージェントのコンテキスト（ctx）のリングを追加しました。</li>
-<li>SSH ホストのファイルを編集できるようになりました。リモートのファイル一覧ペインで編集（F4）を選ぶと既定の App で開き、保存するたびにサーバーへアップロードします。</li>
+<li>iPhone/iPad アプリにターミナルの画面を色つきで送るようになりました（太字・下線・反転なども）。上にさかのぼった出力も色つきです。</li>
+<li>iPhone/iPad アプリで、Mac のスケジュール（次の実行と前回の結果）を確認できるようになりました（閲覧のみ。プロンプトやコマンドは送りません）。</li>
+<li>フォルダの比較と同期：もう一方のファイル一覧ペインと比較・同期…（⇧F2）で、Mac とホストのフォルダを比べて片方向・双方向に同期できます。置き換えたものはゴミ箱に入り、削除はしません。</li>
 </ul>
-<p>この版は Mac のみです。iPhone/iPad アプリは 0.11.0 から変わりません。</p>
+<p>iPhone/iPad の新機能には iPhone/iPad アプリ 0.14.0 が必要です。古いアプリでもこれまでどおり使えます。</p>
 <h3>Added</h3>
 <ul>
-<li>Codex hooks: with <code>cmds hook codex</code> in <code>~/.codex/hooks.json</code>, the sidebar and notifications show when Codex works, asks for approval (with what it wants to run) or finishes a turn.</li>
-<li>Google Antigravity (<code>agy</code>): with <code>cmds hook agy-status</code> as its status line, cmds shows its model, context and limits (Gemini 5h / 7d and more).</li>
-<li>ctx rings in the menu bar menu: the context window of each agent.</li>
-<li>Edit files on SSH hosts: Edit (F4) in a remote files pane opens the file in its default app and uploads every save.</li>
+<li>Terminal screens go to the iPhone/iPad app in colour (bold, underline, inverse and more), earlier output too.</li>
+<li>The iPhone/iPad app shows the Mac's schedules (next run, last result), read only; prompts and commands are never sent.</li>
+<li>Compare and sync folders: Compare and Sync with Other Pane… (⇧F2) compares a folder on this Mac or a host with the other files pane and syncs one way or both ways. Replaced items go to the Trash; nothing is deleted.</li>
 </ul>
-<p>Mac only; the iPhone/iPad app is unchanged from 0.11.0.</p>
+<p>The iPhone/iPad features need the iPhone/iPad app 0.14.0; older apps keep working as before.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.13.0/cmds-0.13.0.dmg" length="14958784" type="application/octet-stream" sparkle:edSignature="ZK+hMCBf9WMEmI7V08ksrM4sqcEcdkKdiOUKRERnPIJgZziMZngzASSFx9k8XtY3jtAcBZlcKiAIErKBtSI0AA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.14.0/cmds-0.14.0.dmg" length="15312646" type="application/octet-stream" sparkle:edSignature="FmSqhFjZuuIJ3JG5GBKTE8OF8m8eKgy3QHMwIv4q8T0tqH3S7m2Q+ivldmVLw1/NsfvM3qqTztZvHdHDPZNBDQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: oiS1yPIDce/OU5Y0MyskLdaf0JsuDR+tSb6xdaIVD2rOpDhoYG+drvtG4f6IJRtBQn1jS1FWuXm8/kyOm2gtBQ==
-length: 2958
+edSignature: c0oNPZzQrQng+1QlZOJe9mJlt8wnOCBh4iufAcQ3JuQW2N1jrEv5AMiYZ4r87G5eyHCAGUWCBcf2XTh80sUEBw==
+length: 2713
 -->

@@ -70,7 +70,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>Install and first launch</h2>
       <ol>
-        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.13.0/cmds-0.13.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
+        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.14.0/cmds-0.14.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
         <li>If the macOS firewall is on, macOS asks about incoming connections. Choose <strong>Allow</strong> if you want to use the iPhone/iPad companion; the terminal works either way.</li>
         <li>Allow notifications, so panes that need you can notify you while cmds is in the background.</li>
         <li>Updates are automatic (0.2.0 and later): cmds checks once a day, downloads a new version and installs it when cmds quits. <strong>cmds › Check for Updates…</strong> installs it now; turn it off in <strong>cmds › Settings… › Updates</strong>.</li>
@@ -285,6 +285,11 @@ cmds stats                                # CPU and memory per workspace and for
         <li>cmds runs your own <code>ssh</code> (<code>~/.ssh/config</code>, keys, agent, jump hosts). It never asks for or stores a password and never adds host keys: password-only hosts and unknown or changed host keys are refused, with a note on what to do.</li>
         <li>Edit (<kbd>F4</kbd>, the right-click menu or Pane › Files) opens an editable copy in its default app and uploads every save over the server's file (written under a temporary name, then swapped in, keeping its permissions). If the file changed on the server meanwhile, cmds asks whether to overwrite it, take the server's version, or save yours as a copy.</li>
         <li>Open and preview use a downloaded, read-only copy. Move to Trash moves items to the server's own Trash (<code>~/.local/share/Trash</code>) and never deletes them.</li>
+      </ul>
+      <h3>Comparing and syncing folders</h3>
+      <ul>
+        <li>Pane › Files › Compare and Sync with Other Pane… (<kbd>⇧F2</kbd>) compares the folders of two files panes (Mac and host, two hosts, or two Mac folders) and lists what is only on one side or modified.</li>
+        <li>Sync one way (new and modified items; optionally move items only on the target side to its Trash) or both ways (differences settled by a rule such as Newer wins, or per item). You see the plan before it runs through the transfer queue. Replaced items go to their side's Trash; nothing is deleted.</li>
       </ul>
       <h3>Transfers</h3>
       <ul>

@@ -70,7 +70,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>インストールと初回起動</h2>
       <ol>
-        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.13.0/cmds-0.13.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
+        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.14.0/cmds-0.14.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
         <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
         <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
         <li>ウィンドウを閉じても cmds とターミナル（エージェント）は動き続けます。Dock のアイコンか <kbd>⌘N</kbd> でウィンドウが戻ります。エージェントの実行中に終了しようとすると確認が出ます。</li>
@@ -286,6 +286,11 @@ cmds stats                                # ワークスペースごとと Mac �
         <li>接続にはいつもの <code>ssh</code>（<code>~/.ssh/config</code>、鍵、エージェント、ジャンプホスト）を使います。cmds はパスワードを尋ねたり保存したりせず、ホスト鍵も追加しません。パスワードだけのホストや、<code>known_hosts</code> にない・変わったホスト鍵は、対処方法を添えて断ります。</li>
         <li>編集（<kbd>F4</kbd>、右クリック、ペイン › ファイル）を選ぶと、編集用のコピーを既定の App で開き、保存するたびにサーバーへアップロードします（一時的な名前で書いてから置き換え、権限はそのまま）。サーバー側でその間に変わっていたら、上書きするか、サーバーの版を取り込むか、別名で保存するかを尋ねます。</li>
         <li>開く・プレビューはダウンロードしたコピー（読み取り専用）で行います。ゴミ箱に入れると、サーバー側のゴミ箱（<code>~/.local/share/Trash</code>）へ移すだけで削除はしません。</li>
+      </ul>
+      <h3>フォルダの比較と同期</h3>
+      <ul>
+        <li>ペイン › ファイル › もう一方のペインと比較・同期…（<kbd>⇧F2</kbd>）で、2 つのファイル一覧ペインのフォルダ（Mac とホスト、ホスト同士、Mac 同士）を比べ、片方にしかないもの・変更されたものを一覧します。</li>
+        <li>片方向（新規と変更をコピー。チェックすると相手側にしかないものをゴミ箱へ）または双方向（違うものは「新しい方」などのルールか項目ごとに決定）で同期します。実行前に内容を確認でき、転送キューで実行されます。置き換えたものはその側のゴミ箱に入り、削除はしません。</li>
       </ul>
       <h3>転送</h3>
       <ul>
