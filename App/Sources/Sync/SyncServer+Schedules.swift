@@ -46,7 +46,7 @@ extension SyncServer {
         let phones = schedulePhones
         guard !phones.isEmpty else { return }
         lastSchedulesSentAt = Date()
-        guard let data = try? SyncCodec().encode(currentSchedules()), data != lastSchedulesData else { return }
+        guard let data = try? codec.encode(currentSchedules()), data != lastSchedulesData else { return }
         lastSchedulesData = data
         for client in phones { client.connection.send(data) }
     }

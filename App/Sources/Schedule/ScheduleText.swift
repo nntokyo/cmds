@@ -1,24 +1,19 @@
 import Foundation
 import CmdsCore
 
-/// UI text for schedules (English and Japanese). CmdsCore keeps the API's and the CLI's English
+/// Mac-only UI text for schedules (English and Japanese); what the phone shows too (reasons, states, causes,
+/// triggers, times) is `ScheduleStrings` (Shared/Sources). CmdsCore keeps the API's and the CLI's English
 /// (`ScheduleReason.english`, `ScheduleProblem.english`).
 @MainActor
 enum ScheduleText {
-    static func reason(_ reason: ScheduleReason) -> String { ScheduleStrings.reason(reason) }
-
-    static func state(_ state: ScheduleRunState) -> String { ScheduleStrings.state(state) }
-
     /// One line for a notification or the history: `Skipped: the pane was running another program.`
     static func outcome(_ run: ScheduleRun) -> String {
         if run.state == .missed {
-            return String(localized: "Did not run at \(time(run.dueAt)): the Mac was asleep or cmds was not running.")
+            return String(localized: "Did not run at \(ScheduleStrings.time(run.dueAt)): the Mac was asleep or cmds was not running.")
         }
-        guard let reason = run.reason else { return state(run.state) }
-        return "\(state(run.state)) — \(self.reason(reason))"
+        guard let reason = run.reason else { return ScheduleStrings.state(run.state) }
+        return "\(ScheduleStrings.state(run.state)) — \(ScheduleStrings.reason(reason))"
     }
-
-    static func cause(_ cause: ScheduleRun.Cause) -> String { ScheduleStrings.cause(cause) }
 
     /// A refused change: the runner's message (English, as for the API), else the error itself.
     static func error(_ error: Error) -> String {
@@ -68,8 +63,6 @@ enum ScheduleText {
         }
         return ScheduleStrings.trigger(trigger, reset: reset)
     }
-
-    static func days(_ weekdays: Set<Weekday>) -> String { ScheduleStrings.days(weekdays) }
 
     /// `Start “app”: claude + prompt`, `Continue “Fix login”`.
     static func action(_ action: ScheduleAction) -> String {
@@ -134,11 +127,8 @@ enum ScheduleText {
         let upcoming = schedules.filter(\.enabled).compactMap { schedule in schedule.nextFireAt.map { (schedule, $0) } }
             .sorted { $0.1 < $1.1 }.prefix(nextRunHintCount)
         guard let first = upcoming.first else { return nil }
-        let lines = upcoming.map { "\(time($0.1, now: now))  \($0.0.name)" }
-        return NextRunHint(title: "\(first.0.name) · \(time(first.1, now: now))",
+        let lines = upcoming.map { "\(ScheduleStrings.time($0.1, now: now))  \($0.0.name)" }
+        return NextRunHint(title: "\(first.0.name) · \(ScheduleStrings.time(first.1, now: now))",
                            tooltip: String(localized: "Next schedules (Window › Schedules):") + "\n" + lines.joined(separator: "\n"))
     }
-
-    /// `15:00` today, `Thu 09:00` this week, else `Nov 12 09:00`.
-    static func time(_ date: Date, now: Date = Date()) -> String { ScheduleStrings.time(date, now: now) }
 }

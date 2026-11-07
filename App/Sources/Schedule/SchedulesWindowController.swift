@@ -258,7 +258,7 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
         if let entry {
             var parts = [ScheduleText.origin(entry.schedule.origin)]
             if let problem = runner.problem(of: entry.schedule) { parts.append(ScheduleText.problem(problem)) }
-            if let run = entry.activeRun { parts.append(String(localized: "Running: \(ScheduleText.state(run.state))")) }
+            if let run = entry.activeRun { parts.append(String(localized: "Running: \(ScheduleStrings.state(run.state))")) }
             detail.stringValue = parts.joined(separator: " · ")
         } else {
             detail.stringValue = String(localized: "Recent runs of all schedules:")
@@ -306,17 +306,17 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
             field.toolTip = field.stringValue
         case .next:
             if let run = entry.activeRun {
-                field.stringValue = ScheduleText.state(run.state)
+                field.stringValue = ScheduleStrings.state(run.state)
                 field.textColor = .controlAccentColor
             } else if let next = entry.nextFireAt, entry.schedule.enabled {
-                field.stringValue = ScheduleText.time(next)
+                field.stringValue = ScheduleStrings.time(next)
             } else {
                 field.stringValue = "–"
                 field.textColor = .secondaryLabelColor
             }
         case .last:
             if let last = entry.lastRun {
-                field.stringValue = ScheduleText.state(last.state)
+                field.stringValue = ScheduleStrings.state(last.state)
                 field.toolTip = ScheduleText.outcome(last)
                 if last.state.isProblem { field.textColor = .systemOrange }
             } else {
@@ -339,12 +339,12 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
         field.textColor = .labelColor
         switch column {
         case .time:
-            field.stringValue = ScheduleText.time(run.startedAt)
+            field.stringValue = ScheduleStrings.time(run.startedAt)
         case .cause:
-            field.stringValue = ScheduleText.cause(run.cause)
+            field.stringValue = ScheduleStrings.cause(run.cause)
         case .result:
             let prefix = selectedEntry == nil ? "\(run.scheduleName): " : ""
-            field.stringValue = prefix + (run.state.isActive ? ScheduleText.state(run.state) : ScheduleText.outcome(run))
+            field.stringValue = prefix + (run.state.isActive ? ScheduleStrings.state(run.state) : ScheduleText.outcome(run))
             field.textColor = run.state.isProblem ? .systemOrange : .labelColor
         case .place:
             field.stringValue = [run.pane, run.account].compactMap { $0 }.joined(separator: " · ")

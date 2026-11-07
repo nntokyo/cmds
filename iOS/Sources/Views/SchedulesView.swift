@@ -95,7 +95,7 @@ private struct ScheduleRow: View {
                 Label(ScheduleStrings.trigger(trigger, now: now), systemImage: "clock")
                     .font(.subheadline)
             }
-            if let action = ScheduleActionText.text(schedule.action) {
+            if let action = SchedulesViewText.action(schedule.action) {
                 Label(action, systemImage: "terminal")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -132,7 +132,7 @@ private struct ScheduleRunRow: View {
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            if let detail = RunText.detail(run) {
+            if let detail = SchedulesViewText.runDetail(run) {
                 Text(detail).font(.caption).foregroundStyle(.secondary)
             }
         }
@@ -153,6 +153,7 @@ private struct RunOutcomeLine: View {
                 RunStateLabel(state: run.state)
                 Text(verbatim: "· \(ScheduleStrings.time(run.lastActivityAt, now: now))").foregroundStyle(.secondary)
             }
+            // A plain success needs no reason; an unconfirmed one (the agent was not seen working) does.
             if let reason = run.reason, run.state != .succeeded || reason == .unconfirmed {
                 Text(ScheduleStrings.reason(reason)).foregroundStyle(.secondary)
             }
@@ -195,19 +196,19 @@ private struct RunStateLabel: View {
     }
 }
 
-private enum RunText {
+/// The phone's own schedule texts (the shared ones are `ScheduleStrings`).
+private enum SchedulesViewText {
     /// `Catch-up · The pane was running another program.`; nil when there is nothing to add.
-    static func detail(_ run: ScheduleRun) -> String? {
+    static func runDetail(_ run: ScheduleRun) -> String? {
         var parts: [String] = []
         if run.cause != .scheduled { parts.append(ScheduleStrings.cause(run.cause)) }
         if let reason = run.reason { parts.append(ScheduleStrings.reason(reason)) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
-}
 
-/// What a schedule does, from the summary the Mac sends (no prompts, commands or folders reach the phone).
-enum ScheduleActionText {
-    static func text(_ action: SyncScheduleAction) -> String? {
+    /// What a schedule does, from the summary the Mac sends (no prompts, commands or folders reach the phone); nil
+    /// for an action of a newer Mac.
+    static func action(_ action: SyncScheduleAction) -> String? {
         switch action.type {
         case "startWorkspace":
             return String(localized: "Opens a new workspace")

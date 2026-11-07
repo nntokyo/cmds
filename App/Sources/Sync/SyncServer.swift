@@ -136,7 +136,7 @@ final class SyncServer {
     var statusText: String { status.english }
 
     private let queue = DispatchQueue(label: "tokyo.n-n.cmds.sync", qos: .userInitiated)
-    private let codec = SyncCodec()
+    let codec = SyncCodec()
     private let limiter = SyncRateLimiter()
     private let identityStore = SyncIdentityStore()
     private var listener: NWListener?

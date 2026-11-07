@@ -35,7 +35,7 @@ extension ScheduleRunner {
         scheduleLog.info("schedule \(schedule.id, privacy: .public) notice for its run due \(due.timeIntervalSince1970)")
         let content = UNMutableNotificationContent()
         content.title = String(localized: "Schedule “\(schedule.name)”")
-        content.body = String(localized: "Starts at \(ScheduleText.time(due)): \(ScheduleText.action(schedule.action))")
+        content.body = String(localized: "Starts at \(ScheduleStrings.time(due)): \(ScheduleText.action(schedule.action))")
         content.categoryIdentifier = Self.noticeCategory
         content.userInfo = ["schedules": true, Self.noticeScheduleKey: schedule.id, Self.noticeDueKey: due.timeIntervalSince1970]
         let request = UNNotificationRequest(identifier: Self.noticeIdentifier(schedule.id), content: content, trigger: nil)
