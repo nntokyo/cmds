@@ -2990,6 +2990,16 @@
         }
       }
     },
+    "This page is served by the Mac (localhost or a file) and cannot be opened on the phone." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このページは Mac 上で配信されている（localhost やファイル）ため、このデバイスでは開けません。"
+          }
+        }
+      }
+    },
     "This pairing code could not be read." : {
       "localizations" : {
         "ja" : {

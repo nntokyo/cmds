@@ -69,8 +69,12 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   sideways. Pinch zooms from there, double-tap resets. **Remember pinch zoom per pane** keeps each pane's zoom
   (pane ids are reassigned when cmds restarts on the Mac). This only changes the phone's view, never the terminal
   size on the Mac.
-- **Preview panes**: images (with zoom) and PDFs are fetched from the Mac (up to 10 MB); other files show their name
-  and **Open on Mac**.
+- **Preview panes**: images (with zoom) and PDFs are fetched from the Mac (up to 10 MB); Markdown and diffs are
+  rendered like on the Mac (links open in Safari), other text files are shown as text (the first 256 KB); other files
+  show their name and **Open on Mac**.
+- **Browser panes**: the pane's page in a web view, with Reload and **Open in Safari**. The phone loads the page
+  itself (its own network, cookies and sign-ins, not the Mac's), so pages the Mac serves itself (`localhost`, files)
+  cannot be shown; the pane says so.
 - **Files panes**: with a cmds release after 0.14.0 on the Mac, the folder's contents with icons, sizes and dates. Tap
   a folder to go into it (on the phone only; the Mac pane stays where it is), **Back** to return, pull to refresh, and
   tap an image, PDF or text file to open it. Read only; see [Files](files.md#iphone-and-ipad). Older Macs show

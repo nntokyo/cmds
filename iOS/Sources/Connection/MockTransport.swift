@@ -102,6 +102,13 @@ final class MockTransport: SyncTransport {
             }
             for piece in pieces { deliver(after: 0.2, .message(.file(piece))) }
         case .requestFile(let request):
+            if request.paneID == "p-notes" {
+                let notes = Data(MockData.notesMarkdown.utf8)
+                for piece in SyncFile.messages(paneID: request.paneID, name: "NOTES.md", mime: "text/markdown", data: notes) {
+                    deliver(after: 0.2, .message(.file(piece)))
+                }
+                return
+            }
             guard request.paneID == "p-chart" else {
                 return emit(.error(.init(code: .badRequest, message: "pane \(request.paneID) is not a preview pane")))
             }
@@ -461,8 +468,10 @@ enum MockData {
         WorkspaceInfo(
             id: "w-dot", title: "dotfiles", selected: false, gitBranch: "master",
             workingDirectory: "~/.dotfiles", ports: [], notificationText: nil, attention: false,
-            panes: [PaneInfo(id: "p-dot", kind: .terminal, title: "codex", focused: true, attention: false)],
-            layout: .pane(id: "p-dot")),
+            panes: [PaneInfo(id: "p-dot", kind: .terminal, title: "codex", focused: true, attention: false),
+                    PaneInfo(id: "p-docs", kind: .browser, title: "Example Domain", focused: false, attention: false,
+                             url: "https://example.com/")],
+            layout: .split(axis: .horizontal, ratio: 0.5, first: .pane(id: "p-dot"), second: .pane(id: "p-docs"))),
         WorkspaceInfo(
             id: "w-report", title: "report", selected: false, gitBranch: "main",
             workingDirectory: "~/Source/report", ports: [], notificationText: "Opened chart.png", attention: false,
@@ -480,6 +489,22 @@ enum MockData {
                                           second: .split(axis: .horizontal, ratio: 0.5, first: .pane(id: "p-notes"),
                                                          second: .pane(id: "p-files"))))),
     ]
+
+    /// The mock Markdown preview pane's file.
+    static let notesMarkdown = """
+        # Report notes
+
+        Build times went **down** this week after caching the `deps` step.
+
+        - Monday: 4m 12s
+        - Friday: 2m 58s
+
+        See [the runbook](https://example.com/runbook) for details.
+
+        ```sh
+        python report.py --week 45
+        ```
+        """
 
     /// A small bar chart for the mock preview pane.
     static func chartPNG() -> Data {

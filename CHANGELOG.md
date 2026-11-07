@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
+  only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
+  show other text files as text; the same for files opened while browsing a files pane.
+
 ## [0.15.0] - 2026-11-08
 
 Mac and iPhone/iPad. Browsing on the phone needs cmds 0.15.0 on the Mac and the next companion release; older Macs

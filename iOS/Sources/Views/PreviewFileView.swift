@@ -3,8 +3,8 @@ import PDFKit
 import SwiftUI
 import UIKit
 
-/// A Mac preview pane on the phone: images and PDFs are fetched (`requestFile`) and shown (`FilePreviewContent`);
-/// other files show their name and "Open on Mac".
+/// A Mac preview pane on the phone: images, PDFs and text files are fetched (`requestFile`) and shown
+/// (`FilePreviewContent`; Markdown and diffs rendered like on the Mac); other files show their name and "Open on Mac".
 struct PreviewFileView: View {
     @Environment(CompanionClient.self) private var client
     let pane: PaneInfo
@@ -13,7 +13,7 @@ struct PreviewFileView: View {
         pane.file.map { ($0 as NSString).lastPathComponent } ?? (pane.title.isEmpty ? String(localized: "File") : pane.title)
     }
     private var mime: String { SyncFile.mimeType(forFileName: name) }
-    private var viewable: Bool { PreviewFileStore.isViewable(mime: mime) }
+    private var viewable: Bool { PreviewFileStore.isShown(name: name, asText: true) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -49,7 +49,7 @@ struct PreviewFileView: View {
     private var content: some View {
         FilePreviewContent(name: name, entry: client.previewFiles.entry(for: pane.id),
                            unviewableDetail: String(localized: "\(name) is shown on the Mac."),
-                           openOnMac: { client.focusPaneOnMac(pane.id) })
+                           openOnMac: { client.focusPaneOnMac(pane.id) }, showsText: true)
     }
 
     private var icon: String { FilePreviewContent.icon(mime: mime) }
@@ -83,7 +83,11 @@ struct FilePreviewContent: View {
             switch entry {
             case .loaded(_, let mime, let data)?:
                 if showsText, !PreviewFileStore.isViewable(mime: mime) {
-                    FileTextView(data: data)
+                    if let html = Self.renderedHTML(name: name, data: data) {
+                        WebPageView(content: .html(html))
+                    } else {
+                        FileTextView(data: data)
+                    }
                 } else if mime == "application/pdf" {
                     PDFDocumentView(data: data)
                 } else if let image = UIImage(data: data) {
@@ -121,6 +125,21 @@ struct FilePreviewContent: View {
         } actions: {
             if let openOnMac { Button("Open on Mac", action: openOnMac) }
         }
+    }
+
+    /// Markdown and diffs as the Mac's preview pane renders them; nil for other text.
+    static func renderedHTML(name: String, data: Data) -> String? {
+        let text = String(decoding: data.prefix(PreviewFormat.maxRenderedBytes), as: UTF8.self)
+        let page: String
+        switch PreviewFormat.forFile(name) {
+        case .markdown: page = MarkdownHTML.page(text, title: name)
+        case .diff: page = DiffHTML.page(text, title: name)
+        case .quickLook: return nil
+        }
+        // The Mac's page is made for a window; on the phone it is laid out for the screen's width.
+        return page.replacingOccurrences(
+            of: "<head>", with: #"<head><meta name="viewport" content="width=device-width, initial-scale=1">"#,
+            options: [], range: page.range(of: "<head>"))
     }
 
     static func icon(mime: String) -> String {

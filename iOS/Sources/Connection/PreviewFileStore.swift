@@ -42,7 +42,7 @@ final class PreviewFileStore {
     static func isText(name: String) -> Bool {
         let ext = (name as NSString).pathExtension.lowercased()
         guard !ext.isEmpty else { return false }
-        if ["log", "csv", "tsv", "md", "markdown", "env", "conf", "ini", "toml", "yml", "yaml"].contains(ext) { return true }
+        if ["log", "csv", "tsv", "md", "markdown", "mdown", "mkd", "diff", "patch", "env", "conf", "ini", "toml", "yml", "yaml"].contains(ext) { return true }
         guard let type = UTType(filenameExtension: ext) else { return false }
         return type.conforms(to: .text) || type.conforms(to: .sourceCode) || type.conforms(to: .json)
             || type.conforms(to: .xml)
