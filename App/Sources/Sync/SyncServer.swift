@@ -77,6 +77,11 @@ final class SyncServer {
         var supportsFiles = false
         /// A `requestFile` is being read/sent (one at a time per phone).
         var sendingFile = false
+        /// `hello.features` has `SyncFeature.filesBrowse`: may list folders of files panes (SyncServer+Files).
+        var browsesFiles = false
+        /// A `requestListing` is being read (one at a time per phone); the latest one asked for meanwhile waits.
+        var readingListing = false
+        var pendingListing: ClientMessage.RequestListing?
         /// Last read of the rows above a pane's screen for a `requestScrollback`, answered or not (subscribed panes).
         var scrollbackSentAt: [String: Date] = [:]
         /// `requestScrollback` not answered yet, per subscribed pane: the rows asked for (the latest request wins).
@@ -617,7 +622,13 @@ final class SyncServer {
         case .focusPane(let focus):
             perform(client) { try AppController.shared.focusPane(id: focus.id) }
         case .requestFile(let request):
-            sendFile(paneID: request.paneID, to: client)
+            if let path = request.path {
+                sendBrowsedFile(paneID: request.paneID, path: path, to: client)
+            } else {
+                sendFile(paneID: request.paneID, to: client)
+            }
+        case .requestListing(let request):
+            sendListing(request, to: client)
         case .requestScrollback(let request):
             sendScrollback(request, to: client)
         }
@@ -746,9 +757,10 @@ final class SyncServer {
             client.streamsHistory = hello.features?.contains(SyncFeature.scrollbackStream) == true
             client.drawsStyles = hello.features?.contains(SyncFeature.styles) == true
             client.wantsSchedules = SyncSchedules.isWanted(by: hello)
+            client.browsesFiles = hello.features?.contains(SyncFeature.filesBrowse) == true
             send(.welcome(.init(macName: macName, token: plainToken,
                                 features: [SyncFeature.scrollback, SyncFeature.scrollbackStream, SyncFeature.styles,
-                                           SyncFeature.schedules])),
+                                           SyncFeature.schedules, SyncFeature.filesBrowse])),
                  to: client)
             send(.state(currentState(for: client)), to: client)
             if client.wantsSchedules { sendSchedules(to: client) }
@@ -859,7 +871,7 @@ final class SyncServer {
 
     /// Sends `file` pieces one after another, each only once the connection's write queue has drained below a few
     /// MB, so a 10 MB file on a slow link (Bluetooth) never hits `SyncConnection.maxPendingBytes`.
-    private func sendFilePieces(_ pieces: ArraySlice<ServerMessage.File>, to client: Client) {
+    func sendFilePieces(_ pieces: ArraySlice<ServerMessage.File>, to client: Client) {
         guard let piece = pieces.first, !client.closing, clients[client.connection.id] === client else {
             client.sendingFile = false
             return
