@@ -62,7 +62,7 @@ final class SFTPEndToEndTests: XCTestCase {
         defer { try? FileManager.default.removeItem(atPath: edits) }
         let copy = edits + "/notes.txt"
 
-        let downloaded = try RemoteEditCopy.download(file, from: remote, to: copy)
+        let downloaded = try RemoteFileCopy.download(file, from: remote, to: copy)
         XCTAssertEqual(try String(contentsOfFile: copy, encoding: .utf8), "old")
         try Data("edited".utf8).write(to: URL(fileURLWithPath: copy))
         let tree: (FileLocation) throws -> FileTree = { $0.isRemote ? remote : LocalFileTree() }
