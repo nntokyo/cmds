@@ -23,6 +23,9 @@ final class CompanionClient {
     private(set) var agentLimits: [AgentLimits] = []
     /// The Mac's Claude accounts at a limit now, with its end (empty for older Macs, #112).
     private(set) var accountLimits: [ServerMessage.State.AccountLimit] = []
+    /// The Mac's schedules and recent runs, read only (`SyncFeature.schedules`, #45); nil until the Mac sent them, and
+    /// for Macs without the feature.
+    private(set) var schedules: ServerMessage.Schedules?
     /// Bumped whenever any screen changes (cheap observation hook).
     private(set) var screens: [String: ScreenSnapshot] = [:]
     /// Rows above each streamed pane's screen (`scrollback`); none for Macs without `SyncFeature.scrollback`. Asked
@@ -35,7 +38,7 @@ final class CompanionClient {
     let previewFiles = PreviewFileStore()
     /// Optional protocol additions this build understands (`hello.features`).
     static let features = [SyncFeature.previewPanes, SyncFeature.scrollbackStream, SyncFeature.filesPanes,
-                           SyncFeature.styles]
+                           SyncFeature.styles, SyncFeature.schedules]
     /// Panes that raised a `notification` and have not been viewed since.
     private(set) var unreadPaneIDs: Set<String> = []
     private(set) var unreadWorkspaceIDs: Set<String> = []
@@ -82,6 +85,8 @@ final class CompanionClient {
     private var upgradeNotice: String?
     /// Requests the connected Mac answers (`welcome.features`).
     private var macFeatures: Set<String> = []
+    /// The connected Mac sends its schedules (`SyncFeature.schedules`); ⋯ › Schedules is offered only then.
+    var macSendsSchedules: Bool { macFeatures.contains(SyncFeature.schedules) }
     private var historyRequestedAt: [String: Date] = [:]
     /// A request that waits for the end of `historyInterval` (one per pane); with a streaming Mac also the next try of
     /// an unanswered request.
@@ -226,6 +231,7 @@ final class CompanionClient {
         systemStats = nil
         agentLimits = []
         accountLimits = []
+        schedules = nil
         screens = [:]
         mirror.removeAll()
     }
@@ -378,6 +384,8 @@ final class CompanionClient {
             backoff.reset()
             mirror.removeAll()
             macFeatures = Set(welcome.features ?? [])
+            // The Mac sends its schedules right after `state`; a Mac without the feature never does.
+            if !macSendsSchedules { schedules = nil }
             cancelHistoryRequests()
             // Possibly another Mac (pane ids are per Mac) or one without `scrollback`: the views ask again. With a
             // streaming Mac, rows being read stay until reading ends.
@@ -467,6 +475,9 @@ final class CompanionClient {
             }
             historyMirror.receive(rows.lines, styles: rows.styles, paneID: rows.paneID)
             publishHistories()
+
+        case .schedules(let list):
+            if schedules != list { schedules = list }
 
         case .pong:
             break // `lastInbound` was updated on arrival; that is all a pong is for

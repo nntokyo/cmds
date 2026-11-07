@@ -55,10 +55,14 @@ final class MockTransport: SyncTransport {
         case .hello(let hello):
             phoneStreamsHistory = streamsHistory && hello.features?.contains(SyncFeature.scrollbackStream) == true
             phoneDrawsStyles = hello.features?.contains(SyncFeature.styles) == true
-            let features = [SyncFeature.scrollback, SyncFeature.styles]
+            let features = [SyncFeature.scrollback, SyncFeature.styles, SyncFeature.schedules]
                 + (streamsHistory ? [SyncFeature.scrollbackStream] : [])
             deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token", features: features))))
             deliver(after: 0.1, .message(.state(currentState)))
+            // Like a current Mac: the schedules follow `state`, only for phones that asked for them.
+            if hello.features?.contains(SyncFeature.schedules) == true {
+                deliver(after: 0.1, .message(.schedules(MockSchedules.message())))
+            }
             DispatchQueue.main.async { self.startTimer() }
         case .subscribe(let sub):
             let new = Set(sub.paneIDs)
