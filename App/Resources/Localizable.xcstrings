@@ -66,6 +66,16 @@
         }
       }
     },
+    " (replaces the newer one)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（新しい方を置き換えます）"
+          }
+        }
+      }
+    },
     " + %lld min": {
       "localizations": {
         "ja": {
@@ -488,6 +498,16 @@
         }
       }
     },
+    "%lld conflicts not synced": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "競合%lld件は同期しません"
+          }
+        }
+      }
+    },
     "%lld copied": {
       "localizations": {
         "ja": {
@@ -505,6 +525,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld日前"
+          }
+        }
+      }
+    },
+    "%lld differences: ": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "違い%lld件："
           }
         }
       }
@@ -575,6 +605,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld件移動"
+          }
+        }
+      }
+    },
+    "%lld moved to the Trash": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件をゴミ箱に移動"
           }
         }
       }
@@ -650,6 +690,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 個のサブエージェントが実行中"
+          }
+        }
+      }
+    },
+    "%lld to copy to the left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左へコピー%lld件"
+          }
+        }
+      }
+    },
+    "%lld to copy to the right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右へコピー%lld件"
+          }
+        }
+      }
+    },
+    "%lld to move to the Trash": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱へ移動%lld件"
           }
         }
       }
@@ -1330,6 +1400,26 @@
         }
       }
     },
+    "Both Ways": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双方向"
+          }
+        }
+      }
+    },
+    "Both panes show the same folder.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "両方のペインが同じフォルダを表示しています。"
+          }
+        }
+      }
+    },
     "Bring All to Front": {
       "localizations": {
         "ja": {
@@ -1577,6 +1667,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "注意：スリープしないMacは蓋を閉じてバッグに入れても動き続け、過熱やバッテリー消耗の原因になります。Macがバッテリー駆動に切り替わると、cmdsはこの設定をオフにするよう求めます。cmdsがクラッシュしたり強制終了されたりした場合、cmdsを再度起動する（元に戻すよう提案します）か%@を実行するまでスリープは無効のままです。"
+          }
+        }
+      }
+    },
+    "Changed since the folders were compared, so it was left as it is. Compare again to sync it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを比較した後に変更されたため、そのままにしました。同期するにはもう一度比較してください。"
           }
         }
       }
@@ -1841,6 +1941,16 @@
         }
       }
     },
+    "Close": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
+          }
+        }
+      }
+    },
     "Close Pane": {
       "localizations": {
         "ja": {
@@ -1921,6 +2031,52 @@
         }
       }
     },
+    "Compare %@ and %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Compare %1$@ and %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@と%2$@を比較"
+          }
+        }
+      }
+    },
+    "Compare Again": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一度比較"
+          }
+        }
+      }
+    },
+    "Compare and Sync with Other Pane…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "もう一方のペインと比較・同期…"
+          }
+        }
+      }
+    },
+    "Comparing… %lld items read": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "比較中…%lld項目を読み込みました"
+          }
+        }
+      }
+    },
     "Config Directory": {
       "localizations": {
         "ja": {
@@ -1957,6 +2113,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "競合"
+          }
+        }
+      }
+    },
+    "Conflict: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "競合：%@"
+          }
+        }
+      }
+    },
+    "Conflicts:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "競合："
           }
         }
       }
@@ -2166,12 +2342,62 @@
         }
       }
     },
+    "Copy items missing on either side; items that differ are conflicts": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どちらかにない項目をコピーします。異なる項目は競合になります"
+          }
+        }
+      }
+    },
+    "Copy new and modified items from the left folder to the right one": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左のフォルダの新しい項目と変更された項目を右にコピーします"
+          }
+        }
+      }
+    },
+    "Copy new and modified items from the right folder to the left one": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右のフォルダの新しい項目と変更された項目を左にコピーします"
+          }
+        }
+      }
+    },
     "Copy to Other Pane": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "もう一方のペインにコピー"
+          }
+        }
+      }
+    },
+    "Copy to left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左へコピー"
+          }
+        }
+      }
+    },
+    "Copy to right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右へコピー"
           }
         }
       }
@@ -2209,6 +2435,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "コスト%@"
+          }
+        }
+      }
+    },
+    "Could not be read": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み込めません"
           }
         }
       }
@@ -2445,6 +2681,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@に実行されませんでした：Macがスリープしていたか、cmdsが起動していませんでした。"
+          }
+        }
+      }
+    },
+    "Difference": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "違い"
+          }
+        }
+      }
+    },
+    "Different size": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイズが異なる"
           }
         }
       }
@@ -2837,6 +3093,16 @@
         }
       }
     },
+    "File and folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルとフォルダ"
+          }
+        }
+      }
+    },
     "File not found": {
       "localizations": {
         "ja": {
@@ -2933,6 +3199,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "上のペインにフォーカス"
+          }
+        }
+      }
+    },
+    "Folder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ"
           }
         }
       }
@@ -3173,6 +3449,16 @@
         }
       }
     },
+    "Hidden items": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隠し項目"
+          }
+        }
+      }
+    },
     "Hide Others": {
       "localizations": {
         "ja": {
@@ -3305,6 +3591,16 @@
         }
       }
     },
+    "Include items whose names start with a dot (compares again)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前がドットで始まる項目も含めます（もう一度比較します）"
+          }
+        }
+      }
+    },
     "Install": {
       "localizations": {
         "ja": {
@@ -3385,6 +3681,16 @@
         }
       }
     },
+    "Items only in the folder being synced to go to its Trash (on a server: its Trash there). Nothing is deleted.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期先のフォルダにしかない項目をそのゴミ箱（サーバではサーバ上のゴミ箱）に移動します。何も削除しません。"
+          }
+        }
+      }
+    },
     "Its active run is cancelled. Its history is kept.": {
       "localizations": {
         "ja": {
@@ -3421,6 +3727,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "最新の通知へ移動"
+          }
+        }
+      }
+    },
+    "Keep": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残す"
           }
         }
       }
@@ -3646,6 +3962,66 @@
         }
       }
     },
+    "Left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左"
+          }
+        }
+      }
+    },
+    "Left is newer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左が新しい"
+          }
+        }
+      }
+    },
+    "Left wins": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左を優先"
+          }
+        }
+      }
+    },
+    "Left ← Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左 ← 右"
+          }
+        }
+      }
+    },
+    "Left → Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左 → 右"
+          }
+        }
+      }
+    },
+    "Left: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左：%@"
+          }
+        }
+      }
+    },
     "Lets a paired iPhone/iPad reach this Mac away from home through an SSH server you use. The connection stays encrypted end to end.": {
       "localizations": {
         "ja": {
@@ -3699,6 +4075,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "変更行 +%1$lld −%2$lld"
+          }
+        }
+      }
+    },
+    "Link (not synced)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンク（同期しません）"
           }
         }
       }
@@ -3929,6 +4315,16 @@
         }
       }
     },
+    "Move %lld items to the Trash?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld項目をゴミ箱に移動しますか？"
+          }
+        }
+      }
+    },
     "Move Down": {
       "localizations": {
         "ja": {
@@ -3989,6 +4385,16 @@
         }
       }
     },
+    "Move extra items to the Trash": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "余分な項目をゴミ箱に移動"
+          }
+        }
+      }
+    },
     "Move to Other Pane": {
       "localizations": {
         "ja": {
@@ -4005,6 +4411,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "ゴミ箱に入れる"
+          }
+        }
+      }
+    },
+    "Move to Trash (left)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱に移動（左）"
+          }
+        }
+      }
+    },
+    "Move to Trash (right)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱に移動（右）"
           }
         }
       }
@@ -4202,6 +4628,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\n新規ファイル一覧ペイン ⇧⌘E・一覧で：Return 開く・Space プレビュー・F5/F6 もう一方のペインにコピー/移動・F2 名前変更・F7 新規フォルダ・⌘⌫ ゴミ箱・⌘↑ 上の階層・⇧⌘. 非表示ファイル\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R\n並べて表示：サイドバーで ⌘-クリック／⇧-クリック · すべてを並べて表示 ⌃⌘T · タイルを拡大 ⇧⌘↩"
+          }
+        }
+      }
+    },
+    "Newer wins": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しい方を優先"
           }
         }
       }
@@ -4437,6 +4873,16 @@
         }
       }
     },
+    "Nothing to sync": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期するものはありません"
+          }
+        }
+      }
+    },
     "Notify 1 minute before, with Skip": {
       "localizations": {
         "ja": {
@@ -4538,12 +4984,42 @@
         }
       }
     },
+    "One folder is inside the other. Compare two separate folders.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一方のフォルダがもう一方の中にあります。別々のフォルダを比較してください。"
+          }
+        }
+      }
+    },
     "Only Claude Code and Codex sessions can be continued.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "続けられるのはClaude CodeとCodexのセッションだけです。"
+          }
+        }
+      }
+    },
+    "Only on the left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左のみ"
+          }
+        }
+      }
+    },
+    "Only on the right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右のみ"
           }
         }
       }
@@ -4625,6 +5101,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "プレビューで開く…"
+          }
+        }
+      }
+    },
+    "Open one with File › New Files Pane (⇧⌘E), then compare the two folders.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイル › 新規ファイルペイン（⇧⌘E）で開いてから、2つのフォルダを比較してください。"
           }
         }
       }
@@ -5434,6 +5920,46 @@
         }
       }
     },
+    "Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右"
+          }
+        }
+      }
+    },
+    "Right is newer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右が新しい"
+          }
+        }
+      }
+    },
+    "Right wins": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右を優先"
+          }
+        }
+      }
+    },
+    "Right: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右：%@"
+          }
+        }
+      }
+    },
     "Run Now": {
       "localizations": {
         "ja": {
@@ -5510,6 +6036,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "前回のセッションのSSHペインは、指示したときにだけ接続します。"
+          }
+        }
+      }
+    },
+    "Same": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じ"
           }
         }
       }
@@ -5872,6 +6408,16 @@
         }
       }
     },
+    "Show identical items": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同じ項目も表示"
+          }
+        }
+      }
+    },
     "Show in Preview Pane": {
       "localizations": {
         "ja": {
@@ -6110,6 +6656,26 @@
         }
       }
     },
+    "Some items could not be synced.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一部の項目を同期できませんでした。"
+          }
+        }
+      }
+    },
+    "Special file": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "特殊ファイル"
+          }
+        }
+      }
+    },
     "Spend limit": {
       "comment": "agent usage limit",
       "localizations": {
@@ -6288,6 +6854,16 @@
         }
       }
     },
+    "Stopped.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中止しました。"
+          }
+        }
+      }
+    },
     "Stopped: %@": {
       "localizations": {
         "ja": {
@@ -6381,6 +6957,74 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”に切り替え中：Claude Codeを終了しています…"
+          }
+        }
+      }
+    },
+    "Symbolic link": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シンボリックリンク"
+          }
+        }
+      }
+    },
+    "Sync": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期"
+          }
+        }
+      }
+    },
+    "Sync %@ ← %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Sync %1$@ ← %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期 %1$@ ← %2$@"
+          }
+        }
+      }
+    },
+    "Sync %@ → %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Sync %1$@ → %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期 %1$@ → %2$@"
+          }
+        }
+      }
+    },
+    "Sync %@ ↔ %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Sync %1$@ ↔ %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期 %1$@ ↔ %2$@"
           }
         }
       }
@@ -6586,6 +7230,16 @@
         }
       }
     },
+    "The comparison stopped after %lld items (too many), so it cannot be synced. Compare smaller folders.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "項目が多すぎるため%lld項目で比較を止めました。同期できません。もっと小さいフォルダを比較してください。"
+          }
+        }
+      }
+    },
     "The connection timed out.": {
       "localizations": {
         "ja": {
@@ -6672,6 +7326,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "フォルダがありません。"
+          }
+        }
+      }
+    },
+    "The folders are the same (%lld items).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダは同じです（%lld項目）。"
           }
         }
       }
@@ -7102,6 +7766,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ディスクの空き領域が足りません。"
+          }
+        }
+      }
+    },
+    "They are not in the folder being synced from. Items on this Mac go to its Trash, items on a server to your Trash there (~/.local/share/Trash). Nothing is deleted.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同期元のフォルダにない項目です。このMacの項目はゴミ箱に、サーバの項目はサーバ上のゴミ箱（~/.local/share/Trash）に移動します。何も削除しません。"
           }
         }
       }
@@ -8188,6 +8862,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "移動済み"
+          }
+        }
+      }
+    },
+    "moved to the Trash (not in the other folder)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ゴミ箱に移動（もう一方のフォルダにない項目）"
           }
         }
       }
