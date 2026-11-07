@@ -127,6 +127,37 @@ Copies between two folders on this Mac keep using `FileOperation` (copyfile, foo
   or upload is not seen; between the check and the rename there is a short window in which a change on the server is
   overwritten; the rename makes the login user the owner, and needs a writable folder.
 
+## Comparing and syncing two folders
+
+`FolderSync` (`CmdsCore/Files/FolderSync.swift`, pure apart from `FileTree`, unit-tested in `FolderSyncTests`):
+
+- `compare` walks both trees together, folder by folder (names sorted, an item before its contents), and gives one
+  `Entry` per item with each side's `FileItem` and relative path (each side keeps its own spelling of a name: Swift
+  matches NFC and NFD as equal, but each tree is addressed with its own bytes). Statuses: `leftOnly`, `rightOnly`,
+  `modified` (sizes differ, dates more than `timeTolerance` = 1 s apart, or a file against a folder), `same`,
+  `skipped` (a link or special file on either side: never followed), `unreadable` (a folder that could not be listed:
+  its contents are not compared, so they can never look missing). Hidden names are left out unless asked, part files
+  always. It stops at `maxItems` (50 000 read) as `truncated`; a lost connection or cancel throws.
+- `plan` turns entries and `Options` (direction, `deleteExtra`, conflict rule) plus per-item `Choice`s into
+  `Decision`s (action or none, `isConflict`, `replacesNewer`). One-way: copy new and modified from the source,
+  `trash` extras only with `deleteExtra`. Two-way: copy one-sided items to the other side, never trash; every modified
+  item is a conflict (no baseline is stored, so "changed on both sides" cannot be told from "changed on one").
+- An `Action` keeps what the comparison saw on both sides. `TransferJob` `.sync` (`SyncRequest`: left, right,
+  direction, actions) runs them in order; before changing a side it checks `FolderSync.matches` (same kind; for files
+  size and date to the second), and logs `changedSinceCompare` (a failure that Retry does not repeat) when not. A file
+  over a file: the new one is streamed to a part file, then the old one goes to its tree's Trash
+  (`existingNotTrashed` if not, and the part file is removed), then the part file is renamed into place. Anything
+  else replaced is trashed first; the job remembers that (`syncTrashed`) so a retry expects nothing there. A folder
+  copy that failed half-way is filled in on retry (`ownFolders`), as for copies. Log entries carry the `side` written.
+- App: `FolderCompareTask` (`App/Sources/Files/FolderCompare.swift`) connects (`RemoteConnections`), makes remote
+  roots absolute against the login folder, refuses the same folder or one inside the other, and compares off the
+  main thread. `FolderCompareWindowController` shows the plan and queues it with `TransferCenter.startSync`;
+  `FolderCompareAPI` answers `files.compare` / `files.sync`. Panes showing either folder (or a folder inside them)
+  list again when a sync finishes.
+- Not done: comparing contents (hashes), a stored baseline (to sync deletions both ways and tell real conflicts),
+  saved syncs (no favorites feature to attach them to), case-insensitive matching (on this Mac's file system, `A`
+  and `a` from a server are two items; copying one onto the other is refused as changed since the comparison).
+
 ## The server's Trash
 
 `RemoteTrash` moves items into the login user's freedesktop.org Trash, `~/.local/share/Trash/files`, after writing
@@ -149,5 +180,5 @@ never follows a files pane.
 
 ## Not done (later phases of #26)
 
-Compare and sync, dragging remote items to the Finder (file promises),
+Content comparison and stored baselines for sync, dragging remote items to the Finder (file promises),
 the Git column on servers, following an SSH pane's `cd`, other protocols, and browsing from the iPhone.

@@ -354,7 +354,7 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
 }
 
 /// The list of a files pane. Keys (docs/reference/shortcuts.md "Files pane"): Return / ⌘↓ open, ⌘↑ enclosing folder,
-/// Space preview, ⌘⌫ Move to Trash, F2 rename, F4 edit, F5 / F6 copy / move to the other pane, F7 new folder, Tab
+/// Space preview, ⌘⌫ Move to Trash, F2 rename, ⇧F2 compare and sync with the other pane, F4 edit, F5 / F6 copy / move to the other pane, F7 new folder, Tab
 /// other pane, ⇧⌘. hidden files, ⇧⌘G go to folder; ⌘C / ⌘V / ⌥⌘V copy, paste, move here.
 @MainActor
 final class FilesTableView: NSTableView, NSMenuItemValidation {
@@ -384,6 +384,7 @@ final class FilesTableView: NSTableView, NSMenuItemValidation {
         case (Self.spaceKeyCode, []): pane.previewSelection()
         case (Self.deleteKeyCode, [.command]): pane.moveToTrash()
         case (Self.f2KeyCode, []): pane.renameSelection()
+        case (Self.f2KeyCode, [.shift]): pane.compareWithOtherPane()
         case (Self.f4KeyCode, []): pane.editSelection()
         case (Self.f5KeyCode, []): pane.copyToOtherPane()
         case (Self.f6KeyCode, []): pane.moveToOtherPane()

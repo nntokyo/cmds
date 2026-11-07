@@ -19,6 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   `schedules`) (#45).
 - iPhone/iPad: ⋯ › Schedules lists the Mac's schedules with their next run, the run in progress or the last result
   with its reason, and the recent runs, read only, from a Mac that sends them (#45).
+- Mac: compare and sync folders. **Compare and Sync with Other Pane…** (⇧F2, Pane › Files or the right-click menu)
+  compares the folders of two files panes, on this Mac or SSH hosts (local ↔ remote, remote ↔ remote, local ↔ local),
+  recursively by name, size and date, and lists what differs: only on one side, modified, a link (never followed or
+  synced) or a folder that could not be read. A sync copies one way (new and modified items; with **Move extra items
+  to the Trash**, items only on the target side go to its Trash) or both ways (missing items both ways; items that
+  differ are conflicts settled by Newer wins, Left wins, Right wins or Skip, or per item). The window shows each
+  planned action with a checkbox before anything runs; Sync queues them as one transfer in Window › Transfers.
+  Replaced items go to the Trash of their side (the server's Trash on a host), nothing is deleted, and an item that
+  changed after the comparison is left as it is. Also `cmds files compare` / `cmds files sync` and `files.compare` /
+  `files.sync` (#26).
 
 ## [0.13.0] - 2026-11-07
 

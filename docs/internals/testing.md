@@ -28,7 +28,7 @@ the same jobs here ([ci.md](ci.md)).
 | Package | Command | Covers |
 |---|---|---|
 | `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), cells per character for the phone's grid (`TerminalCellsTests`), the widget's file (`WidgetSnapshotTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
-| `Packages/CmdsCore` | `swift test --filter 'SFTP\|FileLocation\|SSHFileCommand\|RemoteEdit'` | the SFTP codec and client, ssh arguments and failure classification, `HOST:PATH`, the server Trash, the transfer job and queue, and editing a server's file (download, save, the conflict answers, upload timing) (in-process server, no network) |
+| `Packages/CmdsCore` | `swift test --filter 'SFTP\|FileLocation\|SSHFileCommand\|RemoteEdit\|FolderSync'` | the SFTP codec and client, ssh arguments and failure classification, `HOST:PATH`, the server Trash, the transfer job and queue, editing a server's file (download, save, the conflict answers, upload timing), and comparing and syncing folders (plans, one-way and two-way runs, the Trash, items changed since the comparison, retry) (in-process server, no network) |
 | `Packages/CmdsCore` | `swift test --filter CmdsCLITests` | the CLI's English output, `cmds schedule` argument mapping (`ScheduleCLITests`), the `cmds mcp` server with the app API stubbed (`MCPServerTests`) |
 | `Packages/CmdsSSH` | `swift test` (in that directory; fetches swift-nio-ssh and friends on first run) | the SSH tunnel; the end-to-end part needs a throwaway sshd ([below](#remote-access-via-ssh)) |
 
@@ -169,7 +169,10 @@ stay inside `<dir>`). Never point a test at your own hosts, keys or `localhost` 
    and `cmds files <local tmp dir>` in a workspace the test created, then `debug.files` (`select`, `copyToOther`,
    `moveToOther` from the remote pane only (a local move would put the originals in your Trash), `rename`,
    `newFolder`, `trash`, `paste {paths}`, `preview`, `reload`, `conflict`, `edit` (no app is opened unless
-   `open: true`) and `editing`, then write the copy and check the server's file, `stopEditing`), `cmds transfers` (`pause`, `cancel`,
+   `open: true`) and `editing`, then write the copy and check the server's file, `stopEditing`, `compare`, then
+   `debug.compare` (`direction`, `delete`, `conflicts`, `path` + `choice`/`exclude`, `action`: `state`, `compare`,
+   `hidden`, `sync` (no confirmation), `snapshot`, `close`)), `cmds files compare` / `cmds files sync` between the
+   remote folder and the local one, `cmds transfers` (`pause`, `cancel`,
    `retry` on a large file), the refusals in the pane's status, and a relaunch (remote panes wait for Connect).
 4. `test-relay-sshd.sh stop <dir>` and delete `<dir>`.
 

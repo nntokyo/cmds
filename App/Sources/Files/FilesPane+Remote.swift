@@ -369,10 +369,15 @@ extension FilesPane {
 
     private func transferFinished(_ job: TransferJob.Snapshot) {
         let shown = location
-        let touched = job.destination == shown || job.sources.contains { $0.parent == shown }
+        // A sync changes both folders and anything inside them.
+        let synced = job.mode == .sync && [job.destination, job.sources.first].contains { root in
+            guard let root, root.isSameTree(as: shown) else { return false }
+            return isRemote ? RemotePath.isSameOrInside(shown.path, root.path) : FileNames.isSameOrInside(shown.path, root.path)
+        }
+        let touched = synced || job.destination == shown || job.sources.contains { $0.parent == shown }
         // Local folders are watched; remote ones are listed again here.
         if touched, isRemote {
-            if job.destination == shown {
+            if job.destination == shown, job.mode != .sync {
                 let names = job.log.compactMap { entry -> String? in
                     guard !entry.path.contains("/") else { return nil }
                     switch entry.outcome {
@@ -389,7 +394,8 @@ extension FilesPane {
         // A failed upload of an edited file is reported by RemoteEdits.
         if job.state == .failed, job.mode != .save, startedTransfers.contains(job.id) {
             let failures = job.log.filter { $0.outcome.isFailure }.map { "\($0.path): \($0.outcome.localizedText)" }
-            showError(String(localized: "Some items could not be copied or moved."),
+            showError(job.mode == .sync ? String(localized: "Some items could not be synced.")
+                          : String(localized: "Some items could not be copied or moved."),
                       detail: Self.failureList(failures, extra: job.error.map { [$0.localizedText] } ?? []) + "\n\n"
                           + String(localized: "Retry it in Window › Transfers."))
         }
@@ -479,6 +485,8 @@ extension TransferFailure {
             return String(localized: "Could not move “\(name)” to the server's Trash (\(reason.localizedText)). Nothing was deleted.")
         case .notAFile(let name):
             return String(localized: "“\(name)” on the server is not a file any more; nothing was uploaded.")
+        case .changedSinceCompare:
+            return String(localized: "Changed since the folders were compared, so it was left as it is. Compare again to sync it.")
         case .sftp(let error): return FilesPane.remoteErrorText(error)
         case .connect(let failure): return failure.localizedText
         case .posix(let code, let name): return "\(Self.posixText(code)) (\(name))"
