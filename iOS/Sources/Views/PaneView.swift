@@ -615,36 +615,8 @@ enum TerminalGrid {
     /// gets kerning so every character takes `TerminalCells.width` cells. Characters in a style `run` get its
     /// colour and attributes (backgrounds are drawn by the row, behind the text).
     static func text(_ line: String, runs: [StyleRun] = [], fontSize: CGFloat) -> Text {
-        guard runs.isEmpty else { return styledText(line, runs: runs, fontSize: fontSize) }
-        guard line.unicodeScalars.contains(where: { !$0.isASCII }) else { return Text(verbatim: line) }
-        var result = Text(verbatim: "")
-        var run = ""
-        var runKerning: CGFloat?
-        func flush() {
-            guard !run.isEmpty else { return }
-            let segment = Text(verbatim: run)
-            result = result + (runKerning.map { segment.kerning($0) } ?? segment)
-            run = ""
-        }
-        for character in line {
-            let kerning = self.kerning(character, fontSize: fontSize)
-            if kerning != runKerning {
-                flush()
-                runKerning = kerning
-            }
-            run.append(character)
-        }
-        flush()
-        return result
-    }
-
-    private static func kerning(_ character: Character, fontSize: CGFloat) -> CGFloat? {
-        character.isASCII ? nil
-            : (CGFloat(TerminalCells.width(of: character)) * cellWidthPerPoint - advancePerPoint(character)) * fontSize
-    }
-
-    /// `text` with style runs: segments split where the kerning or the style changes.
-    private static func styledText(_ line: String, runs: [StyleRun], fontSize: CGFloat) -> Text {
+        if runs.isEmpty, !line.unicodeScalars.contains(where: { !$0.isASCII }) { return Text(verbatim: line) }
+        // Segments split where the kerning or the style changes.
         var result = Text(verbatim: "")
         var segment = ""
         var key: (kerning: CGFloat?, style: TerminalStyle?) = (nil, nil)
@@ -671,6 +643,11 @@ enum TerminalGrid {
         }
         flush()
         return result
+    }
+
+    private static func kerning(_ character: Character, fontSize: CGFloat) -> CGFloat? {
+        character.isASCII ? nil
+            : (CGFloat(TerminalCells.width(of: character)) * cellWidthPerPoint - advancePerPoint(character)) * fontSize
     }
 
     private static func styled(_ text: Text, _ style: TerminalStyle) -> Text {

@@ -91,7 +91,7 @@ final class GhosttyTerminalSurface: TerminalSurface {
     /// `visibleText()`'s rows read as VT text (`ghostty_surface_read_text_vt`, from cmds' libghostty patch: SGR with
     /// palette indexes, CUF over blank cells) and split into text and style runs by `TerminalStyledText` (CmdsCore).
     /// One read per row like `visibleText()`, plus the parsing; only the sync server asks, for phones that draw colours.
-    func visibleStyledRows() -> [(text: String, runs: [StyleRun])]? {
+    func visibleStyledRows() -> [StyledRow]? {
         guard let surface = surfaceView.surface else { return nil }
         let size = ghostty_surface_size(surface)
         let rows = Int(size.rows), cols = Int(size.columns)
@@ -121,7 +121,7 @@ final class GhosttyTerminalSurface: TerminalSurface {
     }
 
     /// `historyRows` read as VT text and split into text and style runs, like `visibleStyledRows`.
-    func historyStyledRows(maxRows: Int) -> [(text: String, runs: [StyleRun])]? {
+    func historyStyledRows(maxRows: Int) -> [StyledRow]? {
         readHistory(maxRows: maxRows) { surface, row, cols in
             readRowVT(surface, GHOSTTY_POINT_SCREEN, row, cols: cols).map(TerminalStyledText.parse)
         }
@@ -214,24 +214,22 @@ final class GhosttyTerminalSurface: TerminalSurface {
     /// row. A single-row rectangle selection: libghostty's text reader always unwraps soft wraps, so rows are read
     /// separately; `rectangle` also stops a wide char that wrapped onto the next row from being pulled into this one.
     private func readRow(_ surface: ghostty_surface_t, _ tag: ghostty_point_tag_e, _ row: Int, cols: Int) -> String? {
-        let sel = ghostty_selection_s(
-            top_left: Self.cell(tag, col: 0, row: row),
-            bottom_right: Self.cell(tag, col: cols - 1, row: row),
-            rectangle: true)
-        guard let text = read(surface, sel)?.text else { return nil }
+        guard let text = read(surface, Self.rowSelection(tag, row, cols: cols))?.text else { return nil }
         return text.contains("\n") ? text.replacingOccurrences(of: "\n", with: " ") : text
     }
 
     /// `readRow` as VT text: the row's text with the SGR sequences of its styles (`ghostty_surface_read_text_vt`).
     private func readRowVT(_ surface: ghostty_surface_t, _ tag: ghostty_point_tag_e, _ row: Int, cols: Int) -> String? {
-        let sel = ghostty_selection_s(
-            top_left: Self.cell(tag, col: 0, row: row),
-            bottom_right: Self.cell(tag, col: cols - 1, row: row),
-            rectangle: true)
         var text = ghostty_text_s()
-        guard ghostty_surface_read_text_vt(surface, sel, &text) else { return nil }
+        guard ghostty_surface_read_text_vt(surface, Self.rowSelection(tag, row, cols: cols), &text) else { return nil }
         defer { ghostty_surface_free_text(surface, &text) }
         return Self.string(from: text)
+    }
+
+    /// Row `row` as a single-row rectangle selection (`readRow`).
+    private static func rowSelection(_ tag: ghostty_point_tag_e, _ row: Int, cols: Int) -> ghostty_selection_s {
+        ghostty_selection_s(top_left: cell(tag, col: 0, row: row), bottom_right: cell(tag, col: cols - 1, row: row),
+                            rectangle: true)
     }
 
     /// Reads a selection's text plus the viewport position (points) of its top-left cell; the position
@@ -352,11 +350,11 @@ private final class FallbackSurface: TerminalSurface {
     func typeText(_ text: String) {}
     func focus() { view.window?.makeFirstResponder(textView) }
     func visibleText() -> String { textView.string }
-    func visibleStyledRows() -> [(text: String, runs: [StyleRun])]? { nil }
+    func visibleStyledRows() -> [StyledRow]? { nil }
     func scrollbackText(maxLines: Int) -> String { textView.string }
     func scrollbar() -> TerminalScrollbar? { nil }
     func historyRows(maxRows: Int) -> [String]? { [] } // `visibleText()` already has all of it
-    func historyStyledRows(maxRows: Int) -> [(text: String, runs: [StyleRun])]? { [] }
+    func historyStyledRows(maxRows: Int) -> [StyledRow]? { [] }
     var cursorPosition: (row: Int, col: Int)? { nil }
     var gridSize: (rows: Int, cols: Int)? { nil }
     var foregroundProcessGroupID: pid_t? { nil }
