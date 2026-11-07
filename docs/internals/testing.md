@@ -159,6 +159,10 @@ In addition to `CMDS_SUPPORT_DIR`, which also selects separate keychain items fo
   has a files pane in the report workspace with a small demo tree (`MockFiles`); `-mockWorkspace w-report -mockPane
   p-files` opens it at launch, `-mockShowHiddenFiles` lists hidden items, `-mockNoFilesBrowse` answers like a Mac
   without the feature.
+  Against an isolated instance: `CMDS_FILES_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt swift test --filter
+  SyncFilesBrowseE2ETests` (in `Packages/CmdsCore`) opens a temporary folder in a files pane, lists it and a subfolder,
+  fetches a file, checks the errors and that the Mac pane did not move, and that a phone without the feature is
+  refused. It closes the workspace and removes the folder.
 
 ### Files panes on SSH hosts
 

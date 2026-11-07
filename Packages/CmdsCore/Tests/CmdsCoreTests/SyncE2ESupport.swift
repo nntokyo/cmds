@@ -3,7 +3,7 @@ import Foundation
 import XCTest
 
 // Phones against an isolated instance, for the end-to-end sync tests (SyncScrollbackTests, SyncRevokeTests,
-// SyncSchedulesE2ETests;
+// SyncSchedulesE2ETests, SyncFilesBrowseE2ETests;
 // docs/internals/testing.md "Sync against an isolated instance").
 
 struct SyncE2EFailure: Error, CustomStringConvertible {
