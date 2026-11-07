@@ -72,6 +72,7 @@ as menu shortcuts, so programs in terminals keep them.
 | Copy / move to the other files pane | F5 / F6 | Pane › Files |
 | Keyboard to the other files pane | Tab | – |
 | Rename | F2 | Pane › Files |
+| Compare and sync with the other files pane | ⇧F2 | Pane › Files |
 | Edit (on an SSH host: a copy uploaded on every save) | F4 | Pane › Files |
 | New folder | F7 | Pane › Files |
 | Move to Trash | ⌘⌫ | Pane › Files |

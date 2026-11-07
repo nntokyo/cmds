@@ -1,13 +1,13 @@
 # Files panes
 
 > A folder on this Mac or on an SSH host as a list next to your terminals: browse, preview, copy and move between
-> two panes (also to and from servers, through a transfer queue), rename, new folder, Move to Trash, follow a
-> terminal's `cd`, and drop files on a terminal to type their paths.
+> two panes (also to and from servers, through a transfer queue), compare and sync two folders, edit a server's files,
+> rename, new folder, Move to Trash, follow a terminal's `cd`, and drop files on a terminal to type their paths.
 
 A files pane is one more kind of pane, like a browser or preview pane: split it, zoom it, close it with ⌘W, and it
 comes back after a relaunch. Two of them side by side give a two-pane file manager. A files pane can also list a
-folder on an SSH host ([below](#folders-on-ssh-hosts)). Folder compare and sync, and editing remote files, are planned
-for later phases of [#26](https://github.com/nntokyo/cmds/issues/26).
+folder on an SSH host ([below](#folders-on-ssh-hosts)), and two of them can be compared and synced
+([below](#comparing-and-syncing-folders)).
 
 ## Opening one
 
@@ -165,6 +165,57 @@ file, over the pane's SSH connection (no password, as for everything else in rem
   are kept in `~/Library/Caches/tokyo.n-n.cmds/remote-edits/` (one folder per edit, never reused), the others are
   removed.
 - Edits do not survive a relaunch: after it, edit the file again from its pane.
+
+## Comparing and syncing folders
+
+**Compare and Sync with Other Pane…** (⇧F2, **Pane › Files** or the right-click menu) compares the folder of the
+pane with the one of the other files pane of the workspace: two folders on this Mac, one here and one on an SSH host,
+or two on servers. A window lists what differs and what a sync would do; nothing changes until you click **Sync**.
+
+- **Left and right** are the panes as they sit in the window (the upper one counts as left when they are stacked).
+  The window names both folders at the top.
+- **Comparing** reads both folders and everything inside them in the background (**Stop** ends it). Items are
+  matched by name. Files are the same when their sizes are equal and their dates differ by at most a second (SFTP
+  gives dates to the second); otherwise they are modified. Contents are not read. A folder that exists on only one
+  side is one item; a file on one side and a folder on the other count as modified.
+- **Symbolic links** are listed but never followed or synced. A folder that cannot be read on one side is listed as
+  such, and nothing in it is synced.
+- **Hidden items** (names starting with a dot) take part when **Hidden items** is on; it starts as the pane's **Show
+  Hidden Files**. Temporary `.cmds-part-…` files of transfers never do.
+- Up to 50 000 items are read. A larger comparison stops there and cannot be synced (an item not read could look
+  missing); compare smaller folders.
+
+**Direction**:
+
+- **Left → Right** / **Left ← Right** (one-way; it starts from the pane you opened the window in, as F5 copies):
+  items new or modified on the source side are copied to the other side; a modified item replaces the other one,
+  even when the other one is newer (the list says so). Items only on the target side stay, unless **Move extra
+  items to the Trash** is on.
+- **Both Ways**: items missing on either side are copied to it, and nothing is moved to the Trash. cmds keeps no
+  record of earlier syncs, so for an item that differs it cannot tell which side changed: every modified item is a
+  conflict, settled by **Conflicts**: **Newer wins** (default; the later date wins, and items with the same date, or a
+  file against a folder, are left as they are), **Left wins**, **Right wins** or **Skip**.
+
+Each row has a checkbox (unticked rows are not synced), and a modified item a menu to choose **Copy to right**,
+**Copy to left** or **Skip** for it alone. The line below the list counts what will be copied each way, moved to the
+Trash, and the conflicts left as they are. **Show identical items** lists the rest too.
+
+**Sync** queues the checked actions as one transfer (Window › Transfers, and the footer of the pane): with progress,
+**Pause**, **Cancel**, **Show Log** (each item with the folder it went to) and **Retry**, as other transfers. When
+items will go to the Trash, cmds asks first.
+
+- Nothing is deleted. A replaced item goes to the Trash of its side first (this Mac's Trash, or your Trash on the
+  server, as **Move to Trash** does); if it cannot go there, it is not replaced. A file replacing a file is written in
+  full under a temporary name first, so the old one goes to the Trash only once the new one is complete.
+- Before each item, cmds checks that the side it changes still looks as compared (same kind, size and date). An
+  item that changed or appeared after the comparison is left as it is and logged ("Changed since the folders were
+  compared"); compare again to sync it. **Retry** does not take such items again.
+- Dates and permissions are kept, so the folders compare as the same afterwards.
+
+From a terminal: `cmds files compare LEFT RIGHT` prints the differences and the plan, `cmds files sync --to-right LEFT
+RIGHT` (or `--to-left`, `--both`, with `--delete` and `--conflicts newer|left|right|skip`) queues a sync
+([CLI reference](../reference/cli.md#commands)). Saving a compare as a favorite is not available (cmds has no
+favorites for files panes yet).
 
 ## Transfers
 

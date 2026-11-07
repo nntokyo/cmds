@@ -85,6 +85,8 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?`, `account?` (local terminals) | `PaneInfo` |
 | `pane.open_file` | `path` (absolute, existing file), `pane?` (to split from; a preview pane shows the file itself instead), `direction?` (`right`/`down`), `focus?` (default true), `format?` (`markdown`/`diff`/`quicklook`) | `PaneInfo` (kind `preview`); refused (403) on SSH panes' sockets |
 | `files.open` | `path` (absolute, existing folder or file), `pane?` (to split from; a files pane shows the folder itself instead), `direction?` (`right`/`down`), `focus?` (default true); `host?` (an SSH host: `path` is then a folder there, absolute, `~/…`, relative to the remote home or empty, checked by the listing) | `PaneInfo` (kind `files`, `workingDirectory` = the folder, `remote` = `{host, connected}` on a host; a file's folder is listed with the file selected); refused (403) on SSH panes' sockets. [Files panes](../guide/files.md) |
+| `files.compare` | `left`, `right` (absolute folders on this Mac or `HOST:PATH`), `direction?` (`leftToRight`, `rightToLeft`, `both`; default `both`), `delete?` (one-way: plan extra items for the Trash), `conflicts?` (`newer` (default), `left`, `right`, `skip`), `hidden?`, `same?` (also list identical items) | `FolderCompareInfo`. Compares off the main thread (may take a while for large or remote folders); refused on SSH panes' sockets. [Comparing and syncing](../guide/files.md#comparing-and-syncing-folders) |
+| `files.sync` | as `files.compare` (without `same`) | `FolderCompareInfo` with `transfer` = the id of the queued sync (nil when there was nothing to do); compares again first. Error when the comparison stopped at the item limit |
 | `transfer.list` | – | `[TransferInfo]`: the transfer queue, oldest first. All `transfer.*` methods: local socket only. [Transfers](../guide/files.md#transfers) |
 | `transfer.pause` / `transfer.resume` / `transfer.cancel` / `transfer.retry` | `id` | – (`retry`: a failed or cancelled transfer; else 400) |
 | `transfer.clear` | – | – (removes finished transfers) |
@@ -136,12 +138,20 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `{host, connected, branch?}` (SSH panes; files panes on a host, `connected` false until it was listed, e.g. after a
   relaunch), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude
   Code runs under).
-- `TransferInfo` = `id`, `mode` (`copy`/`move`, or `save`: the upload of an edited file over the server's file, with
-  `sources` the edited copy), `state` (`queued`, `running`, `paused`, `waiting`, `done`,
+- `TransferInfo` = `id`, `mode` (`copy`/`move`, `save`: the upload of an edited file over the server's file, with
+  `sources` the edited copy, or `sync`: `sources[0]` is the left folder, `destination` the right one, with
+  `direction` and `trashed`, the extra items moved to the Trash), `state` (`queued`, `running`, `paused`, `waiting`, `done`,
   `failed`, `cancelled`), `sources` and `destination` (`HOST:PATH` on SSH hosts, else paths), `itemsDone`,
   `itemsTotal`, `bytesDone`, `bytesTotal`, `current?` (the file being written), `error?` (why the whole transfer
   stopped, e.g. the connection), `asking?` (a name conflict waiting for an answer in the app), `copied`, `moved`,
   `skipped`, `failed` (counts of the log) and `failures` (`[{path, message}]`, the first 50).
+- `FolderCompareInfo` = `left`, `right` (as compared; remote folders absolute), `direction`, `truncated` (the
+  comparison stopped at 50 000 items and cannot be synced), `itemsRead`, `entries`, `summary` (`toRight`, `toLeft`,
+  `trashLeft`, `trashRight`, `unsettled` conflicts) and `transfer?`. Each entry: `path` (relative), `status`
+  (`leftOnly`, `rightOnly`, `modified`, `same`, `skipped` (a symbolic link or special file, never synced),
+  `unreadable` (with `error`)), `left?` / `right?` (`kind` `file`/`folder`/`symlink`/`other`, `size?`, `modified?`
+  in seconds since 1970), `newer?` (`left`/`right`), `action?` (`toRight`, `toLeft`, `trashLeft`, `trashRight`) and
+  `conflict` (two-way: modified on a side, which one is not known).
 - `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`, `memoryTotalBytes`, `memoryPressure` (1 normal,
   2 warning, 4 critical; optional).
 - `AgentUsage` = `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`, `effort`,

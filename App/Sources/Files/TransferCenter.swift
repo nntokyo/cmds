@@ -71,6 +71,14 @@ final class TransferCenter {
         return job
     }
 
+    /// Queues a sync of two folders (FolderCompareWindowController, `files.sync`). It asks nothing: replaced items go
+    /// to the Trash, and items that changed since the comparison are left alone and logged.
+    func startSync(_ request: TransferJob.SyncRequest, from pane: FilesPane?) -> TransferJob {
+        let job = TransferJob(id: queue.makeID(), syncing: request)
+        add(job, from: pane, several: true)
+        return job
+    }
+
     private func add(_ job: TransferJob, from pane: FilesPane?, several: Bool) {
         job.tree = { location in try RemoteConnections.shared.tree(for: location) }
         job.partJournal = Self.partJournal
@@ -173,12 +181,19 @@ final class TransferCenter {
 extension TransferJob.Snapshot {
     /// "Copying 3 items to host:/srv" (UI).
     var localizedTitle: String {
-        let target = destination.isRemote ? destination.description : (destination.path as NSString).abbreviatingWithTildeInPath
+        let target = destination.displayPath
         let what = sources.count == 1 ? "“\(sources[0].name)”" : String(localized: "\(sources.count) items")
         switch mode {
         case .copy: return String(localized: "Copy \(what) to \(target)")
         case .move: return String(localized: "Move \(what) to \(target)")
         case .save: return String(localized: "Upload edited “\(saving ?? sources.first?.name ?? "")” to \(target)")
+        case .sync:
+            let left = sources.first.map(\.displayPath) ?? ""
+            switch syncDirection ?? .leftToRight {
+            case .leftToRight: return String(localized: "Sync \(left) → \(target)")
+            case .rightToLeft: return String(localized: "Sync \(left) ← \(target)")
+            case .both: return String(localized: "Sync \(left) ↔ \(target)")
+            }
         }
     }
 
@@ -210,6 +225,7 @@ extension TransferJob.Snapshot {
         if counts.copied > 0 { parts.append(String(localized: "\(counts.copied) copied")) }
         if counts.moved > 0 { parts.append(String(localized: "\(counts.moved) moved")) }
         if counts.skipped > 0 { parts.append(String(localized: "\(counts.skipped) skipped")) }
+        if counts.trashed > 0 { parts.append(String(localized: "\(counts.trashed) moved to the Trash")) }
         if counts.failed > 0 { parts.append(String(localized: "\(counts.failed) failed")) }
         return parts.joined(separator: ", ")
     }
@@ -228,7 +244,13 @@ extension TransferJob.Outcome {
         case .notCopied: return String(localized: "not copied (special file)")
         case .saved: return String(localized: "uploaded")
         case .keptTheirs: return String(localized: "kept the server's version (downloaded into the edited copy)")
+        case .trashed: return String(localized: "moved to the Trash (not in the other folder)")
         case .failed(let reason): return String(localized: "failed: \(reason.localizedText)")
         }
     }
+}
+
+extension FileLocation {
+    /// `host:/path` for a server, `~/…` for this Mac (UI).
+    var displayPath: String { isRemote ? description : (path as NSString).abbreviatingWithTildeInPath }
 }

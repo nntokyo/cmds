@@ -417,3 +417,93 @@ public enum FolderSync {
         public var isEmpty: Bool { toLeft + toRight + trashLeft + trashRight == 0 }
     }
 }
+
+/// A comparison and its plan as the socket API reports it (`files.compare`, `files.sync`, `cmds files compare`).
+/// Locations are `HOST:PATH` for SSH hosts, paths for this Mac; dates are seconds since 1970.
+public struct FolderCompareInfo: Codable, Equatable, Sendable {
+    public struct Item: Codable, Equatable, Sendable {
+        /// `file`, `folder`, `symlink` or `other`.
+        public var kind: String
+        public var size: Int64?
+        public var modified: Double?
+
+        public init(_ item: FileItem) {
+            switch item.kind {
+            case .file: kind = "file"
+            case .folder: kind = "folder"
+            case .symlink: kind = "symlink"
+            case .other: kind = "other"
+            }
+            size = item.kind == .file ? item.size : nil
+            modified = item.modified?.timeIntervalSince1970
+        }
+    }
+
+    /// Planned action of an entry: copy to a side, or to a side's Trash.
+    public enum Action: String, Codable, Equatable, Sendable {
+        case toRight, toLeft, trashLeft, trashRight
+
+        public init(_ kind: FolderSync.Action.Kind) {
+            switch kind {
+            case .copy(to: .right): self = .toRight
+            case .copy(to: .left): self = .toLeft
+            case .trash(.left): self = .trashLeft
+            case .trash(.right): self = .trashRight
+            }
+        }
+    }
+
+    public struct Entry: Codable, Equatable, Sendable {
+        public var path: String
+        public var status: FolderSync.Status
+        public var left: Item?
+        public var right: Item?
+        public var newer: FolderSync.Side?
+        public var action: Action?
+        public var conflict: Bool
+        public var error: String?
+    }
+
+    public struct Summary: Codable, Equatable, Sendable {
+        public var toRight: Int
+        public var toLeft: Int
+        public var trashLeft: Int
+        public var trashRight: Int
+        public var unsettled: Int
+    }
+
+    public var left: String
+    public var right: String
+    public var direction: FolderSync.Direction
+    public var truncated: Bool
+    public var itemsRead: Int
+    /// Entries that differ (and the same ones when asked for).
+    public var entries: [Entry]
+    public var summary: Summary
+    /// `files.sync`: the transfer that runs the plan (nil when there was nothing to do).
+    public var transfer: Int?
+
+    public init(left: FileLocation, right: FileLocation, comparison: FolderSync.Comparison,
+                decisions: [FolderSync.Decision], options: FolderSync.Options, includeSame: Bool = false,
+                transfer: Int? = nil) {
+        self.left = left.description
+        self.right = right.description
+        direction = options.direction
+        truncated = comparison.truncated
+        itemsRead = comparison.itemsRead
+        let byPath = Dictionary(decisions.map { ($0.entry.path, $0) }, uniquingKeysWith: { a, _ in a })
+        entries = comparison.entries.compactMap { entry in
+            guard includeSame || entry.status != .same else { return nil }
+            let decision = byPath[entry.path]
+            return Entry(path: entry.path, status: entry.status, left: entry.left.map(Item.init),
+                         right: entry.right.map(Item.init), newer: entry.newer,
+                         action: decision?.action.map { Action($0.kind) }, conflict: decision?.isConflict ?? false,
+                         error: entry.error)
+        }
+        let counts = FolderSync.Summary(decisions.compactMap(\.action),
+                                        unsettled: decisions.filter { $0.isConflict && $0.action == nil }.count)
+        summary = Summary(toRight: counts.toRight, toLeft: counts.toLeft, trashLeft: counts.trashLeft,
+                          trashRight: counts.trashRight, unsettled: counts.unsettled)
+        self.transfer = transfer
+    }
+}

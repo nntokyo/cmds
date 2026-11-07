@@ -70,6 +70,12 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { ["value": try await self.controller.browserEvaluate(paneID: pane, script: script)] }
                 }
+            case "files.compare", "files.sync":
+                // Compares (connecting to servers) off the main thread; FolderCompare.swift.
+                let method = request.method
+                Task { @MainActor in
+                    await respond(id, to: connection) { try await FolderCompareAPI.perform(method, params) }
+                }
             case "browser.snapshot":
                 let pane = try browserPaneID(params)
                 Task { @MainActor in
@@ -95,6 +101,10 @@ final class APIServer {
                     throw RPCError.invalidParams("not a files pane")
                 }
                 connection.reply(id: id, result: try files.debugPerform(params.value))
+            case "debug.compare":
+                // Tests only: the newest Compare and Sync window (FolderCompareWindowController).
+                guard let window = FolderCompareWindowController.latest else { throw RPCError.notFound("no Compare window") }
+                connection.reply(id: id, result: try window.debugPerform(params))
             case "debug.transfers":
                 // Tests only: the queue with every job's log (TransferCenter+API).
                 connection.reply(id: id, result: TransferCenter.shared.debugState())

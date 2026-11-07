@@ -178,6 +178,7 @@ enum MainMenu {
         menu.addItem(item("Stop Editing", #selector(CommandRouter.filesStopEditing(_:)), "", target: router))
         menu.addItem(item("Copy to Other Pane", #selector(CommandRouter.filesCopyToOtherPane(_:)), "", target: router))
         menu.addItem(item("Move to Other Pane", #selector(CommandRouter.filesMoveToOtherPane(_:)), "", target: router))
+        menu.addItem(item("Compare and Sync with Other Pane…", #selector(CommandRouter.filesCompare(_:)), "", target: router))
         menu.addItem(.separator())
         menu.addItem(item("New Folder", #selector(CommandRouter.filesNewFolder(_:)), "", target: router))
         menu.addItem(item("Rename", #selector(CommandRouter.filesRename(_:)), "", target: router))

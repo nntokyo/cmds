@@ -8,7 +8,7 @@ extension FilesPane {
     /// `state` (default) reports; `select` (names), `copyToOther`, `moveToOther`, `newFolder`, `rename` (name,
     /// newName), `paste` (paths, move; `host:/path` for remote items), `trash`, `reload` (also Connect), `goto` (path),
     /// `hidden` (on), `follow` (on), `preview`, `terminal`, `back`, `forward`, `up`, `edit` (remote: download the
-    /// selected files for editing; opened in their apps only with `open: true`), `stopEditing`. `conflict` answers
+    /// selected files for editing; opened in their apps only with `open: true`), `stopEditing`, `compare` (opens Compare and Sync with the other pane; then `debug.compare`). `conflict` answers
     /// name conflicts of later operations without asking (keepBoth, replace, skip, stop; for an edited file changed on
     /// the server: replace keeps mine, skip keeps theirs, keepBoth saves mine as a copy). `editing` lists the edits of
     /// this pane: name, server path, copy, busy, notUploaded.
@@ -53,6 +53,7 @@ extension FilesPane {
             guard isRemote, !files.isEmpty else { throw RPCError.invalidParams("select files of a remote pane first") }
             editRemoteFiles(files, open: params?["open"]?.boolValue ?? false)
         case "stopEditing": stopEditing()
+        case "compare": compareWithOtherPane()
         default: throw RPCError.invalidParams("unknown action \(action)")
         }
         return .object([

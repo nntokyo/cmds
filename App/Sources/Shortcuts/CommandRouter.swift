@@ -108,6 +108,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     // Pane › Files (the focused files pane; its list also takes the keys in docs/reference/shortcuts.md).
     @objc func filesCopyToOtherPane(_ sender: Any?) { focusedFiles?.copyToOtherPane() }
     @objc func filesMoveToOtherPane(_ sender: Any?) { focusedFiles?.moveToOtherPane() }
+    @objc func filesCompare(_ sender: Any?) { focusedFiles?.compareWithOtherPane() }
     @objc func filesNewFolder(_ sender: Any?) { focusedFiles?.newFolder() }
     @objc func filesRename(_ sender: Any?) { focusedFiles?.renameSelection() }
     @objc func filesMoveToTrash(_ sender: Any?) { focusedFiles?.moveToTrash() }
@@ -374,6 +375,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(filesCopyToOtherPane(_:)), #selector(filesMoveToOtherPane(_:)),
              #selector(filesMoveToTrash(_:)), #selector(filesPreview(_:)):
             return focusedFiles?.selectedEntries.isEmpty == false
+        case #selector(filesCompare(_:)):
+            return focusedFiles?.otherPane?() != nil
         case #selector(filesEdit(_:)):
             return focusedFiles?.selectedEntries.contains { !$0.isFolder } == true
         case #selector(filesStopEditing(_:)):

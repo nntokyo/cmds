@@ -62,6 +62,16 @@ final class RemoteAPIPolicyTests: XCTestCase {
         XCTAssertFalse(RemoteAPIPolicy.allowedMethods.contains { $0.hasPrefix("schedule.") })
     }
 
+    /// Files panes, transfers and folder sync act on this Mac's files and the user's hosts: local socket only (#26).
+    func testRefusesFilesAndTransfers() {
+        for method in ["files.open", "files.compare", "files.sync", "transfer.list", "transfer.retry"] {
+            XCTAssertThrowsError(try RemoteAPIPolicy.authorize(method: method, params: [:], scope: scope), method) { error in
+                XCTAssertEqual((error as? RPCError)?.code, 403)
+            }
+        }
+        XCTAssertFalse(RemoteAPIPolicy.allowedMethods.contains { $0.hasPrefix("files.") || $0.hasPrefix("transfer.") })
+    }
+
     func testFiltersResults() {
         let workspaces: JSONValue = [
             ["id": "w1", "panes": [["id": "p1"]]],

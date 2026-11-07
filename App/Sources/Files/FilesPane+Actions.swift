@@ -178,6 +178,18 @@ extension FilesPane {
         startOperation(mode, sources: entries.map(url(of:)), destination: other.folderURL)
     }
 
+    /// ⇧F2: compare this pane's folder with the other files pane's and sync them (FolderCompareWindowController).
+    @objc func compareWithOtherPane() {
+        guard let other = otherPane?() else {
+            return showError(String(localized: "There is no other files pane in this workspace."),
+                             detail: String(localized: "Open one with File › New Files Pane (⇧⌘E), then compare the two folders."))
+        }
+        guard other.location != location else {
+            return showError(FolderCompareError.sameFolder.localizedText, detail: nil)
+        }
+        FolderCompareWindowController.show(self, other)
+    }
+
     func focusOtherPane() {
         guard let other = otherPane?() else { return NSSound.beep() }
         other.focus()
@@ -367,6 +379,8 @@ extension FilesPane {
             menu.addItem(.separator())
         }
         add(String(localized: "New Folder"), #selector(newFolder))
+        add(String(localized: "Compare and Sync with Other Pane…"), #selector(compareWithOtherPane),
+            enabled: otherPane?() != nil)
         add(isRemote ? String(localized: "Open SSH Terminal Here") : String(localized: "Open Terminal Here"),
             #selector(openTerminalHere))
         add(String(localized: "Show Hidden Files"), #selector(toggleHiddenFiles), checked: showHidden)

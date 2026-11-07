@@ -14,6 +14,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   phones keep getting plain text. The rows above the screen (earlier output) keep theirs too. Built on a new libghostty patch, `ghostty_surface_read_text_vt` (#113).
 - iPhone/iPad: terminal screens and their earlier output in colour, with bold, italic, underlined, inverse and faint text and backgrounds on the
   cell grid, from a Mac that sends them; the 16 ANSI colours use a palette made for the dark terminal screen (#113).
+- Mac: compare and sync folders. **Compare and Sync with Other Pane…** (⇧F2, Pane › Files or the right-click menu)
+  compares the folders of two files panes, on this Mac or SSH hosts (local ↔ remote, remote ↔ remote, local ↔ local),
+  recursively by name, size and date, and lists what differs: only on one side, modified, a link (never followed or
+  synced) or a folder that could not be read. A sync copies one way (new and modified items; with **Move extra items
+  to the Trash**, items only on the target side go to its Trash) or both ways (missing items both ways; items that
+  differ are conflicts settled by Newer wins, Left wins, Right wins or Skip, or per item). The window shows each
+  planned action with a checkbox before anything runs; Sync queues them as one transfer in Window › Transfers.
+  Replaced items go to the Trash of their side (the server's Trash on a host), nothing is deleted, and an item that
+  changed after the comparison is left as it is. Also `cmds files compare` / `cmds files sync` and `files.compare` /
+  `files.sync` (#26).
 
 ## [0.13.0] - 2026-11-07
 

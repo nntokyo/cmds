@@ -124,7 +124,12 @@ final class TransfersWindowController: NSWindowController, NSTableViewDataSource
         alert.messageText = job.localizedTitle
         let formatter = DateFormatter()
         formatter.timeStyle = .medium
-        var lines = job.log.map { "\(formatter.string(from: $0.date))  \($0.path): \($0.outcome.localizedText)" }
+        var lines = job.log.map { entry -> String in
+            // A sync names the folder each item was written to or trashed in.
+            let side = entry.side.flatMap { $0 == .left ? job.sources.first : job.destination }
+                .map { " → " + $0.displayPath } ?? ""
+            return "\(formatter.string(from: entry.date))  \(entry.path)\(side): \(entry.outcome.localizedText)"
+        }
         if let error = job.error { lines.append(String(localized: "Stopped: \(error.localizedText)")) }
         if lines.isEmpty { lines = [job.localizedStatus(bytes: bytes)] }
         let text = NSTextView(frame: NSRect(x: 0, y: 0, width: 480, height: 220))
