@@ -107,9 +107,9 @@ private struct ScheduleRow: View {
                 Text("No next run").font(.subheadline).foregroundStyle(.secondary)
             }
             if let active = schedule.activeRun {
-                RunOutcomeLine(run: active, now: now, prefix: String(localized: "Now"))
+                RunOutcomeLine(run: active, now: now, prefix: String(localized: "Now:"))
             } else if let last = schedule.lastRun {
-                RunOutcomeLine(run: last, now: now, prefix: String(localized: "Last"))
+                RunOutcomeLine(run: last, now: now, prefix: String(localized: "Last:"))
             }
         }
         .padding(.vertical, 2)
@@ -149,7 +149,7 @@ private struct RunOutcomeLine: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                Text(verbatim: "\(prefix):").foregroundStyle(.secondary)
+                Text(verbatim: prefix).foregroundStyle(.secondary)
                 RunStateLabel(state: run.state)
                 Text(verbatim: "· \(ScheduleStrings.time(run.lastActivityAt, now: now))").foregroundStyle(.secondary)
             }

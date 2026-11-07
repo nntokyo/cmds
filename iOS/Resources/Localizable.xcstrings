@@ -1309,12 +1309,12 @@
         }
       }
     },
-    "Last" : {
+    "Last:" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "前回"
+            "value" : "前回："
           }
         }
       }
@@ -1613,12 +1613,12 @@
         }
       }
     },
-    "Now" : {
+    "Now:" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "実行中"
+            "value" : "実行中："
           }
         }
       }
