@@ -2,7 +2,7 @@ import AppKit
 import CmdsCore
 
 /// Top of the menu bar item's menu (#95): ring charts instead of text. A row for the Mac (CPU, memory) and one per
-/// agent with account limits (5-hour, 7-day, …), each ring filled by its share, the percentage inside and the window
+/// agent with account limits (5-hour, 7-day, …; more windows than fit continue on the next row), each ring filled by its share, the percentage inside and the window
 /// and reset time under it. Colours as in the sidebar footer: limits green, orange from 80 %, red from 95 %; memory by
 /// memory pressure. A ctx row shows the context window of the fullest agents (workspace name, agent under it), coloured
 /// like the limits.
@@ -61,8 +61,12 @@ final class MenuBarDashboardView: NSView {
                              color: level.color,
                              caption: limit.resetsAt.map { Self.shortReset($0, now: now) })
             }
-            rows.append(Row(title: limits.agent.displayName, gauges: gauges,
-                            stale: now.timeIntervalSince(limits.updatedAt) > 3600))
+            // More windows than fit (Antigravity has one per model group) continue on the next rows.
+            let stale = now.timeIntervalSince(limits.updatedAt) > 3600
+            for start in stride(from: 0, to: gauges.count, by: Self.maxGauges) {
+                rows.append(Row(title: start == 0 ? limits.agent.displayName : "",
+                                gauges: Array(gauges[start..<min(start + Self.maxGauges, gauges.count)]), stale: stale))
+            }
         }
         if !contexts.isEmpty {
             let gauges = contexts.prefix(Self.maxGauges).map { context in
@@ -112,12 +116,10 @@ final class MenuBarDashboardView: NSView {
     }
 
     override func draw(_ dirtyRect: NSRect) {
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: NSColor.secondaryLabelColor,
-        ]
         for (index, row) in rows.enumerated() {
             let top = Self.insets.top + CGFloat(index) * Self.rowHeight
             let alpha: CGFloat = row.stale ? 0.5 : 1
+            let titleAttributes = Self.titleAttributes(fitting: row.title)
             let titleSize = row.title.size(withAttributes: titleAttributes)
             row.title.draw(at: NSPoint(x: Self.insets.left, y: top + Self.ring / 2 - titleSize.height / 2),
                            withAttributes: titleAttributes)
@@ -127,6 +129,18 @@ final class MenuBarDashboardView: NSView {
                 drawGauge(gauge, cell: NSRect(x: x, y: top, width: Self.cellWidth, height: Self.rowHeight), alpha: alpha)
             }
         }
+    }
+
+    /// 11 pt, smaller for a title wider than its column (`Antigravity`), down to 8 pt.
+    private static func titleAttributes(fitting title: String) -> [NSAttributedString.Key: Any] {
+        var size: CGFloat = 11
+        var attributes: [NSAttributedString.Key: Any] = [:]
+        repeat {
+            attributes = [.font: NSFont.systemFont(ofSize: size, weight: .semibold),
+                          .foregroundColor: NSColor.secondaryLabelColor]
+            size -= 0.5
+        } while size >= 8 && title.size(withAttributes: attributes).width > titleWidth - 4
+        return attributes
     }
 
     private func drawGauge(_ gauge: Gauge, cell: NSRect, alpha: CGFloat) {

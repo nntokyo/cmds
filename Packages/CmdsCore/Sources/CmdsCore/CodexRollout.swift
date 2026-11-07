@@ -367,7 +367,8 @@ public enum AgentProcessClassifier {
         case utility
     }
 
-    /// Claude Code (native build in `…/claude/versions/<v>`, `claude` launcher or the npm package) or Codex.
+    /// Claude Code (native build in `…/claude/versions/<v>`, `claude` launcher or the npm package), Codex or Antigravity
+    /// (`agy`).
     public static func agent(executablePath: String, arguments: [String]) -> AgentKind? {
         let executable = (executablePath as NSString).lastPathComponent
         let first = arguments.first.map { ($0 as NSString).lastPathComponent } ?? ""
@@ -378,6 +379,7 @@ public enum AgentProcessClassifier {
             || script.contains("@openai/codex/") {
             return .codex
         }
+        if executable == "agy" || first == "agy" { return .antigravity }
         if executable == "claude" || first == "claude" || executablePath.contains("/claude/versions/")
             || scriptName == "claude" || script.contains("@anthropic-ai/claude-code/") {
             return .claude

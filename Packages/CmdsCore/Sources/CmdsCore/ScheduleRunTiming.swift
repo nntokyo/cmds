@@ -172,7 +172,7 @@ public enum ScheduleRunTiming {
         case .claude?: idle = PaneReadiness.isAgentIdle(o.pane)
         case .codex?: idle = PaneReadiness.isCodexIdle(o.pane, sessionReported: o.agentReported)
         // Not known which agent runs: never typed into.
-        case .other?, nil: idle = false
+        case .antigravity?, .other?, nil: idle = false
         }
         if idle, o.activity != .needsInput, !o.choiceOnScreen, !o.workingOnScreen, !o.accountSwitchInProgress,
            !o.resumeQueued { return .paste }

@@ -82,6 +82,7 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds mcp` | MCP server on stdin/stdout for agents: browser panes, previews, sidebar status ([setup](../guide/ai-agents.md#mcp-server)) |
 | `cmds hook claude` | Claude Code `Notification` / `Stop` / `UserPromptSubmit` hook ([setup](../guide/ai-agents.md#claude-code)) |
 | `cmds hook claude-status` | Claude Code status-line reporter ([setup](../guide/ai-agents.md#claude-code)) |
+| `cmds hook agy-status` | Antigravity (`agy`) status-line reporter ([setup](../guide/ai-agents.md#antigravity-cli)) |
 | `cmds hook codex` | Codex `PermissionRequest` / `Stop` / `UserPromptSubmit` / tool / `Interrupt` hook ([setup](../guide/ai-agents.md#hooks)) |
 
 Every command accepts `--json` (print the raw result) and `--help` (also `cmds help <command>`); `cmds --version`

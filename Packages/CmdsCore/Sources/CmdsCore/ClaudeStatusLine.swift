@@ -65,13 +65,13 @@ public enum ClaudeStatusLine {
         }
     }
 
-    private static func string(_ value: JSONValue?) -> String? {
+    static func string(_ value: JSONValue?) -> String? {
         guard case .string(let string)? = value else { return nil }
         let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    private static func number(_ value: JSONValue?) -> Double? {
+    static func number(_ value: JSONValue?) -> Double? {
         switch value {
         case .number(let number)?: return number.isFinite ? number : nil
         case .string(let string)?: return Double(string.trimmingCharacters(in: .whitespaces)).flatMap { $0.isFinite ? $0 : nil }
@@ -79,12 +79,12 @@ public enum ClaudeStatusLine {
         }
     }
 
-    private static func int(_ value: JSONValue?) -> Int? {
+    static func int(_ value: JSONValue?) -> Int? {
         guard let number = number(value), abs(number) < 9e15 else { return nil }
         return Int(number.rounded(.down))
     }
 
-    private static func bool(_ value: JSONValue?) -> Bool? {
+    static func bool(_ value: JSONValue?) -> Bool? {
         switch value {
         case .bool(let bool)?: return bool
         case .string(let string)?: return string == "true" ? true : string == "false" ? false : nil

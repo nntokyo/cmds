@@ -8,6 +8,8 @@ import Foundation
 public enum AgentKind: String, Codable, Sendable, CaseIterable, Comparable {
     case claude
     case codex
+    /// Google Antigravity's CLI (`agy`).
+    case antigravity
     case other
 
     public init(from decoder: Decoder) throws {
@@ -19,6 +21,7 @@ public enum AgentKind: String, Codable, Sendable, CaseIterable, Comparable {
         switch self {
         case .claude: return "Claude"
         case .codex: return "Codex"
+        case .antigravity: return "Antigravity"
         case .other: return "Agent"
         }
     }

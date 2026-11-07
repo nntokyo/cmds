@@ -234,6 +234,24 @@ Usage needs no setup: cmds finds the session file of each `codex` running in a p
 daemon writes it) and reads only its session id and directory (`session_meta`), usage events (`token_count`) and model
 (`turn_context`) — never the conversation.
 
+## Antigravity CLI
+
+`cmds hook agy-status` reads the JSON Google Antigravity's CLI (`agy`) passes to a custom status-line command and
+reports, for the pane, the model, the context window (ctx) and the quota windows (`gemini-5h`, `gemini-weekly`,
+`3p-5h`, …, shown as `Gemini 5h`, `Gemini 7d`, `3P 5h`; used = 1 − `remaining_fraction`). Add to
+`~/.gemini/antigravity-cli/settings.json`:
+
+```json
+{
+  "statusLine": { "type": "command", "command": "cmds hook agy-status", "stack_with_default": true }
+}
+```
+
+`stack_with_default` keeps agy's own status line (the hook prints nothing). The hook finds the `agy` process among its
+ancestors, so the usage goes when agy exits. Only those figures are sent to the app; the JSON's account e-mail and
+paths are not read. Checked with agy 1.5.2. Antigravity has no notification or state hooks in cmds yet: its state
+comes from the status-line reports and the terminal title like other agents.
+
 ## Usage and limits
 
 The sidebar shows, per workspace, the agent of its focused (else most recently active) pane — model, context %, cost

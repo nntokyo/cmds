@@ -15,6 +15,17 @@ enum AgentHook {
     /// Buffer for a process's `KERN_PROCARGS2` (larger argument lists are not read).
     static let maxProcessArgumentBytes = 256 * 1024
 
+    /// `cmds hook agy-status`: Antigravity's (`agy`) status-line JSON → `agent.report`, like `claudeStatus`.
+    static func antigravityStatus(_ ctx: Context) {
+        guard let pane = ctx.envPane else { return } // not inside cmds
+        let input = readStandardInput(deadline: Date().addingTimeInterval(stdinDeadline))
+        guard let usage = AntigravityStatusLine.usage(fromJSON: input),
+              let encoded = try? JSONValue.from(usage) else { return }
+        var params: [String: JSONValue] = ["pane": .string(pane), "usage": encoded]
+        if let pid = agentProcessID(.antigravity) { params["pid"] = .number(Double(pid)) }
+        post(socketPath: ctx.socketPath, method: "agent.report", params: .object(params))
+    }
+
     static func claudeStatus(_ ctx: Context) {
         guard let pane = ctx.envPane else { return } // not inside cmds
         let input = readStandardInput(deadline: Date().addingTimeInterval(stdinDeadline))
@@ -22,7 +33,7 @@ enum AgentHook {
         var params: [String: JSONValue] = ["pane": .string(pane)]
         params["usage"] = try? JSONValue.from(usage)
         guard params["usage"] != nil else { return }
-        if let pid = agentProcessID() { params["pid"] = .number(Double(pid)) }
+        if let pid = agentProcessID(.claude) { params["pid"] = .number(Double(pid)) }
         // Which config directory (account) Claude Code runs with; "" = the default ~/.claude. A path, never its contents.
         params["configDir"] = .string(ctx.environment[ClaudeAccounts.configDirVariable] ?? "")
         post(socketPath: ctx.socketPath, method: "agent.report", params: .object(params))
@@ -59,14 +70,14 @@ enum AgentHook {
         return data
     }
 
-    /// Claude Code's pid: the nearest ancestor recognised as Claude, else the nearest one that is not a shell
+    /// The agent's pid: the nearest ancestor recognised as `agent`, else the nearest one that is not a shell
     /// (the status line runs as `claude → sh → bash statusline.sh → cmds`). The app drops the pane's usage once it exits.
-    static func agentProcessID() -> pid_t? {
+    static func agentProcessID(_ agent: AgentKind) -> pid_t? {
         var pid = getppid()
         var fallback: pid_t?
         for _ in 0..<maxAncestors {
             guard pid > 1, let info = processInfo(pid) else { break }
-            if info.agent == .claude { return pid }
+            if info.agent == agent { return pid }
             if fallback == nil, !AgentProcessClassifier.shells.contains(info.name) { fallback = pid }
             pid = info.parent
         }
