@@ -64,7 +64,7 @@ final class SyncE2EPhone {
     /// `styles` of the last `scrollback` (SyncStylesE2ETests).
     private(set) var lastScrollbackStyles: [RowStyle]?
     /// Every `scrolledOff` row received, in order, with its runs from `scrolledOffStyles`.
-    private(set) var scrolledOffRows: [(text: String, runs: [StyleRun])] = []
+    private(set) var scrolledOffRows: [StyledRow] = []
 
     init(_ instance: SyncE2EInstance, hello: ClientMessage.Hello) throws {
         let tls = SyncTLS.clientOptions(policy: .pinned(instance.payload.fingerprint), queue: .global()) { _ in }

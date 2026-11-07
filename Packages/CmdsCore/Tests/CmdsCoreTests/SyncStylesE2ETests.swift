@@ -94,7 +94,7 @@ final class SyncStylesE2ETests: XCTestCase {
                                                             token: phone.welcome.token))
         let red = StyleRun(column: 4, length: 3,
                            style: TerminalStyle(attributes: .bold, foreground: .palette(1)))
-        func check(_ rows: [(text: String, runs: [StyleRun])], file: StaticString = #filePath, line: UInt = #line) {
+        func check(_ rows: [StyledRow], file: StaticString = #filePath, line: UInt = #line) {
             var checked = 0
             for row in rows {
                 let parts = row.text.split(separator: " ")
