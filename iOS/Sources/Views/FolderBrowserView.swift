@@ -211,7 +211,7 @@ private struct FileEntryRow: View {
         if mime == "application/pdf" { return "doc.richtext" }
         if mime.hasPrefix("video/") { return "film" }
         if mime.hasPrefix("audio/") { return "waveform" }
-        if mime.hasPrefix("text/") || mime.contains("json") || mime.contains("xml") { return "doc.text" }
+        if PreviewFileStore.isText(name: entry.name) { return "doc.text" }
         return "doc"
     }
 }
