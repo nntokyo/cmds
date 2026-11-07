@@ -345,6 +345,8 @@ private struct TerminalHistoryRows: View, Equatable {
                 let start = max(first, block.index * Self.blockRows)
                 let stop = min(end, (block.index + 1) * Self.blockRows)
                 TerminalHistoryBlock(lines: history.lines[(start - first)..<(stop - first)], firstRow: start,
+                                     runs: history.runs.isEmpty ? [:]
+                                         : history.runs.filter { (start..<stop).contains($0.key) },
                                      fontSize: fontSize, lineH: lineH)
                     .equatable()
             }
@@ -356,13 +358,16 @@ private struct TerminalHistoryBlock: View, Equatable {
     let lines: ArraySlice<String>
     /// Row number of the first of `lines`.
     let firstRow: Int
+    /// Style runs of these rows, by row number (`PaneHistory.runs`).
+    let runs: [Int: [StyleRun]]
     let fontSize: CGFloat
     let lineH: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach((firstRow..<firstRow + lines.count).map(HistoryRowID.init(index:)), id: \.self) { row in
-                TerminalRow(line: lines[lines.startIndex + row.index - firstRow], fontSize: fontSize, lineH: lineH)
+                TerminalRow(line: lines[lines.startIndex + row.index - firstRow], runs: runs[row.index] ?? [],
+                            fontSize: fontSize, lineH: lineH)
             }
         }
     }

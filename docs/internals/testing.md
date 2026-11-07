@@ -143,7 +143,8 @@ In addition to `CMDS_SUPPORT_DIR`, which also selects separate keychain items fo
   swift test --filter SyncStylesE2ETests` (in `Packages/CmdsCore`) prints coloured rows (palette, 256-colour and RGB
   colours, every attribute, wide characters, a background erased to the right edge) in a workspace it creates and checks
   the runs a phone with `styles` gets, that the text matches `cmds read`, and that a phone without the feature gets the
-  same text and no styles.
+  same text and no styles. A second test checks the runs of the rows above the screen, in the `scrollback` answer and
+  in `scrolledOff` rows, and that a phone without the feature gets those rows plain.
 
 ### Files panes on SSH hosts
 

@@ -105,8 +105,9 @@ final class MockTransport: SyncTransport {
             guard case .screen(let screen)? = streamer.fullScreen(paneID: request.paneID) else { return }
             emit(.screen(screen))
             let rows = MockData.history(paneID: request.paneID) + shell.scrolledOff
-            emit(.scrollback(.init(paneID: request.paneID, seq: screen.seq,
-                                   lines: Array(rows.suffix(SyncScrollback.clampedLines(request.lines))))))
+            let sent = Array(rows.suffix(SyncScrollback.clampedLines(request.lines)))
+            emit(.scrollback(.init(paneID: request.paneID, seq: screen.seq, lines: sent,
+                                   styles: phoneDrawsStyles ? MockStyles.rowStyles(sent) : nil)))
             // From here on, like the Mac: the rows that scroll off go with the screen updates.
             if phoneStreamsHistory {
                 historyStreams[request.paneID] = (shell.historyEpoch, shell.scrolledCount)
@@ -260,7 +261,10 @@ final class MockTransport: SyncTransport {
             return msg.withHistory(scrolledOff: nil, reset: true)
         }
         historyStreams[paneID]?.scrolled = shell.scrolledCount
-        return new > 0 ? msg.withHistory(scrolledOff: Array(shell.scrolledOff.suffix(new)), reset: false) : msg
+        guard new > 0 else { return msg }
+        let rows = Array(shell.scrolledOff.suffix(new))
+        return msg.withHistory(scrolledOff: rows, styles: phoneDrawsStyles ? MockStyles.rowStyles(rows) : nil,
+                               reset: false)
     }
 
     /// Round-trip through the codec so the mock exercises encoding too.
@@ -596,6 +600,11 @@ enum MockStyles {
         var styled = snapshot
         for (row, line) in snapshot.lines.enumerated() { styled.setRuns(runs(line), row: row) }
         return styled
+    }
+
+    /// The runs of rows above the screen, as `scrollback.styles` / `scrolledOffStyles`.
+    static func rowStyles(_ lines: [String]) -> [RowStyle]? {
+        RowStyle.sparse(lines.map(runs))
     }
 
     private static func run(_ column: Int, _ length: Int, _ attributes: TerminalStyle.Attributes = [],

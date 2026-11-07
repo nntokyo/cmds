@@ -432,7 +432,8 @@ final class CompanionClient {
             let result = mirror.apply(screen)
             apply(result)
             if result != .stale {
-                extendHistory(screen.paneID, scrolledOff: screen.scrolledOff, reset: screen.historyReset == true)
+                extendHistory(screen.paneID, scrolledOff: screen.scrolledOff, styles: screen.scrolledOffStyles,
+                              reset: screen.historyReset == true)
             }
 
         case .screenDiff(let diff):
@@ -441,7 +442,8 @@ final class CompanionClient {
             // Also when the diff did not apply (a full screen is requested): the rows are relative to the previous
             // update the Mac sent, not to the copy here.
             if result != .stale {
-                extendHistory(diff.paneID, scrolledOff: diff.scrolledOff, reset: diff.historyReset == true)
+                extendHistory(diff.paneID, scrolledOff: diff.scrolledOff, styles: diff.scrolledOffStyles,
+                              reset: diff.historyReset == true)
             }
 
         case .notification(let note):
@@ -463,7 +465,7 @@ final class CompanionClient {
                 // From here on the Mac sends the rows that scroll off with the screen: no further requests.
                 historyTasks.removeValue(forKey: rows.paneID)?.cancel()
             }
-            historyMirror.receive(rows.lines, paneID: rows.paneID)
+            historyMirror.receive(rows.lines, styles: rows.styles, paneID: rows.paneID)
             publishHistories()
 
         case .pong:
@@ -580,8 +582,8 @@ final class CompanionClient {
 
     /// `scrolledOff` / `historyReset` of a screen update from a streaming Mac (for panes whose request it answered).
     /// After a reset the rows stay until the Mac answers again.
-    private func extendHistory(_ paneID: String, scrolledOff rows: [String]?, reset: Bool) {
-        let askAgain = historyMirror.extend(paneID: paneID, scrolledOff: rows, reset: reset)
+    private func extendHistory(_ paneID: String, scrolledOff rows: [String]?, styles: [RowStyle]?, reset: Bool) {
+        let askAgain = historyMirror.extend(paneID: paneID, scrolledOff: rows, styles: styles, reset: reset)
         publishHistories()
         if askAgain { refreshHistory(paneID: paneID) }
     }
