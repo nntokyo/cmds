@@ -167,6 +167,7 @@ public enum AgentResume {
         switch agent {
         case .claude: return "Claude Code"
         case .codex: return "Codex"
+        case .antigravity: return "Antigravity"
         case .other: return "Agent"
         }
     }
@@ -197,7 +198,7 @@ public enum AgentResume {
                 resume = "claude --resume \(session.sessionID)"
             }
         case .codex: resume = "codex resume \(session.sessionID)"
-        case .other: return nil
+        case .antigravity, .other: return nil
         }
         guard let cwd = session.cwd, let quoted = quotedPath(cwd) else { return resume }
         return "cd \(quoted) && \(resume)"

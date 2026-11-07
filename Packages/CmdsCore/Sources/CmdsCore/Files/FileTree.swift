@@ -54,6 +54,10 @@ public protocol FileTree: AnyObject {
     func createFile(_ path: String, permissions: UInt32?) throws -> FileTreeWriter
     /// Fails when `newPath` exists (never overwrites).
     func rename(_ path: String, to newPath: String) throws
+    /// Renames a file over the file at `newPath` in one step (POSIX `rename`), so readers see the old or the new
+    /// file, never neither. Only for saving an edited file over the one it came from (`TransferJob` `.save`); throws
+    /// `SFTPError` `.unsupported` when the tree cannot (a server without `posix-rename@openssh.com`).
+    func renameReplacing(_ path: String, to newPath: String) throws
     /// To the Trash of this tree (this Mac's, or the server's freedesktop Trash); throws when that is not possible,
     /// and then nothing changed.
     func trash(_ path: String) throws
@@ -197,6 +201,15 @@ public final class LocalFileTree: FileTree {
         guard renamex_np(path, newPath, UInt32(RENAME_EXCL)) == 0 else { throw Self.errnoFailure(newPath) }
     }
 
+    public func renameReplacing(_ path: String, to newPath: String) throws {
+        var info = stat()
+        // Only a file is replaced (rename(2) would also replace an empty folder).
+        if lstat(newPath, &info) == 0, info.st_mode & S_IFMT != S_IFREG {
+            throw TransferFailure.posix(code: EEXIST, name: (newPath as NSString).lastPathComponent)
+        }
+        guard Darwin.rename(path, newPath) == 0 else { throw Self.errnoFailure(newPath) }
+    }
+
     public func trash(_ path: String) throws {
         try trashItem(URL(fileURLWithPath: path))
     }
@@ -314,6 +327,10 @@ public final class SFTPFileTree: FileTree {
 
     public func rename(_ path: String, to newPath: String) throws {
         try client.rename(path, to: newPath)
+    }
+
+    public func renameReplacing(_ path: String, to newPath: String) throws {
+        try client.posixRename(path, to: newPath)
     }
 
     public func trash(_ path: String) throws {

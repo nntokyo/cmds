@@ -51,6 +51,9 @@ main thread. When the stream ends, waiting requests fail with `SFTPError.disconn
 - `rename` is SFTP v3's: it fails when the target exists (OpenSSH links and unlinks, and checks first for other
   types), so nothing is overwritten.
 - `symlink` sends the target first, then the link (OpenSSH's order, the reverse of the draft).
+- `posixRename` sends OpenSSH's `posix-rename@openssh.com` extension (offered in the `VERSION` reply, kept in
+  `extensions`): `rename(2)`, which replaces an existing file. It is used only to save an edited file over the one it
+  came from; without the extension it fails with `unsupported`.
 - `remove` exists only for a transfer's own temporary file (`TransferNames.isPart`) and a just-written `.trashinfo`;
   there is no `rmdir`.
 
@@ -92,6 +95,38 @@ changes (throttled) on the main queue. `TransferCenter` (app) owns it, asks conf
 (or the Transfers window), and posts `transferDidFinish` so remote panes showing the folders list them again.
 Copies between two folders on this Mac keep using `FileOperation` (copyfile, footer progress).
 
+## Editing a server's file
+
+`RemoteEdits` (`App/Sources/Files/RemoteEdits.swift`) keeps one `RemoteEditSession` per edited file:
+
+- **Start** (Edit, F4): `RemoteFileCopy.download` (`CmdsCore/Files/RemoteEdit.swift`) resolves the path with `realpath`
+  (a link is edited at its file), refuses anything but a file, and writes the copy (mode 0600, through a part file) into
+  a new folder `remote-edits/<host>-<random>/` in the cache (the support folder of isolated instances), recording the
+  server file's `RemoteFileVersion` (size, mtime in seconds) and the content's SHA-256. The copy opens in its default
+  app (`NSWorkspace.open`). The same file edited again opens the existing copy.
+- **Watching**: `FileWatcher` (vnode source on the copy, which follows atomic saves). Each write is an event for
+  `RemoteEditUploads` (pure, unit-tested): a debounce of 1 s, one upload at a time, another one after it when the copy
+  changed during the upload, and ending uploads what is pending first. An upload whose hash equals the last uploaded
+  or downloaded content does nothing.
+- **Upload**: a `TransferJob` in `.save` mode (`TransferCenter.startSave`), so it runs in the queue (Transfers window,
+  footer, log, Retry, `transfer.list` with `mode: save`). It `lstat`s the server's file and compares it with the
+  version (`RemoteFileVersion.change`): unchanged → upload; a folder or link now → fails (`notAFile`); changed or
+  gone → `onConflict` with the save's own alert (Keep Mine = `.replace`, Keep Theirs = `.skip`, Save Mine as a Copy =
+  `.keepBoth`, Cancel = `.stop`). With nobody to ask (no pane, no window), the job stops: Skip would overwrite the copy.
+- The upload goes to a part file created with the server file's permissions (| 0600 while writing, then set exactly),
+  then `renameReplacing` (`posix-rename@openssh.com`) puts it over the file in one step. A server without the
+  extension: the file goes to the server's Trash, then a plain rename (logged as replaced). Keep Theirs downloads the
+  server's file into a part file next to the copy and renames it over the copy (`rename(2)`). The job's
+  `SaveResult` (name, new version, content hash) becomes the session's base for the next save; after Save Mine as a
+  Copy, the session follows the copy's name.
+- **End**: Stop Editing, the pane's `tearDown`, or quit. The copy's folder is removed unless the copy holds changes the
+  server does not have (an upload pending, running, failed or stopped, or a hash that differs); quitting asks first
+  when there are such copies (`applicationShouldTerminate`). Nothing is restored after a relaunch. A dropped
+  connection does not end an edit: the next upload connects again (`RemoteConnections`).
+- Known limits: SFTP v3 gives mtimes in seconds, so a change of the same size within the second of the last download
+  or upload is not seen; between the check and the rename there is a short window in which a change on the server is
+  overwritten; the rename makes the login user the owner, and needs a writable folder.
+
 ## The server's Trash
 
 `RemoteTrash` moves items into the login user's freedesktop.org Trash, `~/.local/share/Trash/files`, after writing
@@ -108,10 +143,11 @@ the login folder (`RemotePath.absolute`) and then with `realpath`, follows a pat
 (selecting it), and `stat`s symbolic links to know whether they open like folders. Kinds come from the extension (`UTType`). There is no Git column, no folder watching (⌘R,
 the pane's own commands and finished transfers list it again) and no Follow Terminal. Open and Space download a copy
 into `~/Library/Caches/tokyo.n-n.cmds/remote-files/<host>-<hash>/` (in the support folder for isolated instances),
-read only. Restored remote panes wait for Connect. `PaneInfo.remote = {host, connected}`; the workspace's location
+read only; Edit downloads an editable copy instead ([above](#editing-a-servers-file)). Restored remote panes wait
+for Connect. `PaneInfo.remote = {host, connected}`; the workspace's location
 never follows a files pane.
 
 ## Not done (later phases of #26)
 
-Compare and sync, editing a remote file and uploading on save, dragging remote items to the Finder (file promises),
+Compare and sync, dragging remote items to the Finder (file promises),
 the Git column on servers, following an SSH pane's `cd`, other protocols, and browsing from the iPhone.

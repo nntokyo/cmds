@@ -144,6 +144,7 @@ public final class SFTPClient: @unchecked Sendable {
     private var pending: [UInt32: Pending] = [:]
     private var closedReason: String?
     private var disconnectHandler: (@Sendable (String) -> Void)?
+    private var serverExtensions: [String: String] = [:]
 
     /// Called once (on the thread that noticed) when the connection ends, with the reason for the user.
     public var onDisconnect: (@Sendable (String) -> Void)? {
@@ -154,6 +155,17 @@ public final class SFTPClient: @unchecked Sendable {
     public init(transport: SFTPTransport) {
         self.transport = transport
     }
+
+    /// Extensions the server named in its `VERSION` reply (name → version), e.g. OpenSSH's
+    /// `posix-rename@openssh.com`.
+    public var extensions: [String: String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return serverExtensions
+    }
+
+    /// OpenSSH's extension that renames with POSIX `rename(2)`, replacing the target in one step.
+    public static let posixRenameExtension = "posix-rename@openssh.com"
 
     public var isConnected: Bool {
         lock.lock()
@@ -167,10 +179,13 @@ public final class SFTPClient: @unchecked Sendable {
         do {
             try transport.write(SFTP.packet(.initialize) { $0.uint32(SFTP.version) })
             let response = try readResponse()
-            guard case .version(let version, _) = response else {
+            guard case .version(let version, let extensions) = response else {
                 throw SFTPError.protocolError("expected VERSION")
             }
             guard version >= 3 else { throw SFTPError.protocolError("server speaks SFTP version \(version)") }
+            lock.lock()
+            serverExtensions = extensions
+            lock.unlock()
         } catch let error as SFTPError {
             transport.close()
             throw (error.isStreamEnd ? SFTPError.disconnected(transport.closeReason ?? error.description) : error)
@@ -330,6 +345,20 @@ public final class SFTPClient: @unchecked Sendable {
     /// nothing is overwritten.
     public func rename(_ oldPath: String, to newPath: String) throws {
         try Self.expectOK(send(.rename) { $0.string(oldPath); $0.string(newPath) }.wait())
+    }
+
+    /// Renames with POSIX semantics (`posix-rename@openssh.com`): an existing file at `newPath` is replaced in one
+    /// step, so readers see the old or the new file, never neither. Only for saving an edited file over the one it
+    /// came from (`TransferJob` `.save`). Fails with `.unsupported` when the server did not offer the extension.
+    public func posixRename(_ oldPath: String, to newPath: String) throws {
+        guard extensions[Self.posixRenameExtension] != nil else {
+            throw SFTPError.status(code: SFTP.StatusCode.unsupported.rawValue, message: "")
+        }
+        try Self.expectOK(send(.extended) { writer in
+            writer.string(Self.posixRenameExtension)
+            writer.string(oldPath)
+            writer.string(newPath)
+        }.wait())
     }
 
     /// Removes a file. Used only for a transfer's own temporary file (`.cmds-part-…`), never for the user's files.

@@ -21,6 +21,8 @@ final class SFTPTestServer: @unchecked Sendable {
     var dropAfterRequests: Int?
     /// Delay before each READ/WRITE reply (slows transfers so tests can pause and cancel).
     var ioDelay: TimeInterval = 0
+    /// Offer OpenSSH's `posix-rename@openssh.com` in `VERSION` (set before `connect()`), as OpenSSH does.
+    var offersPosixRename = true
     /// Requests seen, by packet type (tests check that nothing is removed that should not be).
     private(set) var removed: [String] = []
     private(set) var renamed: [(String, String)] = []
@@ -89,7 +91,14 @@ final class SFTPTestServer: @unchecked Sendable {
             var reader = SFTP.Reader(payload)
             guard let type = try? reader.byte() else { return stop() }
             if type == SFTP.PacketType.initialize.rawValue {
-                send(SFTP.packet(.version) { $0.uint32(3) })
+                let posixRename = offersPosixRename
+                send(SFTP.packet(.version) { writer in
+                    writer.uint32(3)
+                    if posixRename {
+                        writer.string(SFTPClient.posixRenameExtension)
+                        writer.string("1")
+                    }
+                })
                 continue
             }
             requests += 1
@@ -182,7 +191,12 @@ final class SFTPTestServer: @unchecked Sendable {
                 var path = try reader.string()
                 if path == "." || path.isEmpty { path = home }
                 if !path.hasPrefix("/") { path = (home as NSString).appendingPathComponent(path) }
-                let resolved = (path as NSString).standardizingPath
+                var resolved = (path as NSString).standardizingPath
+                // Like OpenSSH, a link (here: the last component only) is resolved.
+                if let target = try? FileManager.default.destinationOfSymbolicLink(atPath: resolved) {
+                    resolved = target.hasPrefix("/") ? target
+                        : ((resolved as NSString).deletingLastPathComponent as NSString).appendingPathComponent(target)
+                }
                 send(SFTP.packet(.name) { w in
                     w.uint32(id)
                     w.uint32(1)
@@ -280,6 +294,15 @@ final class SFTPTestServer: @unchecked Sendable {
                 // Like OpenSSH: never replaces an existing item.
                 var info = Darwin.stat()
                 if lstat(new, &info) == 0 { return status(id, .failure, "Failure") }
+                guard Darwin.rename(old, new) == 0 else { return errnoStatus(id) }
+                renamed.append((old, new))
+                status(id, .ok)
+            case .extended:
+                let name = try reader.string()
+                guard name == SFTPClient.posixRenameExtension, offersPosixRename else { return status(id, .unsupported) }
+                let old = try reader.string()
+                let new = try reader.string()
+                // rename(2): replaces an existing file.
                 guard Darwin.rename(old, new) == 0 else { return errnoStatus(id) }
                 renamed.append((old, new))
                 status(id, .ok)

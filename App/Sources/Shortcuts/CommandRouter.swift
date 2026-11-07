@@ -112,6 +112,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func filesRename(_ sender: Any?) { focusedFiles?.renameSelection() }
     @objc func filesMoveToTrash(_ sender: Any?) { focusedFiles?.moveToTrash() }
     @objc func filesPreview(_ sender: Any?) { focusedFiles?.previewSelection() }
+    @objc func filesEdit(_ sender: Any?) { focusedFiles?.editSelection() }
+    @objc func filesStopEditing(_ sender: Any?) { focusedFiles?.stopEditing() }
     @objc func filesEnclosingFolder(_ sender: Any?) { focusedFiles?.goUp() }
     @objc func filesGoToFolder(_ sender: Any?) { focusedFiles?.goToFolder() }
     @objc func filesToggleHidden(_ sender: Any?) { focusedFiles?.toggleHiddenFiles() }
@@ -372,6 +374,11 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(filesCopyToOtherPane(_:)), #selector(filesMoveToOtherPane(_:)),
              #selector(filesMoveToTrash(_:)), #selector(filesPreview(_:)):
             return focusedFiles?.selectedEntries.isEmpty == false
+        case #selector(filesEdit(_:)):
+            return focusedFiles?.selectedEntries.contains { !$0.isFolder } == true
+        case #selector(filesStopEditing(_:)):
+            guard let files = focusedFiles else { return false }
+            return !files.editSessions(for: files.selectedEntries).isEmpty
         case #selector(filesRename(_:)):
             // One row, like Rename in the list's context menu.
             return focusedFiles?.selectedEntries.count == 1

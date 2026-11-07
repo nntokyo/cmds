@@ -68,6 +68,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         metadataMonitor?.stop()
         apiServer?.stop()
         controller.scheduleRunner.stop()
+        // Before the queue stops: copies whose uploads would be cut off are kept.
+        RemoteEdits.shared.shutdown()
         TransferCenter.shared.shutdown()
         SyncRemoteAccess.shared.shutdown()
         SyncServer.shared.stop()
@@ -88,6 +90,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     static var quitWithoutConfirmation = false
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let edited = RemoteEdits.shared.namesNotUploaded
+        if !edited.isEmpty, !Self.quitWithoutConfirmation {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Some edited files are not uploaded to their servers yet.")
+            alert.informativeText = String(localized: "\(edited.joined(separator: ", ")): quitting stops their uploads. Their edited copies stay in \(RemoteEdits.base.path).")
+            alert.addButton(withTitle: String(localized: "Quit"))
+            alert.addButton(withTitle: String(localized: "Cancel"))
+            guard alert.runModal() == .alertFirstButtonReturn else { return .terminateCancel }
+        }
         let agents = controller.workspaces.reduce(0) { $0 + $1.agentPanes.count }
         guard agents > 0, !Self.quitWithoutConfirmation else { return .terminateNow }
         let alert = NSAlert()

@@ -14,8 +14,41 @@ import Foundation
 /// - Pause holds at the next chunk; Cancel stops there, and a folder the interrupted item created goes to the Trash.
 /// - Retry runs the items that are not done; a folder the job created before is filled in (files already there with
 ///   the same size are kept).
+/// - Save (`.save`, editing a server's file): the edited copy on this Mac goes over the file it came from. When the
+///   server's file is not as it was last read or written (`SaveRequest.base`), the conflict is asked: Replace keeps
+///   the copy (uploads it), Skip keeps the server's file (downloads it into the copy), Keep Both uploads the copy
+///   under a numbered name, Stop uploads nothing. The upload is written to a part file with the server file's
+///   permissions and renamed over it in one step (`renameReplacing`); on a server without that, its file goes to its
+///   Trash first, as Replace does.
 public final class TransferJob: @unchecked Sendable {
-    public enum Mode: String, Codable, Sendable { case copy, move }
+    public enum Mode: String, Codable, Sendable {
+        case copy, move
+        /// Upload an edited copy over the server's file it came from.
+        case save
+    }
+
+    /// `.save`: the edited copy (the job's one source) goes over `name` in the destination folder, whose server file
+    /// was `base` when it was last downloaded or uploaded.
+    public struct SaveRequest: Equatable, Sendable {
+        public var name: String
+        public var base: RemoteFileVersion
+
+        public init(name: String, base: RemoteFileVersion) {
+            self.name = name
+            self.base = base
+        }
+    }
+
+    /// What a save left: the server file that now holds the content (`name` in the destination folder; another one
+    /// after Keep Both), its version, and the hash of that content (the upload, or the server's file downloaded into
+    /// the copy after Skip).
+    public struct SaveResult: Equatable, Sendable {
+        public var name: String
+        public var version: RemoteFileVersion
+        public var contentHash: String
+        /// The server's file was downloaded into the copy (Skip: keep theirs).
+        public var keptTheirs: Bool
+    }
 
     public enum State: String, Codable, Sendable {
         case queued, running, paused, waiting, done, failed, cancelled
@@ -41,6 +74,10 @@ public final class TransferJob: @unchecked Sendable {
         case originalKept(TransferFailure)
         /// A special file (device, socket, FIFO) is not copied.
         case notCopied
+        /// Save: uploaded over the server's file.
+        case saved
+        /// Save: the server's file had changed and was kept; it was downloaded into the edited copy.
+        case keptTheirs
         case failed(TransferFailure)
 
         public var isFailure: Bool {
@@ -84,6 +121,10 @@ public final class TransferJob: @unchecked Sendable {
         public var finished: Date?
         /// Waiting for an answer to a conflict about this name.
         public var asking: String?
+        /// `.save`: the server file's name it goes over.
+        public var saving: String?
+        /// `.save`: what the save left (nil until it is done, or when nothing was written).
+        public var saved: SaveResult?
 
         /// The log counted (Transfers window, `cmds transfers`).
         public var counts: Counts { Counts(log.map(\.outcome)) }
@@ -100,9 +141,9 @@ public final class TransferJob: @unchecked Sendable {
         public init(_ outcomes: [Outcome]) {
             for outcome in outcomes {
                 switch outcome {
-                case .copied, .replaced, .keptBoth, .merged: copied += 1
+                case .copied, .replaced, .keptBoth, .merged, .saved: copied += 1
                 case .moved: moved += 1
-                case .skipped, .notCopied: skipped += 1
+                case .skipped, .notCopied, .keptTheirs: skipped += 1
                 case .failed, .originalKept: failed += 1
                 }
             }
@@ -114,6 +155,8 @@ public final class TransferJob: @unchecked Sendable {
     public let sources: [FileLocation]
     public let destination: FileLocation
     public let policy: ConflictPolicy
+    /// `.save` only.
+    public let save: SaveRequest?
 
     /// The tree a location is on (connects to a server when needed; called on the job's thread).
     public var tree: (FileLocation) throws -> FileTree = { _ in LocalFileTree() }
@@ -146,20 +189,35 @@ public final class TransferJob: @unchecked Sendable {
     private var applyToAll: Resolution?
     /// Failures logged so far (all runs; the log itself is capped).
     private var failureTotal = 0
+    private var saved: SaveResult?
 
+    /// A copy or move (`mode` `.copy` or `.move`).
     public init(id: Int, mode: Mode, sources: [FileLocation], destination: FileLocation, policy: ConflictPolicy = .ask) {
+        precondition(mode != .save, "a save is made with init(id:saving:to:_:)")
         self.id = id
         self.mode = mode
         self.sources = sources
         self.destination = destination
         self.policy = policy
+        save = nil
+    }
+
+    /// A save: the edited copy at `copy` (on this Mac) goes over `request.name` in `folder` (on a server).
+    public init(id: Int, saving copy: FileLocation, to folder: FileLocation, _ request: SaveRequest,
+                policy: ConflictPolicy = .ask) {
+        self.id = id
+        mode = .save
+        sources = [copy]
+        destination = folder
+        self.policy = policy
+        save = request
     }
 
     public var snapshot: Snapshot {
         lock.lock()
         defer { lock.unlock() }
         return Snapshot(id: id, mode: mode, sources: sources, destination: destination, state: state, progress: progress,
-                        log: log, error: error, started: started, finished: finished, asking: asking)
+                        log: log, error: error, started: started, finished: finished, asking: asking, saving: save?.name, saved: saved)
     }
 
     public var currentState: State {
@@ -260,11 +318,15 @@ public final class TransferJob: @unchecked Sendable {
         let failuresBefore = failureCount()
         do {
             try checkpoint()
-            try measure(sourceTree)
-            for (index, source) in sources.enumerated() where !isCompleted(index) {
-                try checkpoint()
-                let finishedItem = try transferTopLevel(source, from: sourceTree, to: destinationTree)
-                if finishedItem { markCompleted(index) }
+            if let save {
+                try runSave(save, from: sourceTree, to: destinationTree)
+            } else {
+                try measure(sourceTree)
+                for (index, source) in sources.enumerated() where !isCompleted(index) {
+                    try checkpoint()
+                    let finishedItem = try transferTopLevel(source, from: sourceTree, to: destinationTree)
+                    if finishedItem { markCompleted(index) }
+                }
             }
             finish(failureCount() > failuresBefore ? .failed : .done)
         } catch is Cancelled, is StopRequested {
@@ -607,29 +669,12 @@ public final class TransferJob: @unchecked Sendable {
         let folder = destinationTree.paths.parent(target)
         let finalName = target.split(separator: "/").last.map(String.init) ?? relative
         let part = destinationTree.paths.join(folder, TransferNames.part(for: finalName))
-        update { $0.progress.current = relative }
-        let reader = try sourceTree.openForReading(source)
-        defer { reader.close() }
-        let writer = try destinationTree.createFile(part, permissions: (item.permissions ?? 0o644) | 0o600)
-        // Recorded until it is renamed or removed, so one left by a quit or crash is removed later.
         let partEntry = TransferPartJournal.Entry(host: destination.host, path: part)
-        partJournal?.add(partEntry)
-        var written: Int64 = 0
         do {
-            while true {
-                try checkpoint()
-                let chunk = try reader.read()
-                if chunk.isEmpty { break }
-                try writer.write(chunk)
-                written += Int64(chunk.count)
-                addBytesDone(Int64(chunk.count))
-            }
-            try writer.finish()
+            _ = try stream(source, from: sourceTree, to: part, in: destinationTree, entry: partEntry,
+                           permissions: (item.permissions ?? 0o644) | 0o600, current: relative)
         } catch {
-            writer.abandon()
-            removePart(partEntry, from: destinationTree)
-            // Bytes of a file that did not arrive do not count.
-            addBytesDone(-written)
+            // A file that did not arrive counts as done (its bytes were taken back), unless the job was cancelled.
             if !(error is Cancelled) { addBytesDone(item.size) }
             throw error
         }
@@ -647,5 +692,183 @@ public final class TransferJob: @unchecked Sendable {
     private func removePart(_ entry: TransferPartJournal.Entry, from tree: FileTree) {
         guard (try? tree.removePart(entry.path)) != nil else { return }
         partJournal?.remove(entry)
+    }
+
+    // MARK: - Save (an edited copy over the server's file)
+
+    /// Uploads the edited copy over `request.name` in the destination folder, after checking that the server's file is
+    /// still `request.base` (or asking what to do when it is not). Failures are logged; throws only to stop the job.
+    private func runSave(_ request: SaveRequest, from localTree: FileTree, to tree: FileTree) throws {
+        let name = request.name
+        let copy = sources[0].path
+        let folder = destination.path
+        let target = tree.paths.join(folder, name)
+        defer { update { $0.progress.itemsDone = 1 } }
+        guard let local = try localTree.item(at: copy), local.kind == .file else {
+            record(name, .failed(.noSuchItem))
+            return
+        }
+        update {
+            $0.progress.itemsTotal = 1
+            $0.progress.bytesTotal = local.size
+        }
+        let current = try tree.item(at: target)
+        var path = target
+        var outcome: Outcome = .saved
+        switch request.base.change(to: current) {
+        case .unchanged:
+            break
+        case .notAFile:
+            record(name, .failed(.notAFile(name: name)))
+            return
+        case .changed, .missing:
+            // Nobody to ask: upload nothing and keep the copy (Skip would replace it with the server's file).
+            if policy == .ask, onConflict == nil { throw StopRequested() }
+            switch try resolve(name: name, isFolder: false) {
+            case .stop:
+                throw StopRequested()
+            case .replace:
+                break
+            case .skip:
+                // Keep theirs: the server's file into the copy (nothing to take when it is gone).
+                guard let current else {
+                    record(name, .skipped)
+                    return
+                }
+                _ = try attempt(name) {
+                    try download(target, item: current, into: copy, in: localTree, from: tree,
+                                 permissions: local.permissions)
+                }
+                return
+            case .keepBoth:
+                let newName = keepBothName(name, isFolder: false, in: folder, tree: tree)
+                path = tree.paths.join(folder, newName)
+                outcome = .keptBoth(newName)
+            }
+        }
+        // Keep mine replaces what is there; after Keep Both, or when the file is gone, the name must be free.
+        let replacing = outcome == .saved && current != nil
+        _ = try attempt(name) {
+            let written = try upload(copy, from: localTree, to: path, in: tree, replacing: replacing,
+                                     permissions: current?.permissions ?? local.permissions)
+            if written.replacedThroughTrash { outcome = .replaced }
+            let version = try tree.item(at: path).map(RemoteFileVersion.init)
+                ?? RemoteFileVersion(size: written.size, modified: nil)
+            update {
+                $0.saved = SaveResult(name: tree.paths.name(path), version: version, contentHash: written.hash,
+                                      keptTheirs: false)
+            }
+            record(name, outcome)
+        }
+    }
+
+    private struct Uploaded {
+        var size: Int64
+        var hash: String
+        /// The server cannot rename over a file: its file went to its Trash first.
+        var replacedThroughTrash = false
+    }
+
+    /// Writes the copy to a part file next to `path` (with `permissions`), then puts it in place: over the file there
+    /// in one step when `replacing` (or through the server's Trash when the server cannot), else only if the name is
+    /// still free.
+    private func upload(_ copy: String, from localTree: FileTree, to path: String, in tree: FileTree, replacing: Bool,
+                        permissions: UInt32?) throws -> Uploaded {
+        let name = tree.paths.name(path)
+        let part = tree.paths.join(tree.paths.parent(path), TransferNames.part(for: name))
+        let entry = TransferPartJournal.Entry(host: destination.host, path: part)
+        var hash = ContentHash()
+        let size = try stream(copy, from: localTree, to: part, in: tree, entry: entry,
+                              permissions: (permissions ?? 0o644) | 0o600) { hash.update($0) }
+        tree.setAttributes(part, modified: nil, permissions: permissions)
+        var uploaded = Uploaded(size: size, hash: hash.finalize())
+        do {
+            if replacing {
+                do {
+                    try tree.renameReplacing(part, to: path)
+                } catch let error as SFTPError where error.statusCode == .unsupported {
+                    do {
+                        try tree.trash(path)
+                    } catch {
+                        throw TransferFailure.existingNotTrashed(TransferFailure(error))
+                    }
+                    try tree.rename(part, to: path)
+                    uploaded.replacedThroughTrash = true
+                }
+            } else {
+                do {
+                    try tree.rename(part, to: path)
+                } catch {
+                    throw TransferFailure.appeared(name: name, TransferFailure(error))
+                }
+            }
+            partJournal?.remove(entry)
+        } catch {
+            removePart(entry, from: tree)
+            throw error
+        }
+        return uploaded
+    }
+
+    /// Keep theirs: the server's file into the copy (a part file next to it, renamed over it).
+    private func download(_ path: String, item: FileItem, into copy: String, in localTree: FileTree, from tree: FileTree,
+                          permissions: UInt32?) throws {
+        let name = localTree.paths.name(copy)
+        let part = localTree.paths.join(localTree.paths.parent(copy), TransferNames.part(for: name))
+        let entry = TransferPartJournal.Entry(host: nil, path: part)
+        update {
+            $0.progress.bytesDone = 0
+            $0.progress.bytesTotal = item.size
+        }
+        var hash = ContentHash()
+        _ = try stream(path, from: tree, to: part, in: localTree, entry: entry, permissions: permissions ?? 0o644) {
+            hash.update($0)
+        }
+        do {
+            try localTree.renameReplacing(part, to: copy)
+            partJournal?.remove(entry)
+        } catch {
+            removePart(entry, from: localTree)
+            throw error
+        }
+        update {
+            $0.saved = SaveResult(name: tree.paths.name(path), version: RemoteFileVersion(item),
+                                  contentHash: hash.finalize(), keptTheirs: true)
+        }
+        record(tree.paths.name(path), .keptTheirs)
+    }
+
+    /// Streams `source` into a new part file (recorded in the journal until it is renamed or removed) and returns the
+    /// bytes written, showing `current` (default: the source's name) as the file being written. On failure or cancel
+    /// the part file is removed and its bytes are taken back. Copies, saves and Keep Theirs all write through here.
+    private func stream(_ source: String, from sourceTree: FileTree, to part: String, in tree: FileTree,
+                        entry: TransferPartJournal.Entry, permissions: UInt32, current: String? = nil,
+                        _ each: (Data) -> Void = { _ in }) throws -> Int64 {
+        update { $0.progress.current = current ?? sourceTree.paths.name(source) }
+        let reader = try sourceTree.openForReading(source)
+        defer { reader.close() }
+        let writer = try tree.createFile(part, permissions: permissions)
+        // Recorded until it is renamed or removed, so one left by a quit or crash is removed later.
+        partJournal?.add(entry)
+        var written: Int64 = 0
+        do {
+            while true {
+                try checkpoint()
+                let chunk = try reader.read()
+                if chunk.isEmpty { break }
+                try writer.write(chunk)
+                each(chunk)
+                written += Int64(chunk.count)
+                addBytesDone(Int64(chunk.count))
+            }
+            try writer.finish()
+        } catch {
+            writer.abandon()
+            removePart(entry, from: tree)
+            // Bytes of a file that did not arrive do not count.
+            addBytesDone(-written)
+            throw error
+        }
+        return written
     }
 }

@@ -42,6 +42,8 @@ enum MenuBarOption: String, OnByDefaultOption {
     case systemRings = "MenuBarSystemRings"
     /// Menu: Claude Code / Codex limit rings.
     case limitRings = "MenuBarLimitRings"
+    /// Menu: the context window of each agent (ctx).
+    case contextRings = "MenuBarContextRings"
     /// Menu: the workspaces with an agent.
     case workspaces = "MenuBarWorkspaces"
 
@@ -52,6 +54,7 @@ enum MenuBarOption: String, OnByDefaultOption {
         case .animation: return String(localized: "Animate while agents work")
         case .systemRings: return String(localized: "CPU and memory", comment: "Settings › Menu Bar › Menu")
         case .limitRings: return String(localized: "AI limits (Claude Code, Codex)", comment: "Settings › Menu Bar › Menu")
+        case .contextRings: return String(localized: "Context of each agent (ctx)", comment: "Settings › Menu Bar › Menu")
         case .workspaces: return String(localized: "Workspaces with agents", comment: "Settings › Menu Bar › Menu")
         }
     }

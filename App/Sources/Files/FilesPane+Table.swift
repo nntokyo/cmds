@@ -354,8 +354,8 @@ extension FilesPane: NSTableViewDataSource, NSTableViewDelegate, NSTextFieldDele
 }
 
 /// The list of a files pane. Keys (docs/reference/shortcuts.md "Files pane"): Return / ⌘↓ open, ⌘↑ enclosing folder,
-/// Space preview, ⌘⌫ Move to Trash, F2 rename, F5 / F6 copy / move to the other pane, F7 new folder, Tab other pane,
-/// ⇧⌘. hidden files, ⇧⌘G go to folder; ⌘C / ⌘V / ⌥⌘V copy, paste, move here.
+/// Space preview, ⌘⌫ Move to Trash, F2 rename, F4 edit, F5 / F6 copy / move to the other pane, F7 new folder, Tab
+/// other pane, ⇧⌘. hidden files, ⇧⌘G go to folder; ⌘C / ⌘V / ⌥⌘V copy, paste, move here.
 @MainActor
 final class FilesTableView: NSTableView, NSMenuItemValidation {
     weak var pane: FilesPane?
@@ -384,6 +384,7 @@ final class FilesTableView: NSTableView, NSMenuItemValidation {
         case (Self.spaceKeyCode, []): pane.previewSelection()
         case (Self.deleteKeyCode, [.command]): pane.moveToTrash()
         case (Self.f2KeyCode, []): pane.renameSelection()
+        case (Self.f4KeyCode, []): pane.editSelection()
         case (Self.f5KeyCode, []): pane.copyToOtherPane()
         case (Self.f6KeyCode, []): pane.moveToOtherPane()
         case (Self.f7KeyCode, []): pane.newFolder()
@@ -404,6 +405,7 @@ final class FilesTableView: NSTableView, NSMenuItemValidation {
     private static let deleteKeyCode: UInt16 = 51
     private static let tabKeyCode: UInt16 = 48
     private static let f2KeyCode: UInt16 = 120
+    private static let f4KeyCode: UInt16 = 118
     private static let f5KeyCode: UInt16 = 96
     private static let f6KeyCode: UInt16 = 97
     private static let f7KeyCode: UInt16 = 98

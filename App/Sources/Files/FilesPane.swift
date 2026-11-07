@@ -166,6 +166,7 @@ final class FilesPane: NSView {
         transferObservers.forEach(NotificationCenter.default.removeObserver)
         transferObservers = []
         operation?.cancel()
+        RemoteEdits.shared.paneClosed(self)
         generation += 1
         gitGeneration += 1
     }
@@ -664,9 +665,9 @@ final class FilesPane: NSView {
             return
         }
         let selected = tableView.selectedRowIndexes.count
-        statusLabel.stringValue = selected > 0
+        statusLabel.stringValue = (selected > 0
             ? String(localized: "\(selected) of \(rows.count) selected")
-            : String(localized: "\(rows.count) items")
+            : String(localized: "\(rows.count) items")) + editingSuffix
     }
 
     override func mouseDown(with event: NSEvent) {

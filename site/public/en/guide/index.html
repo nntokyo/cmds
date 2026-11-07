@@ -70,7 +70,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>Install and first launch</h2>
       <ol>
-        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.12.0/cmds-0.12.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
+        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.13.0/cmds-0.13.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
         <li>If the macOS firewall is on, macOS asks about incoming connections. Choose <strong>Allow</strong> if you want to use the iPhone/iPad companion; the terminal works either way.</li>
         <li>Allow notifications, so panes that need you can notify you while cmds is in the background.</li>
         <li>Updates are automatic (0.2.0 and later): cmds checks once a day, downloads a new version and installs it when cmds quits. <strong>cmds › Check for Updates…</strong> installs it now; turn it off in <strong>cmds › Settings… › Updates</strong>.</li>
@@ -104,7 +104,7 @@
         <figcaption>Claude Code asks for permission in the right pane, so it lights up.</figcaption>
       </figure>
       <h3 id="menubar">Menu bar</h3>
-      <p>The cmds icon in the menu bar carries badges: how many workspaces need you (orange) and how many have an agent working (blue, with a turning ring). A red dot appears when an account limit is at 95% or more, or memory pressure is critical (hover for which). Click it for ring charts of CPU, memory and your Claude Code / Codex limits (with the time left to the reset), and the workspaces where an agent ran, with a state mark, what the agent is doing or asking, and how long it has waited for you; choose one, or press ⌘1–⌘9, to jump to its pane.</p>
+      <p>The cmds icon in the menu bar carries badges: how many workspaces need you (orange) and how many have an agent working (blue, with a turning ring). A red dot appears when an account limit is at 95% or more, or memory pressure is critical (hover for which). Click it for ring charts of CPU, memory, your Claude Code / Codex / Antigravity limits (with the time left to the reset) and each agent's context window (ctx), and the workspaces where an agent ran, with a state mark, what the agent is doing or asking, and how long it has waited for you; choose one, or press ⌘1–⌘9, to jump to its pane.</p>
       <p>Choose what shows in Settings › <strong>Menu Bar</strong> (also Menu Bar Settings… in the menu): for the icon, the number of agents working, the red dot and the animation; for the menu, CPU and memory, AI limits and the workspaces with agents. The orange badge always shows.</p>
       <h3 id="widget">Widget</h3>
       <p>See the same on the desktop or in Notification Center: right-click the desktop › <strong>Edit Widgets…</strong> and add <strong>cmds</strong> (small or medium). Small shows the badges, the workspace waiting longest and your most used limit; medium the list of workspaces and the rings. Click to open that workspace. When cmds has not updated it for five minutes, it says "cmds isn't running".</p>
@@ -203,7 +203,8 @@ cmds stats                                # CPU and memory per workspace and for
       <ul>
         <li>MCP server: register <code>claude mcp add --scope user cmds -- cmds mcp</code> (Codex: <code>[mcp_servers.cmds]</code> <code>command = "cmds"</code> <code>args = ["mcp"]</code> <code>env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]</code> in <code>~/.codex/config.toml</code>), and agents in a cmds terminal open web pages in a cmds browser pane instead of Chrome and check them with screenshots and JavaScript. They can also show files in previews and set the sidebar status.</li>
         <li>Skill: copy <code>integrations/claude/skills/cmds/SKILL.md</code> to <code>~/.claude/skills/cmds/</code> (Claude Code) or <code>~/.codex/skills/cmds/</code> (Codex), and the agent uses helper panes and previews without stealing your focus, and opens web pages in a cmds browser pane instead of Chrome.</li>
-        <li>Codex: usage needs no setup. For notifications set <code>notifications = true</code>, <code>notification_method = "osc9"</code> and <code>notification_condition = "always"</code> under <code>[tui]</code> in <code>~/.codex/config.toml</code>.</li>
+        <li>Codex: usage needs no setup. State and notifications come from Codex hooks: in <code>~/.codex/hooks.json</code>, add <code>command -v cmds &gt;/dev/null &amp;&amp; cmds hook codex || true</code> to <code>PermissionRequest</code>, <code>Stop</code> (ending in <code>|| echo '{}'</code>), <code>UserPromptSubmit</code>, <code>PreToolUse</code>, <code>PostToolUse</code> and <code>Interrupt</code>, then trust them in Codex's <code>/hooks</code>. cmds then shows approvals (orange, with the command), work and finished turns, also for sessions on the shared app-server. Without hooks, set <code>notifications = true</code>, <code>notification_method = "osc9"</code> and <code>notification_condition = "always"</code> under <code>[tui]</code> for notifications only (with both, every turn notifies twice).</li>
+        <li>Antigravity (<code>agy</code>): add <code>"statusLine": {"type": "command", "command": "cmds hook agy-status", "stack_with_default": true}</code> to <code>~/.gemini/antigravity-cli/settings.json</code> to show its model, context and limits (Gemini 5h / 7d, third-party models) like Claude Code's.</li>
       </ul>
       <div class="split">
         <div>
@@ -282,6 +283,7 @@ cmds stats                                # CPU and memory per workspace and for
       <ul>
         <li><kbd>⌥⇧⌘E</kbd> (File › New Remote Files Pane…) asks for a host and a folder; <kbd>⇧⌘E</kbd> in an SSH pane opens the pane's remote directory. From a terminal: <code>cmds files HOST:PATH</code>. Nothing is installed on the server (SFTP).</li>
         <li>cmds runs your own <code>ssh</code> (<code>~/.ssh/config</code>, keys, agent, jump hosts). It never asks for or stores a password and never adds host keys: password-only hosts and unknown or changed host keys are refused, with a note on what to do.</li>
+        <li>Edit (<kbd>F4</kbd>, the right-click menu or Pane › Files) opens an editable copy in its default app and uploads every save over the server's file (written under a temporary name, then swapped in, keeping its permissions). If the file changed on the server meanwhile, cmds asks whether to overwrite it, take the server's version, or save yours as a copy.</li>
         <li>Open and preview use a downloaded, read-only copy. Move to Trash moves items to the server's own Trash (<code>~/.local/share/Trash</code>) and never deletes them.</li>
       </ul>
       <h3>Transfers</h3>

@@ -9,14 +9,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Mac: Codex hooks. `cmds hook codex` in `~/.codex/hooks.json` shows when Codex works, asks for approval
-  (`PermissionRequest`, with what it wants to run) or finishes a turn, like the Claude Code hooks; also for Codex TUIs
-  on the shared app-server daemon, matched to their pane by session (#128).
 - Mac: terminal screens go to the iPhone/iPad with their colours and attributes (palette, 256 and RGB colours, bold,
   faint, italic, underline, inverse, strikethrough), only to phones that ask for them (sync feature `styles`); older
   phones keep getting plain text. The rows above the screen (earlier output) keep theirs too. Built on a new libghostty patch, `ghostty_surface_read_text_vt` (#113).
 - iPhone/iPad: terminal screens and their earlier output in colour, with bold, italic, underlined, inverse and faint text and backgrounds on the
   cell grid, from a Mac that sends them; the 16 ANSI colours use a palette made for the dark terminal screen (#113).
+
+## [0.13.0] - 2026-11-07
+
+Mac only; the iPhone/iPad app is unchanged from 0.11.0.
+
+### Added
+
+- Mac: ctx rings in the menu bar item's menu: the context window of the fullest agents, by workspace (Settings ›
+  Menu Bar › Menu).
+- Mac: Google Antigravity's CLI (`agy`). `cmds hook agy-status` as its status-line command reports the model, context
+  and quota windows (Gemini 5h / 7d, third-party models) like Claude Code's status line; they show in the sidebar,
+  the menu bar rings, the widget and on the iPhone (named “Agent” there until the iPhone app's next update). Limit rows with more windows than fit continue on the next row.
+- Mac: Codex hooks. `cmds hook codex` in `~/.codex/hooks.json` shows when Codex works, asks for approval
+  (`PermissionRequest`, with what it wants to run) or finishes a turn, like the Claude Code hooks; also for Codex TUIs
+  on the shared app-server daemon, matched to their pane by session (#128). A turn that Codex's usage limit stops
+  (no `Stop` hook) goes back to idle when its title spinner stops.
+- Mac: edit files on SSH hosts. **Edit** (F4, the right-click menu or Pane › Files) in a remote files pane downloads
+  the file into an editable copy and opens it in its default app; every save is uploaded over the server's file
+  (written under a temporary name, then renamed over it in one step, keeping its permissions) and listed in Window ›
+  Transfers. If the file changed on the server meanwhile, cmds asks: Keep Mine, Keep Theirs, Save Mine as a Copy or
+  Cancel. **Stop Editing**, closing the pane or quitting ends it; quitting warns about edits not uploaded yet (#26).
 
 ## [0.12.0] - 2026-11-07
 
@@ -407,7 +425,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.12.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.13.0...master
+[0.13.0]: https://github.com/nntokyo/cmds/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nntokyo/cmds/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nntokyo/cmds/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/nntokyo/cmds/compare/v0.9.1...v0.10.0

@@ -172,16 +172,23 @@ extension FilesPane {
 
     /// The cache folder for copies of remote files opened or previewed (in the support folder for isolated instances).
     nonisolated static func remoteCacheFolder(host: String, folder: String) -> URL {
-        let base: URL
-        if let isolated = CmdsEnv.supportDirectoryOverride() {
-            base = URL(fileURLWithPath: isolated).appendingPathComponent("remote-cache", isDirectory: true)
-        } else {
-            base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("tokyo.n-n.cmds/remote-files", isDirectory: true)
-        }
+        let base = cacheBase(cache: "remote-files", isolated: "remote-cache")
         let digest = SHA256.hash(data: Data("\(host):\(folder)".utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
-        let safeHost = String(host.map { $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" ? $0 : "_" })
-        return base.appendingPathComponent("\(safeHost)-\(digest)", isDirectory: true)
+        return base.appendingPathComponent("\(safeName(host))-\(digest)", isDirectory: true)
+    }
+
+    /// `name` in cmds' cache folder, or `isolated` in the support folder of an isolated instance.
+    nonisolated static func cacheBase(cache name: String, isolated: String) -> URL {
+        if let support = CmdsEnv.supportDirectoryOverride() {
+            return URL(fileURLWithPath: support).appendingPathComponent(isolated, isDirectory: true)
+        }
+        return FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("tokyo.n-n.cmds/\(name)", isDirectory: true)
+    }
+
+    /// A host as part of a folder name.
+    nonisolated static func safeName(_ host: String) -> String {
+        String(host.map { $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" ? $0 : "_" })
     }
 
     /// Downloads one file into the cache (a fresh copy each time), then calls `then` with its local path.
@@ -192,23 +199,7 @@ extension FilesPane {
         let target = cache.appendingPathComponent(entry.name).path
         onServer(String(localized: "Downloading “\(entry.name)”…"), { tree in
             try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
-            let part = cache.appendingPathComponent(TransferNames.part(for: entry.name)).path
-            let local = LocalFileTree()
-            let reader = try tree.openForReading(source)
-            defer { reader.close() }
-            let writer = try local.createFile(part, permissions: 0o600)
-            do {
-                while true {
-                    let chunk = try reader.read()
-                    if chunk.isEmpty { break }
-                    try writer.write(chunk)
-                }
-                try writer.finish()
-            } catch {
-                writer.abandon()
-                try? local.removePart(part)
-                throw error
-            }
+            let part = try RemoteFileCopy.downloadToPart(source, from: tree, nextTo: target).part
             // The previous copy is ours (the cache), never the user's file.
             try? FileManager.default.removeItem(atPath: target)
             try FileManager.default.moveItem(atPath: part, toPath: target)
@@ -221,6 +212,70 @@ extension FilesPane {
                 then(target)
             }
         })
+    }
+
+    // MARK: - Editing (RemoteEdits)
+
+    /// F4 / Edit: each selected file is downloaded into an editable copy, opened in its default app, and uploaded
+    /// whenever it is saved.
+    func editRemoteFiles(_ entries: [FileEntry], open: Bool = true) {
+        guard let host else { return }
+        for entry in entries where !entry.isFolder {
+            RemoteEdits.shared.edit(host: host, path: remotePath(entry), from: self, open: open)
+        }
+    }
+
+    /// The edits of these files (by any pane), if any.
+    func editSessions(for entries: [FileEntry]) -> [RemoteEditSession] {
+        guard let host else { return [] }
+        let paths = Set(entries.map(remotePath))
+        return RemoteEdits.shared.sessions.filter { $0.host == host && paths.contains($0.remotePath) }
+    }
+
+    /// Edits started or ended: the footer counts them.
+    func editsChanged() { updateStatus() }
+
+    /// The footer follows an upload of an edited file like a transfer this pane started.
+    func showSave(_ jobID: Int) {
+        startedTransfers.insert(jobID)
+        updateStatus()
+    }
+
+    /// " — editing 2 files" for the footer.
+    var editingSuffix: String {
+        let count = RemoteEdits.shared.sessions(of: self).count
+        return count == 0 ? "" : " — " + String(localized: "\(count) being edited")
+    }
+
+    /// An edited file changed on the server since it was downloaded or last uploaded.
+    func askSaveConflict(name: String, reply: @escaping @Sendable (FileOperation.Resolution, Bool) -> Void) {
+        #if DEBUG
+        if let answer = debugConflictAnswer { return reply(answer, false) }
+        #endif
+        let alert = Self.saveConflictAlert(name: name)
+        present(alert) { response in reply(Self.saveResolution(for: response), false) }
+    }
+
+    /// Keep Mine / Keep Theirs / Save Mine as a Copy / Cancel.
+    static func saveConflictAlert(name: String) -> NSAlert {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "“\(name)” has changed on the server since you downloaded or last uploaded it.")
+        alert.informativeText = String(localized: "Keep Mine uploads your version over it. Keep Theirs replaces your edited copy with the server's version. Save Mine as a Copy uploads your version under a numbered name, and later saves go there. Cancel uploads nothing now; saving again asks again.")
+        alert.addButton(withTitle: String(localized: "Keep Mine"))
+        alert.addButton(withTitle: String(localized: "Keep Theirs"))
+        alert.addButton(withTitle: String(localized: "Save Mine as a Copy"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        return alert
+    }
+
+    /// The save's answer as a transfer resolution: Replace keeps mine, Skip keeps theirs, Keep Both saves a copy.
+    static func saveResolution(for response: NSApplication.ModalResponse) -> FileOperation.Resolution {
+        switch response {
+        case .alertFirstButtonReturn: return .replace
+        case .alertSecondButtonReturn: return .skip
+        case .alertThirdButtonReturn: return .keepBoth
+        default: return .stop
+        }
     }
 
     func renameRemote(_ entry: FileEntry, to newName: String) {
@@ -331,7 +386,8 @@ extension FilesPane {
             load()
         }
         updateStatus()
-        if job.state == .failed, startedTransfers.contains(job.id) {
+        // A failed upload of an edited file is reported by RemoteEdits.
+        if job.state == .failed, job.mode != .save, startedTransfers.contains(job.id) {
             let failures = job.log.filter { $0.outcome.isFailure }.map { "\($0.path): \($0.outcome.localizedText)" }
             showError(String(localized: "Some items could not be copied or moved."),
                       detail: Self.failureList(failures, extra: job.error.map { [$0.localizedText] } ?? []) + "\n\n"
@@ -421,6 +477,8 @@ extension TransferFailure {
         case .trashNotAFolder(let path): return String(localized: "“\(path)” is not a folder.")
         case .serverTrashFailed(let name, let reason):
             return String(localized: "Could not move “\(name)” to the server's Trash (\(reason.localizedText)). Nothing was deleted.")
+        case .notAFile(let name):
+            return String(localized: "“\(name)” on the server is not a file any more; nothing was uploaded.")
         case .sftp(let error): return FilesPane.remoteErrorText(error)
         case .connect(let failure): return failure.localizedText
         case .posix(let code, let name): return "\(Self.posixText(code)) (\(name))"
