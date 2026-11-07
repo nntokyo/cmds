@@ -87,6 +87,8 @@ final class SyncServer {
         /// `hello.features` has `SyncFeature.styles`: screens carry the rows' colours and attributes; other phones get
         /// `ScreenSnapshot.withoutStyles`.
         var drawsStyles = false
+        /// `hello.features` has `SyncFeature.schedules`: gets the read-only `schedules` summary (SyncServer+Schedules).
+        var wantsSchedules = false
         /// Streaming phones: per subscribed pane whose `requestScrollback` was answered, where their rows above the
         /// screen end. Dropped with `historyReset` (the phone asks again).
         var historyMarks: [String: HistoryMark] = [:]
@@ -154,6 +156,13 @@ final class SyncServer {
     private var stateScheduled = false
     private var lastStateSentAt = Date.distantPast
     private var lastStateData: Data?
+
+    /// `schedules` messages (SyncServer+Schedules.swift): runner changes, paced to one per `SyncSchedules.interval`.
+    var schedulesCancellable: AnyCancellable?
+    var schedulesScheduled = false
+    var lastSchedulesSentAt: Date?
+    /// The last `schedules` broadcast; an unchanged summary is not sent again.
+    var lastSchedulesData: Data?
 
     private init() {
         macName = Host.current().localizedName ?? ProcessInfo.processInfo.hostName
@@ -237,11 +246,14 @@ final class SyncServer {
         usageCancellable = AppController.shared.usageChanges.sink { [weak self] in
             self?.usageDidChange()
         }
+        observeSchedules()
     }
 
     func stop() {
         changesCancellable = nil
         usageCancellable = nil
+        schedulesCancellable = nil
+        lastSchedulesData = nil
         listener?.cancel()
         listener = nil
         port = nil
@@ -733,10 +745,13 @@ final class SyncServer {
             client.supportsFiles = hello.features?.contains(SyncFeature.filesPanes) == true
             client.streamsHistory = hello.features?.contains(SyncFeature.scrollbackStream) == true
             client.drawsStyles = hello.features?.contains(SyncFeature.styles) == true
+            client.wantsSchedules = SyncSchedules.isWanted(by: hello)
             send(.welcome(.init(macName: macName, token: plainToken,
-                                features: [SyncFeature.scrollback, SyncFeature.scrollbackStream, SyncFeature.styles])),
+                                features: [SyncFeature.scrollback, SyncFeature.scrollbackStream, SyncFeature.styles,
+                                           SyncFeature.schedules])),
                  to: client)
             send(.state(currentState(for: client)), to: client)
+            if client.wantsSchedules { sendSchedules(to: client) }
             // This client may now be ahead of the last broadcast; never skip the next one as a duplicate.
             lastStateData = nil
             didChange()

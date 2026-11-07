@@ -2,7 +2,8 @@
 import Foundation
 import XCTest
 
-// Phones against an isolated instance, for the end-to-end sync tests (SyncScrollbackTests, SyncRevokeTests;
+// Phones against an isolated instance, for the end-to-end sync tests (SyncScrollbackTests, SyncRevokeTests,
+// SyncSchedulesE2ETests;
 // docs/internals/testing.md "Sync against an isolated instance").
 
 struct SyncE2EFailure: Error, CustomStringConvertible {
@@ -65,6 +66,8 @@ final class SyncE2EPhone {
     private(set) var lastScrollbackStyles: [RowStyle]?
     /// Every `scrolledOff` row received, in order, with its runs from `scrolledOffStyles`.
     private(set) var scrolledOffRows: [StyledRow] = []
+    /// The frame of the last message, as the Mac sent it (SyncSchedulesE2ETests).
+    private(set) var lastFrame = Data()
 
     init(_ instance: SyncE2EInstance, hello: ClientMessage.Hello) throws {
         let tls = SyncTLS.clientOptions(policy: .pinned(instance.payload.fingerprint), queue: .global()) { _ in }
@@ -84,8 +87,9 @@ final class SyncE2EPhone {
     }
 
     /// Next message from the Mac; screens go into `mirror` (a diff that does not fit asks for the screen).
-    func next() throws -> ServerMessage {
-        guard let data = client.receive() else { throw SyncE2EFailure("no message from the Mac") }
+    func next(timeout: TimeInterval = 10) throws -> ServerMessage {
+        guard let data = client.receive(timeout: timeout) else { throw SyncE2EFailure("no message from the Mac") }
+        lastFrame = data
         let message = try codec.decodeServerMessage(data)
         let result: ScreenMirror.ApplyResult
         switch message {

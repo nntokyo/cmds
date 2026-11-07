@@ -146,6 +146,14 @@ In addition to `CMDS_SUPPORT_DIR`, which also selects separate keychain items fo
   same text and no styles. A second test checks the runs of the rows above the screen, in the `scrollback` answer and
   in `scrolledOff` rows, and that a phone without the feature gets those rows plain.
 
+- Schedules test against an isolated instance: `CMDS_SCHEDULES_E2E_PAIRING=$CMDS_SUPPORT_DIR/sync-test-pairing.txt
+  swift test --filter SyncSchedulesE2ETests` (in `Packages/CmdsCore`) pairs a phone with `schedules`, adds a schedule
+  three hours ahead through the socket (as `cmds schedule add`; it does not fire during the test) whose prompt, command
+  and folder carry markers, and checks the summary (no marker in the frame), that a burst of changes arrives at most
+  once a second ending with the last state, that a phone without the feature gets no `schedules`, and the removal.
+  It removes the schedule at the end. On the phone side, `-mock` sends demo schedules (`-mockNoSchedules`: none;
+  `-mockShowSchedules YES` opens ⋯ › Schedules at launch, for screenshots).
+
 ### Files panes on SSH hosts
 
 The same throwaway sshd serves SFTP, starting in `<dir>/sftp-home` (so the "home" and the server Trash of the test

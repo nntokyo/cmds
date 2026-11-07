@@ -5,59 +5,9 @@ import CmdsCore
 /// (`ScheduleReason.english`, `ScheduleProblem.english`).
 @MainActor
 enum ScheduleText {
-    static func reason(_ reason: ScheduleReason) -> String {
-        switch reason {
-        case .confirmed: return String(localized: "The agent started working on the prompt.")
-        case .unconfirmed: return String(localized: "The prompt was sent, but the agent was not seen working.")
-        case .commandTyped: return String(localized: "The command was typed.")
-        case .workspaceOpened: return String(localized: "The workspace was opened.")
-        case .previousRunActive: return String(localized: "The previous run was still active.")
-        case .tooManyRuns: return String(localized: "Too many runs were active.")
-        case .paneInUse: return String(localized: "Another run was using the pane.")
-        case .allAccountsLimited: return String(localized: "Every account has hit its limit.")
-        case .agentRunning: return String(localized: "An agent was running in the pane.")
-        case .otherProgram: return String(localized: "The pane was running another program.")
-        case .agentNotRunning: return String(localized: "No agent was running in the pane.")
-        case .differentSession: return String(localized: "The pane was running a different session.")
-        case .ambiguousSession: return String(localized: "Several panes hold the session.")
-        case .movedToOtherAccount: return String(localized: "The session had moved to another account.")
-        case .notClaude: return String(localized: "The agent in the pane is not Claude Code.")
-        case .notCodex: return String(localized: "The agent in the pane is not Codex.")
-        case .paneNotFound: return String(localized: "The target pane was not found.")
-        case .ambiguousTarget: return String(localized: "Several panes match the target.")
-        case .skippedByUser: return String(localized: "Skipped on request.")
-        case .accountRemoved: return String(localized: "The account was removed.")
-        case .accountStillLimited: return String(localized: "The account was still limited.")
-        case .paneClosed: return String(localized: "The pane was closed.")
-        case .shellNotReady: return String(localized: "The shell prompt did not become ready.")
-        case .agentDidNotStart: return String(localized: "The agent did not start.")
-        case .agentBusy: return String(localized: "The agent stayed busy.")
-        case .sessionNotFound: return String(localized: "No pane holds the session, and its folder is not known.")
-        case .folderMissing: return String(localized: "The folder does not exist.")
-        case .invalidSchedule: return String(localized: "The schedule is not valid any more.")
-        case .resumeNotPossible: return String(localized: "The session cannot be resumed.")
-        case .missed: return String(localized: "The Mac was asleep or cmds was not running.")
-        case .cancelledByUser: return String(localized: "Cancelled.")
-        case .scheduleRemoved: return String(localized: "The schedule was removed.")
-        case .appQuit: return String(localized: "cmds quit during the run.")
-        case .other: return String(localized: "Unknown reason.")
-        }
-    }
+    static func reason(_ reason: ScheduleReason) -> String { ScheduleStrings.reason(reason) }
 
-    static func state(_ state: ScheduleRunState) -> String {
-        switch state {
-        case .waitingForAccount: return String(localized: "Waiting for the account")
-        case .waitingForPane: return String(localized: "Waiting for the shell")
-        case .typing: return String(localized: "Typing")
-        case .waitingForAgent: return String(localized: "Waiting for the agent")
-        case .confirming: return String(localized: "Confirming")
-        case .succeeded: return String(localized: "Succeeded")
-        case .failed: return String(localized: "Failed")
-        case .skipped: return String(localized: "Skipped")
-        case .missed: return String(localized: "Missed")
-        case .cancelled: return String(localized: "Cancelled")
-        }
-    }
+    static func state(_ state: ScheduleRunState) -> String { ScheduleStrings.state(state) }
 
     /// One line for a notification or the history: `Skipped: the pane was running another program.`
     static func outcome(_ run: ScheduleRun) -> String {
@@ -68,13 +18,7 @@ enum ScheduleText {
         return "\(state(run.state)) — \(self.reason(reason))"
     }
 
-    static func cause(_ cause: ScheduleRun.Cause) -> String {
-        switch cause {
-        case .scheduled: return String(localized: "Scheduled")
-        case .catchUp: return String(localized: "Catch-up")
-        case .manual: return String(localized: "Run Now")
-        }
-    }
+    static func cause(_ cause: ScheduleRun.Cause) -> String { ScheduleStrings.cause(cause) }
 
     /// A refused change: the runner's message (English, as for the API), else the error itself.
     static func error(_ error: Error) -> String {
@@ -113,42 +57,19 @@ enum ScheduleText {
 
     /// `Weekdays 09:00`, `When “work” resets (15:00) + 1 min`, `Once, Nov 4 02:00`.
     static func trigger(_ trigger: ScheduleTrigger, accounts: [ClaudeAccount]) -> String {
+        var reset: Date?
         switch trigger {
-        case .once(let at):
-            return String(localized: "Once, \(time(at))")
-        case .weekly(let rule):
-            let times = rule.times.map(\.text).joined(separator: String(localized: ", ", comment: "list separator"))
-            var text = "\(days(rule.weekdays)) \(times)"
-            if let zone = rule.timeZone { text += " (\(zone))" }
-            return text
-        case .limitReset(let name, let delay, let repeats):
-            let reset = accounts.first { $0.hasName(name) }?.limit.flatMap { $0.isActive() ? time($0.resetsAt) : nil }
-            let base = repeats ? String(localized: "Every time “\(name)” resets") : String(localized: "When “\(name)” resets")
-            return limitText(base, reset: reset, delay: delay)
-        case .codexLimitReset(let delay, let repeats):
-            let reset = AppController.shared.agentLimitsByKind[.codex]?.exhaustedReset.flatMap { $0 > Date() ? time($0) : nil }
-            let base = repeats ? String(localized: "Every time Codex resets") : String(localized: "When Codex resets")
-            return limitText(base, reset: reset, delay: delay)
+        case .once, .weekly:
+            break
+        case .limitReset(let name, _, _):
+            reset = accounts.first { $0.hasName(name) }?.limit.flatMap { $0.isActive() ? $0.resetsAt : nil }
+        case .codexLimitReset:
+            reset = AppController.shared.agentLimitsByKind[.codex]?.exhaustedReset.flatMap { $0 > Date() ? $0 : nil }
         }
+        return ScheduleStrings.trigger(trigger, reset: reset)
     }
 
-    /// `When “work” resets (15:00) + 1 min`.
-    private static func limitText(_ base: String, reset: String?, delay: TimeInterval) -> String {
-        let minutes = Int((delay / 60).rounded())
-        var text = base
-        if let reset { text += " (\(reset))" }
-        if minutes > 0 { text += String(localized: " + \(minutes) min") }
-        return text
-    }
-
-    static func days(_ weekdays: Set<Weekday>) -> String {
-        if weekdays == Set(Weekday.allCases) { return String(localized: "Every day") }
-        if weekdays == Weekday.workdays { return String(localized: "Weekdays") }
-        if weekdays == [.sat, .sun] { return String(localized: "Weekends") }
-        let formatter = DateFormatter()
-        let symbols = formatter.shortWeekdaySymbols ?? []
-        return weekdays.sorted().compactMap { symbols[safe: $0.calendarWeekday - 1] }.joined(separator: " ")
-    }
+    static func days(_ weekdays: Set<Weekday>) -> String { ScheduleStrings.days(weekdays) }
 
     /// `Start “app”: claude + prompt`, `Continue “Fix login”`.
     static func action(_ action: ScheduleAction) -> String {
@@ -219,12 +140,5 @@ enum ScheduleText {
     }
 
     /// `15:00` today, `Thu 09:00` this week, else `Nov 12 09:00`.
-    static func time(_ date: Date, now: Date = Date()) -> String {
-        let calendar = Calendar.current
-        if calendar.isDate(date, inSameDayAs: now) { return date.formatted(date: .omitted, time: .shortened) }
-        if abs(date.timeIntervalSince(now)) < 6 * 86400 {
-            return date.formatted(.dateTime.weekday(.abbreviated).hour().minute())
-        }
-        return date.formatted(.dateTime.month(.abbreviated).day().hour().minute())
-    }
+    static func time(_ date: Date, now: Date = Date()) -> String { ScheduleStrings.time(date, now: now) }
 }

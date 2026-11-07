@@ -136,6 +136,8 @@ public enum ServerMessage: Equatable, Sendable {
     case pong(Pong)
     case file(File)
     case scrollback(Scrollback)
+    /// `SyncFeature.schedules`: the Mac's schedules, read only (`Schedules`, SyncSchedules.swift).
+    case schedules(Schedules)
 
     /// Authentication succeeded. The phone stores `token` (Keychain, per Mac) for future connects.
     public struct Welcome: Codable, Equatable, Sendable {
@@ -374,6 +376,7 @@ public enum ServerMessage: Equatable, Sendable {
         case .pong: return "pong"
         case .file: return "file"
         case .scrollback: return "scrollback"
+        case .schedules: return "schedules"
         }
     }
 }
@@ -436,6 +439,7 @@ extension ServerMessage: Codable {
         case "pong": self = .pong(try Pong(from: decoder))
         case "file": self = .file(try File(from: decoder))
         case "scrollback": self = .scrollback(try Scrollback(from: decoder))
+        case "schedules": self = .schedules(try Schedules(from: decoder))
         default: throw UnknownSyncMessageType(type: type)
         }
     }
@@ -451,6 +455,7 @@ extension ServerMessage: Codable {
         case .pong(let p): try p.encode(to: encoder)
         case .file(let p): try p.encode(to: encoder)
         case .scrollback(let p): try p.encode(to: encoder)
+        case .schedules(let p): try p.encode(to: encoder)
         }
         var c = encoder.container(keyedBy: SyncTypeKey.self)
         try c.encode(typeName, forKey: .type)

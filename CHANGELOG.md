@@ -14,6 +14,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   phones keep getting plain text. The rows above the screen (earlier output) keep theirs too. Built on a new libghostty patch, `ghostty_surface_read_text_vt` (#113).
 - iPhone/iPad: terminal screens and their earlier output in colour, with bold, italic, underlined, inverse and faint text and backgrounds on the
   cell grid, from a Mac that sends them; the 16 ANSI colours use a palette made for the dark terminal screen (#113).
+- Mac: schedules go to the iPhone/iPad as a read-only summary (name, trigger, kind of action, next run, results and
+  recent runs; never prompts, commands, texts or folders), only to phones that ask for them (sync feature
+  `schedules`) (#45).
+- iPhone/iPad: ⋯ › Schedules lists the Mac's schedules with their next run, the run in progress or the last result
+  with its reason, and the recent runs, read only, from a Mac that sends them (#45).
 - Mac: compare and sync folders. **Compare and Sync with Other Pane…** (⇧F2, Pane › Files or the right-click menu)
   compares the folders of two files panes, on this Mac or SSH hosts (local ↔ remote, remote ↔ remote, local ↔ local),
   recursively by name, size and date, and lists what differs: only on one side, modified, a link (never followed or
