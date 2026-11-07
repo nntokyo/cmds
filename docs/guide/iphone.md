@@ -53,7 +53,9 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   agent of each workspace, with the Claude account its pane runs under (`@work`) and, while that account is at a limit,
   when it resets (Mac 0.11.0 or later). The bottom bar shows the Mac's CPU, memory and memory pressure and each agent's account
   limits. Long-press a workspace for **Show on Mac**.
-- **Panes**: each terminal's live screen, with pinch to zoom; it follows the cursor row. Swipe down for earlier output
+- **Panes**: each terminal's live screen, with pinch to zoom; it follows the cursor row. Colours and bold, italic,
+  underlined or inverse text are shown as on the Mac (with a cmds release after 0.12.0 on the Mac; earlier ones send
+  plain text), also in the earlier output above the screen. Swipe down for earlier output
   (up to 500 rows above the screen when you open the pane, 200 over Bluetooth; iOS 18 or later, and cmds 0.3.0 or later
   on the Mac): while you read it the screen stays put, and **Latest** (最新へ) or scrolling back down returns to the
   live screen. With cmds 0.4.0 or later on the Mac the earlier output keeps up, also while you read it: the rows that

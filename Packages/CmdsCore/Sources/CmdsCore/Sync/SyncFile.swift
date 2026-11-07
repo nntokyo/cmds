@@ -16,6 +16,9 @@ public enum SyncFeature {
     /// Phone: decodes `PaneKind.files`. Phones without it get files panes as browser panes (`url` = the folder's
     /// `file://` URL), like preview panes before `previewPanes`.
     public static let filesPanes = "files"
+    /// Phone (`hello.features`) and Mac (`welcome.features`): `screen` carries `styles` and `screenDiff` rows carry
+    /// `runs`, the colours and attributes of the rows (`StyleRun`). Phones without it get plain text only.
+    public static let styles = "styles"
 }
 
 /// Sending the file of a preview pane to the phone in `file` messages (`requestFile`).

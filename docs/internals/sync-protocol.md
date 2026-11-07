@@ -138,7 +138,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"files"` (see "Files panes"), `"scrollbackStream"` (see "Scrollback"). The Mac lists what it answers in `welcome.features`. |
+| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"files"` (see "Files panes"), `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"). The Mac lists what it answers in `welcome.features`. |
 | `subscribe` | `paneIDs:[String]` | Replaces the streamed set. Mac sends a full `screen` for each new pane. `[]` stops streaming. |
 | `requestScreen` | `paneID` | Ask for a full `screen` (after a diff gap). |
 | `input` | `paneID, text` | Typed/pasted text, sent as-is (no newline translation). |
@@ -153,15 +153,15 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `welcome` | `protocolVersion, macName, token, features?:[String]` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. `features`: optional requests this Mac answers (`SyncFeature`): `"scrollback"`, `"scrollbackStream"` (see "Scrollback"); absent from older Macs. |
+| `welcome` | `protocolVersion, macName, token, features?:[String]` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. `features`: optional requests this Mac answers (`SyncFeature`): `"scrollback"`, `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"); absent from older Macs. |
 | `error` | `code:SyncErrorCode, message` | Codes: `unsupportedVersion pairingRequired invalidPairingCode invalidToken rateLimited notAuthenticated badRequest notFound internal`. After auth errors (`isAuthFailure`) the Mac closes the socket. |
 | `state` | `workspaces:[WorkspaceInfo], system?:SystemStats, agentLimits?:[AgentLimits], accountLimits?:[{name, resetsAt, estimated}]` | `accountLimits` = the Mac's Claude accounts (Settings › Agents › Claude accounts) at a limit now, with its end (epoch s); `name` matches `PaneInfo.account`; names only; omitted when none is limited or by older Macs (#112). `agentLimits` = latest account limits per coding agent (`{agent: claude/codex/other, limits:[{id: five_hour/seven_day/spend/…, usedPercent, resetsAt? (epoch s), windowMinutes?, usedUSD?, limitUSD?, period?}], plan?, updatedAt}`), omitted when none is known or by older Macs; panes running an agent carry `PaneInfo.agent?` (`AgentUsage`, see [reference/api.md](../reference/api.md#types)). Agent figures alone change at the same ≤ 2 s cadence as CPU/memory. Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
-| `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?, scrolledOff?:[String], historyReset?:Bool` | Full visible screen, i.e. the Mac's viewport (the rows above it: `requestScrollback`). Trailing spaces may be trimmed. Cursor nil = hidden. `scrolledOff` / `historyReset`: phones with `"scrollbackStream"` only, see "Scrollback". |
-| `screenDiff` | `paneID, seq, baseSeq, changes:[{row,text}], cursorRow?, cursorCol?, scrolledOff?, historyReset?` | Only when rows/cols unchanged. Applies to the screen with `seq == baseSeq`; cursor is absolute. `scrolledOff` / `historyReset` as in `screen`. |
+| `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?, scrolledOff?:[String], historyReset?:Bool, styles?:[{row, runs}]` | Full visible screen, i.e. the Mac's viewport (the rows above it: `requestScrollback`). Trailing spaces may be trimmed. Cursor nil = hidden. `scrolledOff` / `historyReset`: phones with `"scrollbackStream"` only, see "Scrollback". `styles`: phones with `"styles"` only, the rows that have colours or attributes, see "Styles"; `scrolledOffStyles?:[{row, runs}]` the same for `scrolledOff`. |
+| `screenDiff` | `paneID, seq, baseSeq, changes:[{row,text,runs?}], cursorRow?, cursorCol?, scrolledOff?, historyReset?, scrolledOffStyles?` | Only when rows/cols unchanged. Applies to the screen with `seq == baseSeq`; cursor is absolute. `scrolledOff` / `historyReset` / `scrolledOffStyles` as in `screen`. `runs`: phones with `"styles"` only; a row changes when its text or its runs change, and a changed row without `runs` is plain. |
 | `notification` | `paneID?, workspaceID, title, body` | Pane raised attention (agent waiting, OSC 9/777…). Phone posts a local notification. |
 | `pong` | `nonce?` | Echo of `ping.nonce`. |
 | `file` | `paneID, name, mime, size:Int, offset:Int, data:base64, truncated?:Bool` | Answer to `requestFile`: bytes `offset ..< offset+len(data)` of the `size`-byte file, in pieces of ≤ 2 MiB (`SyncFile.chunkBytes`, so a frame stays under 4 MiB), in order; complete when the pieces reach `size` (an empty file is one piece with `size` 0). `truncated: true` (no data): over `SyncFile.maxBytes` (10 MB) or unreadable. |
-| `scrollback` | `paneID, seq, lines:[String]` | Answer to `requestScrollback`, sent right after the full `screen` with the same `seq`: the rows above that screen, oldest first, the last one directly above its first row. One entry per displayed row (soft wraps kept, trailing spaces trimmed); empty when there are none. |
+| `scrollback` | `paneID, seq, lines:[String], styles?:[{row, runs}]` | Answer to `requestScrollback`, sent right after the full `screen` with the same `seq`: the rows above that screen, oldest first, the last one directly above its first row. One entry per displayed row (soft wraps kept, trailing spaces trimmed); empty when there are none. `styles`: phones with `"styles"` only, see "Styles". |
 
 `seq` increases per pane for every `screen`/`screenDiff` and never goes backwards on a connection.
 The phone (`ScreenMirror`) ignores stale messages and sends `requestScreen` when a diff's `baseSeq`
@@ -271,6 +271,43 @@ count from the top of the scrollback, so pruning moves every row up by the rows 
   in a way the counts do not show (`historyReset`). Cost per tick: about 35 µs for the scrollbar reads, and about
   3 µs per row sent (0.33 ms for 100 rows).
 
+## Styles
+
+A phone that lists `"styles"` (`SyncFeature.styles`) in `hello.features` gets the colours and attributes of the screen
+rows from Macs that list it in `welcome.features` (#113). Code: `CmdsCore/TerminalStyle.swift`.
+
+- **Runs.** A row's style is a list of runs, sorted and not overlapping, only for cells that are not plain: the
+  default colours and no attributes are implicit, and a plain row has no runs. A run is an array of integers
+  `[column, length, attributes, fg, bg]` (`StyleRun`), trailing defaults left out: `[0,4,1]` bold, `[6,3,0,1]` palette
+  red, `[0,80,16,-1,4]` inverse on palette blue.
+  - `column`, `length`: cells of the phone's grid over the row's text, counted with `TerminalCells` (a wide character
+    is 2). A run may reach past the end of the text (a background up to the right edge, over blank cells).
+  - `attributes`: bits, 1 bold, 2 faint, 4 italic, 8 underline (any style), 16 inverse, 32 strikethrough, 64
+    invisible. Unknown bits are ignored.
+  - `fg`, `bg`: -1 the default colour; 0–255 a palette index (0–15 the ANSI colours, which the phone maps to its own
+    palette, 16–255 the xterm cube and greys); `0x1000000 + 0xRRGGBB` an RGB colour. Other values are ignored.
+    Underline colour, blink, overline and fonts are not sent.
+- **`screen.styles`**: `[{row, runs}]` for the rows that have runs (`row` indexes `lines`); omitted when every row is
+  plain. **`screenDiff`**: each changed row carries its `runs` (omitted: plain). A row whose runs changed is a change
+  even when its text did not.
+- **Size.** Only styled rows carry anything, so plain output costs nothing and a coloured prompt a few bytes; a
+  full-colour TUI can add a few kilobytes per screen. The Mac reads styles only for panes a phone with the feature
+  streams.
+- **Rows above the screen** carry theirs the same way, indexed into their own array: `scrollback.styles` into
+  `scrollback.lines`, and `scrolledOffStyles` (on `screen` / `screenDiff`) into `scrolledOff`; omitted when none of
+  those rows has runs (and never without rows, e.g. with `historyReset`). The Mac reads them like the screen's rows
+  (screen points, `ghostty_surface_read_text_vt`) only for phones with the feature. The phone keeps them by row number
+  with the rows (`PaneHistory.runs`); an answer that continues the shown rows adds only the newer rows' runs.
+- **Older Macs** send none of these fields; **older phones** do not list the feature and get exactly the plain messages
+  (`ScreenSnapshot.withoutStyles`; a change of styles alone sends them nothing).
+- **The Mac** reads each row of a pane streamed to such a phone with `ghostty_surface_read_text_vt` (cmds' libghostty
+  patch `0002`: Ghostty's formatter in VT mode, without a palette, so colours stay palette indexes) and
+  `TerminalStyledText` turns it into the row's text and runs (SGR, CUF over blank cells as spaces, ECH for cells that
+  only carry a background, OSC 8 skipped). The text is the plain read's, trailing spaces aside.
+- **The phone** (`TerminalGrid` in `PaneView.swift`) draws backgrounds as cells of the grid behind the text, inverse
+  swaps the colours, faint dims the text, invisible text takes the background colour. Its terminal screen is always
+  dark; ANSI 0–15 come from `TerminalPalette` (CmdsCore), made for it.
+
 ## Mac identity
 
 - Created on the first sync start (`SyncIdentityStore`, `App/Sources/Sync/SyncIdentity.swift`): an
@@ -364,7 +401,8 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
   `parse(_:)`), `SyncCertificate.make(...)`, `DER`.
 - `ScreenStreamer` (per connection; `full(paneID:snapshot:)` for `requestScrollback`), `ScreenSnapshot` (rows, cols,
   lines, cursor); `ServerMessage.withHistory(scrolledOff:reset:)` for `scrollbackStream`.
-- `ScreenDiffer.diff(from:to:)` / `apply(_:to:)` for custom use.
+- `ScreenDiffer.diff(from:to:)` / `apply(_:to:)` for custom use (lines, or snapshots with their styles).
+- `TerminalStyledText.parse(_:)` (VT row → text and `StyleRun`s), `TerminalPalette.rgb(_:)`.
 - `SyncKey.terminalBytes(applicationCursor:)` if writing keys straight to the pty.
 
 ## Security and threat model

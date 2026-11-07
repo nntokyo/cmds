@@ -147,14 +147,29 @@ public struct SyncErrorCode: RawRepresentable, Codable, Hashable, Sendable, Cust
 public struct LineChange: Codable, Equatable, Sendable {
     public var row: Int
     public var text: String
+    /// `SyncFeature.styles`: the row's style runs; nil when the row is plain (or for phones without the feature).
+    public var runs: [StyleRun]?
 
-    public init(row: Int, text: String) {
+    public init(row: Int, text: String, runs: [StyleRun]? = nil) {
         self.row = row
         self.text = text
+        self.runs = runs
     }
 }
 
-/// Plain-text screen contents of one terminal pane (what is visible, no scrollback).
+/// The style runs of one row of a `screen` (`SyncFeature.styles`); only rows that have any are sent.
+public struct RowStyle: Codable, Equatable, Sendable {
+    public var row: Int
+    public var runs: [StyleRun]
+
+    public init(row: Int, runs: [StyleRun]) {
+        self.row = row
+        self.runs = runs
+    }
+}
+
+/// Screen contents of one terminal pane (what is visible, no scrollback): the rows' text, and their colours and
+/// attributes when the Mac read them (`SyncFeature.styles`).
 public struct ScreenSnapshot: Codable, Equatable, Sendable {
     public var rows: Int
     public var cols: Int
@@ -162,14 +177,56 @@ public struct ScreenSnapshot: Codable, Equatable, Sendable {
     public var lines: [String]
     public var cursorRow: Int?
     public var cursorCol: Int?
+    /// Style runs per row (exactly `rows` entries, empty for a plain row), or nil when every row is plain or styles
+    /// were not read. `init` and `setRuns` keep it nil rather than all empty, so equal screens compare equal.
+    public private(set) var styles: [[StyleRun]]?
 
-    public init(rows: Int, cols: Int, lines: [String], cursorRow: Int? = nil, cursorCol: Int? = nil) {
+    public init(rows: Int, cols: Int, lines: [String], cursorRow: Int? = nil, cursorCol: Int? = nil,
+                styles: [[StyleRun]]? = nil) {
         self.rows = rows
         self.cols = cols
         self.lines = lines
         self.cursorRow = cursorRow
         self.cursorCol = cursorCol
+        self.styles = Self.normalized(styles, count: lines.count)
     }
 
     public static let empty = ScreenSnapshot(rows: 0, cols: 0, lines: [])
+
+    /// The runs of `row` (empty: plain).
+    public func runs(row: Int) -> [StyleRun] {
+        guard let styles, styles.indices.contains(row) else { return [] }
+        return styles[row]
+    }
+
+    /// Replaces the runs of `row` (nil or empty: plain).
+    public mutating func setRuns(_ runs: [StyleRun]?, row: Int) {
+        guard lines.indices.contains(row) else { return }
+        let runs = runs ?? []
+        if styles == nil {
+            guard !runs.isEmpty else { return }
+            styles = Array(repeating: [], count: lines.count)
+        }
+        styles?[row] = runs
+        styles = Self.normalized(styles, count: lines.count)
+    }
+
+    /// The same screen without styles, for phones without `SyncFeature.styles`.
+    public var withoutStyles: ScreenSnapshot {
+        var plain = self
+        plain.styles = nil
+        return plain
+    }
+
+    /// The rows that have runs, as sent in `screen.styles`; nil when none has.
+    public var rowStyles: [RowStyle]? {
+        styles.flatMap(RowStyle.sparse)
+    }
+
+    private static func normalized(_ styles: [[StyleRun]]?, count: Int) -> [[StyleRun]]? {
+        guard var styles, styles.contains(where: { !$0.isEmpty }) else { return nil }
+        if styles.count > count { styles.removeLast(styles.count - count) }
+        if styles.count < count { styles += Array(repeating: [], count: count - styles.count) }
+        return styles
+    }
 }

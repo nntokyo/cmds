@@ -43,7 +43,8 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 - iPhone/iPad with iOS/iPadOS 17 or later for the companion (optional).
 - To build: Xcode (Swift 5.10, so Xcode 15.3 or later; developed with Xcode 27), [XcodeGen](https://github.com/yonaskolb/XcodeGen),
   and [Zig](https://ziglang.org) 0.17.0 (the version the pinned Ghostty requires; check with `zig version`, and get
-  that exact release from ziglang.org if your package manager has another) to build GhosttyKit.
+  that exact release from ziglang.org if your package manager has another) to build GhosttyKit, and Xcode's Metal Toolchain
+  (`xcodebuild -downloadComponent MetalToolchain` if `xcrun metal` says it is missing).
 
 ## Build from source
 

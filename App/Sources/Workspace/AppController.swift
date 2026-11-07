@@ -383,15 +383,26 @@ final class AppController {
         try terminal(for: paneID).historyRows(maxRows: maxRows)
     }
 
+    /// `historyRows` with each row's style runs (`TerminalSurface.historyStyledRows`).
+    func historyStyledRows(paneID: String?, maxRows: Int) throws -> [(text: String, runs: [StyleRun])]? {
+        try terminal(for: paneID).historyStyledRows(maxRows: maxRows)
+    }
+
     /// Where the pane's visible screen is in its whole screen (`TerminalSurface.scrollbar`).
     func scrollbar(paneID: String?) throws -> TerminalScrollbar? {
         try terminal(for: paneID).scrollbar()
     }
 
-    /// Visible screen with its grid size and cursor, read back to back.
-    func screenState(paneID: String?) throws -> (text: String, grid: (rows: Int, cols: Int)?, cursor: (row: Int, col: Int)?) {
+    /// Visible screen with its grid size and cursor, read back to back. `styled`: the rows' colours and attributes too
+    /// (`TerminalSurface.visibleStyledRows`; nil when the engine cannot read them), with the text read along with them.
+    func screenState(paneID: String?, styled: Bool = false) throws
+        -> (text: String, styles: [[StyleRun]]?, grid: (rows: Int, cols: Int)?, cursor: (row: Int, col: Int)?) {
         let terminal = try terminal(for: paneID)
-        return (terminal.visibleText(), terminal.gridSize, terminal.cursorPosition)
+        if styled, let rows = terminal.visibleStyledRows() {
+            return (rows.map(\.text).joined(separator: "\n"), rows.map(\.runs), terminal.gridSize,
+                    terminal.cursorPosition)
+        }
+        return (terminal.visibleText(), nil, terminal.gridSize, terminal.cursorPosition)
     }
 
     /// Lights the pane's ring (unless it is the focused pane in the key window), updates the sidebar

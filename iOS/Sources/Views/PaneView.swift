@@ -136,7 +136,7 @@ struct TerminalScreenView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(Color(white: 0.08))
+        .background(TerminalGrid.background)
         .overlay {
             if attention {
                 Rectangle().strokeBorder(Color.orange, lineWidth: 2).allowsHitTesting(false)
@@ -253,7 +253,7 @@ struct TerminalScreenView: View {
             VStack(alignment: .leading, spacing: 0) {
                 TerminalHistoryRows(history: above, fontSize: fontSize, lineH: lineH).equatable()
                 ForEach(Array(s.lines.enumerated()), id: \.offset) { row, line in
-                    TerminalRow(line: line, fontSize: fontSize, lineH: lineH).id(row)
+                    TerminalRow(line: line, runs: s.runs(row: row), fontSize: fontSize, lineH: lineH).id(row)
                 }
             }
             if let row = s.cursorRow, let col = s.cursorCol, row >= 0, row < s.rows {
@@ -288,19 +288,38 @@ struct TerminalScreenView: View {
     }
 }
 
-/// One terminal row, exactly one line high.
+/// One terminal row, exactly one line high, in its colours and attributes (`runs`, from Macs with
+/// `SyncFeature.styles`): backgrounds as cells of the grid behind the text, which may reach past it.
 private struct TerminalRow: View {
     let line: String
+    var runs: [StyleRun] = []
     let fontSize: CGFloat
     let lineH: CGFloat
 
     var body: some View {
-        TerminalGrid.text(line.isEmpty ? " " : line, fontSize: fontSize)
+        TerminalGrid.text(line.isEmpty ? " " : line, runs: runs, fontSize: fontSize)
             .font(.system(size: fontSize, design: .monospaced))
-            .foregroundStyle(Color(white: 0.92))
+            .foregroundStyle(TerminalGrid.foreground)
             .lineLimit(1)
             .fixedSize()
             .frame(height: lineH, alignment: .leading)
+            .background(alignment: .topLeading) {
+                if !runs.isEmpty { backgrounds }
+            }
+    }
+
+    private var backgrounds: some View {
+        let cellW = fontSize * TerminalGrid.cellWidthPerPoint
+        return ZStack(alignment: .topLeading) {
+            ForEach(Array(runs.enumerated()), id: \.offset) { _, run in
+                if let color = TerminalGrid.colors(run.style).background {
+                    Rectangle()
+                        .fill(color)
+                        .frame(width: CGFloat(run.length) * cellW, height: lineH)
+                        .offset(x: CGFloat(run.column) * cellW)
+                }
+            }
+        }
     }
 }
 
@@ -326,6 +345,8 @@ private struct TerminalHistoryRows: View, Equatable {
                 let start = max(first, block.index * Self.blockRows)
                 let stop = min(end, (block.index + 1) * Self.blockRows)
                 TerminalHistoryBlock(lines: history.lines[(start - first)..<(stop - first)], firstRow: start,
+                                     runs: history.runs.isEmpty ? [:]
+                                         : history.runs.filter { (start..<stop).contains($0.key) },
                                      fontSize: fontSize, lineH: lineH)
                     .equatable()
             }
@@ -337,13 +358,16 @@ private struct TerminalHistoryBlock: View, Equatable {
     let lines: ArraySlice<String>
     /// Row number of the first of `lines`.
     let firstRow: Int
+    /// Style runs of these rows, by row number (`PaneHistory.runs`).
+    let runs: [Int: [StyleRun]]
     let fontSize: CGFloat
     let lineH: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach((firstRow..<firstRow + lines.count).map(HistoryRowID.init(index:)), id: \.self) { row in
-                TerminalRow(line: lines[lines.startIndex + row.index - firstRow], fontSize: fontSize, lineH: lineH)
+                TerminalRow(line: lines[lines.startIndex + row.index - firstRow], runs: runs[row.index] ?? [],
+                            fontSize: fontSize, lineH: lineH)
             }
         }
     }
@@ -588,8 +612,10 @@ enum TerminalGrid {
     }
 
     /// `line` laid out on the grid: ASCII runs as they are; each run of other characters with the same correction
-    /// gets kerning so every character takes `TerminalCells.width` cells.
-    static func text(_ line: String, fontSize: CGFloat) -> Text {
+    /// gets kerning so every character takes `TerminalCells.width` cells. Characters in a style `run` get its
+    /// colour and attributes (backgrounds are drawn by the row, behind the text).
+    static func text(_ line: String, runs: [StyleRun] = [], fontSize: CGFloat) -> Text {
+        guard runs.isEmpty else { return styledText(line, runs: runs, fontSize: fontSize) }
         guard line.unicodeScalars.contains(where: { !$0.isASCII }) else { return Text(verbatim: line) }
         var result = Text(verbatim: "")
         var run = ""
@@ -601,8 +627,7 @@ enum TerminalGrid {
             run = ""
         }
         for character in line {
-            let kerning: CGFloat? = character.isASCII ? nil
-                : (CGFloat(TerminalCells.width(of: character)) * cellWidthPerPoint - advancePerPoint(character)) * fontSize
+            let kerning = self.kerning(character, fontSize: fontSize)
             if kerning != runKerning {
                 flush()
                 runKerning = kerning
@@ -611,5 +636,71 @@ enum TerminalGrid {
         }
         flush()
         return result
+    }
+
+    private static func kerning(_ character: Character, fontSize: CGFloat) -> CGFloat? {
+        character.isASCII ? nil
+            : (CGFloat(TerminalCells.width(of: character)) * cellWidthPerPoint - advancePerPoint(character)) * fontSize
+    }
+
+    /// `text` with style runs: segments split where the kerning or the style changes.
+    private static func styledText(_ line: String, runs: [StyleRun], fontSize: CGFloat) -> Text {
+        var result = Text(verbatim: "")
+        var segment = ""
+        var key: (kerning: CGFloat?, style: TerminalStyle?) = (nil, nil)
+        func flush() {
+            guard !segment.isEmpty else { return }
+            var text = Text(verbatim: segment)
+            if let kerning = key.kerning { text = text.kerning(kerning) }
+            if let style = key.style { text = styled(text, style) }
+            result = result + text
+            segment = ""
+        }
+        var column = 0
+        var next = 0 // first run that does not end at or before `column`
+        for character in line {
+            while next < runs.count, runs[next].end <= column { next += 1 }
+            let style = next < runs.count && runs[next].column <= column ? runs[next].style : nil
+            let kerning = self.kerning(character, fontSize: fontSize)
+            if kerning != key.kerning || style != key.style {
+                flush()
+                key = (kerning, style)
+            }
+            segment.append(character)
+            column += TerminalCells.width(of: character)
+        }
+        flush()
+        return result
+    }
+
+    private static func styled(_ text: Text, _ style: TerminalStyle) -> Text {
+        var text = text.foregroundColor(colors(style).foreground)
+        if style.attributes.contains(.bold) { text = text.bold() }
+        if style.attributes.contains(.italic) { text = text.italic() }
+        if style.attributes.contains(.underline) { text = text.underline() }
+        if style.attributes.contains(.strikethrough) { text = text.strikethrough() }
+        return text
+    }
+
+    /// Default text colour of the phone's terminal screen (its background is `TerminalScreenView`'s, near black).
+    static let foreground = Color(white: 0.92)
+    static let background = Color(white: 0.08)
+
+    /// Text colour and background (nil: the screen's own) of a style: inverse swaps them, faint dims the text,
+    /// invisible text takes the background's colour.
+    static func colors(_ style: TerminalStyle) -> (foreground: Color, background: Color?) {
+        var fg = style.foreground.map(color) ?? foreground
+        var bg = style.background.map(color)
+        if style.attributes.contains(.inverse) {
+            (fg, bg) = (bg ?? background, fg)
+        }
+        if style.attributes.contains(.faint) { fg = fg.opacity(0.55) }
+        if style.attributes.contains(.invisible) { fg = bg ?? background }
+        return (fg, bg)
+    }
+
+    static func color(_ color: TerminalColor) -> Color {
+        let rgb = TerminalPalette.rgb(color)
+        return Color(red: Double(rgb.r) / 255, green: Double(rgb.g) / 255, blue: Double(rgb.b) / 255)
     }
 }

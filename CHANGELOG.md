@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Mac: terminal screens go to the iPhone/iPad with their colours and attributes (palette, 256 and RGB colours, bold,
+  faint, italic, underline, inverse, strikethrough), only to phones that ask for them (sync feature `styles`); older
+  phones keep getting plain text. The rows above the screen (earlier output) keep theirs too. Built on a new libghostty patch, `ghostty_surface_read_text_vt` (#113).
+- iPhone/iPad: terminal screens and their earlier output in colour, with bold, italic, underlined, inverse and faint text and backgrounds on the
+  cell grid, from a Mac that sends them; the 16 ANSI colours use a palette made for the dark terminal screen (#113).
+
 ## [0.13.0] - 2026-11-07
 
 Mac only; the iPhone/iPad app is unchanged from 0.11.0.

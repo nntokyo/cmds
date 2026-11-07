@@ -84,6 +84,9 @@ final class SyncServer {
         var pendingScrollback: [String: Int] = [:]
         /// `hello.features` has `SyncFeature.scrollbackStream`: screen updates carry the rows that left the screen.
         var streamsHistory = false
+        /// `hello.features` has `SyncFeature.styles`: screens carry the rows' colours and attributes; other phones get
+        /// `ScreenSnapshot.withoutStyles`.
+        var drawsStyles = false
         /// Streaming phones: per subscribed pane whose `requestScrollback` was answered, where their rows above the
         /// screen end. Dropped with `historyReset` (the phone asks again).
         var historyMarks: [String: HistoryMark] = [:]
@@ -614,7 +617,7 @@ final class SyncServer {
             // The screen the phone has, so the rows above it are still the ones it has.
             send(msg, to: client)
         } else if let snapshot = snapshot(paneID: paneID) {
-            guard let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) else { return }
+            guard let msg = client.streamer.update(paneID: paneID, snapshot: snapshot.for(client)) else { return }
             // A screen read now, without knowing where its viewport is.
             let reset = client.historyMarks.removeValue(forKey: paneID) != nil
             send(reset ? msg.withHistory(scrolledOff: nil, reset: true) : msg, to: client)
@@ -729,8 +732,10 @@ final class SyncServer {
             client.supportsPreview = hello.features?.contains(SyncFeature.previewPanes) == true
             client.supportsFiles = hello.features?.contains(SyncFeature.filesPanes) == true
             client.streamsHistory = hello.features?.contains(SyncFeature.scrollbackStream) == true
+            client.drawsStyles = hello.features?.contains(SyncFeature.styles) == true
             send(.welcome(.init(macName: macName, token: plainToken,
-                                features: [SyncFeature.scrollback, SyncFeature.scrollbackStream])), to: client)
+                                features: [SyncFeature.scrollback, SyncFeature.scrollbackStream, SyncFeature.styles])),
+                 to: client)
             send(.state(currentState(for: client)), to: client)
             // This client may now be ahead of the last broadcast; never skip the next one as a duplicate.
             lastStateData = nil
@@ -891,8 +896,8 @@ final class SyncServer {
         let added = wanted.subtracting(client.subscribed)
         for paneID in added {
             client.streamer.reset(paneID: paneID)
-            if let snapshot = snapshot(paneID: paneID) {
-                if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot) { send(msg, to: client) }
+            if let snapshot = snapshot(paneID: paneID, styled: client.drawsStyles || stylesWanted(paneID)) {
+                if let msg = client.streamer.update(paneID: paneID, snapshot: snapshot.for(client)) { send(msg, to: client) }
             } else {
                 wanted.remove(paneID)
                 sendError(.notFound, "pane not found or not a terminal: \(paneID.prefix(64))", to: client)
@@ -911,6 +916,11 @@ final class SyncServer {
 
     private var subscribedPanes: Set<String> {
         clients.values.reduce(into: Set<String>()) { if $1.authenticated { $0.formUnion($1.subscribed) } }
+    }
+
+    /// A phone that draws styles streams the pane, so its screen is read with them (`SyncFeature.styles`).
+    func stylesWanted(_ paneID: String) -> Bool {
+        clients.values.contains { $0.authenticated && $0.drawsStyles && $0.subscribed.contains(paneID) }
     }
 
     private func pruneScreenCache() {
@@ -978,16 +988,20 @@ final class SyncServer {
         answerWaitingScrollbacks(now: now)
     }
 
-    /// Current screen of a pane, or nil if it does not exist / is not a terminal.
-    func snapshot(paneID: String) -> ScreenSnapshot? {
-        guard !paneID.isEmpty, let state = try? AppController.shared.screenState(paneID: paneID) else { return nil }
+    /// Current screen of a pane, or nil if it does not exist / is not a terminal. With the rows' styles when a phone
+    /// that draws them streams the pane (`styled`, by default `stylesWanted`); phones without `SyncFeature.styles` get
+    /// it `for(client)` without them.
+    func snapshot(paneID: String, styled: Bool? = nil) -> ScreenSnapshot? {
+        guard !paneID.isEmpty,
+              let state = try? AppController.shared.screenState(paneID: paneID, styled: styled ?? stylesWanted(paneID))
+        else { return nil }
         var lines = state.text.components(separatedBy: "\n").map(Self.trimmed)
         let rows = max(1, state.grid?.rows ?? lines.count)
         let cols = max(1, state.grid?.cols ?? lines.reduce(20) { max($0, $1.count) })
         if lines.count > rows { lines.removeLast(lines.count - rows) }
         if lines.count < rows { lines += Array(repeating: "", count: rows - lines.count) }
         return ScreenSnapshot(rows: rows, cols: cols, lines: lines,
-                              cursorRow: state.cursor?.row, cursorCol: state.cursor?.col)
+                              cursorRow: state.cursor?.row, cursorCol: state.cursor?.col, styles: state.styles)
     }
 
     /// A row as sent in `screen` and `scrollback`: without trailing spaces (or CR).

@@ -27,6 +27,8 @@ final class MockTransport: SyncTransport {
     /// This demo Mac streams scrolled-off rows (not with `-mockNoHistoryStream`), and the phone asked for them.
     private let streamsHistory = !ProcessInfo.processInfo.arguments.contains("-mockNoHistoryStream")
     private var phoneStreamsHistory = false
+    /// The phone listed `SyncFeature.styles`: its screens come with colours (`MockStyles`), like from a current Mac.
+    private var phoneDrawsStyles = false
     /// Panes whose `requestScrollback` was answered: their shell's `historyEpoch`, and its `scrolledCount` when the
     /// last screen update was sent.
     private var historyStreams: [String: (epoch: Int, scrolled: Int)] = [:]
@@ -52,7 +54,9 @@ final class MockTransport: SyncTransport {
         switch message {
         case .hello(let hello):
             phoneStreamsHistory = streamsHistory && hello.features?.contains(SyncFeature.scrollbackStream) == true
-            let features = [SyncFeature.scrollback] + (streamsHistory ? [SyncFeature.scrollbackStream] : [])
+            phoneDrawsStyles = hello.features?.contains(SyncFeature.styles) == true
+            let features = [SyncFeature.scrollback, SyncFeature.styles]
+                + (streamsHistory ? [SyncFeature.scrollbackStream] : [])
             deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token", features: features))))
             deliver(after: 0.1, .message(.state(currentState)))
             DispatchQueue.main.async { self.startTimer() }
@@ -101,8 +105,9 @@ final class MockTransport: SyncTransport {
             guard case .screen(let screen)? = streamer.fullScreen(paneID: request.paneID) else { return }
             emit(.screen(screen))
             let rows = MockData.history(paneID: request.paneID) + shell.scrolledOff
-            emit(.scrollback(.init(paneID: request.paneID, seq: screen.seq,
-                                   lines: Array(rows.suffix(SyncScrollback.clampedLines(request.lines))))))
+            let sent = Array(rows.suffix(SyncScrollback.clampedLines(request.lines)))
+            emit(.scrollback(.init(paneID: request.paneID, seq: screen.seq, lines: sent,
+                                   styles: phoneDrawsStyles ? MockStyles.rowStyles(sent) : nil)))
             // From here on, like the Mac: the rows that scroll off go with the screen updates.
             if phoneStreamsHistory {
                 historyStreams[request.paneID] = (shell.historyEpoch, shell.scrolledCount)
@@ -238,7 +243,9 @@ final class MockTransport: SyncTransport {
 
     private func pushScreens() {
         for paneID in subscribed.sorted() {
-            guard let shell = shells[paneID], let msg = streamer.update(paneID: paneID, snapshot: shell.snapshot) else { continue }
+            guard let shell = shells[paneID] else { continue }
+            let snapshot = phoneDrawsStyles ? MockStyles.styled(shell.snapshot) : shell.snapshot
+            guard let msg = streamer.update(paneID: paneID, snapshot: snapshot) else { continue }
             emit(withScrolledOffRows(msg, paneID: paneID, shell: shell))
         }
     }
@@ -254,7 +261,10 @@ final class MockTransport: SyncTransport {
             return msg.withHistory(scrolledOff: nil, reset: true)
         }
         historyStreams[paneID]?.scrolled = shell.scrolledCount
-        return new > 0 ? msg.withHistory(scrolledOff: Array(shell.scrolledOff.suffix(new)), reset: false) : msg
+        guard new > 0 else { return msg }
+        let rows = Array(shell.scrolledOff.suffix(new))
+        return msg.withHistory(scrolledOff: rows, styles: phoneDrawsStyles ? MockStyles.rowStyles(rows) : nil,
+                               reset: false)
     }
 
     /// Round-trip through the codec so the mock exercises encoding too.
@@ -580,5 +590,56 @@ enum MockData {
         ]
         let lines = header + Array(repeating: "", count: rows - header.count - footer.count) + footer
         return ScreenSnapshot(rows: rows, cols: cols, lines: lines, cursorRow: rows - 4, cursorCol: 2)
+    }
+}
+
+/// Colours for the demo screens, by what the rows say (a prompt, a commit hash, a passed or failed test, Claude Code's
+/// header and status lines), so the demo shows a screen as a current Mac sends it (`SyncFeature.styles`, #113).
+enum MockStyles {
+    static func styled(_ snapshot: ScreenSnapshot) -> ScreenSnapshot {
+        var styled = snapshot
+        for (row, line) in snapshot.lines.enumerated() { styled.setRuns(runs(line), row: row) }
+        return styled
+    }
+
+    /// The runs of rows above the screen, as `scrollback.styles` / `scrolledOffStyles`.
+    static func rowStyles(_ lines: [String]) -> [RowStyle]? {
+        RowStyle.sparse(lines.map(runs))
+    }
+
+    private static func run(_ column: Int, _ length: Int, _ attributes: TerminalStyle.Attributes = [],
+                            fg: UInt8? = nil, bg: TerminalColor? = nil) -> StyleRun {
+        StyleRun(column: column, length: length,
+                 style: TerminalStyle(attributes: attributes, foreground: fg.map { .palette($0) }, background: bg))
+    }
+
+    static func runs(_ line: String) -> [StyleRun] {
+        let width = TerminalCells.width(of: line)
+        if line.hasPrefix("demo@mac "), let percent = line.firstIndex(of: "%") {
+            // demo@mac <dir> % : user bold green, directory blue.
+            let dirStart = 9
+            let dirWidth = TerminalCells.width(of: String(line[line.index(line.startIndex, offsetBy: 9)..<percent])) - 1
+            return [run(0, 8, .bold, fg: 2), run(dirStart, max(dirWidth, 0), fg: 4)]
+        }
+        if line.count > 8, line.prefix(7).allSatisfy(\.isHexDigit), line.dropFirst(7).first == " " {
+            return [run(0, 7, fg: 3)]
+        }
+        let trimmed = line.drop { $0 == " " }
+        let indent = line.count - trimmed.count
+        if trimmed.hasPrefix("✓") { return [run(indent, 1, fg: 2)] }
+        if trimmed.hasPrefix("✗") { return [run(indent, width - indent, .bold, fg: 1)] }
+        if trimmed.hasPrefix("AssertionError") { return [run(indent, width - indent, fg: 1)] }
+        if trimmed.hasPrefix("●") { return [run(indent, 1, fg: 2)] }
+        if trimmed.hasPrefix("> ") { return [run(indent, width - indent, .faint)] }
+        if trimmed.hasPrefix("M ") || line.hasPrefix(" M ") { return [run(1, 1, fg: 1)] }
+        if line.hasPrefix("listening on") { return [run(0, width, fg: 2)] }
+        if line.hasPrefix("Build complete!") { return [run(0, 15, .bold, fg: 2)] }
+        if line.hasPrefix("│ ✻") { return [run(0, 1, fg: 208), run(2, 1, fg: 208), run(4, 11, .bold), run(width - 1, 1, fg: 208)] }
+        if line.hasPrefix("╭") || line.hasPrefix("╰") || line.hasPrefix("│") { return [run(0, width, fg: 208)] }
+        if line.hasPrefix(" ▐▛") || line.hasPrefix("▝▜") || line.hasPrefix("  ▘▘") { return [run(0, 10, fg: 208)] }
+        if line.hasPrefix("  ◆ ") { return [run(2, width - 2, .inverse, fg: 4)] }
+        if line.hasPrefix("  ⏵⏵") { return [run(2, width - 2, fg: 5)] }
+        if line.hasPrefix("─") { return [run(0, width, .faint)] }
+        return []
     }
 }
