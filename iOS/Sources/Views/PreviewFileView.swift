@@ -136,10 +136,7 @@ struct FilePreviewContent: View {
         case .diff: page = DiffHTML.page(text, title: name)
         case .quickLook: return nil
         }
-        // The Mac's page is made for a window; on the phone it is laid out for the screen's width.
-        return page.replacingOccurrences(
-            of: "<head>", with: #"<head><meta name="viewport" content="width=device-width, initial-scale=1">"#,
-            options: [], range: page.range(of: "<head>"))
+        return PreviewHTML.forPhoneScreen(page)
     }
 
     static func icon(mime: String) -> String {
