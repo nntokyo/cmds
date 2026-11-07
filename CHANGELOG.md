@@ -14,9 +14,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: Google Antigravity's CLI (`agy`). `cmds hook agy-status` as its status-line command reports the model, context
   and quota windows (Gemini 5h / 7d, third-party models) like Claude Code's status line; they show in the sidebar,
   the menu bar rings, the widget and on the iPhone. Limit rows with more windows than fit continue on the next row.
-
-### Added
-
 - Mac: Codex hooks. `cmds hook codex` in `~/.codex/hooks.json` shows when Codex works, asks for approval
   (`PermissionRequest`, with what it wants to run) or finishes a turn, like the Claude Code hooks; also for Codex TUIs
   on the shared app-server daemon, matched to their pane by session (#128).
