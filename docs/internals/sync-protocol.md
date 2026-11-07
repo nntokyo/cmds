@@ -138,7 +138,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"files"` (see "Files panes"), `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"). The Mac lists what it answers in `welcome.features`. |
+| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"files"` (see "Files panes"), `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"), `"schedules"` (see "Schedules"). The Mac lists what it answers in `welcome.features`. |
 | `subscribe` | `paneIDs:[String]` | Replaces the streamed set. Mac sends a full `screen` for each new pane. `[]` stops streaming. |
 | `requestScreen` | `paneID` | Ask for a full `screen` (after a diff gap). |
 | `input` | `paneID, text` | Typed/pasted text, sent as-is (no newline translation). |
@@ -153,7 +153,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `welcome` | `protocolVersion, macName, token, features?:[String]` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. `features`: optional requests this Mac answers (`SyncFeature`): `"scrollback"`, `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"); absent from older Macs. |
+| `welcome` | `protocolVersion, macName, token, features?:[String]` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. `features`: optional requests this Mac answers (`SyncFeature`): `"scrollback"`, `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"), `"schedules"` (see "Schedules"); absent from older Macs. |
 | `error` | `code:SyncErrorCode, message` | Codes: `unsupportedVersion pairingRequired invalidPairingCode invalidToken rateLimited notAuthenticated badRequest notFound internal`. After auth errors (`isAuthFailure`) the Mac closes the socket. |
 | `state` | `workspaces:[WorkspaceInfo], system?:SystemStats, agentLimits?:[AgentLimits], accountLimits?:[{name, resetsAt, estimated}]` | `accountLimits` = the Mac's Claude accounts (Settings › Agents › Claude accounts) at a limit now, with its end (epoch s); `name` matches `PaneInfo.account`; names only; omitted when none is limited or by older Macs (#112). `agentLimits` = latest account limits per coding agent (`{agent: claude/codex/other, limits:[{id: five_hour/seven_day/spend/…, usedPercent, resetsAt? (epoch s), windowMinutes?, usedUSD?, limitUSD?, period?}], plan?, updatedAt}`), omitted when none is known or by older Macs; panes running an agent carry `PaneInfo.agent?` (`AgentUsage`, see [reference/api.md](../reference/api.md#types)). Agent figures alone change at the same ≤ 2 s cadence as CPU/memory. Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
 | `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?, scrolledOff?:[String], historyReset?:Bool, styles?:[{row, runs}]` | Full visible screen, i.e. the Mac's viewport (the rows above it: `requestScrollback`). Trailing spaces may be trimmed. Cursor nil = hidden. `scrolledOff` / `historyReset`: phones with `"scrollbackStream"` only, see "Scrollback". `styles`: phones with `"styles"` only, the rows that have colours or attributes, see "Styles"; `scrolledOffStyles?:[{row, runs}]` the same for `scrolledOff`. |
@@ -161,6 +161,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 | `notification` | `paneID?, workspaceID, title, body` | Pane raised attention (agent waiting, OSC 9/777…). Phone posts a local notification. |
 | `pong` | `nonce?` | Echo of `ping.nonce`. |
 | `file` | `paneID, name, mime, size:Int, offset:Int, data:base64, truncated?:Bool` | Answer to `requestFile`: bytes `offset ..< offset+len(data)` of the `size`-byte file, in pieces of ≤ 2 MiB (`SyncFile.chunkBytes`, so a frame stays under 4 MiB), in order; complete when the pieces reach `size` (an empty file is one piece with `size` 0). `truncated: true` (no data): over `SyncFile.maxBytes` (10 MB) or unreadable. |
+| `schedules` | `schedules:[{id, name, enabled, trigger?, action:{type, agent?, to?}, nextFireAt?, activeRun?, lastRun?}], runs:[ScheduleRun], readOnly?:Bool` | Phones with `"schedules"` only: the Mac's schedules, read only. Sent after `welcome` and `state`, and on change at most once per second. See "Schedules". |
 | `scrollback` | `paneID, seq, lines:[String], styles?:[{row, runs}]` | Answer to `requestScrollback`, sent right after the full `screen` with the same `seq`: the rows above that screen, oldest first, the last one directly above its first row. One entry per displayed row (soft wraps kept, trailing spaces trimmed); empty when there are none. `styles`: phones with `"styles"` only, see "Styles". |
 
 `seq` increases per pane for every `screen`/`screenDiff` and never goes backwards on a connection.
@@ -308,6 +309,33 @@ rows from Macs that list it in `welcome.features` (#113). Code: `CmdsCore/Termin
   swaps the colours, faint dims the text, invisible text takes the background colour. Its terminal screen is always
   dark; ANSI 0–15 come from `TerminalPalette` (CmdsCore), made for it.
 
+## Schedules
+
+A phone that lists `"schedules"` (`SyncFeature.schedules`) in `hello.features` gets the Mac's
+[schedules](../guide/schedules.md) from Macs that list it in `welcome.features` (#45 phase 3). Read only: there is no
+client message for schedules, so a paired phone cannot add, change, skip or run one. Code:
+`CmdsCore/Sync/SyncSchedules.swift`, `App/Sources/Sync/SyncServer+Schedules.swift`.
+
+- **When**: right after `welcome` and `state`, and when the Mac's schedules or runs change (`ScheduleRunner.changes`),
+  at most once per second (`SyncSchedules.interval`); a summary equal to the last one broadcast is not sent again.
+  Always the whole list.
+- **`schedules`**, in the Mac's order: `id`, `name`, `enabled`, `trigger` (as in `schedules.json`: `once {at}`,
+  `weekly {weekdays, times, timeZone?}`, `limitReset {account, delay, repeats?}`, `codexLimitReset {delay, repeats?}`),
+  `action` = `{type: startWorkspace | continueSession | sendText, agent?: claude | codex (continueSession),
+  to?: shell | agent (sendText)}`, `nextFireAt?` (absent when the schedule is off or has no next run), `activeRun?`
+  (the run in progress) and `lastRun?` (the latest ended run).
+- **`runs`**: the latest runs, active ones first, then newest first, at most 30 (`SyncSchedules.maxRuns`), each a
+  `ScheduleRun` as in the API (`id, scheduleID, scheduleName, cause, dueAt, startedAt, endedAt?, state, reason?,
+  workspace?, pane?, account?`).
+- **`readOnly: true`** when the Mac's schedule files were made by a newer cmds (shown there, never run).
+- **Never sent**: prompts, commands, the text of a `sendText`, folders, workspace titles of targets, pane tags and
+  session ids. `SyncScheduleAction` carries only the kind of action; `SyncSchedulesTests` checks that none of these
+  reach the JSON. Account names are sent, as in `state.accountLimits`. Dates are epoch seconds.
+- **Lenient**: a schedule or run the phone cannot read (a trigger type, run state or field of a newer Mac) is dropped or
+  shown without that part, never the whole message; an unknown reason reads as `other`.
+- **Older phones** do not list the feature and never get the message (an unknown `type` would be ignored anyway).
+  **Older Macs** do not list it; the phone then hides ⋯ › Schedules.
+
 ## Mac identity
 
 - Created on the first sync start (`SyncIdentityStore`, `App/Sources/Sync/SyncIdentity.swift`): an
@@ -403,6 +431,7 @@ total per minute (then 1 minute); a client that does not read 8 MiB of output is
   lines, cursor); `ServerMessage.withHistory(scrolledOff:reset:)` for `scrollbackStream`.
 - `ScreenDiffer.diff(from:to:)` / `apply(_:to:)` for custom use (lines, or snapshots with their styles).
 - `TerminalStyledText.parse(_:)` (VT row → text and `StyleRun`s), `TerminalPalette.rgb(_:)`.
+- `SyncSchedules.message(list:runs:)` (the `schedules` summary), `SyncSchedules.isWanted(by:)`, `delay(lastSentAt:)`.
 - `SyncKey.terminalBytes(applicationCursor:)` if writing keys straight to the pty.
 
 ## Security and threat model

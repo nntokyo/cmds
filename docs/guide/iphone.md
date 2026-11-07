@@ -71,6 +71,11 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   size on the Mac.
 - **Preview panes**: images (with zoom) and PDFs are fetched from the Mac (up to 10 MB); other files show their name
   and **Open on Mac**.
+- **Schedules**: ⋯ › **Schedules** on the workspace list (with a cmds release after 0.13.0 on the Mac; the item is not
+  there for older ones) lists the Mac's [schedules](schedules.md), read only: each one's trigger, what it does (no
+  prompts, commands or folders are sent to the phone), its next run, the run in progress or the last result with its
+  reason (succeeded, failed, skipped, missed), and below them the recent runs. Times are shown in the phone's time
+  zone; a weekly schedule's times of day are the Mac's. Schedules are made, changed and run on the Mac only.
 - **Notifications**: every pane notification on the Mac (agent waiting, finished, OSC 9/777, bell, `cmds notify`) is
   posted on the phone while the app is connected, except for the pane you have open on the phone.
 - **Try with demo data** on the connect screen runs the app without a Mac.

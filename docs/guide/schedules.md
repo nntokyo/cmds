@@ -110,11 +110,16 @@ the selected schedule (or of all schedules) with why each ended as it did. `cmds
 
 Run Now runs a schedule at once (also one that is off); Cancel Run stops an active run (nothing more is typed).
 
+**On the iPhone/iPad**: ⋯ › **Schedules** shows the same list and the recent runs, read only (with a cmds release
+after 0.13.0 on the Mac and the companion). The phone gets each schedule's name, trigger, kind of action, next run and
+results, never its prompt, command, text, folder or session; it cannot add, change, skip or run a schedule
+([iphone.md](iphone.md#what-the-companion-shows)).
+
 ## Where schedules are kept
 
 `schedules.json` (definitions) and `schedule-runs.json` (history: at most 50 runs per schedule, 300 in all, 90 days)
 in the support folder (`~/Library/Application Support/cmds`, readable by you only). Prompts and commands are stored
-there in plain text; they are never logged and never sent to the iPhone. A damaged file is renamed to
+there in plain text; they are never logged and never sent to the iPhone (it gets only a summary, see above). A damaged file is renamed to
 `schedules.json.corrupt-<time>` and kept; a file written by a newer cmds is shown but not changed.
 
 Going back to an older cmds: as long as your schedules only start workspaces and continue Claude Code sessions once,
