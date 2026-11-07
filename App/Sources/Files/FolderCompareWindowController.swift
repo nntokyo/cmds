@@ -152,9 +152,9 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
         optionsRow.setCustomSpacing(4, after: conflictsLabel)
 
         let columns: [(String, String, CGFloat)] = [
-            ("include", "", 24), ("name", String(localized: "Name"), 260), ("left", String(localized: "Left"), 150),
-            ("status", String(localized: "Difference"), 150), ("right", String(localized: "Right"), 150),
-            ("action", String(localized: "Sync"), 150),
+            ("include", "", 24), ("name", String(localized: "Name"), 220), ("left", String(localized: "Left"), 140),
+            ("status", String(localized: "Difference"), 130), ("right", String(localized: "Right"), 140),
+            ("action", String(localized: "Sync"), 120),
         ]
         for (id, title, width) in columns {
             let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
@@ -566,6 +566,7 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
             "left": .string(left.description),
             "right": .string(right.description),
             "comparing": .bool(task != nil),
+            "window": .number(Double(window?.windowNumber ?? 0)),
             "error": error.map(JSONValue.string) ?? .null,
             "status": .string(statusLabel.stringValue),
             "syncEnabled": .bool(syncButton.isEnabled),
