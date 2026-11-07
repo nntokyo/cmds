@@ -7,24 +7,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.12.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.12.0</link>
-      <sparkle:version>19</sparkle:version>
-      <sparkle:shortVersionString>0.12.0</sparkle:shortVersionString>
+      <title>cmds 0.13.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.13.0</link>
+      <sparkle:version>20</sparkle:version>
+      <sparkle:shortVersionString>0.13.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 06 Nov 2026 17:00:20 GMT</pubDate>
+      <pubDate>Sat, 07 Nov 2026 04:06:42 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
-<p>cmds のウィジェットを追加しました。デスクトップや通知センターに、メニューバーと同じ情報（対応待ちと作業中のバッジ、対応待ちになってからの時間、利用上限と CPU・メモリのリング）を表示します。デスクトップを右クリックして「ウィジェットを編集…」から「cmds」を追加してください。クリックするとそのワークスペースが開きます。</p>
+<ul>
+<li>Codex のフックに対応しました。<code>~/.codex/hooks.json</code> に <code>cmds hook codex</code> を登録すると、Codex の作業中・承認待ち（実行したい内容つき）・ターンの終了がサイドバーと通知に出ます。</li>
+<li>Google Antigravity（<code>agy</code>）に対応しました。ステータスラインに <code>cmds hook agy-status</code> を登録すると、モデル、コンテキスト、利用上限（Gemini 5h / 7d など）が表示されます。</li>
+<li>メニューバーのメニューに、各エージェントのコンテキスト（ctx）のリングを追加しました。</li>
+<li>SSH ホストのファイルを編集できるようになりました。リモートのファイル一覧ペインで編集（F4）を選ぶと既定の App で開き、保存するたびにサーバーへアップロードします。</li>
+</ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは 0.11.0 から変わりません。</p>
 <h3>Added</h3>
-<p>A cmds widget for the desktop and Notification Center, with what the menu bar shows: badges for the workspaces that need you and those working, how long they have waited, and rings for your limits, CPU and memory. Right-click the desktop, choose Edit Widgets…, and add cmds. Click it to open that workspace.</p>
+<ul>
+<li>Codex hooks: with <code>cmds hook codex</code> in <code>~/.codex/hooks.json</code>, the sidebar and notifications show when Codex works, asks for approval (with what it wants to run) or finishes a turn.</li>
+<li>Google Antigravity (<code>agy</code>): with <code>cmds hook agy-status</code> as its status line, cmds shows its model, context and limits (Gemini 5h / 7d and more).</li>
+<li>ctx rings in the menu bar menu: the context window of each agent.</li>
+<li>Edit files on SSH hosts: Edit (F4) in a remote files pane opens the file in its default app and uploads every save.</li>
+</ul>
 <p>Mac only; the iPhone/iPad app is unchanged from 0.11.0.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.12.0/cmds-0.12.0.dmg" length="14851772" type="application/octet-stream" sparkle:edSignature="HO6MKFH8Z9aEUKkP0Q9j4x2vZpvjwN+SosfyCL3+yNPMZYc5m2nP7Mpk0prA/FtmWfxtAoNV32cuazrSQ1dqAw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.13.0/cmds-0.13.0.dmg" length="14958784" type="application/octet-stream" sparkle:edSignature="ZK+hMCBf9WMEmI7V08ksrM4sqcEcdkKdiOUKRERnPIJgZziMZngzASSFx9k8XtY3jtAcBZlcKiAIErKBtSI0AA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: oGioPVtKb6SwJ/ExeH82F0hc+XhwCJaAp04CJGR0j0ADIH2qhUIbWsukeGTWPQ9g8DBNV3e3vOgumbI/hRbaCw==
-length: 2240
+edSignature: oiS1yPIDce/OU5Y0MyskLdaf0JsuDR+tSb6xdaIVD2rOpDhoYG+drvtG4f6IJRtBQn1jS1FWuXm8/kyOm2gtBQ==
+length: 2958
 -->
