@@ -76,14 +76,8 @@ struct FilePreviewContent: View {
 
     private var mime: String { SyncFile.mimeType(forFileName: name) }
 
-    /// The phone fetches and shows the file: images, PDFs, and with `asText` text files.
-    static func isShown(name: String, asText: Bool) -> Bool {
-        PreviewFileStore.isViewable(mime: SyncFile.mimeType(forFileName: name))
-            || (asText && PreviewFileStore.isText(name: name))
-    }
-
     var body: some View {
-        if !Self.isShown(name: name, asText: showsText) {
+        if !PreviewFileStore.isShown(name: name, asText: showsText) {
             unavailable(String(localized: "No preview on the phone"), detail: unviewableDetail)
         } else {
             switch entry {

@@ -150,17 +150,14 @@ struct FolderBrowserView: View {
         } else if browse.folders.last.map(\.isAnswered) == false {
             // Asked while offline, or the answer was lost with the connection.
             reload()
-        } else if let file = browse.file, client.previewFiles.entry(for: pane.id, path: file) == nil,
-                  FilePreviewContent.isShown(name: RemotePath.name(file), asText: true) {
+        } else if let file = browse.file, client.previewFiles.entry(for: pane.id, path: file) == nil {
             client.requestFile(paneID: pane.id, path: file)
         }
     }
 
     private func reload() {
         if let file = browse?.file {
-            if FilePreviewContent.isShown(name: RemotePath.name(file), asText: true) {
-                client.requestFile(paneID: pane.id, path: file)
-            }
+            client.requestFile(paneID: pane.id, path: file)
         } else {
             Task { await client.reloadFolder(of: pane) }
         }

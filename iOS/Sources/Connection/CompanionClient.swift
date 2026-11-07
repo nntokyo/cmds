@@ -669,21 +669,19 @@ final class CompanionClient {
     /// Goes into a subfolder on the phone (the Mac pane stays where it is).
     func openFolder(named name: String, in paneID: String) {
         guard let path = folders.push(paneID: paneID, name: name) else { return }
-        guard status.isLive else { return }
-        send(.requestListing(.init(paneID: paneID, path: path)))
+        requestListing(paneID: paneID, path: path)
     }
 
     /// Opens a file of the folder shown with the preview viewer.
     func openFile(named name: String, in paneID: String) {
         guard let path = folders.open(paneID: paneID, name: name) else { return }
-        // Only what the phone can show is fetched; other files show their name only.
-        guard FilePreviewContent.isShown(name: name, asText: true) else { return }
         requestFile(paneID: paneID, path: path)
     }
 
-    /// A file of a files pane (`requestFile` with its path).
+    /// A file of a files pane (`requestFile` with its path). Only what the phone can show is fetched; other files show
+    /// their name only.
     func requestFile(paneID: String, path: String) {
-        guard status.isLive else { return }
+        guard status.isLive, PreviewFileStore.isShown(name: RemotePath.name(path), asText: true) else { return }
         previewFiles.begin(paneID: paneID, path: path)
         send(.requestFile(.init(paneID: paneID, path: path)))
     }
@@ -709,8 +707,12 @@ final class CompanionClient {
     }
 
     private func requestListing(paneID: String, _ folder: FolderBrowserStore.Folder) {
+        requestListing(paneID: paneID, path: folder.requested)
+    }
+
+    private func requestListing(paneID: String, path: String?) {
         guard status.isLive else { return }
-        send(.requestListing(.init(paneID: paneID, path: folder.requested)))
+        send(.requestListing(.init(paneID: paneID, path: path)))
     }
 
     func sendKey(_ key: SyncKey, to paneID: String) {
