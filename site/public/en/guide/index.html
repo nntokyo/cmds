@@ -286,6 +286,11 @@ cmds stats                                # CPU and memory per workspace and for
         <li>Edit (<kbd>F4</kbd>, the right-click menu or Pane › Files) opens an editable copy in its default app and uploads every save over the server's file (written under a temporary name, then swapped in, keeping its permissions). If the file changed on the server meanwhile, cmds asks whether to overwrite it, take the server's version, or save yours as a copy.</li>
         <li>Open and preview use a downloaded, read-only copy. Move to Trash moves items to the server's own Trash (<code>~/.local/share/Trash</code>) and never deletes them.</li>
       </ul>
+      <h3>Comparing and syncing folders</h3>
+      <ul>
+        <li>Pane › Files › Compare and Sync with Other Pane… (<kbd>⇧F2</kbd>) compares the folders of two files panes (Mac and host, two hosts, or two Mac folders) and lists what is only on one side or modified.</li>
+        <li>Sync one way (new and modified items; optionally move items only on the target side to its Trash) or both ways (differences settled by a rule such as Newer wins, or per item). You see the plan before it runs through the transfer queue. Replaced items go to their side's Trash; nothing is deleted.</li>
+      </ul>
       <h3>Transfers</h3>
       <ul>
         <li>Copies and moves between the Mac and a host, or two hosts, run in the background in a transfer queue. Follow them in the pane and in Window › Transfers (<kbd>⌥⌘T</kbd>), with Pause, Cancel, Retry and a log; <code>cmds transfers</code> shows the same.</li>
