@@ -19,6 +19,9 @@ public enum SyncFeature {
     /// Phone (`hello.features`) and Mac (`welcome.features`): `screen` carries `styles` and `screenDiff` rows carry
     /// `runs`, the colours and attributes of the rows (`StyleRun`). Phones without it get plain text only.
     public static let styles = "styles"
+    /// Phone (`hello.features`) and Mac (`welcome.features`): the Mac sends `schedules`, a read-only summary of its
+    /// schedules and their recent runs (#45 phase 3), after `welcome` and on change. Phones without it never get it.
+    public static let schedules = "schedules"
 }
 
 /// Sending the file of a preview pane to the phone in `file` messages (`requestFile`).

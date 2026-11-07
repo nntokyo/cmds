@@ -45,6 +45,7 @@ struct WorkspaceListView: View {
     @Binding var selection: String?
     @State private var showingRemoteAccess = false
     @State private var showingSettings = false
+    @State private var showingSchedules = UserDefaults.standard.bool(forKey: "mockShowSchedules")
 
     var body: some View {
         List(selection: $selection) {
@@ -107,6 +108,10 @@ struct WorkspaceListView: View {
                     }
                     Button("Switch Mac…") { client.disconnect() }
                     Divider()
+                    if client.macSendsSchedules {
+                        Button("Schedules", systemImage: "calendar.badge.clock") { showingSchedules = true }
+                            .accessibilityIdentifier("schedulesMenuItem")
+                    }
                     Button("Settings…", systemImage: "textformat.size") { showingSettings = true }
                         .accessibilityIdentifier("settingsMenuItem")
                     #if DEBUG
@@ -125,6 +130,7 @@ struct WorkspaceListView: View {
             }
         }
         .sheet(isPresented: $showingSettings) { TerminalSettingsView() }
+        .sheet(isPresented: $showingSchedules) { SchedulesView().environment(client) }
     }
 
     /// Debug builds connected to a real Mac show the connection diagnostics row.

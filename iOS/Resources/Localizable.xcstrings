@@ -66,6 +66,16 @@
         }
       }
     },
+    " + %lld min" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "＋%lld分"
+          }
+        }
+      }
+    },
     " daily" : {
       "comment" : "after a spend limit: its period",
       "localizations" : {
@@ -412,6 +422,17 @@
         }
       }
     },
+    ", " : {
+      "comment" : "list separator",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "、"
+          }
+        }
+      }
+    },
     "5-hour limit" : {
       "comment" : "agent usage limit",
       "localizations" : {
@@ -491,6 +512,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "設定でcmdsのカメラへのアクセスを許可するか、カメラを使わずにペアリングしてください。"
+          }
+        }
+      }
+    },
+    "An agent was running in the pane." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインでエージェントが動いていました。"
+          }
+        }
+      }
+    },
+    "Another run was using the pane." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別の実行がペインを使っていました。"
           }
         }
       }
@@ -643,12 +684,42 @@
         }
       }
     },
+    "Cancelled" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中止"
+          }
+        }
+      }
+    },
+    "Cancelled." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キャンセルしました。"
+          }
+        }
+      }
+    },
     "Cannot show this image" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "この画像は表示できません"
+          }
+        }
+      }
+    },
+    "Catch-up" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遅れて実行"
           }
         }
       }
@@ -669,6 +740,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Macと照合"
+          }
+        }
+      }
+    },
+    "Confirming" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "確認中"
           }
         }
       }
@@ -742,6 +823,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "コンテキスト%@"
+          }
+        }
+      }
+    },
+    "Continues a Claude Code session" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Claude Codeのセッションを続ける"
+          }
+        }
+      }
+    },
+    "Continues a Codex session" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codexのセッションを続ける"
           }
         }
       }
@@ -968,6 +1069,56 @@
         }
       }
     },
+    "Every account has hit its limit." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのアカウントが上限に達しています。"
+          }
+        }
+      }
+    },
+    "Every day" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日"
+          }
+        }
+      }
+    },
+    "Every time Codex resets" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codexがリセットされるたび"
+          }
+        }
+      }
+    },
+    "Every time “%@” resets" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」がリセットされるたび"
+          }
+        }
+      }
+    },
+    "Failed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "失敗"
+          }
+        }
+      }
+    },
     "File" : {
       "localizations" : {
         "ja" : {
@@ -1158,6 +1309,16 @@
         }
       }
     },
+    "Last:" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回："
+          }
+        }
+      }
+    },
     "Latest" : {
       "comment" : "button over a terminal scrolled into earlier output: back to the live screen",
       "localizations" : {
@@ -1202,6 +1363,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "変更行 +%1$lld −%2$lld"
+          }
+        }
+      }
+    },
+    "Loading Schedules…" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュールを読み込み中…"
           }
         }
       }
@@ -1272,6 +1443,16 @@
         }
       }
     },
+    "Make schedules on the Mac in Window › Schedules… or with cmds schedule add." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュールはMacの「ウインドウ › スケジュール…」またはcmds schedule addで作成します。"
+          }
+        }
+      }
+    },
     "Manual" : {
       "localizations" : {
         "ja" : {
@@ -1302,6 +1483,16 @@
         }
       }
     },
+    "Missed" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "見送り"
+          }
+        }
+      }
+    },
     "More" : {
       "localizations" : {
         "ja" : {
@@ -1322,12 +1513,62 @@
         }
       }
     },
+    "Next: %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次回：%@"
+          }
+        }
+      }
+    },
     "No Camera" : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "カメラがありません"
+          }
+        }
+      }
+    },
+    "No Schedules" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュールなし"
+          }
+        }
+      }
+    },
+    "No agent was running in the pane." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインでエージェントが動いていませんでした。"
+          }
+        }
+      }
+    },
+    "No next run" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次回の実行なし"
+          }
+        }
+      }
+    },
+    "No pane holds the session, and its folder is not known." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セッションを持つペインがなく、フォルダも分かりません。"
           }
         }
       }
@@ -1372,6 +1613,27 @@
         }
       }
     },
+    "Now:" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実行中："
+          }
+        }
+      }
+    },
+    "Off" : {
+      "comment" : "show subagents",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ"
+          }
+        }
+      }
+    },
     "On the Mac, choose cmds › Pair iPhone/iPad… and scan the QR code it shows." : {
       "localizations" : {
         "ja" : {
@@ -1402,6 +1664,16 @@
         }
       }
     },
+    "Once, %@" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1回、%@"
+          }
+        }
+      }
+    },
     "Only changes how this device shows the terminal; the size on the Mac stays the same." : {
       "localizations" : {
         "ja" : {
@@ -1428,6 +1700,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Macで開く"
+          }
+        }
+      }
+    },
+    "Opens a new workspace" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新しいワークスペースを開く"
           }
         }
       }
@@ -1563,6 +1845,16 @@
         }
       }
     },
+    "Read only. Change schedules on the Mac in Window › Schedules…." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "読み取り専用です。スケジュールはMacの「ウインドウ › スケジュール…」で変更します。"
+          }
+        }
+      }
+    },
     "Reading the Mac's identity…" : {
       "localizations" : {
         "ja" : {
@@ -1579,6 +1871,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近使った項目"
+          }
+        }
+      }
+    },
+    "Recent Runs" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の実行"
           }
         }
       }
@@ -1723,6 +2025,16 @@
         }
       }
     },
+    "Run Now" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "今すぐ実行"
+          }
+        }
+      }
+    },
     "SSH" : {
       "localizations" : {
         "ja" : {
@@ -1783,6 +2095,26 @@
         }
       }
     },
+    "Scheduled" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "予定どおり"
+          }
+        }
+      }
+    },
+    "Schedules" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュール"
+          }
+        }
+      }
+    },
     "Scrolls back to the live screen." : {
       "comment" : "accessibility hint of the Latest button",
       "localizations" : {
@@ -1820,6 +2152,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enterなしで送信"
+          }
+        }
+      }
+    },
+    "Sends a prompt to the agent in a pane" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインのエージェントにプロンプトを送る"
           }
         }
       }
@@ -1865,6 +2207,26 @@
         }
       }
     },
+    "Several panes hold the session." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複数のペインがこのセッションを持っています。"
+          }
+        }
+      }
+    },
+    "Several panes match the target." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象に当てはまるペインが複数あります。"
+          }
+        }
+      }
+    },
     "Shortcut buttons" : {
       "localizations" : {
         "ja" : {
@@ -1905,6 +2267,26 @@
         }
       }
     },
+    "Skipped" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スキップ"
+          }
+        }
+      }
+    },
+    "Skipped on request." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "指示によりスキップしました。"
+          }
+        }
+      }
+    },
     "Spend limit" : {
       "comment" : "agent usage limit",
       "localizations" : {
@@ -1912,6 +2294,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "利用額の上限"
+          }
+        }
+      }
+    },
+    "Succeeded" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成功"
           }
         }
       }
@@ -2088,6 +2480,16 @@
         }
       }
     },
+    "The Mac was asleep or cmds was not running." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macがスリープしていたか、cmdsが起動していませんでした。"
+          }
+        }
+      }
+    },
     "The SSH connection to the relay host closed." : {
       "localizations" : {
         "ja" : {
@@ -2108,6 +2510,96 @@
         }
       }
     },
+    "The account was removed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントが削除されていました。"
+          }
+        }
+      }
+    },
+    "The account was still limited." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントが上限に達したままでした。"
+          }
+        }
+      }
+    },
+    "The agent did not start." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エージェントが起動しませんでした。"
+          }
+        }
+      }
+    },
+    "The agent in the pane is not Claude Code." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインのエージェントがClaude Codeではありません。"
+          }
+        }
+      }
+    },
+    "The agent in the pane is not Codex." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインのエージェントがCodexではありません。"
+          }
+        }
+      }
+    },
+    "The agent started working on the prompt." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エージェントがプロンプトの作業を始めました。"
+          }
+        }
+      }
+    },
+    "The agent stayed busy." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エージェントが作業中のままでした。"
+          }
+        }
+      }
+    },
+    "The command was typed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コマンドを入力しました。"
+          }
+        }
+      }
+    },
+    "The folder does not exist." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダがありません。"
+          }
+        }
+      }
+    },
     "The identities did not match, so nothing was sent. Something else may be answering for this Mac. Scan the QR code in the Mac's pairing window instead." : {
       "localizations" : {
         "ja" : {
@@ -2124,6 +2616,56 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%@”のペアリングウインドウに「Macの識別情報」が表示されています。次の内容と完全に一致する必要があります："
+          }
+        }
+      }
+    },
+    "The pane was closed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインが閉じられていました。"
+          }
+        }
+      }
+    },
+    "The pane was running a different session." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインで別のセッションが動いていました。"
+          }
+        }
+      }
+    },
+    "The pane was running another program." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインでほかのプログラムが動いていました。"
+          }
+        }
+      }
+    },
+    "The previous run was still active." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前回の実行がまだ続いていました。"
+          }
+        }
+      }
+    },
+    "The prompt was sent, but the agent was not seen working." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロンプトを送りましたが、エージェントが作業を始めたことを確認できませんでした。"
           }
         }
       }
@@ -2188,12 +2730,92 @@
         }
       }
     },
+    "The schedule is not valid any more." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュールが無効になっています。"
+          }
+        }
+      }
+    },
+    "The schedule was removed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スケジュールが削除されました。"
+          }
+        }
+      }
+    },
+    "The session cannot be resumed." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セッションを再開できません。"
+          }
+        }
+      }
+    },
+    "The session had moved to another account." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セッションが別のアカウントに移っていました。"
+          }
+        }
+      }
+    },
+    "The shell prompt did not become ready." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シェルのプロンプトが入力待ちになりませんでした。"
+          }
+        }
+      }
+    },
+    "The target pane was not found." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "対象のペインが見つかりませんでした。"
+          }
+        }
+      }
+    },
     "The whole terminal width fits the screen. Pinch to zoom, double-tap to reset." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "ターミナルの幅全体が画面に収まります。ピンチで拡大、ダブルタップで元に戻ります。"
+          }
+        }
+      }
+    },
+    "The workspace was opened." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ワークスペースを開きました。"
+          }
+        }
+      }
+    },
+    "These schedules were made by a newer cmds and do not run on this Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "これらのスケジュールは新しいバージョンのcmdsで作成されたため、このMacでは実行されません。"
           }
         }
       }
@@ -2289,6 +2911,16 @@
         }
       }
     },
+    "Too many runs were active." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実行中の処理が多すぎました。"
+          }
+        }
+      }
+    },
     "Too much input. Slow down." : {
       "localizations" : {
         "ja" : {
@@ -2315,6 +2947,36 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1行入力"
+          }
+        }
+      }
+    },
+    "Types a command in a pane" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ペインでコマンドを入力する"
+          }
+        }
+      }
+    },
+    "Typing" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力中"
+          }
+        }
+      }
+    },
+    "Unknown reason." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "理由は不明です。"
           }
         }
       }
@@ -2379,12 +3041,82 @@
         }
       }
     },
+    "Waiting for the account" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アカウントを待機中"
+          }
+        }
+      }
+    },
+    "Waiting for the agent" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エージェントを待機中"
+          }
+        }
+      }
+    },
+    "Waiting for the shell" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "シェルを待機中"
+          }
+        }
+      }
+    },
+    "Weekdays" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "平日"
+          }
+        }
+      }
+    },
+    "Weekends" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "週末"
+          }
+        }
+      }
+    },
+    "When Codex resets" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Codexのリセット時"
+          }
+        }
+      }
+    },
     "When “%@” cannot be reached over Wi‑Fi or Bluetooth, connect through an SSH server you use (the relay host). On the Mac, turn on cmds › Remote Access via SSH… for the same host. Pair on the local network first; the connection stays encrypted end to end and pinned to the Mac." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%@”にWi‑FiやBluetoothで接続できないときに、お使いのSSHサーバ（中継ホスト）を経由して接続します。Macでも同じホストに対してcmds › 「SSH経由のリモートアクセス…」をオンにしてください。先にローカルネットワーク上でペアリングしておく必要があります。接続はエンドツーエンドで暗号化され、Macに固定（ピン留め）されたままです。"
+          }
+        }
+      }
+    },
+    "When “%@” resets" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "「%@」のリセット時"
           }
         }
       }
@@ -2446,6 +3178,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "cmdsはMacとの接続を暗号化し、Macの識別情報を確認するようになりました。一度だけペアリングし直してください：Macのcmdsで「iPhone/iPadとペアリング…」を開き、コードをスキャンします。"
+          }
+        }
+      }
+    },
+    "cmds quit during the run." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "実行中にcmdsが終了しました。"
           }
         }
       }
