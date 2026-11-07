@@ -89,6 +89,9 @@ libghostty binding action after 3 s, `CMDS_HARNESS_DUMP=<path>` writes the curso
 | `-mockNoHistoryStream` | With `-mock`: the demo Mac answers like cmds 0.3.0, without streaming the rows that scroll off a screen (`scrollbackStream`). |
 | `-mockNoSchedules` | With `-mock`: the demo Mac sends an empty schedules list (the empty state of ⋯ › Schedules). |
 | `-mockShowSchedules YES` | Opens ⋯ › Schedules at launch (screenshots; with `-mock` it shows the demo schedules, #45). |
+| `-mockPane <id>` | Selects that pane of the workspace opened at launch (with `-mockWorkspace`; e.g. `-mockWorkspace w-report -mockPane p-files` for the demo files pane). |
+| `-mockNoFilesBrowse` | With `-mock`: the demo Mac does not list folders of files panes (`filesBrowse`); the files pane shows its path only. |
+| `-mockShowHiddenFiles` | With `-mock`: the demo files pane lists hidden items. |
 | `-uiTestProbes` | Adds the accessibility elements `terminalRows` (all rows of the open terminal, earlier output first) and `terminalViewport` (the rows on screen), for UI tests. |
 | `-noNotify` | Do not post local notifications. |
 | `-cmdsTransport auto\|network\|bluetooth\|ssh` | Debug builds only: force one connection path ([internals/testing.md](../internals/testing.md#testing-sync-on-a-device)). |
