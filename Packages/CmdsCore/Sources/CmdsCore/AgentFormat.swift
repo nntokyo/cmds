@@ -96,9 +96,10 @@ public enum AgentFormat {
         case UsageLimit.spend: return strings(.spendLabel)
         default:
             if let minutes = limit.windowMinutes, minutes > 0 {
-                if minutes % 1440 == 0 { return "\(minutes / 1440)d" }
-                if minutes % 60 == 0 { return "\(minutes / 60)h" }
-                return "\(minutes)m"
+                let window = minutes % 1440 == 0 ? "\(minutes / 1440)d" : minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes)m"
+                // Antigravity has a window per model group (`gemini-5h`, `3p-5h`): `Gemini 5h`, `3P 5h`.
+                if let group = AntigravityStatusLine.groupName(limit.id) { return "\(group) \(window)" }
+                return window
             }
             return limit.id.replacingOccurrences(of: "_", with: " ")
         }

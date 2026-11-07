@@ -45,6 +45,18 @@ enum AgentOverview {
     }
 
     /// An account limit at 95 % or more, or critical memory pressure: what the red dot warns of; nil when nothing does.
+    /// The agents' context windows for the menu's ctx rings: one per agent pane whose share is known, fullest first.
+    static func contexts(_ controller: AppController) -> [MenuBarDashboardView.Context] {
+        controller.workspaces.flatMap { workspace in
+            workspace.agentPanes.compactMap { pane -> MenuBarDashboardView.Context? in
+                guard let usage = pane.agentUsage, let percent = usage.contextUsedPercent else { return nil }
+                return .init(workspace: workspace.displayTitle, agent: usage.agent.displayName, percent: percent,
+                             stale: usage.stale == true)
+            }
+        }
+        .sorted { $0.percent > $1.percent }
+    }
+
     static func warning(_ controller: AppController) -> String? {
         var reasons: [String] = []
         for limits in controller.activeAgentLimits() {

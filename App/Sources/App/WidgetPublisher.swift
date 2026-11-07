@@ -117,7 +117,10 @@ final class WidgetPublisher {
         }
         for limits in controller.activeAgentLimits(now: now) {
             for limit in limits.ordered where limit.id != UsageLimit.spend {
-                gauges.append(.init(label: "\(limits.agent.displayName) \(AgentFormat.limitLabel(limit, strings: .localized))",
+                let window = AgentFormat.limitLabel(limit, strings: .localized)
+                // Antigravity's windows already name their model group (`Gemini 5h`).
+                let label = AntigravityStatusLine.groupName(limit.id) != nil ? window : "\(limits.agent.displayName) \(window)"
+                gauges.append(.init(label: label,
                                     fraction: min(max(limit.usedPercent / 100, 0), 1),
                                     level: .init(usage: UsageLevel(percent: limit.usedPercent)), resetsAt: limit.resetsAt))
             }

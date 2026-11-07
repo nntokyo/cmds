@@ -170,6 +170,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, option(.animation)],
             [Self.label(String(localized: "Menu:", comment: "Settings › Menu Bar")), option(.systemRings)],
             [NSGridCell.emptyContentView, option(.limitRings)],
+            [NSGridCell.emptyContentView, option(.contextRings)],
             [NSGridCell.emptyContentView, option(.workspaces)],
         ]
         let updates: [[NSView]] = [

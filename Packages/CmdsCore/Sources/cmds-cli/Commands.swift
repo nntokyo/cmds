@@ -461,6 +461,11 @@ extension CLI {
                 details: "Prints nothing and always exits 0 within ~200 ms; a no-op outside cmds. See docs/guide/ai-agents.md for the status-line snippet.") { ctx in
             AgentHook.claudeStatus(ctx)
         },
+        Command(name: "hook agy-status", usage: "hook agy-status",
+                summary: "Antigravity (agy) status line: read its JSON on stdin and report the session usage and quota for this pane.",
+                details: "Prints nothing and always exits 0 within ~200 ms; a no-op outside cmds. See docs/guide/ai-agents.md for the settings.json snippet.") { ctx in
+            AgentHook.antigravityStatus(ctx)
+        },
         Command(name: "hook claude", usage: "hook claude",
                 summary: "Claude Code hook: read the hook JSON on stdin; notify (Notification / Stop), track the agent's state (UserPromptSubmit) and its subagents (SubagentStart / SubagentStop).",
                 details: "Always exits 0 so a missing app never blocks Claude Code. See docs/guide/ai-agents.md for the settings.json snippet.") { ctx in
