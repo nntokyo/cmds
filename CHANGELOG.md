@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Mac: Codex hooks. `cmds hook codex` in `~/.codex/hooks.json` shows when Codex works, asks for approval
   (`PermissionRequest`, with what it wants to run) or finishes a turn, like the Claude Code hooks; also for Codex TUIs
   on the shared app-server daemon, matched to their pane by session (#128).
+- Mac: edit files on SSH hosts. **Edit** (F4, the right-click menu or Pane › Files) in a remote files pane downloads
+  the file into an editable copy and opens it in its default app; every save is uploaded over the server's file
+  (written under a temporary name, then renamed over it in one step, keeping its permissions) and listed in Window ›
+  Transfers. If the file changed on the server meanwhile, cmds asks: Keep Mine, Keep Theirs, Save Mine as a Copy or
+  Cancel. **Stop Editing**, closing the pane or quitting ends it; quitting warns about edits not uploaded yet (#26).
 
 ## [0.12.0] - 2026-11-07
 

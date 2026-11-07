@@ -121,7 +121,8 @@ A files pane can list a folder on any host you reach with `ssh`, over SFTP. Noth
   the background; ⌘R reads it again (the server's folder is not watched; the pane's own changes and finished
   transfers show up by themselves). Connection problems show in the list with **Connect** to try again.
 - **Open and Space** download a copy of the file (read only, in cmds' cache) and open it in its default app or show it
-  in the preview pane. Editing that copy does not change the server's file.
+  in the preview pane. Editing that copy does not change the server's file; to change it, use **Edit** (F4, see
+  [Editing files on a server](#editing-files-on-a-server)).
 - **Rename** (F2), **New Folder** (F7) and **Copy Path** (`host:/path`) work as locally. **Open Terminal Here** opens
   an SSH pane at the folder.
 - **Move to Trash** (⌘⌫) never deletes anything on the server: items go to your Trash there,
@@ -131,6 +132,39 @@ A files pane can list a folder on any host you reach with `ssh`, over SFTP. Noth
 - A pane restored after a relaunch does not connect by itself; it shows **Connect** (⌘R).
 
 Copying and moving between a remote pane and a local one, or two hosts, goes through the transfer queue.
+
+## Editing files on a server
+
+**Edit** (F4, the right-click menu or **Pane › Files**) on a file in a remote pane downloads it into an editable copy on
+this Mac and opens that in the file's default app. Each time you save there, cmds uploads the copy over the server's
+file, over the pane's SSH connection (no password, as for everything else in remote panes):
+
+- The upload starts one second after the last write (editors often write a file in several steps); a save during an
+  upload is uploaded after it. Saving without changing the content uploads nothing.
+- Uploads show in **Window › Transfers** (as "Upload edited …") and below the list of the pane, like other transfers.
+  The footer counts the files the pane is editing.
+- The upload is written under a temporary name (`.cmds-part-…`) next to the file and then renamed over it in one step,
+  so the file on the server is always either the old or the new version. It keeps the file's permissions. (The
+  owner becomes your login user, and the folder must be writable for you; editing a file you can write in a folder
+  you cannot write in fails.) On a server whose SFTP cannot rename over a file (OpenSSH's can), the old version
+  goes to your Trash there first, as Replace does.
+- **Changed on the server**: before each upload cmds checks the file's size and date against the version it last
+  downloaded or uploaded. If someone changed (or removed) it meanwhile, it asks: **Keep Mine** uploads your version
+  over theirs, **Keep Theirs** replaces your edited copy with the server's version (your app then shows it or asks to
+  revert), **Save Mine as a Copy** uploads yours as a numbered name (`notes 2.txt`) and later saves go there, and
+  **Cancel** uploads nothing now (saving again asks again). cmds is usually in the background while you edit, so a
+  notification tells you to answer in cmds. The check uses what SFTP reports (size, and the date to the second): two
+  changes of the same size within one second are not told apart.
+- If an upload fails (the connection dropped, the disk is full), an alert and a notification say so. The edit goes on:
+  your changes stay in the copy, saving again uploads them (reconnecting if needed), and **Retry** in Window ›
+  Transfers works too.
+- Editing the same file again opens the same copy. A link on the server is edited at the file it points to.
+- **Stop Editing** (right-click menu or **Pane › Files**) uploads what is pending and stops watching the copy. Closing
+  the pane does the same. The copy is then removed, unless it holds changes that could not be uploaded.
+- **Quitting** cmds stops watching every copy. If some hold changes not uploaded yet, cmds asks first; those copies
+  are kept in `~/Library/Caches/tokyo.n-n.cmds/remote-edits/` (one folder per edit, never reused), the others are
+  removed.
+- Edits do not survive a relaunch: after it, edit the file again from its pane.
 
 ## Transfers
 

@@ -58,20 +58,38 @@ final class TransferCenter {
     func start(_ mode: TransferJob.Mode, sources: [FileLocation], destination: FileLocation,
                from pane: FilesPane?) -> TransferJob {
         let job = TransferJob(id: queue.makeID(), mode: mode, sources: sources, destination: destination)
+        add(job, from: pane, several: sources.count > 1)
+        return job
+    }
+
+    /// Queues the upload of an edited copy (`copy`, on this Mac) over the server's file `path` on `host`, which was
+    /// `base` when it was last downloaded or uploaded (RemoteEdits). A change on the server is asked in `pane`'s window.
+    func startSave(copy: String, host: String, path: String, base: RemoteFileVersion, from pane: FilesPane?) -> TransferJob {
+        let job = TransferJob(id: queue.makeID(), saving: .local(copy), to: .remote(host: host, path: RemotePath.parent(path)),
+                              .init(name: RemotePath.name(path), base: base))
+        add(job, from: pane, several: false)
+        return job
+    }
+
+    private func add(_ job: TransferJob, from pane: FilesPane?, several: Bool) {
         job.tree = { location in try RemoteConnections.shared.tree(for: location) }
         job.partJournal = Self.partJournal
         askers[job.id] = { [weak pane] in pane }
         let id = job.id
+        let saving = job.mode == .save
         job.onConflict = { name, isFolder, reply in
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    TransferCenter.shared.askConflict(jobID: id, name: name, isFolder: isFolder,
-                                                      several: sources.count > 1, reply: reply)
+                    if saving {
+                        TransferCenter.shared.askSaveConflict(jobID: id, name: name, reply: reply)
+                    } else {
+                        TransferCenter.shared.askConflict(jobID: id, name: name, isFolder: isFolder, several: several,
+                                                          reply: reply)
+                    }
                 }
             }
         }
         queue.add(job)
-        return job
     }
 
     private func askConflict(jobID: Int, name: String, isFolder: Bool, several: Bool,
@@ -89,6 +107,29 @@ final class TransferCenter {
             }
         } else {
             reply(.skip, false)
+        }
+    }
+
+    /// An edited file changed on the server: Keep Mine / Keep Theirs / Save Mine as a Copy / Cancel, in the pane that
+    /// started the edit, else the Transfers window. cmds is usually in the background then (the user is in the
+    /// editor), so a notification says so.
+    private func askSaveConflict(jobID: Int, name: String,
+                                 reply: @escaping @Sendable (TransferJob.Resolution, Bool) -> Void) {
+        if !NSApp.isActive {
+            RemoteEdits.postNotice(title: String(localized: "“\(name)” changed on the server"),
+                                   body: String(localized: "Choose in cmds whether to upload your version."))
+        }
+        if let pane = askers[jobID]?(), pane.window != nil {
+            pane.askSaveConflict(name: name, reply: reply)
+            return
+        }
+        TransfersWindowController.shared.showWindow(nil)
+        let alert = FilesPane.saveConflictAlert(name: name)
+        if let window = TransfersWindowController.shared.window {
+            alert.beginSheetModal(for: window) { response in reply(FilesPane.saveResolution(for: response), false) }
+        } else {
+            // Nobody to ask: upload nothing (Keep Theirs would replace the edited copy).
+            reply(.stop, false)
         }
     }
 
@@ -138,6 +179,7 @@ extension TransferJob.Snapshot {
         switch mode {
         case .copy: return String(localized: "Copy \(what) to \(target)")
         case .move: return String(localized: "Move \(what) to \(target)")
+        case .save: return String(localized: "Upload edited “\(saving ?? sources.first?.name ?? "")” to \(target)")
         }
     }
 
@@ -185,6 +227,8 @@ extension TransferJob.Outcome {
         case .merged: return String(localized: "completed")
         case .originalKept(let reason): return String(localized: "copied, but the original could not be moved to the Trash: \(reason.localizedText)")
         case .notCopied: return String(localized: "not copied (special file)")
+        case .saved: return String(localized: "uploaded")
+        case .keptTheirs: return String(localized: "kept the server's version (downloaded into the edited copy)")
         case .failed(let reason): return String(localized: "failed: \(reason.localizedText)")
         }
     }

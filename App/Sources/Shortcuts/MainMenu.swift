@@ -174,6 +174,8 @@ enum MainMenu {
     private static func filesMenu(_ router: CommandRouter) -> NSMenu {
         let menu = NSMenu(title: String(localized: "Files"))
         menu.addItem(item("Show in Preview Pane", #selector(CommandRouter.filesPreview(_:)), "", target: router))
+        menu.addItem(item("Edit", #selector(CommandRouter.filesEdit(_:)), "", target: router))
+        menu.addItem(item("Stop Editing", #selector(CommandRouter.filesStopEditing(_:)), "", target: router))
         menu.addItem(item("Copy to Other Pane", #selector(CommandRouter.filesCopyToOtherPane(_:)), "", target: router))
         menu.addItem(item("Move to Other Pane", #selector(CommandRouter.filesMoveToOtherPane(_:)), "", target: router))
         menu.addItem(.separator())

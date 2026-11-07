@@ -458,12 +458,32 @@
         }
       }
     },
+    "%@: quitting stops their uploads. Their edited copies stay in %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：終了するとアップロードが止まります。編集用のコピーは%2$@に残ります。"
+          }
+        }
+      }
+    },
     "%lld AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "cmds の中で AI エージェントのセッションが %lld 件動いています。終了すると中断されます（保存されたセッションから後で再開できます）。"
+          }
+        }
+      }
+    },
+    "%lld being edited": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件を編集中"
           }
         }
       }
@@ -1671,6 +1691,16 @@
         }
       }
     },
+    "Choose in cmds whether to upload your version.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分の版をアップロードするかどうかをcmdsで選んでください。"
+          }
+        }
+      }
+    },
     "Choose…": {
       "localizations": {
         "ja": {
@@ -2203,6 +2233,16 @@
         }
       }
     },
+    "Could not download “%@” for editing.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集用に“%@”をダウンロードできませんでした。"
+          }
+        }
+      }
+    },
     "Could not download “%@”.": {
       "localizations": {
         "ja": {
@@ -2265,6 +2305,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”の名前を変更できませんでした。"
+          }
+        }
+      }
+    },
+    "Could not upload “%@” to %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”を%2$@にアップロードできませんでした。"
           }
         }
       }
@@ -2502,6 +2552,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アップデートを自動的にダウンロードしてインストール"
+          }
+        }
+      }
+    },
+    "Downloading “%@” for editing…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集用に“%@”をダウンロード中…"
           }
         }
       }
@@ -3455,6 +3515,36 @@
         }
       }
     },
+    "Keep Mine": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分の版を残す"
+          }
+        }
+      }
+    },
+    "Keep Mine uploads your version over it. Keep Theirs replaces your edited copy with the server's version. Save Mine as a Copy uploads your version under a numbered name, and later saves go there. Cancel uploads nothing now; saving again asks again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“自分の版を残す”はサーバのファイルを自分の版で置き換えます。“サーバの版を残す”は編集用のコピーをサーバの版で置き換えます。“自分の版をコピーとして保存”は番号付きの名前でアップロードし、以後の保存はそちらに行きます。“キャンセル”は今は何もアップロードせず、次に保存したときにもう一度確認します。"
+          }
+        }
+      }
+    },
+    "Keep Theirs": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバの版を残す"
+          }
+        }
+      }
+    },
     "Keep this Mac awake with the lid closed?": {
       "localizations": {
         "ja": {
@@ -4183,6 +4273,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "作業中のエージェントはありません"
+          }
+        }
+      }
+    },
+    "No app could open “%@”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”を開けるAppがありません。"
           }
         }
       }
@@ -5424,6 +5524,16 @@
         }
       }
     },
+    "Save Mine as a Copy": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分の版をコピーとして保存"
+          }
+        }
+      }
+    },
     "Schedule “%@”": {
       "localizations": {
         "ja": {
@@ -5980,6 +6090,16 @@
         }
       }
     },
+    "Some edited files are not uploaded to their servers yet.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集したファイルの一部がまだサーバにアップロードされていません。"
+          }
+        }
+      }
+    },
     "Some items could not be copied or moved.": {
       "localizations": {
         "ja": {
@@ -6133,6 +6253,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "中止"
+          }
+        }
+      }
+    },
+    "Stop Editing": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集を終了"
           }
         }
       }
@@ -6472,6 +6602,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバとの接続が切れました: %@"
+          }
+        }
+      }
+    },
+    "The copy is at %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コピーの場所：%@"
           }
         }
       }
@@ -7359,6 +7499,16 @@
         }
       }
     },
+    "Upload edited “%@” to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集した“%1$@”を%2$@にアップロード"
+          }
+        }
+      }
+    },
     "Usage": {
       "localizations": {
         "ja": {
@@ -7718,6 +7868,16 @@
         }
       }
     },
+    "Your changes stay in the edited copy. Save it again, or retry in Window › Transfers.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更は編集用のコピーに残っています。もう一度保存するか、ウインドウ › 転送で再試行してください。"
+          }
+        }
+      }
+    },
     "Zoom": {
       "localizations": {
         "ja": {
@@ -7982,6 +8142,16 @@
         }
       }
     },
+    "kept the server's version (downloaded into the edited copy)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバの版を残しました（編集用のコピーにダウンロード）"
+          }
+        }
+      }
+    },
     "last seen %@": {
       "localizations": {
         "ja": {
@@ -8176,6 +8346,16 @@
         }
       }
     },
+    "uploaded": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アップロード済み"
+          }
+        }
+      }
+    },
     "warning": {
       "comment": "memory pressure",
       "localizations": {
@@ -8229,6 +8409,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "コピー中に移動先に“%1$@”ができたため、そのままにしました（%2$@）。"
+          }
+        }
+      }
+    },
+    "“%@” changed on the server": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバ上の“%@”が変更されました"
+          }
+        }
+      }
+    },
+    "“%@” has changed on the server since you downloaded or last uploaded it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”は、ダウンロードまたは前回のアップロードのあとにサーバ上で変更されています。"
           }
         }
       }
@@ -8333,6 +8533,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」はアカウント名として使えません。"
+          }
+        }
+      }
+    },
+    "“%@” on the server is not a file any more; nothing was uploaded.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバ上の“%@”はもうファイルではありません。何もアップロードしませんでした。"
           }
         }
       }

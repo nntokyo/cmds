@@ -46,6 +46,57 @@ final class SFTPEndToEndTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: URL(fileURLWithPath: local + "/down/blob.bin")), payload)
     }
 
+    /// Editing a server's file over real ssh and OpenSSH's sftp server (which offers `posix-rename@openssh.com`).
+    func testEditAndSave() throws {
+        let connection = try SSHFileConnection(host: "cmds-test-relay", configFile: config)
+        defer { connection.close() }
+        XCTAssertNotNil(connection.client.extensions[SFTPClient.posixRenameExtension])
+        let remote = SFTPFileTree(client: connection.client, home: connection.home)
+        let work = connection.home + "/edit-\(UUID().uuidString)"
+        try remote.makeFolder(work, permissions: 0o700)
+        let file = work + "/notes.txt"
+        try Data("old".utf8).write(to: URL(fileURLWithPath: file))
+        chmod(file, 0o640)
+        let edits = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-e2e-edit-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: edits, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: edits) }
+        let copy = edits + "/notes.txt"
+
+        let downloaded = try RemoteEditCopy.download(file, from: remote, to: copy)
+        XCTAssertEqual(try String(contentsOfFile: copy, encoding: .utf8), "old")
+        try Data("edited".utf8).write(to: URL(fileURLWithPath: copy))
+        let tree: (FileLocation) throws -> FileTree = { $0.isRemote ? remote : LocalFileTree() }
+        let save = TransferJob(id: 1, saving: .local(copy), to: .remote(host: "cmds-test-relay", path: work),
+                               .init(name: "notes.txt", base: downloaded.version))
+        save.tree = tree
+        save.onConflict = { _, _, reply in
+            XCTFail("unchanged on the server")
+            reply(.stop, false)
+        }
+        save.run()
+        XCTAssertEqual(save.snapshot.log.map(\.outcome), [.saved])
+        XCTAssertEqual(try String(contentsOfFile: file, encoding: .utf8), "edited")
+        XCTAssertEqual(try remote.item(at: file)?.permissions, 0o640)
+        XCTAssertEqual(try remote.list(work).map(\.name), ["notes.txt"])
+
+        // Changed on the server: asked; Keep Theirs brings it into the copy.
+        try Data("theirs, longer".utf8).write(to: URL(fileURLWithPath: file))
+        try Data("mine".utf8).write(to: URL(fileURLWithPath: copy))
+        let conflict = TransferJob(id: 2, saving: .local(copy), to: .remote(host: "cmds-test-relay", path: work),
+                                   .init(name: "notes.txt", base: save.snapshot.saved!.version))
+        conflict.tree = tree
+        var asked = 0
+        conflict.onConflict = { _, _, reply in
+            asked += 1
+            reply(.skip, false)
+        }
+        conflict.run()
+        XCTAssertEqual(asked, 1)
+        XCTAssertEqual(conflict.snapshot.log.map(\.outcome), [.keptTheirs])
+        XCTAssertEqual(try String(contentsOfFile: copy, encoding: .utf8), "theirs, longer")
+        XCTAssertEqual(try String(contentsOfFile: file, encoding: .utf8), "theirs, longer")
+    }
+
     func testRefusals() throws {
         let emptyKnownHosts = directory + "/known_hosts_empty"
         for (host, expected) in [("cmds-test-unknown", SSHFailure.unknownHostKey),

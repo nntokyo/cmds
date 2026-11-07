@@ -37,6 +37,22 @@ extension FilesPane {
         urls.forEach { NSWorkspace.shared.open($0) }
     }
 
+    /// F4: edit the selected files. A server's file is downloaded into an editable copy, opened in its default app and
+    /// uploaded when saved (RemoteEdits); a file on this Mac simply opens in its default app.
+    @objc func editSelection() {
+        let files = targetEntries.filter { !$0.isFolder }
+        guard !files.isEmpty else { return NSSound.beep() }
+        if isRemote { return editRemoteFiles(files) }
+        files.map(url(of:)).forEach { NSWorkspace.shared.open($0) }
+    }
+
+    /// Ends the edits of the selected files: what is pending is uploaded, then the copy is no longer watched.
+    @objc func stopEditing() {
+        let sessions = editSessions(for: targetEntries)
+        guard !sessions.isEmpty else { return NSSound.beep() }
+        sessions.forEach(RemoteEdits.shared.end)
+    }
+
     /// Space: the selected file in the workspace's preview pane (images, PDF, Markdown, diffs, Quick Look).
     @objc func previewSelection() {
         guard let entry = targetEntries.first(where: { !$0.isFolder }) else { return NSSound.beep() }
@@ -335,6 +351,10 @@ extension FilesPane {
         if !entries.isEmpty {
             add(String(localized: "Open"), #selector(openSelection))
             add(String(localized: "Open in Default App"), #selector(openWithDefaultApp))
+            add(String(localized: "Edit"), #selector(editSelection), enabled: hasFile)
+            if !editSessions(for: entries).isEmpty {
+                add(String(localized: "Stop Editing"), #selector(stopEditing))
+            }
             add(String(localized: "Show in Preview Pane"), #selector(previewSelection), enabled: hasFile)
             menu.addItem(.separator())
             add(String(localized: "Copy to Other Pane"), #selector(copyToOtherPane))

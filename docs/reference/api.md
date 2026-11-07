@@ -136,7 +136,8 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `{host, connected, branch?}` (SSH panes; files panes on a host, `connected` false until it was listed, e.g. after a
   relaunch), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude
   Code runs under).
-- `TransferInfo` = `id`, `mode` (`copy`/`move`), `state` (`queued`, `running`, `paused`, `waiting`, `done`,
+- `TransferInfo` = `id`, `mode` (`copy`/`move`, or `save`: the upload of an edited file over the server's file, with
+  `sources` the edited copy), `state` (`queued`, `running`, `paused`, `waiting`, `done`,
   `failed`, `cancelled`), `sources` and `destination` (`HOST:PATH` on SSH hosts, else paths), `itemsDone`,
   `itemsTotal`, `bytesDone`, `bytesTotal`, `current?` (the file being written), `error?` (why the whole transfer
   stopped, e.g. the connection), `asking?` (a name conflict waiting for an answer in the app), `copied`, `moved`,
