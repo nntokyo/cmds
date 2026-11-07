@@ -669,29 +669,12 @@ public final class TransferJob: @unchecked Sendable {
         let folder = destinationTree.paths.parent(target)
         let finalName = target.split(separator: "/").last.map(String.init) ?? relative
         let part = destinationTree.paths.join(folder, TransferNames.part(for: finalName))
-        update { $0.progress.current = relative }
-        let reader = try sourceTree.openForReading(source)
-        defer { reader.close() }
-        let writer = try destinationTree.createFile(part, permissions: (item.permissions ?? 0o644) | 0o600)
-        // Recorded until it is renamed or removed, so one left by a quit or crash is removed later.
         let partEntry = TransferPartJournal.Entry(host: destination.host, path: part)
-        partJournal?.add(partEntry)
-        var written: Int64 = 0
         do {
-            while true {
-                try checkpoint()
-                let chunk = try reader.read()
-                if chunk.isEmpty { break }
-                try writer.write(chunk)
-                written += Int64(chunk.count)
-                addBytesDone(Int64(chunk.count))
-            }
-            try writer.finish()
+            _ = try stream(source, from: sourceTree, to: part, in: destinationTree, entry: partEntry,
+                           permissions: (item.permissions ?? 0o644) | 0o600, current: relative)
         } catch {
-            writer.abandon()
-            removePart(partEntry, from: destinationTree)
-            // Bytes of a file that did not arrive do not count.
-            addBytesDone(-written)
+            // A file that did not arrive counts as done (its bytes were taken back), unless the job was cancelled.
             if !(error is Cancelled) { addBytesDone(item.size) }
             throw error
         }
@@ -856,14 +839,16 @@ public final class TransferJob: @unchecked Sendable {
     }
 
     /// Streams `source` into a new part file (recorded in the journal until it is renamed or removed) and returns the
-    /// bytes written. On failure or cancel the part file is removed.
+    /// bytes written, showing `current` (default: the source's name) as the file being written. On failure or cancel
+    /// the part file is removed and its bytes are taken back. Copies, saves and Keep Theirs all write through here.
     private func stream(_ source: String, from sourceTree: FileTree, to part: String, in tree: FileTree,
-                        entry: TransferPartJournal.Entry, permissions: UInt32,
-                        _ each: (Data) -> Void) throws -> Int64 {
-        update { $0.progress.current = sourceTree.paths.name(source) }
+                        entry: TransferPartJournal.Entry, permissions: UInt32, current: String? = nil,
+                        _ each: (Data) -> Void = { _ in }) throws -> Int64 {
+        update { $0.progress.current = current ?? sourceTree.paths.name(source) }
         let reader = try sourceTree.openForReading(source)
         defer { reader.close() }
         let writer = try tree.createFile(part, permissions: permissions)
+        // Recorded until it is renamed or removed, so one left by a quit or crash is removed later.
         partJournal?.add(entry)
         var written: Int64 = 0
         do {
@@ -880,6 +865,7 @@ public final class TransferJob: @unchecked Sendable {
         } catch {
             writer.abandon()
             removePart(entry, from: tree)
+            // Bytes of a file that did not arrive do not count.
             addBytesDone(-written)
             throw error
         }

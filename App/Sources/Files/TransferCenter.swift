@@ -99,14 +99,9 @@ final class TransferCenter {
             return
         }
         // The pane is gone: ask in the Transfers window.
-        TransfersWindowController.shared.showWindow(nil)
         let alert = FilesPane.conflictAlert(name: name, isFolder: isFolder, several: several)
-        if let window = TransfersWindowController.shared.window {
-            alert.beginSheetModal(for: window) { response in
-                reply(FilesPane.resolution(for: response), alert.suppressionButton?.state == .on)
-            }
-        } else {
-            reply(.skip, false)
+        askInTransfersWindow(alert, otherwise: { reply(.skip, false) }) { response in
+            reply(FilesPane.resolution(for: response), alert.suppressionButton?.state == .on)
         }
     }
 
@@ -123,14 +118,18 @@ final class TransferCenter {
             pane.askSaveConflict(name: name, reply: reply)
             return
         }
-        TransfersWindowController.shared.showWindow(nil)
-        let alert = FilesPane.saveConflictAlert(name: name)
-        if let window = TransfersWindowController.shared.window {
-            alert.beginSheetModal(for: window) { response in reply(FilesPane.saveResolution(for: response), false) }
-        } else {
-            // Nobody to ask: upload nothing (Keep Theirs would replace the edited copy).
-            reply(.stop, false)
+        // Nobody to ask: upload nothing (Keep Theirs would replace the edited copy).
+        askInTransfersWindow(FilesPane.saveConflictAlert(name: name), otherwise: { reply(.stop, false) }) { response in
+            reply(FilesPane.saveResolution(for: response), false)
         }
+    }
+
+    /// A conflict whose pane is gone: `alert` as a sheet on the Transfers window, else `otherwise`.
+    private func askInTransfersWindow(_ alert: NSAlert, otherwise: () -> Void,
+                                      answer: @escaping (NSApplication.ModalResponse) -> Void) {
+        TransfersWindowController.shared.showWindow(nil)
+        guard let window = TransfersWindowController.shared.window else { return otherwise() }
+        alert.beginSheetModal(for: window, completionHandler: answer)
     }
 
     func job(id: Int) throws -> TransferJob {

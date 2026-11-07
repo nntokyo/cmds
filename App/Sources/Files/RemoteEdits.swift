@@ -100,7 +100,7 @@ final class RemoteEdits {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true,
                                                     attributes: [.posixPermissions: 0o700])
             do {
-                result.value = try RemoteEditCopy.download(path, from: tree, to: copy.path)
+                result.value = try RemoteFileCopy.download(path, from: tree, to: copy.path)
             } catch {
                 try? FileManager.default.removeItem(at: folder)
                 throw error
@@ -136,15 +136,13 @@ final class RemoteEdits {
     }
 
     private final class Downloaded: @unchecked Sendable {
-        var value: RemoteEditCopy.Downloaded?
+        var value: RemoteFileCopy.Downloaded?
     }
 
     private func openCopy(_ session: RemoteEditSession) {
-        guard NSWorkspace.shared.open(session.copy) else {
-            session.pane?.showError(String(localized: "No app could open “\(session.name)”."),
-                                    detail: String(localized: "The copy is at \(session.copy.path)."))
-            return
-        }
+        guard !NSWorkspace.shared.open(session.copy) else { return }
+        session.pane?.showError(String(localized: "No app could open “\(session.name)”."),
+                                detail: String(localized: "The copy is at \(session.copy.path)."))
     }
 
     // MARK: - End
@@ -168,29 +166,26 @@ final class RemoteEdits {
 
     /// Quit: stop watching; remove the copies that hold nothing the server lacks, keep the others.
     func shutdown() {
-        for session in sessions {
-            session.timer?.cancel()
-            session.watcher?.cancel()
-            if session.hasChangesNotUploaded {
-                editLog.notice("keeping the edited copy \(session.copy.path, privacy: .private): not uploaded")
-            } else {
-                try? FileManager.default.removeItem(at: session.folder)
-            }
-        }
+        sessions.forEach(release)
         sessions.removeAll()
     }
 
     private func finish(_ session: RemoteEditSession) {
+        release(session)
+        sessions.removeAll { $0 === session }
+        session.pane?.editsChanged()
+    }
+
+    /// Stops watching the copy and removes its folder, unless it holds changes the server does not have.
+    private func release(_ session: RemoteEditSession) {
         session.timer?.cancel()
         session.watcher?.cancel()
         session.watcher = nil
-        sessions.removeAll { $0 === session }
         if session.hasChangesNotUploaded {
-            editLog.notice("edit ended; keeping \(session.copy.path, privacy: .private): not uploaded")
+            editLog.notice("keeping the edited copy \(session.copy.path, privacy: .private): not uploaded")
         } else {
             try? FileManager.default.removeItem(at: session.folder)
         }
-        session.pane?.editsChanged()
     }
 
     // MARK: - Uploads

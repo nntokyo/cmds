@@ -144,11 +144,11 @@ final class RemoteEditSaveTests: XCTestCase {
     }
 
     /// Downloads home/notes.txt into the edit copy.
-    private func download() throws -> RemoteEditCopy.Downloaded {
-        try RemoteEditCopy.download(home + "/notes.txt", from: remote, to: copy)
+    private func download() throws -> RemoteFileCopy.Downloaded {
+        try RemoteFileCopy.download(home + "/notes.txt", from: remote, to: copy)
     }
 
-    private func saveJob(_ downloaded: RemoteEditCopy.Downloaded, name: String = "notes.txt") -> TransferJob {
+    private func saveJob(_ downloaded: RemoteFileCopy.Downloaded, name: String = "notes.txt") -> TransferJob {
         let job = TransferJob(id: 1, saving: .local(copy), to: .remote(host: "test", path: home),
                               .init(name: name, base: downloaded.version))
         job.tree = { [remote, local] location in location.isRemote ? remote! as FileTree : local! as FileTree }

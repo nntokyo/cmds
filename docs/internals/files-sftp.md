@@ -99,7 +99,7 @@ Copies between two folders on this Mac keep using `FileOperation` (copyfile, foo
 
 `RemoteEdits` (`App/Sources/Files/RemoteEdits.swift`) keeps one `RemoteEditSession` per edited file:
 
-- **Start** (Edit, F4): `RemoteEditCopy.download` (`CmdsCore/Files/RemoteEdit.swift`) resolves the path with `realpath`
+- **Start** (Edit, F4): `RemoteFileCopy.download` (`CmdsCore/Files/RemoteEdit.swift`) resolves the path with `realpath`
   (a link is edited at its file), refuses anything but a file, and writes the copy (mode 0600, through a part file) into
   a new folder `remote-edits/<host>-<random>/` in the cache (the support folder of isolated instances), recording the
   server file's `RemoteFileVersion` (size, mtime in seconds) and the content's SHA-256. The copy opens in its default

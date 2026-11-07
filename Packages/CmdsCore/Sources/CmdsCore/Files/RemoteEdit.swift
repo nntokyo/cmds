@@ -42,8 +42,9 @@ public struct RemoteFileVersion: Equatable, Sendable {
     }
 }
 
-/// The editable copy of a server's file.
-public enum RemoteEditCopy {
+/// Copies of a server's files on this Mac: the editable copy of Edit (`download`), and the part file under both it
+/// and the read-only copies of Open and Space (`downloadToPart`).
+public enum RemoteFileCopy {
     /// What `download` made.
     public struct Downloaded: Equatable, Sendable {
         /// The server's file, absolute with links resolved (saves go there, not over a link).
@@ -58,9 +59,24 @@ public enum RemoteEditCopy {
         let resolved = try tree.client.realpath(path)
         guard let item = try tree.item(at: resolved) else { throw TransferFailure.noSuchItem }
         guard item.kind == .file else { throw TransferFailure.notAFile(name: RemotePath.name(resolved)) }
+        let (part, hash) = try downloadToPart(resolved, from: tree, nextTo: copy)
+        do {
+            try LocalFileTree().rename(part, to: copy)
+        } catch {
+            try? LocalFileTree().removePart(part)
+            throw error
+        }
+        return Downloaded(path: resolved, version: RemoteFileVersion(item), contentHash: hash)
+    }
+
+    /// Downloads a server's file into a new part file next to `target` on this Mac (readable by this user only) and
+    /// returns it with the content's hash; the caller puts it in place. A failure removes the part file. Also used for
+    /// the read-only copies that Open and Space show. Blocks; never on the main thread.
+    public static func downloadToPart(_ path: String, from tree: FileTree, nextTo target: String) throws
+        -> (part: String, contentHash: String) {
         let local = LocalFileTree()
-        let part = local.paths.join(local.paths.parent(copy), TransferNames.part(for: local.paths.name(copy)))
-        let reader = try tree.openForReading(resolved)
+        let part = local.paths.join(local.paths.parent(target), TransferNames.part(for: local.paths.name(target)))
+        let reader = try tree.openForReading(path)
         defer { reader.close() }
         let writer = try local.createFile(part, permissions: 0o600)
         var hash = ContentHash()
@@ -72,13 +88,12 @@ public enum RemoteEditCopy {
                 hash.update(chunk)
             }
             try writer.finish()
-            try local.rename(part, to: copy)
         } catch {
             writer.abandon()
             try? local.removePart(part)
             throw error
         }
-        return Downloaded(path: resolved, version: RemoteFileVersion(item), contentHash: hash.finalize())
+        return (part, hash.finalize())
     }
 }
 

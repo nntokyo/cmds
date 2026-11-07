@@ -199,23 +199,7 @@ extension FilesPane {
         let target = cache.appendingPathComponent(entry.name).path
         onServer(String(localized: "Downloading “\(entry.name)”…"), { tree in
             try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
-            let part = cache.appendingPathComponent(TransferNames.part(for: entry.name)).path
-            let local = LocalFileTree()
-            let reader = try tree.openForReading(source)
-            defer { reader.close() }
-            let writer = try local.createFile(part, permissions: 0o600)
-            do {
-                while true {
-                    let chunk = try reader.read()
-                    if chunk.isEmpty { break }
-                    try writer.write(chunk)
-                }
-                try writer.finish()
-            } catch {
-                writer.abandon()
-                try? local.removePart(part)
-                throw error
-            }
+            let part = try RemoteFileCopy.downloadToPart(source, from: tree, nextTo: target).part
             // The previous copy is ours (the cache), never the user's file.
             try? FileManager.default.removeItem(atPath: target)
             try FileManager.default.moveItem(atPath: part, toPath: target)
