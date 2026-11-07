@@ -27,6 +27,8 @@ final class MockTransport: SyncTransport {
     /// This demo Mac streams scrolled-off rows (not with `-mockNoHistoryStream`), and the phone asked for them.
     private let streamsHistory = !ProcessInfo.processInfo.arguments.contains("-mockNoHistoryStream")
     private var phoneStreamsHistory = false
+    /// This demo Mac lists its files pane's folders (not with `-mockNoFilesBrowse`).
+    private let browsesFiles = !ProcessInfo.processInfo.arguments.contains("-mockNoFilesBrowse")
     /// The phone listed `SyncFeature.styles`: its screens come with colours (`MockStyles`), like from a current Mac.
     private var phoneDrawsStyles = false
     /// Panes whose `requestScrollback` was answered: their shell's `historyEpoch`, and its `scrolledCount` when the
@@ -57,6 +59,7 @@ final class MockTransport: SyncTransport {
             phoneDrawsStyles = hello.features?.contains(SyncFeature.styles) == true
             let features = [SyncFeature.scrollback, SyncFeature.styles, SyncFeature.schedules]
                 + (streamsHistory ? [SyncFeature.scrollbackStream] : [])
+                + (browsesFiles ? [SyncFeature.filesBrowse] : [])
             deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token", features: features))))
             deliver(after: 0.1, .message(.state(currentState)))
             // Like a current Mac: the schedules follow `state`, only for phones that asked for them.
@@ -93,6 +96,11 @@ final class MockTransport: SyncTransport {
             emit(.state(currentState))
         case .ping(let ping):
             deliver(after: 0.02, .message(.pong(.init(nonce: ping.nonce))))
+        case .requestFile(let request) where request.path != nil:
+            guard browsesFiles, let pieces = MockFiles.file(paneID: request.paneID, path: request.path ?? "") else {
+                return emit(.error(.init(code: .notFound, message: SyncListing.Failure.notFound.rawValue)))
+            }
+            for piece in pieces { deliver(after: 0.2, .message(.file(piece))) }
         case .requestFile(let request):
             guard request.paneID == "p-chart" else {
                 return emit(.error(.init(code: .badRequest, message: "pane \(request.paneID) is not a preview pane")))
@@ -100,6 +108,11 @@ final class MockTransport: SyncTransport {
             for piece in SyncFile.messages(paneID: request.paneID, name: "chart.png", mime: "image/png", data: MockData.chartPNG()) {
                 deliver(after: 0.2, .message(.file(piece)))
             }
+        case .requestListing(let request):
+            guard browsesFiles else {
+                return emit(.error(.init(code: .badRequest, message: "unknown message type requestListing")))
+            }
+            deliver(after: 0.15, .message(.listing(MockFiles.listing(request))))
         case .requestScrollback(let request):
             // Like the Mac: a full screen, then the rows above it with the same seq.
             guard subscribed.contains(request.paneID), let shell = shells[request.paneID] else {
@@ -459,9 +472,13 @@ enum MockData {
                          file: "/Users/demo/Source/report/out/chart.png"),
                 PaneInfo(id: "p-notes", kind: .preview, title: "NOTES.md", focused: false, attention: false,
                          file: "/Users/demo/Source/report/NOTES.md"),
+                PaneInfo(id: "p-files", kind: .files, title: "report", focused: false, attention: false,
+                         workingDirectory: MockFiles.root),
             ],
             layout: .split(axis: .horizontal, ratio: 0.5, first: .pane(id: "p-report-shell"),
-                           second: .split(axis: .vertical, ratio: 0.6, first: .pane(id: "p-chart"), second: .pane(id: "p-notes")))),
+                           second: .split(axis: .vertical, ratio: 0.6, first: .pane(id: "p-chart"),
+                                          second: .split(axis: .horizontal, ratio: 0.5, first: .pane(id: "p-notes"),
+                                                         second: .pane(id: "p-files"))))),
     ]
 
     /// A small bar chart for the mock preview pane.

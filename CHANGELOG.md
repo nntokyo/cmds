@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Mac: phones can browse the folder of a files pane, read only: they ask for a folder's contents (folders first, then
+  by name, at most 2,000 items; hidden items only when the pane shows them) and open a file in it (up to 10 MB), only
+  phones that ask for it (sync feature `filesBrowse`). A pane on an SSH host is listed through the connection the pane
+  already has open; the phone never makes cmds connect. Nothing can be changed from the phone (#26).
+- iPhone/iPad: a files pane lists its folder with icons, sizes and dates; tap a folder to go into it (on the phone
+  only, the Mac pane stays where it is), Back to return, pull to refresh, and tap a file to open it: images and PDFs
+  with the preview viewer, text files (source code, logs, JSON…) as text. Macs without the feature keep showing the folder's path (#26).
+
 ## [0.14.0] - 2026-11-07
 
 Mac and iPhone/iPad. The iPhone/iPad features need cmds 0.14.0 on the Mac; older Macs and phones keep working as

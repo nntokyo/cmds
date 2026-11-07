@@ -67,6 +67,14 @@ final class RemoteConnections: @unchecked Sendable {
         return SFTPFileTree(client: connection.client, home: connection.home)
     }
 
+    /// The host's files through the connection that is open now, or nil when there is none: never connects (a paired
+    /// phone browsing a remote files pane, which must not start ssh). Counts as a use.
+    func openTree(host: String) -> SFTPFileTree? {
+        guard let connection = existing(host), connection.isConnected else { return nil }
+        touch(host)
+        return SFTPFileTree(client: connection.client, home: connection.home)
+    }
+
     /// The tree a transfer location is on.
     func tree(for location: FileLocation) throws -> FileTree {
         guard let host = location.host else { return LocalFileTree() }

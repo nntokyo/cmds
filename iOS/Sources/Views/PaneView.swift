@@ -11,8 +11,10 @@ struct PaneView: View {
         VStack(spacing: 0) {
             if pane.kind == .preview {
                 PreviewFileView(pane: pane)
+            } else if pane.kind == .files, client.macBrowsesFiles {
+                FolderBrowserView(pane: pane)
             } else if pane.kind == .files {
-                // Browsing a Mac folder from the phone comes later (#26): the folder it shows, for now.
+                // A Mac that does not list folders for the phone: the folder it shows.
                 ContentUnavailableView {
                     Label(pane.title, systemImage: "folder")
                 } description: {

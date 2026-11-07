@@ -489,6 +489,14 @@ final class AppController {
         return preview.path
     }
 
+    /// Where a files pane is and whether it shows hidden files: what a paired phone may browse in it (sync
+    /// `requestListing`, `requestFile` with a path; #26 phase 4). Throws for a pane that is not a files pane.
+    func filesPaneFolder(paneID: String) throws -> (location: FileLocation, showHidden: Bool) {
+        let pane = try resolvePane(paneID)
+        guard let files = pane.files else { throw RPCError.invalidParams("pane \(pane.id) is not a files pane") }
+        return (files.location, files.showHidden)
+    }
+
     // MARK: - Files
 
     /// `files.open`: lists a local folder in a files pane split off `paneID` (default: focused pane). When `paneID` is

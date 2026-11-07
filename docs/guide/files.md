@@ -244,9 +244,20 @@ Copies between two folders on this Mac do not use the queue (see [Copying and mo
 
 ## iPhone and iPad
 
-The companion lists files panes with a folder icon and shows the folder's path; browsing it from the phone comes in a
-later phase. Older companion versions show a files pane as a browser pane with the folder's `file://` URL
-([sync protocol](../internals/sync-protocol.md#files-panes)).
+With a cmds release after 0.14.0 on the Mac, the companion lists the folder a files pane shows: folders first, then
+files, with their size and date (hidden items only when the pane shows them, at most 2,000 items). Tap a folder to go
+into it and **Back** to return; this happens on the phone only, the pane on the Mac stays where it is. Pull down (or
+tap the reload button) to list the folder again; at the top this is the folder the Mac pane shows now. Tap a file to
+open it: images and PDFs are shown with the preview viewer, text files (source code, logs, JSON…) as text (up to 10 MB; the
+first 256 KB of a text file), other files show their name.
+
+Browsing is read only: nothing can be renamed, moved, deleted or copied from the phone. A pane on an SSH host is
+listed through the connection the pane has open on the Mac; when it has none (the pane waits for **Connect**, or the
+connection was closed after two idle minutes) the phone says so, and reloading the pane on the Mac opens it again. The
+phone never makes cmds connect to a host.
+
+With an older cmds on the Mac the companion shows the folder's path only. Older companion versions show a files pane
+as a browser pane with the folder's `file://` URL ([sync protocol](../internals/sync-protocol.md#files-panes)).
 
 ## Keys
 

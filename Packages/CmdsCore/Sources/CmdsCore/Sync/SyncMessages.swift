@@ -16,6 +16,8 @@ public enum ClientMessage: Equatable, Sendable {
     case ping(Ping)
     case requestFile(RequestFile)
     case requestScrollback(RequestScrollback)
+    /// `SyncFeature.filesBrowse`: a folder of a files pane (`RequestListing`, SyncListing.swift).
+    case requestListing(RequestListing)
 
     /// First message on every connection. Give `token` when one is stored for this Mac,
     /// otherwise `pairingCode` (the 6 digits shown on the Mac).
@@ -82,11 +84,17 @@ public enum ClientMessage: Equatable, Sendable {
         public init(id: String) { self.id = id }
     }
 
-    /// Ask for the file shown in a preview pane (never an arbitrary path). Answered with `file` message(s),
-    /// or `error` (`notFound`, `badRequest`). Older Macs answer `error{badRequest}` (unknown type).
+    /// Ask for the file shown in a preview pane, or (`path`, Macs with `SyncFeature.filesBrowse`) a file in a folder of
+    /// a files pane. Answered with `file` message(s), or `error` (`notFound`, `badRequest`). Older Macs answer
+    /// `error{badRequest}` (unknown type).
     public struct RequestFile: Codable, Equatable, Sendable {
         public var paneID: String
-        public init(paneID: String) { self.paneID = paneID }
+        /// Files panes only: the file, absolute (on the Mac, or on the SSH host of a remote pane).
+        public var path: String?
+        public init(paneID: String, path: String? = nil) {
+            self.paneID = paneID
+            self.path = path
+        }
     }
 
     /// Ask for the rows above the screen of a streamed terminal pane (Macs that list `SyncFeature.scrollback` in
@@ -120,6 +128,7 @@ public enum ClientMessage: Equatable, Sendable {
         case .ping: return "ping"
         case .requestFile: return "requestFile"
         case .requestScrollback: return "requestScrollback"
+        case .requestListing: return "requestListing"
         }
     }
 }
@@ -138,6 +147,8 @@ public enum ServerMessage: Equatable, Sendable {
     case scrollback(Scrollback)
     /// `SyncFeature.schedules`: the Mac's schedules, read only (`Schedules`, SyncSchedules.swift).
     case schedules(Schedules)
+    /// `SyncFeature.filesBrowse`: a folder of a files pane (`Listing`, SyncListing.swift).
+    case listing(Listing)
 
     /// Authentication succeeded. The phone stores `token` (Keychain, per Mac) for future connects.
     public struct Welcome: Codable, Equatable, Sendable {
@@ -314,9 +325,11 @@ public enum ServerMessage: Equatable, Sendable {
         public var offset: Int
         public var data: Data
         public var truncated: Bool?
+        /// The `requestFile.path` this answers (a file of a files pane); absent for preview panes.
+        public var path: String?
 
         public init(paneID: String, name: String, mime: String, size: Int, offset: Int = 0, data: Data,
-                    truncated: Bool? = nil) {
+                    truncated: Bool? = nil, path: String? = nil) {
             self.paneID = paneID
             self.name = name
             self.mime = mime
@@ -324,6 +337,7 @@ public enum ServerMessage: Equatable, Sendable {
             self.offset = offset
             self.data = data
             self.truncated = truncated
+            self.path = path
         }
     }
 
@@ -377,6 +391,7 @@ public enum ServerMessage: Equatable, Sendable {
         case .file: return "file"
         case .scrollback: return "scrollback"
         case .schedules: return "schedules"
+        case .listing: return "listing"
         }
     }
 }
@@ -404,6 +419,7 @@ extension ClientMessage: Codable {
         case "ping": self = .ping(try Ping(from: decoder))
         case "requestFile": self = .requestFile(try RequestFile(from: decoder))
         case "requestScrollback": self = .requestScrollback(try RequestScrollback(from: decoder))
+        case "requestListing": self = .requestListing(try RequestListing(from: decoder))
         default: throw UnknownSyncMessageType(type: type)
         }
     }
@@ -420,6 +436,7 @@ extension ClientMessage: Codable {
         case .ping(let p): try p.encode(to: encoder)
         case .requestFile(let p): try p.encode(to: encoder)
         case .requestScrollback(let p): try p.encode(to: encoder)
+        case .requestListing(let p): try p.encode(to: encoder)
         }
         var c = encoder.container(keyedBy: SyncTypeKey.self)
         try c.encode(typeName, forKey: .type)
@@ -440,6 +457,7 @@ extension ServerMessage: Codable {
         case "file": self = .file(try File(from: decoder))
         case "scrollback": self = .scrollback(try Scrollback(from: decoder))
         case "schedules": self = .schedules(try Schedules(from: decoder))
+        case "listing": self = .listing(try Listing(from: decoder))
         default: throw UnknownSyncMessageType(type: type)
         }
     }
@@ -456,6 +474,7 @@ extension ServerMessage: Codable {
         case .file(let p): try p.encode(to: encoder)
         case .scrollback(let p): try p.encode(to: encoder)
         case .schedules(let p): try p.encode(to: encoder)
+        case .listing(let p): try p.encode(to: encoder)
         }
         var c = encoder.container(keyedBy: SyncTypeKey.self)
         try c.encode(typeName, forKey: .type)

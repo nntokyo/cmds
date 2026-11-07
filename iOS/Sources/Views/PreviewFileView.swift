@@ -3,8 +3,8 @@ import PDFKit
 import SwiftUI
 import UIKit
 
-/// A Mac preview pane on the phone: images and PDFs are fetched (`requestFile`) and shown; other files show their
-/// name and "Open on Mac".
+/// A Mac preview pane on the phone: images and PDFs are fetched (`requestFile`) and shown (`FilePreviewContent`);
+/// other files show their name and "Open on Mac".
 struct PreviewFileView: View {
     @Environment(CompanionClient.self) private var client
     let pane: PaneInfo
@@ -46,14 +46,51 @@ struct PreviewFileView: View {
         .padding(.vertical, 8)
     }
 
-    @ViewBuilder
     private var content: some View {
-        if !viewable {
-            unavailable(String(localized: "No preview on the phone"), detail: String(localized: "\(name) is shown on the Mac."))
+        FilePreviewContent(name: name, entry: client.previewFiles.entry(for: pane.id),
+                           unviewableDetail: String(localized: "\(name) is shown on the Mac."),
+                           openOnMac: { client.focusPaneOnMac(pane.id) })
+    }
+
+    private var icon: String { FilePreviewContent.icon(mime: mime) }
+
+    private func fetchIfNeeded(force: Bool) {
+        guard viewable, client.status.isLive else { return }
+        if !force, case .loaded? = client.previewFiles.entry(for: pane.id) { return }
+        client.requestFile(paneID: pane.id)
+    }
+}
+
+/// What a fetched file shows: the image or PDF, progress, or why it cannot be shown. Used by preview panes and by
+/// files opened while browsing a files pane.
+struct FilePreviewContent: View {
+    @Environment(CompanionClient.self) private var client
+    let name: String
+    let entry: PreviewFileStore.Entry?
+    /// Below "No preview on the phone" for types the phone does not show.
+    let unviewableDetail: String
+    /// "Open on Mac" (preview panes: focuses the pane there); nil hides it.
+    var openOnMac: (() -> Void)?
+    /// Text files are shown as text (files panes).
+    var showsText = false
+
+    private var mime: String { SyncFile.mimeType(forFileName: name) }
+
+    /// The phone fetches and shows the file: images, PDFs, and with `asText` text files.
+    static func isShown(name: String, asText: Bool) -> Bool {
+        PreviewFileStore.isViewable(mime: SyncFile.mimeType(forFileName: name))
+            || (asText && PreviewFileStore.isText(name: name))
+    }
+
+    var body: some View {
+        if !Self.isShown(name: name, asText: showsText) {
+            unavailable(String(localized: "No preview on the phone"), detail: unviewableDetail)
         } else {
-            switch client.previewFiles.entry(for: pane.id) {
+            switch entry {
             case .loaded(_, let mime, let data)?:
-                if mime == "application/pdf" {
+                if showsText, !PreviewFileStore.isViewable(mime: mime) {
+                    FileTextView(data: data)
+                } else if mime == "application/pdf" {
                     PDFDocumentView(data: data)
                 } else if let image = UIImage(data: data) {
                     ZoomableImage(image: image)
@@ -84,25 +121,43 @@ struct PreviewFileView: View {
 
     private func unavailable(_ title: String, detail: String) -> some View {
         ContentUnavailableView {
-            Label(title, systemImage: icon)
+            Label(title, systemImage: Self.icon(mime: mime))
         } description: {
             Text(detail)
         } actions: {
-            Button("Open on Mac") { client.focusPaneOnMac(pane.id) }
+            if let openOnMac { Button("Open on Mac", action: openOnMac) }
         }
     }
 
-    private var icon: String {
+    static func icon(mime: String) -> String {
         if mime.hasPrefix("image/") { return "photo" }
         if mime == "application/pdf" { return "doc.richtext" }
         if mime.hasPrefix("video/") { return "film" }
         return "doc.text"
     }
+}
 
-    private func fetchIfNeeded(force: Bool) {
-        guard viewable, client.status.isLive else { return }
-        if !force, case .loaded? = client.previewFiles.entry(for: pane.id) { return }
-        client.requestFile(paneID: pane.id)
+/// A text file, monospaced and scrollable; at most `maxBytes` of it (the rest on the Mac).
+private struct FileTextView: View {
+    static let maxBytes = 256 * 1024
+    let data: Data
+
+    var body: some View {
+        let shown = data.prefix(Self.maxBytes)
+        ScrollView([.vertical, .horizontal]) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(decoding: shown, as: UTF8.self))
+                    .font(.system(.footnote, design: .monospaced))
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: true, vertical: false)
+                if data.count > shown.count {
+                    Text("Showing the first \(Self.maxBytes / 1024) KB. Open the file on the Mac to see all.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(12)
+        }
+        .accessibilityIdentifier("fileText")
     }
 }
 

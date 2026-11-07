@@ -557,6 +557,16 @@
         }
       }
     },
+    "Back" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "戻る"
+          }
+        }
+      }
+    },
     "Bad message from the Mac: %@" : {
       "localizations" : {
         "ja" : {
@@ -700,6 +710,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "キャンセルしました。"
+          }
+        }
+      }
+    },
+    "Cannot show this folder" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このフォルダを表示できません"
           }
         }
       }
@@ -1019,6 +1039,16 @@
         }
       }
     },
+    "Empty folder" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "空のフォルダ"
+          }
+        }
+      }
+    },
     "Enable iOS Sync in cmds on your Mac. The first connection to a Mac needs its pairing code." : {
       "localizations" : {
         "ja" : {
@@ -1255,6 +1285,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "画像"
+          }
+        }
+      }
+    },
+    "Images, PDFs and text files can be shown on the phone." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイスで表示できるのは画像、PDF、テキストファイルです。"
           }
         }
       }
@@ -1603,6 +1643,16 @@
         }
       }
     },
+    "Not available for remote folders while the pane is not connected. Open or reload the pane on the Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リモートのフォルダは、ペインがMacで接続しているときだけ表示できます。Macでペインを開くか再読み込みしてください。"
+          }
+        }
+      }
+    },
     "Not connected" : {
       "localizations" : {
         "ja" : {
@@ -1810,6 +1860,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ペイン%lld"
+          }
+        }
+      }
+    },
+    "Permission denied on the Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macでアクセスが拒否されました。"
           }
         }
       }
@@ -2257,6 +2317,26 @@
         }
       }
     },
+    "Showing the first %lld KB. Open the file on the Mac to see all." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の%lld KBを表示しています。すべて見るにはMacでファイルを開いてください。"
+          }
+        }
+      }
+    },
+    "Showing the first %lld items. Open the folder on the Mac to see all." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の%lld項目を表示しています。すべて見るにはMacでフォルダを開いてください。"
+          }
+        }
+      }
+    },
     "Shown above the key bar. Tap one to send its text and Return, for example a reply to an agent or a command such as claude. Long-press to insert it without Return. In line mode, while you are typing a line, it is added to the line instead." : {
       "localizations" : {
         "ja" : {
@@ -2590,12 +2670,32 @@
         }
       }
     },
+    "The folder could not be read." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダを読み込めませんでした。"
+          }
+        }
+      }
+    },
     "The folder does not exist." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "フォルダがありません。"
+          }
+        }
+      }
+    },
+    "The folder or file is no longer there." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダまたはファイルが見つかりません。"
           }
         }
       }
@@ -2616,6 +2716,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "“%@”のペアリングウインドウに「Macの識別情報」が表示されています。次の内容と完全に一致する必要があります："
+          }
+        }
+      }
+    },
+    "The pane is no longer open on the Mac." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このペインはMacで閉じられています。"
           }
         }
       }
@@ -2840,6 +2950,16 @@
         }
       }
     },
+    "This cannot be opened as a file." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルとして開けません。"
+          }
+        }
+      }
+    },
     "This device is no longer paired. Enter a new pairing code." : {
       "localizations" : {
         "ja" : {
@@ -2860,6 +2980,16 @@
         }
       }
     },
+    "This is not a folder." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "フォルダではありません。"
+          }
+        }
+      }
+    },
     "This pairing code could not be read." : {
       "localizations" : {
         "ja" : {
@@ -2876,6 +3006,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "このペアリングコードは別のバージョンのcmdsのものです。Macとこのデバイスのcmdsをアップデートしてください。"
+          }
+        }
+      }
+    },
+    "This pane no longer shows a folder." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このペインはもうフォルダを表示していません。"
+          }
+        }
+      }
+    },
+    "This path cannot be opened." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このパスは開けません。"
           }
         }
       }

@@ -22,6 +22,10 @@ public enum SyncFeature {
     /// Phone (`hello.features`) and Mac (`welcome.features`): the Mac sends `schedules`, a read-only summary of its
     /// schedules and their recent runs (#45 phase 3), after `welcome` and on change. Phones without it never get it.
     public static let schedules = "schedules"
+    /// Phone (`hello.features`) and Mac (`welcome.features`): the phone browses a files pane's folders, read only
+    /// (`requestListing` → `listing`, `requestFile` with `path` → `file`, #26 phase 4; SyncListing.swift). Phones
+    /// without it never send these; with a Mac without it the phone shows the folder's path only.
+    public static let filesBrowse = "filesBrowse"
 }
 
 /// Sending the file of a preview pane to the phone in `file` messages (`requestFile`).
@@ -31,23 +35,27 @@ public enum SyncFile {
     /// Bytes per `file` message: base64 (×4/3) plus JSON stays well under `SyncCodec.maxFrameBytes`.
     public static let chunkBytes = 2 * 1024 * 1024
 
-    /// The `file` messages for `data` (the whole file, at most `maxBytes`).
-    public static func messages(paneID: String, name: String, mime: String, data: Data) -> [ServerMessage.File] {
-        guard !data.isEmpty else { return [.init(paneID: paneID, name: name, mime: mime, size: 0, data: Data())] }
+    /// The `file` messages for `data` (the whole file, at most `maxBytes`). `path`: the file of a files pane that was
+    /// asked for (`requestFile.path`), repeated in every piece.
+    public static func messages(paneID: String, name: String, mime: String, data: Data,
+                                path: String? = nil) -> [ServerMessage.File] {
+        guard !data.isEmpty else {
+            return [.init(paneID: paneID, name: name, mime: mime, size: 0, data: Data(), path: path)]
+        }
         var result: [ServerMessage.File] = []
         var offset = 0
         while offset < data.count {
             let end = min(offset + chunkBytes, data.count)
             result.append(.init(paneID: paneID, name: name, mime: mime, size: data.count, offset: offset,
-                                data: data.subdata(in: data.startIndex + offset ..< data.startIndex + end)))
+                                data: data.subdata(in: data.startIndex + offset ..< data.startIndex + end), path: path))
             offset = end
         }
         return result
     }
 
     /// The answer for a file that is too large (or could not be read): name and type only.
-    public static func truncated(paneID: String, name: String, mime: String) -> ServerMessage.File {
-        .init(paneID: paneID, name: name, mime: mime, size: 0, data: Data(), truncated: true)
+    public static func truncated(paneID: String, name: String, mime: String, path: String? = nil) -> ServerMessage.File {
+        .init(paneID: paneID, name: name, mime: mime, size: 0, data: Data(), truncated: true, path: path)
     }
 
     /// MIME type from the file name (`application/octet-stream` when unknown).
