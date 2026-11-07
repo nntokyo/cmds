@@ -14,13 +14,13 @@ import Foundation
 /// - Pause holds at the next chunk; Cancel stops there, and a folder the interrupted item created goes to the Trash.
 /// - Retry runs the items that are not done; a folder the job created before is filled in (files already there with
 ///   the same size are kept).
-/// - Save (`.save`, editing a server's file): the edited copy on this Mac goes over the file it came from. When the
+/// - Save (`.save`, TransferJob+Save.swift; editing a server's file): the edited copy on this Mac goes over the file it came from. When the
 ///   server's file is not as it was last read or written (`SaveRequest.base`), the conflict is asked: Replace keeps
 ///   the copy (uploads it), Skip keeps the server's file (downloads it into the copy), Keep Both uploads the copy
 ///   under a numbered name, Stop uploads nothing. The upload is written to a part file with the server file's
 ///   permissions and renamed over it in one step (`renameReplacing`); on a server without that, its file goes to its
 ///   Trash first, as Replace does.
-/// - Sync (`.sync`, docs/guide/files.md "Comparing and syncing folders"): the actions of a `FolderSync` plan between
+/// - Sync (`.sync`, TransferJob+Sync.swift; docs/guide/files.md "Comparing and syncing folders"): the actions of a `FolderSync` plan between
 ///   two folders, each on its own: before an item is changed, the side it changes must still look as the comparison
 ///   saw it (else it is left alone and logged as changed). A file replacing a file is written to a part file first;
 ///   the old file then goes to the Trash of its side and the part file is renamed into place. Anything else that is
@@ -233,10 +233,41 @@ public final class TransferJob: @unchecked Sendable {
     private var saved: SaveResult?
     /// Sync actions whose old item already went to the Trash (a retry then expects nothing there).
     private var syncTrashed = Set<Int>()
-    /// Sync: the host of the side being written (part files are journaled under it); the job's thread only.
-    private var targetHost: String??
     /// Sync: the side the running action changes (its log entries, also those of a folder's contents, name it).
     private var syncSide: FolderSync.Side?
+
+    /// The host of the tree being written (part files are journaled under it): the destination's, or during a sync
+    /// the host of the side its running action changes.
+    private var writingHost: String? {
+        guard let sync, let side = currentSyncSide else { return destination.host }
+        return sync.location(side).host
+    }
+
+    /// Sync: the side the running action changes (nil outside a sync).
+    var currentSyncSide: FolderSync.Side? {
+        lock.lock()
+        defer { lock.unlock() }
+        return syncSide
+    }
+
+    /// Sync: the next actions change `side` (their log entries name it).
+    func setSyncSide(_ side: FolderSync.Side) { update { $0.syncSide = side } }
+
+    /// Sync: the action at `index` has already moved the old item to the Trash.
+    func isSyncTrashed(_ index: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return syncTrashed.contains(index)
+    }
+
+    func markSyncTrashed(_ index: Int) {
+        lock.lock()
+        syncTrashed.insert(index)
+        lock.unlock()
+    }
+
+    /// Save: what the save left.
+    func setSaved(_ result: SaveResult) { update { $0.saved = result } }
 
     /// A copy or move (`mode` `.copy` or `.move`).
     public init(id: Int, mode: Mode, sources: [FileLocation], destination: FileLocation, policy: ConflictPolicy = .ask) {
@@ -340,6 +371,20 @@ public final class TransferJob: @unchecked Sendable {
         onChange?()
     }
 
+    /// Changes the progress (any thread; reported like other changes).
+    func updateProgress(_ change: (inout Progress) -> Void) {
+        update { change(&$0.progress) }
+    }
+
+    /// Done counting: the totals are what is left (`items`, `bytes`) plus what is done already (a retry).
+    func setTotals(items: Int, bytes: Int64) {
+        updateProgress {
+            $0.counting = false
+            $0.itemsTotal = items + $0.itemsDone
+            $0.bytesTotal = bytes + $0.bytesDone
+        }
+    }
+
     private func signal() {
         wake.lock()
         wake.broadcast()
@@ -347,11 +392,14 @@ public final class TransferJob: @unchecked Sendable {
     }
 
     // MARK: - Run (the job's thread)
+    //
+    // Helpers below that are not private are shared with TransferJob+Save.swift and TransferJob+Sync.swift (Swift's
+    // `private` ends at the file); nothing outside TransferJob calls them.
 
     /// Cancel was requested (seen at a checkpoint).
-    private struct Cancelled: Error {}
+    struct Cancelled: Error {}
     /// Stop was the answer to a name conflict.
-    private struct StopRequested: Error {}
+    struct StopRequested: Error {}
 
     /// While paused, how often the job looks again in case a signal was missed.
     private static let pausePollInterval: TimeInterval = 1
@@ -410,20 +458,20 @@ public final class TransferJob: @unchecked Sendable {
         }
     }
 
-    private func isCompleted(_ index: Int) -> Bool {
+    func isCompleted(_ index: Int) -> Bool {
         lock.lock()
         defer { lock.unlock() }
         return completed.contains(index)
     }
 
-    private func markCompleted(_ index: Int) {
+    func markCompleted(_ index: Int) {
         lock.lock()
         completed.insert(index)
         lock.unlock()
     }
 
     /// Waits while paused; throws when cancelled.
-    private func checkpoint() throws {
+    func checkpoint() throws {
         wake.lock()
         defer { wake.unlock() }
         while true {
@@ -449,9 +497,10 @@ public final class TransferJob: @unchecked Sendable {
         if changed { onChange?() }
     }
 
-    private func record(_ path: String, _ outcome: Outcome, side: FolderSync.Side? = nil) {
+    /// Logs an item; during a sync, with the side its action changes.
+    func record(_ path: String, _ outcome: Outcome) {
         update {
-            $0.log.append(LogEntry(path: path, outcome: outcome, date: Date(), side: side ?? $0.syncSide))
+            $0.log.append(LogEntry(path: path, outcome: outcome, date: Date(), side: $0.syncSide))
             if outcome.isFailure { $0.failureTotal += 1 }
             if $0.log.count > Self.logLimit { $0.log.removeFirst($0.log.count - Self.logLimit) }
         }
@@ -467,14 +516,10 @@ public final class TransferJob: @unchecked Sendable {
             if mode == .move, source.isSameTree(as: destination) { continue }
             bytes += try size(of: source.path, in: tree)
         }
-        update {
-            $0.progress.counting = false
-            $0.progress.itemsTotal = items + $0.progress.itemsDone
-            $0.progress.bytesTotal = bytes + $0.progress.bytesDone
-        }
+        setTotals(items: items, bytes: bytes)
     }
 
-    private func size(of path: String, in tree: FileTree) throws -> Int64 {
+    func size(of path: String, in tree: FileTree) throws -> Int64 {
         try checkpoint()
         guard let item = try tree.item(at: path) else { return 0 }
         switch item.kind {
@@ -537,7 +582,7 @@ public final class TransferJob: @unchecked Sendable {
             record(name, target.outcome)
             return true
         } catch is Cancelled {
-            if createdFolder, ownFolder(target.path) { try? destinationTree.trash(target.path) }
+            trashFolderOnCancel(target.path, created: createdFolder, in: destinationTree)
             throw Cancelled()
         }
     }
@@ -581,22 +626,22 @@ public final class TransferJob: @unchecked Sendable {
                 return nil
             }
             do {
-                try destinationTree.trash(path)
+                try trashExisting(path, in: destinationTree)
             } catch {
-                record(name, .failed(.existingNotTrashed(TransferFailure(error))))
+                record(name, .failed(TransferFailure(error)))
                 return nil
             }
             return Target(path: path, outcome: .replaced)
         }
     }
 
-    private func failureCount() -> Int {
+    func failureCount() -> Int {
         lock.lock()
         defer { lock.unlock() }
         return failureTotal
     }
 
-    private func ownFolder(_ path: String) -> Bool {
+    func ownFolder(_ path: String) -> Bool {
         lock.lock()
         defer { lock.unlock() }
         return ownFolders.contains(path)
@@ -608,15 +653,15 @@ public final class TransferJob: @unchecked Sendable {
         lock.unlock()
     }
 
-    private func addBytesDone(_ bytes: Int64) {
+    func addBytesDone(_ bytes: Int64) {
         update { $0.progress.bytesDone += bytes }
     }
 
-    private func keepBothName(_ name: String, isFolder: Bool, in folder: String, tree: FileTree) -> String {
+    func keepBothName(_ name: String, isFolder: Bool, in folder: String, tree: FileTree) -> String {
         FileNames.keepBoth(name, isFolder: isFolder) { tree.exists(tree.paths.join(folder, $0)) }
     }
 
-    private func resolve(name: String, isFolder: Bool) throws -> Resolution {
+    func resolve(name: String, isFolder: Bool) throws -> Resolution {
         if let applyToAll { return applyToAll }
         switch policy {
         case .skip: return .skip
@@ -652,7 +697,7 @@ public final class TransferJob: @unchecked Sendable {
 
     /// Runs one step of copying `relative`: true when it worked. A failure is logged (false), except a lost connection
     /// or a cancel, which stop the job.
-    private func attempt(_ relative: String, _ step: () throws -> Void) throws -> Bool {
+    func attempt(_ relative: String, _ step: () throws -> Void) throws -> Bool {
         do {
             try step()
             return true
@@ -670,7 +715,7 @@ public final class TransferJob: @unchecked Sendable {
 
     /// Copies one item (recursively) to `target`, which does not exist yet (or is a folder this job created, when
     /// `merging`). Failures inside are logged; throws only to stop the job (cancel, connection gone).
-    private func copy(_ item: FileItem, from source: String, in sourceTree: FileTree, to target: String,
+    func copy(_ item: FileItem, from source: String, in sourceTree: FileTree, to target: String,
                       in destinationTree: FileTree, relative: String, merging: Bool, isTopLevel: Bool = false) throws {
         try checkpoint()
         switch item.kind {
@@ -728,12 +773,12 @@ public final class TransferJob: @unchecked Sendable {
 
     /// Streams a file into a temporary name next to `target`, then renames it into place. `beforeRename` runs once
     /// the file is complete (sync: the old file goes to the Trash); when it throws, the part file is removed.
-    private func copyFile(_ item: FileItem, from source: String, in sourceTree: FileTree, to target: String,
+    func copyFile(_ item: FileItem, from source: String, in sourceTree: FileTree, to target: String,
                           in destinationTree: FileTree, relative: String, beforeRename: () throws -> Void = {}) throws {
         let folder = destinationTree.paths.parent(target)
         let finalName = target.split(separator: "/").last.map(String.init) ?? relative
         let part = destinationTree.paths.join(folder, TransferNames.part(for: finalName))
-        let partEntry = TransferPartJournal.Entry(host: targetHost ?? destination.host, path: part)
+        let partEntry = TransferPartJournal.Entry(host: writingHost, path: part)
         do {
             _ = try stream(source, from: sourceTree, to: part, in: destinationTree, entry: partEntry,
                            permissions: (item.permissions ?? 0o644) | 0o600, current: relative)
@@ -758,279 +803,31 @@ public final class TransferJob: @unchecked Sendable {
         }
     }
 
+    /// Moves the item at `path` to its tree's Trash before something replaces it; throws `existingNotTrashed` when it
+    /// cannot go there (then nothing is replaced).
+    func trashExisting(_ path: String, in tree: FileTree) throws {
+        do {
+            try tree.trash(path)
+        } catch {
+            throw TransferFailure.existingNotTrashed(TransferFailure(error))
+        }
+    }
+
+    /// Cancelled while copying a folder this job had just made: that folder goes to the Trash (best effort).
+    func trashFolderOnCancel(_ path: String, created: Bool, in tree: FileTree) {
+        if created, ownFolder(path) { try? tree.trash(path) }
+    }
+
     /// Removes this job's part file; it stays in the journal when that fails (e.g. the connection is gone).
-    private func removePart(_ entry: TransferPartJournal.Entry, from tree: FileTree) {
+    func removePart(_ entry: TransferPartJournal.Entry, from tree: FileTree) {
         guard (try? tree.removePart(entry.path)) != nil else { return }
         partJournal?.remove(entry)
-    }
-
-    // MARK: - Sync (two folders)
-
-    /// Runs the plan's actions not done yet. Each is logged with the side it changed; failures are logged and the
-    /// action is retried by Retry. Throws only to stop the job.
-    private func runSync(_ request: SyncRequest, left: FileTree, right: FileTree) throws {
-        let pending = request.actions.indices.filter { !isCompleted($0) }
-        update { $0.progress.counting = true }
-        var bytes: Int64 = 0
-        for index in pending {
-            let action = request.actions[index]
-            guard case .copy(let to) = action.kind else { continue }
-            let from = to.other
-            let tree = from == .left ? left : right
-            bytes += try size(of: tree.paths.join(request.root(from), action.path(from)), in: tree)
-        }
-        update {
-            $0.progress.counting = false
-            $0.progress.itemsTotal = pending.count + $0.progress.itemsDone
-            $0.progress.bytesTotal = bytes + $0.progress.bytesDone
-        }
-        for index in pending {
-            try checkpoint()
-            if try runSyncAction(index, request, left: left, right: right) { markCompleted(index) }
-        }
-    }
-
-    /// One action of a sync; true when it needs no retry (done, or left alone for good).
-    private func runSyncAction(_ index: Int, _ request: SyncRequest, left: FileTree, right: FileTree) throws -> Bool {
-        defer { update { $0.progress.itemsDone += 1 } }
-        let action = request.actions[index]
-        func tree(_ side: FolderSync.Side) -> FileTree { side == .left ? left : right }
-        func path(_ side: FolderSync.Side) -> String { tree(side).paths.join(request.root(side), action.path(side)) }
-        let shown = action.path
-        let side = action.changes
-        let target = path(side)
-        let targetTree = tree(side)
-        targetHost = .some(request.location(side).host)
-        update { $0.syncSide = side }
-        var existing: FileItem?
-        guard try attempt(shown, { existing = try targetTree.item(at: target) }) else { return false }
-        let trashedBefore = isSyncTrashed(index)
-
-        guard case .copy = action.kind else {
-            guard FolderSync.matches(existing, action.item(side)) else {
-                record(shown, .failed(.changedSinceCompare), side: side)
-                return true
-            }
-            guard try attempt(shown, { try targetTree.trash(target) }) else { return false }
-            record(shown, .trashed, side: side)
-            return true
-        }
-
-        let from = side.other
-        let source = path(from)
-        let sourceTree = tree(from)
-        var found: FileItem?
-        guard try attempt(shown, { found = try sourceTree.item(at: source) }) else { return false }
-        guard let item = found else {
-            record(shown, .failed(.noSuchItem), side: side)
-            return false
-        }
-        guard item.kind == .file || item.kind == .folder else {
-            record(shown, .notCopied, side: side)
-            return true
-        }
-        let merging = item.kind == .folder && existing?.kind == .folder && ownFolder(target)
-        guard merging || FolderSync.matches(existing, trashedBefore ? nil : action.item(side)) else {
-            record(shown, .failed(.changedSinceCompare), side: side)
-            addBytesDone(item.kind == .file ? item.size : 0)
-            return true
-        }
-        let outcome: Outcome = merging ? .merged : (existing != nil || trashedBefore) ? .replaced : .copied
-        let failuresBefore = failureCount()
-        do {
-            if let existing, !merging {
-                // What is there goes to its side's Trash; a file over a file only once the new one is complete.
-                let trashOld = {
-                    do {
-                        try targetTree.trash(target)
-                    } catch {
-                        throw TransferFailure.existingNotTrashed(TransferFailure(error))
-                    }
-                    self.markSyncTrashed(index)
-                }
-                if existing.kind == .file, item.kind == .file {
-                    _ = try attempt(shown) {
-                        try copyFile(item, from: source, in: sourceTree, to: target, in: targetTree, relative: shown,
-                                     beforeRename: trashOld)
-                    }
-                } else {
-                    guard try attempt(shown, trashOld) else { return false }
-                    try copy(item, from: source, in: sourceTree, to: target, in: targetTree, relative: shown,
-                             merging: false, isTopLevel: true)
-                }
-            } else {
-                try copy(item, from: source, in: sourceTree, to: target, in: targetTree, relative: shown,
-                         merging: merging, isTopLevel: true)
-            }
-        } catch is Cancelled {
-            if item.kind == .folder, !merging, ownFolder(target) { try? targetTree.trash(target) }
-            throw Cancelled()
-        }
-        guard failureCount() == failuresBefore else { return false }
-        record(shown, outcome, side: side)
-        return true
-    }
-
-    private func isSyncTrashed(_ index: Int) -> Bool {
-        lock.lock()
-        defer { lock.unlock() }
-        return syncTrashed.contains(index)
-    }
-
-    private func markSyncTrashed(_ index: Int) {
-        lock.lock()
-        syncTrashed.insert(index)
-        lock.unlock()
-    }
-
-    // MARK: - Save (an edited copy over the server's file)
-
-    /// Uploads the edited copy over `request.name` in the destination folder, after checking that the server's file is
-    /// still `request.base` (or asking what to do when it is not). Failures are logged; throws only to stop the job.
-    private func runSave(_ request: SaveRequest, from localTree: FileTree, to tree: FileTree) throws {
-        let name = request.name
-        let copy = sources[0].path
-        let folder = destination.path
-        let target = tree.paths.join(folder, name)
-        defer { update { $0.progress.itemsDone = 1 } }
-        guard let local = try localTree.item(at: copy), local.kind == .file else {
-            record(name, .failed(.noSuchItem))
-            return
-        }
-        update {
-            $0.progress.itemsTotal = 1
-            $0.progress.bytesTotal = local.size
-        }
-        let current = try tree.item(at: target)
-        var path = target
-        var outcome: Outcome = .saved
-        switch request.base.change(to: current) {
-        case .unchanged:
-            break
-        case .notAFile:
-            record(name, .failed(.notAFile(name: name)))
-            return
-        case .changed, .missing:
-            // Nobody to ask: upload nothing and keep the copy (Skip would replace it with the server's file).
-            if policy == .ask, onConflict == nil { throw StopRequested() }
-            switch try resolve(name: name, isFolder: false) {
-            case .stop:
-                throw StopRequested()
-            case .replace:
-                break
-            case .skip:
-                // Keep theirs: the server's file into the copy (nothing to take when it is gone).
-                guard let current else {
-                    record(name, .skipped)
-                    return
-                }
-                _ = try attempt(name) {
-                    try download(target, item: current, into: copy, in: localTree, from: tree,
-                                 permissions: local.permissions)
-                }
-                return
-            case .keepBoth:
-                let newName = keepBothName(name, isFolder: false, in: folder, tree: tree)
-                path = tree.paths.join(folder, newName)
-                outcome = .keptBoth(newName)
-            }
-        }
-        // Keep mine replaces what is there; after Keep Both, or when the file is gone, the name must be free.
-        let replacing = outcome == .saved && current != nil
-        _ = try attempt(name) {
-            let written = try upload(copy, from: localTree, to: path, in: tree, replacing: replacing,
-                                     permissions: current?.permissions ?? local.permissions)
-            if written.replacedThroughTrash { outcome = .replaced }
-            let version = try tree.item(at: path).map(RemoteFileVersion.init)
-                ?? RemoteFileVersion(size: written.size, modified: nil)
-            update {
-                $0.saved = SaveResult(name: tree.paths.name(path), version: version, contentHash: written.hash,
-                                      keptTheirs: false)
-            }
-            record(name, outcome)
-        }
-    }
-
-    private struct Uploaded {
-        var size: Int64
-        var hash: String
-        /// The server cannot rename over a file: its file went to its Trash first.
-        var replacedThroughTrash = false
-    }
-
-    /// Writes the copy to a part file next to `path` (with `permissions`), then puts it in place: over the file there
-    /// in one step when `replacing` (or through the server's Trash when the server cannot), else only if the name is
-    /// still free.
-    private func upload(_ copy: String, from localTree: FileTree, to path: String, in tree: FileTree, replacing: Bool,
-                        permissions: UInt32?) throws -> Uploaded {
-        let name = tree.paths.name(path)
-        let part = tree.paths.join(tree.paths.parent(path), TransferNames.part(for: name))
-        let entry = TransferPartJournal.Entry(host: destination.host, path: part)
-        var hash = ContentHash()
-        let size = try stream(copy, from: localTree, to: part, in: tree, entry: entry,
-                              permissions: (permissions ?? 0o644) | 0o600) { hash.update($0) }
-        tree.setAttributes(part, modified: nil, permissions: permissions)
-        var uploaded = Uploaded(size: size, hash: hash.finalize())
-        do {
-            if replacing {
-                do {
-                    try tree.renameReplacing(part, to: path)
-                } catch let error as SFTPError where error.statusCode == .unsupported {
-                    do {
-                        try tree.trash(path)
-                    } catch {
-                        throw TransferFailure.existingNotTrashed(TransferFailure(error))
-                    }
-                    try tree.rename(part, to: path)
-                    uploaded.replacedThroughTrash = true
-                }
-            } else {
-                do {
-                    try tree.rename(part, to: path)
-                } catch {
-                    throw TransferFailure.appeared(name: name, TransferFailure(error))
-                }
-            }
-            partJournal?.remove(entry)
-        } catch {
-            removePart(entry, from: tree)
-            throw error
-        }
-        return uploaded
-    }
-
-    /// Keep theirs: the server's file into the copy (a part file next to it, renamed over it).
-    private func download(_ path: String, item: FileItem, into copy: String, in localTree: FileTree, from tree: FileTree,
-                          permissions: UInt32?) throws {
-        let name = localTree.paths.name(copy)
-        let part = localTree.paths.join(localTree.paths.parent(copy), TransferNames.part(for: name))
-        let entry = TransferPartJournal.Entry(host: nil, path: part)
-        update {
-            $0.progress.bytesDone = 0
-            $0.progress.bytesTotal = item.size
-        }
-        var hash = ContentHash()
-        _ = try stream(path, from: tree, to: part, in: localTree, entry: entry, permissions: permissions ?? 0o644) {
-            hash.update($0)
-        }
-        do {
-            try localTree.renameReplacing(part, to: copy)
-            partJournal?.remove(entry)
-        } catch {
-            removePart(entry, from: localTree)
-            throw error
-        }
-        update {
-            $0.saved = SaveResult(name: tree.paths.name(path), version: RemoteFileVersion(item),
-                                  contentHash: hash.finalize(), keptTheirs: true)
-        }
-        record(tree.paths.name(path), .keptTheirs)
     }
 
     /// Streams `source` into a new part file (recorded in the journal until it is renamed or removed) and returns the
     /// bytes written, showing `current` (default: the source's name) as the file being written. On failure or cancel
     /// the part file is removed and its bytes are taken back. Copies, saves and Keep Theirs all write through here.
-    private func stream(_ source: String, from sourceTree: FileTree, to part: String, in tree: FileTree,
+    func stream(_ source: String, from sourceTree: FileTree, to part: String, in tree: FileTree,
                         entry: TransferPartJournal.Entry, permissions: UInt32, current: String? = nil,
                         _ each: (Data) -> Void = { _ in }) throws -> Int64 {
         update { $0.progress.current = current ?? sourceTree.paths.name(source) }
@@ -1060,9 +857,4 @@ public final class TransferJob: @unchecked Sendable {
         }
         return written
     }
-}
-
-extension TransferJob.SyncRequest {
-    public func location(_ side: FolderSync.Side) -> FileLocation { side == .left ? left : right }
-    public func root(_ side: FolderSync.Side) -> String { location(side).path }
 }
