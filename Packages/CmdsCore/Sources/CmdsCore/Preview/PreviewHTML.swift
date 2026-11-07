@@ -50,6 +50,13 @@ public enum PreviewHTML {
         return trimmed
     }
 
+    /// The page laid out for a phone's screen width (the pages are made for a Mac window): a viewport tag in its head.
+    public static func forPhoneScreen(_ page: String) -> String {
+        guard let head = page.range(of: "<head>") else { return page }
+        return page.replacingCharacters(
+            in: head, with: #"<head><meta name="viewport" content="width=device-width, initial-scale=1">"#)
+    }
+
     public static func page(title: String, bodyClass: String, body: String) -> String {
         """
         <!DOCTYPE html>
