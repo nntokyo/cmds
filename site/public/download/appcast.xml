@@ -7,32 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.14.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.14.0</link>
-      <sparkle:version>21</sparkle:version>
-      <sparkle:shortVersionString>0.14.0</sparkle:shortVersionString>
+      <title>cmds 0.15.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.15.0</link>
+      <sparkle:version>22</sparkle:version>
+      <sparkle:shortVersionString>0.15.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 07 Nov 2026 07:24:09 GMT</pubDate>
+      <pubDate>Sat, 07 Nov 2026 16:12:35 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
 <ul>
-<li>iPhone/iPad アプリにターミナルの画面を色つきで送るようになりました（太字・下線・反転なども）。上にさかのぼった出力も色つきです。</li>
-<li>iPhone/iPad アプリで、Mac のスケジュール（次の実行と前回の結果）を確認できるようになりました（閲覧のみ。プロンプトやコマンドは送りません）。</li>
-<li>フォルダの比較と同期：もう一方のファイル一覧ペインと比較・同期…（⇧F2）で、Mac とホストのフォルダを比べて片方向・双方向に同期できます。置き換えたものはゴミ箱に入り、削除はしません。</li>
+<li>iPhone/iPad アプリから、ファイル一覧ペインのフォルダを閲覧できるようにしました（閲覧のみ）。フォルダをたどり、画像・PDF・テキストファイルを開けます。Mac のペインは動きません。SSH ホストのフォルダは、ペインがすでに接続しているときだけ読みます。</li>
 </ul>
-<p>iPhone/iPad の新機能には iPhone/iPad アプリ 0.14.0 が必要です。古いアプリでもこれまでどおり使えます。</p>
+<p>iPhone/iPad での閲覧には、次の iPhone/iPad アプリが必要です。古いアプリでもこれまでどおり使えます。</p>
 <h3>Added</h3>
 <ul>
-<li>Terminal screens go to the iPhone/iPad app in colour (bold, underline, inverse and more), earlier output too.</li>
-<li>The iPhone/iPad app shows the Mac's schedules (next run, last result), read only; prompts and commands are never sent.</li>
-<li>Compare and sync folders: Compare and Sync with Other Pane… (⇧F2) compares a folder on this Mac or a host with the other files pane and syncs one way or both ways. Replaced items go to the Trash; nothing is deleted.</li>
+<li>The iPhone/iPad app can browse the folder of a files pane, read only: go into folders and open images, PDFs and text files. The pane on the Mac stays where it is. Folders on SSH hosts are read only through the connection the pane already has open.</li>
 </ul>
-<p>The iPhone/iPad features need the iPhone/iPad app 0.14.0; older apps keep working as before.</p>
+<p>Browsing on the iPhone/iPad needs the next iPhone/iPad app; older apps keep working as before.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.14.0/cmds-0.14.0.dmg" length="15312646" type="application/octet-stream" sparkle:edSignature="FmSqhFjZuuIJ3JG5GBKTE8OF8m8eKgy3QHMwIv4q8T0tqH3S7m2Q+ivldmVLw1/NsfvM3qqTztZvHdHDPZNBDQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.15.0/cmds-0.15.0.dmg" length="15512117" type="application/octet-stream" sparkle:edSignature="3KdCRvl8y1d/jsHzsW44axbZbc4xmurgCALHHJLXflmlKt8Lhibqiedx2mJWoVqd8HJpxAwVvQINaTNVRuaUDA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: c0oNPZzQrQng+1QlZOJe9mJlt8wnOCBh4iufAcQ3JuQW2N1jrEv5AMiYZ4r87G5eyHCAGUWCBcf2XTh80sUEBw==
-length: 2713
+edSignature: B+I9ptHfdFAuAdxTRzHYJpI76ndLK53kn0atSgNKLlldSskNimVztSVcp4DKI7zv/cp9l5tH2lI/llFTg9W4CA==
+length: 2172
 -->
