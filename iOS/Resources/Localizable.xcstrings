@@ -1289,12 +1289,12 @@
         }
       }
     },
-    "Images and PDFs can be shown on the phone." : {
+    "Images, PDFs and text files can be shown on the phone." : {
       "localizations" : {
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このデバイスで表示できるのは画像とPDFです。"
+            "value" : "このデバイスで表示できるのは画像、PDF、テキストファイルです。"
           }
         }
       }
@@ -2313,6 +2313,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Macで表示"
+          }
+        }
+      }
+    },
+    "Showing the first %lld KB. Open the file on the Mac to see all." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最初の%lld KBを表示しています。すべて見るにはMacでファイルを開いてください。"
           }
         }
       }

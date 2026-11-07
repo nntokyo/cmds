@@ -676,6 +676,8 @@ final class CompanionClient {
     /// Opens a file of the folder shown with the preview viewer.
     func openFile(named name: String, in paneID: String) {
         guard let path = folders.open(paneID: paneID, name: name) else { return }
+        // Only what the phone can show is fetched; other files show their name only.
+        guard FilePreviewContent.isShown(name: name, asText: true) else { return }
         requestFile(paneID: paneID, path: path)
     }
 

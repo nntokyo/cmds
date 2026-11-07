@@ -17,7 +17,8 @@ struct FolderBrowserView: View {
             if let file = browse?.file {
                 let name = RemotePath.name(file)
                 FilePreviewContent(name: name, entry: client.previewFiles.entry(for: pane.id, path: file),
-                                   unviewableDetail: String(localized: "Images and PDFs can be shown on the phone."))
+                                   unviewableDetail: String(localized: "Images, PDFs and text files can be shown on the phone."),
+                                   showsText: true)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 list
@@ -149,14 +150,17 @@ struct FolderBrowserView: View {
         } else if browse.folders.last.map(\.isAnswered) == false {
             // Asked while offline, or the answer was lost with the connection.
             reload()
-        } else if let file = browse.file, client.previewFiles.entry(for: pane.id, path: file) == nil {
+        } else if let file = browse.file, client.previewFiles.entry(for: pane.id, path: file) == nil,
+                  FilePreviewContent.isShown(name: RemotePath.name(file), asText: true) {
             client.requestFile(paneID: pane.id, path: file)
         }
     }
 
     private func reload() {
         if let file = browse?.file {
-            client.requestFile(paneID: pane.id, path: file)
+            if FilePreviewContent.isShown(name: RemotePath.name(file), asText: true) {
+                client.requestFile(paneID: pane.id, path: file)
+            }
         } else {
             Task { await client.reloadFolder(of: pane) }
         }

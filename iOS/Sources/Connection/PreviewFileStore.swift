@@ -1,6 +1,7 @@
 import CmdsCore
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 
 /// Files of Mac preview panes, and files opened while browsing a files pane, on the phone (`requestFile` → `file`
 /// pieces, docs/internals/sync-protocol.md). One request at a time; results are kept per pane (and path, for a files
@@ -29,6 +30,17 @@ final class PreviewFileStore {
     /// Types the phone shows itself; others get "Open on Mac".
     static func isViewable(mime: String) -> Bool {
         mime.hasPrefix("image/") || mime == "application/pdf"
+    }
+
+    /// Plain text, source code, JSON, logs…: files of a files pane are shown as text (not preview panes, whose Mac view
+    /// renders them).
+    static func isText(name: String) -> Bool {
+        let ext = (name as NSString).pathExtension.lowercased()
+        guard !ext.isEmpty else { return false }
+        if ["log", "csv", "tsv", "md", "markdown", "env", "conf", "ini", "toml", "yml", "yaml"].contains(ext) { return true }
+        guard let type = UTType(filenameExtension: ext) else { return false }
+        return type.conforms(to: .text) || type.conforms(to: .sourceCode) || type.conforms(to: .json)
+            || type.conforms(to: .xml)
     }
 
     func entry(for paneID: String, path: String? = nil) -> Entry? { entries[Key(paneID: paneID, path: path)] }

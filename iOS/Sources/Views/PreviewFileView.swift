@@ -71,16 +71,26 @@ struct FilePreviewContent: View {
     let unviewableDetail: String
     /// "Open on Mac" (preview panes: focuses the pane there); nil hides it.
     var openOnMac: (() -> Void)?
+    /// Text files are shown as text (files panes).
+    var showsText = false
 
     private var mime: String { SyncFile.mimeType(forFileName: name) }
 
+    /// The phone fetches and shows the file: images, PDFs, and with `asText` text files.
+    static func isShown(name: String, asText: Bool) -> Bool {
+        PreviewFileStore.isViewable(mime: SyncFile.mimeType(forFileName: name))
+            || (asText && PreviewFileStore.isText(name: name))
+    }
+
     var body: some View {
-        if !PreviewFileStore.isViewable(mime: mime) {
+        if !Self.isShown(name: name, asText: showsText) {
             unavailable(String(localized: "No preview on the phone"), detail: unviewableDetail)
         } else {
             switch entry {
             case .loaded(_, let mime, let data)?:
-                if mime == "application/pdf" {
+                if showsText, !PreviewFileStore.isViewable(mime: mime) {
+                    FileTextView(data: data)
+                } else if mime == "application/pdf" {
                     PDFDocumentView(data: data)
                 } else if let image = UIImage(data: data) {
                     ZoomableImage(image: image)
@@ -124,6 +134,30 @@ struct FilePreviewContent: View {
         if mime == "application/pdf" { return "doc.richtext" }
         if mime.hasPrefix("video/") { return "film" }
         return "doc.text"
+    }
+}
+
+/// A text file, monospaced and scrollable; at most `maxBytes` of it (the rest on the Mac).
+private struct FileTextView: View {
+    static let maxBytes = 256 * 1024
+    let data: Data
+
+    var body: some View {
+        let shown = data.prefix(Self.maxBytes)
+        ScrollView([.vertical, .horizontal]) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(String(decoding: shown, as: UTF8.self))
+                    .font(.system(.footnote, design: .monospaced))
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: true, vertical: false)
+                if data.count > shown.count {
+                    Text("Showing the first \(Self.maxBytes / 1024) KB. Open the file on the Mac to see all.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(12)
+        }
+        .accessibilityIdentifier("fileText")
     }
 }
 
