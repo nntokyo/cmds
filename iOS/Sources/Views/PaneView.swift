@@ -24,14 +24,7 @@ struct PaneView: View {
                     }
                 }
             } else if pane.kind == .browser {
-                ContentUnavailableView {
-                    Label(pane.title.isEmpty ? String(localized: "Browser") : DefaultTitle.localized(pane.title), systemImage: "globe")
-                } description: {
-                    if let url = pane.url { Text(url) }
-                }
-                if let url = pane.url.flatMap(URL.init(string:)) {
-                    Link("Open in Safari", destination: url).padding(.bottom)
-                }
+                BrowserPaneView(pane: pane)
             } else {
                 TerminalScreenView(paneID: pane.id, snapshot: client.screens[pane.id],
                                    attention: client.needsAttention(pane))
