@@ -61,6 +61,10 @@ final class SyncE2EPhone {
     private(set) var mirror = ScreenMirror()
     /// `screen` / `screenDiff` messages that carried `scrolledOff` or `historyReset`.
     private(set) var historyMessages = 0
+    /// `styles` of the last `scrollback` (SyncStylesE2ETests).
+    private(set) var lastScrollbackStyles: [RowStyle]?
+    /// Every `scrolledOff` row received, in order, with its runs from `scrolledOffStyles`.
+    private(set) var scrolledOffRows: [(text: String, runs: [StyleRun])] = []
 
     init(_ instance: SyncE2EInstance, hello: ClientMessage.Hello) throws {
         let tls = SyncTLS.clientOptions(policy: .pinned(instance.payload.fingerprint), queue: .global()) { _ in }
@@ -87,15 +91,26 @@ final class SyncE2EPhone {
         switch message {
         case .screen(let screen):
             if screen.scrolledOff != nil || screen.historyReset != nil { historyMessages += 1 }
+            record(screen.scrolledOff, screen.scrolledOffStyles)
             result = mirror.apply(screen)
         case .screenDiff(let diff):
             if diff.scrolledOff != nil || diff.historyReset != nil { historyMessages += 1 }
+            record(diff.scrolledOff, diff.scrolledOffStyles)
             result = mirror.apply(diff)
+        case .scrollback(let scrollback):
+            lastScrollbackStyles = scrollback.styles
+            return message
         default:
             return message
         }
         if case .needsFullScreen(let paneID) = result { try send(.requestScreen(.init(paneID: paneID))) }
         return message
+    }
+
+    private func record(_ rows: [String]?, _ styles: [RowStyle]?) {
+        guard let rows else { return }
+        let history = PaneHistory(lines: rows, styles: styles)
+        scrolledOffRows += rows.indices.map { (rows[$0], history.runs(row: $0)) }
     }
 
     /// Reads messages until the pane's screen satisfies `condition`.

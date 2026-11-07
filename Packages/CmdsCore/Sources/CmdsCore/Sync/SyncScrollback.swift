@@ -122,14 +122,27 @@ public struct PaneHistory: Equatable, Sendable {
     /// Rows dropped from the top since these rows began: `lines[i]` is row `first + i`. A row keeps its number (its
     /// identity in the view) while rows are added at the bottom and dropped at the top.
     public var first: Int
+    /// `SyncFeature.styles`: the style runs of the rows that have any, by row number (`first + i`).
+    public var runs: [Int: [StyleRun]]
 
-    public init(lines: [String] = [], first: Int = 0) {
+    public init(lines: [String] = [], first: Int = 0, runs: [Int: [StyleRun]] = [:]) {
         self.lines = lines
         self.first = first
+        self.runs = runs
     }
 
-    /// Adds rows at the bottom and drops the oldest beyond `cap`.
-    public mutating func append(_ rows: [String], keepingAtMost cap: Int) {
+    /// `lines` with the runs of `styles` (`RowStyle.row` indexes `lines`), numbered from `first`.
+    public init(lines: [String], styles: [RowStyle]?, first: Int = 0) {
+        self.init(lines: lines, first: first)
+        add(styles, from: first)
+    }
+
+    /// The runs of row number `row` (empty: plain).
+    public func runs(row: Int) -> [StyleRun] { runs[row] ?? [] }
+
+    /// Adds rows at the bottom and drops the oldest beyond `cap`. `styles` index `rows`.
+    public mutating func append(_ rows: [String], styles: [RowStyle]? = nil, keepingAtMost cap: Int) {
+        add(styles, from: first + lines.count, count: rows.count)
         lines.append(contentsOf: rows)
         dropOldest(lines.count - cap)
     }
@@ -140,6 +153,30 @@ public struct PaneHistory: Equatable, Sendable {
         let dropped = min(count, lines.count)
         lines.removeFirst(dropped)
         first += dropped
+        if !runs.isEmpty { runs = runs.filter { $0.key >= first } }
+    }
+
+    private mutating func add(_ styles: [RowStyle]?, from number: Int, count: Int = .max) {
+        for style in styles ?? [] where style.row >= 0 && style.row < count && !style.runs.isEmpty {
+            runs[number + style.row] = style.runs
+        }
+    }
+}
+
+extension RowStyle {
+    /// The entries of `styles` for rows `range` of the array they index, re-indexed from its start.
+    static func slice(_ styles: [RowStyle]?, _ range: Range<Int>) -> [RowStyle]? {
+        guard let styles else { return nil }
+        let sliced = styles.compactMap {
+            range.contains($0.row) ? RowStyle(row: $0.row - range.lowerBound, runs: $0.runs) : nil
+        }
+        return sliced.isEmpty ? nil : sliced
+    }
+
+    /// The rows of `runs` (one entry per row) that have any; nil when none has.
+    public static func sparse(_ runs: [[StyleRun]]) -> [RowStyle]? {
+        let rows = runs.enumerated().compactMap { $1.isEmpty ? nil : RowStyle(row: $0, runs: $1) }
+        return rows.isEmpty ? nil : rows
     }
 }
 
@@ -191,17 +228,18 @@ public struct HistoryMirror: Sendable {
 
     /// A `scrollback` answer (it follows the full `screen` it was read with). From a streaming Mac it starts the
     /// stream of the pane, and when it still has the last shown rows only the newer rows are added.
-    public mutating func receive(_ lines: [String], paneID: String) {
+    public mutating func receive(_ lines: [String], styles: [RowStyle]? = nil, paneID: String) {
         if streams {
             streamed.insert(paneID)
-            if continueHistory(paneID, with: lines) { return }
+            if continueHistory(paneID, with: lines, styles: styles) { return }
         }
-        replace(paneID, with: lines)
+        replace(paneID, with: PaneHistory(lines: lines, styles: styles))
     }
 
     /// `scrolledOff` / `historyReset` of a screen update from a streaming Mac (for panes whose request it answered).
     /// True after a reset: ask again (`requestScrollback`).
-    public mutating func extend(paneID: String, scrolledOff rows: [String]?, reset: Bool) -> Bool {
+    public mutating func extend(paneID: String, scrolledOff rows: [String]?, styles: [RowStyle]? = nil,
+                                reset: Bool) -> Bool {
         guard streams, streamed.contains(paneID) else { return false }
         if reset {
             // The rows above the screen no longer continue these: ask again. The answer replaces them, or adds the
@@ -210,7 +248,7 @@ public struct HistoryMirror: Sendable {
             streamed.remove(paneID)
             return true
         }
-        if let rows { append(paneID, rows) }
+        if let rows { append(paneID, rows, styles: styles) }
         return false
     }
 
@@ -242,8 +280,7 @@ public struct HistoryMirror: Sendable {
 
     /// A pane's rows from a `scrollback` answer, or none (new connection). While a streaming Mac's pane is read, they
     /// wait in `pending` and the shown rows stay.
-    private mutating func replace(_ paneID: String, with lines: [String]?) {
-        let history = lines.map { PaneHistory(lines: $0) }
+    private mutating func replace(_ paneID: String, with history: PaneHistory?) {
         if streams, reading.contains(paneID) {
             pending[paneID] = history ?? PaneHistory()
             return
@@ -255,28 +292,28 @@ public struct HistoryMirror: Sendable {
     /// A streaming Mac's answer that still has the last shown rows (after a reset that left them in place, or a new
     /// connection): adds the newer rows below them, so rows being read stay where they are and keep growing. False
     /// when it does not continue them, or reaches further back while the pane is not read.
-    private mutating func continueHistory(_ paneID: String, with answer: [String]) -> Bool {
+    private mutating func continueHistory(_ paneID: String, with answer: [String], styles: [RowStyle]?) -> Bool {
         guard let shown = histories[paneID]?.lines, let newer = Self.rows(after: shown, in: answer) else { return false }
         if !reading.contains(paneID), answer.count > shown.count + newer.count { return false }
         pending[paneID] = nil
-        append(paneID, Array(newer))
+        append(paneID, Array(newer), styles: RowStyle.slice(styles, newer.startIndex..<newer.endIndex))
         return true
     }
 
     /// Adds rows below a pane's rows, or below the pending ones while there are. Rows being read are never dropped at
     /// the top: once they are full they stay, and the rest waits in `pending`.
-    private mutating func append(_ paneID: String, _ rows: [String]) {
+    private mutating func append(_ paneID: String, _ rows: [String], styles: [RowStyle]?) {
         guard !rows.isEmpty else { return }
         let isReading = reading.contains(paneID)
         let cap = isReading ? Self.maxRowsWhileReading : Self.maxRows
         if pending[paneID] != nil {
-            pending[paneID]?.append(rows, keepingAtMost: cap)
+            pending[paneID]?.append(rows, styles: styles, keepingAtMost: cap)
         } else if isReading, (histories[paneID]?.lines.count ?? 0) + rows.count > cap {
             var waiting = histories[paneID] ?? PaneHistory()
-            waiting.append(rows, keepingAtMost: cap)
+            waiting.append(rows, styles: styles, keepingAtMost: cap)
             pending[paneID] = waiting
         } else {
-            histories[paneID, default: PaneHistory()].append(rows, keepingAtMost: cap)
+            histories[paneID, default: PaneHistory()].append(rows, styles: styles, keepingAtMost: cap)
         }
     }
 

@@ -69,4 +69,61 @@ final class SyncStylesE2ETests: XCTestCase {
         try older.wait(for: paneID) { $0.lines.contains("ok") }
         XCTAssertNil(older.mirror[paneID]?.styles)
     }
+
+    /// The rows above the screen keep their styles: in the `scrollback` answer (`styles`) and in the rows that scroll
+    /// off afterwards (`scrolledOffStyles`), for a phone with `styles` and `scrollbackStream`; a phone without
+    /// `styles` gets the same rows plain.
+    func testHistoryStylesFromIsolatedInstance() throws {
+        let instance = try SyncE2EInstance(pairingVariable: "CMDS_STYLES_E2E_PAIRING")
+        let (workspaceID, paneID) = try instance.createWorkspace(title: "styles history e2e")
+        defer { instance.closeWorkspace(workspaceID) }
+        // Numbered rows, every third one red and bold from column 4: `n  r` with n right-aligned in 3 columns.
+        func printRows(_ range: ClosedRange<Int>) throws {
+            try instance.type("for i in {\(range.lowerBound)..\(range.upperBound)}; do if (( i % 3 == 0 )); then "
+                              + #"printf '%3d \033[1;31mred\033[0m\n' $i; else printf '%3d plain\n' $i; fi; done"#
+                              + "\n", into: paneID)
+        }
+        try printRows(1...200)
+
+        let phone = try SyncE2EPhone(instance, hello: .init(
+            deviceName: "styles history test", deviceID: "styles-history-test",
+            features: [SyncFeature.styles, SyncFeature.scrollbackStream], pairingCode: instance.payload.code))
+        let plain = try SyncE2EPhone(instance, hello: .init(deviceName: "plain history test",
+                                                            deviceID: "plain-history-test",
+                                                            features: [SyncFeature.scrollbackStream],
+                                                            token: phone.welcome.token))
+        let red = StyleRun(column: 4, length: 3,
+                           style: TerminalStyle(attributes: .bold, foreground: .palette(1)))
+        func check(_ rows: [(text: String, runs: [StyleRun])], file: StaticString = #filePath, line: UInt = #line) {
+            var checked = 0
+            for row in rows {
+                let parts = row.text.split(separator: " ")
+                guard parts.count == 2, let n = Int(parts[0]) else { continue }
+                XCTAssertEqual(row.runs, n % 3 == 0 ? [red] : [], row.text, file: file, line: line)
+                checked += 1
+            }
+            XCTAssertGreaterThan(checked, 10, "numbered rows", file: file, line: line)
+        }
+
+        for p in [phone, plain] {
+            try p.send(.subscribe(.init(paneIDs: [paneID])))
+            try p.wait(for: paneID) { $0.lines.contains(where: { $0.hasPrefix("200 ") }) }
+            try p.send(.requestScrollback(.init(paneID: paneID, lines: 150)))
+        }
+        let (_, rows) = try phone.scrollback(paneID)
+        let answered = PaneHistory(lines: rows, styles: phone.lastScrollbackStyles)
+        check(rows.indices.map { (rows[$0], answered.runs(row: $0)) })
+        let (_, plainRows) = try plain.scrollback(paneID)
+        XCTAssertEqual(plainRows, rows)
+        XCTAssertNil(plain.lastScrollbackStyles)
+
+        // Rows that scroll off from now on come with their runs.
+        try printRows(201...300)
+        try phone.wait(for: paneID) { $0.lines.contains(where: { $0.hasPrefix("300 ") }) }
+        while !phone.scrolledOffRows.contains(where: { $0.text.hasPrefix("230 ") }) { _ = try phone.next() }
+        check(phone.scrolledOffRows)
+        try plain.wait(for: paneID) { $0.lines.contains(where: { $0.hasPrefix("300 ") }) }
+        while !plain.scrolledOffRows.contains(where: { $0.text.hasPrefix("230 ") }) { _ = try plain.next() }
+        XCTAssertTrue(plain.scrolledOffRows.allSatisfy { $0.runs.isEmpty })
+    }
 }

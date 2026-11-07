@@ -133,6 +133,68 @@ final class SyncStylesTests: XCTestCase {
         XCTAssertNil(streamer.update(paneID: "p", snapshot: snapshot(["a"], styles: [[bold]]).withoutStyles))
     }
 
+    /// `scrollback.styles` and `scrolledOffStyles` round trip; without runs the keys are left out.
+    func testHistoryStylesRoundTrip() throws {
+        let messages: [ServerMessage] = [
+            .scrollback(.init(paneID: "p", seq: 2, lines: ["a", "b"], styles: [RowStyle(row: 1, runs: [red])])),
+            .screen(.init(paneID: "p", seq: 3, rows: 1, cols: 5, lines: ["c"]))
+                .withHistory(scrolledOff: ["x", "y"], styles: [RowStyle(row: 0, runs: [bold])], reset: false),
+            .screenDiff(.init(paneID: "p", seq: 4, baseSeq: 3, changes: []))
+                .withHistory(scrolledOff: ["z"], styles: [RowStyle(row: 0, runs: [bar])], reset: false),
+        ]
+        for message in messages {
+            XCTAssertEqual(try codec.decodeServerMessage(try codec.encode(message)), message)
+        }
+        let plain = ServerMessage.scrollback(.init(paneID: "p", seq: 2, lines: ["a"]))
+        XCTAssertFalse(String(decoding: try codec.encode(plain), as: UTF8.self).contains("styles"))
+        // A reset carries no rows and so no runs.
+        guard case .screen(let reset) = messages[1].withHistory(scrolledOff: nil, styles: [RowStyle(row: 0, runs: [red])],
+                                                                reset: true) else { return XCTFail() }
+        XCTAssertNil(reset.scrolledOffStyles)
+    }
+
+    /// The phone keeps the runs of the rows above the screen by row number: from the answer, from `scrolledOff`, across
+    /// dropping the oldest rows, when an answer after a reset continues the rows, and when it replaces them.
+    func testHistoryMirrorKeepsRuns() throws {
+        var mirror = HistoryMirror()
+        mirror.connected(streams: true)
+        let answer = (0..<10).map { "row \($0)" }
+        mirror.receive(answer, styles: [RowStyle(row: 0, runs: [red]), RowStyle(row: 9, runs: [bold])], paneID: "p")
+        var history = try XCTUnwrap(mirror.histories["p"])
+        XCTAssertEqual(history.runs(row: 0), [red])
+        XCTAssertEqual(history.runs(row: 9), [bold])
+        XCTAssertEqual(history.runs(row: 5), [])
+
+        XCTAssertFalse(mirror.extend(paneID: "p", scrolledOff: ["row 10", "row 11"],
+                                     styles: [RowStyle(row: 1, runs: [bar])], reset: false))
+        history = try XCTUnwrap(mirror.histories["p"])
+        XCTAssertEqual(history.lines.last, "row 11")
+        XCTAssertEqual(history.runs(row: 11), [bar])
+        XCTAssertEqual(history.runs(row: 10), [])
+
+        // Dropping the oldest rows drops their runs; the others keep their numbers.
+        var dropped = history
+        dropped.dropOldest(3)
+        XCTAssertEqual(dropped.runs(row: 0), [])
+        XCTAssertNil(dropped.runs[0])
+        XCTAssertEqual(dropped.runs(row: 9), [bold])
+
+        // A reset, then an answer that still has the last rows: only the newer rows are added, with their own runs.
+        XCTAssertTrue(mirror.extend(paneID: "p", scrolledOff: nil, reset: true))
+        let again = (0..<14).map { "row \($0)" }
+        mirror.receive(again, styles: [RowStyle(row: 13, runs: [red]), RowStyle(row: 0, runs: [bar])], paneID: "p")
+        history = try XCTUnwrap(mirror.histories["p"])
+        XCTAssertEqual(history.lines.count, 14)
+        XCTAssertEqual(history.runs(row: 13), [red])
+        XCTAssertEqual(history.runs(row: 0), [red], "rows already shown keep their runs")
+        XCTAssertEqual(history.runs(row: 11), [bar])
+
+        // An answer that does not continue them replaces rows and runs.
+        XCTAssertTrue(mirror.extend(paneID: "p", scrolledOff: nil, reset: true))
+        mirror.receive(["other"], styles: nil, paneID: "p")
+        XCTAssertEqual(mirror.histories["p"], PaneHistory(lines: ["other"]))
+    }
+
     func testFeatureName() {
         XCTAssertEqual(SyncFeature.styles, "styles")
     }

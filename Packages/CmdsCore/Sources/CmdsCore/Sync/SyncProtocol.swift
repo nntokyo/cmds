@@ -220,9 +220,7 @@ public struct ScreenSnapshot: Codable, Equatable, Sendable {
 
     /// The rows that have runs, as sent in `screen.styles`; nil when none has.
     public var rowStyles: [RowStyle]? {
-        guard let styles else { return nil }
-        let rows = styles.enumerated().compactMap { $1.isEmpty ? nil : RowStyle(row: $0, runs: $1) }
-        return rows.isEmpty ? nil : rows
+        styles.flatMap(RowStyle.sparse)
     }
 
     private static func normalized(_ styles: [[StyleRun]]?, count: Int) -> [[StyleRun]]? {

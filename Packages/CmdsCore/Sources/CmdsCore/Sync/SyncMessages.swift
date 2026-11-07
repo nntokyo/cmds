@@ -217,10 +217,12 @@ public enum ServerMessage: Equatable, Sendable {
         /// `SyncFeature.styles`: the style runs of the rows that have any (`row` indexes `lines`); nil when every row
         /// is plain (or for phones without the feature).
         public var styles: [RowStyle]?
+        /// `SyncFeature.styles` with `scrolledOff`: the runs of those rows that have any (`row` indexes `scrolledOff`).
+        public var scrolledOffStyles: [RowStyle]?
 
         public init(paneID: String, seq: UInt64, rows: Int, cols: Int, lines: [String],
                     cursorRow: Int? = nil, cursorCol: Int? = nil, scrolledOff: [String]? = nil,
-                    historyReset: Bool? = nil, styles: [RowStyle]? = nil) {
+                    historyReset: Bool? = nil, styles: [RowStyle]? = nil, scrolledOffStyles: [RowStyle]? = nil) {
             self.paneID = paneID
             self.seq = seq
             self.rows = rows
@@ -231,6 +233,7 @@ public enum ServerMessage: Equatable, Sendable {
             self.scrolledOff = scrolledOff
             self.historyReset = historyReset
             self.styles = styles
+            self.scrolledOffStyles = scrolledOffStyles
         }
 
         public init(paneID: String, seq: UInt64, snapshot: ScreenSnapshot) {
@@ -259,10 +262,12 @@ public enum ServerMessage: Equatable, Sendable {
         public var scrolledOff: [String]?
         /// As in `Screen`.
         public var historyReset: Bool?
+        /// As in `Screen`.
+        public var scrolledOffStyles: [RowStyle]?
 
         public init(paneID: String, seq: UInt64, baseSeq: UInt64, changes: [LineChange],
                     cursorRow: Int? = nil, cursorCol: Int? = nil, scrolledOff: [String]? = nil,
-                    historyReset: Bool? = nil) {
+                    historyReset: Bool? = nil, scrolledOffStyles: [RowStyle]? = nil) {
             self.paneID = paneID
             self.seq = seq
             self.baseSeq = baseSeq
@@ -271,6 +276,7 @@ public enum ServerMessage: Equatable, Sendable {
             self.cursorCol = cursorCol
             self.scrolledOff = scrolledOff
             self.historyReset = historyReset
+            self.scrolledOffStyles = scrolledOffStyles
         }
     }
 
@@ -326,24 +332,30 @@ public enum ServerMessage: Equatable, Sendable {
         public var paneID: String
         public var seq: UInt64
         public var lines: [String]
+        /// `SyncFeature.styles`: the style runs of the rows that have any (`row` indexes `lines`).
+        public var styles: [RowStyle]?
 
-        public init(paneID: String, seq: UInt64, lines: [String]) {
+        public init(paneID: String, seq: UInt64, lines: [String], styles: [RowStyle]? = nil) {
             self.paneID = paneID
             self.seq = seq
             self.lines = lines
+            self.styles = styles
         }
     }
 
     /// This `screen` / `screenDiff` with the rows that scrolled off its top attached, or `historyReset`
     /// (`SyncFeature.scrollbackStream`). Other messages are returned unchanged.
-    public func withHistory(scrolledOff: [String]?, reset: Bool) -> ServerMessage {
+    /// `styles`: the runs of `scrolledOff` rows (`SyncFeature.styles`).
+    public func withHistory(scrolledOff: [String]?, styles: [RowStyle]? = nil, reset: Bool) -> ServerMessage {
         switch self {
         case .screen(var screen):
             screen.scrolledOff = scrolledOff
+            screen.scrolledOffStyles = scrolledOff == nil ? nil : styles
             screen.historyReset = reset ? true : nil
             return .screen(screen)
         case .screenDiff(var diff):
             diff.scrolledOff = scrolledOff
+            diff.scrolledOffStyles = scrolledOff == nil ? nil : styles
             diff.historyReset = reset ? true : nil
             return .screenDiff(diff)
         default:
