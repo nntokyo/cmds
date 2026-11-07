@@ -311,13 +311,11 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
         updateStatus()
     }
 
+    /// The row of `decision` is ticked (rows without an action have nothing to tick).
+    private func isChecked(_ decision: FolderSync.Decision) -> Bool { !excluded.contains(decision.entry.path) }
+
     /// The actions that Sync would queue: planned and checked.
-    private var checkedActions: [FolderSync.Action] {
-        decisions.compactMap { decision in
-            guard let action = decision.action, !excluded.contains(decision.entry.path) else { return nil }
-            return action
-        }
-    }
+    private var checkedActions: [FolderSync.Action] { decisions.filter(isChecked).compactMap(\.action) }
 
     private func updateStatus() {
         let running = task != nil
@@ -345,7 +343,7 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
             statusLabel.textColor = .systemOrange
             return
         }
-        let summary = FolderSync.Summary(actions, unsettled: decisions.filter { $0.isConflict && $0.action == nil }.count)
+        let summary = FolderSync.Summary(decisions: decisions, including: isChecked)
         if decisions.isEmpty {
             statusLabel.stringValue = String(localized: "The folders are the same (\(output.comparison.itemsRead) items).")
             return
@@ -366,7 +364,8 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
         guard let output, !output.comparison.truncated else { return }
         let actions = checkedActions
         guard !actions.isEmpty, let window else { return NSSound.beep() }
-        let trashed = actions.filter { if case .trash = $0.kind { return true } else { return false } }.count
+        let summary = FolderSync.Summary(actions)
+        let trashed = summary.trashLeft + summary.trashRight
         guard trashed > 0 else { return start(actions, output) }
         let alert = NSAlert()
         alert.messageText = String(localized: "Move \(trashed) items to the Trash?")
@@ -518,7 +517,8 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
     #if DEBUG
     /// `debug.compare` (docs/internals/testing.md): the newest Compare window's state; `direction`, `delete`,
     /// `conflicts`, `hidden`, `same` set its options, `choose {path, choice}` and `exclude {path, on}` set items,
-    /// `compare` compares again, `sync` starts the sync (no confirmation: the test asked for it), `close` closes it.
+    /// `compare` compares again, `sync` starts the sync (no confirmation: the test asked for it), `snapshot` (with
+    /// `appearance` light or dark) draws the window as PNG, `close` closes it.
     func debugPerform(_ params: Params) throws -> JSONValue {
         if let raw = try params.string("direction") {
             guard let direction = FolderSync.Direction(rawValue: raw) else { throw RPCError.invalidParams("direction") }
@@ -554,11 +554,29 @@ final class FolderCompareWindowController: NSWindowController, NSWindowDelegate,
             start(checkedActions, output)
         case "close": close()
         case "snapshot":
-            guard let view = window?.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
+            // `appearance` (light/dark) draws the window in it. The content view draws no background of its own (the
+            // window does), so it is drawn on the window's background colour, as on screen.
+            guard let window, let view = window.contentView,
+                  let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else {
                 throw RPCError(code: 500, message: "no window")
             }
+            if let name = try params.string("appearance") {
+                window.appearance = NSAppearance(named: name == "dark" ? .darkAqua : .aqua)
+                view.layoutSubtreeIfNeeded()
+            }
             view.cacheDisplay(in: view.bounds, to: rep)
-            guard let png = rep.representation(using: .png, properties: [:]) else { throw RPCError(code: 500, message: "PNG") }
+            let image = NSImage(size: view.bounds.size)
+            image.lockFocus()
+            view.effectiveAppearance.performAsCurrentDrawingAppearance {
+                NSColor.windowBackgroundColor.setFill()
+                view.bounds.fill()
+            }
+            rep.draw(in: view.bounds)
+            image.unlockFocus()
+            guard let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff),
+                  let png = bitmap.representation(using: .png, properties: [:]) else {
+                throw RPCError(code: 500, message: "PNG")
+            }
             return ["png_base64": .string(png.base64EncodedString())]
         default: throw RPCError.invalidParams("unknown action")
         }
