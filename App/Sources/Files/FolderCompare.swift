@@ -150,10 +150,10 @@ enum FolderCompareAPI {
                 transfer = TransferCenter.shared.startSync(request, from: nil).id
             }
         }
+        let includeSame = try params.bool("same") ?? false
         let info = FolderCompareInfo(left: output.left, right: output.right, comparison: output.comparison,
                                      decisions: decisions, options: options,
-                                     includeSame: method == "files.compare" && (try params.bool("same") ?? false),
-                                     transfer: transfer)
+                                     includeSame: method == "files.compare" && includeSame, transfer: transfer)
         return try .from(info)
     }
 
