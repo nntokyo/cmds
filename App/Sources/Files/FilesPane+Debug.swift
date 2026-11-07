@@ -7,8 +7,11 @@ import CmdsCore
 extension FilesPane {
     /// `state` (default) reports; `select` (names), `copyToOther`, `moveToOther`, `newFolder`, `rename` (name,
     /// newName), `paste` (paths, move; `host:/path` for remote items), `trash`, `reload` (also Connect), `goto` (path),
-    /// `hidden` (on), `follow` (on), `preview`, `terminal`, `back`, `forward`, `up`. `conflict` answers
-    /// name conflicts of later operations without asking (keepBoth, replace, skip, stop).
+    /// `hidden` (on), `follow` (on), `preview`, `terminal`, `back`, `forward`, `up`, `edit` (remote: download the
+    /// selected files for editing; opened in their apps only with `open: true`), `stopEditing`. `conflict` answers
+    /// name conflicts of later operations without asking (keepBoth, replace, skip, stop; for an edited file changed on
+    /// the server: replace keeps mine, skip keeps theirs, keepBoth saves mine as a copy). `editing` lists the edits of
+    /// this pane: name, server path, copy, busy, notUploaded.
     func debugPerform(_ params: JSONValue?) throws -> JSONValue {
         let action = params?["action"]?.stringValue ?? "state"
         if let raw = params?["conflict"]?.stringValue {
@@ -45,6 +48,11 @@ extension FilesPane {
         case "back": goBack()
         case "forward": goForward()
         case "up": goUp()
+        case "edit":
+            let files = selectedEntries.filter { !$0.isFolder }
+            guard isRemote, !files.isEmpty else { throw RPCError.invalidParams("select files of a remote pane first") }
+            editRemoteFiles(files, open: params?["open"]?.boolValue ?? false)
+        case "stopEditing": stopEditing()
         default: throw RPCError.invalidParams("unknown action \(action)")
         }
         return .object([
@@ -62,6 +70,15 @@ extension FilesPane {
             "forward": .number(Double(forwardStack.count)),
             "showHidden": .bool(showHidden),
             "follow": .bool(followsTerminal),
+            "editing": .array(RemoteEdits.shared.sessions(of: self).map { session in
+                .object([
+                    "name": .string(session.name),
+                    "path": .string(session.remotePath),
+                    "copy": .string(session.copy.path),
+                    "busy": .bool(session.uploads.isBusy),
+                    "notUploaded": .bool(session.notUploaded),
+                ])
+            }),
         ])
     }
 
