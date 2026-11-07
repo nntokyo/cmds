@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-08
+
+Mac and iPhone/iPad. Browsing on the phone needs cmds 0.15.0 on the Mac and the next companion release; older Macs
+and phones keep working as before.
+
 ### Added
 
 - Mac: phones can browse the folder of a files pane, read only: they ask for a folder's contents (folders first, then
@@ -15,7 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   already has open; the phone never makes cmds connect. Nothing can be changed from the phone (#26).
 - iPhone/iPad: a files pane lists its folder with icons, sizes and dates; tap a folder to go into it (on the phone
   only, the Mac pane stays where it is), Back to return, pull to refresh, and tap a file to open it: images and PDFs
-  with the preview viewer, text files (source code, logs, JSON…) as text. Macs without the feature keep showing the folder's path (#26).
+  with the preview viewer, text files (source code, logs, JSON…) as text. Macs without the feature keep showing the
+  folder's path (#26).
 
 ## [0.14.0] - 2026-11-07
 
@@ -455,7 +461,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.14.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.15.0...master
+[0.15.0]: https://github.com/nntokyo/cmds/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/nntokyo/cmds/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nntokyo/cmds/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nntokyo/cmds/compare/v0.11.0...v0.12.0
