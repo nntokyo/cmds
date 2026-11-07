@@ -73,7 +73,7 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   and **Open on Mac**.
 - **Files panes**: with a cmds release after 0.14.0 on the Mac, the folder's contents with icons, sizes and dates. Tap
   a folder to go into it (on the phone only; the Mac pane stays where it is), **Back** to return, pull to refresh, and
-  tap an image or PDF to open it like a preview pane. Read only; see [Files](files.md#iphone-and-ipad). Older Macs show
+  tap an image, PDF or text file to open it. Read only; see [Files](files.md#iphone-and-ipad). Older Macs show
   the folder's path.
 - **Schedules**: ⋯ › **Schedules** on the workspace list (with a cmds release after 0.13.0 on the Mac; the item is not
   there for older ones) lists the Mac's [schedules](schedules.md), read only: each one's trigger, what it does (no
