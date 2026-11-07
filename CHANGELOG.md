@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-07
+
+Mac and iPhone/iPad. The iPhone/iPad features need cmds 0.14.0 on the Mac; older Macs and phones keep working as
+before.
+
 ### Added
 
 - Mac: terminal screens go to the iPhone/iPad with their colours and attributes (palette, 256 and RGB colours, bold,
@@ -440,7 +445,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.13.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.14.0...master
+[0.14.0]: https://github.com/nntokyo/cmds/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nntokyo/cmds/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/nntokyo/cmds/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/nntokyo/cmds/compare/v0.10.0...v0.11.0
