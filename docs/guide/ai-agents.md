@@ -139,10 +139,13 @@ set the sidebar status:
 | `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs) |
 | `browser_snapshot` | A PNG of the visible page, returned as an image (also when its workspace is not shown) |
 | `open_file` | Show a file (image, PDF, Markdown, diff, …) in a preview pane |
-| `close_pane` | Close a pane the server opened (never others) |
+| `close_pane` | Close a browser, preview or files pane opened from the agent's terminal: by this server, an earlier one or the CLI (`cmds browser open`, `cmds open`); refuses others |
 | `set_status` | Sidebar status text for the agent's workspace |
 
-The browser tools use the last browser pane the server opened unless given `pane`. The server's instructions tell the
+The browser tools use the last browser pane the server opened unless given `pane`. cmds remembers which terminal pane
+each browser, preview or files pane was opened from over the API (also across a relaunch), so `close_pane` works after
+the MCP server restarted and for panes the agent opened with the CLI. Panes opened from another terminal or by you stay
+open; the refusal points the agent to `cmds close-pane <id>`, for when you ask for it. The server's instructions tell the
 agent to use these tools rather than Chrome inside cmds, and Chrome only when you ask for it, for pages that need your
 Chrome sign-ins (browser panes do not share them), or for what `browser_eval` cannot do (file uploads). Outside a cmds
 terminal (`CMDS_PANE_ID` not set) the server offers no tools, so registering it for every project is harmless.

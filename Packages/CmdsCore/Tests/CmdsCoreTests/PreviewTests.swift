@@ -161,9 +161,11 @@ final class SyncFileTests: XCTestCase {
         let old = try JSONDecoder().decode(PaneInfo.self, from: Data(#"{"id":"p1","kind":"browser","title":"t","focused":true,"attention":false}"#.utf8))
         XCTAssertEqual(old.kind, .browser)
         XCTAssertNil(old.file)
-        let new = try JSONDecoder().decode(PaneInfo.self, from: Data(#"{"id":"p1","kind":"preview","title":"t","focused":true,"attention":false,"file":"/x"}"#.utf8))
+        XCTAssertNil(old.openedBy)
+        let new = try JSONDecoder().decode(PaneInfo.self, from: Data(#"{"id":"p1","kind":"preview","title":"t","focused":true,"attention":false,"file":"/x","openedBy":"p0"}"#.utf8))
         XCTAssertEqual(new.kind, .preview)
         XCTAssertEqual(new.file, "/x")
+        XCTAssertEqual(new.openedBy, "p0")
     }
 }
 

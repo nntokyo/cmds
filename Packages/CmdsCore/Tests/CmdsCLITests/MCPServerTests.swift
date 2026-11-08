@@ -11,6 +11,8 @@ final class MCPServerTests: XCTestCase {
     private var failure: CLIError?
     /// Panes the stub app no longer has: requests to them fail like the app's "pane not found".
     private var closedPanes: Set<String> = []
+    /// The stub app's `Pane.openedBy`: pane id → the terminal pane it was opened from.
+    private var openers: [String: String] = [:]
 
     private func server(inside: Bool = true) -> MCPServer {
         let environment = inside ? ["CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1"] : [:]
@@ -19,6 +21,12 @@ final class MCPServerTests: XCTestCase {
             if let failure = self.failure { throw failure }
             if let pane = params["pane"]??.stringValue, self.closedPanes.contains(pane) {
                 throw CLIError.failure("pane not found: \(pane)")
+            }
+            if method == "pane.close", let pane = params["pane"]??.stringValue {
+                if let openedBy = params["openedBy"]??.stringValue, self.openers[pane] != openedBy {
+                    throw CLIError.failure("pane \(pane) was not opened from pane \(openedBy)")
+                }
+                self.closedPanes.insert(pane)
             }
             return self.replies[method] ?? .object([:])
         }
@@ -112,18 +120,39 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(content["data"]?.stringValue, "iVBORw0K")
     }
 
-    func testClosePaneOnlyClosesPanesTheServerOpened() {
+    func testClosePaneClosesAPaneTheServerOpened() {
         let server = server()
-        let refused = callTool(server, "close_pane", #"{"pane":"p1"}"#)
-        XCTAssertEqual(refused?["isError"], .bool(true))
-        XCTAssertTrue(requests.isEmpty)
-
         replies["browser.open"] = .object(["id": "p9"])
         _ = callTool(server, "browser_open", #"{"url":"https://example.com"}"#)
         XCTAssertEqual(callTool(server, "close_pane", #"{"pane":"p9"}"#)?["isError"], .bool(false))
         XCTAssertEqual(requests.last?.method, "pane.close")
+        XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, nil)
         XCTAssertEqual(server.openedPanes, [])
-        XCTAssertEqual(callTool(server, "close_pane", #"{"pane":"p9"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "close_pane", #"{"pane":"p9"}"#)?["isError"], .bool(true))  // gone
+    }
+
+    /// #165: a pane opened from the same terminal with the CLI, or by an earlier server (MCP restart).
+    func testClosePaneClosesAPaneOpenedFromTheSameTerminal() {
+        openers["p9"] = "p1"
+        let server = server()  // a new server that never opened p9
+        XCTAssertEqual(text(callTool(server, "close_pane", #"{"pane":"p9"}"#)), "Closed p9.")
+        XCTAssertEqual(requests.last?.method, "pane.close")
+        XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, .string("p1"))
+        XCTAssertTrue(closedPanes.contains("p9"))
+    }
+
+    func testClosePaneRefusesPanesFromAnotherTerminalOrWithoutOpener() throws {
+        openers["p8"] = "p2"
+        let server = server()
+        for pane in ["p8", "p7", "p1"] {  // another terminal's pane, one the user opened, our own terminal
+            let refused = callTool(server, "close_pane", #"{"pane":"\#(pane)"}"#)
+            XCTAssertEqual(refused?["isError"], .bool(true))
+            let message = try XCTUnwrap(text(refused))
+            XCTAssertTrue(message.contains("was not opened from your terminal (p1)"), message)
+            XCTAssertTrue(message.contains("`cmds close-pane \(pane)`"), message)
+            XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, .string("p1"))
+        }
+        XCTAssertTrue(closedPanes.isEmpty)
     }
 
     func testOpenFileChecksThePathAndOpensWithoutFocus() throws {

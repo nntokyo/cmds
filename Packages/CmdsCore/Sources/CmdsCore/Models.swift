@@ -36,10 +36,12 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var file: String?
     /// The Claude account (`ClaudeAccount.name`) the pane's Claude Code runs under, when known.
     public var account: String?
+    /// The terminal pane an API request opened this browser, preview or files pane from (`Pane.openedBy`, #165).
+    public var openedBy: String?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
                 workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
-                remote: RemoteInfo? = nil, file: String? = nil, account: String? = nil) {
+                remote: RemoteInfo? = nil, file: String? = nil, account: String? = nil, openedBy: String? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -51,6 +53,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.remote = remote
         self.file = file
         self.account = account
+        self.openedBy = openedBy
     }
 }
 

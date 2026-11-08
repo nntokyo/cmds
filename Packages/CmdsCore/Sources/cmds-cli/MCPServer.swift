@@ -10,7 +10,8 @@ extension CLI {
         details: """
             Register it with your agent (e.g. `claude mcp add cmds -- cmds mcp`); the agent starts it. Tools are offered
             only inside a cmds terminal (CMDS_PANE_ID set). Panes open without taking the keyboard focus, and
-            close_pane closes only panes this server opened. See docs/guide/ai-agents.md.
+            close_pane closes only panes opened from that terminal (by this server or the cmds CLI). See
+            docs/guide/ai-agents.md.
             """
     ) { ctx in
         let server = MCPServer(environment: ctx.environment) { method, params, timeout in
@@ -37,7 +38,8 @@ final class MCPServer {
         page beside the terminal. Use Chrome only when the user asks for it, when the page needs the user's Chrome \
         sign-ins or saved passwords (cmds browser panes do not share them), or for what browser_eval cannot do (file \
         uploads, native dialogs). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Close the \
-        panes you opened when you are done (close_pane).
+        panes you opened when you are done (close_pane; it also closes panes opened from your terminal with the cmds \
+        CLI, such as `cmds browser open` or `cmds open`).
         """
 
     static let notInsideCmds = """
@@ -49,7 +51,8 @@ final class MCPServer {
 
     private let environment: [String: String]
     private let call: Call
-    /// Panes this server opened, oldest first: close_pane accepts only these.
+    /// Panes this server opened, oldest first. close_pane accepts these, and panes the app says were opened from our
+    /// terminal pane (`pane.close` with `openedBy`; #165).
     private(set) var openedPanes: [String] = []
     /// The browser pane browser_* tools use when no pane is given: the last one this server opened.
     private var lastBrowserPane: String?
@@ -167,8 +170,9 @@ final class MCPServer {
              properties: ["path": string("Absolute path (relative paths are resolved against the server's working directory)."),
                           "diff": .object(["type": "boolean", "description": "Show the file as a unified diff."])],
              required: ["path"]),
-        Tool(name: "close_pane", description: "Close a pane that this server opened (browser_open, open_file).",
-             properties: ["pane": string("Pane id returned by browser_open or open_file.")], required: ["pane"]),
+        Tool(name: "close_pane",
+             description: "Close a browser, preview or files pane opened from your terminal: by browser_open or open_file, or with the cmds CLI (`cmds browser open`, `cmds open`), also before this server restarted. Other panes are refused; close them with `cmds close-pane <id>` only when the user asks.",
+             properties: ["pane": string("Pane id returned by browser_open, open_file or the cmds CLI.")], required: ["pane"]),
         Tool(name: "set_status",
              description: "Show a short progress text in the cmds sidebar for your workspace, without notifying the user (empty text clears it).",
              properties: ["text": string("Status text, e.g. \"Running tests (3/10)\".")], required: ["text"]),
@@ -197,7 +201,7 @@ final class MCPServer {
         return value
     }
 
-    /// The id of the pane a request opened, remembered so close_pane accepts it.
+    /// The id of the pane a request opened, remembered (also for browser_* defaults).
     private func recordOpenedPane(_ result: JSONValue) throws -> String {
         guard let id = result["id"]?.stringValue else { throw ToolError(message: "the app returned no pane id") }
         if !openedPanes.contains(id) { openedPanes.append(id) }
@@ -267,10 +271,26 @@ final class MCPServer {
             return [Self.text("Showing \(path) in preview pane \(id).")]
         case "close_pane":
             let pane = try argument(arguments, "pane")
-            guard openedPanes.contains(pane) else {
-                throw ToolError(message: "\(pane) was not opened by this server; close_pane only closes panes from browser_open or open_file")
+            // Panes not opened by this server: the app closes them only if they were opened from our terminal pane
+            // (a CLI `cmds browser open`, or a previous server), checked app-side so the answer cannot go stale.
+            let openedBy: JSONValue?
+            if openedPanes.contains(pane) {
+                openedBy = nil
+            } else if let envPane {
+                openedBy = .string(envPane)
+            } else {
+                // Never an unchecked close of someone else's pane (tools/call already requires CMDS_PANE_ID).
+                throw ToolError(message: "\(pane) was not opened by this server")
             }
-            try call("pane.close", ["pane": .string(pane)], Self.requestTimeout)
+            do {
+                try call("pane.close", ["pane": .string(pane), "openedBy": openedBy], Self.requestTimeout)
+            } catch let error as CLIError where openedBy != nil && error.message.contains("was not opened from") {
+                throw ToolError(message: """
+                    \(pane) was not opened from your terminal (\(envPane ?? "")), so close_pane leaves it open: it closes \
+                    only browser, preview and files panes opened from your terminal (browser_open, open_file, `cmds \
+                    browser open`, `cmds open`). If the user wants it closed, run `cmds close-pane \(pane)`.
+                    """)
+            }
             openedPanes.removeAll { $0 == pane }
             if lastBrowserPane == pane { lastBrowserPane = nil }
             return [Self.text("Closed \(pane).")]

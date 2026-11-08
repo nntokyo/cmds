@@ -22,6 +22,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
 
+### Fixed
+
+- Mac: `cmds mcp`'s `close_pane` also closes browser, preview and files panes the agent opened from its terminal with
+  the CLI (`cmds browser open`, `cmds open`) or before the MCP server restarted. cmds remembers the terminal pane each
+  such pane was opened from (`openedBy` in `cmds panes --json`, kept across a relaunch); panes opened from another
+  terminal or by you are still refused, with a hint to `cmds close-pane <id>` (#165).
+
 ## [0.15.1] - 2026-11-08
 
 Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
