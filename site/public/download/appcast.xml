@@ -7,28 +7,24 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.15.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.15.0</link>
-      <sparkle:version>22</sparkle:version>
-      <sparkle:shortVersionString>0.15.0</sparkle:shortVersionString>
+      <title>cmds 0.15.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.15.1</link>
+      <sparkle:version>24</sparkle:version>
+      <sparkle:shortVersionString>0.15.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 07 Nov 2026 16:12:35 GMT</pubDate>
+      <pubDate>Sun, 08 Nov 2026 08:12:06 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
-<ul>
-<li>iPhone/iPad アプリから、ファイル一覧ペインのフォルダを閲覧できるようにしました（閲覧のみ）。フォルダをたどり、画像・PDF・テキストファイルを開けます。Mac のペインは動きません。SSH ホストのフォルダは、ペインがすでに接続しているときだけ読みます。</li>
-</ul>
-<p>iPhone/iPad での閲覧には、次の iPhone/iPad アプリが必要です。古いアプリでもこれまでどおり使えます。</p>
-<h3>Added</h3>
-<ul>
-<li>The iPhone/iPad app can browse the folder of a files pane, read only: go into folders and open images, PDFs and text files. The pane on the Mac stays where it is. Folders on SSH hosts are read only through the connection the pane already has open.</li>
-</ul>
-<p>Browsing on the iPhone/iPad needs the next iPhone/iPad app; older apps keep working as before.</p>
+<h3>修正</h3>
+<p>ペインの Claude Code のセッションを別のアカウントに移すとき、「Claude Codeが終了しませんでした」で止まることが多かった問題を直しました。Claude Code は 1 回目の Ctrl-C から約 0.7 秒以内に 2 回目を受けたときだけ終了しますが、cmds の送る間隔が長すぎました。いまは 2 回の Ctrl-C を同時に送ります。</p>
+<p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
+<h3>Fixed</h3>
+<p>Moving a pane's Claude Code session to another account often stopped with "Claude Code did not quit": Claude Code quits only on a second Ctrl-C within about 0.7 s of the first, and cmds sent them too far apart. Both Ctrl-Cs now go out at once.</p>
+<p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.15.0/cmds-0.15.0.dmg" length="15512117" type="application/octet-stream" sparkle:edSignature="3KdCRvl8y1d/jsHzsW44axbZbc4xmurgCALHHJLXflmlKt8Lhibqiedx2mJWoVqd8HJpxAwVvQINaTNVRuaUDA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.15.1/cmds-0.15.1.dmg" length="15369980" type="application/octet-stream" sparkle:edSignature="5v1wn7eVarF7g9Y7QqR+UbZqj7gGwpYaiUE3/aKrZ8XwNVHEIornjElzpuMZ9N8rlIlWnagxg4YQiC60J5GvCg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: B+I9ptHfdFAuAdxTRzHYJpI76ndLK53kn0atSgNKLlldSskNimVztSVcp4DKI7zv/cp9l5tH2lI/llFTg9W4CA==
-length: 2172
+edSignature: 5RXuVQ13OE+2M6w0wb07pPKebNyjN0vuQCVmKTMTGWSwawrPWBOyCc2ezsz0PwfMP18LbyGSCQgkjFyNUPfZBw==
+length: 2083
 -->
