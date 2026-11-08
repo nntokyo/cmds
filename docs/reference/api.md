@@ -83,7 +83,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `view.tile` | one of `off: true`, `all: true`, `workspaces` ([id], at least two); `active?` (workspace to give the keyboard); `zoom?` (bool: show the active tile alone); no params = query | `TileStatus` `{"mode": "off"/"all"/"selected", "workspaces": [id] (display order), "active"?, "zoomed"?, "hidden"}` (`hidden` = left out beyond 9), `"rows"?` ([[id]], top to bottom: only while the user's dragged arrangement is shown; `workspaces` lists the same ids in reading order). Calling with `workspaces` resets to the automatic layout. [Tiled view](../guide/workspaces-and-panes.md#tiled-view); local socket only |
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
-| `pane.split` | `pane?`, `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?`, `account?` (local terminals) | `PaneInfo` |
+| `pane.split` | `pane?` (to split from; a browser split off a terminal pane records it as its `openedBy`, as do `pane.open_file`, `files.open` and `browser.open`), `direction` (`right`/`down`), `kind?` (`terminal`/`browser`), `url?`, `cwd?`, `command?`, `focus?` (default true), `ssh?` (host), `remoteCwd?`, `account?` (local terminals) | `PaneInfo` |
 | `pane.open_file` | `path` (absolute, existing file), `pane?` (to split from; a preview pane shows the file itself instead), `direction?` (`right`/`down`), `focus?` (default true), `format?` (`markdown`/`diff`/`quicklook`) | `PaneInfo` (kind `preview`); refused (403) on SSH panes' sockets |
 | `files.open` | `path` (absolute, existing folder or file), `pane?` (to split from; a files pane shows the folder itself instead), `direction?` (`right`/`down`), `focus?` (default true); `host?` (an SSH host: `path` is then a folder there, absolute, `~/…`, relative to the remote home or empty, checked by the listing) | `PaneInfo` (kind `files`, `workingDirectory` = the folder, `remote` = `{host, connected}` on a host; a file's folder is listed with the file selected); refused (403) on SSH panes' sockets. [Files panes](../guide/files.md) |
 | `files.compare` | `left`, `right` (absolute folders on this Mac or `HOST:PATH`), `direction?` (`leftToRight`, `rightToLeft`, `both`; default `both`), `delete?` (one-way: plan extra items for the Trash), `conflicts?` (`newer` (default), `left`, `right`, `skip`), `hidden?`, `same?` (also list identical items) | `FolderCompareInfo`. Compares off the main thread (may take a while for large or remote folders); refused on SSH panes' sockets. [Comparing and syncing](../guide/files.md#comparing-and-syncing-folders) |
@@ -93,7 +93,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `transfer.clear` | – | – (removes finished transfers) |
 | `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
 | `pane.focus` | `pane` | – |
-| `pane.close` | `pane` | – |
+| `pane.close` | `pane`, `openedBy?` (a terminal pane: close only a pane opened from it, else an invalid-params error) | – |
 | `pane.send_text` | `pane?`, `text` | – |
 | `pane.read_text` | `pane?`, `scrollback?` (lines) | `{"text": ...}` |
 | `notify` | `pane?`, `title?`, `body` | – |
@@ -138,7 +138,8 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `workingDirectory?` (files: the listed folder), `url?` (browser), `file?` (preview: absolute path), `remote?` =
   `{host, connected, branch?}` (SSH panes; files panes on a host, `connected` false until it was listed, e.g. after a
   relaunch), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude
-  Code runs under).
+  Code runs under), `openedBy?` (browser, preview and files panes split off a terminal pane named in the request: that
+  terminal; kept across a relaunch).
 - `TransferInfo` = `id`, `mode` (`copy`/`move`, `save`: the upload of an edited file over the server's file, with
   `sources` the edited copy, or `sync`: `sources[0]` is the left folder, `destination` the right one, with
   `direction` and `trashed`, the extra items moved to the Trash), `state` (`queued`, `running`, `paused`, `waiting`, `done`,

@@ -70,6 +70,11 @@ final class Pane {
     /// Given when a schedule first names the pane; saved in the session, so it survives a relaunch (pane ids do not).
     var scheduleTag: String?
 
+    /// The terminal pane an API request (`browser.open`, `pane.open_file`, …) opened this browser, preview or files
+    /// pane from: the agent there may close it (`pane.close` with `openedBy`, `cmds mcp` close_pane; #165). Saved in
+    /// the session.
+    var openedBy: String?
+
     /// Last time the pane took focus (the "other" files pane is the one used most recently).
     var focusedAt = Date.distantPast
 
@@ -260,7 +265,7 @@ final class Pane {
     func info(focused: Bool) -> PaneInfo {
         PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
                  workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
-                 file: preview?.path, account: claudeAccount)
+                 file: preview?.path, account: claudeAccount, openedBy: openedBy)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.

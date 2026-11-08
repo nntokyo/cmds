@@ -285,11 +285,13 @@ final class AppController {
     /// Splits `paneID` (default: focused pane) and focuses the new pane.
     /// New terminals start in the source pane's directory unless `cwd` is given. With `focus: false` the source
     /// pane keeps focus (scripts and agents opening a helper pane must not take the user's keyboard).
+    /// `recordOpener` (API requests naming their pane): a browser, preview or files pane split off a terminal pane
+    /// remembers it as its opener (`Pane.openedBy`, #165).
     @discardableResult
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
                url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
                ssh: SSHLaunch? = nil, file: PreviewTarget? = nil, account: ClaudeAccount? = nil,
-               filesHost: String? = nil) throws -> PaneInfo {
+               filesHost: String? = nil, recordOpener: Bool = false) throws -> PaneInfo {
         let source = try resolvePane(paneID)
         if account != nil, kind != .terminal || ssh != nil || (source.ssh != nil && cwd == nil && command == nil) {
             throw RPCError.invalidParams("an account is for local terminal panes (its config directory is on this Mac)")
@@ -317,6 +319,7 @@ final class AppController {
             let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? localSource ?? localWorkspace ?? NSHomeDirectory()
             pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account)
         }
+        if recordOpener, pane.kind != .terminal, source.kind == .terminal { pane.openedBy = source.id }
         workspace.zoomedPaneID = nil
         leaf.split(axis: direction.axis, newPaneID: pane.id)
         guard focus else {
@@ -341,9 +344,13 @@ final class AppController {
         pane.focus()
     }
 
-    /// Closes a pane; the split tree collapses. Closing the last pane closes the workspace.
-    func closePane(id: String?) throws {
+    /// Closes a pane; the split tree collapses. Closing the last pane closes the workspace. With `openedBy`, only a
+    /// pane opened from that terminal pane (`Pane.openedBy`; `cmds mcp` close_pane, #165).
+    func closePane(id: String?, openedBy: String? = nil) throws {
         let pane = try resolvePane(id)
+        if let openedBy, pane.openedBy != openedBy {
+            throw RPCError.invalidParams("pane \(pane.id) was not opened from pane \(openedBy)")
+        }
         guard let workspace = workspace(id: pane.workspaceID), let root = workspace.root else { return }
         let order = workspace.orderedPanes.map(\.id)
         pane.tearDown()
@@ -428,8 +435,8 @@ final class AppController {
 
     /// Opens a browser split to the right of `paneID` (default: focused pane).
     @discardableResult
-    func openBrowser(paneID: String? = nil, url: String, focus: Bool = true) throws -> PaneInfo {
-        try split(paneID: paneID, direction: .right, kind: .browser, url: url, focus: focus)
+    func openBrowser(paneID: String? = nil, url: String, focus: Bool = true, recordOpener: Bool = false) throws -> PaneInfo {
+        try split(paneID: paneID, direction: .right, kind: .browser, url: url, focus: focus, recordOpener: recordOpener)
     }
 
     func browser(paneID: String) throws -> BrowserPane {
@@ -462,7 +469,7 @@ final class AppController {
     /// file (the CLI resolves relative paths against its cwd).
     @discardableResult
     func openFile(paneID: String? = nil, path: String, direction: SplitDirection = .right, focus: Bool = true,
-                  format: PreviewFormat? = nil) throws -> PaneInfo {
+                  format: PreviewFormat? = nil, recordOpener: Bool = false) throws -> PaneInfo {
         let target = try PreviewTarget.checked(path: path, format: format)
         let source = try resolvePane(paneID)
         if let preview = source.preview {
@@ -470,7 +477,8 @@ final class AppController {
             if focus { try focusPane(id: source.id) }
             return try paneInfo(id: source.id)
         }
-        return try split(paneID: source.id, direction: direction, kind: .preview, focus: focus, file: target)
+        return try split(paneID: source.id, direction: direction, kind: .preview, focus: focus, file: target,
+                         recordOpener: recordOpener)
     }
 
     /// ⌘-click on a file path in a terminal (or Space in a files pane): shows it in the workspace's preview pane if it
@@ -510,9 +518,10 @@ final class AppController {
     /// the pane.
     @discardableResult
     func openFolder(paneID: String? = nil, path raw: String, host rawHost: String? = nil,
-                    direction: SplitDirection = .right, focus: Bool = true) throws -> PaneInfo {
+                    direction: SplitDirection = .right, focus: Bool = true, recordOpener: Bool = false) throws -> PaneInfo {
         if let rawHost {
-            return try openRemoteFolder(paneID: paneID, host: rawHost, path: raw, direction: direction, focus: focus)
+            return try openRemoteFolder(paneID: paneID, host: rawHost, path: raw, direction: direction, focus: focus,
+                                        recordOpener: recordOpener)
         }
         guard raw.hasPrefix("/") else { throw RPCError.invalidParams("path must be absolute: \(raw)") }
         let path = (raw as NSString).standardizingPath
@@ -529,13 +538,14 @@ final class AppController {
             if focus { try focusPane(id: source.id) }
             return try paneInfo(id: source.id)
         }
-        let info = try split(paneID: source.id, direction: direction, kind: .files, cwd: folder, focus: focus)
+        let info = try split(paneID: source.id, direction: direction, kind: .files, cwd: folder, focus: focus,
+                             recordOpener: recordOpener)
         if let select { pane(id: info.id)?.files?.navigate(to: folder, select: select) }
         return info
     }
 
     private func openRemoteFolder(paneID: String?, host rawHost: String, path raw: String, direction: SplitDirection,
-                                  focus: Bool) throws -> PaneInfo {
+                                  focus: Bool, recordOpener: Bool) throws -> PaneInfo {
         let host: String
         let path: String
         do {
@@ -553,7 +563,8 @@ final class AppController {
             if focus { try focusPane(id: source.id) }
             return try paneInfo(id: source.id)
         }
-        return try split(paneID: source.id, direction: direction, kind: .files, cwd: path, focus: focus, filesHost: host)
+        return try split(paneID: source.id, direction: direction, kind: .files, cwd: path, focus: focus, filesHost: host,
+                         recordOpener: recordOpener)
     }
 
     /// The files pane that Copy / Move to Other Pane of `pane` goes to: of the workspace's other files panes, the one
@@ -820,13 +831,20 @@ final class AppController {
                 guard let pane = workspace.panes[id], pane.ssh == nil, let tag = pane.scheduleTag else { return nil }
                 return SessionState.PaneTag(paneIndex: index, tag: tag)
             }
+            let paneOpeners = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneOpener? in
+                guard let opener = workspace.panes[id]?.openedBy, let openerIndex = root.paneIDs.firstIndex(of: opener) else {
+                    return nil
+                }
+                return SessionState.PaneOpener(paneIndex: index, openerIndex: openerIndex)
+            }
             return SessionState.WorkspaceState(
                 title: workspace.customTitle, workingDirectory: workspace.workingDirectory,
                 layout: node(root, in: workspace),
                 focusedPaneIndex: workspace.focusedPaneID.flatMap { root.paneIDs.firstIndex(of: $0) },
                 agentSessions: agentSessions.isEmpty ? nil : agentSessions,
                 paneAccounts: paneAccounts.isEmpty ? nil : paneAccounts,
-                paneTags: paneTags.isEmpty ? nil : paneTags)
+                paneTags: paneTags.isEmpty ? nil : paneTags,
+                paneOpeners: paneOpeners.isEmpty ? nil : paneOpeners)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -908,6 +926,13 @@ final class AppController {
             restored.append(workspace)
             restoreAgentSessions(saved.agentSessions, in: workspace, mode: resumeMode)
             restoreScheduleTags(saved.paneTags, in: workspace)
+            for entry in saved.paneOpeners ?? [] {
+                guard let opener = ids[safe: entry.openerIndex], workspace.panes[opener]?.kind == .terminal,
+                      let pane = ids[safe: entry.paneIndex].flatMap({ workspace.panes[$0] }), pane.kind != .terminal else {
+                    continue
+                }
+                pane.openedBy = opener
+            }
         }
         return restored
     }

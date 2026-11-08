@@ -33,6 +33,15 @@ struct SessionState: Codable {
         /// Schedule tag of each terminal pane that has one (`Pane.scheduleTag`). Added later (schedules phase 2): older
         /// versions ignore it and drop it when they save, so a schedule then finds no pane and skips its run.
         var paneTags: [PaneTag]? = nil
+        /// The opener of each browser, preview or files pane opened from a terminal pane of the workspace (`Pane.openedBy`,
+        /// #165). Added later: older sessions lack it, older versions ignore it.
+        var paneOpeners: [PaneOpener]? = nil
+    }
+
+    /// The pane at `paneIndex` was opened from the terminal pane at `openerIndex` (reading order of `layout`).
+    struct PaneOpener: Codable {
+        var paneIndex: Int
+        var openerIndex: Int
     }
 
     /// The schedule tag of the pane at `paneIndex` (reading order of `layout`).
@@ -119,7 +128,7 @@ enum SessionStore {
 
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
-        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags
+        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners
     }
 
     init(from decoder: Decoder) throws {
@@ -135,6 +144,8 @@ extension SessionState.WorkspaceState {
         paneAccounts = accounts.isEmpty ? nil : accounts
         let tags = (try? c.decodeIfPresent([Lossy<SessionState.PaneTag>].self, forKey: .paneTags))?.compactMap(\.value) ?? []
         paneTags = tags.isEmpty ? nil : tags
+        let openers = (try? c.decodeIfPresent([Lossy<SessionState.PaneOpener>].self, forKey: .paneOpeners))?.compactMap(\.value) ?? []
+        paneOpeners = openers.isEmpty ? nil : openers
     }
 }
 

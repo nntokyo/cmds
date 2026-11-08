@@ -279,7 +279,8 @@ final class APIServer {
                                               url: try params.string("url"), cwd: try params.string("cwd"),
                                               command: try params.string("command"),
                                               focus: try params.bool("focus") ?? true, ssh: ssh,
-                                              account: try controller.resolveAccountParam(try params.string("account"))))
+                                              account: try controller.resolveAccountParam(try params.string("account")),
+                                              recordOpener: try params.string("pane") != nil))
         case "pane.open_file":
             let direction = try splitDirection(params)
             let format = try params.string("format").map { raw -> PreviewFormat in
@@ -290,20 +291,21 @@ final class APIServer {
             }
             return try .from(controller.openFile(paneID: try params.string("pane"), path: try params.required("path"),
                                                  direction: direction, focus: try params.bool("focus") ?? true,
-                                                 format: format))
+                                                 format: format, recordOpener: try params.string("pane") != nil))
         case "files.open":
             return try .from(controller.openFolder(paneID: try params.string("pane"),
                                                    path: try params.string("path") ?? (try params.string("host") == nil
                                                        ? try params.required("path") : ""),
                                                    host: try params.string("host"),
                                                    direction: try splitDirection(params),
-                                                   focus: try params.bool("focus") ?? true))
+                                                   focus: try params.bool("focus") ?? true,
+                                                   recordOpener: try params.string("pane") != nil))
         case "pane.reconnect":
             try controller.connectSSH(paneID: try params.string("pane"))
         case "pane.focus":
             try controller.focusPane(id: try params.required("pane"))
         case "pane.close":
-            try controller.closePane(id: try params.string("pane"))
+            try controller.closePane(id: try params.string("pane"), openedBy: try params.string("openedBy"))
         case "pane.send_text":
             try controller.sendText(paneID: try params.string("pane"), text: try params.required("text"))
         case "pane.read_text":
@@ -316,7 +318,8 @@ final class APIServer {
 
         case "browser.open":
             return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url"),
-                                                    focus: try params.bool("focus") ?? true))
+                                                    focus: try params.bool("focus") ?? true,
+                                                    recordOpener: try params.string("pane") != nil))
         case "browser.navigate":
             try controller.browserNavigate(paneID: try browserPaneID(params), url: try params.required("url"))
         case "browser.get_url":
