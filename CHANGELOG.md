@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: cmds can be chosen as the default web browser; links opened from other apps open in a browser split beside the
+  focused pane. First step towards passkeys in browser panes (#162).
+
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.

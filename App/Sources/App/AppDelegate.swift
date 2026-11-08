@@ -123,11 +123,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// `cmds://workspace/<id>` (the widget, #96) opens cmds on that workspace; `cmds://` alone just brings it forward.
+    /// http(s) URLs (cmds chosen as the default browser, #162) open in a browser split beside the focused pane.
     func application(_ application: NSApplication, open urls: [URL]) {
-        for url in urls where url.scheme == "cmds" {
-            let parts = url.pathComponents.filter { $0 != "/" }
-            showWorkspace(id: url.host == "workspace" ? parts.first : nil)
+        for url in urls {
+            switch url.scheme?.lowercased() {
+            case "cmds":
+                let parts = url.pathComponents.filter { $0 != "/" }
+                showWorkspace(id: url.host == "workspace" ? parts.first : nil)
+            case "http", "https":
+                openInBrowserPane(url)
+            default:
+                break
+            }
         }
+    }
+
+    private func openInBrowserPane(_ url: URL) {
+        NSApp.activate()
+        windowController.showWindow(nil)
+        if controller.focusedPane == nil { controller.createWorkspace() }
+        _ = try? controller.openBrowser(url: url.absoluteString)
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
