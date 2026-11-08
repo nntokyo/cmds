@@ -27,7 +27,8 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 - **Coding agents**: Claude Code hooks and status-line reporter, Codex usage read from its session files; per-pane
   model, context, cost and 5-hour / 7-day / spend limits; a Claude Code skill.
 - **Session restore and resume**: layout and directories come back after a restart, and Claude Code / Codex sessions
-  are offered for resuming; export/import moves them to another instance.
+  are offered for resuming; File › Recent Agent Sessions resumes recent ones in a new workspace; export/import moves
+  them to another instance.
 - **Several Claude accounts** of your own: panes run Claude Code under an account (`CLAUDE_CONFIG_DIR`); when one
   hits its usage limit, the session continues under the next one, on request or by itself, at the idle prompt. Use only
   your own accounts; you are responsible for following Anthropic's terms for each.

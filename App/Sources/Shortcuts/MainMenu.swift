@@ -64,6 +64,8 @@ enum MainMenu {
         menu.addItem(item("New Files Pane", #selector(CommandRouter.openFilesPane(_:)), "e", [.command, .shift], target: router))
         menu.addItem(item("New Remote Files Pane…", #selector(CommandRouter.openRemoteFilesPane(_:)), "e", [.command, .shift, .option], target: router))
         menu.addItem(.separator())
+        menu.addItem(submenu(router.recentAgentSessions.makeMenu()))
+        menu.addItem(.separator())
         menu.addItem(item("Export Workspaces…", #selector(CommandRouter.exportWorkspaces(_:)), "", target: router))
         menu.addItem(item("Import Workspaces…", #selector(CommandRouter.importWorkspaces(_:)), "", target: router))
         menu.addItem(.separator())

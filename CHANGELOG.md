@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: File › Recent Agent Sessions (also the clock button at the bottom of the sidebar) lists the 5 newest Claude
+  Code and Codex sessions seen in any pane, kept after the agent exits or the pane closes and across restarts.
+  Choosing one shows the pane that still has it, or resumes it in a new workspace in its folder, under its Claude
+  account or on its SSH host, typed only once that new shell's prompt is ready. `cmds sessions --recent` /
+  `agent.history` list them.
+
 - Mac: cmds can be chosen as the default web browser; links opened from other apps open in a browser split beside the
   focused pane. First step towards passkeys in browser panes (#162).
 

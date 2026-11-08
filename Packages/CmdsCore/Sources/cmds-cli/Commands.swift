@@ -48,15 +48,24 @@ extension CLI {
             let titles = workspaceTitles(workspaces)
             print(Format.agents(list, titles: titles, currentPane: ctx.envPane), terminator: "")
         },
-        Command(name: "sessions", usage: "sessions [--pane P]",
+        Command(name: "sessions", usage: "sessions [--pane P | --recent]",
                 summary: "List the AI agent sessions remembered per pane (resumable after cmds restarts).",
                 details: """
                     One line per terminal pane: state (offered = from before the restart, waiting = resume queued until
                     the shell prompt is ready, running, resumed), agent, session id, directory (and SSH host) and the
                     command `cmds resume` types into the pane. See docs/guide/ai-agents.md "Resuming sessions".
+                    --recent lists the recent sessions of all panes instead (File › Recent Agent Sessions, newest
+                    first; also after the agent exited or its pane closed), with the pane holding each, if any.
                     """,
-                options: ["pane"]) { ctx in
-            try ctx.args.expectPositionals(0...0, usage: "cmds sessions [--pane P]")
+                options: ["pane"], flags: ["recent"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds sessions [--pane P | --recent]")
+            if ctx.args.has("recent") {
+                if ctx.args[option: "pane"] != nil { throw CLIError.usage("give either --pane or --recent") }
+                let result = try ctx.call("agent.history")
+                if ctx.json { return ctx.printJSON(result) }
+                let entries = try perform { try result.decode([AgentHistoryEntry].self) }
+                return print(Format.agentHistory(entries), terminator: "")
+            }
             let result = try ctx.call("agent.sessions", ["pane": ctx.args[option: "pane"].json])
             if ctx.json { return ctx.printJSON(result) }
             let list = try perform { try result.decode(AgentSessionList.self) }

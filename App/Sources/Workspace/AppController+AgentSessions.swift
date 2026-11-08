@@ -40,6 +40,9 @@ enum AgentResumeSettings {
 /// - Resuming: a queued pane gets `AgentResume.command` typed into its own shell, once: when the shell is the
 ///   foreground process and its screen has settled (SSH panes: connected, and the remote prompt reported through
 ///   `remote.location` or a settled screen ending in a prompt character). Nothing is typed when the pane runs an agent.
+/// - Recent sessions: every remembered session also goes into `agentHistory` (kept after the agent exits or the pane
+///   closes, `agent-history.json`). File › Recent Agent Sessions shows the pane holding one, or resumes it in a new
+///   workspace through the same offer and queue.
 extension AppController {
     // MARK: Remembering
 
@@ -64,6 +67,7 @@ extension AppController {
         }
         applyAccount(to: &record, in: pane)
         pane.agentSession = record
+        if agentHistory.record(record) { agentHistoryDirty = true }
         // A live agent in the pane makes any offer moot (and must never get a resume command typed over it).
         if pane.resumeOffer != nil { clearResumeOffer(pane) }
         if isNew || record.lastSeen.timeIntervalSince(pane.agentSessionSavedAt ?? .distantPast) > 60 {
@@ -99,6 +103,8 @@ extension AppController {
             guard let pane = panes[safe: entry.paneIndex], pane.kind == .terminal, pane.preview == nil,
                   entry.session.host == pane.ssh?.launch.host, AgentResume.command(for: entry.session) != nil else { continue }
             guard mode != .never else { continue }
+            // Sessions saved before the history existed show up in it too.
+            if agentHistory.record(entry.session) { agentHistoryDirty = true }
             pane.agentSession = entry.session
             pane.agentSessionSavedAt = entry.session.lastSeen
             pane.resumeOffer = entry.session

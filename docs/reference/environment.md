@@ -43,7 +43,7 @@ environment reliably. How to use them together: [internals/testing.md](../intern
 
 | Variable | Effect |
 |---|---|
-| `CMDS_SUPPORT_DIR=<dir>` | Replaces `~/Library/Application Support/cmds` (`session.json`, `sync-devices.json`, `claude-accounts.json`, `cmds.sock`, sync settings) and wins over an inherited `CMDS_SOCKET_PATH`. The instance also uses its own keychain items for the sync identity, keeps settings (language, keep-awake, resume mode, compact sidebar) in memory, leaves the saved window frames alone, never activates itself on launch and never runs `pmset` with privileges. |
+| `CMDS_SUPPORT_DIR=<dir>` | Replaces `~/Library/Application Support/cmds` (`session.json`, `agent-history.json`, `sync-devices.json`, `claude-accounts.json`, `cmds.sock`, sync settings) and wins over an inherited `CMDS_SOCKET_PATH`. The instance also uses its own keychain items for the sync identity, keeps settings (language, keep-awake, resume mode, compact sidebar) in memory, leaves the saved window frames alone, never activates itself on launch and never runs `pmset` with privileges. |
 | `CMDS_SYNC_DISABLED=1` | Do not start the iOS sync server (no Bonjour advert, no port, no Bluetooth). |
 | `CMDS_SYNC_PORT=<port>` | Sync listen port instead of `47823`; unlike the default it never falls back to another port when taken. |
 | `CMDS_SYNC_NO_BONJOUR=1` | Run the sync server without the Bonjour advert, so no phone discovers the instance. |

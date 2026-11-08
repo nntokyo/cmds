@@ -66,6 +66,10 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
   `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. Point it only at folders the test created.
+- `debug.recent_sessions {open?, snapshot?}` (DEBUG builds) returns the items of File › Recent Agent Sessions
+  (title, checked, enabled, tooltip); `open` (index of a session item) does what choosing it does and returns the
+  `problem` the alert would show; `snapshot: true` adds `png_base64`, the window drawn off screen. Seed
+  `agent-history.json` in the support directory with sessions in folders the test created.
 
 ### Schedules end to end
 

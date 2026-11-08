@@ -122,6 +122,9 @@ final class APIServer {
                 controller.scheduleRunner.clockOffset = offset
                 controller.scheduleRunner.checkDue()
                 connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970)])
+            case "debug.recent_sessions":
+                // Tests only: File › Recent Agent Sessions' items, and `open` (index) as choosing one does.
+                connection.reply(id: id, result: RecentAgentSessionsMenu(controller: controller).debugPerform(params.value))
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 SettingsWindowController.shared.showSettings(nil)
@@ -203,6 +206,9 @@ final class APIServer {
             try controller.claudeStatus(paneID: try params.string("pane"), input: try params.json("input"))
         case "agent.sessions":
             return try .from(controller.agentSessionList(paneID: try params.string("pane")))
+        case "agent.history":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods): it lists sessions of every pane and host.
+            return try .from(controller.agentHistoryList(limit: try params.int("limit")))
         case "account.list":
             // Local socket only (not in RemoteAPIPolicy.allowedMethods), like every account.* method.
             return try .from(controller.accountList())
