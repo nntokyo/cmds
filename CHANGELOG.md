@@ -13,6 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
 
+## [0.15.1] - 2026-11-08
+
+Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
+
+### Fixed
+
+- Mac: moving a pane's Claude Code session to another account often ended with "Claude Code did not quit": Claude
+  Code quits only on a second Ctrl-C within about 0.7 s of the first, and cmds sent them too far apart. Each attempt
+  now sends both Ctrl-Cs at once (#159).
+
 ## [0.15.0] - 2026-11-08
 
 Mac and iPhone/iPad. Browsing on the phone needs cmds 0.15.0 on the Mac and the next companion release; older Macs
@@ -467,7 +477,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.15.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.15.1...master
+[0.15.1]: https://github.com/nntokyo/cmds/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/nntokyo/cmds/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/nntokyo/cmds/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/nntokyo/cmds/compare/v0.12.0...v0.13.0
