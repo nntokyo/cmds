@@ -152,6 +152,29 @@ enum Format {
         return out
     }
 
+    /// `cmds sessions --recent`: `1  running p3  Claude Code session “Fix login” (Opus, 2 h ago)` + id, host,
+    /// directory and account, and the resume command for sessions no pane holds.
+    static func agentHistory(_ entries: [AgentHistoryEntry], now: Date = Date()) -> String {
+        guard !entries.isEmpty else { return "no recent agent sessions\n" }
+        let numberWidth = String(entries.count).count
+        let places = entries.map { entry in entry.pane.map { "\(entry.state?.rawValue ?? "open") \($0)" } ?? "-" }
+        let placeWidth = places.map(\.count).max() ?? 0
+        var out = ""
+        for (index, entry) in entries.enumerated() {
+            let number = String(index + 1).padding(toLength: numberWidth, withPad: " ", startingAt: 0)
+            out += "\(number)  \(places[index].padding(toLength: placeWidth, withPad: " ", startingAt: 0))  "
+                + oneLine(entry.session.summary(now: now)) + "\n"
+            let indent = String(repeating: " ", count: numberWidth + 2)
+            var where_ = "id \(entry.session.sessionID)"
+            if let host = entry.session.host { where_ += "  on \(oneLine(host))" }
+            if let cwd = entry.session.cwd { where_ += "  in \(oneLine(cwd))" }
+            if let account = entry.session.account { where_ += "  account \(oneLine(account))" }
+            out += indent + where_ + "\n"
+            if entry.pane == nil, let command = entry.command { out += indent + "$ \(command)\n" }
+        }
+        return out
+    }
+
     /// `Claude  5h 40% (resets 15:30 (in 2h10m)) · 7d 12% (resets Fri 09:00)`.
     static func limits(_ limits: [AgentLimits], now: Date = Date()) -> String {
         guard !limits.isEmpty else { return "" }

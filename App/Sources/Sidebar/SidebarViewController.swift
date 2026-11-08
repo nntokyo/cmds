@@ -92,6 +92,9 @@ final class SidebarViewController: NSViewController {
     private let usageFooter = SystemUsageView()
     private let compactFooter = CompactUsageView()
     private let compactButton = NSButton()
+    /// Next to New Workspace (full sidebar only): the Recent Agent Sessions menu (File › Recent Agent Sessions).
+    private let recentButton = NSButton()
+    private lazy var recentSessions = RecentAgentSessionsMenu(controller: controller)
     /// Shown while a row is dragged over the sidebar but reordering is off (filter or grouping).
     private let reorderHint = NSTextField(wrappingLabelWithString: "")
     /// A plain click on an unselected row selects on release, so the row can be dragged onto the content area
@@ -231,6 +234,14 @@ final class SidebarViewController: NSViewController {
         addButton.toolTip = String(localized: "New Workspace (⌘N)")
         addButton.translatesAutoresizingMaskIntoConstraints = false
 
+        recentButton.image = NSImage(systemSymbolName: "clock.arrow.circlepath",
+                                     accessibilityDescription: String(localized: "Recent Agent Sessions"))
+        recentButton.isBordered = false
+        recentButton.target = self
+        recentButton.action = #selector(recentClicked)
+        recentButton.toolTip = String(localized: "Recent Agent Sessions")
+        recentButton.translatesAutoresizingMaskIntoConstraints = false
+
         let separator = NSBox()
         separator.boxType = .separator
         separator.translatesAutoresizingMaskIntoConstraints = false
@@ -255,7 +266,7 @@ final class SidebarViewController: NSViewController {
 
         let view = NSView()
         for subview in [compactButton, filterField, scrollView, separator, usageFooter, compactFooter, addButton,
-                        reorderHint] as [NSView] {
+                        recentButton, reorderHint] as [NSView] {
             view.addSubview(subview)
         }
         NSLayoutConstraint.activate([
@@ -272,6 +283,8 @@ final class SidebarViewController: NSViewController {
             reorderHint.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -8),
             reorderHint.bottomAnchor.constraint(equalTo: separator.topAnchor, constant: -8),
             addButton.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -10),
+            recentButton.centerYAnchor.constraint(equalTo: addButton.centerYAnchor),
+            recentButton.leadingAnchor.constraint(equalTo: addButton.trailingAnchor, constant: 10),
         ])
         filterShownConstraints = [
             filterField.topAnchor.constraint(equalTo: compactButton.bottomAnchor, constant: 4),
@@ -309,6 +322,7 @@ final class SidebarViewController: NSViewController {
         NSLayoutConstraint.activate(isCompact ? compactConstraints : fullConstraints)
         if isCompact, isFilterShown { endFilter() }
         usageFooter.isHidden = isCompact
+        recentButton.isHidden = isCompact
         compactFooter.isHidden = !isCompact
         let symbol = isCompact ? "sidebar.right" : "sidebar.leading"
         compactButton.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
@@ -563,6 +577,12 @@ final class SidebarViewController: NSViewController {
 
     @objc private func addClicked() {
         controller.createWorkspace()
+    }
+
+    @objc private func recentClicked() {
+        let menu = recentSessions.makeMenu()
+        let below = recentButton.isFlipped ? recentButton.bounds.height + 4 : -4
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: below), in: recentButton)
     }
 
     @objc private func renameClicked() {

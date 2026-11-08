@@ -86,7 +86,8 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   default ([reference/environment.md](../reference/environment.md)).
 - **Session restore** (`Workspace/SessionStore.swift`): `session.json` in the support directory keeps the workspaces
   with their split layout, per-pane cwd / URL / preview file / SSH host and remote cwd, the focused pane and the
-  remembered agent sessions. Pane and workspace ids are not persisted; they are reassigned on launch. Terminal
+  remembered agent sessions; `agent-history.json` next to it the recent agent sessions of all panes
+  (`CmdsCore/AgentSessionHistory.swift`, `AppController+AgentHistory.swift`). Pane and workspace ids are not persisted; they are reassigned on launch. Terminal
   contents and running processes are not restored. **Export/import** (`AppController+Transfer.swift`,
   `CmdsCore/WorkspaceTransfer.swift`) writes the same information as a portable bundle
   ([reference/cli.md](../reference/cli.md#moving-workspaces-to-another-cmds)).

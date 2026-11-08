@@ -84,6 +84,26 @@ final class CLIFormatEnglishTests: XCTestCase {
                        "no Claude accounts (add one: cmds accounts add NAME CONFIG_DIR)\n")
     }
 
+    func testRecentAgentSessions() {
+        let id = "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+        let running = AgentSession(agent: .claude, sessionID: id, cwd: "/Users/me/app", title: "Fix login", model: "Opus",
+                                   lastSeen: now.addingTimeInterval(-7200), account: "work")
+        let closed = AgentSession(agent: .codex, sessionID: id, cwd: "/srv/app", host: "home", lastSeen: now.addingTimeInterval(-300))
+        let entries = [
+            AgentHistoryEntry(session: closed, command: AgentResume.command(for: closed)),
+            AgentHistoryEntry(session: running, pane: "p3", state: .running, command: AgentResume.command(for: running)),
+        ]
+        XCTAssertEqual(Format.agentHistory(entries, now: now), """
+            1  -           Codex session (5 min ago)
+               id \(id)  on home  in /srv/app
+               $ cd '/srv/app' && codex resume \(id)
+            2  running p3  Claude Code session “Fix login” (Opus, 2 h ago)
+               id \(id)  in /Users/me/app  account work
+
+            """)
+        XCTAssertEqual(Format.agentHistory([], now: now), "no recent agent sessions\n")
+    }
+
     func testShareSteps() {
         let steps: [JSONValue] = [
             .object(["account": "main", "projects": "/m/projects", "action": "none"]),

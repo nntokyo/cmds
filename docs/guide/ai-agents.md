@@ -296,6 +296,23 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
 
 Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting from `CMDS_AGENT_RESUME=ask|always|never`.
 
+### Recent sessions
+
+File › Recent Agent Sessions (also the clock button next to **+** at the bottom of the sidebar) lists the 5 newest
+Claude Code and Codex sessions cmds saw in any pane: agent, title, model, when it was last seen and its folder (and
+SSH host). Unlike the per-pane memory above, these stay after the agent exits or its pane is closed.
+
+- **Choosing one**: if a pane still has the session (running it, offering it, or remembering it; checked in the
+  menu), cmds shows that pane, and queues its offer if it has one, so a session is never resumed twice. Otherwise
+  cmds opens a new workspace in the session's folder, under its Claude account (local panes) or connected to its SSH
+  host, and queues the resume there: the command is typed into that new shell once its prompt is ready, by the same
+  rules as above. Nothing is typed into an existing pane. A folder that no longer exists is reported instead.
+- **What is kept**: up to 20 sessions, newest first, one per agent + session id + host, in `agent-history.json` in
+  the support directory (`CMDS_SUPPORT_DIR` for an isolated instance), written with the session state, not on every
+  usage update. Sessions remembered by panes before this list existed are added on launch. **Clear Menu** empties it.
+- **CLI/API**: `cmds sessions --recent` (`agent.history`, local socket only) lists them with the pane holding each,
+  if any, and the command a new pane would get.
+
 ## Several Claude accounts
 
 If you have more than one Claude account of your own (say a work and a personal subscription), cmds can run Claude

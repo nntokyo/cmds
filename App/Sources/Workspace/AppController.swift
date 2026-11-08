@@ -102,6 +102,10 @@ final class AppController {
     /// The user's Claude Code accounts (AppController+Accounts.swift), from `claude-accounts.json` in the support
     /// directory. Changed only through AppController+Accounts, which saves it.
     var claudeAccounts = AppController.loadClaudeAccounts()
+    /// Recent agent sessions of every pane (AppController+AgentSessions), from `agent-history.json` in the support
+    /// directory; written with the session when `agentHistoryDirty`.
+    var agentHistory = AppController.loadAgentHistory()
+    var agentHistoryDirty = false
     /// Drives account switches in progress (AppController+Accounts).
     var accountSwitchTimer: Timer?
     /// Schedules (App/Sources/Schedule): started by the app delegate after session restore.
@@ -912,6 +916,7 @@ final class AppController {
         saveWorkItem?.cancel()
         saveWorkItem = nil
         SessionStore.save(sessionState())
+        saveAgentHistoryIfNeeded()
     }
 
     // MARK: - Internals

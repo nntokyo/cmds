@@ -9,9 +9,15 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     private let controller: AppController
     private weak var windowController: MainWindowController?
 
+    /// File › Recent Agent Sessions (kept here: a menu's delegate is weak).
+    let recentAgentSessions: RecentAgentSessionsMenu
+
     init(controller: AppController, windowController: MainWindowController) {
         self.controller = controller
         self.windowController = windowController
+        recentAgentSessions = RecentAgentSessionsMenu(controller: controller)
+        super.init()
+        recentAgentSessions.showWindow = { [weak windowController] in windowController?.showWindow(nil) }
     }
 
     private var focusedBrowser: BrowserPane? { controller.focusedPane?.browser }

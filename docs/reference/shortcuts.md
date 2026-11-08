@@ -111,4 +111,4 @@ as menu shortcuts, so programs in terminals keep them.
 | Quit cmds | ⌘Q |
 
 Menu items without a shortcut (Pair iPhone/iPad…, Keep Awake With Lid Closed…, Language, Export/Import Workspaces…,
-Resume Agent Sessions on Launch, Install Remote Helper…, …) are described in the [guides](../README.md#user-guides).
+Resume Agent Sessions on Launch, Recent Agent Sessions, Install Remote Helper…, …) are described in the [guides](../README.md#user-guides).

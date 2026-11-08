@@ -1801,6 +1801,16 @@
         }
       }
     },
+    "Choose to resume it in a new workspace.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択すると新しいワークスペースで再開します。"
+          }
+        }
+      }
+    },
     "Choose…": {
       "localizations": {
         "ja": {
@@ -1907,6 +1917,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "上限を消去"
+          }
+        }
+      }
+    },
+    "Clear Menu": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューを消去"
           }
         }
       }
@@ -2459,6 +2479,16 @@
         }
       }
     },
+    "Could not connect to %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に接続できませんでした。"
+          }
+        }
+      }
+    },
     "Could not create a folder here.": {
       "localizations": {
         "ja": {
@@ -2541,6 +2571,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”の名前を変更できませんでした。"
+          }
+        }
+      }
+    },
+    "Could not resume the agent session": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントセッションを再開できませんでした"
           }
         }
       }
@@ -4682,6 +4722,16 @@
         }
       }
     },
+    "No Recent Agent Sessions": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近のエージェントセッションはありません"
+          }
+        }
+      }
+    },
     "No agent session is known": {
       "localizations": {
         "ja": {
@@ -4964,6 +5014,16 @@
         }
       }
     },
+    "On %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSHホスト：%@"
+          }
+        }
+      }
+    },
     "Once": {
       "localizations": {
         "ja": {
@@ -5101,6 +5161,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "プレビューで開く…"
+          }
+        }
+      }
+    },
+    "Open in a pane: choose to show it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインで開いています。選択するとそのペインを表示します。"
           }
         }
       }
@@ -5403,6 +5473,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmds を終了しますか？"
+          }
+        }
+      }
+    },
+    "Recent Agent Sessions": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近のエージェントセッション"
           }
         }
       }
@@ -7090,6 +7170,16 @@
         }
       }
     },
+    "The SSH host %@ cannot be used.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSHホスト%@は使用できません。"
+          }
+        }
+      }
+    },
     "The Trash itself, or a folder containing it, cannot be moved to the Trash.": {
       "localizations": {
         "ja": {
@@ -7316,6 +7406,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "既存の項目をゴミ箱に移動できませんでした: %@"
+          }
+        }
+      }
+    },
+    "The folder %@ no longer exists.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ%@はもうありません。"
           }
         }
       }
@@ -7862,6 +7962,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このサーバのホスト鍵はまだ登録されていません。SSHワークスペースかターミナルで一度接続して、鍵を確認して受け入れてください。cmdsがホスト鍵を自動で追加することはありません。"
+          }
+        }
+      }
+    },
+    "This session cannot be resumed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このセッションは再開できません。"
           }
         }
       }
