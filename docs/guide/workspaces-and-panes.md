@@ -132,6 +132,10 @@ cmds browser eval 'document.title'                   # run JavaScript, print the
 cmds browser snapshot -o /tmp/page.png               # PNG of the visible page
 ```
 
+cmds can be chosen as the default web browser (**System Settings › Desktop & Dock › Default web browser**): links
+opened from other apps then open in a browser split beside the focused pane. Passkeys and security keys don't work in
+browser panes yet; they need an entitlement from Apple ([#162](https://github.com/nntokyo/cmds/issues/162)).
+
 ## Preview panes
 
 A preview pane shows a local file next to your terminals and reloads it whenever the file changes (also on atomic

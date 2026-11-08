@@ -116,9 +116,14 @@ targets:
         SUAutomaticallyUpdate: true
         SUScheduledCheckInterval: 86400
         # cmds://workspace/<id>, opened by the widget (#96, AppDelegate.application(_:open:)).
+        # http/https: cmds can be chosen as the default browser and opens those URLs in a browser pane. Apple requires
+        # it of apps holding the passkeys entitlement for browsers (#162, com.apple.developer.web-browser.public-key-credential).
         CFBundleURLTypes:
           - CFBundleURLName: tokyo.n-n.cmds
             CFBundleURLSchemes: [cmds]
+          - CFBundleURLName: Web site URL
+            CFBundleTypeRole: Viewer
+            CFBundleURLSchemes: [http, https]
     settings:
       base:
         PRODUCT_NAME: cmds
