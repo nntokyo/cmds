@@ -8,7 +8,7 @@ struct AccountSwitch {
         case offered(problem: AccountSwitchProblem?)
         /// Asked for (button, notification, `account.switch`, automatic): waits for Claude Code to sit idle.
         case waitingForIdle
-        /// Ctrl-C sent; waits for the shell to come back.
+        /// A double Ctrl-C sent; waits for the shell to come back.
         case quitting
     }
 
@@ -18,9 +18,9 @@ struct AccountSwitch {
     var to: String?
     var session: AgentSession?
     var phase: Phase
-    /// Ctrl-Cs sent while quitting, and when the last one was.
-    var interrupts = 0
-    var lastInterruptAt: Date?
+    /// Attempts to quit (a double Ctrl-C each), and when the last one was.
+    var quitAttempts = 0
+    var lastQuitAt: Date?
     /// The pane's screen while waiting for idle, and since when it has looked like that.
     var screen = ScreenStability()
 

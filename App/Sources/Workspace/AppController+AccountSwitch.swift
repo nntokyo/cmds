@@ -151,7 +151,7 @@ extension AppController {
         }
     }
 
-    /// `waitingForIdle`: never mid-turn. Once Claude Code is idle, the first Ctrl-C.
+    /// `waitingForIdle`: never mid-turn. Once Claude Code is idle, the first double Ctrl-C.
     private func quitWhenIdle(_ pane: Pane, _ change: AccountSwitch, terminal: TerminalSurface,
                               foreground: PaneForeground, now: Date) {
         var change = change
@@ -159,28 +159,28 @@ extension AppController {
                                                 stability: &change.screen, now: now)
         let idle = PaneReadiness.isAgentIdle(observation)
         if idle {
-            terminal.sendText(ClaudeAccountSwitchTiming.interrupt)
+            terminal.sendText(ClaudeAccountSwitchTiming.quit)
             change.phase = .quitting
-            change.interrupts = 1
-            change.lastInterruptAt = now
+            change.quitAttempts = 1
+            change.lastQuitAt = now
         }
         pane.accountSwitch = change
         if idle { updateResumeBanner(pane) }
     }
 
-    /// `quitting`: more Ctrl-Cs until the shell is back, or give up and say so.
+    /// `quitting`: another double Ctrl-C now and then until the shell is back, or give up and say so.
     private func keepQuitting(_ pane: Pane, _ change: AccountSwitch, terminal: TerminalSurface, agentInForeground: Bool,
                               now: Date) {
         var change = change
-        let sinceLast = now.timeIntervalSince(change.lastInterruptAt ?? now)
-        switch ClaudeAccountSwitchTiming.quitStep(interrupts: change.interrupts, sinceLast: sinceLast,
+        let sinceLast = now.timeIntervalSince(change.lastQuitAt ?? now)
+        switch ClaudeAccountSwitchTiming.quitStep(attempts: change.quitAttempts, sinceLast: sinceLast,
                                                   agentInForeground: agentInForeground) {
         case .wait:
             return
-        case .interrupt:
-            terminal.sendText(ClaudeAccountSwitchTiming.interrupt)
-            change.interrupts += 1
-            change.lastInterruptAt = now
+        case .retry:
+            terminal.sendText(ClaudeAccountSwitchTiming.quit)
+            change.quitAttempts += 1
+            change.lastQuitAt = now
             pane.accountSwitch = change
         case .giveUp:
             change.phase = .offered(problem: .didNotQuit)

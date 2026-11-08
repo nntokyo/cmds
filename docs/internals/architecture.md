@@ -166,8 +166,8 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
 - **Switch** (`Pane.accountSwitch`, `AccountSwitch.Phase`): `offered(problem?)` → `waitingForIdle` → `quitting` →
   handed to the resume machinery (`resumeOffer` + `resumeRequestedAt`). A 0.3 s timer runs while a switch is in
   progress; the rules are `ClaudeAccountSwitchTiming` (unit-tested): idle (`PaneReadiness.isAgentIdle`) = Claude Code
-  is the foreground process (`PaneProcessProbe`), activity not busy, no running subagent, screen unchanged for 2 s; then Ctrl-C (`\u{3}` through
-  `sendText`) twice 0.4 s apart, then every 2.5 s up to four, giving up 5 s after the last; once the shell is the foreground process with no agent on the tty, the pane's usage is dropped and the
+  is the foreground process (`PaneProcessProbe`), activity not busy, no running subagent, screen unchanged for 2 s; then two Ctrl-Cs (`\u{3}\u{3}`)
+  in one `sendText` (Claude Code quits only on a second Ctrl-C within about 0.7 s, too tight for the timer), again every 2.5 s up to three times, giving up 5 s after the last; once the shell is the foreground process with no agent on the tty, the pane's usage is dropped and the
   session is queued under the new account. The banner shares the pane's bar with the resume banner and wins.
 - **Sharing**: `ClaudeSessionSharing.plan/apply` (unit-tested on temporary folders): the store is the first account
   whose folder exists, its `projects` with symlinks resolved (after reordering, the real folder a linked account points

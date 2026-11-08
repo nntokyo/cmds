@@ -360,8 +360,8 @@ Switching to the next account in order that has not hit its limit, in that pane 
 
 1. Waits until Claude Code is idle at its prompt: it is the pane's foreground process, not working, no subagent
    running, and the screen has not changed for 2 s. Never mid-turn.
-2. Sends Ctrl-C twice, as Claude Code asks to quit (a draft typed in its prompt is cleared by the first one), more if
-   needed; after four without effect it gives up and says so.
+2. Sends Ctrl-C twice in quick succession, as Claude Code asks to quit (a draft typed in its prompt is cleared by the
+   first one), again if needed; after three tries without effect it gives up and says so.
 3. Once the shell is back, types `cd '<dir>' && env CLAUDE_CONFIG_DIR='<next folder>' claude --resume <id>` the way
    [resuming](#resuming-sessions) does (at an empty shell prompt, once). The conversation continues under the next
    account; ask Claude to go on with what it was doing.
