@@ -34,17 +34,26 @@ struct CommandPaletteItem {
     /// Key equivalent of a menu command (`⇧⌘D`), else "".
     var shortcut = ""
     let run: () -> Void
-    /// Matched against the title and the detail.
+    /// Matched against the title and the detail, and against `alternates` (their English names in a localized UI).
     let candidate: FuzzyMatch.Candidate
 
-    init(kind: Kind, title: String, detail: String, shortcut: String = "", run: @escaping () -> Void) {
+    init(kind: Kind, title: String, detail: String, shortcut: String = "", alternates: [String] = [],
+         run: @escaping () -> Void) {
         self.kind = kind
         self.title = title
         self.detail = detail
         self.shortcut = shortcut
         self.run = run
-        candidate = FuzzyMatch.Candidate(detail.isEmpty ? title : "\(title) \(detail)")
+        candidate = FuzzyMatch.Candidate(detail.isEmpty ? title : "\(title) \(detail)", alternates: alternates)
     }
+
+    /// The English names of the app's localized strings, in the language the UI runs in (none in English), so
+    /// "split" also finds 右に分割 (#186).
+    static let sourceTitles: SourceTitles = {
+        guard let url = Bundle.main.url(forResource: "Localizable", withExtension: "strings"),
+              let table = NSDictionary(contentsOf: url) as? [String: String] else { return SourceTitles(table: [:]) }
+        return SourceTitles(table: table)
+    }()
 
     /// Workspaces and their panes (sidebar order), recent agent sessions, listening ports, then the enabled menu
     /// commands. Call while `window` has the keyboard: menu items are validated against its first responder.
@@ -62,8 +71,12 @@ struct CommandPaletteItem {
             for pane in workspace.orderedPanes {
                 let paneID = pane.id
                 let title = pane.agentTopic ?? DefaultTitle.localized(pane.title)
+                // The model keeps default titles in English (DefaultTitle). Same as the shown text in English.
+                let english = "\(pane.agentTopic ?? pane.title) \(workspace.displayTitle) · "
+                    + sourceTitles.englishOrSame(pane.kind.label)
                 panes.append(CommandPaletteItem(kind: .pane, title: title,
-                                                detail: "\(workspace.displayTitle) · \(pane.kind.label)") { [weak controller] in
+                                                detail: "\(workspace.displayTitle) · \(pane.kind.label)",
+                                                alternates: [english]) { [weak controller] in
                     try? controller?.focusPane(id: paneID)
                 })
             }
@@ -106,8 +119,10 @@ struct CommandPaletteItem {
                   action != #selector(CommandRouter.showCommandPalette(_:)),
                   action != #selector(CommandRouter.selectWorkspace(_:)) else { continue }
             let target = item.target
+            let englishPath = path.map(sourceTitles.englishOrSame).joined(separator: " › ")
+            let alternates = sourceTitles.english(for: item.title).map { "\($0) \(englishPath)" }
             items.append(CommandPaletteItem(kind: .command, title: item.title, detail: path.joined(separator: " › "),
-                                            shortcut: shortcut(of: item)) { [weak item] in
+                                            shortcut: shortcut(of: item), alternates: alternates) { [weak item] in
                 guard let item else { return }
                 NSApp.sendAction(action, to: target, from: item)
             })

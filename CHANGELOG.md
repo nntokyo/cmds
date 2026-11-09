@@ -60,6 +60,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Mac: the command palette also matches English names in a localized UI (#186). With the app in Japanese, "split"
+  or "browser" found nothing; menu commands now also match their English titles and menu path, and panes their
+  English kind and default title (`split` finds 右に分割, `browser` ブラウザを分割して開く and browser panes).
+
 - Mac: `cmds mcp`'s `close_pane` also closes browser, preview and files panes the agent opened from its terminal with
   the CLI (`cmds browser open`, `cmds open`) or before the MCP server restarted. cmds remembers the terminal pane each
   such pane was opened from (`openedBy` in `cmds panes --json`, kept across a relaunch); panes opened from another

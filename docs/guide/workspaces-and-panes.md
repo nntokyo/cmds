@@ -98,7 +98,9 @@ scrollback and the screen; the count shows the selected hit and the total (`3/12
 
 Typing filters by fuzzy match: the letters in order, not necessarily adjacent (`nwk` finds New Workspace), words in
 any order; case, full/half width and hiragana/katakana do not matter. ↑/↓ (or ⌃P/⌃N) choose, Return runs, Esc or
-clicking elsewhere closes. Menu commands appear under their names in the app's language.
+clicking elsewhere closes. Menu commands appear under their names in the app's language; when that is not English,
+their English names (and English pane kinds and default titles) match too, so `split` finds 右に分割 and `browser`
+finds browser panes. Only the shown name is highlighted.
 
 ## Tiled view
 
