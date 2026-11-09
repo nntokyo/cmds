@@ -119,7 +119,7 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
     /// One pane. `kind` terminal: `cwd`, or `host` (+ `remoteCwd`) for an SSH pane; browser: `url`; preview: `path`
     /// (+ `format`); files: `path` (the folder; with `host` a folder on that SSH host). `agentSession` only on terminal panes (on an SSH pane its `host` is
     /// the pane's). `emulation` only on browser panes (device size, user agent, color scheme; added with #168, older cmds
-    /// ignore it).
+    /// ignore it), and `responsive` (the responsive view's devices, #170).
     public struct Pane: Codable, Equatable, Sendable {
         public var kind: PaneKind
         public var cwd: String?
@@ -131,11 +131,13 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
         public var format: String?
         public var agentSession: AgentSession?
         public var emulation: BrowserEmulation?
+        public var responsive: BrowserResponsive?
 
         public init(kind: PaneKind, cwd: String? = nil, host: String? = nil, remoteCwd: String? = nil, url: String? = nil,
                     path: String? = nil, format: String? = nil, agentSession: AgentSession? = nil,
-                    emulation: BrowserEmulation? = nil) {
+                    emulation: BrowserEmulation? = nil, responsive: BrowserResponsive? = nil) {
             self.emulation = emulation
+            self.responsive = responsive
             self.kind = kind
             self.cwd = cwd
             self.host = host
@@ -278,7 +280,7 @@ extension WorkspaceBundle {
 
     private static func validate(_ pane: Pane, _ label: String) throws -> Pane {
         var pane = pane
-        guard pane.kind == .browser || pane.emulation == nil else {
+        guard pane.kind == .browser || (pane.emulation == nil && pane.responsive == nil) else {
             throw TransferError("\(label): \(pane.kind.rawValue) pane with browser settings")
         }
         switch pane.kind {
@@ -318,6 +320,7 @@ extension WorkspaceBundle {
             }
             do {
                 pane.emulation = try pane.emulation?.validated()
+                pane.responsive = try pane.responsive?.validated()
             } catch let error as RPCError {
                 throw TransferError("\(label): browser settings: \(error.message)")
             }
