@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
+  only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
+  show other text files as text; the same for files opened while browsing a files pane.
+
+## [0.16.0] - 2026-11-10
+
+Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
+
+### Added
+
 - `cmds mcp`: terminal tools for agents that only speak MCP (#171). `terminal_split` opens a terminal pane beside the
   agent's terminal without taking the focus and types a command into its shell (the pane and its output stay when the
   command exits); `terminal_read` (screen or last lines with scrollback) and `terminal_send` (text, Return) reach only
@@ -47,10 +57,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Mac: cmds can be chosen as the default web browser; links opened from other apps open in a browser split beside the
   focused pane. First step towards passkeys in browser panes (#162).
-
-- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
-  only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
-  show other text files as text; the same for files opened while browsing a files pane.
 
 - Mac: browser panes check responsive layouts. The device button in the toolbar shows the page at an iPhone, Pixel,
   iPad or desktop size (or a custom one, rotated if you like), scaled down to fit the pane, with that device's user
@@ -567,7 +573,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.15.1...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.16.0...master
+[0.16.0]: https://github.com/nntokyo/cmds/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/nntokyo/cmds/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/nntokyo/cmds/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/nntokyo/cmds/compare/v0.13.0...v0.14.0
