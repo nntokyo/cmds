@@ -64,6 +64,34 @@ final class PaneContainerView: NSView {
         ])
     }
 
+    /// The find bar (⌘F, `TerminalFind`) in the top-right corner, above everything but the ring.
+    private(set) var findBar: NSView?
+
+    func setFindBar(_ view: NSView?) {
+        guard view !== findBar else { return }
+        findBar?.removeFromSuperview()
+        findBar = view
+        guard let view else { return }
+        view.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(view, positioned: .below, relativeTo: ring)
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 8),
+            view.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
+            view.topAnchor.constraint(equalTo: topAnchor, constant: 8),
+        ])
+    }
+
+    /// Outline of the find bar's selected hit (frame set by `TerminalFind`), right above the content.
+    private(set) var findMarker: NSView?
+
+    func setFindMarker(_ view: NSView?) {
+        guard view !== findMarker else { return }
+        findMarker?.removeFromSuperview()
+        findMarker = view
+        guard let view else { return }
+        addSubview(view, positioned: .above, relativeTo: content)
+    }
+
     private func pin(_ view: NSView, below sibling: NSView? = nil) {
         view.translatesAutoresizingMaskIntoConstraints = false
         if let sibling, sibling.superview === self {

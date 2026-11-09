@@ -8,7 +8,7 @@ enum MainMenu {
         let main = NSMenu()
         main.addItem(submenu(appMenu()))
         main.addItem(submenu(fileMenu(router)))
-        main.addItem(submenu(editMenu()))
+        main.addItem(submenu(editMenu(router)))
         main.addItem(submenu(viewMenu(router)))
         main.addItem(submenu(paneMenu(router)))
         main.addItem(submenu(workspaceMenu(router)))
@@ -75,7 +75,7 @@ enum MainMenu {
         return menu
     }
 
-    private static func editMenu() -> NSMenu {
+    private static func editMenu(_ router: CommandRouter) -> NSMenu {
         let menu = NSMenu(title: String(localized: "Edit"))
         menu.addItem(item("Undo", Selector(("undo:")), "z"))
         menu.addItem(item("Redo", Selector(("redo:")), "z", [.command, .shift]))
@@ -84,11 +84,21 @@ enum MainMenu {
         menu.addItem(item("Copy", #selector(NSText.copy(_:)), "c"))
         menu.addItem(item("Paste", #selector(NSText.paste(_:)), "v"))
         menu.addItem(item("Select All", #selector(NSText.selectAll(_:)), "a"))
+        menu.addItem(.separator())
+        // The terminal's find bar (TerminalFind). The sidebar takes ⌘F itself while it has the keyboard (filter), a
+        // files list ⇧⌘G (Go to Folder).
+        let find = NSMenu(title: String(localized: "Find"))
+        find.addItem(item("Find…", #selector(CommandRouter.find(_:)), "f", target: router))
+        find.addItem(item("Find Next", #selector(CommandRouter.findNext(_:)), "g", target: router))
+        find.addItem(item("Find Previous", #selector(CommandRouter.findPrevious(_:)), "g", [.command, .shift], target: router))
+        menu.addItem(submenu(find))
         return menu
     }
 
     private static func viewMenu(_ router: CommandRouter) -> NSMenu {
         let menu = NSMenu(title: String(localized: "View"))
+        menu.addItem(item("Command Palette…", #selector(CommandRouter.showCommandPalette(_:)), "p", [.command, .shift], target: router))
+        menu.addItem(.separator())
         menu.addItem(item("Toggle Sidebar", #selector(CommandRouter.toggleSidebar(_:)), "b", target: router))
         menu.addItem(item("Compact Sidebar", #selector(CommandRouter.toggleCompactSidebar(_:)), "s", [.command, .control], target: router))
         menu.addItem(item("Filter Workspaces", #selector(CommandRouter.filterWorkspaces(_:)), "f", [.command, .option], target: router))

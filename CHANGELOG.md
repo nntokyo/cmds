@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: find in a terminal pane (#173). Edit › Find › Find… (⌘F) opens a find bar over the pane: libghostty's own
+  search highlights every hit in the scrollback and on the screen and scrolls to the selected one; Find Next / Find
+  Previous (⌘G / ⇧⌘G, Return / ⇧Return in the bar) go up and down through them, Esc closes. Match Case and Regular
+  Expression search the rows in cmds instead (read in slices, matched off the main thread) and outline the selected
+  hit. While the bar is open no key reaches the program in the terminal.
+
+- Mac: command palette (#173). View › Command Palette… (⇧⌘P) finds workspaces, panes, enabled menu commands, recent
+  agent sessions and listening ports (opened in a browser split) by fuzzy search, also in Japanese; ↑/↓ and Return
+  run one, Esc closes.
+
 - Mac: worktree workspaces for agents working side by side (#172). File › New Worktree Workspace… (⌥⌘N, also in a
   workspace's sidebar menu) or `cmds new --worktree BRANCH [--base REF] [--path DIR]` fetches, creates a new branch
   (without upstream) and a git worktree for it, by default in `<repo>-worktrees/<branch>` next to the repository, and

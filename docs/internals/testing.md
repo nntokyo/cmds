@@ -72,6 +72,17 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   from the first frame and from another one reaches all frames, the scroll fraction matches with Sync Scrolling and
   stays per frame without it, saving the file reloads every frame, relaunch restores the frames, and the number of
   `com.apple.WebKit.WebContent` processes drops by the extra frames when the view is turned off.
+- `debug.find {pane, action?, …}` (DEBUG builds) drives a terminal pane's find bar (#173) and returns its state
+  (open, text, count, engine = libghostty's search, hits, the selected hit's row/column/width and marker frame for
+  Match Case / regex, scrollbar, which of field and terminal has the keyboard): `open {text?, caseSensitive?,
+  regex?}` / `set {…}` search and wait for the result, `next`, `previous`, `close`, `key {chars}` sends key presses
+  to the window as typed (they must land in the field, never in the terminal), `menuKey {chars, shift?}` a ⌘-key
+  through the main menu (⌘F, ⌘G, ⇧⌘G); `snapshot: true` adds `png_base64` (the bar and marker; the terminal's Metal
+  layer is not in it). Generate the scrollback in a pane the test created.
+- `debug.palette {action?, query?, move?, index?}` (DEBUG builds): `open` (default) opens the command palette as ⇧⌘P
+  does, `query` filters, `run {index?}` runs a result as Return does, `close`; returns the results (kind, title,
+  detail, shortcut, score), the selected row, the selected workspace and focused pane. Menu commands are collected
+  when it opens; in an instance that is not the active app, those that need a key window are missing.
 - Browser screenshots (#169): a local page several screens tall with coloured bands and an element below the fold
   (`--full` is one image of the whole page; `--selector` the element, also after navigating to `page.html#element`,
   which scrolls the pane; the pane's scroll position written to `document.title` stays), a page over 16384 px tall

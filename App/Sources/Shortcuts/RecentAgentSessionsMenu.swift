@@ -64,6 +64,12 @@ final class RecentAgentSessionsMenu: NSObject, NSMenuDelegate {
     @objc private func open(_ sender: NSMenuItem) {
         guard let session = sender.representedObject as? AgentSession else { return }
         showWindow?()
+        Self.open(session, controller: controller)
+    }
+
+    /// Shows the pane holding `session` or resumes it in a new workspace; says why when it cannot (also the command
+    /// palette's agent sessions).
+    static func open(_ session: AgentSession, controller: AppController) {
         guard let problem = controller.openRecentAgentSession(session) else { return }
         let alert = NSAlert()
         alert.messageText = String(localized: "Could not resume the agent session")

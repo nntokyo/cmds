@@ -71,6 +71,35 @@ pane: Needs Input, then Working, Idle, Stopped. Plain shells get no state.
 - ⌥⌘ + arrow keys move the focus; **View › Zoom Pane** (⇧⌘↩) shows one pane alone until toggled back.
 - ⌘W closes the focused pane, ⇧⌘W the workspace.
 
+## Finding text in a terminal
+
+**Edit › Find › Find…** (⌘F) in a terminal pane opens a find bar in its top-right corner. Type to search the
+scrollback and the screen; the count shows the selected hit and the total (`3/12`, counted from the bottom).
+
+- Return or ⌘G goes to the next hit (up, towards older output), ⇧Return or ⇧⌘G to the previous one; the chevrons do
+  the same. Esc or the close button closes the bar and gives the keyboard back to the terminal.
+- By default the search ignores case (ASCII letters) and runs in libghostty itself: every hit is highlighted, the
+  selected one stands out, and the terminal scrolls to it. It keeps up with new output while the bar is open.
+- **Aa** (Match Case) and **.\*** (Regular Expression, ICU syntax) search the rows in cmds instead: the selected hit
+  is scrolled into view and outlined, the others are not highlighted. Text that wraps onto the next row is not found
+  in this mode, and only the newest 200,000 rows are searched. An invalid expression shows "Invalid".
+- While the bar is open, keys never reach the program in the terminal: clicking the terminal still selects text but
+  leaves the keyboard in the bar.
+- A Ghostty keybinding for `start_search` or `search_selection` in your Ghostty config opens the same bar.
+
+## Command palette
+
+**View › Command Palette…** (⇧⌘P) opens a search over:
+
+- workspaces and their panes (select / focus them),
+- menu commands that are enabled right now, with their shortcuts (run them as the menu would),
+- recent agent sessions (as File › Recent Agent Sessions: show the pane that has it, or resume it in a new workspace),
+- listening ports of the workspaces (`localhost:3000`: opens it in a browser split in that workspace).
+
+Typing filters by fuzzy match: the letters in order, not necessarily adjacent (`nwk` finds New Workspace), words in
+any order; case, full/half width and hiragana/katakana do not matter. ↑/↓ (or ⌃P/⌃N) choose, Return runs, Esc or
+clicking elsewhere closes. Menu commands appear under their names in the app's language.
+
 ## Tiled view
 
 Shows several workspaces side by side, each as a live tile you can type in — e.g. five Claude Code sessions at once.

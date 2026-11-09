@@ -287,6 +287,25 @@ final class GhosttyRuntime {
             view.owner?.handleChildExited()
             return true
 
+        case GHOSTTY_ACTION_START_SEARCH:
+            let needle = action.action.start_search.needle.map { String(cString: $0) }
+            view.owner?.handleStartSearch(needle?.isEmpty == false ? needle : nil)
+            return true
+
+        case GHOSTTY_ACTION_END_SEARCH:
+            // Our find bar ends the search itself; it stays open (Esc closes it).
+            return true
+
+        case GHOSTTY_ACTION_SEARCH_TOTAL:
+            let total = action.action.search_total.total
+            view.owner?.handleSearchUpdate(total: .some(total < 0 ? nil : Int(total)))
+            return true
+
+        case GHOSTTY_ACTION_SEARCH_SELECTED:
+            let selected = action.action.search_selected.selected
+            view.owner?.handleSearchUpdate(selected: .some(selected < 0 ? nil : Int(selected)))
+            return true
+
         case GHOSTTY_ACTION_COLOR_CHANGE, GHOSTTY_ACTION_RENDERER_HEALTH, GHOSTTY_ACTION_SCROLLBAR,
              GHOSTTY_ACTION_MOUSE_OVER_LINK, GHOSTTY_ACTION_SELECTION_CHANGED, GHOSTTY_ACTION_CONFIG_CHANGE,
              GHOSTTY_ACTION_SIZE_LIMIT, GHOSTTY_ACTION_INITIAL_SIZE, GHOSTTY_ACTION_KEY_SEQUENCE,
