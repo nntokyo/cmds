@@ -32,8 +32,6 @@ public struct ScannedProcess: Equatable, Sendable {
         self.cpuPercent = cpuPercent
     }
 
-    public var started: Date { Date(timeIntervalSince1970: Double(startMicroseconds) / 1_000_000) }
-
     /// Started from a pane or workspace that no longer exists (closed, or from before the app started).
     /// - Parameter appStarted: the app's launch, µs since 1970. Every process of a live pane started after it, so an
     ///   older one carries the ids of an earlier run (ids repeat across launches).
@@ -88,8 +86,7 @@ public struct ProcessEntry: Codable, Equatable, Sendable {
         guard let command, !command.isEmpty else { return name }
         var words = command.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
         if words[0].contains("/") { words[0] = (words[0] as NSString).lastPathComponent }
-        let text = words.joined(separator: " ")
-        return text.count > maxLength ? String(text.prefix(maxLength - 1)) + "…" : text
+        return TranscriptText.truncate(words.joined(separator: " "), maxLength)
     }
 }
 
@@ -117,10 +114,7 @@ public struct ProcessList: Codable, Equatable, Sendable {
             if let workspace = request.workspace, process.workspace != workspace { continue }
             if let pane = request.pane, process.pane != pane { continue }
             if request.leftover, !leftover { continue }
-            var command = process.command
-            if let text = command, text.count > ProcessEntry.maxCommandLength {
-                command = String(text.prefix(ProcessEntry.maxCommandLength - 1)) + "…"
-            }
+            let command = process.command.map { TranscriptText.truncate($0, ProcessEntry.maxCommandLength) }
             entries.append(ProcessEntry(pid: process.pid, name: process.name, command: command, pane: process.pane,
                                         workspace: process.workspace, memoryBytes: process.memoryBytes,
                                         cpuPercent: process.cpuPercent.map { ($0 * 10).rounded() / 10 },
@@ -152,32 +146,29 @@ public struct ProcessListRequest: Equatable, Sendable {
         self.leftover = leftover
     }
 
-    public init(params: JSONValue?) throws {
+    public init(params value: JSONValue?) throws {
         self.init()
-        switch params {
+        switch value {
         case nil, .null?, .object?: break
         default: throw RPCError.invalidParams("params must be an object")
         }
-        switch params?["limit"] {
-        case nil, .null?: break
+        let params = RequestParams(value)
+        switch params["limit"] {
+        case nil: break
         case .number(let value)? where value >= 1 && value <= Double(Self.maxLimit) && value.rounded() == value:
             limit = Int(value)
         default: throw RPCError.invalidParams("limit must be a whole number from 1 to \(Self.maxLimit)")
         }
-        func string(_ key: String) throws -> String? {
-            switch params?[key] {
-            case nil, .null?: return nil
+        func nonEmptyString(_ key: String) throws -> String? {
+            switch params[key] {
+            case nil: return nil
             case .string(let value)? where !value.isEmpty: return value
             default: throw RPCError.invalidParams("\(key) must be a non-empty string")
             }
         }
-        workspace = try string("workspace")
-        pane = try string("pane")
-        switch params?["leftover"] {
-        case nil, .null?: break
-        case .bool(let flag)?: leftover = flag
-        default: throw RPCError.invalidParams("leftover must be a boolean")
-        }
+        workspace = try nonEmptyString("workspace")
+        pane = try nonEmptyString("pane")
+        leftover = try params.bool("leftover") ?? false
     }
 
     public var params: [String: JSONValue?] {
@@ -203,18 +194,14 @@ public struct ProcessKillRequest: Equatable, Sendable {
         self.started = started
     }
 
-    public init(params: JSONValue?) throws {
-        guard case .number(let raw)? = params?["pid"], raw.rounded() == raw, raw >= 1, raw <= Double(Int32.max) else {
+    public init(params value: JSONValue?) throws {
+        let params = RequestParams(value)
+        guard case .number(let raw)? = params["pid"], raw.rounded() == raw, raw >= 1, raw <= Double(Int32.max) else {
             throw RPCError.invalidParams("pid must be a positive whole number")
         }
-        self.init(pid: Int32(raw))
-        switch params?["force"] {
-        case nil, .null?: break
-        case .bool(let flag)?: force = flag
-        default: throw RPCError.invalidParams("force must be a boolean")
-        }
-        switch params?["started"] {
-        case nil, .null?: break
+        self.init(pid: Int32(raw), force: try params.bool("force") ?? false)
+        switch params["started"] {
+        case nil: break
         case .number(let value)? where value.isFinite && value > 0: started = value
         default: throw RPCError.invalidParams("started must be seconds since 1970")
         }
