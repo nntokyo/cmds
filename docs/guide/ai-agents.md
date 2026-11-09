@@ -139,6 +139,11 @@ commands in terminal panes beside the agent's, and set the sidebar status:
 | `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs) |
 | `browser_snapshot` | A PNG of the visible page, returned as an image (also when its workspace is not shown). `fullPage`, `selector` (one element), `device` or `devices` (e.g. `["iphone", "ipad", "desktop-1440"]`: one image per size, each after a line naming it) |
 | `browser_set_viewport` | Show the page at a device size (`device`: a preset such as `iphone-se`, `WIDTHxHEIGHT` or `off`; `rotate`), with a user agent and `colorScheme` (`light` / `dark` / `system`), to check responsive layouts ([device sizes](workspaces-and-panes.md#device-sizes-and-color-scheme)) |
+| `browser_responsive` | The page at phone, tablet and desktop size side by side in one pane (`url` opens a new pane, else `pane`; `devices`, `syncScroll`, `off`). `browser_snapshot` of such a pane returns one image per frame ([responsive view](workspaces-and-panes.md#responsive-view)) |
+| `browser_console` | Console messages, uncaught errors and unhandled promise rejections of the page (`level`, `limit`, `clear`) ([Browser DevTools](#browser-devtools)) |
+| `browser_snapshot_tree` | The page as a compact tree of roles and names with refs (`- button "Sign in" [ref=e3]`; `selector` to start lower) |
+| `browser_click` / `browser_fill` | Click, or fill a field / select / checkbox, by `ref` or `selector` |
+| `browser_wait_for` | Wait for a `selector` or `text` to be visible (`timeout` seconds, default 5); an error when it is not |
 | `open_file` | Show a file (image, PDF, Markdown, diff, …) in a preview pane |
 | `terminal_split` | Open a terminal pane split off the agent's terminal (`direction` `right` / `down`, `cwd`), without taking the focus, and type `command` into its shell (a dev server, a watcher); the pane stays when the command exits. Returns the pane id |
 | `terminal_read` | The visible screen of a terminal pane opened from the agent's terminal, or its last `lines` lines including scrollback (at most 2000) |
@@ -176,6 +181,40 @@ env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]
 
 Other MCP clients take the same command (`cmds mcp`). The [skill](#skill) adds the working rules around it (helper
 panes, dev servers, when to notify); both can be used together.
+
+### Browser DevTools
+
+For debugging a web front end in a browser pane without screenshots and hand-written JavaScript (CLI and MCP alike):
+
+```sh
+cmds browser console --level warn          # warnings and errors since the page loaded (--follow, --clear)
+cmds browser tree                          # - textbox "Email" [ref=e4] …
+cmds browser fill e4 me@example.com        # or a CSS selector: cmds browser fill '#email' …
+cmds browser click e7
+cmds browser wait-for --text "Welcome" --timeout 10
+```
+
+- **Console**: every `console.debug/log/info/warn/error`, uncaught error (with its file and line) and unhandled
+  promise rejection of the page, from the first line of each page on, also before anyone asks. The last 1000 are
+  kept per pane (older ones are counted as dropped); a page logging more than 200 messages a second has the rest
+  counted instead. Values are recorded as text (objects as JSON). Only the main frame: not iframes, and in the
+  [responsive view](workspaces-and-panes.md#responsive-view) only the first frame.
+- **Tree and refs**: links, buttons, form fields (with their value and checked/disabled state), headings, images,
+  landmarks and lists, named the way assistive technology names them (`aria-label`, `<label>`, `alt`, text). Hidden
+  elements are left out. A ref stays valid for its element until the page navigates; a ref of an element that is
+  gone gives an error asking for a new tree.
+- **click** scrolls the element into view and sends pointer and mouse events, then a click. **fill** sets the value
+  with the element's own setter and sends `input` and `change`, so React, Vue and similar see the change; selects
+  take an option's value or text, checkboxes and radio buttons `true` / `false`. These events are synthetic
+  (`isTrusted` is false); a page that only accepts real input needs a person.
+- **wait-for** polls every 100 ms for a visible element matching the selector, or visible text, and fails with a
+  timeout error after the timeout (default 5 s, at most 60 s).
+- All of it works on pages with a strict Content Security Policy: WebKit injects cmds' scripts itself, so the page's
+  policy does not apply to them (the console hook runs in the page's own JavaScript world, everything else in a world
+  the page cannot see).
+
+**cmds › Settings… › General › Allow Safari's Web Inspector** (off by default) lets you inspect browser panes with
+Safari › Develop › (this Mac) › cmds; turn on Show features for web developers in Safari's Advanced settings first.
 
 ## Codex CLI
 

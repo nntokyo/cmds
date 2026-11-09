@@ -14,6 +14,7 @@ extension CLI {
             the cmds CLI). See docs/guide/ai-agents.md.
             """
     ) { ctx in
+        try ctx.args.expectPositionals(0...0, usage: "cmds mcp")
         let server = MCPServer(environment: ctx.environment) { method, params, timeout in
             try ctx.call(method, params, timeout: timeout)
         }
@@ -189,6 +190,41 @@ final class MCPServer {
                                         "description": "prefers-color-scheme of the page; system follows the Mac."]),
                 "pane": browserPane,
              ]),
+        Tool(name: "browser_console",
+             description: "Console messages, uncaught errors and unhandled promise rejections of a cmds browser pane's page, recorded from the start of each page (the last \(ConsoleBuffer.defaultCapacity)). Check it after loading or acting on a page.",
+             properties: [
+                "pane": browserPane,
+                "level": .object(["type": "string", "enum": ["debug", "log", "info", "warn", "error"],
+                                  "description": "Only this level and more severe ones."]),
+                "limit": .object(["type": "integer", "description": "Only the newest this many."]),
+                "clear": .object(["type": "boolean", "description": "Empty the record after reading it."]),
+             ]),
+        Tool(name: "browser_snapshot_tree",
+             description: "The page of a cmds browser pane as a compact tree of roles and names (links, buttons, form fields, headings, images, landmarks), one line each with a ref, e.g. `- button \"Sign in\" [ref=e3]`. Use the refs with browser_click and browser_fill. Cheaper than a screenshot for finding what to act on.",
+             properties: ["pane": browserPane, "selector": string("Start at this element (CSS selector) instead of the body.")]),
+        Tool(name: "browser_click",
+             description: "Click an element of a cmds browser pane's page by ref (from browser_snapshot_tree) or CSS selector.",
+             properties: ["pane": browserPane, "ref": string("Ref from browser_snapshot_tree, e.g. e3."),
+                          "selector": string("CSS selector (the first match), instead of ref.")]),
+        Tool(name: "browser_fill",
+             description: "Fill a text field, select (option value or text) or checkbox (true/false) of a cmds browser pane's page as typing would (input and change events), by ref or CSS selector.",
+             properties: ["pane": browserPane, "ref": string("Ref from browser_snapshot_tree."),
+                          "selector": string("CSS selector, instead of ref."), "value": string("The value to enter.")],
+             required: ["value"]),
+        Tool(name: "browser_wait_for",
+             description: "Wait until an element matching a CSS selector, or some text, is visible in a cmds browser pane's page. Errors after timeout seconds.",
+             properties: ["pane": browserPane, "selector": string("CSS selector."), "text": string("Visible text, instead of selector."),
+                          "timeout": .object(["type": "number", "description": .string("Seconds (default \(Int(PageScripts.defaultWaitTimeout)), at most \(Int(PageScripts.maxWaitTimeout))).")])]),
+        Tool(name: "browser_responsive",
+             description: "Show a page at several sizes side by side in one cmds browser pane (default phone, tablet and desktop: \(BrowserResponsive.defaultDevices.joined(separator: ", "))). With url it opens a new browser pane beside your terminal (no focus) and returns its id; otherwise it acts on a browser pane. Navigation and scrolling stay in step across the frames. browser_snapshot of such a pane returns one image per frame. Each frame is its own WebKit process: use off when done.",
+             properties: [
+                "url": string("URL to open in a new responsive browser pane."),
+                "pane": browserPane,
+                "devices": .object(["type": "array", "items": .object(["type": "string"]),
+                                    "description": "2–4 presets or WIDTHxHEIGHT sizes, left to right."]),
+                "syncScroll": .object(["type": "boolean", "description": "Scroll the other frames along (default true)."]),
+                "off": .object(["type": "boolean", "description": "Show the page once again."]),
+             ]),
         Tool(name: "open_file",
              description: "Show a file on this Mac (image, PDF, video, Office, text/code, rendered Markdown, coloured diff) in a cmds preview pane split to the right, without taking the focus. The pane reloads when the file changes. Returns the pane id.",
              properties: ["path": string("Absolute path (relative paths are resolved against the server's working directory)."),
@@ -277,6 +313,15 @@ final class MCPServer {
         return try send(["workspace": envWorkspace.json])
     }
 
+    /// A DevTools request (#167); an app without the method says to update.
+    private func devToolsCall(_ method: String, _ arguments: JSONValue, _ params: [String: JSONValue?]) throws -> JSONValue {
+        do {
+            return try browserCall(method, arguments, params, timeout: Self.pageTimeout)
+        } catch let error as CLIError where error.message.contains("method not found") {
+            throw ToolError(message: "this cmds app has no \(method); update cmds")
+        }
+    }
+
     private func run(_ name: String, _ arguments: JSONValue) throws -> [JSONValue] {
         switch name {
         case "browser_open":
@@ -317,7 +362,7 @@ final class MCPServer {
                 return [.object(["type": "image", "data": .string(base64), "mimeType": "image/png"])]  // older app
             }
             guard !images.isEmpty else { throw ToolError(message: "the snapshot returned no image") }
-            if request.isPlain { return [Self.image(images[0])] }
+            if request.isPlain, images.count == 1 { return [Self.image(images[0])] }  // else: a responsive view's frames
             return images.flatMap { image -> [JSONValue] in
                 let what = request.selector.map { "element \($0)" } ?? (request.fullPage ? "full page" : "visible page")
                 let size = image.device.map { "\($0), " } ?? ""
@@ -332,6 +377,61 @@ final class MCPServer {
             }
             let result = try browserCall("browser.set_viewport", arguments, change.params, timeout: Self.requestTimeout)
             return [Self.text(BrowserEmulation(json: result).summary)]
+        case "browser_console":
+            let request: BrowserConsoleRequest
+            do { request = try BrowserConsoleRequest(params: arguments) } catch let error as RPCError {
+                throw ToolError(message: error.message)
+            }
+            let result = try devToolsCall("browser.console", arguments, request.params)
+            let entries = (try? result["entries"]?.decode([ConsoleEntry].self)) ?? []
+            var lines = entries.map { $0.line() }
+            if let dropped = result["dropped"]?.intValue, dropped > 0 { lines.insert("(\(dropped) older messages dropped)", at: 0) }
+            return [Self.text(lines.isEmpty ? "No console messages." : lines.joined(separator: "\n"))]
+        case "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for":
+            let method = "browser." + name.dropFirst("browser_".count)
+            let action: BrowserPageAction
+            do { action = try BrowserPageAction(method: method, params: arguments) } catch let error as RPCError {
+                throw ToolError(message: error.message)
+            }
+            let result = try devToolsCall(method, arguments, action.params)
+            switch action {
+            case .tree:
+                var text = "\(result["title"]?.stringValue ?? "") — \(result["url"]?.stringValue ?? "")\n"
+                text += result["text"]?.stringValue ?? ""
+                if result["truncated"]?.boolValue == true { text += "(cut at \(result["count"]?.intValue ?? 0) nodes; pass selector)\n" }
+                return [Self.text(text)]
+            case .click(let target): return [Self.text("Clicked \(result["ref"]?.stringValue ?? target.description).")]
+            case .fill(let target, _): return [Self.text("Filled \(result["ref"]?.stringValue ?? target.description).")]
+            case .waitFor:
+                return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
+            }
+        case "browser_responsive":
+            let change: BrowserResponsiveChange
+            do {
+                var params = arguments
+                if case .object(var object) = arguments, object["off"]?.boolValue == true {
+                    object["on"] = .bool(false)
+                    params = .object(object)
+                }
+                change = try BrowserResponsiveChange(params: params)
+            } catch let error as RPCError {
+                throw ToolError(message: error.message)
+            }
+            var params = change.params
+            if change.on == nil { params["on"] = .bool(true) }
+            if let url = nonEmpty(arguments["url"]?.stringValue) {
+                guard nonEmpty(arguments["pane"]?.stringValue) == nil else { throw ToolError(message: "give either url or pane") }
+                guard change.on != false else { throw ToolError(message: "off needs a pane, not a url") }
+                let opened = try call("browser.open", ["pane": envPane.json, "url": .string(url), "focus": .bool(false)],
+                                      Self.requestTimeout)
+                let id = try recordOpenedPane(opened)
+                lastBrowserPane = id
+                let result = try call("browser.set_responsive", params.merging(["pane": .string(id)]) { $1 },
+                                      Self.requestTimeout)
+                return [Self.text("Opened browser pane \(id): \(BrowserResponsive.summary(result)).")]
+            }
+            let result = try browserCall("browser.set_responsive", arguments, params, timeout: Self.requestTimeout)
+            return [Self.text(BrowserResponsive.summary(result))]
         case "open_file":
             let path = absolutePath(try argument(arguments, "path"))
             var isDirectory: ObjCBool = false

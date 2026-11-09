@@ -1252,6 +1252,16 @@
         }
       }
     },
+    "Allow Safari's Web Inspector": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SafariのWebインスペクタを許可"
+          }
+        }
+      }
+    },
     "Allow remote access via SSH": {
       "localizations": {
         "ja": {
@@ -4065,6 +4075,16 @@
         }
       }
     },
+    "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safariの「開発」メニューからブラウザペインを調べられます（Safariの詳細設定で「Web デベロッパ用の機能を表示」をオンにしてください）。"
+          }
+        }
+      }
+    },
     "Install": {
       "localizations": {
         "ja": {
@@ -6386,6 +6406,26 @@
         }
       }
     },
+    "Responsive View": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レスポンシブ表示"
+          }
+        }
+      }
+    },
+    "Responsive View (Phone, Tablet, Desktop)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レスポンシブ表示（スマートフォン、タブレット、デスクトップ）"
+          }
+        }
+      }
+    },
     "Restore Sleep": {
       "localizations": {
         "ja": {
@@ -7745,6 +7785,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "同期 %1$@ ↔ %2$@"
+          }
+        }
+      }
+    },
+    "Sync Scrolling": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクロールを連動"
           }
         }
       }

@@ -2,6 +2,14 @@ import CmdsCore
 import XCTest
 @testable import cmds_cli
 
+private extension ConsoleBuffer {
+    static var sample: ConsoleBuffer {
+        var buffer = ConsoleBuffer()
+        buffer.append(ConsoleEntry(level: .error, source: .rejection, text: "Error: boom", time: 0))
+        return buffer
+    }
+}
+
 /// `cmds mcp` (#76): the JSON-RPC handling and the tools, with the app API replaced by a recorder.
 final class MCPServerTests: XCTestCase {
     private struct Request { let method: String; let params: [String: JSONValue?] }
@@ -86,8 +94,9 @@ final class MCPServerTests: XCTestCase {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
-                        "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes", "list_ports",
-                        "close_pane", "set_status"])
+                        "browser_console", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
+                        "browser_responsive", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
+                        "list_ports", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
         let result = callTool(server(inside: false), "browser_open", #"{"url":"http://localhost:3000"}"#)
@@ -158,6 +167,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p4"))
 
         // A plain snapshot stays one image.
+        replies["browser.snapshot"] = BrowserSnapshotImage.result([BrowserSnapshotImage(device: nil, width: 1, height: 1, png: Data([1]))])
         XCTAssertEqual(callTool(server, "browser_snapshot")?["content"]?.arrayValue?.map { $0["type"]?.stringValue ?? "" }, ["image"])
 
         // Bad arguments are refused before anything is sent.
@@ -171,6 +181,77 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(old?["isError"], .bool(true))
         XCTAssertTrue(text(old)?.contains("update cmds") == true)
         XCTAssertEqual(callTool(server, "browser_snapshot")?["isError"], .bool(false))
+    }
+
+    /// browser_responsive (#170): with a url it opens a pane (recorded as ours) and turns the view on.
+    func testResponsive() {
+        let server = server()
+        replies["browser.open"] = .object(["id": "p9"])
+        replies["browser.set_responsive"] = BrowserResponsive(devices: ["iphone-se", "ipad"]).json
+        let opened = callTool(server, "browser_responsive", #"{"url":"http://localhost:3000","devices":["iphone-se","ipad"]}"#)
+        XCTAssertEqual(text(opened), "Opened browser pane p9: responsive view: iphone-se, ipad.")
+        XCTAssertEqual(requests.map(\.method), ["browser.open", "browser.set_responsive"])
+        XCTAssertEqual(requests[0].params["focus"] ?? nil, .bool(false))
+        XCTAssertEqual(requests[1].params["pane"] ?? nil, .string("p9"))
+        XCTAssertEqual(requests[1].params["on"] ?? nil, .bool(true))
+        XCTAssertEqual(requests[1].params["devices"] ?? nil, .array(["iphone-se", "ipad"]))
+        XCTAssertEqual(server.openedPanes, ["p9"])
+
+        replies["browser.set_responsive"] = BrowserResponsive.offJSON
+        XCTAssertEqual(text(callTool(server, "browser_responsive", #"{"off":true}"#)), "responsive view off")
+        XCTAssertEqual(requests.last?.params["on"] ?? nil, .bool(false))
+        XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p9"), "the pane this server opened last")
+
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_responsive", #"{"devices":["iphone"]}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_responsive", #"{"url":"http://x.test","pane":"p2"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
+
+        // A responsive pane's plain snapshot: one labelled image per frame.
+        replies["browser.snapshot"] = BrowserSnapshotImage.result([
+            BrowserSnapshotImage(device: "iphone", width: 393, height: 852, png: Data([1])),
+            BrowserSnapshotImage(device: "ipad", width: 820, height: 1180, png: Data([2])),
+        ])
+        let shot = callTool(server, "browser_snapshot")?["content"]?.arrayValue ?? []
+        XCTAssertEqual(shot.map { $0["type"]?.stringValue ?? "" }, ["text", "image", "text", "image"])
+    }
+
+    /// DevTools tools (#167): console lines, the tree's text, click / fill / wait_for params, bad arguments refused.
+    func testDevTools() {
+        let server = server()
+        replies["browser.console"] = ConsoleBuffer.sample.json(level: nil, since: nil, limit: nil)
+        let console = text(callTool(server, "browser_console", #"{"pane":"p4","level":"error","clear":true}"#)) ?? ""
+        XCTAssertTrue(console.contains("Unhandled rejection: Error: boom"), console)
+        XCTAssertEqual(requests.last?.params["level"] ?? nil, .string("error"))
+        XCTAssertEqual(requests.last?.params["clear"] ?? nil, .bool(true))
+
+        replies["browser.snapshot_tree"] = .object(["title": "Form", "url": "http://x.test/", "text": "- button \"Go\" [ref=e1]\n",
+                                                    "truncated": false, "count": 1])
+        XCTAssertEqual(text(callTool(server, "browser_snapshot_tree", #"{"pane":"p4"}"#)),
+                       "Form — http://x.test/\n- button \"Go\" [ref=e1]\n")
+
+        replies["browser.fill"] = .object(["ref": "e2", "value": "x"])
+        XCTAssertEqual(text(callTool(server, "browser_fill", #"{"pane":"p4","ref":"e2","value":"x"}"#)), "Filled e2.")
+        XCTAssertEqual(requests.last?.params["ref"] ?? nil, .string("e2"))
+        XCTAssertEqual(requests.last?.params["value"] ?? nil, .string("x"))
+        replies["browser.click"] = .object(["ref": "e7"])
+        XCTAssertEqual(text(callTool(server, "browser_click", ##"{"pane":"p4","selector":"#go"}"##)), "Clicked e7.")
+        XCTAssertEqual(requests.last?.params["selector"] ?? nil, .string("#go"))
+
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_click", #"{"pane":"p4"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_wait_for", #"{"pane":"p4","timeout":5}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_console", #"{"level":"loud"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
+
+        // The app's timeout error reaches the agent as a tool error.
+        failure = CLIError.failure("timed out after 1 s waiting for text \"Saved\"")
+        let timedOut = callTool(server, "browser_wait_for", #"{"pane":"p4","text":"Saved","timeout":1}"#)
+        XCTAssertEqual(timedOut?["isError"], .bool(true))
+        XCTAssertTrue(text(timedOut)?.contains("timed out") == true)
+        failure = CLIError.failure("method not found: browser.console")
+        XCTAssertTrue(text(callTool(server, "browser_console", #"{"pane":"p4"}"#))?.contains("update cmds") == true)
+        failure = nil
     }
 
     func testBrowserToolsWithoutAnOpenedPaneTargetTheWorkspace() {

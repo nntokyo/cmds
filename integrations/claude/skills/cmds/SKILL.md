@@ -39,6 +39,15 @@ cmds の MCP サーバー（`cmds mcp`。ツール名 `browser_open` / `browser_
   ページはそのCSS幅でレイアウトされ、ペインに収まるよう縮小表示される。ピクセル比・タッチ・`<meta viewport>`・
   視差効果を減らす は再現されないので、それらは実機で確認するようユーザーに伝える。設定はペインごとに残るので、
   確認が終わったら `off` で戻す。
+- スマホ・タブレット・デスクトップを並べて見る: `B=$(cmds browser responsive --no-focus <URL>)`（MCP では
+  `browser_responsive`）。ナビゲーションとスクロールは連動し、`cmds browser snapshot --pane "$B" -o /tmp/r.png` で
+  サイズごとの画像（`r-iphone.png` など）が撮れる。フレームごとに WebKit のプロセスを使うので、終わったら
+  `cmds browser responsive --pane "$B" --off` か `cmds close-pane "$B"`。
+- フロントエンドの不具合を調べる: `cmds browser console --pane "$B" --level warn`（ページの開始時から記録された
+  console のメッセージ・未捕捉エラー・未処理の Promise 拒否）。操作は `cmds browser tree --pane "$B"` で ref を得て
+  `cmds browser fill --pane "$B" e4 値`、`cmds browser click --pane "$B" e7`（CSS セレクタも可）、表示を待つのは
+  `cmds browser wait-for --pane "$B" --text "保存しました"`。MCP では `browser_console` / `browser_snapshot_tree` /
+  `browser_click` / `browser_fill` / `browser_wait_for`。厳しい CSP のページでも使える。
 - 使い終わったら自分が開いたブラウザペインを閉じる（`cmds close-pane "$B"`）。
 
 Chrome を使うのは次のときだけ:

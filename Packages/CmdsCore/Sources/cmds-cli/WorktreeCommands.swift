@@ -4,17 +4,30 @@ import Foundation
 /// Worktree workspaces (docs/guide/workspaces-and-panes.md "Worktree workspaces"): `cmds new --worktree`,
 /// `cmds changes`, `cmds close --remove-worktree`.
 extension CLI {
+    static let newUsage = "cmds new [--title T] [--cwd DIR | DIR] [--account NAME|auto] [--worktree BRANCH [--base REF] [--path DIR]] [-- command…]"
+
     /// Params of `workspace.create` for a local `cmds new` (with or without `--worktree`). Relative `--cwd` / `--path`
-    /// are resolved against `currentDirectory`.
-    static func newWorkspaceParams(_ args: Arguments, currentDirectory: String) throws -> [String: JSONValue?] {
+    /// are resolved against `currentDirectory`. A single bare argument is the directory, as `--cwd`, when it is one and
+    /// no `--cwd` is given; any other bare argument is a usage error. It used to be ignored, so
+    /// `cmds new --worktree B /repo` made the branch and worktree in the current directory's repository (#185).
+    static func newWorkspaceParams(_ args: Arguments, currentDirectory: String,
+                                   isDirectory: (String) -> Bool = directoryExists) throws -> [String: JSONValue?] {
         func absolute(_ path: String) -> String {
             let expanded = (path as NSString).expandingTildeInPath
             if expanded.hasPrefix("/") { return (expanded as NSString).standardizingPath }
             return ((currentDirectory as NSString).appendingPathComponent(expanded) as NSString).standardizingPath
         }
+        var cwd = args[option: "cwd"]
+        if !args.positionals.isEmpty {
+            guard args.positionals.count == 1, cwd == nil else { throw CLIError.usage("usage: \(newUsage)") }
+            guard isDirectory(absolute(args.positionals[0])) else {
+                throw CLIError.usage("not a directory: \(args.positionals[0])  (a command goes after --)\nusage: \(newUsage)")
+            }
+            cwd = args.positionals[0]
+        }
         var params: [String: JSONValue?] = [
             "title": args[option: "title"].json,
-            "cwd": .string(absolute(args[option: "cwd"] ?? currentDirectory)),
+            "cwd": .string(absolute(cwd ?? currentDirectory)),
             "command": shellCommand(args.rest ?? []).json,
             "account": args[option: "account"].json,
         ]
@@ -29,6 +42,11 @@ extension CLI {
         params["base"] = args[option: "base"].json
         params["worktreePath"] = args[option: "path"].map { .string(absolute($0)) }
         return params
+    }
+
+    static func directoryExists(_ path: String) -> Bool {
+        var isDirectory: ObjCBool = false
+        return FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory) && isDirectory.boolValue
     }
 
     /// Prints the warning a result may carry (`git fetch` failed) on stderr.

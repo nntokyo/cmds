@@ -106,8 +106,9 @@ final class AppSettings: NSObject {
     static let previewZoomKey = "PreviewPageZoom"
     static let showSubagentsKey = "ShowSubagents"
     static let showInMenuBarKey = "ShowInMenuBar"
+    static let browserInspectableKey = "BrowserInspectable"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
-                               showSubagentsKey, showInMenuBarKey] + MenuBarOption.allCases.map(\.rawValue)
+                               showSubagentsKey, showInMenuBarKey, browserInspectableKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue)
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -200,6 +201,13 @@ final class AppSettings: NSObject {
     var showInMenuBar: Bool {
         get { defaults.object(forKey: Self.showInMenuBarKey) as? Bool ?? (suiteName == nil) }
         set { set(newValue == (suiteName == nil) ? nil : newValue, forKey: Self.showInMenuBarKey) }
+    }
+
+    /// Browser panes can be inspected with Safari's Web Inspector (Safari › Develop › this Mac; `isInspectable`, #167).
+    /// Off by default.
+    var browserInspectable: Bool {
+        get { defaults.bool(forKey: Self.browserInspectableKey) }
+        set { set(newValue ? true : nil, forKey: Self.browserInspectableKey) }
     }
 
     /// An on-by-default switch (Settings › Sidebar, Settings › Menu Bar); only "off" is stored.

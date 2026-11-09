@@ -65,11 +65,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   same and returns one image per size; socket `browser.snapshot` answers with `images`. An older app gives a clear
   "update cmds" error instead of a visible-page image (#169).
 
+- Mac: responsive view. Browser panes can show one page at phone, tablet and desktop size side by side (device menu ›
+  Responsive View, `cmds browser responsive [URL]`, MCP `browser_responsive`); 2–4 sizes. Navigating in any frame
+  loads the page in the others, scrolling keeps them at the same proportion of their page (Sync Scrolling), Reload
+  reloads them all and a `file://` page reloads when saved. Screenshots of such a pane have one image per frame.
+  Kept across relaunches; each frame is its own WebKit process, freed when the view is turned off (#170).
+
+- Mac: DevTools for agents in browser panes. `cmds browser console` (MCP `browser_console`) returns the page's
+  console messages, uncaught errors and unhandled promise rejections, recorded from the start of each page;
+  `cmds browser tree` (`browser_snapshot_tree`) the page as roles and names with refs, which `cmds browser click` /
+  `fill` act on (also by CSS selector; fill sends input and change events); `cmds browser wait-for` waits for an
+  element or text with a timeout. Works on pages with a strict Content Security Policy. cmds › Settings… › General ›
+  Allow Safari's Web Inspector makes browser panes inspectable from Safari's Develop menu (off by default) (#167).
+
 ### Changed
 
 - Mac: browser pages follow the Mac's light or dark appearance by default; before, they were always dark (#168).
 
 ### Fixed
+
+- Mac: the command palette also matches English names in a localized UI (#186). With the app in Japanese, "split"
+  or "browser" found nothing; menu commands now also match their English titles and menu path, and panes their
+  English kind and default title (`split` finds 右に分割, `browser` ブラウザを分割して開く and browser panes).
+
+- CLI: bare arguments a command does not take are a usage error instead of being ignored (#185).
+  `cmds new --worktree B /path/to/repo` ignored the directory and created the branch and worktree in the repository
+  of the current directory; `cmds new` now takes a single bare existing directory as `--cwd` (not together with
+  `--cwd`) and refuses anything else. `cmds ping`, `quit`, `identify`, `ls`, `panes`, `remote-helper`, `events` and
+  `mcp` refuse bare arguments with their usage.
 
 - Mac: `cmds mcp`'s `close_pane` also closes browser, preview and files panes the agent opened from its terminal with
   the CLI (`cmds browser open`, `cmds open`) or before the MCP server restarted. cmds remembers the terminal pane each

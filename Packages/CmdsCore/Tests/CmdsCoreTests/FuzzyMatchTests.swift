@@ -63,4 +63,36 @@ final class FuzzyMatchTests: XCTestCase {
         XCTAssertEqual(result?.positions, [0, 1])
         XCTAssertNotNil(FuzzyMatch.match("ße", "Straße"))
     }
+
+    /// #186: in a localized UI, English names match too, through the candidate's alternates; only words matched in
+    /// the shown text are highlighted.
+    func testAlternatesMatchEnglishNames() {
+        let candidate = FuzzyMatch.Candidate("ブラウザを分割して開く ファイル",
+                                             alternates: ["Open Browser Split File"])
+        XCTAssertNotNil(FuzzyMatch.match("browser", candidate))
+        XCTAssertEqual(FuzzyMatch.match("split", candidate)?.positions, [])
+        XCTAssertEqual(FuzzyMatch.match("ぶらうざ", candidate)?.positions, [0, 1, 2, 3])
+        // Words may mix languages: each word matches where it scores best.
+        XCTAssertEqual(FuzzyMatch.match("ぶらうざ split", candidate)?.positions, [0, 1, 2, 3])
+        XCTAssertNil(FuzzyMatch.match("browser merge", candidate))
+        XCTAssertNil(FuzzyMatch.match("browser", FuzzyMatch.Candidate("ブラウザを分割して開く")))
+
+        let items = [("右に分割", "Split Right"), ("ペインを閉じる", "Close Pane"), ("下に分割", "Split Down")]
+        let ranked = FuzzyMatch.rank(items, query: "split") { FuzzyMatch.Candidate($0.0, alternates: [$0.1]) }
+        XCTAssertEqual(ranked.map(\.item.0), ["右に分割", "下に分割"])
+    }
+
+    func testSourceTitlesInvertTheStringsTable() {
+        let titles = SourceTitles(table: [
+            "Split Right": "右に分割", "Browser": "ブラウザ", "Pane": "ペイン", "Window": "Window",
+            "Open in a browser split — %@": "ブラウザで開く — %@", "Close": "閉じる", "Close Tab": "閉じる",
+        ])
+        XCTAssertEqual(titles.english(for: "右に分割"), ["Split Right"])
+        XCTAssertEqual(titles.english(for: "閉じる"), ["Close", "Close Tab"])
+        XCTAssertEqual(titles.english(for: "Window"), [])  // untranslated
+        XCTAssertEqual(titles.english(for: "ブラウザで開く — %@"), [])  // format strings are skipped
+        XCTAssertEqual(titles.englishOrSame("ペイン"), "Pane")
+        XCTAssertEqual(titles.englishOrSame("自作"), "自作")
+        XCTAssertEqual(SourceTitles(table: [:]).english(for: "右に分割"), [])
+    }
 }
