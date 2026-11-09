@@ -42,11 +42,7 @@ extension BrowserPane {
         guard new != old else { return }
         emulation = new
         // In the responsive view the frames send their devices' user agents; this one applies when it ends.
-        if new.userAgent != old.userAgent, responsiveView == nil {
-            webView.customUserAgent = new.userAgent
-            // Servers see the new user agent only with a new request.
-            if let scheme = webView.url?.scheme, ["http", "https", "file"].contains(scheme) { webView.reload() }
-        }
+        if new.userAgent != old.userAgent, responsiveView == nil { webView.setUserAgent(new.userAgent) }
         if new.scheme != old.scheme { applyColorScheme() }
         if new.size != old.size { layoutWebView() }
         updateDeviceButton()

@@ -122,11 +122,8 @@ extension CLI {
         try ctx.args.expectPositionals(0...1, usage: usage)
         let change = try browserResponsiveChange(ctx.args)
         func setResponsive(_ target: [String: JSONValue?]) throws -> JSONValue {
-            do {
-                return try ctx.call("browser.set_responsive", target.merging(change.params) { $1 })
-            } catch let error as CLIError where error.message.contains("method not found") {
-                throw CLIError.failure("this cmds app has no responsive view; update cmds")
-            }
+            try callNewMethod(ctx, "browser.set_responsive", target.merging(change.params) { $1 },
+                              unsupported: "this cmds app has no responsive view; update cmds")
         }
         if let url = ctx.args.positionals.first {
             guard ctx.args[option: "pane"] == nil else { throw CLIError.usage("give either --pane or a URL") }
@@ -152,11 +149,7 @@ extension CLI {
         if let devices = args[option: "devices"] { params["devices"] = .string(devices) }
         if args.has("sync-scroll") { params["syncScroll"] = .bool(true) }
         if args.has("no-sync-scroll") { params["syncScroll"] = .bool(false) }
-        do {
-            return try BrowserResponsiveChange(params: .object(params))
-        } catch let error as RPCError {
-            throw CLIError.usage(error.message)
-        }
+        return try usageError { try BrowserResponsiveChange(params: .object(params)) }
     }
 
     /// The request a command line asks for; bad values are usage errors (nothing is sent).

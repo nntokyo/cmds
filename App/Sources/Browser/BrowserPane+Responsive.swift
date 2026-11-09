@@ -29,10 +29,7 @@ extension BrowserPane {
             responsiveView = nil
             viewportHost.addSubview(webView)
             viewportHost.isHidden = false
-            if webView.customUserAgent != emulation.userAgent {
-                webView.customUserAgent = emulation.userAgent
-                if let scheme = webView.url?.scheme, ["http", "https", "file"].contains(scheme) { webView.reload() }
-            }
+            webView.setUserAgent(emulation.userAgent)
             layoutWebView()
         }
         if let settings, let view = try? ResponsiveView(primary: webView, settings: settings) {
