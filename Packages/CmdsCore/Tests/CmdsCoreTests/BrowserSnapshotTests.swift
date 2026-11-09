@@ -50,6 +50,38 @@ final class BrowserSnapshotTests: XCTestCase {
         }
     }
 
+    /// The API, CLI and MCP show these messages as they are.
+    func testRefusalMessages() {
+        let presets = "iphone-se, iphone, iphone-pro-max, pixel, ipad, ipad-landscape, desktop-1280, desktop-1440, desktop-1920"
+        let cases: [(JSONValue, String)] = [
+            (["zoom": 2, "abc": 1], "browser.snapshot does not support the parameter \"abc\" (unsupported by this cmds app)"),
+            ("text", "params must be an object"),
+            (["fullPage": "yes"], "fullPage must be a boolean"),
+            (["selector": " "], "selector is empty"),
+            (["selector": .string(String(repeating: "a", count: 1_001))], "selector is too long"),
+            (["selector": 3], "selector must be a string"),
+            (["device": "iphone", "width": 400], "give only one of device, devices and width"),
+            (["height": 500], "height goes with width"),
+            (["device": 3], "device must be a string"),
+            (["device": "nokia"], "unknown device \"nokia\": use a preset (\(presets)) or WIDTHxHEIGHT"),
+            (["devices": [1]], "devices must be strings"),
+            (["devices": []], "devices is empty"),
+            (["devices": ""], "devices is empty"),
+            (["devices": 3], "devices must be a list of presets or WIDTHxHEIGHT"),
+            (["width": 300.5], "width must be a whole number of CSS pixels"),
+            (["width": 300, "height": "x"], "height must be a whole number of CSS pixels"),
+            (["width": 20], "width and height must be 100–4096 CSS pixels (got 20×900)"),
+            (["devices": ["iphone", "ipad", "pixel", "iphone-se", "desktop-1280"]], "at most 4 devices per snapshot"),
+        ]
+        for (params, message) in cases {
+            XCTAssertThrowsError(try BrowserSnapshotRequest(params: params), "\(params)") {
+                XCTAssertEqual(($0 as? RPCError)?.message, message)
+            }
+        }
+        XCTAssertEqual(BrowserSnapshotRequest.tooTall(30_000).message,
+                       "the page is 30000 CSS pixels tall, over the 16384 px limit of a snapshot; capture an element (selector) instead")
+    }
+
     func testLimits() {
         XCTAssertEqual(BrowserSnapshotRequest.outputScale(cssHeight: 4_000), 2)
         XCTAssertEqual(BrowserSnapshotRequest.outputScale(cssHeight: 4_096), 2)
