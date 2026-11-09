@@ -38,6 +38,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   workspaces. `cmds browser device`, MCP `browser_set_viewport`, socket `browser.set_viewport`. WebKit does not
   emulate the pixel ratio, touch, `<meta viewport>` or reduced motion; check those on a device (#168).
 
+- Mac: browser screenshots of the whole page (`cmds browser snapshot --full`), of one element (`--selector`), and at
+  other sizes, up to four in one go (`--device iphone,ipad,desktop-1440 -o shot.png` writes `shot-iphone.png`, …;
+  each size loads the page again off screen). The pane is not scrolled or resized. MCP `browser_snapshot` takes the
+  same and returns one image per size; socket `browser.snapshot` answers with `images`. An older app gives a clear
+  "update cmds" error instead of a visible-page image (#169).
+
 ### Changed
 
 - Mac: browser pages follow the Mac's light or dark appearance by default; before, they were always dark (#168).

@@ -57,6 +57,15 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
   URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
   (the file is on the server). Session restore keeps preview panes (path, forced format).
+- **Browser screenshots** (`Browser/BrowserPane+Snapshot.swift`, params and answer in `CmdsCore/BrowserSnapshot.swift`;
+  #169): the visible page is `takeSnapshot`. `takeSnapshot` paints only what is on screen (a rect below the fold comes
+  out blank), so a full page or an element is WebKit's PDF of the view (`pdf(configuration:)`; no rect = the whole
+  document, a rect is in document coordinates whatever the scroll position) drawn into an sRGB bitmap on white. Page
+  metrics (viewport, scroll, document height, the element's rect) are read in the `.defaultClient` world. Other
+  sizes: a `CaptureWebView` (a `WKWebView` sharing the pane's configuration, so its website data, in a
+  `RenderOnlyWindow` outside the screen) loads the pane's URL, waits for `didFinish` (30 s limit) and 600 ms, is
+  captured the same way and closed; one at a time, at most 4. Unknown params are refused, and the answer's `images`
+  tells clients the app knows the new params (an older app ignores them and returns only `png_base64`).
 - **Browser pane device sizes** (`Browser/BrowserPane+Device.swift`, presets and settings in
   `CmdsCore/BrowserDevice.swift`; [guide](../guide/workspaces-and-panes.md#device-sizes-and-color-scheme), #168): the
   `WKWebView` sits in a `ViewportHostView` below the toolbar. Filling the pane, it takes the host's bounds and the page

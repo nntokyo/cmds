@@ -132,6 +132,28 @@ cmds browser eval 'document.title'                   # run JavaScript, print the
 cmds browser snapshot -o /tmp/page.png               # PNG of the visible page
 ```
 
+### Screenshots
+
+`cmds browser snapshot` captures what the pane shows; it can also capture more without scrolling or resizing the
+pane:
+
+```sh
+cmds browser snapshot --full -o /tmp/page.png                  # the whole page as one image
+cmds browser snapshot --selector '#pricing' -o /tmp/pricing.png  # one element
+cmds browser snapshot --full --device iphone,ipad,desktop-1440 -o /tmp/shot.png
+# → /tmp/shot-iphone.png, /tmp/shot-ipad.png, /tmp/shot-desktop-1440.png
+```
+
+- A full page may be up to 16384 CSS pixels tall; a taller one is refused (capture an element instead). Images are
+  at 2× (1× above 4096 CSS pixels tall).
+- `--device` takes the presets of [Device sizes](#device-sizes-and-color-scheme) or `WIDTHxHEIGHT`, up to four. Each
+  size loads the pane's URL again in a web view outside the screen, one after another: the same cookies and storage,
+  but not what you did on the page (form input, opened menus, client-side state). The pane's own device size and
+  color scheme apply to the pane only; the other sizes use their preset's user agent and the pane's color scheme.
+- Full-page and element captures come from WebKit's PDF of the page: fixed headers appear once, at the top, and
+  a page that sets no background of its own comes out on white.
+- Agents get the same through the MCP tool `browser_snapshot` (`fullPage`, `selector`, `device`, `devices`).
+
 cmds can be chosen as the default web browser (**System Settings › Desktop & Dock › Default web browser**): links
 opened from other apps then open in a browser split beside the focused pane. Passkeys and security keys don't work in
 browser panes yet; they need an entitlement from Apple ([#162](https://github.com/nntokyo/cmds/issues/162)).
