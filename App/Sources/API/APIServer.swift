@@ -76,6 +76,14 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await FolderCompareAPI.perform(method, params) }
                 }
+            case "workspace.create" where try params.string("worktree") != nil,
+                 "workspace.changes",
+                 "workspace.close" where try params.bool("removeWorktree") == true:
+                // git runs off the main thread (AppController+Worktrees.swift).
+                let method = request.method
+                Task { @MainActor in
+                    await respond(id, to: connection) { try await self.worktreeRequest(method, params) }
+                }
             case "browser.snapshot":
                 let pane = try browserPaneID(params)
                 Task { @MainActor in
@@ -132,6 +140,17 @@ final class APIServer {
             case "debug.recent_sessions":
                 // Tests only: File › Recent Agent Sessions' items, and `open` (index) as choosing one does.
                 connection.reply(id: id, result: RecentAgentSessionsMenu(controller: controller).debugPerform(params.value))
+            case "debug.close_alert":
+                // Tests only: what closing the workspace from the sidebar asks (nil: it closes without asking about a
+                // worktree), without showing it.
+                let workspace = try controller.resolveWorkspace(try params.string("id"))
+                guard let record = controller.worktreeToRemove(onClosing: workspace) else {
+                    connection.reply(id: id, result: ["worktree": .null])
+                    break
+                }
+                let alert = WorktreeCloseAlert.make(workspace: workspace, record: record)
+                connection.reply(id: id, result: ["worktree": .string(record.path), "text": .string(alert.informativeText),
+                                                  "buttons": .array(alert.buttons.map { .string($0.title) })])
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 SettingsWindowController.shared.showSettings(nil)
@@ -485,8 +504,37 @@ final class APIServer {
     /// Code of errors that are not `RPCError`s (controller failures, JavaScript exceptions).
     private static let internalErrorCode = 500
 
+    /// `workspace.create` with `worktree`, `workspace.changes`, `workspace.close` with `removeWorktree`.
+    private func worktreeRequest(_ method: String, _ params: Params) async throws -> JSONValue {
+        switch method {
+        case "workspace.create":
+            if try params.string("ssh") != nil { throw RPCError.invalidParams("a worktree workspace is local (no ssh)") }
+            let request = Worktrees.Request(branch: try params.required("worktree"), base: try params.string("base"),
+                                            path: try params.string("worktreePath"))
+            if let path = request.path, !path.hasPrefix("/") {
+                throw RPCError.invalidParams("worktreePath must be absolute: \(path)")
+            }
+            let directory = try params.string("cwd") ?? controller.selectedWorkspace.flatMap { $0.isRemote ? nil : $0.workingDirectory }
+            guard let directory else { throw RPCError.invalidParams("missing param: cwd (a folder in the repository)") }
+            let account = try controller.resolveAccountParam(try params.string("account"))
+            let created = try await controller.createWorktreeWorkspace(
+                from: directory, request: request, title: try params.string("title"),
+                command: try params.string("command"), account: account)
+            guard case .object(var object) = try JSONValue.from(created.info) else { return try .from(created.info) }
+            if let warning = created.warning { object["warning"] = .string(warning) }
+            return .object(object)
+        case "workspace.changes":
+            let shown = try await controller.showChanges(workspaceID: try params.string("id"))
+            return ["pane": .string(shown.pane.id), "path": .string(shown.path)]
+        default:  // workspace.close with removeWorktree
+            let record = try await controller.closeWorkspaceRemovingWorktree(id: try params.string("id"))
+            return ["removed": .string(record.path), "branch": .string(record.branch)]
+        }
+    }
+
     private static func rpcError(_ error: Error) -> RPCError {
         if let error = error as? RPCError { return error }
+        if let error = error as? WorktreeError { return RPCError(code: internalErrorCode, message: error.description) }
         let nsError = error as NSError
         if let message = nsError.userInfo[BrowserPane.javaScriptExceptionMessageKey] as? String {
             return RPCError(code: internalErrorCode, message: "JavaScript exception: \(message)")

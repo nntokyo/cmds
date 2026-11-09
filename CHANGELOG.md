@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac: worktree workspaces for agents working side by side (#172). File › New Worktree Workspace… (⌥⌘N, also in a
+  workspace's sidebar menu) or `cmds new --worktree BRANCH [--base REF] [--path DIR]` fetches, creates a new branch
+  (without upstream) and a git worktree for it, by default in `<repo>-worktrees/<branch>` next to the repository, and
+  opens a workspace there; an existing branch or folder is an error. Show Changes in the sidebar menu (`cmds changes`)
+  opens the branch's commits and its diff against the base, working tree included, as a diff preview. Closing such a
+  workspace offers Close and Remove Worktree (`cmds close --remove-worktree`): `git worktree remove`, refused while
+  there are uncommitted changes, untracked files or unpushed commits, and never for worktrees cmds did not create
+  (remembered in `worktrees.json` in the support folder).
+
 - Mac: File › Recent Agent Sessions (also the clock button at the bottom of the sidebar) lists the 5 newest Claude
   Code and Codex sessions seen in any pane, kept after the agent exits or the pane closes and across restarts.
   Choosing one shows the pane that still has it, or resumes it in a new workspace in its folder, under its Claude

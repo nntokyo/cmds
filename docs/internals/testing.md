@@ -77,6 +77,27 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `problem` the alert would show; `snapshot: true` adds `png_base64`, the window drawn off screen. Seed
   `agent-history.json` in the support directory with sessions in folders the test created.
 
+### Worktree workspaces end to end
+
+Unit tests: `swift test --filter 'WorktreeTests|WorktreeCLITests'` (in `Packages/CmdsCore`) create temporary
+repositories with a local bare remote (hooks off with `core.hooksPath=/dev/null`, no network).
+
+In an isolated instance, with the CLI called as above (`env -u CMDS_PANE_ID … CMDS_SUPPORT_DIR=…`), only on a
+temporary repository with a local bare remote (`git init --bare`, `core.hooksPath` set to `/dev/null` in both), never
+on a real repository:
+
+- `cmds new --worktree feat/a` in the repository: the folder `<repo>-worktrees/feat-a`, `worktree` in `cmds ls --json`,
+  `worktrees.json` in the support directory; the same branch, an existing path, a path inside the repository and an
+  unknown `--base` are errors and create nothing.
+- Commit, change and add files in the worktree from your own shell (never typed into a pane), `cmds changes <ws>`, then
+  the file it names and `debug.preview_snapshot`; a second `cmds changes` reuses the pane.
+- `cmds rpc debug.close_alert '{"id": …}'` (DEBUG builds) shows the close alert's text and buttons;
+  `cmds close <ws> --remove-worktree` is refused while there are changes, untracked files or unpushed commits; after a
+  commit and `git push -u origin feat/a` to the bare remote it removes the folder (the branch stays).
+- A worktree made with `git worktree add` and opened with `cmds new --cwd`: no `worktree`, `debug.close_alert` gives
+  `null`, `--remove-worktree` is refused. A second workspace in a worktree cmds created: neither is offered.
+- Quit and relaunch: the worktree workspace keeps its `worktree`.
+
 ### Schedules end to end
 
 In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the CLI called as

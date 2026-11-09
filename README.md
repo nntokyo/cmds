@@ -24,6 +24,8 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
   on hosts, never deleted); follow a terminal's `cd`; drop files on a terminal to type their quoted paths.
 - **SSH workspaces**: your own `ssh` with a restricted socket forwarded to the server, so notifications, status and
   agent usage work remotely; reconnect overlay.
+- **Worktree workspaces**: a new branch in its own git worktree per agent (`cmds new --worktree BRANCH`), Show Changes
+  as a diff preview, and removal on close that never drops uncommitted or unpushed work.
 - **Coding agents**: Claude Code hooks and status-line reporter, Codex usage read from its session files; per-pane
   model, context, cost and 5-hour / 7-day / spend limits; a Claude Code skill.
 - **Session restore and resume**: layout and directories come back after a restart, and Claude Code / Codex sessions

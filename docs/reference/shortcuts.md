@@ -10,6 +10,7 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 |---|---|---|
 | New workspace | ⌘N | File |
 | New SSH workspace… | ⇧⌘N | File |
+| New worktree workspace… | ⌥⌘N | File |
 | Close workspace | ⇧⌘W | File |
 | Rename workspace… | ⇧⌘R | Workspace |
 | Next / previous workspace | ⇧⌘] / ⇧⌘[, also ⌃Tab / ⌃⇧Tab | Workspace |

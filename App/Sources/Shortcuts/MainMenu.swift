@@ -59,6 +59,7 @@ enum MainMenu {
         let menu = NSMenu(title: String(localized: "File"))
         menu.addItem(item("New Workspace", #selector(CommandRouter.newWorkspace(_:)), "n", target: router))
         menu.addItem(item("New SSH Workspace…", #selector(CommandRouter.newSSHWorkspace(_:)), "n", [.command, .shift], target: router))
+        menu.addItem(item("New Worktree Workspace…", #selector(CommandRouter.newWorktreeWorkspace(_:)), "n", [.command, .option], target: router))
         menu.addItem(item("Open Browser Split", #selector(CommandRouter.openBrowser(_:)), "b", [.command, .shift], target: router))
         menu.addItem(item("Open in Preview…", #selector(CommandRouter.openInPreview(_:)), "o", [.command, .shift], target: router))
         menu.addItem(item("New Files Pane", #selector(CommandRouter.openFilesPane(_:)), "e", [.command, .shift], target: router))

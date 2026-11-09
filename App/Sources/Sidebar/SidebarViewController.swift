@@ -596,6 +596,17 @@ final class SidebarViewController: NSViewController {
         confirmClose(workspaceID: id)
     }
 
+    @objc private func showChangesClicked(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        ShowChangesAction.run(workspaceID: id, controller: controller, window: view.window)
+    }
+
+    @objc private func newWorktreeClicked(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String, let workspace = controller.workspace(id: id) else { return }
+        WorktreeSheet.present(in: view.window, controller: controller,
+                              directory: workspace.isRemote ? nil : workspace.workingDirectory)
+    }
+
     @objc private func clearNotificationClicked(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String else { return }
         try? controller.clearNotification(workspaceID: id)
@@ -614,9 +625,14 @@ final class SidebarViewController: NSViewController {
         promptRename(workspaceID: id)
     }
 
-    /// The row's × and the context menu: asks first while an agent is still around in the workspace.
+    /// The row's × and the context menu: asks first while an agent is still around in the workspace, and offers to
+    /// remove a worktree cmds created for it (WorktreeCloseAlert).
     func confirmClose(workspaceID id: String) {
         guard let workspace = controller.workspace(id: id) else { return }
+        if let record = controller.worktreeToRemove(onClosing: workspace) {
+            WorktreeCloseAlert.present(workspace: workspace, record: record, in: view.window, controller: controller)
+            return
+        }
         guard workspace.agentActivity != .none, let window = view.window else {
             try? controller.closeWorkspace(id: id)
             return
@@ -811,6 +827,11 @@ extension SidebarViewController: NSMenuDelegate {
         var items = [item(String(localized: "Rename…"), #selector(renameMenuClicked(_:)), id)]
         if workspace.notificationText != nil || workspace.attention {
             items.append(item(String(localized: "Clear Notification"), #selector(clearNotificationClicked(_:)), id))
+        }
+        // A local git repository (the branch comes from reading .git, no git process).
+        if !workspace.isRemote, workspace.gitBranch != nil {
+            items += [.separator(), item(String(localized: "Show Changes"), #selector(showChangesClicked(_:)), id),
+                      item(String(localized: "New Worktree Workspace…"), #selector(newWorktreeClicked(_:)), id)]
         }
         items += [.separator(), filter, group, .separator(),
                   item(String(localized: "Close Workspace"), #selector(closeClicked(_:)), id)]

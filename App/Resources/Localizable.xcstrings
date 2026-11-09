@@ -331,12 +331,68 @@
         }
       }
     },
+    "%@ already exists.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はすでにあります。"
+          }
+        }
+      }
+    },
+    "%@ failed: %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ failed: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@が失敗しました：%2$@"
+          }
+        }
+      }
+    },
+    "%@ is a bare repository, without a working tree to start from.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はベアリポジトリで、元にする作業ツリーがありません。"
+          }
+        }
+      }
+    },
     "%@ is a folder": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%@はフォルダです"
+          }
+        }
+      }
+    },
+    "%@ is inside the repository. Choose a folder outside it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はリポジトリの中にあります。リポジトリの外のフォルダを選んでください。"
+          }
+        }
+      }
+    },
+    "%@ is not in a git repository.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はgitリポジトリの中にありません。"
           }
         }
       }
@@ -834,12 +890,32 @@
         }
       }
     },
+    "<repository>-worktrees/<branch> next to it": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リポジトリの隣の<リポジトリ>-worktrees/<ブランチ>"
+          }
+        }
+      }
+    },
     "A Codex session has no account.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "Codexのセッションにはアカウントを指定できません。"
+          }
+        }
+      }
+    },
+    "A branch named “%@” already exists (locally or on the remote).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」というブランチはすでにあります（ローカルまたはリモート）。"
           }
         }
       }
@@ -945,6 +1021,7 @@
       }
     },
     "AI limits (Claude Code, Codex)": {
+      "comment": "Settings › Menu Bar › Menu",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -1105,6 +1182,7 @@
       }
     },
     "Agent model, context and cost": {
+      "comment": "Settings › Sidebar › Show in each workspace",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -1244,6 +1322,16 @@
         }
       }
     },
+    "Another workspace is in the worktree %@.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのワークスペースがワークツリー%@を使っています。"
+          }
+        }
+      }
+    },
     "App %@ · Wired %@ · Compressed %@": {
       "localizations": {
         "en": {
@@ -1370,6 +1458,16 @@
         }
       }
     },
+    "Base:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ベース："
+          }
+        }
+      }
+    },
     "Bell": {
       "localizations": {
         "ja": {
@@ -1416,6 +1514,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "両方のペインが同じフォルダを表示しています。"
+          }
+        }
+      }
+    },
+    "Branch:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブランチ："
           }
         }
       }
@@ -1552,6 +1660,7 @@
       }
     },
     "CPU and memory": {
+      "comment": "Settings › Menu Bar › Menu",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -1621,6 +1730,16 @@
         }
       }
     },
+    "Cannot create the worktree": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークツリーを作成できません"
+          }
+        }
+      }
+    },
     "Cannot export workspaces": {
       "localizations": {
         "ja": {
@@ -1657,6 +1776,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "リモートのフォルダを開けません"
+          }
+        }
+      }
+    },
+    "Cannot remove the worktree": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークツリーを削除できません"
+          }
+        }
+      }
+    },
+    "Cannot show the changes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更を表示できません"
+          }
+        }
+      }
+    },
+    "Cannot tell the repository's default branch. Enter a base.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リポジトリのデフォルトブランチがわかりません。ベースを入力してください。"
           }
         }
       }
@@ -2011,6 +2160,16 @@
         }
       }
     },
+    "Close and Remove Worktree": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じてワークツリーを削除"
+          }
+        }
+      }
+    },
     "Close “%@”?": {
       "localizations": {
         "ja": {
@@ -2057,6 +2216,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "コマンド："
+          }
+        }
+      }
+    },
+    "Commit and push the work first, or close the workspace and keep the worktree.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先に作業をコミットしてプッシュするか、ワークツリーを残してワークスペースを閉じてください。"
+          }
+        }
+      }
+    },
+    "Commits not pushed: %lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プッシュされていないコミット：%lld"
           }
         }
       }
@@ -2625,6 +2804,16 @@
         }
       }
     },
+    "Create": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作成"
+          }
+        }
+      }
+    },
     "Created from the command line or an agent": {
       "localizations": {
         "ja": {
@@ -2856,6 +3045,7 @@
       }
     },
     "Directory": {
+      "comment": "Settings › Sidebar › Show in each workspace",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3233,6 +3423,16 @@
         }
       }
     },
+    "Fetches, creates a new branch from the base and a git worktree for it, and opens a workspace there, so agents can work side by side without touching your checkout.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フェッチしてベースから新しいブランチとそのgitワークツリーを作成し、そこでワークスペースを開きます。手元のチェックアウトに触れずに、エージェントが並行して作業できます。"
+          }
+        }
+      }
+    },
     "File": {
       "localizations": {
         "ja": {
@@ -3434,6 +3634,7 @@
       }
     },
     "Footer:": {
+      "comment": "Settings › Sidebar",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3480,6 +3681,7 @@
       }
     },
     "General": {
+      "comment": "Settings tab",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3510,6 +3712,7 @@
       }
     },
     "Git branch": {
+      "comment": "Settings › Sidebar › Show in each workspace",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3680,6 +3883,7 @@
       }
     },
     "Icon:": {
+      "comment": "Settings › Menu Bar",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3847,6 +4051,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "この端末は切断され、使うには新しいコードで再度ペアリングが必要です。ほかの端末はペアリングされたままです。"
+          }
+        }
+      }
+    },
+    "It is locked (git worktree lock).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロックされています（git worktree lock）。"
+          }
+        }
+      }
+    },
+    "It is no longer a worktree of its repository.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リポジトリのワークツリーではなくなっています。"
           }
         }
       }
@@ -4103,6 +4327,7 @@
       }
     },
     "Latest notification": {
+      "comment": "Settings › Sidebar › Show in each workspace",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -4290,6 +4515,7 @@
       }
     },
     "Listening ports": {
+      "comment": "Settings › Sidebar › Show in each workspace",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -4305,6 +4531,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "SSHホストのフォルダを、お使いのssh（~/.ssh/config、鍵、エージェント）でSFTP経由で一覧表示します。cmdsはパスワードを尋ねることも保存することもなく、ホスト鍵がknown_hostsにあるホストにだけ接続します。"
+          }
+        }
+      }
+    },
+    "Location:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "場所："
           }
         }
       }
@@ -4440,6 +4676,7 @@
       }
     },
     "Menu:": {
+      "comment": "Settings › Menu Bar",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -4802,6 +5039,26 @@
         }
       }
     },
+    "New Worktree Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークツリーワークスペース"
+          }
+        }
+      }
+    },
+    "New Worktree Workspace…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークツリーワークスペース…"
+          }
+        }
+      }
+    },
     "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nNew Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files\nToggle sidebar ⌘B · Rename workspace ⇧⌘R\nTile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩": {
       "localizations": {
         "ja": {
@@ -5134,6 +5391,7 @@
       }
     },
     "Number of agents working": {
+      "comment": "Settings › Menu Bar › Icon",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -5688,6 +5946,7 @@
       }
     },
     "Red dot when a limit or memory runs short": {
+      "comment": "Settings › Menu Bar › Icon",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -5933,6 +6192,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "置き換えると既存の項目はゴミ箱に入ります。両方とも残すと、新しい項目の名前に番号が付きます。"
+          }
+        }
+      }
+    },
+    "Repository:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リポジトリ："
           }
         }
       }
@@ -6638,6 +6907,16 @@
         }
       }
     },
+    "Show Changes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "変更を表示"
+          }
+        }
+      }
+    },
     "Show Hidden Files": {
       "localizations": {
         "ja": {
@@ -6699,6 +6978,7 @@
       }
     },
     "Show in each workspace:": {
+      "comment": "Settings › Sidebar",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -7690,6 +7970,16 @@
         }
       }
     },
+    "The location must be an absolute path: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "場所は絶対パスで指定してください：%@"
+          }
+        }
+      }
+    },
     "The name is too long.": {
       "localizations": {
         "ja": {
@@ -8030,6 +8320,26 @@
         }
       }
     },
+    "The worktree starts from what was fetched before": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークツリーは前回フェッチした内容から作成されました"
+          }
+        }
+      }
+    },
+    "The worktree was kept": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークツリーは残しました"
+          }
+        }
+      }
+    },
     "There are already 50 schedules.": {
       "localizations": {
         "ja": {
@@ -8046,6 +8356,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」という名前のアカウントはありません。"
+          }
+        }
+      }
+    },
+    "There is no branch or commit named “%@”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」というブランチやコミットはありません。"
           }
         }
       }
@@ -8423,6 +8743,16 @@
         }
       }
     },
+    "Uncommitted changes: %lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コミットされていない変更：%lld"
+          }
+        }
+      }
+    },
     "Undo": {
       "localizations": {
         "ja": {
@@ -8459,6 +8789,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "未追跡"
+          }
+        }
+      }
+    },
+    "Untracked files: %lld": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追跡されていないファイル：%lld"
           }
         }
       }
@@ -8853,6 +9193,7 @@
       }
     },
     "Workspaces with agents": {
+      "comment": "Settings › Menu Bar › Menu",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -8958,6 +9299,16 @@
         }
       }
     },
+    "a folder in the repository": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リポジトリ内のフォルダ"
+          }
+        }
+      }
+    },
     "a pane of “%@”": {
       "localizations": {
         "ja": {
@@ -8978,12 +9329,38 @@
         }
       }
     },
+    "cmds created the worktree %@ (branch %@) for this workspace. Close and Remove Worktree also removes that folder with git worktree remove: files git ignores (build output, dependencies) go with it, the branch stays. It is not removed while it has uncommitted changes, untracked files or commits that are not pushed.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "cmds created the worktree %1$@ (branch %2$@) for this workspace. Close and Remove Worktree also removes that folder with git worktree remove: files git ignores (build output, dependencies) go with it, the branch stays. It is not removed while it has uncommitted changes, untracked files or commits that are not pushed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースのワークツリー%1$@（ブランチ%2$@）はcmdsが作成しました。「閉じてワークツリーを削除」はgit worktree removeでそのフォルダも削除します。gitが無視するファイル（ビルド結果、依存パッケージ）も一緒に削除され、ブランチは残ります。コミットされていない変更、追跡されていないファイル、プッシュされていないコミットがあるあいだは削除しません。"
+          }
+        }
+      }
+    },
     "cmds creates a new key and certificate for iOS Sync and unpairs every iPhone and iPad. Each one must be paired again; until then they report that this Mac's identity changed.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "cmdsはiOS同期用の新しい鍵と証明書を作成し、すべてのiPhone/iPadのペアリングを解除します。それぞれ再度ペアリングが必要で、それまではこのMacの識別情報が変わったと表示されます。"
+          }
+        }
+      }
+    },
+    "cmds did not create the worktree %@, so it never removes it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークツリー%@はcmdsが作成したものではないため、削除しません。"
           }
         }
       }
@@ -9034,6 +9411,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsはこのペインのリモートシェルにコマンドを1つ入力します。~/.local/bin/cmds-remote.sh（小さなshスクリプト。サーバーにpython3、socat、ncのいずれかが必要）を書き込み、サーバーに`cmds`コマンドがなければそれへのリンク~/.local/bin/cmdsも作成します。ほかには何も変更しません。\n\n続ける前に、ペインにシェルのプロンプトが表示されている（プログラムが実行中でない）ことを確認してください。"
+          }
+        }
+      }
+    },
+    "command (optional, e.g. claude)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンド（省略可、例：claude）"
           }
         }
       }
@@ -9110,6 +9497,16 @@
         }
       }
     },
+    "default branch (e.g. origin/main)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デフォルトブランチ（例：origin/main）"
+          }
+        }
+      }
+    },
     "failed: %@": {
       "localizations": {
         "ja": {
@@ -9126,6 +9523,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "フォルダ（省略可、例: ~/src/app。省略時はホーム）"
+          }
+        }
+      }
+    },
+    "git is not installed. Install the Xcode Command Line Tools.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "gitがインストールされていません。Xcode Command Line Toolsをインストールしてください。"
           }
         }
       }
@@ -9228,6 +9635,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ゴミ箱に移動（もう一方のフォルダにない項目）"
+          }
+        }
+      }
+    },
+    "new branch, e.g. fix-login": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新しいブランチ（例：fix-login）"
           }
         }
       }
@@ -9573,6 +9990,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」はアカウント名として使えません。"
+          }
+        }
+      }
+    },
+    "“%@” is not a valid branch name.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」はブランチ名として使えません。"
           }
         }
       }
