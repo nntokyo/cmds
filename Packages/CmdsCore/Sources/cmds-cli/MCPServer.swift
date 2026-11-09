@@ -14,6 +14,7 @@ extension CLI {
             docs/guide/ai-agents.md.
             """
     ) { ctx in
+        try ctx.args.expectPositionals(0...0, usage: "cmds mcp")
         let server = MCPServer(environment: ctx.environment) { method, params, timeout in
             try ctx.call(method, params, timeout: timeout)
         }

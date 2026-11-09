@@ -34,9 +34,9 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds sync` | iOS sync status (read-only): listener port, Bonjour, Bluetooth (permission `authorization`, peripheral state, advertising, PSM), SSH remote access, and each connection (device, authenticated, peer `ip` / `bluetooth:…` / `ssh:…`, panes, bytes, connected for). `--json` for the full report; see [Testing sync on a device](../internals/testing.md#testing-sync-on-a-device) |
 | `cmds sync devices` | Paired iPhones and iPads: id, name, connected from / last seen (local time), paired date. `--json` |
 | `cmds sync revoke <id\|name>` | Unpair one device (disconnected at once; must pair again). Takes an id, an id prefix of 4+ characters or the name, when exactly one device matches; the others stay paired |
-| `cmds new [--title T] [--cwd DIR] [--account NAME\|auto] [-- cmd…]` | New workspace (default cwd: current directory); prints its id. `--account`: the shell gets that Claude account's `CLAUDE_CONFIG_DIR` (`auto` = the first account without a limit), e.g. `cmds new --account work -- claude` ([Several Claude accounts](../guide/ai-agents.md#several-claude-accounts)) |
+| `cmds new [--title T] [--cwd DIR \| DIR] [--account NAME\|auto] [-- cmd…]` | New workspace (default cwd: current directory; a bare `DIR` is the same as `--cwd DIR`, must be an existing directory and cannot be combined with `--cwd`); prints its id. `--account`: the shell gets that Claude account's `CLAUDE_CONFIG_DIR` (`auto` = the first account without a limit), e.g. `cmds new --account work -- claude` ([Several Claude accounts](../guide/ai-agents.md#several-claude-accounts)) |
 | `cmds new --ssh HOST [--remote-cwd DIR] [--title T]` | New SSH workspace ([SSH workspaces](../guide/workspaces-and-panes.md#ssh-workspaces)) |
-| `cmds new --worktree BRANCH [--base REF] [--path DIR] [--cwd DIR] [--title T] [--account …] [-- cmd…]` | New workspace in a new git worktree of the repository of `--cwd` (default: current directory): fetches, creates branch `BRANCH` from `--base` (default: the repository's default branch, the remote's when there is one, e.g. `origin/main`) without an upstream, and the worktree in `--path` (default `<repo>-worktrees/<branch>` next to the repository, `/` → `-`). An existing branch (also on the remote), an existing path or a path inside the repository is an error. A failed fetch is a warning on stderr. Prints the workspace id ([Worktree workspaces](../guide/workspaces-and-panes.md#worktree-workspaces)) |
+| `cmds new --worktree BRANCH [--base REF] [--path DIR] [--cwd DIR \| DIR] [--title T] [--account …] [-- cmd…]` | New workspace in a new git worktree of the repository of `--cwd` (default: current directory): fetches, creates branch `BRANCH` from `--base` (default: the repository's default branch, the remote's when there is one, e.g. `origin/main`) without an upstream, and the worktree in `--path` (default `<repo>-worktrees/<branch>` next to the repository, `/` → `-`). An existing branch (also on the remote), an existing path or a path inside the repository is an error. A failed fetch is a warning on stderr. Prints the workspace id ([Worktree workspaces](../guide/workspaces-and-panes.md#worktree-workspaces)) |
 | `cmds changes [ws]` | Show Changes: the commits since the base and one diff from the merge base to the working tree (with untracked files) in the workspace's diff preview; base = the worktree's for one cmds created, else the default branch. Prints the preview pane id |
 | `cmds reconnect [pane]` | Reconnect an SSH pane whose `ssh` exited |
 | `cmds remote-helper` | Print `cmds-remote.sh`, the sh client for servers reached through an SSH pane |
@@ -94,7 +94,9 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 
 Every command accepts `--json` (print the raw result) and `--help` (also `cmds help <command>`); `cmds --version`
 prints the version of the cmds the CLI came with (`dev` when built with SwiftPM). Exit codes: `0` ok, `1` the request failed
-(e.g. unknown pane), `2` usage error, `3` the app is not reachable.
+(e.g. unknown pane), `2` usage error, `3` the app is not reachable. A bare argument a command does not take (e.g.
+`cmds ls x`, a pane id without `--pane`) is a usage error, never ignored; only the `cmds hook …` commands, which
+always exit 0, ignore them.
 
 Examples:
 

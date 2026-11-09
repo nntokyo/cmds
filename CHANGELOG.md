@@ -60,6 +60,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- CLI: bare arguments a command does not take are a usage error instead of being ignored (#185).
+  `cmds new --worktree B /path/to/repo` ignored the directory and created the branch and worktree in the repository
+  of the current directory; `cmds new` now takes a single bare existing directory as `--cwd` (not together with
+  `--cwd`) and refuses anything else. `cmds ping`, `quit`, `identify`, `ls`, `panes`, `remote-helper`, `events` and
+  `mcp` refuse bare arguments with their usage.
+
 - Mac: `cmds mcp`'s `close_pane` also closes browser, preview and files panes the agent opened from its terminal with
   the CLI (`cmds browser open`, `cmds open`) or before the MCP server restarted. cmds remembers the terminal pane each
   such pane was opened from (`openedBy` in `cmds panes --json`, kept across a relaunch); panes opened from another
