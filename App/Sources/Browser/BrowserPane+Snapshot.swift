@@ -22,10 +22,7 @@ extension BrowserPane {
 
     func snapshot(_ request: BrowserSnapshotRequest) async throws -> [BrowserSnapshotImage] {
         if request.isPlain, let responsiveView {  // every frame at its size
-            let offscreen = OffscreenRenderHost(hosting: responsiveView)
-            defer { offscreen?.release() }
-            if offscreen != nil { try await Task.sleep(for: OffscreenRenderHost.paintDelay) }
-            return try await responsiveView.snapshots()
+            return try await OffscreenRenderHost.rendering(responsiveView) { try await responsiveView.snapshots() }
         }
         if request.isPlain {
             let png = try await snapshot()
@@ -34,10 +31,7 @@ extension BrowserPane {
                                          height: size?.height ?? Int(webView.frame.height / webView.pageZoom), png: png)]
         }
         if request.targets.isEmpty {
-            let offscreen = OffscreenRenderHost(hosting: webView)
-            defer { offscreen?.release() }
-            if offscreen != nil { try await Task.sleep(for: OffscreenRenderHost.paintDelay) }
-            return [try await Self.capture(webView, request: request, device: nil)]
+            return [try await OffscreenRenderHost.rendering(webView) { try await Self.capture(webView, request: request, device: nil) }]
         }
         guard let url = webView.url, ["http", "https", "file"].contains(url.scheme?.lowercased() ?? "") else {
             throw RPCError.invalidParams("the pane shows no web page to capture at other sizes")
@@ -74,9 +68,7 @@ extension BrowserPane {
         guard Int(rect.height) <= BrowserSnapshotRequest.maxHeight else {
             throw BrowserSnapshotRequest.tooTall(Int(rect.height))
         }
-        guard Int(rect.width) <= BrowserSnapshotRequest.maxHeight else {
-            throw RPCError.invalidParams("the capture is \(Int(rect.width)) CSS pixels wide, over the \(BrowserSnapshotRequest.maxHeight) px limit")
-        }
+        guard Int(rect.width) <= BrowserSnapshotRequest.maxHeight else { throw BrowserSnapshotRequest.tooWide(Int(rect.width)) }
         let zoom = webView.pageZoom
         let configuration = WKSnapshotConfiguration()
         configuration.rect = CGRect(x: rect.minX * zoom, y: rect.minY * zoom, width: rect.width * zoom,
@@ -177,11 +169,7 @@ private final class CaptureWebView: NSObject, WKNavigationDelegate {
         webView = WKWebView(frame: frame, configuration: configuration)
         webView.customUserAgent = userAgent
         webView.appearance = appearance
-        window = RenderOnlyWindow(contentRect: NSRect(origin: NSPoint(x: -30_000, y: -30_000), size: frame.size),
-                                  styleMask: [.borderless], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.ignoresMouseEvents = true
-        window.collectionBehavior = [.transient, .ignoresCycle]
+        window = RenderOnlyWindow(offscreenAt: NSPoint(x: -30_000, y: -30_000), size: frame.size)
         window.contentView = webView
         super.init()
         webView.navigationDelegate = self
@@ -218,11 +206,13 @@ private final class CaptureWebView: NSObject, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { finish(.success(())) }
 
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        finish(.failure(RPCError(code: 500, message: "the page did not load: \(error.localizedDescription)")))
-    }
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { failed(error) }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        failed(error)
+    }
+
+    private func failed(_ error: Error) {
         finish(.failure(RPCError(code: 500, message: "the page did not load: \(error.localizedDescription)")))
     }
 }
