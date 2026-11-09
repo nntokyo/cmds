@@ -183,7 +183,7 @@ final class MCPServer {
         Tool(name: "browser_set_viewport",
              description: "Show a cmds browser pane at a device size (the page gets that CSS layout width and height, scaled to fit the pane), with a user agent and light/dark color scheme, to check responsive layouts. Only the arguments given change; without any it returns the current settings. \(CLI.browserDeviceLimits)",
              properties: [
-                "device": string("A preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))), WIDTHxHEIGHT in CSS pixels (e.g. 375x667), or \"off\" to fill the pane again. A preset also sets its user agent."),
+                "device": string("A preset (\(DevicePreset.idList)), WIDTHxHEIGHT in CSS pixels (e.g. 375x667), or \"off\" to fill the pane again. A preset also sets its user agent."),
                 "rotate": .object(["type": "boolean", "description": "Swap width and height (landscape / portrait)."]),
                 "userAgent": string("User agent to send; \"\" = WebKit's own."),
                 "colorScheme": .object(["type": "string", "enum": ["system", "light", "dark"],
@@ -287,6 +287,11 @@ final class MCPServer {
         return value
     }
 
+    /// `body`, with a bad argument it reports (`RPCError`) as the tool's error: nothing is sent.
+    private func toolArguments<T>(_ body: () throws -> T) throws -> T {
+        do { return try body() } catch let error as RPCError { throw ToolError(message: error.message) }
+    }
+
     /// The id of the pane a request opened, remembered (also for browser_* defaults).
     private func recordOpenedPane(_ result: JSONValue) throws -> String {
         guard let id = result["id"]?.stringValue else { throw ToolError(message: "the app returned no pane id") }
@@ -369,12 +374,7 @@ final class MCPServer {
                 return [Self.text("\(size)\(what), \(image.width)×\(image.height) CSS px"), Self.image(image)]
             }
         case "browser_set_viewport":
-            let change: BrowserViewportChange
-            do {
-                change = try BrowserViewportChange(params: arguments)
-            } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let change = try toolArguments { try BrowserViewportChange(params: arguments) }
             let result = try browserCall("browser.set_viewport", arguments, change.params, timeout: Self.requestTimeout)
             return [Self.text(BrowserEmulation(json: result).summary)]
         case "browser_console":

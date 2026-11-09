@@ -62,6 +62,8 @@ public struct DevicePreset: Equatable, Identifiable, Sendable {
     public static let androidUserAgent = "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36"
     /// iPadOS Safari presents itself as Safari on a Mac by default.
     public static let iPadUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+    /// The presets' user agents, in the order the Device menu lists them.
+    public static let userAgents = [iPhoneUserAgent, androidUserAgent, iPadUserAgent]
 
     public static let all: [DevicePreset] = [
         DevicePreset(id: "iphone-se", name: "iPhone SE", category: .phone, size: .init(width: 375, height: 667),
@@ -83,6 +85,9 @@ public struct DevicePreset: Equatable, Identifiable, Sendable {
         DevicePreset(id: "desktop-1920", name: "Desktop 1920", category: .desktop, size: .init(width: 1920, height: 1080),
                      pixelRatio: 1, userAgent: nil),
     ]
+
+    /// `iphone-se, iphone, …`: every preset id, for help texts and error messages.
+    public static let idList = all.map(\.id).joined(separator: ", ")
 
     /// Phone, tablet and desktop: the default set when several sizes are shown or captured at once (#169, #170).
     public static let responsiveSet: [DevicePreset] = ["iphone", "ipad", "desktop-1440"].compactMap(named)
@@ -187,12 +192,16 @@ public struct BrowserEmulation: Codable, Equatable, Sendable {
         }
     }
 
+    /// `iPhone SE 375×667`, or `375×667` for a custom size; nil when the page fills the pane.
+    public var sizeName: String? {
+        size.map { size in [preset?.name, size.description].compactMap { $0 }.joined(separator: " ") }
+    }
+
     /// One line for the CLI and MCP: `iPhone SE 375×667, iPhone user agent, color scheme dark`.
     public var summary: String {
         var parts: [String] = []
-        if let size {
-            parts.append([preset?.name, size.description].compactMap { $0 }.joined(separator: " ")
-                + (preset.map { $0.size != size ? " (rotated)" : "" } ?? ""))
+        if let size, let sizeName {
+            parts.append(sizeName + (preset.map { $0.size != size ? " (rotated)" : "" } ?? ""))
         } else {
             parts.append("fills the pane")
         }
@@ -234,7 +243,7 @@ public struct BrowserViewportChange: Equatable, Sendable {
         if ["off", "fill", "none", "responsive"].contains(text.lowercased()) { return .fill }
         if let preset = DevicePreset.named(text) { return .preset(preset) }
         if let size = try ViewportSize.parse(text) { return .custom(size) }
-        throw RPCError.invalidParams("unknown device \"\(text.prefix(40))\": use a preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))), WIDTHxHEIGHT or off")
+        throw RPCError.invalidParams("unknown device \"\(text.prefix(40))\": use a preset (\(DevicePreset.idList)), WIDTHxHEIGHT or off")
     }
 
     public static func parseColorScheme(_ raw: String) throws -> BrowserColorScheme {
@@ -249,23 +258,10 @@ public struct BrowserViewportChange: Equatable, Sendable {
     /// From `browser.set_viewport` params: `device?` (preset id, `WIDTHxHEIGHT` or `off`), or `width?` + `height?`;
     /// `rotate?`, `userAgent?`, `colorScheme?` (`light` / `dark` / `system`). `pane` / `workspace` are ignored here.
     public init(params: JSONValue?) throws {
-        func string(_ key: String) throws -> String? {
-            switch params?[key] {
-            case nil, .null?: return nil
-            case .string(let value)?: return value
-            default: throw RPCError.invalidParams("\(key) must be a string")
-            }
-        }
-        func integer(_ key: String) throws -> Int? {
-            switch params?[key] {
-            case nil, .null?: return nil
-            case .number(let value)? where value.rounded() == value && abs(value) < 1e6: return Int(value)
-            default: throw RPCError.invalidParams("\(key) must be a whole number of CSS pixels")
-            }
-        }
+        let params = RequestParams(params)
         self.init()
-        let width = try integer("width"), height = try integer("height")
-        if let device = try string("device") {
+        let width = try params.cssPixels("width"), height = try params.cssPixels("height")
+        if let device = try params.string("device") {
             guard width == nil, height == nil else { throw RPCError.invalidParams("give either device or width and height") }
             size = try Self.parseSize(device)
         } else if width != nil || height != nil {
@@ -274,15 +270,11 @@ public struct BrowserViewportChange: Equatable, Sendable {
             try custom.validate()
             size = .custom(custom)
         }
-        switch params?["rotate"] {
-        case nil, .null?: break
-        case .bool(let value)?: rotate = value
-        default: throw RPCError.invalidParams("rotate must be a boolean")
-        }
-        if let agent = try string("userAgent") {
+        rotate = try params.bool("rotate") ?? false
+        if let agent = try params.string("userAgent") {
             userAgent = try BrowserEmulation.checkedUserAgent(agent) ?? ""
         }
-        colorScheme = try string("colorScheme").map(Self.parseColorScheme)
+        colorScheme = try params.string("colorScheme").map(Self.parseColorScheme)
     }
 
     /// The params `init(params:)` reads back (CLI and MCP).
