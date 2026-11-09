@@ -42,6 +42,74 @@ extension CLI {
         print(BrowserEmulation(json: result).summary)
     }
 
+    static let browserSnapshotCommand = Command(
+        name: "browser snapshot",
+        usage: "browser snapshot [--pane P] [--full] [--selector S] [--device D[,D…]] [-o file.png]",
+        summary: "Save a PNG of a browser pane's page: what is visible, the full page, one element, or other sizes.",
+        details: """
+            --full captures the whole page (up to \(BrowserSnapshotRequest.maxHeight) CSS pixels tall), --selector the
+            first element matching a CSS selector. --device captures at a preset (see `cmds browser device --list`) or
+            WIDTHxHEIGHT instead of the pane's size; up to \(BrowserSnapshotRequest.maxTargets) comma-separated ones load
+            the page again off screen, one after another (same cookies, not the pane's in-page state), and need -o:
+            -o shot.png writes shot-iphone.png, shot-ipad.png, … The pane itself is not scrolled or resized.
+            Without -o a single PNG is written to stdout when it is not a terminal. Prints the files written.
+            \(browserPaneNote)
+            """,
+        options: ["pane", "output", "selector", "device"], flags: ["full"], aliases: ["o": "output"]
+    ) { ctx in
+        try ctx.args.expectPositionals(0...0, usage: "cmds browser snapshot [--pane P] [--full] [--selector S] [--device D[,D…]] [-o file.png]")
+        let request = try browserSnapshotRequest(ctx.args)
+        let output = ctx.args[option: "output"]
+        if request.targets.count > 1, output == nil, !ctx.json {
+            throw CLIError.usage("several devices give several images; use -o file.png (written as file-<device>.png)")
+        }
+        let result = try ctx.call("browser.snapshot", browserTarget(ctx).merging(request.params) { $1 }, timeout: 300)
+        let images: [BrowserSnapshotImage]
+        if let read = BrowserSnapshotImage.images(from: result) {
+            images = read
+        } else if request.isPlain, let base64 = result["png_base64"]?.stringValue, let png = Data(base64Encoded: base64) {
+            images = [BrowserSnapshotImage(device: nil, width: 0, height: 0, png: png)]  // an app older than #169
+        } else if request.isPlain {
+            throw CLIError.failure("snapshot returned no image")
+        } else {
+            throw CLIError.failure(BrowserSnapshotImage.unsupportedMessage)
+        }
+        if ctx.json { return ctx.printJSON(result) }
+        guard !images.isEmpty else { throw CLIError.failure("snapshot returned no image") }
+        guard let output else {
+            guard isatty(STDOUT_FILENO) == 0 else { throw CLIError.usage("refusing to write PNG to a terminal; use -o file.png") }
+            return FileHandle.standardOutput.write(images[0].png)
+        }
+        for (path, image) in zip(snapshotPaths(absolutePath(output), images: images), images) {
+            do { try image.png.write(to: URL(fileURLWithPath: path)) } catch {
+                throw CLIError.failure("cannot write \(path): \(error.localizedDescription)")
+            }
+            print(path)
+        }
+    }
+
+    /// The request a command line asks for; bad values are usage errors (nothing is sent).
+    static func browserSnapshotRequest(_ args: Arguments) throws -> BrowserSnapshotRequest {
+        var params: [String: JSONValue] = [:]
+        if args.has("full") { params["fullPage"] = .bool(true) }
+        if let selector = args[option: "selector"] { params["selector"] = .string(selector) }
+        if let devices = args[option: "device"] { params["devices"] = .string(devices) }
+        do {
+            return try BrowserSnapshotRequest(params: .object(params))
+        } catch let error as RPCError {
+            throw CLIError.usage(error.message)
+        }
+    }
+
+    /// `output` for one image; `name-<device>.png` for each of several.
+    static func snapshotPaths(_ output: String, images: [BrowserSnapshotImage]) -> [String] {
+        guard images.count > 1 else { return [output] }
+        let url = URL(fileURLWithPath: output)
+        let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension
+        let base = url.deletingPathExtension().path
+        return images.enumerated().map { index, image in "\(base)-\(image.device ?? String(index + 1)).\(ext)" }
+    }
+
     /// The change a command line asks for; bad values are usage errors (nothing is sent).
     static func browserViewportChange(_ args: Arguments) throws -> BrowserViewportChange {
         do {
