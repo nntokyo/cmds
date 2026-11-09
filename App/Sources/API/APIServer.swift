@@ -549,7 +549,7 @@ final class APIServer {
             if let path = request.path, !path.hasPrefix("/") {
                 throw RPCError.invalidParams("worktreePath must be absolute: \(path)")
             }
-            let directory = try params.string("cwd") ?? controller.selectedWorkspace.flatMap { $0.isRemote ? nil : $0.workingDirectory }
+            let directory = try params.string("cwd") ?? controller.selectedWorkspace?.localWorkingDirectory
             guard let directory else { throw RPCError.invalidParams("missing param: cwd (a folder in the repository)") }
             let account = try controller.resolveAccountParam(try params.string("account"))
             let created = try await controller.createWorktreeWorkspace(

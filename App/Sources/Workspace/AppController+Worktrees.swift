@@ -21,9 +21,10 @@ extension AppController {
 
     // MARK: - Show Changes
 
-    /// Folder of the diffs Show Changes writes (one per workspace, replaced each time).
-    private static var changesDirectory: URL {
+    /// Folder of the diff Show Changes writes for a workspace (`$TMPDIR/cmds-changes/<workspace>`, replaced each time).
+    static func changesFolder(workspaceID: String) -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent("cmds-changes", isDirectory: true)
+            .appendingPathComponent(workspaceID, isDirectory: true)
     }
 
     /// Show Changes: the workspace's branch compared with its base (the worktree's for one cmds created, else the
@@ -38,7 +39,7 @@ extension AppController {
         let base = workspace.createdWorktree?.base
         let changes = try await Self.git { try Worktrees.changes(in: directory, base: base) }
 
-        let folder = Self.changesDirectory.appendingPathComponent(workspace.id, isDirectory: true)
+        let folder = Self.changesFolder(workspaceID: workspace.id)
         let name = (changes.branch ?? (changes.root as NSString).lastPathComponent).replacingOccurrences(of: "/", with: "-")
         let file = folder.appendingPathComponent("\(name) changes.diff")
         do {

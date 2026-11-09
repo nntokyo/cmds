@@ -239,8 +239,7 @@ extension CLI {
                 return ctx.printResult(result, field: "id")
             }
             let params = try newWorkspaceParams(ctx.args, currentDirectory: FileManager.default.currentDirectoryPath)
-            // Creating a worktree fetches first.
-            let result = try ctx.call("workspace.create", params, timeout: params["worktree"] == nil ? 60 : 180)
+            let result = try ctx.call("workspace.create", params, timeout: params["worktree"] == nil ? 60 : worktreeCreateTimeout)
             printWarning(of: result)
             ctx.printResult(result, field: "id")
         },
@@ -296,7 +295,8 @@ extension CLI {
             try ctx.args.expectPositionals(0...1, usage: "cmds close [workspace] [--remove-worktree]")
             let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.envWorkspace
             if ctx.args.has("remove-worktree") {
-                let result = try ctx.call("workspace.close", ["id": id.json, "removeWorktree": true], timeout: 120)
+                let result = try ctx.call("workspace.close", ["id": id.json, "removeWorktree": true],
+                                          timeout: worktreeGitTimeout)
                 if ctx.json { return ctx.printJSON(result) }
                 return print("removed worktree \(result["removed"]?.stringValue ?? "")")
             }
