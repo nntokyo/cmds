@@ -60,6 +60,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   reloads them all and a `file://` page reloads when saved. Screenshots of such a pane have one image per frame.
   Kept across relaunches; each frame is its own WebKit process, freed when the view is turned off (#170).
 
+- Mac: DevTools for agents in browser panes. `cmds browser console` (MCP `browser_console`) returns the page's
+  console messages, uncaught errors and unhandled promise rejections, recorded from the start of each page;
+  `cmds browser tree` (`browser_snapshot_tree`) the page as roles and names with refs, which `cmds browser click` /
+  `fill` act on (also by CSS selector; fill sends input and change events); `cmds browser wait-for` waits for an
+  element or text with a timeout. Works on pages with a strict Content Security Policy. cmds › Settings… › General ›
+  Allow Safari's Web Inspector makes browser panes inspectable from Safari's Develop menu (off by default) (#167).
+
 ### Changed
 
 - Mac: browser pages follow the Mac's light or dark appearance by default; before, they were always dark (#168).

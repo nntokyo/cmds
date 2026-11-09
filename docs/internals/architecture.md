@@ -57,6 +57,18 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
   URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
   (the file is on the server). Session restore keeps preview panes (path, forced format).
+- **Browser DevTools** (`Browser/BrowserPane+DevTools.swift`; buffer, parsing and page scripts in
+  `CmdsCore/BrowserDevTools.swift`; #167): two user scripts per pane at document start, main frame only. The console
+  hook must run in the page world (only there are the page's `console` functions); it wraps `console.*`, listens for
+  `error` and `unhandledrejection`, and hands each record over as a `CustomEvent` with a JSON string detail on
+  `document`, named `cmds-console-<uuid>` per web view and dispatched with references taken before any page script
+  runs. The listener in the `.defaultClient` world batches them (100 ms, at most 200 a second) to the `cmdsConsole`
+  handler, which exists only in that world, into a `ConsoleBuffer` (1000 entries). Tree, click, fill and wait_for are
+  `callAsyncJavaScript` bodies in `.defaultClient`; refs live in that world's `window.__cmdsRefs` (`WeakRef`s), so
+  the page never sees them and the DOM is not changed. User scripts and `callAsyncJavaScript` are compiled by WebKit,
+  so a page's CSP does not apply (as for `browser.eval`'s fallback, #88). The responsive view no longer removes all
+  user scripts on close (that would drop the console capture); its scroll script stays and posts nothing without its
+  handler. `isInspectable` follows Settings (`BrowserInspectable`).
 - **Responsive view** (`Browser/ResponsiveView.swift`, `BrowserPane+Responsive.swift`; settings, requests and scroll
   math in `CmdsCore/BrowserResponsive.swift`; #170): still a `browser` pane (no new `PaneKind`, no sync protocol
   change: the iPhone shows the first frame's URL). The pane's own `WKWebView` becomes the first frame; the others are
