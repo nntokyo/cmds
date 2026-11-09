@@ -48,6 +48,24 @@ final class PaneArgumentCLITests: XCTestCase {
         XCTAssertEqual(CLI.snapshotPaths("/tmp/one.png", images: [images[0]]), ["/tmp/one.png"])
     }
 
+    /// `cmds browser responsive` (#170): bad device lists and conflicting options are usage errors.
+    func testBrowserResponsive() throws {
+        XCTAssertEqual(exitCode(["browser", "responsive", "--devices", "iphone"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "responsive", "--devices", "a,b"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "responsive", "--sync-scroll", "--no-sync-scroll"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "responsive", "--off", "--devices", "iphone,ipad"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "responsive", "--pane", "p2", "http://x.test"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "responsive", "--off", "http://x.test"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "responsive", "--pane", "p2"]), CLIError.Code.unavailable.rawValue)
+
+        let flags: Set<String> = ["no-sync-scroll", "sync-scroll", "off", "no-focus"]
+        let on = try CLI.browserResponsiveChange(try Arguments(["--devices", "iphone,desktop-1920", "--no-sync-scroll"],
+                                                               options: ["pane", "devices"], flags: flags))
+        XCTAssertEqual(on, BrowserResponsiveChange(on: true, devices: ["iphone", "desktop-1920"], syncScroll: false))
+        let off = try CLI.browserResponsiveChange(try Arguments(["--off"], options: ["pane", "devices"], flags: flags))
+        XCTAssertEqual(off, BrowserResponsiveChange(on: false))
+    }
+
     /// `cmds browser device` (#168): bad sizes and schemes are usage errors before anything is sent.
     func testBrowserDevice() throws {
         XCTAssertEqual(exitCode(["browser", "device", "nokia"]), CLIError.Code.usage.rawValue)

@@ -14,6 +14,7 @@ extension CLI {
             docs/guide/ai-agents.md.
             """
     ) { ctx in
+        try ctx.args.expectPositionals(0...0, usage: "cmds mcp")
         let server = MCPServer(environment: ctx.environment) { method, params, timeout in
             try ctx.call(method, params, timeout: timeout)
         }
@@ -185,6 +186,16 @@ final class MCPServer {
                                         "description": "prefers-color-scheme of the page; system follows the Mac."]),
                 "pane": browserPane,
              ]),
+        Tool(name: "browser_responsive",
+             description: "Show a page at several sizes side by side in one cmds browser pane (default phone, tablet and desktop: \(BrowserResponsive.defaultDevices.joined(separator: ", "))). With url it opens a new browser pane beside your terminal (no focus) and returns its id; otherwise it acts on a browser pane. Navigation and scrolling stay in step across the frames. browser_snapshot of such a pane returns one image per frame. Each frame is its own WebKit process: use off when done.",
+             properties: [
+                "url": string("URL to open in a new responsive browser pane."),
+                "pane": browserPane,
+                "devices": .object(["type": "array", "items": .object(["type": "string"]),
+                                    "description": "2–4 presets or WIDTHxHEIGHT sizes, left to right."]),
+                "syncScroll": .object(["type": "boolean", "description": "Scroll the other frames along (default true)."]),
+                "off": .object(["type": "boolean", "description": "Show the page once again."]),
+             ]),
         Tool(name: "open_file",
              description: "Show a file on this Mac (image, PDF, video, Office, text/code, rendered Markdown, coloured diff) in a cmds preview pane split to the right, without taking the focus. The pane reloads when the file changes. Returns the pane id.",
              properties: ["path": string("Absolute path (relative paths are resolved against the server's working directory)."),
@@ -287,7 +298,7 @@ final class MCPServer {
                 return [.object(["type": "image", "data": .string(base64), "mimeType": "image/png"])]  // older app
             }
             guard !images.isEmpty else { throw ToolError(message: "the snapshot returned no image") }
-            if request.isPlain { return [Self.image(images[0])] }
+            if request.isPlain, images.count == 1 { return [Self.image(images[0])] }  // else: a responsive view's frames
             return images.flatMap { image -> [JSONValue] in
                 let what = request.selector.map { "element \($0)" } ?? (request.fullPage ? "full page" : "visible page")
                 let size = image.device.map { "\($0), " } ?? ""
@@ -302,6 +313,33 @@ final class MCPServer {
             }
             let result = try browserCall("browser.set_viewport", arguments, change.params, timeout: Self.requestTimeout)
             return [Self.text(BrowserEmulation(json: result).summary)]
+        case "browser_responsive":
+            let change: BrowserResponsiveChange
+            do {
+                var params = arguments
+                if case .object(var object) = arguments, object["off"]?.boolValue == true {
+                    object["on"] = .bool(false)
+                    params = .object(object)
+                }
+                change = try BrowserResponsiveChange(params: params)
+            } catch let error as RPCError {
+                throw ToolError(message: error.message)
+            }
+            var params = change.params
+            if change.on == nil { params["on"] = .bool(true) }
+            if let url = nonEmpty(arguments["url"]?.stringValue) {
+                guard nonEmpty(arguments["pane"]?.stringValue) == nil else { throw ToolError(message: "give either url or pane") }
+                guard change.on != false else { throw ToolError(message: "off needs a pane, not a url") }
+                let opened = try call("browser.open", ["pane": envPane.json, "url": .string(url), "focus": .bool(false)],
+                                      Self.requestTimeout)
+                let id = try recordOpenedPane(opened)
+                lastBrowserPane = id
+                let result = try call("browser.set_responsive", params.merging(["pane": .string(id)]) { $1 },
+                                      Self.requestTimeout)
+                return [Self.text("Opened browser pane \(id): \(BrowserResponsive.summary(result)).")]
+            }
+            let result = try browserCall("browser.set_responsive", arguments, params, timeout: Self.requestTimeout)
+            return [Self.text(BrowserResponsive.summary(result))]
         case "open_file":
             let path = absolutePath(try argument(arguments, "path"))
             var isDirectory: ObjCBool = false

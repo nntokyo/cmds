@@ -66,6 +66,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
   `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. Point it only at folders the test created.
+- Responsive view (#170): `debug.browser {pane}` also returns `responsive` = each frame's device, URL, title and
+  frame. With a local page that writes its width and scroll fraction into `document.title`, and query-string hooks
+  that scroll the phone frame or navigate the desktop frame after 3 s (page scripts, no input injection): navigation
+  from the first frame and from another one reaches all frames, the scroll fraction matches with Sync Scrolling and
+  stays per frame without it, saving the file reloads every frame, relaunch restores the frames, and the number of
+  `com.apple.WebKit.WebContent` processes drops by the extra frames when the view is turned off.
 - `debug.find {pane, action?, …}` (DEBUG builds) drives a terminal pane's find bar (#173) and returns its state
   (open, text, count, engine = libghostty's search, hits, the selected hit's row/column/width and marker frame for
   Match Case / regex, scrollbar, which of field and terminal has the keyboard): `open {text?, caseSensitive?,

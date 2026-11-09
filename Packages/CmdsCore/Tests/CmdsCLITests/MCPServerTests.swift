@@ -66,7 +66,7 @@ final class MCPServerTests: XCTestCase {
     func testToolsAreListedOnlyInsideCmds() {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
-                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
+                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport", "browser_responsive",
                         "open_file", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
@@ -138,6 +138,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p4"))
 
         // A plain snapshot stays one image.
+        replies["browser.snapshot"] = BrowserSnapshotImage.result([BrowserSnapshotImage(device: nil, width: 1, height: 1, png: Data([1]))])
         XCTAssertEqual(callTool(server, "browser_snapshot")?["content"]?.arrayValue?.map { $0["type"]?.stringValue ?? "" }, ["image"])
 
         // Bad arguments are refused before anything is sent.
@@ -151,6 +152,39 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(old?["isError"], .bool(true))
         XCTAssertTrue(text(old)?.contains("update cmds") == true)
         XCTAssertEqual(callTool(server, "browser_snapshot")?["isError"], .bool(false))
+    }
+
+    /// browser_responsive (#170): with a url it opens a pane (recorded as ours) and turns the view on.
+    func testResponsive() {
+        let server = server()
+        replies["browser.open"] = .object(["id": "p9"])
+        replies["browser.set_responsive"] = BrowserResponsive(devices: ["iphone-se", "ipad"]).json
+        let opened = callTool(server, "browser_responsive", #"{"url":"http://localhost:3000","devices":["iphone-se","ipad"]}"#)
+        XCTAssertEqual(text(opened), "Opened browser pane p9: responsive view: iphone-se, ipad.")
+        XCTAssertEqual(requests.map(\.method), ["browser.open", "browser.set_responsive"])
+        XCTAssertEqual(requests[0].params["focus"] ?? nil, .bool(false))
+        XCTAssertEqual(requests[1].params["pane"] ?? nil, .string("p9"))
+        XCTAssertEqual(requests[1].params["on"] ?? nil, .bool(true))
+        XCTAssertEqual(requests[1].params["devices"] ?? nil, .array(["iphone-se", "ipad"]))
+        XCTAssertEqual(server.openedPanes, ["p9"])
+
+        replies["browser.set_responsive"] = BrowserResponsive.offJSON
+        XCTAssertEqual(text(callTool(server, "browser_responsive", #"{"off":true}"#)), "responsive view off")
+        XCTAssertEqual(requests.last?.params["on"] ?? nil, .bool(false))
+        XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p9"), "the pane this server opened last")
+
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_responsive", #"{"devices":["iphone"]}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_responsive", #"{"url":"http://x.test","pane":"p2"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
+
+        // A responsive pane's plain snapshot: one labelled image per frame.
+        replies["browser.snapshot"] = BrowserSnapshotImage.result([
+            BrowserSnapshotImage(device: "iphone", width: 393, height: 852, png: Data([1])),
+            BrowserSnapshotImage(device: "ipad", width: 820, height: 1180, png: Data([2])),
+        ])
+        let shot = callTool(server, "browser_snapshot")?["content"]?.arrayValue ?? []
+        XCTAssertEqual(shot.map { $0["type"]?.stringValue ?? "" }, ["text", "image", "text", "image"])
     }
 
     func testBrowserToolsWithoutAnOpenedPaneTargetTheWorkspace() {

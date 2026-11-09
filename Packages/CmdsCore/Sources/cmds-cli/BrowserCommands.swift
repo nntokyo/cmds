@@ -77,6 +77,9 @@ extension CLI {
         if ctx.json { return ctx.printJSON(result) }
         guard !images.isEmpty else { throw CLIError.failure("snapshot returned no image") }
         guard let output else {
+            guard images.count == 1 else {  // a pane in the responsive view: one image per frame
+                throw CLIError.usage("the pane gave \(images.count) images (responsive view); use -o file.png (written as file-<device>.png)")
+            }
             guard isatty(STDOUT_FILENO) == 0 else { throw CLIError.usage("refusing to write PNG to a terminal; use -o file.png") }
             return FileHandle.standardOutput.write(images[0].png)
         }
@@ -85,6 +88,62 @@ extension CLI {
                 throw CLIError.failure("cannot write \(path): \(error.localizedDescription)")
             }
             print(path)
+        }
+    }
+
+    static let browserResponsiveCommand = Command(
+        name: "browser responsive",
+        usage: "browser responsive [--pane P] [--devices D,D[,D…]] [--no-sync-scroll | --sync-scroll] [--off] [--no-focus] [<url>]",
+        summary: "Show a page at several sizes side by side in one browser pane (the responsive view).",
+        details: """
+            With a URL, opens it in a new browser split (prints the pane id); otherwise acts on a browser pane.
+            --devices takes \(BrowserResponsive.frameCount.lowerBound)–\(BrowserResponsive.frameCount.upperBound) presets (see `cmds browser device --list`) or WIDTHxHEIGHT sizes, left to right
+            (default \(BrowserResponsive.defaultDevices.joined(separator: ","))). Navigating in any frame loads the page in
+            the others; scrolling one scrolls the others to the same proportion of their page (--no-sync-scroll turns
+            that off). Reload reloads every frame, and a file:// page reloads when the file changes. --off shows the
+            page once again. Each frame is its own WebKit process. Kept per pane across relaunches.
+            \(browserPaneNote)
+            """,
+        options: ["pane", "devices"], flags: ["no-sync-scroll", "sync-scroll", "off", "no-focus"]
+    ) { ctx in
+        let usage = "cmds browser responsive [--pane P] [--devices D,D[,D…]] [--no-sync-scroll | --sync-scroll] [--off] [--no-focus] [<url>]"
+        try ctx.args.expectPositionals(0...1, usage: usage)
+        let change = try browserResponsiveChange(ctx.args)
+        func setResponsive(_ target: [String: JSONValue?]) throws -> JSONValue {
+            do {
+                return try ctx.call("browser.set_responsive", target.merging(change.params) { $1 })
+            } catch let error as CLIError where error.message.contains("method not found") {
+                throw CLIError.failure("this cmds app has no responsive view; update cmds")
+            }
+        }
+        if let url = ctx.args.positionals.first {
+            guard ctx.args[option: "pane"] == nil else { throw CLIError.usage("give either --pane or a URL") }
+            guard change.on != false else { throw CLIError.usage("--off needs a pane, not a URL") }
+            let opened = try ctx.call("browser.open", ["pane": ctx.pane.json, "url": .string(url),
+                                                       "focus": ctx.args.has("no-focus") ? false : nil])
+            guard let id = opened["id"]?.stringValue else { throw CLIError.failure("the app returned no pane id") }
+            let result = try setResponsive(["pane": .string(id)])
+            if ctx.json { return ctx.printJSON(.object(["id": .string(id), "responsive": result])) }
+            return print(id)
+        }
+        let result = try setResponsive(browserTarget(ctx))
+        if ctx.json { return ctx.printJSON(result) }
+        print(BrowserResponsive.summary(result))
+    }
+
+    /// The change a command line asks for (on unless --off); bad values are usage errors.
+    static func browserResponsiveChange(_ args: Arguments) throws -> BrowserResponsiveChange {
+        guard !(args.has("sync-scroll") && args.has("no-sync-scroll")) else {
+            throw CLIError.usage("give --sync-scroll or --no-sync-scroll, not both")
+        }
+        var params: [String: JSONValue] = ["on": .bool(!args.has("off"))]
+        if let devices = args[option: "devices"] { params["devices"] = .string(devices) }
+        if args.has("sync-scroll") { params["syncScroll"] = .bool(true) }
+        if args.has("no-sync-scroll") { params["syncScroll"] = .bool(false) }
+        do {
+            return try BrowserResponsiveChange(params: .object(params))
+        } catch let error as RPCError {
+            throw CLIError.usage(error.message)
         }
     }
 

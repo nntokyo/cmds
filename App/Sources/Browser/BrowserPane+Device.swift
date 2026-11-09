@@ -37,7 +37,8 @@ extension BrowserPane {
         let old = emulation
         guard new != old else { return }
         emulation = new
-        if new.userAgent != old.userAgent {
+        // In the responsive view the frames send their devices' user agents; this one applies when it ends.
+        if new.userAgent != old.userAgent, responsiveView == nil {
             webView.customUserAgent = new.userAgent
             // Servers see the new user agent only with a new request.
             if let scheme = webView.url?.scheme, ["http", "https", "file"].contains(scheme) { webView.reload() }
@@ -51,6 +52,7 @@ extension BrowserPane {
 
     /// The page fills the host, or sits centered at its device size scaled to fit.
     func layoutWebView() {
+        guard responsiveView == nil else { return }  // the web view is a frame of the responsive view
         let frame = viewportHost.frame
         guard let size = emulation.size else {
             viewportHost.scale(to: 1)
@@ -83,6 +85,7 @@ extension BrowserPane {
         }
         let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         if webView.appearance?.name != appearance?.name { webView.appearance = appearance }
+        responsiveView?.setAppearance(appearance)
     }
 
     // MARK: - Toolbar
@@ -98,9 +101,11 @@ extension BrowserPane {
     }
 
     func updateDeviceButton() {
-        deviceButton.contentTintColor = emulation.isDefault ? nil : .controlAccentColor
+        deviceButton.contentTintColor = emulation.isDefault && responsiveView == nil ? nil : .controlAccentColor
         var tip = String(localized: "Device Size")
-        if let size = emulation.size {
+        if let responsive {
+            tip += " — " + String(localized: "Responsive View") + " (\(responsive.devices.joined(separator: ", ")))"
+        } else if let size = emulation.size {
             tip += " — " + [emulation.preset?.name, size.description].compactMap { $0 }.joined(separator: " ")
         }
         deviceButton.toolTip = tip
@@ -118,6 +123,11 @@ extension BrowserPane {
     /// Reads the CSS width and the media queries of the page (in cmds' own script world, so the page's scripts do not
     /// see it) and shows `375 px · <640 · 80%`.
     private func refreshBreakpoints() {
+        if let responsiveView {  // the frames' widths
+            breakpointLabel.stringValue = responsiveView.targets.map { "\($0.size.width)" }.joined(separator: " · ") + " px"
+            breakpointLabel.toolTip = String(localized: "Responsive View")
+            return
+        }
         Task { @MainActor [weak self] in
             guard let self else { return }
             let result = try? await webView.callAsyncJavaScript(Breakpoints.pageScript, arguments: [:], in: nil,
@@ -175,6 +185,12 @@ extension BrowserPane {
         menu.addItem(item(custom.map { String(localized: "Custom Size (\($0.description))…") } ?? String(localized: "Custom Size…"),
                           #selector(customSizeChosen), on: custom != nil))
         menu.addItem(item(String(localized: "Rotate"), #selector(rotateChosen), enabled: emulation.size != nil))
+        menu.addItem(.separator())
+        let responsiveTitle = String(localized: "Responsive View (Phone, Tablet, Desktop)")
+        menu.addItem(item(responsive.map { _ in String(localized: "Responsive View") } ?? responsiveTitle,
+                          #selector(responsiveViewChosen), on: responsive != nil))
+        menu.addItem(item(String(localized: "Sync Scrolling"), #selector(syncScrollingChosen),
+                          on: responsive?.scrollSynced == true, enabled: responsive != nil))
         menu.addItem(.separator())
 
         let schemes = NSMenu()
@@ -296,6 +312,7 @@ extension BrowserPane {
             "pageZoom": .number(webView.pageZoom),
             "appearance": .string(webView.appearance?.name.rawValue ?? ""),
             "menu": .array(deviceMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),
+            "responsive": responsiveView?.debugFrames ?? .null,
         ]
         if let bitmap = bitmapImageRepForCachingDisplay(in: bounds) {
             cacheDisplay(in: bounds, to: bitmap)

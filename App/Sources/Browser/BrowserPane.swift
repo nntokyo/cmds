@@ -31,6 +31,8 @@ final class BrowserPane: NSView {
     let breakpointLabel = NSTextField(labelWithString: "")
     let deviceButton = BrowserPane.toolbarButton("ipad.and.iphone", label: String(localized: "Device Size"))
     var breakpointRefresh: DispatchWorkItem?
+    /// The responsive view while it is on (BrowserPane+Responsive.swift, #170); `webView` is then its first frame.
+    var responsiveView: ResponsiveView?
 
     var currentURL: URL? { webView.url }
     var pageTitle: String { webView.title ?? "" }
@@ -72,7 +74,9 @@ final class BrowserPane: NSView {
         addressField.stringValue = ""
     }
 
-    func reload() { webView.reload() }
+    func reload() {
+        if let responsiveView { responsiveView.reloadAll() } else { webView.reload() }
+    }
     func goBack() { webView.goBack() }
     func goForward() { webView.goForward() }
 
@@ -191,6 +195,8 @@ final class BrowserPane: NSView {
     }
 
     func tearDown() {
+        responsiveView?.close()  // frees the extra frames' WebContent processes
+        responsiveView = nil
         observations.removeAll()
         webView.stopLoading()
         webView.navigationDelegate = nil

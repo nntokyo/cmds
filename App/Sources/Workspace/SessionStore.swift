@@ -6,9 +6,9 @@ import CmdsCore
 struct SessionState: Codable {
     indirect enum Node: Codable {
         case terminal(cwd: String?)
-        /// `emulation`: device size, user agent, color scheme (#168). Added later: older sessions lack it, older versions
-        /// ignore it.
-        case browser(url: String?, emulation: BrowserEmulation?)
+        /// `emulation`: device size, user agent, color scheme (#168); `responsive`: the responsive view (#170). Added
+        /// later: older sessions lack them, older versions ignore them.
+        case browser(url: String?, emulation: BrowserEmulation?, responsive: BrowserResponsive?)
         /// Preview pane (file path; `format` = forced rendering such as `diff`). Added later: older sessions lack it.
         case preview(path: String, format: String?)
         /// Files pane (folder; `showHidden`/`follow` only when on). Added later: older versions cannot read it.

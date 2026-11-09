@@ -23,10 +23,10 @@ extension AppController {
             case .ssh(let host, let remoteCwd):
                 defer { next += 1 }
                 return .pane(.ssh(host: host, remoteCwd: remoteCwd, session: sessions[next]))
-            case .browser(let url, let emulation):
+            case .browser(let url, let emulation, let responsive):
                 defer { next += 1 }
                 return .pane(WorkspaceBundle.Pane(kind: .browser, url: url.flatMap(WorkspaceBundle.portableURL),
-                                                  emulation: emulation))
+                                                  emulation: emulation, responsive: responsive))
             case .preview(let path, let format):
                 defer { next += 1 }
                 return .pane(WorkspaceBundle.Pane(kind: .preview, path: path, format: format))
@@ -101,7 +101,7 @@ extension SessionState {
                     if let host = pane.host { return .ssh(host: host, remoteCwd: pane.remoteCwd) }
                     return .terminal(cwd: local(pane.cwd))
                 case .browser:
-                    return .browser(url: pane.url, emulation: pane.emulation)
+                    return .browser(url: pane.url, emulation: pane.emulation, responsive: pane.responsive)
                 case .preview:
                     return .preview(path: pane.path ?? NSHomeDirectory(), format: pane.format)
                 case .files:
