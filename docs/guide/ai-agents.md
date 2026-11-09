@@ -129,8 +129,8 @@ The same file works as a [Codex skill](#codex-cli).
 ## MCP server
 
 `cmds mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) for agents that run in a cmds
-terminal. Its tools open and check web pages in cmds browser panes instead of Chrome, show files in preview panes and
-set the sidebar status:
+terminal. Its tools open and check web pages in cmds browser panes instead of Chrome, show files in preview panes, run
+commands in terminal panes beside the agent's, and set the sidebar status:
 
 | Tool | Does |
 |---|---|
@@ -145,13 +145,21 @@ set the sidebar status:
 | `browser_click` / `browser_fill` | Click, or fill a field / select / checkbox, by `ref` or `selector` |
 | `browser_wait_for` | Wait for a `selector` or `text` to be visible (`timeout` seconds, default 5); an error when it is not |
 | `open_file` | Show a file (image, PDF, Markdown, diff, …) in a preview pane |
-| `close_pane` | Close a browser, preview or files pane opened from the agent's terminal: by this server, an earlier one or the CLI (`cmds browser open`, `cmds open`); refuses others |
+| `terminal_split` | Open a terminal pane split off the agent's terminal (`direction` `right` / `down`, `cwd`), without taking the focus, and type `command` into its shell (a dev server, a watcher); the pane stays when the command exits. Returns the pane id |
+| `terminal_read` | The visible screen of a terminal pane opened from the agent's terminal, or its last `lines` lines including scrollback (at most 2000) |
+| `terminal_send` | Type `text` into such a pane (`enter: true` presses Return; `"\u0003"` is Ctrl-C) |
+| `list_panes` | The panes of the agent's workspace, marking its own and those opened from it |
+| `list_ports` | Ports the workspaces' processes listen on, with their workspace (open one with `browser_open`) |
+| `close_pane` | Close a pane opened from the agent's terminal: by this server, an earlier one or the CLI (`cmds browser open`, `cmds open`, `cmds split`); refuses others |
 | `set_status` | Sidebar status text for the agent's workspace |
 
 The browser tools use the last browser pane the server opened unless given `pane`. cmds remembers which terminal pane
-each browser, preview or files pane was opened from over the API (also across a relaunch), so `close_pane` works after
-the MCP server restarted and for panes the agent opened with the CLI. Panes opened from another terminal or by you stay
-open; the refusal points the agent to `cmds close-pane <id>`, for when you ask for it. The server's instructions tell the
+each pane was opened from over the API (also across a relaunch), so `close_pane` works after the MCP server restarted and
+for panes the agent opened with the CLI. Panes opened from another terminal or by you stay open; the refusal points the
+agent to `cmds close-pane <id>`, for when you ask for it. `terminal_read` and `terminal_send` work the same way: only on
+terminal panes opened from the agent's terminal (`terminal_split`, `cmds split` there), never on its own terminal, your
+panes or another agent's; both the server and the app check it. In an SSH pane the server can only reach that pane (the
+[remote socket](../internals/ssh.md) allows no splits), so the terminal tools refuse there. The server's instructions tell the
 agent to use these tools rather than Chrome inside cmds, and Chrome only when you ask for it, for pages that need your
 Chrome sign-ins (browser panes do not share them), or for what `browser_eval` cannot do (file uploads). Outside a cmds
 terminal (`CMDS_PANE_ID` not set) the server offers no tools, so registering it for every project is harmless.

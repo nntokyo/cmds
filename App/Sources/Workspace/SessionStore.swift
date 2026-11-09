@@ -35,8 +35,8 @@ struct SessionState: Codable {
         /// Schedule tag of each terminal pane that has one (`Pane.scheduleTag`). Added later (schedules phase 2): older
         /// versions ignore it and drop it when they save, so a schedule then finds no pane and skips its run.
         var paneTags: [PaneTag]? = nil
-        /// The opener of each browser, preview or files pane opened from a terminal pane of the workspace (`Pane.openedBy`,
-        /// #165). Added later: older sessions lack it, older versions ignore it.
+        /// The opener of each pane opened from a terminal pane of the workspace (`Pane.openedBy`, #165; terminal panes
+        /// too since #171). Added later: older sessions lack it, older versions ignore it.
         var paneOpeners: [PaneOpener]? = nil
         /// The worktree cmds created the workspace in (`Workspace.worktreePath`, #172). Added later: older sessions lack
         /// it, older versions ignore it.

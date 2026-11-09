@@ -169,6 +169,15 @@ final class APIServer {
             case "debug.palette":
                 // Tests only: the command palette (CommandPalette+Debug.swift).
                 connection.reply(id: id, result: try CommandPalette.debugPerform(params.value, controller: controller))
+            case "debug.sidebar_port":
+                // Tests only: a click on port `index` (default 0) of a workspace's sidebar row (#171).
+                let workspace = try controller.resolveWorkspace(try params.string("workspace"))
+                let sidebar = (controller.window?.contentViewController as? NSSplitViewController)?
+                    .splitViewItems.first?.viewController as? SidebarViewController
+                guard let port = sidebar?.debugClickPort(workspaceID: workspace.id, index: try params.int("index") ?? 0) else {
+                    throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
+                }
+                connection.reply(id: id, result: ["port": .number(Double(port))])
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 SettingsWindowController.shared.showSettings(nil)
@@ -351,9 +360,11 @@ final class APIServer {
         case "pane.close":
             try controller.closePane(id: try params.string("pane"), openedBy: try params.string("openedBy"))
         case "pane.send_text":
-            try controller.sendText(paneID: try params.string("pane"), text: try params.required("text"))
+            try controller.sendText(paneID: try params.string("pane"), text: try params.required("text"),
+                                    openedBy: try params.string("openedBy"))
         case "pane.read_text":
-            return ["text": .string(try controller.readText(paneID: try params.string("pane"), scrollback: try params.int("scrollback")))]
+            return ["text": .string(try controller.readText(paneID: try params.string("pane"), scrollback: try params.int("scrollback"),
+                                                            openedBy: try params.string("openedBy")))]
 
         case "notify":
             try controller.notify(paneID: try params.string("pane"), title: try params.string("title"), body: try params.required("body"))

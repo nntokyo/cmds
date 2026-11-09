@@ -27,6 +27,31 @@ extension CLI {
             let workspaces = try perform { try result.decode([WorkspaceInfo].self) }
             print(Format.workspaces(workspaces, currentPane: ctx.envPane), terminator: "")
         },
+        Command(name: "ports", usage: "ports [--workspace W]",
+                summary: "List the TCP ports processes in the workspaces listen on (dev servers), with their workspace.",
+                details: """
+                    One line per port: the URL, the workspace id and title (* the current workspace). The sidebar shows
+                    the same ports; clicking one there opens it in a browser split (`cmds browser open URL` does too).
+                    --workspace lists one workspace's only.
+                    """,
+                options: ["workspace"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds ports [--workspace W]")
+            let result = try ctx.call("workspace.list")
+            var workspaces = try perform { try result.decode([WorkspaceInfo].self) }
+            if let id = ctx.args[option: "workspace"] {
+                workspaces = workspaces.filter { $0.id == id }
+                guard !workspaces.isEmpty else { throw CLIError.failure("workspace not found: \(id)") }
+            }
+            if ctx.json {
+                return ctx.printJSON(.array(workspaces.flatMap { workspace in
+                    workspace.ports.map { port -> JSONValue in
+                        ["port": .number(Double(port)), "url": .string("http://localhost:\(port)"),
+                         "workspace": .string(workspace.id), "title": .string(workspace.title)]
+                    }
+                }))
+            }
+            print(Format.ports(workspaces, currentWorkspace: ctx.envWorkspace), terminator: "")
+        },
         Command(name: "agents", usage: "agents [--subagents [--pane P]]",
                 summary: "Show usage of the AI coding agents in cmds panes (Claude Code, Codex) and account limits.",
                 details: """

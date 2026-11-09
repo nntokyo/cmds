@@ -21,6 +21,8 @@ final class MCPServerTests: XCTestCase {
     private var closedPanes: Set<String> = []
     /// The stub app's `Pane.openedBy`: pane id → the terminal pane it was opened from.
     private var openers: [String: String] = [:]
+    /// The stub app's panes of w1 for pane.list: id → kind.
+    private var paneKinds: [String: PaneKind] = ["p1": .terminal]
 
     private func server(inside: Bool = true) -> MCPServer {
         let environment = inside ? ["CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1"] : [:]
@@ -35,6 +37,23 @@ final class MCPServerTests: XCTestCase {
                     throw CLIError.failure("pane \(pane) was not opened from pane \(openedBy)")
                 }
                 self.closedPanes.insert(pane)
+            }
+            if method == "pane.split" {
+                // As the app does for a split naming its source pane (#165, #171).
+                let id = self.replies[method]?["id"]?.stringValue ?? "p9"
+                self.paneKinds[id] = PaneKind(rawValue: params["kind"]??.stringValue ?? "terminal") ?? .terminal
+                self.openers[id] = params["pane"]??.stringValue
+            }
+            if method == "pane.read_text" || method == "pane.send_text", let pane = params["pane"]??.stringValue,
+               let openedBy = params["openedBy"]??.stringValue, self.openers[pane] != openedBy {
+                throw CLIError.failure("pane \(pane) was not opened from pane \(openedBy)")
+            }
+            if method == "pane.list" {
+                return .array(self.paneKinds.keys.sorted().map { id in
+                    .object(["id": .string(id), "kind": .string(self.paneKinds[id]!.rawValue), "title": .string("t-\(id)"),
+                             "focused": .bool(id == "p1"), "attention": false,
+                             "openedBy": self.openers[id].map(JSONValue.string) ?? .null])
+                })
             }
             return self.replies[method] ?? .object([:])
         }
@@ -74,8 +93,10 @@ final class MCPServerTests: XCTestCase {
     func testToolsAreListedOnlyInsideCmds() {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
-                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport", "browser_console", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for", "browser_responsive",
-                        "open_file", "close_pane", "set_status"])
+                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
+                        "browser_console", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
+                        "browser_responsive", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
+                        "list_ports", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
         let result = callTool(server(inside: false), "browser_open", #"{"url":"http://localhost:3000"}"#)
@@ -295,6 +316,128 @@ final class MCPServerTests: XCTestCase {
             XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, .string("p1"))
         }
         XCTAssertTrue(closedPanes.isEmpty)
+    }
+
+    // MARK: Terminal tools (#171)
+
+    func testTerminalSplitOpensATerminalWithoutFocusAndTypesTheCommand() throws {
+        let server = server()
+        replies["pane.split"] = .object(["id": "p9", "kind": "terminal"])
+        let result = callTool(server, "terminal_split", #"{"command":"npm run dev","direction":"down","cwd":"/tmp"}"#)
+        XCTAssertEqual(result?["isError"], .bool(false))
+        XCTAssertEqual(text(result), "Opened terminal pane p9 running: npm run dev")
+        let split = try XCTUnwrap(requests.first { $0.method == "pane.split" })
+        XCTAssertEqual(split.params["pane"] ?? nil, .string("p1"))
+        XCTAssertEqual(split.params["kind"] ?? nil, .string("terminal"))
+        XCTAssertEqual(split.params["direction"] ?? nil, .string("down"))
+        XCTAssertEqual(split.params["focus"] ?? nil, .bool(false))
+        XCTAssertNil(split.params["command"] ?? nil)  // typed into the shell instead, so the pane outlives it
+        XCTAssertEqual(requests.last?.method, "pane.send_text")
+        XCTAssertEqual(requests.last?.params["text"] ?? nil, .string("npm run dev\n"))
+        XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, .string("p1"))
+        XCTAssertEqual(server.openedPanes, ["p9"])
+
+        XCTAssertEqual(callTool(server, "terminal_split", #"{"direction":"left"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "terminal_split", #"{"cwd":"/nonexistent/cmds-mcp"}"#)?["isError"], .bool(true))
+        requests.removeAll()
+        XCTAssertEqual(text(callTool(server, "terminal_split")), "Opened terminal pane p9.")
+        XCTAssertEqual(requests.map(\.method), ["pane.split"])
+    }
+
+    func testTerminalReadAndSendReachPanesOpenedFromTheTerminal() throws {
+        openers["p9"] = "p1"  // e.g. `cmds split` in our terminal, or an earlier server
+        paneKinds["p9"] = .terminal
+        replies["pane.read_text"] = .object(["text": "ready on :3000"])
+        let server = server()
+        XCTAssertEqual(text(callTool(server, "terminal_read", #"{"pane":"p9"}"#)), "ready on :3000")
+        XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, .string("p1"))
+        XCTAssertNil(requests.last?.params["scrollback"] ?? nil)
+        _ = callTool(server, "terminal_read", #"{"pane":"p9","lines":999999}"#)
+        XCTAssertEqual(requests.last?.params["scrollback"] ?? nil, .number(Double(MCPServer.maxReadLines)))
+        XCTAssertEqual(callTool(server, "terminal_read", #"{"pane":"p9","lines":0}"#)?["isError"], .bool(true))
+
+        XCTAssertEqual(text(callTool(server, "terminal_send", #"{"pane":"p9","text":"q"}"#)), "Typed into p9.")
+        XCTAssertEqual(requests.last?.params["text"] ?? nil, .string("q"))
+        _ = callTool(server, "terminal_send", #"{"pane":"p9","text":"ls","enter":true}"#)
+        XCTAssertEqual(requests.last?.params["text"] ?? nil, .string("ls\n"))
+        XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, .string("p1"))
+        _ = callTool(server, "terminal_send", #"{"pane":"p9","text":"","enter":true}"#)  // just Return
+        XCTAssertEqual(requests.last?.params["text"] ?? nil, .string("\n"))
+        XCTAssertEqual(callTool(server, "terminal_send", #"{"pane":"p9","text":""}"#)?["isError"], .bool(true))
+    }
+
+    func testTerminalReadAndSendRefuseOtherPanesAndTheirOwn() throws {
+        openers["p8"] = "p2"  // another terminal's pane
+        paneKinds["p8"] = .terminal
+        paneKinds["p7"] = .terminal  // the user's own split, no opener
+        openers["p6"] = "p1"  // a browser opened from us: not a terminal
+        paneKinds["p6"] = .browser
+        let server = server()
+        for tool in ["terminal_read", "terminal_send"] {
+            for pane in ["p8", "p7", "p5"] {  // other terminal's, the user's, unknown
+                let refused = callTool(server, tool, #"{"pane":"\#(pane)","text":"rm -rf ~"}"#)
+                XCTAssertEqual(refused?["isError"], .bool(true))
+                let message = try XCTUnwrap(text(refused))
+                XCTAssertTrue(message.contains("\(pane) was not opened from your terminal (p1)"), message)
+            }
+            let own = callTool(server, tool, #"{"pane":"p1","text":"x"}"#)
+            XCTAssertEqual(own?["isError"], .bool(true))
+            XCTAssertTrue(text(own)?.contains("your own terminal") == true, text(own) ?? "")
+            let browser = callTool(server, tool, #"{"pane":"p6","text":"x"}"#)
+            XCTAssertEqual(browser?["isError"], .bool(true))
+            XCTAssertTrue(text(browser)?.contains("not a terminal") == true, text(browser) ?? "")
+        }
+        XCTAssertFalse(requests.contains { $0.method == "pane.read_text" || $0.method == "pane.send_text" })
+        XCTAssertEqual(callTool(server, "terminal_read")?["isError"], .bool(true))  // missing pane
+    }
+
+    /// The app checks the opener too (it may have changed since the list): its refusal reaches the agent.
+    func testTheAppsRefusalIsAToolError() {
+        let server = MCPServer(environment: ["CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1"]) { method, _, _ in
+            if method == "pane.list" {
+                return .array([.object(["id": "p9", "kind": "terminal", "title": "t", "focused": false, "attention": false,
+                                        "openedBy": "p1"])])
+            }
+            throw CLIError.failure("pane p9 was not opened from pane p1")
+        }
+        let result = callTool(server, "terminal_send", #"{"pane":"p9","text":"x"}"#)
+        XCTAssertEqual(result?["isError"], .bool(true))
+        XCTAssertEqual(text(result), "pane p9 was not opened from pane p1")
+    }
+
+    func testListPanesMarksOursAndOpenedOnes() throws {
+        openers["p9"] = "p1"
+        paneKinds["p9"] = .terminal
+        paneKinds["p7"] = .browser
+        let listing = try XCTUnwrap(text(callTool(server(), "list_panes")))
+        XCTAssertEqual(requests.last?.params["workspace"] ?? nil, .string("w1"))
+        let lines = listing.split(separator: "\n").map(String.init)
+        XCTAssertEqual(lines.count, 3)
+        XCTAssertTrue(lines[0].hasPrefix("p1  terminal") && lines[0].contains("[yours, focused]"), lines[0])
+        XCTAssertTrue(lines[1].hasPrefix("p7  browser") && !lines[1].contains("["), lines[1])
+        XCTAssertTrue(lines[2].hasPrefix("p9  terminal") && lines[2].contains("[opened from your terminal]"), lines[2])
+    }
+
+    func testListPorts() throws {
+        replies["workspace.list"] = .array([
+            .object(["id": "w1", "title": "app", "selected": true, "attention": false, "panes": .array([]), "ports": [3000, 5173]]),
+            .object(["id": "w2", "title": "api", "selected": false, "attention": false, "panes": .array([]), "ports": [8080]]),
+        ])
+        XCTAssertEqual(text(callTool(server(), "list_ports")), """
+            http://localhost:3000  w1 app (your workspace)
+            http://localhost:5173  w1 app (your workspace)
+            http://localhost:8080  w2 api
+            """)
+        replies["workspace.list"] = .array([])
+        XCTAssertEqual(text(callTool(server(), "list_ports")), "No listening ports.")
+    }
+
+    func testClosePaneClosesATerminalPaneTheServerSplit() {
+        let server = server()
+        replies["pane.split"] = .object(["id": "p9", "kind": "terminal"])
+        _ = callTool(server, "terminal_split")
+        XCTAssertEqual(text(callTool(server, "close_pane", #"{"pane":"p9"}"#)), "Closed p9.")
+        XCTAssertTrue(closedPanes.contains("p9"))
     }
 
     func testOpenFileChecksThePathAndOpensWithoutFocus() throws {

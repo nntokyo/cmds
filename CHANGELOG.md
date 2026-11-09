@@ -9,6 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `cmds mcp`: terminal tools for agents that only speak MCP (#171). `terminal_split` opens a terminal pane beside the
+  agent's terminal without taking the focus and types a command into its shell (the pane and its output stay when the
+  command exits); `terminal_read` (screen or last lines with scrollback) and `terminal_send` (text, Return) reach only
+  terminal panes opened from the agent's terminal (`terminal_split`, `cmds split`), never its own, the user's or
+  another agent's, checked by the server and by the app (`openedBy` on `pane.read_text` / `pane.send_text`);
+  `list_panes` and `list_ports`. Terminal panes now remember the terminal they were split from over the API, so
+  `close_pane` closes them too.
+
+- Mac: clicking a listening port in the sidebar opens it in a browser split of that workspace; `cmds ports` lists the
+  ports with their workspaces (#171).
+
 - Mac: find in a terminal pane (#173). Edit › Find › Find… (⌘F) opens a find bar over the pane: libghostty's own
   search highlights every hit in the scrollback and on the screen and scrolls to the selected one; Find Next / Find
   Previous (⌘G / ⇧⌘G, Return / ⇧Return in the bar) go up and down through them, Esc closes. Match Case and Regular

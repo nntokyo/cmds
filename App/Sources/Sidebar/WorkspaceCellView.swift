@@ -24,6 +24,8 @@ final class WorkspaceCellView: NSTableCellView {
 
     /// The row's × was clicked (the sidebar confirms and closes the workspace).
     var onClose: ((String) -> Void)?
+    /// A listening port was clicked (the sidebar opens it in a browser split of the workspace; #171).
+    var onOpenPort: ((_ workspaceID: String, _ port: Int) -> Void)?
     private var workspaceID: String?
 
     /// Holds the state dot or, while the agent works, a small spinner (the slot keeps its width so the title never moves).
@@ -46,7 +48,7 @@ final class WorkspaceCellView: NSTableCellView {
     private let hostLabel = NSTextField(labelWithString: "")
     private let branchLabel = NSTextField(labelWithString: "")
     private let directoryLabel = PathLabel(labelWithString: "")
-    private let portsLabel = NSTextField(labelWithString: "")
+    private let portsLabel = PortsLabel(labelWithString: "")
     private let usageLabel = NSTextField(labelWithString: "")
     /// The workspace's agent pane: `Claude Opus 4.5` over `ctx 53% · $117.99` (account limits are in the footer).
     private let agentNameLabel = NSTextField(labelWithString: "")
@@ -111,6 +113,11 @@ final class WorkspaceCellView: NSTableCellView {
         directoryLabel.lineBreakMode = .byTruncatingHead
         portsLabel.font = Self.monoFont
         portsLabel.textColor = .systemGreen
+        portsLabel.toolTip = String(localized: "Click a port to open it in a browser split")
+        portsLabel.onClick = { [weak self] port in
+            guard let self, let id = self.workspaceID else { return }
+            self.onOpenPort?(id, port)
+        }
         usageLabel.font = Self.usageFont
         usageLabel.lineBreakMode = .byClipping
         usageLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -256,6 +263,11 @@ final class WorkspaceCellView: NSTableCellView {
         usageKey = nil
     }
 
+    #if DEBUG
+    /// For `debug.sidebar_port`: the row's ports label, as shown.
+    var debugPortsLabel: PortsLabel? { portsLabel.isHidden ? nil : portsLabel }
+    #endif
+
     @MainActor
     func configure(with workspace: Workspace, index: Int) {
         applyTextSize()
@@ -280,7 +292,7 @@ final class WorkspaceCellView: NSTableCellView {
         directoryLabel.isHidden = directory == nil || topic != nil || !AppSettings.shared.sidebar(.directory)
         statusRow.isHidden = !Self.showsStatusRow(workspace)
         portsLabel.isHidden = !Self.showsPorts(workspace)
-        portsLabel.stringValue = workspace.portsText
+        portsLabel.ports = workspace.ports
         usageLabel.isHidden = !Self.showsUsage(workspace)
         agentLabel.isHidden = !Self.showsAgent(workspace)
         agentNameLabel.isHidden = agentLabel.isHidden
@@ -539,5 +551,58 @@ final class WorkspaceCellView: NSTableCellView {
         result.addAttributes([.font: detailFont, .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: paragraph],
                              range: NSRange(location: 0, length: result.length))
         return result
+    }
+}
+
+/// The sidebar row's `:3000  :5173` (`Workspace.portsText`): a click on a port opens it (`onClick`), with a pointing
+/// hand over the label. The click does not select the row; opening the port shows the workspace anyway.
+final class PortsLabel: NSTextField {
+    var ports: [Int] = [] {
+        didSet {
+            guard ports != oldValue else { return }
+            stringValue = ports.map { ":\($0)" }.joined(separator: "  ")
+            window?.invalidateCursorRects(for: self)
+        }
+    }
+    var onClick: ((Int) -> Void)?
+
+    override func resetCursorRects() {
+        if !ports.isEmpty { addCursorRect(bounds, cursor: .pointingHand) }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let port = port(at: convert(event.locationInWindow, from: nil).x) else { return super.mouseDown(with: event) }
+        onClick?(port)
+    }
+
+    #if DEBUG
+    /// For `debug.sidebar_port`: clicks the middle of port `index`'s text, as the mouse would. Returns the port opened.
+    func debugClick(index: Int) -> Int? {
+        guard ports.indices.contains(index) else { return nil }
+        let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)]
+        let before = ports.prefix(index).map { ":\($0)  " }.joined()
+        let start = (before as NSString).size(withAttributes: attributes).width
+        let width = (":\(ports[index])" as NSString).size(withAttributes: attributes).width
+        let inset = cell?.titleRect(forBounds: bounds).minX ?? 0
+        guard let port = port(at: inset + start + width / 2) else { return nil }
+        onClick?(port)
+        return port
+    }
+    #endif
+
+    /// The port whose text (`:3000` plus half the gap on each side) is under `x`; the last one past the end.
+    func port(at x: CGFloat) -> Int? {
+        guard !ports.isEmpty else { return nil }
+        let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)]
+        let inset = (cell?.titleRect(forBounds: bounds).minX ?? 0)
+        var text = ""
+        for (index, port) in ports.enumerated() {
+            if index > 0 { text += "  " }
+            text += ":\(port)"
+            let end = (text as NSString).size(withAttributes: attributes).width + inset
+            let gap = ("  " as NSString).size(withAttributes: attributes).width / 2
+            if x <= end + gap { return port }
+        }
+        return ports.last
     }
 }

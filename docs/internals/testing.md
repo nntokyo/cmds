@@ -99,6 +99,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   --pane P` (or `cmds browser eval`). `debug.browser {pane}` (DEBUG builds) returns the toolbar's width and
   breakpoint text, the web view's frame and size, the scale, the device menu's items and the pane drawn without its
   page; `cmds browser snapshot` has the page at the device size. Relaunch to check the setting is restored.
+- `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
+  row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
+- `cmds mcp` terminal tools (#171), in an isolated instance: run `cmds mcp` with `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID`
+  of a terminal pane the test created and `CMDS_SUPPORT_DIR` set, write JSON-RPC lines to it (`initialize`, then
+  `tools/call` terminal_split with a command, terminal_read, terminal_send, list_panes, list_ports), and check that
+  terminal_read / terminal_send refuse the caller's own pane and a pane split from another terminal.
 - `debug.recent_sessions {open?, snapshot?}` (DEBUG builds) returns the items of File › Recent Agent Sessions
   (title, checked, enabled, tooltip); `open` (index of a session item) does what choosing it does and returns the
   `problem` the alert would show; `snapshot: true` adds `png_base64`, the window drawn off screen. Seed
