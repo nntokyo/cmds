@@ -107,8 +107,9 @@ final class AppSettings: NSObject {
     static let showSubagentsKey = "ShowSubagents"
     static let showInMenuBarKey = "ShowInMenuBar"
     static let browserInspectableKey = "BrowserInspectable"
+    static let memoryWarningKey = "MemoryWarning"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
-                               showSubagentsKey, showInMenuBarKey, browserInspectableKey] + MenuBarOption.allCases.map(\.rawValue)
+                               showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue)
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -208,6 +209,13 @@ final class AppSettings: NSObject {
     var browserInspectable: Bool {
         get { defaults.bool(forKey: Self.browserInspectableKey) }
         set { set(newValue ? true : nil, forKey: Self.browserInspectableKey) }
+    }
+
+    /// A notification when memory pressure stays at warning or worse for a minute (Settings › General, #193).
+    /// On by default; only "off" is stored.
+    var memoryWarning: Bool {
+        get { defaults.object(forKey: Self.memoryWarningKey) as? Bool ?? true }
+        set { set(newValue ? nil : false, forKey: Self.memoryWarningKey) }
     }
 
     /// An on-by-default switch (Settings › Sidebar, Settings › Menu Bar); only "off" is stored.

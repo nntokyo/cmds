@@ -16,6 +16,8 @@ final class SystemUsageView: NSView {
     private let awakeButton = KeepAwakeIndicator.makeButton()
     /// The next schedule run (`⏱ Morning tests · 09:00`); click opens Window › Schedules. Hidden when none.
     private let scheduleButton = NextScheduleIndicator.makeButton()
+    /// "3 leftover processes · 1.2 GB" (#193); click lists them with Stop buttons. Hidden when none.
+    private let leftoverButton = LeftoverIndicator.makeButton()
 
     /// Title column: "CPU"/"Mem" alone, wide enough for "Claude"/"Codex" when agent rows show (meters stay aligned).
     /// Grows for longer translations ("メモリ").
@@ -36,6 +38,7 @@ final class SystemUsageView: NSView {
         memoryRow.applyTextSize()
         KeepAwakeIndicator.applyTextSize(to: awakeButton)
         NextScheduleIndicator.applyTextSize(to: scheduleButton)
+        LeftoverIndicator.applyTextSize(to: leftoverButton)
         let width = Self.titleWidth
         cpuRow.titleWidth = width
         memoryRow.titleWidth = width
@@ -47,7 +50,7 @@ final class SystemUsageView: NSView {
         agentStack.alignment = .leading
         agentStack.spacing = 5
         agentStack.isHidden = true
-        stack.setViews([scheduleButton, awakeButton, agentStack, cpuRow, memoryRow], in: .top)
+        stack.setViews([scheduleButton, awakeButton, agentStack, cpuRow, memoryRow, leftoverButton], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 5
@@ -107,6 +110,10 @@ final class SystemUsageView: NSView {
     func setShowsSystem(_ shows: Bool) {
         cpuRow.isHidden = !shows
         memoryRow.isHidden = !shows
+    }
+
+    func update(leftovers: ProcessList) {
+        LeftoverIndicator.apply(leftovers, to: leftoverButton)
     }
 
     func update(nextSchedule hint: ScheduleText.NextRunHint?) {

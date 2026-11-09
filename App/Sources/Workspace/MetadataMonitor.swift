@@ -91,7 +91,7 @@ final class MetadataMonitor {
                     self?.controller.applyMetadata(result)
                     self?.controller.applyAgentScan(codex)
                     self?.controller.scanClaudeLimits()
-                    self?.controller.applyResourceUsage(scan.usage, system: system)
+                    self?.controller.applyResourceUsage(scan.usage, system: system, processes: scan.processes)
                 }
             }
         }
@@ -108,6 +108,8 @@ struct ProcessScan: Sendable {
     var workspaceProcesses = 0
     /// Codex processes of our user (sessions in our panes and shared daemons), for `CodexSessionWatcher`.
     var codexProcesses: [CodexProcess] = []
+    /// Every live process started from our terminals, also after its pane closed (`system.processes`, #193).
+    var processes: [ScannedProcess] = []
 }
 
 /// Finds the processes running in this app's terminals and reports their TCP listening ports and CPU/memory
@@ -128,9 +130,13 @@ final class ProcessScanner: @unchecked Sendable {
         var paneID: String?
         /// Codex processes only.
         var codexRole: AgentProcessClassifier.CodexRole?
+        /// Executable and arguments (`ScannedProcess.command`).
+        var command: String?
     }
 
     private var environmentByProcess: [ProcessKey: ProcessFacts] = [:]
+    /// Where each process was first seen (#193): detached processes keep their pane after it closed.
+    private var origins = ProcessOrigins()
     private var argumentBuffer = [UInt8]()
     private let uid = getuid()
     private let ownPID = getpid()
@@ -159,6 +165,7 @@ final class ProcessScanner: @unchecked Sendable {
         var seen = Set<ProcessKey>()
         var codexCandidates: [(pid: pid_t, start: UInt64, tty: UInt32?, facts: ProcessFacts)] = []
         var paneByTTY: [UInt32: String] = [:]
+        var details: [pid_t: (start: UInt64, name: String, facts: ProcessFacts)] = [:]
         for pid in pids {
             var info = proc_bsdinfo()
             let size = Int32(MemoryLayout<proc_bsdinfo>.size)
@@ -179,6 +186,7 @@ final class ProcessScanner: @unchecked Sendable {
                     environmentByProcess[key] = facts
                 }
                 environment = facts.environment
+                details[pid] = (start, processName(info), facts)
                 if facts.codexRole != nil { codexCandidates.append((pid, start, hasTTY ? info.e_tdev : nil, facts)) }
             }
             identities.append(ProcessIdentity(pid: pid, parentPID: pid_t(bitPattern: info.pbi_ppid),
@@ -202,26 +210,83 @@ final class ProcessScanner: @unchecked Sendable {
         }
 
         let workspaces = attributor.attribute(identities, foregroundGroups: foregroundGroups)
+        let panes = attributePanes(identities, details: details, paneByTTY: paneByTTY)
         var ports: [String: Set<Int>] = [:]
         var samples: [ProcessUsageSample] = []
+        var sampled: [pid_t: ProcessOrigins.Origin] = [:]
+        var aliveKeys = Set<ProcessOrigins.Key>()
         for identity in identities {
-            guard let workspace = workspaces[identity.pid] else { continue }
+            // The origin sticks (#193): a process whose pane closed stays in its workspace, as a leftover.
+            var origin: ProcessOrigins.Origin?
+            if let detail = details[identity.pid] {
+                let key = ProcessOrigins.Key(pid: identity.pid, start: detail.start)
+                aliveKeys.insert(key)
+                origin = origins.resolve(key, workspace: workspaces[identity.pid], pane: panes[identity.pid])
+            }
+            guard let workspace = origin?.workspace ?? workspaces[identity.pid] else { continue }
             if let sample = usageSample(pid: identity.pid, parentPID: identity.parentPID, workspace: workspace) {
                 samples.append(sample)
+                if let origin { sampled[identity.pid] = origin }
             }
             let listening = listeningPorts(pid: identity.pid)
             if !listening.isEmpty { ports[workspace, default: []].formUnion(listening) }
         }
+        origins.keep(only: aliveKeys)
         // Listed after every sample was read: a sampled process missing here was reaped during the scan.
         let alive = Set(allPIDs())
         let usage = accountant.update(samples: samples, alivePIDs: alive, now: nanoseconds(mach_absolute_time()))
+        let processes = samples.compactMap { sample -> ScannedProcess? in
+            guard alive.contains(sample.pid), let origin = sampled[sample.pid], let detail = details[sample.pid] else { return nil }
+            return ScannedProcess(pid: sample.pid, startMicroseconds: detail.start, name: detail.name,
+                                  command: detail.facts.command, workspace: origin.workspace, pane: origin.pane,
+                                  memoryBytes: sample.memoryBytes, cpuPercent: accountant.processCPUPercent[sample.pid])
+        }
         return ProcessScan(ports: ports.mapValues { $0.sorted() }, usage: usage,
                            listedProcesses: pids.count, workspaceProcesses: samples.count,
-                           codexProcesses: codexProcesses)
+                           codexProcesses: codexProcesses, processes: processes)
+    }
+
+    /// Pane of each of our user's processes: its `CMDS_PANE_ID`, else the pane of its terminal, else its nearest
+    /// ancestor's.
+    private func attributePanes(_ identities: [ProcessIdentity],
+                                details: [pid_t: (start: UInt64, name: String, facts: ProcessFacts)],
+                                paneByTTY: [UInt32: String]) -> [pid_t: String] {
+        var direct: [pid_t: String] = [:]
+        var parents: [pid_t: pid_t] = [:]
+        for identity in identities where identity.isOwnUser {
+            parents[identity.pid] = identity.parentPID
+            if let pane = details[identity.pid]?.facts.paneID ?? identity.tty.flatMap({ paneByTTY[$0] }) {
+                direct[identity.pid] = pane
+            }
+        }
+        var result = direct
+        for pid in parents.keys where direct[pid] == nil {
+            var parent = parents[pid] ?? 0
+            var hops = 0
+            while hops < 64, parent > 1, parent != ownPID {
+                if let pane = direct[parent] {
+                    result[pid] = pane
+                    break
+                }
+                guard let next = parents[parent] else { break }
+                parent = next
+                hops += 1
+            }
+        }
+        return result
+    }
+
+    /// The process's name as Activity Monitor shows it (`pbi_name`, else the 16-character `pbi_comm`).
+    private func processName(_ info: proc_bsdinfo) -> String {
+        var info = info
+        let name = withUnsafeBytes(of: &info.pbi_name) { String(cString: $0.bindMemory(to: CChar.self).baseAddress!) }
+        if !name.isEmpty { return name }
+        return withUnsafeBytes(of: &info.pbi_comm) { String(cString: $0.bindMemory(to: CChar.self).baseAddress!) }
     }
 
     private func processFacts(pid: pid_t) -> ProcessFacts {
-        guard let parsed = processArguments(pid: pid, names: [CmdsEnv.workspaceID, CmdsEnv.socketPath, CmdsEnv.paneID]) else {
+        guard let parsed = processArguments(pid: pid, names: [CmdsEnv.workspaceID, CmdsEnv.socketPath, CmdsEnv.paneID],
+                                            maxArguments: 32) else {
             return ProcessFacts(environment: .unknown)
         }
         let values = parsed.environment
@@ -232,9 +297,12 @@ final class ProcessScanner: @unchecked Sendable {
             facts.environment = .workspace(workspace)
             facts.paneID = values[CmdsEnv.paneID].flatMap { $0.isEmpty ? nil : $0 }
         }
-        if AgentProcessClassifier.agent(executablePath: parsed.executable, arguments: parsed.arguments) == .codex {
-            facts.codexRole = AgentProcessClassifier.codexRole(arguments: parsed.arguments)
+        let arguments = Array(parsed.arguments.prefix(6))
+        if AgentProcessClassifier.agent(executablePath: parsed.executable, arguments: arguments) == .codex {
+            facts.codexRole = AgentProcessClassifier.codexRole(arguments: arguments)
         }
+        let command = parsed.arguments.isEmpty ? parsed.executable : parsed.arguments.joined(separator: " ")
+        if !command.isEmpty { facts.command = String(command.prefix(ProcessEntry.maxCommandLength + 1)) }
         return facts
     }
 
@@ -299,7 +367,8 @@ final class ProcessScanner: @unchecked Sendable {
 
     /// Executable path, first arguments and the given variables of the process's initial environment
     /// (macOS hides the environment of Apple platform binaries).
-    private func processArguments(pid: pid_t, names: [String]) -> (executable: String, arguments: [String], environment: [String: String])? {
+    private func processArguments(pid: pid_t, names: [String],
+                                  maxArguments: Int = 6) -> (executable: String, arguments: [String], environment: [String: String])? {
         var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
         if argumentBuffer.isEmpty {
             var argMax: Int32 = 0
@@ -312,7 +381,8 @@ final class ProcessScanner: @unchecked Sendable {
         let ok = argumentBuffer.withUnsafeMutableBytes { sysctl(&mib, 3, $0.baseAddress, &size, nil, 0) } == 0
         guard ok, size > MemoryLayout<Int32>.size else { return nil }
         return argumentBuffer.withUnsafeBytes { raw in
-            ProcessArguments.parse(UnsafeRawBufferPointer(rebasing: raw[0..<size]), environmentNames: names)
+            ProcessArguments.parse(UnsafeRawBufferPointer(rebasing: raw[0..<size]), maxArguments: maxArguments,
+                                   environmentNames: names)
         }
     }
 

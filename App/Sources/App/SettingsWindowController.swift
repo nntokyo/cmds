@@ -24,6 +24,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let subagentsPopup = NSPopUpButton()
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show in menu bar"), target: nil, action: nil)
     private let inspectableCheckbox = NSButton(checkboxWithTitle: String(localized: "Allow Safari's Web Inspector"), target: nil, action: nil)
+    private let memoryWarningCheckbox = NSButton(checkboxWithTitle: String(localized: "Warn when memory is short"), target: nil, action: nil)
     /// Settings › Sidebar: what the rows and the footer show (#107).
     private let sidebarItemCheckboxes = SettingsWindowController.checkboxes(for: SidebarItem.self)
     /// Settings › Menu Bar: one checkbox per part of the item (#105).
@@ -127,6 +128,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         menuBarCheckbox.action = #selector(menuBarToggled)
         inspectableCheckbox.target = self
         inspectableCheckbox.action = #selector(inspectableToggled)
+        memoryWarningCheckbox.target = self
+        memoryWarningCheckbox.action = #selector(memoryWarningToggled)
         for checkbox in Array(menuBarOptionCheckboxes.values) + Array(sidebarItemCheckboxes.values) {
             checkbox.target = self
             checkbox.action = #selector(optionToggled(_:))
@@ -154,6 +157,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.label(String(localized: "Preview zoom:")), previewZoomPopup],
             [NSGridCell.emptyContentView, inspectableCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
+            [Self.header(String(localized: "Memory")), NSGridCell.emptyContentView],
+            [NSGridCell.emptyContentView, memoryWarningCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "A notification when memory pressure stays at warning or worse for a minute (at most every 30 minutes), with the swap in use and the heaviest process started from a cmds terminal."))],
         ]
         let sidebar: [[NSView]] = [[Self.label(String(localized: "Text size:")), sidebarControl]]
             + sidebarRows(SidebarItem.rowItems, String(localized: "Show in each workspace:", comment: "Settings › Sidebar"))
@@ -188,7 +194,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let tabs = NSTabViewController()
         tabs.tabStyle = .toolbar
         for (tab, title, symbol, rows, headers) in [
-            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4]),
+            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 9]),
             (.sidebar, String(localized: "Sidebar"), "sidebar.left", sidebar, []),
             (.agents, String(localized: "Agents"), "sparkles", agents, []),
             (.menuBar, String(localized: "Menu Bar"), "menubar.rectangle", menuBar, []),
@@ -316,6 +322,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         subagentsPopup.selectItem(at: subagentsPopup.indexOfItem(withRepresentedObject: settings.showSubagents.rawValue))
         menuBarCheckbox.state = settings.showInMenuBar ? .on : .off
         inspectableCheckbox.state = settings.browserInspectable ? .on : .off
+        memoryWarningCheckbox.state = settings.memoryWarning ? .on : .off
         for (item, checkbox) in sidebarItemCheckboxes { checkbox.state = settings.sidebar(item) ? .on : .off }
         for (option, checkbox) in menuBarOptionCheckboxes {
             checkbox.state = settings.menuBar(option) ? .on : .off
@@ -399,6 +406,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func inspectableToggled() {
         settings.browserInspectable = inspectableCheckbox.state == .on
+    }
+
+    @objc private func memoryWarningToggled() {
+        settings.memoryWarning = memoryWarningCheckbox.state == .on
     }
 
     @objc private func menuBarToggled() {

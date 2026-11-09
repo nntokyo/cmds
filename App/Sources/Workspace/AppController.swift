@@ -68,6 +68,10 @@ final class AppController {
     private(set) var systemStats: SystemStats?
     /// `systemStats` plus the memory breakdown (sidebar tooltip).
     private(set) var systemSample: SystemSample?
+    /// Processes started from our terminals, from the latest scan (`system.processes`, AppController+Processes, #193).
+    private(set) var scannedProcesses: [ScannedProcess] = []
+    /// When to post the "memory is short" notification (AppController+Processes).
+    var memoryAlarm = MemoryPressureAlarm()
 
     /// Latest account limits per agent kind (from whichever pane reported them last). Written only by
     /// AppController+Agents.
@@ -834,12 +838,15 @@ final class AppController {
     }
 
     /// Applies a resource-usage sample (from the same background scan). Workspaces missing from `usage`
-    /// had no live process. `system` is nil until the sampler has two readings.
-    func applyResourceUsage(_ usage: [String: ResourceUsage], system: SystemSample?) {
+    /// had no live process. `system` is nil until the sampler has two readings. `processes`: every process started
+    /// from our terminals (#193).
+    func applyResourceUsage(_ usage: [String: ResourceUsage], system: SystemSample?, processes: [ScannedProcess] = []) {
         for workspace in workspaces { workspace.applyUsage(usage[workspace.id]) }
+        scannedProcesses = processes
         if let system {
             systemSample = system
             systemStats = system.stats
+            checkMemoryPressure(system)
         }
         usageSubject.send()
     }

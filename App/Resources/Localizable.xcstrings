@@ -644,6 +644,35 @@
         }
       }
     },
+    "%lld leftover processes · %@": {
+      "comment": "sidebar footer: processes whose pane was closed, and their memory",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残存プロセス%1$lld個 · %2$@"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld leftover process · %2$@"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld leftover processes · %2$@"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld min ago": {
       "comment": "age of agent figures",
       "localizations": {
@@ -857,6 +886,17 @@
         }
       }
     },
+    "(leftover)": {
+      "comment": "process whose pane was closed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（残存）"
+          }
+        }
+      }
+    },
     ", ": {
       "comment": "list separator",
       "localizations": {
@@ -996,6 +1036,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このアカウント（CLAUDE_CONFIG_DIR）を使うシェルで新しいワークスペースを開きます。そこでclaudeを起動し、初回は/loginしてください"
+          }
+        }
+      }
+    },
+    "A notification when memory pressure stays at warning or worse for a minute (at most every 30 minutes), with the swap in use and the heaviest process started from a cmds terminal.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリプレッシャーが1分間「警告」以上のままのときに通知します（30分に1回まで）。使用中のスワップと、cmdsのターミナルから起動した中で最もメモリを使っているプロセスを示します。"
           }
         }
       }
@@ -2210,6 +2260,17 @@
         }
       }
     },
+    "Close what you do not need, or wait before starting another build.": {
+      "comment": "memory warning notification",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不要なものを閉じるか、次のビルドを始める前に待ってください。"
+          }
+        }
+      }
+    },
     "Close “%@”?": {
       "localizations": {
         "ja": {
@@ -2850,6 +2911,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "エージェントセッションを再開できませんでした"
+          }
+        }
+      }
+    },
+    "Could not stop the process": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロセスを終了できませんでした"
           }
         }
       }
@@ -3744,6 +3815,16 @@
         }
       }
     },
+    "Force Stop": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "強制終了"
+          }
+        }
+      }
+    },
     "Forget this account’s limit (e.g. when it has reset early)": {
       "localizations": {
         "ja": {
@@ -3908,6 +3989,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロジェクトでまとめる"
+          }
+        }
+      }
+    },
+    "Heaviest:": {
+      "comment": "workspace usage tooltip, before its top processes",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリ使用量の多いプロセス："
+          }
+        }
+      }
+    },
+    "Heaviest: %@ (%@) %@.": {
+      "comment": "memory warning notification: process name, pane id, memory",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最大：%1$@（%2$@）%3$@。"
           }
         }
       }
@@ -4527,6 +4630,16 @@
         }
       }
     },
+    "Leftover Processes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残存プロセス"
+          }
+        }
+      }
+    },
     "Lets a paired iPhone/iPad reach this Mac away from home through an SSH server you use. The connection stays encrypted end to end.": {
       "localizations": {
         "ja": {
@@ -4727,12 +4840,33 @@
         }
       }
     },
+    "Memory": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリ"
+          }
+        }
+      }
+    },
     "Memory %@ (physical footprint)": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "メモリ%@（物理フットプリント）"
+          }
+        }
+      }
+    },
+    "Memory is short": {
+      "comment": "notification title (memory pressure warning)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリが不足しています"
           }
         }
       }
@@ -5296,6 +5430,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”を開けるAppがありません。"
+          }
+        }
+      }
+    },
+    "No leftover processes.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残存プロセスはありません。"
           }
         }
       }
@@ -6000,6 +6144,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "前のワークスペース"
+          }
+        }
+      }
+    },
+    "Processes started from cmds terminals that still run after their pane or workspace was closed. Click to see and stop them.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsのターミナルから起動し、ペインやワークスペースを閉じた後も動いているプロセスです。クリックすると一覧を表示して終了できます。"
           }
         }
       }
@@ -7527,6 +7681,16 @@
         }
       }
     },
+    "Started from cmds terminals whose pane or workspace was closed (dev servers, test runners, browser drivers…). They still use memory. Stop sends SIGTERM; if one keeps running, Force Stop sends SIGKILL.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsのターミナルから起動し、そのペインやワークスペースを閉じた後も動いているプロセス（開発サーバー、テストランナー、ブラウザドライバなど）です。メモリを使い続けます。「中止」はSIGTERMを送ります。止まらないときは「強制終了」でSIGKILLを送ります。"
+          }
+        }
+      }
+    },
     "Starting…": {
       "localizations": {
         "ja": {
@@ -7671,6 +7835,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "成功"
+          }
+        }
+      }
+    },
+    "Swap %@ in use.": {
+      "comment": "memory warning notification",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スワップを%@使用中。"
           }
         }
       }
@@ -9183,6 +9358,16 @@
         }
       }
     },
+    "Warn when memory is short": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリが不足したら通知"
+          }
+        }
+      }
+    },
     "WebKit Default": {
       "localizations": {
         "ja": {
@@ -9957,6 +10142,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ごろリセット"
+          }
+        }
+      }
+    },
+    "see cmds top --leftover": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds top --leftoverで一覧"
           }
         }
       }

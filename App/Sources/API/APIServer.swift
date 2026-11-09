@@ -178,6 +178,19 @@ final class APIServer {
                     throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
                 }
                 connection.reply(id: id, result: ["port": .number(Double(port))])
+            case "debug.memory":
+                // Tests only (#193): the "memory is short" notification text as it would be posted now, the sidebar's
+                // leftover row and a workspace's top processes (its usage tooltip), without waiting for pressure.
+                let leftovers = controller.leftoverProcesses()
+                let text = controller.memoryWarningText(controller.systemSample)
+                var result: [String: JSONValue] = [
+                    "warningTitle": .string(text.title), "warningBody": .string(text.body),
+                    "leftoverRow": leftovers.total == 0 ? .null : .string(LeftoverIndicator.title(leftovers)),
+                ]
+                if let workspaceID = try params.string("workspace") {
+                    result["topProcesses"] = .array(controller.topProcessLines(workspaceID: workspaceID).map { .string($0) })
+                }
+                connection.reply(id: id, result: .object(result))
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 SettingsWindowController.shared.showSettings(nil)
@@ -223,6 +236,12 @@ final class APIServer {
             ]
         case "system.stats":
             return try .from(controller.statsSnapshot())
+        case "system.processes":
+            // Local socket only, like sync.status (#193): not in RemoteAPIPolicy.allowedMethods.
+            return try .from(controller.processList(try ProcessListRequest(params: params.value)))
+        case "system.kill_process":
+            // Local socket only (#193). Only processes the scan attributed to our terminals (ProcessKillRequest.authorize).
+            return try .from(controller.killProcess(try ProcessKillRequest(params: params.value)))
         case "sync.status":
             // Local socket only: not in RemoteAPIPolicy.allowedMethods, so SSH-pane sockets get 403.
             return try .from(SyncStatusReport.current())

@@ -488,7 +488,8 @@ final class WorkspaceCellView: NSTableCellView {
         let cpu = workspace.cpuPercent.map(ResourceFormat.percent) ?? "–"
         let memory = workspace.memoryBytes.map(ResourceFormat.bytes) ?? "–"
         let busy = workspace.isCPUBusy
-        let key = "\(cpu)|\(memory)|\(busy)|\(workspace.processCount)"
+        let top = AppController.shared.topProcessLines(workspaceID: workspace.id)
+        let key = "\(cpu)|\(memory)|\(busy)|\(workspace.processCount)|\(top.joined(separator: "|"))"
         guard key != usageKey else { return }
         usageKey = key
         usageLabel.attributedStringValue = Self.usageText(cpu: cpu, memory: memory, busy: busy)
@@ -501,6 +502,8 @@ final class WorkspaceCellView: NSTableCellView {
                 + String(localized: "Memory \(memory) (physical footprint)") + "\n"
                 + String(localized: "\(count) processes in this workspace's terminals")
                 + (workspace.sshPanes.isEmpty ? "" : "\n" + String(localized: "SSH panes count only the local ssh client, not the server"))
+                + (top.isEmpty ? "" : "\n" + String(localized: "Heaviest:", comment: "workspace usage tooltip, before its top processes")
+                    + top.map { "\n   " + $0 }.joined())
         }
     }
 
