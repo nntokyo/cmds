@@ -3,7 +3,8 @@ import Foundation
 /// The command palette's matcher (#173): every query character must appear in the candidate in order (not
 /// necessarily adjacent); runs of adjacent characters, word starts and an early start score higher. Words of the
 /// query (split at spaces) match independently, in any order. Case, full/half width and hiragana/katakana are
-/// ignored, so `わーく` finds `ワークスペース`.
+/// ignored, so `わーく` finds `ワークスペース`. A candidate may have alternate texts (the English name of a localized
+/// title, #186): a query word that is not in the text, or scores higher in an alternate, matches there.
 public enum FuzzyMatch {
     public struct Result: Equatable, Sendable {
         /// Higher is better.
@@ -17,9 +18,14 @@ public enum FuzzyMatch {
         public let text: String
         let folded: [Character]
         let wordStart: [Bool]
+        /// Other texts matched too, e.g. the English title in a localized UI. Words matched in one are not
+        /// highlighted (`Result.positions` are offsets into `text` only).
+        let alternates: [Candidate]
 
-        public init(_ text: String) {
+        /// - Parameter alternates: also matched; texts equal to `text`, or empty, are dropped.
+        public init(_ text: String, alternates: [String] = []) {
             self.text = text
+            self.alternates = alternates.filter { !$0.isEmpty && $0 != text }.map { Candidate($0) }
             let characters = Array(text)
             folded = characters.map(FuzzyMatch.fold)
             wordStart = characters.indices.map { index in
@@ -49,15 +55,23 @@ public enum FuzzyMatch {
         match(query, Candidate(candidate))
     }
 
-    /// nil when some word of the query is not in the candidate. An empty query matches everything with score 0.
+    /// nil when some word of the query is in neither the candidate's text nor one of its alternates. An empty query
+    /// matches everything with score 0.
     public static func match(_ query: String, _ candidate: Candidate) -> Result? {
         let words = query.split(whereSeparator: { $0 == " " || $0 == "　" }).map { $0.map(fold) }
         var score = 0
         var positions = Set<Int>()
         for word in words {
-            guard let result = matchWord(word, candidate) else { return nil }
-            score += result.score
-            positions.formUnion(result.positions)
+            let own = matchWord(word, candidate)
+            let alternate = candidate.alternates.compactMap { matchWord(word, $0)?.score }.max()
+            if let own, own.score >= alternate ?? Int.min {
+                score += own.score
+                positions.formUnion(own.positions)
+            } else if let alternate {
+                score += alternate
+            } else {
+                return nil
+            }
         }
         return Result(score: score, positions: positions.sorted())
     }
