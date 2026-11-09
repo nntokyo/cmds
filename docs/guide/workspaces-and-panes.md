@@ -136,6 +136,39 @@ cmds can be chosen as the default web browser (**System Settings › Desktop & D
 opened from other apps then open in a browser split beside the focused pane. Passkeys and security keys don't work in
 browser panes yet; they need an entitlement from Apple ([#162](https://github.com/nntokyo/cmds/issues/162)).
 
+### Device sizes and color scheme
+
+To check a responsive layout, click the device button at the right end of the browser toolbar:
+
+- **Fill Pane** (default): the page is as wide as the pane.
+- **Phones / Tablets / Desktops**: iPhone SE (375×667), iPhone 16 (393×852), iPhone 16 Pro Max (440×956), Pixel 7
+  (412×915), iPad Air portrait (820×1180) and landscape (1180×820), 1280×800, 1440×900, 1920×1080. **Custom Size…**
+  takes any width and height from 100 to 4096; **Rotate** swaps them. The page gets exactly that size in CSS pixels
+  (`innerWidth`, media queries) and is scaled down to fit the pane when the pane is smaller. Phone and tablet sizes
+  also send that device's user agent (iPhone Safari, Android Chrome; iPadOS Safari presents itself as Mac Safari).
+- **Color Scheme**: Follow the Mac (default), Light or Dark, as `prefers-color-scheme` for the page.
+- **User Agent**: WebKit's own, one of the device ones, or a custom string. Changing it reloads the page so the server
+  sees it too.
+
+The button is tinted while anything differs from the default. Next to it the toolbar shows the page's CSS width, the
+media-query breakpoint range it is in (`768–1023`, `<640`, `≥1280`; the width thresholds come from the page's
+readable style sheets, `min-width` / `max-width` and `width >= …` ranges), and the scale when the page is scaled down.
+Hover over it for the list of breakpoints. View › Bigger / Smaller apply once the page fills the pane again. The
+setting is kept per pane across relaunches and in exported workspaces.
+
+From a terminal or an agent:
+
+```sh
+cmds browser device iphone-se            # preset (see cmds browser device --list)
+cmds browser device 1024x768 --rotate    # custom size, rotated
+cmds browser device --scheme dark        # only the color scheme
+cmds browser device off                  # fill the pane again
+```
+
+What WebKit on the Mac does **not** emulate: the device pixel ratio (`devicePixelRatio` stays the Mac's), touch
+events, `pointer: coarse` / `hover: none`, `<meta name="viewport">` scaling (the page is laid out at the device width
+whatever its viewport tag says) and `prefers-reduced-motion` (WKWebView has no public setting for it). This is a layout-width, user-agent and color-scheme check; check real mobile behaviour on a device.
+
 ## Preview panes
 
 A preview pane shows a local file next to your terminals and reloads it whenever the file changes (also on atomic
@@ -223,7 +256,7 @@ The `printf` alone gives the cwd (no process, no helper needed); `cmds-remote.sh
 ## Session restore
 
 When cmds quits and starts again, it restores the workspaces, their split layout and titles, and per pane the
-working directory, browser URL, previewed file, files pane folder (with its hidden-files and Follow Terminal
+working directory, browser URL (with its device size and color scheme), previewed file, files pane folder (with its hidden-files and Follow Terminal
 settings) or SSH host. Terminals start fresh shells in their directories
 (screen contents and running programs are not restored); SSH panes wait for you to connect. Coding-agent sessions that
 ran in a pane are offered for resuming: [ai-agents.md](ai-agents.md#resuming-sessions). To move workspaces to another

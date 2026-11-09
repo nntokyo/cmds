@@ -138,6 +138,7 @@ set the sidebar status:
 | `browser_navigate`, `browser_url` | Load a URL; the URL and title |
 | `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs) |
 | `browser_snapshot` | A PNG of the visible page, returned as an image (also when its workspace is not shown) |
+| `browser_set_viewport` | Show the page at a device size (`device`: a preset such as `iphone-se`, `WIDTHxHEIGHT` or `off`; `rotate`), with a user agent and `colorScheme` (`light` / `dark` / `system`), to check responsive layouts ([device sizes](workspaces-and-panes.md#device-sizes-and-color-scheme)) |
 | `open_file` | Show a file (image, PDF, Markdown, diff, …) in a preview pane |
 | `close_pane` | Close a browser, preview or files pane opened from the agent's terminal: by this server, an earlier one or the CLI (`cmds browser open`, `cmds open`); refuses others |
 | `set_status` | Sidebar status text for the agent's workspace |
