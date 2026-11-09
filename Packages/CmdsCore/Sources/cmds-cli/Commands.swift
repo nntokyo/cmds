@@ -130,8 +130,9 @@ extension CLI {
                 details: """
                     Workspace figures cover every process started in its terminals (shells, agents, dev servers…):
                     CPU as in Activity Monitor (100% = one core, so it can exceed 100%), memory = physical footprint.
-                    The system line is the share of all cores, memory used / installed and the memory pressure
-                    (normal, warning, critical). Values are sampled every 2 s.
+                    The system line is the share of all cores, memory used / installed, swap used / swap files (swap
+                    in use means the Mac is short of memory) and the memory pressure (normal, warning, critical).
+                    Values are sampled every 2 s. `cmds top` lists the heaviest processes.
                     The awake line shows whether cmds blocks idle sleep and whether closing the lid sleeps the Mac
                     (cmds › Keep Awake With Lid Closed; JSON: keepAwake {idleAssertion, lidCloseDisabled, …}).
                     --watch (-w) refreshes every 2 s, or the given seconds, until interrupted; with --json it prints
@@ -170,6 +171,7 @@ extension CLI {
                 Thread.sleep(forTimeInterval: interval)
             }
         },
+    ] + processCommands + [  // ProcessCommands.swift
         Command(name: "sync", usage: "sync",
                 summary: "Show the iOS sync status: listener, Bonjour, Bluetooth, SSH remote access and connected devices.",
                 details: """

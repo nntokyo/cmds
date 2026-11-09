@@ -96,7 +96,7 @@ final class MCPServerTests: XCTestCase {
                        ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
                         "browser_console", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
                         "browser_responsive", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
-                        "list_ports", "close_pane", "set_status"])
+                        "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
         let result = callTool(server(inside: false), "browser_open", #"{"url":"http://localhost:3000"}"#)
@@ -460,6 +460,71 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(text(callTool(server(), "set_status", #"{"text":""}"#)), "Cleared the status.")
         XCTAssertEqual(requests.last?.params["workspace"] ?? nil, .string("w1"))
         XCTAssertEqual(callTool(server(), "set_status")?["isError"], .bool(true))
+    }
+
+    func testSystemStatsAdvisesWaitingUnderPressure() throws {
+        func stats(_ level: Int, swap: Bool = true) -> JSONValue {
+            var system: [String: JSONValue] = ["cpuPercent": 23.4, "memoryUsedBytes": 12_025_908_428,
+                                               "memoryTotalBytes": 17_179_869_184, "memoryPressure": .number(Double(level))]
+            if swap {
+                system["swapUsedBytes"] = 4_187_593_113
+                system["swapTotalBytes"] = 5_368_709_120
+            }
+            return .object(["system": .object(system), "workspaces": .array([])])
+        }
+        replies["system.stats"] = stats(2)
+        let wait = try XCTUnwrap(text(callTool(server(), "system_stats")))
+        XCTAssertTrue(wait.hasPrefix("advice: wait"), wait)
+        XCTAssertTrue(wait.contains("memory pressure: warning"), wait)
+        XCTAssertTrue(wait.contains("memory: 11.2 / 16 GB used"), wait)
+        XCTAssertTrue(wait.contains("swap: 3.9 / 5 GB used"), wait)
+        XCTAssertEqual(requests.last?.method, "system.stats")
+
+        // An app from before #193 sends no swap.
+        replies["system.stats"] = stats(1, swap: false)
+        let ok = try XCTUnwrap(text(callTool(server(), "system_stats")))
+        XCTAssertTrue(ok.hasPrefix("advice: ok"), ok)
+        XCTAssertFalse(ok.contains("swap"), ok)
+
+        replies["system.stats"] = .object(["workspaces": .array([])])
+        XCTAssertEqual(text(callTool(server(), "system_stats")), "cmds is still measuring; try again in a second.")
+    }
+
+    func testListProcessesShowsOwnPanesAndLeftovers() throws {
+        paneKinds = ["p1": .terminal, "p9": .terminal, "p4": .terminal]
+        openers = ["p9": "p1"]
+        func entry(_ pid: Int, _ pane: String, memory: Double, leftover: Bool = false) -> JSONValue {
+            var object: [String: JSONValue] = ["pid": .number(Double(pid)), "name": "node", "command": .string("node \(pid).js"),
+                                               "pane": .string(pane), "workspace": "w1", "memoryBytes": .number(memory),
+                                               "started": 1_800_000_000]
+            if leftover { object["leftover"] = true }
+            return .object(object)
+        }
+        replies["system.processes"] = .object(["processes": .array([
+            entry(30, "p7", memory: 3_221_225_472, leftover: true),
+            entry(20, "p9", memory: 104_857_600),
+            entry(40, "p4", memory: 52_428_800),   // another terminal's pane: not shown
+            entry(10, "p1", memory: 1_048_576),
+        ]), "total": 4, "totalMemoryBytes": 3_379_560_448])
+        let lines = try XCTUnwrap(text(callTool(server(), "list_processes"))).split(separator: "\n").map(String.init)
+        XCTAssertEqual(lines.count, 3, "\(lines)")
+        XCTAssertTrue(lines[0].hasPrefix("30  3.0 GB  pane p7  [leftover") && lines[0].hasSuffix("node 30.js"), lines[0])
+        XCTAssertTrue(lines[1].hasPrefix("20  100 MB  pane p9  node 20.js"), lines[1])
+        XCTAssertTrue(lines[2].hasPrefix("10  1.0 MB  pane p1 (yours)"), lines[2])
+        XCTAssertEqual(requests.last?.params["limit"] ?? nil, .number(Double(ProcessListRequest.maxLimit)))
+
+        replies["system.processes"] = .object(["processes": .array([entry(40, "p4", memory: 1)]), "total": 1, "totalMemoryBytes": 1])
+        XCTAssertEqual(text(callTool(server(), "list_processes")), "No processes in your panes and no leftovers.")
+    }
+
+    func testListProcessesOnAnOlderAppSaysUpdate() {
+        let server = MCPServer(environment: ["CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1"]) { method, _, _ in
+            if method == "system.processes" { throw CLIError.failure("method not found: system.processes") }
+            return .array([])
+        }
+        let result = callTool(server, "list_processes")
+        XCTAssertEqual(result?["isError"], .bool(true))
+        XCTAssertEqual(text(result), "this cmds app has no system.processes; update cmds")
     }
 
     func testAppErrorsBecomeToolErrors() {
