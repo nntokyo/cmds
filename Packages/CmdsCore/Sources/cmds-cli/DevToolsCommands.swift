@@ -12,10 +12,6 @@ extension CLI {
         }
     }
 
-    static func usageError<T>(_ body: () throws -> T) throws -> T {
-        do { return try body() } catch let error as RPCError { throw CLIError.usage(error.message) }
-    }
-
     static let consoleCommand = Command(
         name: "browser console",
         usage: "browser console [--pane P] [--level L] [--limit N] [--clear] [--follow]",
