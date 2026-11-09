@@ -66,14 +66,11 @@ public struct BrowserResponsiveChange: Equatable, Sendable {
     /// `on?`, `devices?` (a list or `"a,b,c"`; giving them turns the view on), `syncScroll?`. `pane`/`workspace` are
     /// ignored here.
     public init(params: JSONValue?) throws {
+        let values = RequestParams(params)
         self.init()
-        switch params?["on"] {
-        case nil, .null?: break
-        case .bool(let flag)?: on = flag
-        default: throw RPCError.invalidParams("on must be a boolean")
-        }
-        switch params?["devices"] {
-        case nil, .null?: break
+        on = try values.bool("on")
+        switch values["devices"] {
+        case nil: break
         case .array(let items)?:
             devices = try items.map {
                 guard case .string(let text) = $0 else { throw RPCError.invalidParams("devices must be strings") }
@@ -82,11 +79,7 @@ public struct BrowserResponsiveChange: Equatable, Sendable {
         case .string(let text)?: devices = text.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         default: throw RPCError.invalidParams("devices must be a list of presets or WIDTHxHEIGHT")
         }
-        switch params?["syncScroll"] {
-        case nil, .null?: break
-        case .bool(let flag)?: syncScroll = flag
-        default: throw RPCError.invalidParams("syncScroll must be a boolean")
-        }
+        syncScroll = try values.bool("syncScroll")
         if on == false, devices != nil { throw RPCError.invalidParams("devices with on: false") }
         if let devices { _ = try BrowserResponsive(devices: devices).validated() }
     }

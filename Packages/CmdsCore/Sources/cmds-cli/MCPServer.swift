@@ -401,17 +401,12 @@ final class MCPServer {
                 return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
             }
         case "browser_responsive":
-            let change: BrowserResponsiveChange
-            do {
-                var params = arguments
-                if case .object(var object) = arguments, object["off"]?.boolValue == true {
-                    object["on"] = .bool(false)
-                    params = .object(object)
-                }
-                change = try BrowserResponsiveChange(params: params)
-            } catch let error as RPCError {
-                throw ToolError(message: error.message)
+            var request = arguments
+            if case .object(var object) = arguments, object["off"]?.boolValue == true {
+                object["on"] = .bool(false)
+                request = .object(object)
             }
+            let change = try toolArguments { try BrowserResponsiveChange(params: request) }
             var params = change.params
             if change.on == nil { params["on"] = .bool(true) }
             if let url = nonEmpty(arguments["url"]?.stringValue) {
