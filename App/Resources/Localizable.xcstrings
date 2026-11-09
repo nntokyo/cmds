@@ -1252,6 +1252,16 @@
         }
       }
     },
+    "Allow Safari's Web Inspector": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SafariのWebインスペクタを許可"
+          }
+        }
+      }
+    },
     "Allow remote access via SSH": {
       "localizations": {
         "ja": {
@@ -4051,6 +4061,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "名前がドットで始まる項目も含めます（もう一度比較します）"
+          }
+        }
+      }
+    },
+    "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safariの「開発」メニューからブラウザペインを調べられます（Safariの詳細設定で「Web デベロッパ用の機能を表示」をオンにしてください）。"
           }
         }
       }
