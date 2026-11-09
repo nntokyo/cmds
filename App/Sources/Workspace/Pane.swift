@@ -80,6 +80,9 @@ final class Pane {
 
     weak var controller: AppController?
 
+    /// The find bar (⌘F) of a terminal pane.
+    private(set) lazy var find = TerminalFind(pane: self)
+
     init(id: String, workspaceID: String, terminal: TerminalSurface, ssh: SSHSession? = nil) {
         self.id = id
         self.workspaceID = workspaceID
@@ -115,6 +118,7 @@ final class Pane {
 
     /// Replaces the terminal surface (SSH reconnect); the old one is closed without close callbacks.
     func attach(terminal newTerminal: TerminalSurface) {
+        find.reset()
         if let old = terminal {
             old.delegate = nil
             old.close()
@@ -272,6 +276,7 @@ final class Pane {
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.
     func tearDown() {
         isClosing = true
+        if kind == .terminal { find.reset() }
         container.removeFromSuperview()
         if let terminal {
             terminal.delegate = nil
@@ -314,6 +319,17 @@ extension Pane: TerminalSurfaceDelegate {
         agentTopic = parsed.topic
         controller?.updateAgentActivity(self, now: now, emitChange: false)
         controller?.paneDidChange(self)
+    }
+
+    /// A key binding of the user's terminal config (`start_search`, `search_selection`) opens the find bar.
+    func terminalSurface(_ surface: TerminalSurface, didRequestSearch needle: String?) {
+        guard surface === terminal else { return }
+        find.open(needle: needle)
+    }
+
+    func terminalSurface(_ surface: TerminalSurface, searchDidUpdate total: Int?, selected: Int?) {
+        guard surface === terminal else { return }
+        find.engineDidUpdate(total: total, selected: selected)
     }
 
     func terminalSurfaceDidReceiveKeyInput(_ surface: TerminalSurface) {
