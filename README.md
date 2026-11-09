@@ -17,7 +17,7 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 - **Find and command palette**: ⌘F searches a terminal's scrollback (libghostty's highlighted search; Match Case and
   regular expressions too), ⇧⌘P finds workspaces, panes, menu commands, agent sessions and ports.
 - **Attention ring**: panes light up on OSC 9/777 notifications, the bell or `cmds notify`; ⇧⌘U jumps to the latest.
-- **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`).
+- **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`), with phone, tablet and desktop sizes, a breakpoint indicator and light/dark (`cmds browser device`).
 - **Preview panes**: images, PDFs, video and Office files (Quick Look), rendered Markdown and coloured diffs, reloaded
   when the file changes; ⌘-click a path in the terminal to open it.
 - **Files panes**: a folder on the Mac or on an SSH host (SFTP with your own ssh, keys and agent) as a list (size,

@@ -29,9 +29,16 @@ cmds の MCP サーバー（`cmds mcp`。ツール名 `browser_open` / `browser_
 
 - 開く: `B=$(cmds browser open --no-focus <URL>)`。同じペインで別のページへは `cmds browser navigate --pane "$B" <URL>`。
 - 見る: `cmds browser snapshot --pane "$B" -o /tmp/cmds-page.png`（Read ツールで見る）、`cmds browser url --pane "$B"`。
+  ページ全体は `--full`、要素だけは `--selector '#id'`、スマホ・タブレット・デスクトップを一度に撮るなら
+  `--full --device iphone,ipad,desktop-1440 -o /tmp/shot.png`（`shot-iphone.png` などに分かれて保存される）。
 - 読む・操作する: `cmds browser eval --pane "$B" '<JavaScript>'`（結果は JSON で出る）。例:
   `'document.body.innerText.slice(0, 2000)'`、`'document.querySelector("button[type=submit]").click()'`、
   入力欄は値を設定してから `input` イベントを送る（`el.value = "x"; el.dispatchEvent(new Event("input", {bubbles: true}))`）。
+- レスポンシブ表示を確かめる: `cmds browser device --pane "$B" iphone-se`（プリセットは `--list`、`390x844` のような
+  サイズ、`--rotate`、ダークモードは `--scheme dark`、元に戻すのは `off`）。MCP では `browser_set_viewport`。
+  ページはそのCSS幅でレイアウトされ、ペインに収まるよう縮小表示される。ピクセル比・タッチ・`<meta viewport>`・
+  視差効果を減らす は再現されないので、それらは実機で確認するようユーザーに伝える。設定はペインごとに残るので、
+  確認が終わったら `off` で戻す。
 - 使い終わったら自分が開いたブラウザペインを閉じる（`cmds close-pane "$B"`）。
 
 Chrome を使うのは次のときだけ:

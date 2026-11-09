@@ -85,11 +85,12 @@ final class APIServer {
                     await respond(id, to: connection) { try await self.worktreeRequest(method, params) }
                 }
             case "browser.snapshot":
+                // Unknown params are refused (BrowserSnapshotRequest.knownParams), so newer clients get a clear error.
+                let request = try BrowserSnapshotRequest(params: params.value)
                 let pane = try browserPaneID(params)
                 Task { @MainActor in
                     await respond(id, to: connection) {
-                        let png = try await self.controller.browserSnapshot(paneID: pane)
-                        return ["png_base64": .string(png.base64EncodedString())]
+                        BrowserSnapshotImage.result(try await self.controller.browserSnapshot(paneID: pane, request: request))
                     }
                 }
             #if DEBUG
@@ -103,6 +104,13 @@ final class APIServer {
                         ["png_base64": .string(try await preview.debugSnapshot().base64EncodedString())]
                     }
                 }
+            case "debug.browser":
+                // Tests only: a browser pane's toolbar indicator and web view frame, and the pane drawn without its
+                // page (WebKit content does not draw this way; `browser.snapshot` has it).
+                guard let browser = controller.pane(id: try params.required("pane"))?.browser else {
+                    throw RPCError.invalidParams("not a browser pane")
+                }
+                connection.reply(id: id, result: browser.debugState())
             case "debug.files":
                 // Tests only: drive a files pane (FilesPane+Debug.swift).
                 guard let files = controller.pane(id: try params.required("pane"))?.files else {
@@ -354,6 +362,9 @@ final class APIServer {
         case "browser.get_url":
             let location = try controller.browserLocation(paneID: try browserPaneID(params))
             return ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
+        case "browser.set_viewport":
+            return try controller.browserSetViewport(paneID: try browserPaneID(params),
+                                                     change: try BrowserViewportChange(params: params.value))
 
         case let method where method.hasPrefix("transfer."):
             // Local socket only (not in RemoteAPIPolicy.allowedMethods).

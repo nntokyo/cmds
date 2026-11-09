@@ -77,6 +77,17 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   does, `query` filters, `run {index?}` runs a result as Return does, `close`; returns the results (kind, title,
   detail, shortcut, score), the selected row, the selected workspace and focused pane. Menu commands are collected
   when it opens; in an instance that is not the active app, those that need a key window are missing.
+- Browser screenshots (#169): a local page several screens tall with coloured bands and an element below the fold
+  (`--full` is one image of the whole page; `--selector` the element, also after navigating to `page.html#element`,
+  which scrolls the pane; the pane's scroll position written to `document.title` stays), a page over 16384 px tall
+  (refused), `--device iphone,ipad,desktop-1440 -o shot.png` (three files), a pane of a workspace that is not shown,
+  and `cmds mcp` with `browser_snapshot` `devices` (text + image per size).
+- Browser device sizes (#168): open a local test page that writes `innerWidth`, `devicePixelRatio`,
+  `matchMedia('(prefers-color-scheme: dark)').matches` and `navigator.userAgent` into `document.title` on load and
+  resize, set sizes and schemes with `cmds browser device --pane P …`, and read them back with `cmds browser url
+  --pane P` (or `cmds browser eval`). `debug.browser {pane}` (DEBUG builds) returns the toolbar's width and
+  breakpoint text, the web view's frame and size, the scale, the device menu's items and the pane drawn without its
+  page; `cmds browser snapshot` has the page at the device size. Relaunch to check the setting is restored.
 - `debug.recent_sessions {open?, snapshot?}` (DEBUG builds) returns the items of File › Recent Agent Sessions
   (title, checked, enabled, tooltip); `open` (index of a session item) does what choosing it does and returns the
   `problem` the alert would show; `snapshot: true` adds `png_base64`, the window drawn off screen. Seed

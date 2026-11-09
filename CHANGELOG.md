@@ -41,6 +41,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
 
+- Mac: browser panes check responsive layouts. The device button in the toolbar shows the page at an iPhone, Pixel,
+  iPad or desktop size (or a custom one, rotated if you like), scaled down to fit the pane, with that device's user
+  agent; the toolbar shows the page's CSS width and which media-query breakpoint range it is in. Pages can be shown
+  light or dark (`prefers-color-scheme`), or follow the Mac. Kept per pane across relaunches and in exported
+  workspaces. `cmds browser device`, MCP `browser_set_viewport`, socket `browser.set_viewport`. WebKit does not
+  emulate the pixel ratio, touch, `<meta viewport>` or reduced motion; check those on a device (#168).
+
+- Mac: browser screenshots of the whole page (`cmds browser snapshot --full`), of one element (`--selector`), and at
+  other sizes, up to four in one go (`--device iphone,ipad,desktop-1440 -o shot.png` writes `shot-iphone.png`, …;
+  each size loads the page again off screen). The pane is not scrolled or resized. MCP `browser_snapshot` takes the
+  same and returns one image per size; socket `browser.snapshot` answers with `images`. An older app gives a clear
+  "update cmds" error instead of a visible-page image (#169).
+
+### Changed
+
+- Mac: browser pages follow the Mac's light or dark appearance by default; before, they were always dark (#168).
+
 ### Fixed
 
 - Mac: `cmds mcp`'s `close_pane` also closes browser, preview and files panes the agent opened from its terminal with

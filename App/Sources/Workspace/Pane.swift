@@ -180,6 +180,7 @@ final class Pane {
             guard let self else { return }
             self.controller?.paneDidBecomeFocused(self)
         }
+        browser.onEmulationChange = { [weak self] in self?.controller?.scheduleSave() }
     }
 
     init(id: String, workspaceID: String, preview: PreviewPane) {

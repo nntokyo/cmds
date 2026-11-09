@@ -30,6 +30,8 @@ final class MCPServer {
     /// App API timeouts: most requests, and eval / snapshot, which wait for the page.
     static let requestTimeout: TimeInterval = 60
     static let pageTimeout: TimeInterval = 120
+    /// Snapshots at other sizes load the page once per size.
+    static let devicesTimeout: TimeInterval = 300
 
     static let instructions = """
         You are running inside cmds, a terminal workspace app; these tools act on the cmds window next to your terminal.
@@ -163,8 +165,26 @@ final class MCPServer {
         Tool(name: "browser_eval",
              description: "Run JavaScript in a cmds browser pane and return its JSON value. The script may use top-level await (then `return` the value). Use it to read the page (document.body.innerText), click (el.click()) and fill inputs (set el.value, then dispatch an 'input' event).",
              properties: ["script": string("JavaScript to run in the page."), "pane": browserPane], required: ["script"]),
-        Tool(name: "browser_snapshot", description: "A PNG screenshot of the visible page in a cmds browser pane.",
-             properties: ["pane": browserPane]),
+        Tool(name: "browser_snapshot",
+             description: "A PNG screenshot of a cmds browser pane: the visible page, or the full page (fullPage), one element (selector), or the page at other sizes (device, or up to \(BrowserSnapshotRequest.maxTargets) devices at once, each loaded again off screen with the same cookies). Returns one image per size, each after a line naming it. The pane is not scrolled or resized.",
+             properties: [
+                "pane": browserPane,
+                "fullPage": .object(["type": "boolean", "description": .string("Capture the whole page (up to \(BrowserSnapshotRequest.maxHeight) CSS pixels tall).")]),
+                "selector": string("CSS selector of one element to capture (the first match)."),
+                "device": string("Capture at a preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))) or WIDTHxHEIGHT instead of the pane's size."),
+                "devices": .object(["type": "array", "items": .object(["type": "string"]),
+                                    "description": "Several presets or WIDTHxHEIGHT sizes in one call, e.g. [\"iphone\", \"ipad\", \"desktop-1440\"] (phone, tablet, desktop)."]),
+             ]),
+        Tool(name: "browser_set_viewport",
+             description: "Show a cmds browser pane at a device size (the page gets that CSS layout width and height, scaled to fit the pane), with a user agent and light/dark color scheme, to check responsive layouts. Only the arguments given change; without any it returns the current settings. \(CLI.browserDeviceLimits)",
+             properties: [
+                "device": string("A preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))), WIDTHxHEIGHT in CSS pixels (e.g. 375x667), or \"off\" to fill the pane again. A preset also sets its user agent."),
+                "rotate": .object(["type": "boolean", "description": "Swap width and height (landscape / portrait)."]),
+                "userAgent": string("User agent to send; \"\" = WebKit's own."),
+                "colorScheme": .object(["type": "string", "enum": ["system", "light", "dark"],
+                                        "description": "prefers-color-scheme of the page; system follows the Mac."]),
+                "pane": browserPane,
+             ]),
         Tool(name: "open_file",
              description: "Show a file on this Mac (image, PDF, video, Office, text/code, rendered Markdown, coloured diff) in a cmds preview pane split to the right, without taking the focus. The pane reloads when the file changes. Returns the pane id.",
              properties: ["path": string("Absolute path (relative paths are resolved against the server's working directory)."),
@@ -251,11 +271,37 @@ final class MCPServer {
             if case .string(let string) = value { return [Self.text(string)] }
             return [Self.text(encodeJSON(value, pretty: false))]
         case "browser_snapshot":
-            let result = try browserCall("browser.snapshot", arguments, timeout: Self.pageTimeout)
-            guard let base64 = result["png_base64"]?.stringValue, !base64.isEmpty else {
-                throw ToolError(message: "the snapshot returned no image")
+            let request: BrowserSnapshotRequest
+            do {
+                request = try BrowserSnapshotRequest(params: arguments)
+            } catch let error as RPCError {
+                throw ToolError(message: error.message)
             }
-            return [.object(["type": "image", "data": .string(base64), "mimeType": "image/png"])]
+            let result = try browserCall("browser.snapshot", arguments, request.params,
+                                         timeout: request.targets.isEmpty ? Self.pageTimeout : Self.devicesTimeout)
+            guard let images = BrowserSnapshotImage.images(from: result) else {
+                guard request.isPlain else { throw ToolError(message: BrowserSnapshotImage.unsupportedMessage) }
+                guard let base64 = result["png_base64"]?.stringValue, !base64.isEmpty else {
+                    throw ToolError(message: "the snapshot returned no image")
+                }
+                return [.object(["type": "image", "data": .string(base64), "mimeType": "image/png"])]  // older app
+            }
+            guard !images.isEmpty else { throw ToolError(message: "the snapshot returned no image") }
+            if request.isPlain { return [Self.image(images[0])] }
+            return images.flatMap { image -> [JSONValue] in
+                let what = request.selector.map { "element \($0)" } ?? (request.fullPage ? "full page" : "visible page")
+                let size = image.device.map { "\($0), " } ?? ""
+                return [Self.text("\(size)\(what), \(image.width)×\(image.height) CSS px"), Self.image(image)]
+            }
+        case "browser_set_viewport":
+            let change: BrowserViewportChange
+            do {
+                change = try BrowserViewportChange(params: arguments)
+            } catch let error as RPCError {
+                throw ToolError(message: error.message)
+            }
+            let result = try browserCall("browser.set_viewport", arguments, change.params, timeout: Self.requestTimeout)
+            return [Self.text(BrowserEmulation(json: result).summary)]
         case "open_file":
             let path = absolutePath(try argument(arguments, "path"))
             var isDirectory: ObjCBool = false
@@ -306,6 +352,10 @@ final class MCPServer {
     // MARK: JSON-RPC
 
     private static func text(_ string: String) -> JSONValue { .object(["type": "text", "text": .string(string)]) }
+
+    private static func image(_ image: BrowserSnapshotImage) -> JSONValue {
+        .object(["type": "image", "data": .string(image.png.base64EncodedString()), "mimeType": "image/png"])
+    }
 
     private static func toolResult(_ content: [JSONValue], isError: Bool = false) -> JSONValue {
         .object(["content": .array(content), "isError": .bool(isError)])

@@ -161,4 +161,32 @@ final class WorkspaceTransferRemoteFilesTests: XCTestCase {
         XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .files, host: "home", path: "srv")).validated())
         XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .files, host: "home", remoteCwd: "/x", path: "/")).validated())
     }
+
+    /// Browser device settings (#168) travel as an optional `emulation` key, checked like the rest.
+    func testBrowserEmulation() throws {
+        let emulation = BrowserEmulation(device: "iphone-se", size: ViewportSize(width: 667, height: 375),
+                                         userAgent: DevicePreset.iPhoneUserAgent, colorScheme: .dark)
+        func bundle(_ pane: WorkspaceBundle.Pane) -> WorkspaceBundle {
+            WorkspaceBundle(workspaces: [.init(layout: .pane(pane))])
+        }
+        let pane = WorkspaceBundle.Pane(kind: .browser, url: "http://localhost:3000", emulation: emulation)
+        let decoded = try WorkspaceBundle.read(try JSONEncoder().encode(bundle(pane)))
+        XCTAssertEqual(decoded.workspaces[0].panes[0].emulation, emulation)
+        // Settings equal to the default are dropped.
+        let plain = try WorkspaceBundle(workspaces: [
+            .init(layout: .pane(WorkspaceBundle.Pane(kind: .browser, url: "http://x.test",
+                                                     emulation: BrowserEmulation(colorScheme: .system)))),
+        ]).validated()
+        XCTAssertNil(plain.workspaces[0].panes[0].emulation)
+        // A bundle without the key (written by an older cmds) reads as before.
+        let older = try WorkspaceBundle.read(Data(#"""
+            {"format":"cmds.workspaces","version":1,"workspaces":[{"layout":{"pane":{"kind":"browser","url":"http://x.test"}}}]}
+            """#.utf8))
+        XCTAssertNil(older.workspaces[0].panes[0].emulation)
+        // Bad values and settings on other pane kinds are refused.
+        XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .browser, emulation: BrowserEmulation(size: ViewportSize(width: 5, height: 600)))).validated())
+        XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .browser, emulation: BrowserEmulation(device: "nokia", size: ViewportSize(width: 300, height: 600)))).validated())
+        XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .browser, emulation: BrowserEmulation(userAgent: "a\nb"))).validated())
+        XCTAssertThrowsError(try bundle(WorkspaceBundle.Pane(kind: .preview, path: "/a.md", emulation: BrowserEmulation(colorScheme: .dark))).validated())
+    }
 }

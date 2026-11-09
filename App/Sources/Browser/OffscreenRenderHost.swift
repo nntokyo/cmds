@@ -57,7 +57,7 @@ final class OffscreenRenderHost {
 
 /// Never key and never gives a view the keyboard: a text field or terminal becoming first responder here would report
 /// focus, and the app would select the hidden workspace (#76).
-private final class RenderOnlyWindow: NSWindow {
+final class RenderOnlyWindow: NSWindow {
     /// Live `OffscreenRenderHost`s using this window.
     var hosts = 0
 

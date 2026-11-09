@@ -1538,6 +1538,16 @@
         }
       }
     },
+    "Breakpoints: %@ px": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブレークポイント：%@ px"
+          }
+        }
+      }
+    },
     "Bring All to Front": {
       "localizations": {
         "ja": {
@@ -1676,6 +1686,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このワークスペースのターミナルで動くプロセスのCPUとメモリ（計測中…）"
+          }
+        }
+      }
+    },
+    "CSS width of the page and the range of its media-query breakpoints it is in.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページのCSS幅と、その幅が入るメディアクエリのブレークポイントの範囲。"
           }
         }
       }
@@ -2196,6 +2216,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Codexは今、上限に達していません。"
+          }
+        }
+      }
+    },
+    "Color Scheme": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カラースキーム"
           }
         }
       }
@@ -2854,6 +2884,46 @@
         }
       }
     },
+    "Custom Size": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムサイズ"
+          }
+        }
+      }
+    },
+    "Custom Size (%@)…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムサイズ（%@）…"
+          }
+        }
+      }
+    },
+    "Custom Size…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムサイズ…"
+          }
+        }
+      }
+    },
+    "Custom User Agent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタムユーザエージェント"
+          }
+        }
+      }
+    },
     "Custom size:": {
       "localizations": {
         "ja": {
@@ -2864,12 +2934,32 @@
         }
       }
     },
+    "Custom…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カスタム…"
+          }
+        }
+      }
+    },
     "Cut": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "カット"
+          }
+        }
+      }
+    },
+    "Dark": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダーク"
           }
         }
       }
@@ -2930,6 +3020,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "削除"
+          }
+        }
+      }
+    },
+    "Desktops": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デスクトップ"
+          }
+        }
+      }
+    },
+    "Device Size": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイスサイズ"
           }
         }
       }
@@ -3403,6 +3513,16 @@
         }
       }
     },
+    "Fill Pane": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペイン全体"
+          }
+        }
+      }
+    },
     "Filter Workspaces": {
       "localizations": {
         "ja": {
@@ -3549,6 +3669,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ターミナルに追従"
+          }
+        }
+      }
+    },
+    "Follow the Mac": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macに合わせる"
           }
         }
       }
@@ -4397,6 +4527,16 @@
         }
       }
     },
+    "Light": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライト"
+          }
+        }
+      }
+    },
     "Limit — %@": {
       "localizations": {
         "ja": {
@@ -5180,6 +5320,16 @@
         }
       }
     },
+    "No width breakpoints found in the page's style sheets.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページのスタイルシートに幅のブレークポイントはありません。"
+          }
+        }
+      }
+    },
     "No workspaces": {
       "localizations": {
         "ja": {
@@ -5246,6 +5396,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "未接続です。このフォルダを表示するには「接続」をクリックするか⌘Rを押してください。"
+          }
+        }
+      }
+    },
+    "Not emulated: pixel ratio, touch, <meta viewport>, reduced motion": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再現されないもの：ピクセル比、タッチ、<meta viewport>、視差効果を減らす"
           }
         }
       }
@@ -5730,6 +5890,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アクセスが拒否されました。"
+          }
+        }
+      }
+    },
+    "Phones": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スマートフォン"
           }
         }
       }
@@ -6449,6 +6619,16 @@
         }
       }
     },
+    "Rotate": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "回転"
+          }
+        }
+      }
+    },
     "Run Now": {
       "localizations": {
         "ja": {
@@ -6661,6 +6841,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$@のエージェントに「%1$@」を送る"
+          }
+        }
+      }
+    },
+    "Sent with every request of this pane. Leave empty for WebKit's own.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このペインのすべてのリクエストで送信します。空にするとWebKit標準のものを使います。"
           }
         }
       }
@@ -7565,6 +7755,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "システムの使用状況"
+          }
+        }
+      }
+    },
+    "Tablets": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タブレット"
           }
         }
       }
@@ -8833,6 +9033,16 @@
         }
       }
     },
+    "User Agent": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザエージェント"
+          }
+        }
+      }
+    },
     "View": {
       "localizations": {
         "ja": {
@@ -8909,6 +9119,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "待機中：%@"
+          }
+        }
+      }
+    },
+    "WebKit Default": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "WebKit標準"
+          }
+        }
+      }
+    },
+    "WebKit on the Mac sets the layout size, user agent and color scheme only. Check pixel density, touch input, pointer: coarse, <meta name=\"viewport\"> scaling and prefers-reduced-motion on a real device.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac上のWebKitで再現できるのは、レイアウトサイズ、ユーザエージェント、カラースキームだけです。ピクセル密度、タッチ入力、pointer: coarse、<meta name=\"viewport\">による拡大縮小、prefers-reduced-motionは実機で確認してください。"
           }
         }
       }
@@ -9029,6 +9259,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsの実行中は、アイドル時にディスプレイがオフになりません。"
+          }
+        }
+      }
+    },
+    "Width and height in CSS pixels (%lld–%lld).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Width and height in CSS pixels (%1$lld–%2$lld)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "幅と高さ（CSSピクセル、%1$lld〜%2$lld）。"
           }
         }
       }

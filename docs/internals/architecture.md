@@ -57,6 +57,30 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
   URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
   (the file is on the server). Session restore keeps preview panes (path, forced format).
+- **Browser screenshots** (`Browser/BrowserPane+Snapshot.swift`, params and answer in `CmdsCore/BrowserSnapshot.swift`;
+  #169): the visible page is `takeSnapshot`. `takeSnapshot` paints only what is on screen (a rect below the fold comes
+  out blank), so a full page or an element is WebKit's PDF of the view (`pdf(configuration:)`; no rect = the whole
+  document, a rect is in document coordinates whatever the scroll position) drawn into an sRGB bitmap on white. Page
+  metrics (viewport, scroll, document height, the element's rect) are read in the `.defaultClient` world. Other
+  sizes: a `CaptureWebView` (a `WKWebView` sharing the pane's configuration, so its website data, in a
+  `RenderOnlyWindow` outside the screen) loads the pane's URL, waits for `didFinish` (30 s limit) and 600 ms, is
+  captured the same way and closed; one at a time, at most 4. Unknown params are refused, and the answer's `images`
+  tells clients the app knows the new params (an older app ignores them and returns only `png_base64`).
+- **Browser pane device sizes** (`Browser/BrowserPane+Device.swift`, presets and settings in
+  `CmdsCore/BrowserDevice.swift`; [guide](../guide/workspaces-and-panes.md#device-sizes-and-color-scheme), #168): the
+  `WKWebView` sits in a `ViewportHostView` below the toolbar. Filling the pane, it takes the host's bounds and the page
+  zoom. With a device size it gets exactly that size in points and page zoom 1, and the host's bounds are scaled
+  (`setBoundsSize`) so it fits the pane: the page's CSS viewport is the device's and `devicePixelRatio` stays the
+  Mac's. (Fitting with page zoom instead was tried: WebKit then rounds the layout width, 1918 for 1920, and scales
+  `devicePixelRatio`.) `prefers-color-scheme` follows the web view's `appearance` (aqua / darkAqua; the system choice
+  is `NSApp.effectiveAppearance`, as the main window is always dark); the user agent is `customUserAgent`, and a
+  change reloads the page. WKWebView has no public setting for reduced motion, the pixel ratio, touch or
+  `<meta viewport>`. The breakpoint indicator runs `Breakpoints.pageScript` in the `.defaultClient` content world
+  (the page cannot see it) after loads, resizes and changes, and `Breakpoints.thresholds` turns the media queries of
+  readable style sheets into width thresholds. `DevicePreset` (ids, CSS sizes, user agents, `responsiveSet`) is meant
+  for the screenshot (#169) and responsive-view (#170) work too. Settings are `BrowserEmulation`, saved in
+  session.json (`browser.emulation`) and export bundles (`emulation`), both optional keys. The iPhone is not told
+  (no sync protocol change): it keeps loading the pane's URL at its own size.
 - **Files pane** (`PaneKind.files`, `PaneInfo.workingDirectory` = the folder; [guide](../guide/files.md)): the
   folder is read on a background queue (`FileEntry` per item, sorted by `FileSorting`) and watched with the same
   vnode `FileWatcher` as preview panes (re-listed at most every 0.5 s). Git states come from
