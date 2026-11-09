@@ -100,11 +100,15 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
     /// `ssh` destination when the focused terminal pane is an SSH pane: `workingDirectory` and `gitBranch` are then
     /// remote. CPU/memory always describe local processes (for an SSH pane: the ssh client).
     public var remoteHost: String?
+    /// The worktree cmds created for this workspace (`cmds new --worktree`); nil for any other directory, also for
+    /// worktrees made outside cmds.
+    public var worktree: WorktreeInfo?
 
     public init(id: String, title: String, selected: Bool, gitBranch: String? = nil, workingDirectory: String? = nil,
                 ports: [Int] = [], notificationText: String? = nil, attention: Bool = false,
                 panes: [PaneInfo] = [], layout: LayoutNode? = nil,
-                cpuPercent: Double? = nil, memoryBytes: UInt64? = nil, remoteHost: String? = nil) {
+                cpuPercent: Double? = nil, memoryBytes: UInt64? = nil, remoteHost: String? = nil,
+                worktree: WorktreeInfo? = nil) {
         self.id = id
         self.title = title
         self.selected = selected
@@ -118,5 +122,6 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.cpuPercent = cpuPercent
         self.memoryBytes = memoryBytes
         self.remoteHost = remoteHost
+        self.worktree = worktree
     }
 }
