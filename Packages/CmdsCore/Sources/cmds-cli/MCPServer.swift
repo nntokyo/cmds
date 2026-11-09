@@ -6,12 +6,12 @@ import Foundation
 extension CLI {
     static let mcpCommand = Command(
         name: "mcp", usage: "mcp",
-        summary: "Run an MCP server on stdin/stdout: browser panes, previews and sidebar status for agents (Claude Code, Codex, …).",
+        summary: "Run an MCP server on stdin/stdout: browser panes, previews, terminal panes and sidebar status for agents (Claude Code, Codex, …).",
         details: """
             Register it with your agent (e.g. `claude mcp add cmds -- cmds mcp`); the agent starts it. Tools are offered
-            only inside a cmds terminal (CMDS_PANE_ID set). Panes open without taking the keyboard focus, and
-            close_pane closes only panes opened from that terminal (by this server or the cmds CLI). See
-            docs/guide/ai-agents.md.
+            only inside a cmds terminal (CMDS_PANE_ID set). Panes open without taking the keyboard focus;
+            terminal_read, terminal_send and close_pane act only on panes opened from that terminal (by this server or
+            the cmds CLI). See docs/guide/ai-agents.md.
             """
     ) { ctx in
         let server = MCPServer(environment: ctx.environment) { method, params, timeout in
@@ -30,6 +30,8 @@ final class MCPServer {
     /// App API timeouts: most requests, and eval / snapshot, which wait for the page.
     static let requestTimeout: TimeInterval = 60
     static let pageTimeout: TimeInterval = 120
+    /// terminal_read returns at most this many lines.
+    static let maxReadLines = 2000
     /// Snapshots at other sizes load the page once per size.
     static let devicesTimeout: TimeInterval = 300
 
@@ -39,9 +41,11 @@ final class MCPServer {
         browser_* tools instead of Chrome or another browser (no Chrome extension, no `open <url>`), so the user sees the \
         page beside the terminal. Use Chrome only when the user asks for it, when the page needs the user's Chrome \
         sign-ins or saved passwords (cmds browser panes do not share them), or for what browser_eval cannot do (file \
-        uploads, native dialogs). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Close the \
-        panes you opened when you are done (close_pane; it also closes panes opened from your terminal with the cmds \
-        CLI, such as `cmds browser open` or `cmds open`).
+        uploads, native dialogs). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
+        server or another long-running command in a terminal pane beside yours with terminal_split, read its output \
+        with terminal_read and type into it with terminal_send (only panes opened from your terminal); list_ports shows \
+        the ports the workspaces listen on. Close the panes you opened when you are done (close_pane; it also closes \
+        panes opened from your terminal with the cmds CLI, such as `cmds browser open`, `cmds open` or `cmds split`).
         """
 
     static let notInsideCmds = """
@@ -190,9 +194,35 @@ final class MCPServer {
              properties: ["path": string("Absolute path (relative paths are resolved against the server's working directory)."),
                           "diff": .object(["type": "boolean", "description": "Show the file as a unified diff."])],
              required: ["path"]),
+        Tool(name: "terminal_split",
+             description: "Open a terminal pane split off your terminal (to the right or below), without taking the keyboard focus, and type a command into its shell (e.g. a dev server or a watcher). The pane stays open when the command exits, so its output can still be read. Returns the pane id for terminal_read, terminal_send and close_pane.",
+             properties: [
+                "command": string("Command typed into the new shell and run (e.g. \"npm run dev\"). Default: just a shell."),
+                "cwd": string("Directory to start in (absolute, or relative to the server's working directory). Default: your terminal's directory."),
+                "direction": .object(["type": "string", "enum": ["right", "down"], "description": "Where the pane opens. Default: right."]),
+             ]),
+        Tool(name: "terminal_read",
+             description: "Read the text of a terminal pane opened from your terminal (terminal_split or `cmds split`): its visible screen, or its last lines including scrollback. Other panes, also your own, are refused.",
+             properties: [
+                "pane": string("Pane id returned by terminal_split or `cmds split`."),
+                "lines": .object(["type": "integer", "description": .string("Return the last N lines including scrollback (at most \(maxReadLines)) instead of the visible screen.")]),
+             ], required: ["pane"]),
+        Tool(name: "terminal_send",
+             description: "Type text into a terminal pane opened from your terminal (terminal_split or `cmds split`), e.g. a command, an answer to a prompt, or \"\\u0003\" for Ctrl-C. Other panes, and your own, are refused.",
+             properties: [
+                "pane": string("Pane id returned by terminal_split or `cmds split`."),
+                "text": string("Text to type. Control characters are typed as is."),
+                "enter": .object(["type": "boolean", "description": "Press Return after the text (run it). Default: false."]),
+             ], required: ["pane", "text"]),
+        Tool(name: "list_panes",
+             description: "The panes of your workspace: id, kind, title, directory or URL, and which is yours and which were opened from your terminal (those you may read, type into and close).",
+             properties: [:]),
+        Tool(name: "list_ports",
+             description: "TCP ports that processes in the cmds workspaces listen on (dev servers), with their workspace. Open one with browser_open (http://localhost:PORT).",
+             properties: [:]),
         Tool(name: "close_pane",
-             description: "Close a browser, preview or files pane opened from your terminal: by browser_open or open_file, or with the cmds CLI (`cmds browser open`, `cmds open`), also before this server restarted. Other panes are refused; close them with `cmds close-pane <id>` only when the user asks.",
-             properties: ["pane": string("Pane id returned by browser_open, open_file or the cmds CLI.")], required: ["pane"]),
+             description: "Close a pane opened from your terminal: by browser_open, open_file or terminal_split, or with the cmds CLI (`cmds browser open`, `cmds open`, `cmds split`), also before this server restarted. Other panes are refused; close them with `cmds close-pane <id>` only when the user asks.",
+             properties: ["pane": string("Pane id returned by browser_open, open_file, terminal_split or the cmds CLI.")], required: ["pane"]),
         Tool(name: "set_status",
              description: "Show a short progress text in the cmds sidebar for your workspace, without notifying the user (empty text clears it).",
              properties: ["text": string("Status text, e.g. \"Running tests (3/10)\".")], required: ["text"]),
@@ -315,6 +345,78 @@ final class MCPServer {
             ], Self.requestTimeout)
             let id = try recordOpenedPane(result)
             return [Self.text("Showing \(path) in preview pane \(id).")]
+        case "terminal_split":
+            let direction = nonEmpty(arguments["direction"]?.stringValue) ?? "right"
+            guard ["right", "down"].contains(direction) else { throw ToolError(message: "direction must be right or down") }
+            var cwd: String?
+            if let raw = nonEmpty(arguments["cwd"]?.stringValue) {
+                let path = absolutePath(raw)
+                var isDirectory: ObjCBool = false
+                guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory), isDirectory.boolValue else {
+                    throw ToolError(message: "no such directory: \(path)")
+                }
+                cwd = path
+            }
+            let result = try call("pane.split", [
+                "pane": envPane.json, "direction": .string(direction), "kind": "terminal", "cwd": cwd.json,
+                "focus": .bool(false),
+            ], Self.requestTimeout)
+            let id = try recordOpenedPane(result)
+            // Typed into the new shell rather than run as the pane's command, so the pane (and the output) stays
+            // when the command exits. The shell reads it once it has started.
+            guard let command = nonEmpty(arguments["command"]?.stringValue) else {
+                return [Self.text("Opened terminal pane \(id).")]
+            }
+            try call("pane.send_text", ["pane": .string(id), "text": .string(command + "\n"), "openedBy": envPane.json],
+                     Self.requestTimeout)
+            return [Self.text("Opened terminal pane \(id) running: \(command)")]
+        case "terminal_read":
+            let pane = try ownTerminalPane(try argument(arguments, "pane"), action: "read")
+            var lines: Int?
+            if let value = arguments["lines"], value != .null {
+                guard let count = value.intValue, count > 0 else { throw ToolError(message: "lines must be a positive number") }
+                lines = min(count, Self.maxReadLines)
+            }
+            let result = try call("pane.read_text", [
+                "pane": .string(pane), "openedBy": envPane.json, "scrollback": lines.map { .number(Double($0)) },
+            ], Self.requestTimeout)
+            let text = result["text"]?.stringValue ?? ""
+            return [Self.text(text.isEmpty ? "(the pane shows no text)" : text)]
+        case "terminal_send":
+            let pane = try ownTerminalPane(try argument(arguments, "pane"), action: "type into")
+            var text = try argument(arguments, "text", allowEmpty: arguments["enter"]?.boolValue == true)
+            if arguments["enter"]?.boolValue == true { text += "\n" }
+            try call("pane.send_text", ["pane": .string(pane), "text": .string(text), "openedBy": envPane.json],
+                     Self.requestTimeout)
+            return [Self.text("Typed into \(pane).")]
+        case "list_panes":
+            let result = try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout)
+            let panes = try decodePanes(result)
+            let lines = panes.map { pane -> String in
+                var marks: [String] = []
+                if pane.id == envPane { marks.append("yours") }
+                if pane.openedBy == envPane, envPane != nil { marks.append("opened from your terminal") }
+                if pane.focused { marks.append("focused") }
+                let place = pane.url ?? pane.file ?? pane.workingDirectory ?? ""
+                let parts = [pane.id, pane.kind.rawValue, pane.title, place].filter { !$0.isEmpty }
+                return parts.joined(separator: "  ") + (marks.isEmpty ? "" : "  [\(marks.joined(separator: ", "))]")
+            }
+            return [Self.text(lines.isEmpty ? "No panes." : lines.joined(separator: "\n"))]
+        case "list_ports":
+            let result = try call("workspace.list", [:], Self.requestTimeout)
+            let workspaces: [WorkspaceInfo]
+            do {
+                workspaces = try result.decode([WorkspaceInfo].self)
+            } catch {
+                throw ToolError(message: "the app returned an unexpected workspace list")
+            }
+            let lines = workspaces.flatMap { workspace in
+                workspace.ports.map { port in
+                    let mine = workspace.id == envWorkspace ? " (your workspace)" : ""
+                    return "http://localhost:\(port)  \(workspace.id) \(workspace.title)\(mine)"
+                }
+            }
+            return [Self.text(lines.isEmpty ? "No listening ports." : lines.joined(separator: "\n"))]
         case "close_pane":
             let pane = try argument(arguments, "pane")
             // Panes not opened by this server: the app closes them only if they were opened from our terminal pane
@@ -333,8 +435,8 @@ final class MCPServer {
             } catch let error as CLIError where openedBy != nil && error.message.contains("was not opened from") {
                 throw ToolError(message: """
                     \(pane) was not opened from your terminal (\(envPane ?? "")), so close_pane leaves it open: it closes \
-                    only browser, preview and files panes opened from your terminal (browser_open, open_file, `cmds \
-                    browser open`, `cmds open`). If the user wants it closed, run `cmds close-pane \(pane)`.
+                    only panes opened from your terminal (browser_open, open_file, terminal_split, `cmds browser open`, \
+                    `cmds open`, `cmds split`). If the user wants it closed, run `cmds close-pane \(pane)`.
                     """)
             }
             openedPanes.removeAll { $0 == pane }
@@ -346,6 +448,35 @@ final class MCPServer {
             return [Self.text(text.isEmpty ? "Cleared the status." : "Status set.")]
         default:
             throw ToolError(message: "unknown tool: \(name)")
+        }
+    }
+
+    /// `pane` if it is a terminal pane opened from our terminal (`PaneInfo.openedBy`, #165), checked here as well
+    /// as by the app (`openedBy` on pane.read_text / pane.send_text), so an app without that check refuses too. Never
+    /// our own pane, nor any other.
+    private func ownTerminalPane(_ pane: String, action: String) throws -> String {
+        guard let envPane else { throw ToolError(message: "\(pane) was not opened by this server") }
+        guard pane != envPane else {
+            throw ToolError(message: "\(pane) is your own terminal; terminal_\(action == "read" ? "read" : "send") acts only on panes opened from it (terminal_split).")
+        }
+        let panes = try decodePanes(try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout))
+        guard let info = panes.first(where: { $0.id == pane }), info.openedBy == envPane else {
+            throw ToolError(message: """
+                \(pane) was not opened from your terminal (\(envPane)), so you may not \(action) it: terminal_read and \
+                terminal_send act only on terminal panes opened from your terminal (terminal_split, `cmds split`). Open \
+                one with terminal_split; read or type into other panes only when the user asks, with `cmds read` / \
+                `cmds send`.
+                """)
+        }
+        guard info.kind == .terminal else { throw ToolError(message: "\(pane) is a \(info.kind.rawValue) pane, not a terminal") }
+        return pane
+    }
+
+    private func decodePanes(_ result: JSONValue) throws -> [PaneInfo] {
+        do {
+            return try result.decode([PaneInfo].self)
+        } catch {
+            throw ToolError(message: "the app returned an unexpected pane list")
         }
     }
 
