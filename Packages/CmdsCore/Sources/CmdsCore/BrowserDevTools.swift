@@ -61,7 +61,7 @@ public struct ConsoleEntry: Codable, Equatable, Sendable {
               let text = message["text"] as? String else { return nil }
         self.init(level: level, source: (message["source"] as? String).flatMap(Source.init(rawValue:)) ?? .console,
                   text: String(text.prefix(ConsoleBuffer.maxTextLength)),
-                  time: (message["time"] as? NSNumber)?.doubleValue.map { $0 / 1000 } ?? Date().timeIntervalSince1970,
+                  time: (message["time"] as? NSNumber).map { $0.doubleValue / 1000 } ?? Date().timeIntervalSince1970,
                   url: (message["url"] as? String).map { String($0.prefix(2048)) },
                   location: (message["location"] as? String).map { String($0.prefix(2048)) })
     }
