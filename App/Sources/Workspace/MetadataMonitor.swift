@@ -131,6 +131,8 @@ final class ProcessScanner: @unchecked Sendable {
         /// Executable and arguments (`ScannedProcess.command`), one character longer than `ProcessEntry.maxCommandLength`
         /// at most so that `ProcessList.build` still sees it was cut.
         var command: String?
+        /// The process name when this was read (`processName`); another name means the process ran another program.
+        var name: String?
     }
 
     /// One of our user's processes in this scan (`ScannedProcess`, pane attribution).
@@ -189,15 +191,19 @@ final class ProcessScanner: @unchecked Sendable {
                 let start = info.startMicroseconds
                 let key = ProcessKey(pid: pid, start: start)
                 seen.insert(key)
-                let facts: ProcessFacts
-                if let cached = environmentByProcess[key] {
+                let name = processName(info)
+                var facts: ProcessFacts
+                // Read again after an exec (same pid and start, another program): a shell that forked and then ran
+                // `python3 …` would otherwise keep the shell's command line.
+                if let cached = environmentByProcess[key], cached.name == name {
                     facts = cached
                 } else {
                     facts = processFacts(pid: pid)
+                    facts.name = name
                     environmentByProcess[key] = facts
                 }
                 environment = facts.environment
-                details[pid] = ProcessDetail(start: start, name: processName(info), facts: facts)
+                details[pid] = ProcessDetail(start: start, name: name, facts: facts)
                 if facts.codexRole != nil { codexCandidates.append((pid, start, hasTTY ? info.e_tdev : nil, facts)) }
             }
             identities.append(ProcessIdentity(pid: pid, parentPID: pid_t(bitPattern: info.pbi_ppid),
