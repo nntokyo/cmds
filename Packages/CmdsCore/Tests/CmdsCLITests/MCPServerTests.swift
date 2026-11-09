@@ -214,7 +214,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(requests.last?.params["ref"] ?? nil, .string("e2"))
         XCTAssertEqual(requests.last?.params["value"] ?? nil, .string("x"))
         replies["browser.click"] = .object(["ref": "e7"])
-        XCTAssertEqual(text(callTool(server, "browser_click", #"{"pane":"p4","selector":"#go"}"#)), "Clicked e7.")
+        XCTAssertEqual(text(callTool(server, "browser_click", ##"{"pane":"p4","selector":"#go"}"##)), "Clicked e7.")
         XCTAssertEqual(requests.last?.params["selector"] ?? nil, .string("#go"))
 
         let count = requests.count
