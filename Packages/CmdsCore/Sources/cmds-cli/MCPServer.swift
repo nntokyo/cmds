@@ -396,8 +396,10 @@ final class MCPServer {
             }
         case "browser_responsive":
             var request = arguments
-            if case .object(var object) = arguments, object["off"]?.boolValue == true {
-                object["on"] = .bool(false)
+            if case .object(var object) = arguments, let off = object["off"], off != .null {
+                guard case .bool(let isOff) = off else { throw ToolError(message: "off must be a boolean") }  // #203
+                if isOff { object["on"] = .bool(false) }
+                object["off"] = nil
                 request = .object(object)
             }
             let change = try toolArguments { try BrowserResponsiveChange(params: request) }

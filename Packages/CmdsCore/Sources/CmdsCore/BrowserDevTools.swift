@@ -173,8 +173,14 @@ public enum ConsoleCapture {
               return original.apply(this, args);
             };
           }
+          // cmds' eval fallback on pages that refuse eval first tries the script as an expression; a statement list
+          // fails to parse there and WebKit reports that as an error event ("Script error.", no file). The pane
+          // turns this on around that try (#201).
+          let quiet = false;
+          document.addEventListener(name + '-quiet', (event) => { quiet = event.detail === true; });
           window.addEventListener('error', (event) => {
             if (!(event instanceof ErrorEvent)) return;  // resource load errors have no message
+            if (quiet && !event.filename) return;
             const where = event.filename ? event.filename + ':' + event.lineno + ':' + event.colno : undefined;
             send({ level: 'error', source: 'error', text: event.message || text(event.error), time: Date.now(),
                    url: location.href, location: where });
