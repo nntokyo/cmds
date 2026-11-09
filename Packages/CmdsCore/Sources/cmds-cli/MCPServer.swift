@@ -176,7 +176,7 @@ final class MCPServer {
                 "pane": browserPane,
                 "fullPage": .object(["type": "boolean", "description": .string("Capture the whole page (up to \(BrowserSnapshotRequest.maxHeight) CSS pixels tall).")]),
                 "selector": string("CSS selector of one element to capture (the first match)."),
-                "device": string("Capture at a preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))) or WIDTHxHEIGHT instead of the pane's size."),
+                "device": string("Capture at a preset (\(DevicePreset.idList)) or WIDTHxHEIGHT instead of the pane's size."),
                 "devices": .object(["type": "array", "items": .object(["type": "string"]),
                                     "description": "Several presets or WIDTHxHEIGHT sizes in one call, e.g. [\"iphone\", \"ipad\", \"desktop-1440\"] (phone, tablet, desktop)."]),
              ]),
@@ -351,12 +351,7 @@ final class MCPServer {
             if case .string(let string) = value { return [Self.text(string)] }
             return [Self.text(encodeJSON(value, pretty: false))]
         case "browser_snapshot":
-            let request: BrowserSnapshotRequest
-            do {
-                request = try BrowserSnapshotRequest(params: arguments)
-            } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let request = try toolArguments { try BrowserSnapshotRequest(params: arguments) }
             let result = try browserCall("browser.snapshot", arguments, request.params,
                                          timeout: request.targets.isEmpty ? Self.pageTimeout : Self.devicesTimeout)
             guard let images = BrowserSnapshotImage.images(from: result) else {

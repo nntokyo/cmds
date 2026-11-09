@@ -165,11 +165,7 @@ extension CLI {
         if args.has("full") { params["fullPage"] = .bool(true) }
         if let selector = args[option: "selector"] { params["selector"] = .string(selector) }
         if let devices = args[option: "device"] { params["devices"] = .string(devices) }
-        do {
-            return try BrowserSnapshotRequest(params: .object(params))
-        } catch let error as RPCError {
-            throw CLIError.usage(error.message)
-        }
+        return try usageError { try BrowserSnapshotRequest(params: .object(params)) }
     }
 
     /// `output` for one image; `name-<device>.png` for each of several.
