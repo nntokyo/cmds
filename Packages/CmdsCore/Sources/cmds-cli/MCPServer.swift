@@ -327,10 +327,16 @@ final class MCPServer {
 
     /// A DevTools request (#167); an app without the method says to update.
     private func devToolsCall(_ method: String, _ arguments: JSONValue, _ params: [String: JSONValue?]) throws -> JSONValue {
+        try newMethod(method) { try browserCall(method, arguments, params, timeout: Self.pageTimeout) }
+    }
+
+    /// `body`, a request to `method`; an app without it (older than the feature) is the tool's error
+    /// `CLIError.olderApp(method)`.
+    private func newMethod<T>(_ method: String, _ body: () throws -> T) throws -> T {
         do {
-            return try browserCall(method, arguments, params, timeout: Self.pageTimeout)
-        } catch let error as CLIError where error.message.contains("method not found") {
-            throw ToolError(message: "this cmds app has no \(method); update cmds")
+            return try body()
+        } catch let error as CLIError where error.isMethodNotFound {
+            throw ToolError(message: CLIError.olderApp(method))
         }
     }
 
@@ -509,38 +515,18 @@ final class MCPServer {
                 throw ToolError(message: "the app returned unexpected stats")
             }
             guard let system = snapshot.system else { return [Self.text("cmds is still measuring; try again in a second.")] }
-            let advice = HeavyJobAdvice(system)
-            var lines = ["advice: \(advice.rawValue)" + (advice == .wait
-                ? " (memory pressure is \(system.pressure.name): do not start another build, test run or dev server; wait until it is normal, or run one at a time)"
-                : " (memory pressure is \(system.pressure.name))")]
-            lines.append("memory pressure: \(system.pressure.name)")
-            lines.append("memory: \(ResourceFormat.memory(used: system.memoryUsedBytes, total: system.memoryTotalBytes)) used")
-            if let swap = Format.swap(system) { lines.append("swap: \(swap) used") }
-            lines.append("CPU: \(ResourceFormat.wholePercent(system.cpuPercent)) of all cores")
-            return [Self.text(lines.joined(separator: "\n"))]
+            return [Self.text(Self.systemStatsText(system))]
         case "list_processes":
             let panes = try workspacePanes()
             var mine: Set<String> = Set(panes.filter { $0.openedBy == envPane }.map(\.id))
             if let envPane { mine.insert(envPane) }
-            let result: JSONValue
-            do {
-                result = try call("system.processes", ProcessListRequest(limit: ProcessListRequest.maxLimit).params,
-                                  Self.requestTimeout)
-            } catch let error as CLIError where error.message.contains("method not found") {
-                throw ToolError(message: "this cmds app has no system.processes; update cmds")
+            let result = try newMethod("system.processes") {
+                try call("system.processes", ProcessListRequest(limit: ProcessListRequest.maxLimit).params, Self.requestTimeout)
             }
             let list = try decode(result, as: ProcessList.self, what: "process list")
             let shown = list.processes.filter { $0.isLeftover || $0.pane.map(mine.contains) == true }
             guard !shown.isEmpty else { return [Self.text("No processes in your panes and no leftovers.")] }
-            let lines = shown.map { process -> String in
-                var where_ = process.pane.map { "pane \($0)" } ?? "workspace \(process.workspace)"
-                if process.pane == envPane { where_ += " (yours)" }
-                let cpu = process.cpuPercent.map { "  CPU \(ResourceFormat.percent($0))" } ?? ""
-                return "\(process.pid)  \(ResourceFormat.bytes(process.memoryBytes))\(cpu)  \(where_)"
-                    + (process.isLeftover ? "  [leftover: its pane or workspace was closed]" : "")
-                    + "  \(Format.oneLine(process.command ?? process.name))"
-            }
-            return [Self.text(lines.joined(separator: "\n"))]
+            return [Self.text(shown.map { Self.processLine($0, envPane: envPane) }.joined(separator: "\n"))]
         case "close_pane":
             let pane = try argument(arguments, "pane")
             // Panes not opened by this server: the app closes them only if they were opened from our terminal pane
@@ -616,6 +602,29 @@ final class MCPServer {
         } catch {
             throw ToolError(message: "the app returned an unexpected \(what)")
         }
+    }
+
+    /// system_stats: the advice first, then pressure, memory, swap (when the app sends it) and CPU, one per line.
+    private static func systemStatsText(_ system: SystemStats) -> String {
+        let advice = HeavyJobAdvice(system)
+        var lines = ["advice: \(advice.rawValue)" + (advice == .wait
+            ? " (memory pressure is \(system.pressure.name): do not start another build, test run or dev server; wait until it is normal, or run one at a time)"
+            : " (memory pressure is \(system.pressure.name))")]
+        lines.append("memory pressure: \(system.pressure.name)")
+        lines.append("memory: \(ResourceFormat.memory(used: system.memoryUsedBytes, total: system.memoryTotalBytes)) used")
+        if let swap = Format.swap(system) { lines.append("swap: \(swap) used") }
+        lines.append("CPU: \(ResourceFormat.wholePercent(system.cpuPercent)) of all cores")
+        return lines.joined(separator: "\n")
+    }
+
+    /// list_processes: `4321  1.2 GB  CPU 12%  pane p3 (yours)  node server.js`, with a leftover note.
+    private static func processLine(_ process: ProcessEntry, envPane: String?) -> String {
+        var place = process.pane.map { "pane \($0)" } ?? "workspace \(process.workspace)"
+        if process.pane == envPane { place += " (yours)" }
+        let cpu = process.cpuPercent.map { "  CPU \(ResourceFormat.percent($0))" } ?? ""
+        return "\(process.pid)  \(ResourceFormat.bytes(process.memoryBytes))\(cpu)  \(place)"
+            + (process.isLeftover ? "  [leftover: its pane or workspace was closed]" : "")
+            + "  \(Format.oneLine(process.command ?? process.name))"
     }
 
     // MARK: JSON-RPC

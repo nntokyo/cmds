@@ -5,8 +5,7 @@ import Foundation
 extension CLI {
     /// A browser.* request; an app without the method says to update.
     static func devToolsCall(_ ctx: Context, _ method: String, _ params: [String: JSONValue?], timeout: TimeInterval = 60) throws -> JSONValue {
-        try callNewMethod(ctx, method, browserTarget(ctx).merging(params) { $1 }, unsupported: "this cmds app has no \(method); update cmds",
-                          timeout: timeout)
+        try callNewMethod(ctx, method, browserTarget(ctx).merging(params) { $1 }, timeout: timeout)
     }
 
     static let consoleCommand = Command(
