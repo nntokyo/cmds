@@ -11,12 +11,19 @@ public struct SystemStats: Codable, Equatable, Sendable {
     public var memoryTotalBytes: UInt64
     /// `kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical. nil if unknown.
     public var memoryPressure: Int?
+    /// Swap in use (`vm.swapusage`); swap use is the sign the Mac is short of memory. Omitted by older apps (#193).
+    public var swapUsedBytes: UInt64?
+    /// Swap files' total size (grows on demand). Omitted by older apps.
+    public var swapTotalBytes: UInt64?
 
-    public init(cpuPercent: Double, memoryUsedBytes: UInt64, memoryTotalBytes: UInt64, memoryPressure: Int? = nil) {
+    public init(cpuPercent: Double, memoryUsedBytes: UInt64, memoryTotalBytes: UInt64, memoryPressure: Int? = nil,
+                swapUsedBytes: UInt64? = nil, swapTotalBytes: UInt64? = nil) {
         self.cpuPercent = cpuPercent
         self.memoryUsedBytes = memoryUsedBytes
         self.memoryTotalBytes = memoryTotalBytes
         self.memoryPressure = memoryPressure
+        self.swapUsedBytes = swapUsedBytes
+        self.swapTotalBytes = swapTotalBytes
     }
 
     public var pressure: MemoryPressure { MemoryPressure(level: memoryPressure) }

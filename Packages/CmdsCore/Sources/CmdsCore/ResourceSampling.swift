@@ -120,6 +120,9 @@ public struct ProcessUsageAccountant: Sendable {
     private var previous: [Key: ProcessUsageSample] = [:]
     private var credits: [Key: Credit] = [:]
     private var previousTime: UInt64?
+    /// Own CPU of each live process over the last interval (100 = one core), without reaped children; empty after
+    /// the first scan. For the per-process list (`system.processes`, #193).
+    public private(set) var processCPUPercent: [Int32: Double] = [:]
 
     public init(cpuCount: Int) {
         maxPercent = Double(max(cpuCount, 1)) * 100
@@ -170,6 +173,7 @@ public struct ProcessUsageAccountant: Sendable {
 
         var usage: [String: ResourceUsage] = [:]
         var cpuTime: [String: UInt64] = [:]
+        var ownTime: [Int32: UInt64] = [:]
         for (key, sample) in alive {
             usage[sample.group, default: ResourceUsage()].memoryBytes += sample.memoryBytes
             usage[sample.group, default: ResourceUsage()].processCount += 1
@@ -184,6 +188,7 @@ public struct ProcessUsageAccountant: Sendable {
                 own = sample.cpuTime
                 children = sample.childCPUTime
             } // else: existed before the last scan but was not sampled then; no baseline.
+            ownTime[sample.pid] = own
             if children > 0, var credit = credits[key] {
                 let used = min(credit.amount, children)
                 children -= used
@@ -193,12 +198,14 @@ public struct ProcessUsageAccountant: Sendable {
             cpuTime[sample.group, default: 0] = cpuTime[sample.group, default: 0].addingClamped(own.addingClamped(children))
         }
 
+        processCPUPercent = [:]
         if let since = previousTime, now > since {
             let interval = Double(now - since)
             for group in usage.keys {
                 let percent = Double(cpuTime[group] ?? 0) / interval * 100
                 usage[group]?.cpuPercent = min(percent, maxPercent)
             }
+            for (pid, time) in ownTime { processCPUPercent[pid] = min(Double(time) / interval * 100, maxPercent) }
         }
 
         credits = credits.reduce(into: [:]) { kept, entry in

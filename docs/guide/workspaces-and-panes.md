@@ -25,11 +25,13 @@ Each row shows:
 - the coding agent of its focused pane: model, context and cost of that session
   ([ai-agents.md](ai-agents.md#usage-and-limits)); the account limits are the same for every row and live in the footer;
 - optionally (View › Show CPU and Memory per Workspace, off by default) CPU and memory of its processes (100 % CPU =
-  one core, like Activity Monitor); never shown for SSH workspaces, whose processes run on the server;
+  one core, like Activity Monitor), with its three heaviest processes in the tooltip; never shown for SSH workspaces,
+  whose processes run on the server;
 - the latest notification text.
 
 The footer shows each agent's account limits (Claude's 5-hour / 7-day windows and spend limit, Codex's windows, as
-far as they are known) and Mac-wide CPU and memory meters (with memory pressure). ⌘B hides the sidebar; ⌃⌘S (or the
+far as they are known), Mac-wide CPU and memory meters (with memory pressure) and, when there are any, a
+"3 leftover processes · 1.2 GB" row ([Memory and leftover processes](#memory-and-leftover-processes)). ⌘B hides the sidebar; ⌃⌘S (or the
 button at the top) switches to a compact 52 pt rail with workspace numbers, state dots in the same colours (working
 pulses), a status colour and tiny meters. The sidebar width and the compact state are kept across launches.
 
@@ -437,6 +439,31 @@ Clicking the widget, or a workspace in it, brings cmds forward on that workspace
 when that is older than five minutes it says "cmds isn't running". Isolated test instances (`CMDS_SUPPORT_DIR`) write
 their own file and never change your widget.
 
+## Memory and leftover processes
+
+Several agents, dev servers and builds at once can run a 16 GB Mac short of memory. cmds shows where it goes:
+
+- **`cmds stats`**: memory used / installed, swap used (swap in use means the Mac is short) and the memory pressure
+  (normal, warning, critical), plus CPU and memory per workspace. The sidebar's memory meter turns yellow at warning
+  and red at critical.
+- **`cmds top`**: the heaviest processes started from cmds terminals — memory (physical footprint), CPU, pane,
+  workspace, start time and command. `--workspace W` / `--pane P` narrow it down; the workspace's usage tooltip in the
+  sidebar lists its three heaviest.
+- **Leftover processes**: a dev server started with `&` or `nohup`, a test runner, a browser driver or a build daemon
+  keeps running after you close its pane or workspace. cmds still knows it came from its terminal and marks it
+  *leftover*: `cmds top --leftover` lists them, and the sidebar footer shows "N leftover processes · X GB"; click it for
+  the list with a **Stop** button each (SIGTERM; **Force Stop** sends SIGKILL if one keeps running). `cmds kill PID`
+  (`--force` for SIGKILL) does the same from the command line. Both stop only processes cmds lists (checked by pid and
+  start time in the app), never other processes, pid 1 or cmds itself. Processes left from before cmds started (after
+  a crash, a quit or an update) count as leftovers too when macOS shows their environment (node, python and other
+  programs you installed); Apple's own tools such as `sleep` or `make` are recognised only while cmds runs.
+- **Warning**: when the memory pressure stays at warning or worse for a minute, cmds posts a notification with the
+  swap in use and the heaviest process (at most every 30 minutes). Turn it off in Settings › General › Memory.
+
+Agents can ask too: the `cmds mcp` tools `system_stats` (with advice `ok` or `wait` before a heavy job) and
+`list_processes` ([ai-agents.md](ai-agents.md#memory-before-heavy-jobs)). Processes not started from cmds terminals
+(other apps) are not listed; use Activity Monitor for those.
+
 ## Keeping the Mac awake
 
 While cmds runs, the Mac does not go to sleep when idle (**cmds › Prevent Idle Sleep**, on by default, no password).
@@ -474,6 +501,8 @@ once to all open panes and remembers it:
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
 - **Menu Bar**: show the item, and what its icon and menu show ([Menu bar](#menu-bar)). All on by default.
+- **Warn when memory is short** (General › Memory): a notification when the memory pressure stays at warning or worse
+  for a minute ([Memory and leftover processes](#memory-and-leftover-processes)). On by default.
 
 Isolated test instances (`CMDS_SUPPORT_DIR`) keep their own settings
 ([internals/testing.md](../internals/testing.md#isolated-instances)). The iPhone companion has its own text size

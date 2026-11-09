@@ -45,7 +45,8 @@ final class MCPServer {
         uploads, native dialogs). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
         server or another long-running command in a terminal pane beside yours with terminal_split, read its output \
         with terminal_read and type into it with terminal_send (only panes opened from your terminal); list_ports shows \
-        the ports the workspaces listen on. Close the panes you opened when you are done (close_pane; it also closes \
+        the ports the workspaces listen on. Before a build, test run or other heavy job, check system_stats: at advice \
+        wait the Mac is short of memory, so do not start another one. Close the panes you opened when you are done (close_pane; it also closes \
         panes opened from your terminal with the cmds CLI, such as `cmds browser open`, `cmds open` or `cmds split`).
         """
 
@@ -255,6 +256,12 @@ final class MCPServer {
              properties: [:]),
         Tool(name: "list_ports",
              description: "TCP ports that processes in the cmds workspaces listen on (dev servers), with their workspace. Open one with browser_open (http://localhost:PORT).",
+             properties: [:]),
+        Tool(name: "system_stats",
+             description: "The Mac's memory pressure (normal, warning, critical), memory and swap used, CPU, and advice: ok or wait. Check it before a heavy job (build, test run, type check, dev server): at wait (pressure warning or worse) do not start another one; wait until it is ok or run one at a time. See list_processes for what uses the memory.",
+             properties: [:]),
+        Tool(name: "list_processes",
+             description: "Processes started from your terminal and the panes opened from it (heaviest first: memory, CPU, command), plus leftovers: processes whose cmds pane or workspace was closed but which still run (dev servers, test runners, browser drivers). Stopping them is for the user (`cmds kill PID`, or the sidebar's leftover row); in panes you opened, send Ctrl-C with terminal_send.",
              properties: [:]),
         Tool(name: "close_pane",
              description: "Close a pane opened from your terminal: by browser_open, open_file or terminal_split, or with the cmds CLI (`cmds browser open`, `cmds open`, `cmds split`), also before this server restarted. Other panes are refused; close them with `cmds close-pane <id>` only when the user asks.",
@@ -496,6 +503,44 @@ final class MCPServer {
                 return "\(ListeningPort.url(port))  \(workspace.id) \(workspace.title)\(mine)"
             }
             return [Self.text(lines.isEmpty ? "No listening ports." : lines.joined(separator: "\n"))]
+        case "system_stats":
+            let result = try call("system.stats", [:], Self.requestTimeout)
+            guard let snapshot = try? result.decode(StatsSnapshot.self) else {
+                throw ToolError(message: "the app returned unexpected stats")
+            }
+            guard let system = snapshot.system else { return [Self.text("cmds is still measuring; try again in a second.")] }
+            let advice = HeavyJobAdvice(system)
+            var lines = ["advice: \(advice.rawValue)" + (advice == .wait
+                ? " (memory pressure is \(system.pressure.name): do not start another build, test run or dev server; wait until it is normal, or run one at a time)"
+                : " (memory pressure is \(system.pressure.name))")]
+            lines.append("memory pressure: \(system.pressure.name)")
+            lines.append("memory: \(ResourceFormat.memory(used: system.memoryUsedBytes, total: system.memoryTotalBytes)) used")
+            if let swap = Format.swap(system) { lines.append("swap: \(swap) used") }
+            lines.append("CPU: \(ResourceFormat.wholePercent(system.cpuPercent)) of all cores")
+            return [Self.text(lines.joined(separator: "\n"))]
+        case "list_processes":
+            let panes = try workspacePanes()
+            var mine: Set<String> = Set(panes.filter { $0.openedBy == envPane }.map(\.id))
+            if let envPane { mine.insert(envPane) }
+            let result: JSONValue
+            do {
+                result = try call("system.processes", ProcessListRequest(limit: ProcessListRequest.maxLimit).params,
+                                  Self.requestTimeout)
+            } catch let error as CLIError where error.message.contains("method not found") {
+                throw ToolError(message: "this cmds app has no system.processes; update cmds")
+            }
+            let list = try decode(result, as: ProcessList.self, what: "process list")
+            let shown = list.processes.filter { $0.isLeftover || $0.pane.map(mine.contains) == true }
+            guard !shown.isEmpty else { return [Self.text("No processes in your panes and no leftovers.")] }
+            let lines = shown.map { process -> String in
+                var where_ = process.pane.map { "pane \($0)" } ?? "workspace \(process.workspace)"
+                if process.pane == envPane { where_ += " (yours)" }
+                let cpu = process.cpuPercent.map { "  CPU \(ResourceFormat.percent($0))" } ?? ""
+                return "\(process.pid)  \(ResourceFormat.bytes(process.memoryBytes))\(cpu)  \(where_)"
+                    + (process.isLeftover ? "  [leftover: its pane or workspace was closed]" : "")
+                    + "  \(Format.oneLine(process.command ?? process.name))"
+            }
+            return [Self.text(lines.joined(separator: "\n"))]
         case "close_pane":
             let pane = try argument(arguments, "pane")
             // Panes not opened by this server: the app closes them only if they were opened from our terminal pane

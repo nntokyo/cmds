@@ -41,7 +41,7 @@ final class SystemSampler: @unchecked Sendable {
         let swap = swapUsage()
         let stats = SystemStats(cpuPercent: (cpu * 10).rounded() / 10, memoryUsedBytes: used,
                                 memoryTotalBytes: ProcessInfo.processInfo.physicalMemory,
-                                memoryPressure: memoryPressureLevel())
+                                memoryPressure: memoryPressureLevel(), swapUsedBytes: swap?.used, swapTotalBytes: swap?.total)
         return SystemSample(stats: stats, appMemoryBytes: app, wiredBytes: UInt64(vm.wire_count) * pageSize,
                             compressedBytes: UInt64(vm.compressor_page_count) * pageSize,
                             swapUsedBytes: swap?.used, swapTotalBytes: swap?.total,

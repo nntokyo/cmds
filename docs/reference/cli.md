@@ -31,7 +31,9 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds quit` | Quit the app without the "agents are running" confirmation (scripted updates: `cmds export` → `cmds quit` → start the new build → `cmds import`) |
 | `cmds ls` | Workspaces (branch, cwd, ports, `CPU 12% · 1.2 GB`, `!` attention, sidebar text) with a tree of panes (`>` focused) |
 | `cmds ports [--workspace W]` | TCP ports the workspaces' processes listen on: `http://localhost:PORT`, workspace id and title (`*` = the current workspace). `--json`: `[{port, url, workspace, title}]`. In the sidebar, clicking a port opens it in a browser split |
-| `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core), plus an `awake` line (idle-sleep assertion, whether closing the lid sleeps the Mac; JSON `keepAwake`, see [Keeping the Mac awake](../guide/workspaces-and-panes.md#keeping-the-mac-awake)). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
+| `cmds stats [--watch [seconds]]` | CPU and memory: the Mac (CPU of all cores, memory used / installed, swap used / swap files, memory pressure) and each workspace's processes (CPU like Activity Monitor: 100% = one core), plus an `awake` line (idle-sleep assertion, whether closing the lid sleeps the Mac; JSON `keepAwake`, see [Keeping the Mac awake](../guide/workspaces-and-panes.md#keeping-the-mac-awake)). `--watch`/`-w` refreshes every 2 s or the given seconds; with `--json` one JSON object per line |
+| `cmds top [--leftover] [--limit N] [--workspace W] [--pane P]` | The heaviest processes started from cmds terminals: pid, memory (physical footprint), CPU, pane, workspace (`(leftover)` when its pane or workspace was closed), start time, command; then the count and their memory. `--leftover` only leftovers, `--limit` 1–500 (default 20). `--json`: `{processes: [ProcessEntry], total, totalMemoryBytes}`. Not from SSH panes. See [Memory and leftover processes](../guide/workspaces-and-panes.md#memory-and-leftover-processes) |
+| `cmds kill <pid> [--force]` | Stop a process `cmds top` lists (SIGTERM; SIGKILL with `--force`/`-f`). Any other pid, pid 1 and cmds itself are refused by the app (it checks pid and start time). Not from SSH panes |
 | `cmds sync` | iOS sync status (read-only): listener port, Bonjour, Bluetooth (permission `authorization`, peripheral state, advertising, PSM), SSH remote access, and each connection (device, authenticated, peer `ip` / `bluetooth:…` / `ssh:…`, panes, bytes, connected for). `--json` for the full report; see [Testing sync on a device](../internals/testing.md#testing-sync-on-a-device) |
 | `cmds sync devices` | Paired iPhones and iPads: id, name, connected from / last seen (local time), paired date. `--json` |
 | `cmds sync revoke <id\|name>` | Unpair one device (disconnected at once; must pair again). Takes an id, an id prefix of 4+ characters or the name, when exactly one device matches; the others stay paired |
@@ -123,6 +125,8 @@ cmds schedule add --name "Morning tests" --every weekdays --time 09:00 \
   --start ~/src/app --account auto --prompt "Run the tests and summarise failures" -- claude
 cmds stats --json | jq '.system.memoryPressure'   # 1 normal, 2 warning, 4 critical
 cmds stats --watch 5
+cmds top --leftover                               # dev servers etc. whose pane was closed
+cmds kill 4321                                    # stop one of them (SIGTERM)
 ```
 
 ## Moving workspaces to another cmds

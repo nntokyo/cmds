@@ -130,7 +130,8 @@ The same file works as a [Codex skill](#codex-cli).
 
 `cmds mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio) for agents that run in a cmds
 terminal. Its tools open and check web pages in cmds browser panes instead of Chrome, show files in preview panes, run
-commands in terminal panes beside the agent's, and set the sidebar status:
+commands in terminal panes beside the agent's, tell whether memory allows another heavy job, and set the sidebar
+status:
 
 | Tool | Does |
 |---|---|
@@ -150,6 +151,8 @@ commands in terminal panes beside the agent's, and set the sidebar status:
 | `terminal_send` | Type `text` into such a pane (`enter: true` presses Return; `"\u0003"` is Ctrl-C) |
 | `list_panes` | The panes of the agent's workspace, marking its own and those opened from it |
 | `list_ports` | Ports the workspaces' processes listen on, with their workspace (open one with `browser_open`) |
+| `system_stats` | Memory pressure, memory and swap used, CPU, and `advice: ok` or `advice: wait` (pressure warning or worse) for heavy jobs ([below](#memory-before-heavy-jobs)) |
+| `list_processes` | Processes of the agent's terminal and the panes opened from it (memory, CPU, command), plus leftovers: processes whose pane or workspace was closed but which still run. No tool stops them: that is for the user (`cmds kill`, the sidebar's leftover row); in panes it opened, the agent sends Ctrl-C with `terminal_send` |
 | `close_pane` | Close a pane opened from the agent's terminal: by this server, an earlier one or the CLI (`cmds browser open`, `cmds open`, `cmds split`); refuses others |
 | `set_status` | Sidebar status text for the agent's workspace |
 
@@ -181,6 +184,15 @@ env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]
 
 Other MCP clients take the same command (`cmds mcp`). The [skill](#skill) adds the working rules around it (helper
 panes, dev servers, when to notify); both can be used together.
+
+### Memory before heavy jobs
+
+Several agents building and testing at once can run the Mac out of memory. Before a build, a test run, a type check
+or a dev server, an agent should call `system_stats` (or run `cmds stats`): at `advice: wait` the memory pressure is
+warning or critical, so it should not start another heavy job, but wait until the advice is `ok` again or run its jobs
+one at a time. `list_processes` shows what its own panes use and which leftover processes (dev servers, test runners
+whose pane was closed) hold memory; it can ask you to stop them (`cmds top --leftover`, `cmds kill PID`, or the
+sidebar's leftover row; [Memory and leftover processes](workspaces-and-panes.md#memory-and-leftover-processes)).
 
 ### Browser DevTools
 

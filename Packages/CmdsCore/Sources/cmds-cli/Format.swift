@@ -42,6 +42,7 @@ enum Format {
         if let system = snapshot.system {
             out = "system  CPU \(leftPad(ResourceFormat.wholePercent(system.cpuPercent), 4))  "
                 + "memory \(ResourceFormat.memory(used: system.memoryUsedBytes, total: system.memoryTotalBytes))  "
+                + (swap(system).map { "swap \($0)  " } ?? "")
                 + "pressure \(system.pressure.name)\n"
         } else {
             out = "system  (measuring, try again in a second)\n"
@@ -61,6 +62,47 @@ enum Format {
                 + "\(title.padding(toLength: nameWidth, withPad: " ", startingAt: 0))  "
                 + "CPU \(leftPad(cpu, 5))  \(leftPad(memory, 8))\n"
         }
+        return out
+    }
+
+    /// `3.9 / 5 GB`, `0 B` without swap files; nil from an app that does not send swap.
+    static func swap(_ system: SystemStats) -> String? {
+        guard let used = system.swapUsedBytes, let total = system.swapTotalBytes else { return nil }
+        return total == 0 ? ResourceFormat.bytes(used) : ResourceFormat.memory(used: used, total: total)
+    }
+
+    /// `cmds top`: one line per process, heaviest first, then the count and their memory.
+    static func processes(_ list: ProcessList, titles: [String: String], currentPane: String?, now: Date = Date(),
+                          timeZone: TimeZone = .current) -> String {
+        guard !list.processes.isEmpty else { return "no processes started from cmds terminals\n" }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        func started(_ seconds: Double) -> String {
+            let date = Date(timeIntervalSince1970: seconds)
+            formatter.dateFormat = calendar.isDate(date, inSameDayAs: now) ? "HH:mm" : "MMM d"
+            return formatter.string(from: date)
+        }
+        let rows = list.processes.map { process -> [String] in
+            let place = (process.pane != nil && process.pane == currentPane ? ">" : "") + (process.pane ?? "-")
+            let title = process.isLeftover ? "(leftover)" : String(oneLine(titles[process.workspace] ?? "").prefix(20))
+            return [String(process.pid), ResourceFormat.bytes(process.memoryBytes),
+                    process.cpuPercent.map(ResourceFormat.percent) ?? "–", place,
+                    "\(process.workspace) \(title)", started(process.started), oneLine(process.command ?? process.name)]
+        }
+        let header = ["PID", "MEMORY", "CPU", "PANE", "WORKSPACE", "START", "COMMAND"]
+        let widths = (0..<header.count).map { column in ([header] + rows).map { $0[column].count }.max() ?? 0 }
+        func line(_ row: [String]) -> String {
+            row.enumerated().map { column, cell in
+                if column == row.count - 1 { return cell }
+                return column < 3 ? leftPad(cell, widths[column]) : cell.padding(toLength: widths[column], withPad: " ", startingAt: 0)
+            }.joined(separator: "  ")
+        }
+        var out = line(header) + "\n" + rows.map { line($0) + "\n" }.joined()
+        let shown = list.processes.count < list.total ? " (\(list.processes.count) shown)" : ""
+        out += "\(list.total) process\(list.total == 1 ? "" : "es") · \(ResourceFormat.bytes(list.totalMemoryBytes))\(shown)\n"
         return out
     }
 
