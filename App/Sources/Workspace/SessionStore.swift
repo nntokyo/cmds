@@ -131,7 +131,7 @@ enum SessionStore {
 
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
-        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners
+        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners, worktree
     }
 
     init(from decoder: Decoder) throws {
@@ -149,6 +149,7 @@ extension SessionState.WorkspaceState {
         paneTags = tags.isEmpty ? nil : tags
         let openers = (try? c.decodeIfPresent([Lossy<SessionState.PaneOpener>].self, forKey: .paneOpeners))?.compactMap(\.value) ?? []
         paneOpeners = openers.isEmpty ? nil : openers
+        worktree = try? c.decodeIfPresent(String.self, forKey: .worktree)
     }
 }
 
