@@ -205,6 +205,12 @@ final class MCPServerTests: XCTestCase {
         let count = requests.count
         XCTAssertEqual(callTool(server, "browser_responsive", #"{"devices":["iphone"]}"#)?["isError"], .bool(true))
         XCTAssertEqual(callTool(server, "browser_responsive", #"{"url":"http://x.test","pane":"p2"}"#)?["isError"], .bool(true))
+        // #203: a non-boolean off is refused, not taken as on.
+        let sent = requests.count
+        let refused = callTool(server, "browser_responsive", #"{"pane":"p2","off":"yes"}"#)
+        XCTAssertEqual(refused?["isError"], .bool(true))
+        XCTAssertEqual(text(refused), "off must be a boolean")
+        XCTAssertEqual(requests.count, sent)
         XCTAssertEqual(requests.count, count)
 
         // A responsive pane's plain snapshot: one labelled image per frame.

@@ -43,6 +43,7 @@ extension BrowserPane {
                 view.bottomAnchor.constraint(equalTo: viewportHost.bottomAnchor),
             ])
             responsiveView = view
+            applyInspectable()  // the new frames follow Settings › Allow Safari's Web Inspector (#202)
         }
         updateDeviceButton()
         scheduleBreakpointRefresh()

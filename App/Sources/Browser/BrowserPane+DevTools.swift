@@ -22,7 +22,7 @@ extension BrowserPane {
 
     @objc private func inspectableSettingChanged() { applyInspectable() }
 
-    private func applyInspectable() {
+    func applyInspectable() {
         let on = AppSettings.shared.browserInspectable
         if webView.isInspectable != on { webView.isInspectable = on }
         for frame in responsiveView?.webViews.dropFirst() ?? [] where frame.isInspectable != on { frame.isInspectable = on }

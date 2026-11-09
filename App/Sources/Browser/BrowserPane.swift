@@ -153,12 +153,25 @@ final class BrowserPane: NSView {
             }
             return .success(Self.decodeEvaluation(result))
         }
+        /// While on, the console hook ignores the error event of the expression form's failure to parse (#201).
+        func quietConsole(_ on: Bool) async {
+            _ = try? await webView.callAsyncJavaScript(
+                "document.dispatchEvent(new CustomEvent(name, { detail: on }));",
+                arguments: ["name": consoleEventName + "-quiet", "on": on], in: nil, contentWorld: .page)
+        }
+        await quietConsole(true)
+        let expression: Result<Result<JSONValue, NSError>, Error>
+        do { expression = .success(try await run("await (\n\(script)\n)")) } catch { expression = .failure(error) }
+        await quietConsole(false)
         let result: Result<JSONValue, NSError>
-        do {
-            result = try await run("await (\n\(script)\n)")
-        } catch let error as WKError where error.code == .javaScriptExceptionOccurred
-                    && (error.userInfo[Self.javaScriptExceptionMessageKey] as? String)?.hasPrefix("SyntaxError") == true {
+        switch expression {
+        case .success(let value):
+            result = value
+        case .failure(let error as WKError) where error.code == .javaScriptExceptionOccurred
+                && (error.userInfo[Self.javaScriptExceptionMessageKey] as? String)?.hasPrefix("SyntaxError") == true:
             result = try await run("await (async () => {\n\(script)\n})()")
+        case .failure(let error):
+            throw error
         }
         return try result.get()
     }
