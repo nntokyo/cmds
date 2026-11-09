@@ -40,6 +40,8 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Focus pane left / right / up / down | ⌥⌘← / ⌥⌘→ / ⌥⌘↑ / ⌥⌘↓ | Pane |
 | Zoom pane (toggle; zooms the tile in the tiled view) | ⇧⌘↩ | View |
 | Jump to latest attention pane | ⇧⌘U | Pane |
+| Find in the terminal (find bar; Esc closes) | ⌘F | Edit › Find |
+| Next / previous hit (also Return / ⇧Return in the find bar) | ⌘G / ⇧⌘G | Edit › Find |
 | Close pane | ⌘W | File |
 | Open browser split | ⇧⌘B | File |
 | Open in Preview… (file picker) | ⇧⌘O | File |
@@ -67,7 +69,7 @@ as menu shortcuts, so programs in terminals keep them.
 | Show in the preview pane | Space | Pane › Files |
 | Enclosing folder | ⌘↑ | Pane › Files |
 | Back / forward | ⌘[ / ⌘] | View |
-| Go to folder (type a path) | ⇧⌘G | Pane › Files |
+| Go to folder (type a path; the list takes ⇧⌘G before Find Previous) | ⇧⌘G | Pane › Files |
 | Show hidden files (toggle) | ⇧⌘. | Pane › Files |
 | Select by name | type its first letters | – |
 | Copy / move to the other files pane | F5 / F6 | Pane › Files |
@@ -94,6 +96,7 @@ as menu shortcuts, so programs in terminals keep them.
 
 | Action | Key | Menu |
 |---|---|---|
+| Command palette (workspaces, panes, commands, agent sessions, ports) | ⇧⌘P | View |
 | Toggle sidebar | ⌘B | View |
 | Compact sidebar (52 pt rail; also the button at the top of the sidebar) | ⌃⌘S | View |
 | Filter workspaces (⌘F while the sidebar has the keyboard; Esc closes) | ⌥⌘F | View |

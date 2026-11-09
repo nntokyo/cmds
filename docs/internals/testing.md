@@ -66,6 +66,17 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
   `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. Point it only at folders the test created.
+- `debug.find {pane, action?, …}` (DEBUG builds) drives a terminal pane's find bar (#173) and returns its state
+  (open, text, count, engine = libghostty's search, hits, the selected hit's row/column/width and marker frame for
+  Match Case / regex, scrollbar, which of field and terminal has the keyboard): `open {text?, caseSensitive?,
+  regex?}` / `set {…}` search and wait for the result, `next`, `previous`, `close`, `key {chars}` sends key presses
+  to the window as typed (they must land in the field, never in the terminal), `menuKey {chars, shift?}` a ⌘-key
+  through the main menu (⌘F, ⌘G, ⇧⌘G); `snapshot: true` adds `png_base64` (the bar and marker; the terminal's Metal
+  layer is not in it). Generate the scrollback in a pane the test created.
+- `debug.palette {action?, query?, move?, index?}` (DEBUG builds): `open` (default) opens the command palette as ⇧⌘P
+  does, `query` filters, `run {index?}` runs a result as Return does, `close`; returns the results (kind, title,
+  detail, shortcut, score), the selected row, the selected workspace and focused pane. Menu commands are collected
+  when it opens; in an instance that is not the active app, those that need a key window are missing.
 - `debug.recent_sessions {open?, snapshot?}` (DEBUG builds) returns the items of File › Recent Agent Sessions
   (title, checked, enabled, tooltip); `open` (index of a session item) does what choosing it does and returns the
   `problem` the alert would show; `snapshot: true` adds `png_base64`, the window drawn off screen. Seed

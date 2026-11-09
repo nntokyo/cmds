@@ -14,6 +14,8 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 
 - **Workspaces and splits**: vertical tabs with git branch, directory, listening ports, CPU and memory; nested
   right/down splits, zoom, compact sidebar.
+- **Find and command palette**: ⌘F searches a terminal's scrollback (libghostty's highlighted search; Match Case and
+  regular expressions too), ⇧⌘P finds workspaces, panes, menu commands, agent sessions and ports.
 - **Attention ring**: panes light up on OSC 9/777 notifications, the bell or `cmds notify`; ⇧⌘U jumps to the latest.
 - **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`).
 - **Preview panes**: images, PDFs, video and Office files (Quick Look), rendered Markdown and coloured diffs, reloaded
