@@ -21,6 +21,12 @@ extension BrowserPane {
     }
 
     func snapshot(_ request: BrowserSnapshotRequest) async throws -> [BrowserSnapshotImage] {
+        if request.isPlain, let responsiveView {  // every frame at its size
+            let offscreen = OffscreenRenderHost(hosting: responsiveView)
+            defer { offscreen?.release() }
+            if offscreen != nil { try await Task.sleep(for: OffscreenRenderHost.paintDelay) }
+            return try await responsiveView.snapshots()
+        }
         if request.isPlain {
             let png = try await snapshot()
             let size = emulation.size

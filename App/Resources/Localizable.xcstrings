@@ -6376,6 +6376,26 @@
         }
       }
     },
+    "Responsive View": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レスポンシブ表示"
+          }
+        }
+      }
+    },
+    "Responsive View (Phone, Tablet, Desktop)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レスポンシブ表示（スマートフォン、タブレット、デスクトップ）"
+          }
+        }
+      }
+    },
     "Restore Sleep": {
       "localizations": {
         "ja": {
@@ -7735,6 +7755,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "同期 %1$@ ↔ %2$@"
+          }
+        }
+      }
+    },
+    "Sync Scrolling": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクロールを連動"
           }
         }
       }
