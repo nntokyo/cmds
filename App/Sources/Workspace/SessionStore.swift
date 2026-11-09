@@ -36,6 +36,9 @@ struct SessionState: Codable {
         /// The opener of each browser, preview or files pane opened from a terminal pane of the workspace (`Pane.openedBy`,
         /// #165). Added later: older sessions lack it, older versions ignore it.
         var paneOpeners: [PaneOpener]? = nil
+        /// The worktree cmds created the workspace in (`Workspace.worktreePath`, #172). Added later: older sessions lack
+        /// it, older versions ignore it.
+        var worktree: String? = nil
     }
 
     /// The pane at `paneIndex` was opened from the terminal pane at `openerIndex` (reading order of `layout`).

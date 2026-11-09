@@ -106,6 +106,7 @@ public enum RemoteAPIPolicy {
                     object["panes"] = .array(panes.filter { $0["id"]?.stringValue == scope.paneID })
                 }
                 object["layout"] = nil
+                object["worktree"] = nil  // a folder on this Mac
                 return .object(object)
             })
         case "pane.list":

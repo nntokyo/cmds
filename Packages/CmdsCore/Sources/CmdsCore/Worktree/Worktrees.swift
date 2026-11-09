@@ -14,6 +14,8 @@ public enum WorktreeError: Error, Equatable, CustomStringConvertible {
     case unknownBase(String)
     case noDefaultBranch
     case notCreatedByCmds(String)
+    /// Another open workspace is in the worktree (the app does not remove it then).
+    case inUse(String)
     case refused([WorktreeRefusal])
     case gitFailed(command: String, message: String)
 
@@ -30,6 +32,7 @@ public enum WorktreeError: Error, Equatable, CustomStringConvertible {
         case .unknownBase(let name): return "no branch or commit named \(name)"
         case .noDefaultBranch: return "cannot tell the repository's default branch; give --base"
         case .notCreatedByCmds(let path): return "cmds did not create the worktree \(path); it is never removed by cmds"
+        case .inUse(let path): return "another workspace is in the worktree \(path)"
         case .refused(let refusals): return "worktree kept: " + refusals.map(\.description).joined(separator: ", ")
         case .gitFailed(let command, let message): return "\(command) failed: \(message)"
         }
