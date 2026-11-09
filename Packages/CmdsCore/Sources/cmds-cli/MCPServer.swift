@@ -471,7 +471,7 @@ final class MCPServer {
                      Self.requestTimeout)
             return [Self.text("Opened terminal pane \(id) running: \(command)")]
         case "terminal_read":
-            let pane = try ownTerminalPane(try argument(arguments, "pane"), action: "read")
+            let pane = try ownTerminalPane(try argument(arguments, "pane"), for: .read)
             var lines: Int?
             if let value = arguments["lines"], value != .null {
                 guard let count = value.intValue, count > 0 else { throw ToolError(message: "lines must be a positive number") }
@@ -483,15 +483,15 @@ final class MCPServer {
             let text = result["text"]?.stringValue ?? ""
             return [Self.text(text.isEmpty ? "(the pane shows no text)" : text)]
         case "terminal_send":
-            let pane = try ownTerminalPane(try argument(arguments, "pane"), action: "type into")
-            var text = try argument(arguments, "text", allowEmpty: arguments["enter"]?.boolValue == true)
-            if arguments["enter"]?.boolValue == true { text += "\n" }
+            let pane = try ownTerminalPane(try argument(arguments, "pane"), for: .send)
+            let enter = arguments["enter"]?.boolValue == true
+            var text = try argument(arguments, "text", allowEmpty: enter)
+            if enter { text += "\n" }
             try call("pane.send_text", ["pane": .string(pane), "text": .string(text), "openedBy": envPane.json],
                      Self.requestTimeout)
             return [Self.text("Typed into \(pane).")]
         case "list_panes":
-            let result = try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout)
-            let panes = try decodePanes(result)
+            let panes = try workspacePanes()
             let lines = panes.map { pane -> String in
                 var marks: [String] = []
                 if pane.id == envPane { marks.append("yours") }
@@ -503,18 +503,11 @@ final class MCPServer {
             }
             return [Self.text(lines.isEmpty ? "No panes." : lines.joined(separator: "\n"))]
         case "list_ports":
-            let result = try call("workspace.list", [:], Self.requestTimeout)
-            let workspaces: [WorkspaceInfo]
-            do {
-                workspaces = try result.decode([WorkspaceInfo].self)
-            } catch {
-                throw ToolError(message: "the app returned an unexpected workspace list")
-            }
-            let lines = workspaces.flatMap { workspace in
-                workspace.ports.map { port in
-                    let mine = workspace.id == envWorkspace ? " (your workspace)" : ""
-                    return "http://localhost:\(port)  \(workspace.id) \(workspace.title)\(mine)"
-                }
+            let workspaces = try decode(try call("workspace.list", [:], Self.requestTimeout), as: [WorkspaceInfo].self,
+                                        what: "workspace list")
+            let lines = workspaces.listeningPorts.map { workspace, port in
+                let mine = workspace.id == envWorkspace ? " (your workspace)" : ""
+                return "\(ListeningPort.url(port))  \(workspace.id) \(workspace.title)\(mine)"
             }
             return [Self.text(lines.isEmpty ? "No listening ports." : lines.joined(separator: "\n"))]
         case "close_pane":
@@ -551,18 +544,25 @@ final class MCPServer {
         }
     }
 
+    /// What terminal_read and terminal_send do to a pane (`ownTerminalPane`'s refusals name it).
+    private enum TerminalAccess {
+        case read, send
+
+        var tool: String { self == .read ? "terminal_read" : "terminal_send" }
+        var verb: String { self == .read ? "read" : "type into" }
+    }
+
     /// `pane` if it is a terminal pane opened from our terminal (`PaneInfo.openedBy`, #165), checked here as well
     /// as by the app (`openedBy` on pane.read_text / pane.send_text), so an app without that check refuses too. Never
     /// our own pane, nor any other.
-    private func ownTerminalPane(_ pane: String, action: String) throws -> String {
+    private func ownTerminalPane(_ pane: String, for access: TerminalAccess) throws -> String {
         guard let envPane else { throw ToolError(message: "\(pane) was not opened by this server") }
         guard pane != envPane else {
-            throw ToolError(message: "\(pane) is your own terminal; terminal_\(action == "read" ? "read" : "send") acts only on panes opened from it (terminal_split).")
+            throw ToolError(message: "\(pane) is your own terminal; \(access.tool) acts only on panes opened from it (terminal_split).")
         }
-        let panes = try decodePanes(try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout))
-        guard let info = panes.first(where: { $0.id == pane }), info.openedBy == envPane else {
+        guard let info = try workspacePanes().first(where: { $0.id == pane }), info.openedBy == envPane else {
             throw ToolError(message: """
-                \(pane) was not opened from your terminal (\(envPane)), so you may not \(action) it: terminal_read and \
+                \(pane) was not opened from your terminal (\(envPane)), so you may not \(access.verb) it: terminal_read and \
                 terminal_send act only on terminal panes opened from your terminal (terminal_split, `cmds split`). Open \
                 one with terminal_split; read or type into other panes only when the user asks, with `cmds read` / \
                 `cmds send`.
@@ -572,11 +572,18 @@ final class MCPServer {
         return pane
     }
 
-    private func decodePanes(_ result: JSONValue) throws -> [PaneInfo] {
+    /// The panes of our workspace (`pane.list`).
+    private func workspacePanes() throws -> [PaneInfo] {
+        try decode(try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout), as: [PaneInfo].self,
+                   what: "pane list")
+    }
+
+    /// An app reply decoded as `type`; anything else is "the app returned an unexpected `what`".
+    private func decode<T: Decodable>(_ result: JSONValue, as type: T.Type, what: String) throws -> T {
         do {
-            return try result.decode([PaneInfo].self)
+            return try result.decode(type)
         } catch {
-            throw ToolError(message: "the app returned an unexpected pane list")
+            throw ToolError(message: "the app returned an unexpected \(what)")
         }
     }
 

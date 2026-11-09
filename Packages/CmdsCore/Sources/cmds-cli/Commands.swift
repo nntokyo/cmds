@@ -43,11 +43,9 @@ extension CLI {
                 guard !workspaces.isEmpty else { throw CLIError.failure("workspace not found: \(id)") }
             }
             if ctx.json {
-                return ctx.printJSON(.array(workspaces.flatMap { workspace in
-                    workspace.ports.map { port -> JSONValue in
-                        ["port": .number(Double(port)), "url": .string("http://localhost:\(port)"),
-                         "workspace": .string(workspace.id), "title": .string(workspace.title)]
-                    }
+                return ctx.printJSON(.array(workspaces.listeningPorts.map { workspace, port -> JSONValue in
+                    ["port": .number(Double(port)), "url": .string(ListeningPort.url(port)),
+                     "workspace": .string(workspace.id), "title": .string(workspace.title)]
                 }))
             }
             print(Format.ports(workspaces, currentWorkspace: ctx.envWorkspace), terminator: "")

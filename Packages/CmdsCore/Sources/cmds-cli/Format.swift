@@ -30,10 +30,8 @@ enum Format {
 
     /// `cmds ports`: `* http://localhost:3000  w1  app` (one line per port, sidebar order; * the current workspace).
     static func ports(_ workspaces: [WorkspaceInfo], currentWorkspace: String?) -> String {
-        let lines = workspaces.flatMap { workspace in
-            workspace.ports.map { port in
-                "\(workspace.id == currentWorkspace ? "*" : " ") http://localhost:\(port)  \(workspace.id)  \(workspace.title)"
-            }
+        let lines = workspaces.listeningPorts.map { workspace, port in
+            "\(workspace.id == currentWorkspace ? "*" : " ") \(ListeningPort.url(port))  \(workspace.id)  \(workspace.title)"
         }
         return lines.isEmpty ? "no listening ports\n" : lines.joined(separator: "\n") + "\n"
     }
