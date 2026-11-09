@@ -27,6 +27,17 @@ extension AppController {
             .appendingPathComponent(workspaceID, isDirectory: true)
     }
 
+    /// A closed workspace's Show Changes diff goes with it (`closeWorkspace`; #176).
+    func removeChangesFolder(workspaceID: String) {
+        let folder = Self.changesFolder(workspaceID: workspaceID)
+        guard FileManager.default.fileExists(atPath: folder.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: folder)
+        } catch {
+            NSLog("cmds: could not remove the Show Changes diff \(folder.path): \(error)")
+        }
+    }
+
     /// Show Changes: the workspace's branch compared with its base (the worktree's for one cmds created, else the
     /// repository's default branch) as a diff preview, in the preview pane already showing it, else in a new one split
     /// to the right of the focused pane. The keyboard stays where it is.
@@ -38,6 +49,8 @@ extension AppController {
         }
         let base = workspace.createdWorktree?.base
         let changes = try await Self.git { try Worktrees.changes(in: directory, base: base) }
+        // The workspace may have closed while git ran: then nothing is written (its folder is already gone).
+        let current = try resolveWorkspace(workspace.id)
 
         let folder = Self.changesFolder(workspaceID: workspace.id)
         let name = (changes.branch ?? (changes.root as NSString).lastPathComponent).replacingOccurrences(of: "/", with: "-")
@@ -48,8 +61,6 @@ extension AppController {
         } catch {
             throw RPCError(code: 500, message: "cannot write the diff: \(error.localizedDescription)")
         }
-        // The workspace may have closed while git ran.
-        let current = try resolveWorkspace(workspace.id)
         if let existing = current.orderedPanes.first(where: { pane in
             pane.preview.map { $0.path.hasPrefix(folder.path + "/") } ?? false
         }), let preview = existing.preview {
