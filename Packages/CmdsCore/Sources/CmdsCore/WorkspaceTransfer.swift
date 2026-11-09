@@ -118,7 +118,8 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
 
     /// One pane. `kind` terminal: `cwd`, or `host` (+ `remoteCwd`) for an SSH pane; browser: `url`; preview: `path`
     /// (+ `format`); files: `path` (the folder; with `host` a folder on that SSH host). `agentSession` only on terminal panes (on an SSH pane its `host` is
-    /// the pane's).
+    /// the pane's). `emulation` only on browser panes (device size, user agent, color scheme; added with #168, older cmds
+    /// ignore it).
     public struct Pane: Codable, Equatable, Sendable {
         public var kind: PaneKind
         public var cwd: String?
@@ -129,9 +130,12 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
         /// Preview: forced rendering (`markdown`, `diff`, `quickLook`).
         public var format: String?
         public var agentSession: AgentSession?
+        public var emulation: BrowserEmulation?
 
         public init(kind: PaneKind, cwd: String? = nil, host: String? = nil, remoteCwd: String? = nil, url: String? = nil,
-                    path: String? = nil, format: String? = nil, agentSession: AgentSession? = nil) {
+                    path: String? = nil, format: String? = nil, agentSession: AgentSession? = nil,
+                    emulation: BrowserEmulation? = nil) {
+            self.emulation = emulation
             self.kind = kind
             self.cwd = cwd
             self.host = host
@@ -274,6 +278,9 @@ extension WorkspaceBundle {
 
     private static func validate(_ pane: Pane, _ label: String) throws -> Pane {
         var pane = pane
+        guard pane.kind == .browser || pane.emulation == nil else {
+            throw TransferError("\(label): \(pane.kind.rawValue) pane with browser settings")
+        }
         switch pane.kind {
         case .terminal:
             if let host = pane.host {
@@ -309,6 +316,13 @@ extension WorkspaceBundle {
             if let url = pane.url {
                 pane.url = try checkedURL(url, label)
             }
+            do {
+                pane.emulation = try pane.emulation?.validated()
+            } catch let error as RPCError {
+                throw TransferError("\(label): browser settings: \(error.message)")
+            }
+            if pane.emulation?.isDefault == true { pane.emulation = nil }
+            return pane
         case .preview:
             guard pane.cwd == nil, pane.host == nil, pane.remoteCwd == nil, pane.url == nil, pane.agentSession == nil else {
                 throw TransferError("\(label): preview pane with terminal/browser fields")

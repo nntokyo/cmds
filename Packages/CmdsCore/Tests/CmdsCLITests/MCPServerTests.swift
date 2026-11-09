@@ -66,7 +66,7 @@ final class MCPServerTests: XCTestCase {
     func testToolsAreListedOnlyInsideCmds() {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
-                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot",
+                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
                         "open_file", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
@@ -89,6 +89,35 @@ final class MCPServerTests: XCTestCase {
 
         _ = callTool(server, "browser_url", #"{"pane":"p4"}"#)
         XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p4"))
+    }
+
+    /// browser_set_viewport (#168) sends `browser.set_viewport` with the same params as `cmds browser device`.
+    func testSetViewport() {
+        let server = server()
+        replies["browser.set_viewport"] = BrowserEmulation(device: "iphone-se", size: .init(width: 667, height: 375),
+                                                           userAgent: DevicePreset.iPhoneUserAgent, colorScheme: .dark).json
+        let result = callTool(server, "browser_set_viewport", #"{"device":"iphone-se","rotate":true,"colorScheme":"dark","pane":"p4"}"#)
+        XCTAssertEqual(result?["isError"], .bool(false))
+        XCTAssertEqual(text(result), "iPhone SE 667×375 (rotated), user agent iPhone Safari, color scheme dark")
+        XCTAssertEqual(requests.last?.method, "browser.set_viewport")
+        XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p4"))
+        XCTAssertEqual(requests.last?.params["device"] ?? nil, .string("iphone-se"))
+        XCTAssertEqual(requests.last?.params["rotate"] ?? nil, .bool(true))
+        XCTAssertEqual(requests.last?.params["colorScheme"] ?? nil, .string("dark"))
+
+        _ = callTool(server, "browser_set_viewport", #"{"device":"500x900","userAgent":""}"#)
+        XCTAssertEqual(requests.last?.params["width"] ?? nil, .number(500))
+        XCTAssertEqual(requests.last?.params["height"] ?? nil, .number(900))
+        XCTAssertEqual(requests.last?.params["userAgent"] ?? nil, .string(""))
+        XCTAssertEqual(requests.last?.params["workspace"] ?? nil, .string("w1"))
+
+        // Bad values are refused before anything is sent.
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_set_viewport", #"{"device":"nokia"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_set_viewport", #"{"colorScheme":"sepia"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
+        let definition = MCPServer.tools.first { $0.name == "browser_set_viewport" }?.definition
+        XCTAssertTrue(definition?["description"]?.stringValue?.contains("device pixel ratio") == true)
     }
 
     func testBrowserToolsWithoutAnOpenedPaneTargetTheWorkspace() {

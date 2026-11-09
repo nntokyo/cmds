@@ -165,6 +165,16 @@ final class MCPServer {
              properties: ["script": string("JavaScript to run in the page."), "pane": browserPane], required: ["script"]),
         Tool(name: "browser_snapshot", description: "A PNG screenshot of the visible page in a cmds browser pane.",
              properties: ["pane": browserPane]),
+        Tool(name: "browser_set_viewport",
+             description: "Show a cmds browser pane at a device size (the page gets that CSS layout width and height, scaled to fit the pane), with a user agent and light/dark color scheme, to check responsive layouts. Only the arguments given change; without any it returns the current settings. \(CLI.browserDeviceLimits)",
+             properties: [
+                "device": string("A preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))), WIDTHxHEIGHT in CSS pixels (e.g. 375x667), or \"off\" to fill the pane again. A preset also sets its user agent."),
+                "rotate": .object(["type": "boolean", "description": "Swap width and height (landscape / portrait)."]),
+                "userAgent": string("User agent to send; \"\" = WebKit's own."),
+                "colorScheme": .object(["type": "string", "enum": ["system", "light", "dark"],
+                                        "description": "prefers-color-scheme of the page; system follows the Mac."]),
+                "pane": browserPane,
+             ]),
         Tool(name: "open_file",
              description: "Show a file on this Mac (image, PDF, video, Office, text/code, rendered Markdown, coloured diff) in a cmds preview pane split to the right, without taking the focus. The pane reloads when the file changes. Returns the pane id.",
              properties: ["path": string("Absolute path (relative paths are resolved against the server's working directory)."),
@@ -256,6 +266,15 @@ final class MCPServer {
                 throw ToolError(message: "the snapshot returned no image")
             }
             return [.object(["type": "image", "data": .string(base64), "mimeType": "image/png"])]
+        case "browser_set_viewport":
+            let change: BrowserViewportChange
+            do {
+                change = try BrowserViewportChange(params: arguments)
+            } catch let error as RPCError {
+                throw ToolError(message: error.message)
+            }
+            let result = try browserCall("browser.set_viewport", arguments, change.params, timeout: Self.requestTimeout)
+            return [Self.text(BrowserEmulation(json: result).summary)]
         case "open_file":
             let path = absolutePath(try argument(arguments, "path"))
             var isDirectory: ObjCBool = false

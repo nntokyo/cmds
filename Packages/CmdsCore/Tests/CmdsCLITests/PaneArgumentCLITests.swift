@@ -1,4 +1,5 @@
 import XCTest
+import CmdsCore
 @testable import cmds_cli
 
 /// Commands that read a pane take it only as `--pane P`. A bare pane id used to be ignored, so `cmds read p2` printed
@@ -23,5 +24,26 @@ final class PaneArgumentCLITests: XCTestCase {
         XCTAssertEqual(exitCode(["browser", "url", "p2"]), CLIError.Code.usage.rawValue)
         XCTAssertEqual(exitCode(["browser", "snapshot", "p2"]), CLIError.Code.usage.rawValue)
         XCTAssertEqual(exitCode(["browser", "url", "--pane", "p2"]), CLIError.Code.unavailable.rawValue)
+    }
+
+    /// `cmds browser device` (#168): bad sizes and schemes are usage errors before anything is sent.
+    func testBrowserDevice() throws {
+        XCTAssertEqual(exitCode(["browser", "device", "nokia"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "device", "20x20"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "device", "--scheme", "sepia"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "device", "iphone", "ipad"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "device", "--pane", "p2", "iphone-se"]), CLIError.Code.unavailable.rawValue)
+        XCTAssertEqual(exitCode(["browser", "device", "--list"]), 0)
+
+        let args = try Arguments(["--rotate", "--ua", "", "--scheme", "dark", "390x844"], options: ["pane", "ua", "scheme"],
+                                 flags: ["rotate", "list"])
+        let change = try CLI.browserViewportChange(args)
+        XCTAssertEqual(change.params["width"] ?? nil, .number(390))
+        XCTAssertEqual(change.params["height"] ?? nil, .number(844))
+        XCTAssertEqual(change.params["rotate"] ?? nil, .bool(true))
+        XCTAssertEqual(change.params["userAgent"] ?? nil, .string(""))
+        XCTAssertEqual(change.params["colorScheme"] ?? nil, .string("dark"))
+        XCTAssertEqual(try CLI.browserViewportChange(try Arguments(["off"])).params["device"] ?? nil, .string("off"))
+        XCTAssertTrue(CLI.presetTable().contains("iphone-se"))
     }
 }
