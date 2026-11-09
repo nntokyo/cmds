@@ -440,6 +440,7 @@ extension CLI {
         browserSnapshotCommand,
         browserDeviceCommand,
         browserResponsiveCommand,
+        consoleCommand, treeCommand, clickCommand, fillCommand, waitForCommand,
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",
                 details: "Events: notification, workspace.changed, pane.changed, workspaces.changed, schedule.changed, schedule.run.") { ctx in

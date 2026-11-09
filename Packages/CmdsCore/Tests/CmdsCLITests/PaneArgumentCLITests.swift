@@ -48,6 +48,22 @@ final class PaneArgumentCLITests: XCTestCase {
         XCTAssertEqual(CLI.snapshotPaths("/tmp/one.png", images: [images[0]]), ["/tmp/one.png"])
     }
 
+    /// DevTools commands (#167): bad arguments are usage errors before anything is sent.
+    func testBrowserDevToolsCommands() {
+        XCTAssertEqual(exitCode(["browser", "console", "--level", "loud"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "console", "--pane", "p2", "--level", "warn"]), CLIError.Code.unavailable.rawValue)
+        XCTAssertEqual(exitCode(["browser", "click"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "click", " "]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "click", "--pane", "p2", "e3"]), CLIError.Code.unavailable.rawValue)
+        XCTAssertEqual(exitCode(["browser", "fill", "e3"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "fill", "--pane", "p2", "#email", "a@b.c"]), CLIError.Code.unavailable.rawValue)
+        XCTAssertEqual(exitCode(["browser", "wait-for"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "wait-for", "--text", "a", "--selector", "b"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "wait-for", "--text", "a", "--timeout", "soon"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "wait-for", "--text", "a", "--timeout", "999"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "tree", "--pane", "p2"]), CLIError.Code.unavailable.rawValue)
+    }
+
     /// `cmds browser responsive` (#170): bad device lists and conflicting options are usage errors.
     func testBrowserResponsive() throws {
         XCTAssertEqual(exitCode(["browser", "responsive", "--devices", "iphone"]), CLIError.Code.usage.rawValue)

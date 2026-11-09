@@ -2,6 +2,14 @@ import CmdsCore
 import XCTest
 @testable import cmds_cli
 
+private extension ConsoleBuffer {
+    static var sample: ConsoleBuffer {
+        var buffer = ConsoleBuffer()
+        buffer.append(ConsoleEntry(level: .error, source: .rejection, text: "Error: boom", time: 0))
+        return buffer
+    }
+}
+
 /// `cmds mcp` (#76): the JSON-RPC handling and the tools, with the app API replaced by a recorder.
 final class MCPServerTests: XCTestCase {
     private struct Request { let method: String; let params: [String: JSONValue?] }
@@ -66,7 +74,7 @@ final class MCPServerTests: XCTestCase {
     func testToolsAreListedOnlyInsideCmds() {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
-                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport", "browser_responsive",
+                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport", "browser_console", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for", "browser_responsive",
                         "open_file", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
@@ -185,6 +193,44 @@ final class MCPServerTests: XCTestCase {
         ])
         let shot = callTool(server, "browser_snapshot")?["content"]?.arrayValue ?? []
         XCTAssertEqual(shot.map { $0["type"]?.stringValue ?? "" }, ["text", "image", "text", "image"])
+    }
+
+    /// DevTools tools (#167): console lines, the tree's text, click / fill / wait_for params, bad arguments refused.
+    func testDevTools() {
+        let server = server()
+        replies["browser.console"] = ConsoleBuffer.sample.json(level: nil, since: nil, limit: nil)
+        let console = text(callTool(server, "browser_console", #"{"pane":"p4","level":"error","clear":true}"#)) ?? ""
+        XCTAssertTrue(console.contains("Unhandled rejection: Error: boom"), console)
+        XCTAssertEqual(requests.last?.params["level"] ?? nil, .string("error"))
+        XCTAssertEqual(requests.last?.params["clear"] ?? nil, .bool(true))
+
+        replies["browser.snapshot_tree"] = .object(["title": "Form", "url": "http://x.test/", "text": "- button \"Go\" [ref=e1]\n",
+                                                    "truncated": false, "count": 1])
+        XCTAssertEqual(text(callTool(server, "browser_snapshot_tree", #"{"pane":"p4"}"#)),
+                       "Form — http://x.test/\n- button \"Go\" [ref=e1]\n")
+
+        replies["browser.fill"] = .object(["ref": "e2", "value": "x"])
+        XCTAssertEqual(text(callTool(server, "browser_fill", #"{"pane":"p4","ref":"e2","value":"x"}"#)), "Filled e2.")
+        XCTAssertEqual(requests.last?.params["ref"] ?? nil, .string("e2"))
+        XCTAssertEqual(requests.last?.params["value"] ?? nil, .string("x"))
+        replies["browser.click"] = .object(["ref": "e7"])
+        XCTAssertEqual(text(callTool(server, "browser_click", #"{"pane":"p4","selector":"#go"}"#)), "Clicked e7.")
+        XCTAssertEqual(requests.last?.params["selector"] ?? nil, .string("#go"))
+
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_click", #"{"pane":"p4"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_wait_for", #"{"pane":"p4","timeout":5}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_console", #"{"level":"loud"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
+
+        // The app's timeout error reaches the agent as a tool error.
+        failure = CLIError.failure("timed out after 1 s waiting for text \"Saved\"")
+        let timedOut = callTool(server, "browser_wait_for", #"{"pane":"p4","text":"Saved","timeout":1}"#)
+        XCTAssertEqual(timedOut?["isError"], .bool(true))
+        XCTAssertTrue(text(timedOut)?.contains("timed out") == true)
+        failure = CLIError.failure("method not found: browser.console")
+        XCTAssertTrue(text(callTool(server, "browser_console", #"{"pane":"p4"}"#))?.contains("update cmds") == true)
+        failure = nil
     }
 
     func testBrowserToolsWithoutAnOpenedPaneTargetTheWorkspace() {
