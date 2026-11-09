@@ -458,6 +458,7 @@ extension CLI {
                 throw CLIError.usage("refusing to write PNG to a terminal; use -o file.png")
             }
         },
+        browserDeviceCommand,
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",
                 details: "Events: notification, workspace.changed, pane.changed, workspaces.changed, schedule.changed, schedule.run.") { ctx in

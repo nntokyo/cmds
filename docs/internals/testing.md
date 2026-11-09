@@ -66,6 +66,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
   `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. Point it only at folders the test created.
+- Browser device sizes (#168): open a local test page that writes `innerWidth`, `devicePixelRatio`,
+  `matchMedia('(prefers-color-scheme: dark)').matches` and `navigator.userAgent` into `document.title` on load and
+  resize, set sizes and schemes with `cmds browser device --pane P …`, and read them back with `cmds browser url
+  --pane P` (or `cmds browser eval`). `debug.browser {pane}` (DEBUG builds) returns the toolbar's width and
+  breakpoint text, the web view's frame and size, the scale, the device menu's items and the pane drawn without its
+  page; `cmds browser snapshot` has the page at the device size. Relaunch to check the setting is restored.
 - `debug.recent_sessions {open?, snapshot?}` (DEBUG builds) returns the items of File › Recent Agent Sessions
   (title, checked, enabled, tooltip); `open` (index of a session item) does what choosing it does and returns the
   `problem` the alert would show; `snapshot: true` adds `png_base64`, the window drawn off screen. Seed

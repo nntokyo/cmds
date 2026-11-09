@@ -6,7 +6,7 @@ final class RemoteAPIPolicyTests: XCTestCase {
     let scope = RemoteScope(paneID: "p7", workspaceID: "w3")
 
     func testRefusesMethodsOutsideTheAllowlist() {
-        for method in ["browser.eval", "browser.open", "workspace.close", "workspace.create", "pane.split", "pane.close",
+        for method in ["browser.eval", "browser.open", "browser.set_viewport", "workspace.close", "workspace.create", "pane.split", "pane.close",
                        "pane.focus", "events.subscribe", "system.stats", "agent.list", "sync.status", "sync.devices", "sync.revoke", "state.export", "state.import", "nope"] {
             XCTAssertThrowsError(try RemoteAPIPolicy.authorize(method: method, params: nil, scope: scope), method) { error in
                 XCTAssertEqual((error as? RPCError)?.code, 403)

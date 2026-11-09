@@ -61,7 +61,8 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds browser navigate [--pane P] <url>` | Load a URL |
 | `cmds browser url [--pane P]` | Print URL and title |
 | `cmds browser eval [--pane P] <script\|->` | Run JavaScript and print the JSON result. Promises are awaited; an expression may use `await`; statements with top-level `await` must `return` their value. Also works on pages whose Content Security Policy forbids `unsafe-eval`; there, statements must always `return` their value |
-| `cmds browser snapshot [--pane P] [-o file.png]` | PNG of the visible page (to stdout when piped) |
+| `cmds browser snapshot [--pane P] [-o file.png]` | PNG of the visible page (to stdout when piped); with a device size, the page at that size |
+| `cmds browser device [--pane P] [--rotate] [--ua UA] [--scheme light\|dark\|system] [--list] [<device\|WxH\|off>]` | Show the page at a device size: a preset (`--list`: `iphone-se`, `iphone`, `iphone-pro-max`, `pixel`, `ipad`, `ipad-landscape`, `desktop-1280`, `desktop-1440`, `desktop-1920`), `WIDTHxHEIGHT` in CSS pixels (100–4096) or `off` (fill the pane). A preset also sets its user agent; `--ua` another one (`""` = WebKit's own); `--rotate` swaps width and height; `--scheme` sets `prefers-color-scheme`. Only what is given changes; without arguments prints the current settings (`--json`: `BrowserEmulation`, [API](api.md#types)). Kept per pane. Not emulated: pixel ratio, touch, `<meta viewport>`, reduced motion ([guide](../guide/workspaces-and-panes.md#device-sizes-and-color-scheme)) |
 | `cmds events` | Stream `notification`, `workspace.changed`, `pane.changed`, `workspaces.changed`, `schedule.changed`, `schedule.run` events as JSON lines |
 | `cmds rpc <method> [json-params\|-]` | Raw API call, e.g. `cmds rpc pane.split '{"direction":"down"}'` |
 | `cmds agents` | Coding agents in cmds panes: per pane the figures of Claude Code's status line (`ctx 53% 527k/1M │ $117.99 ($34.53/h) │ ⏱ 3h25m api 3h40m(107%) │ +17642 -330 │ cache ●98%`) or Codex context/tokens, then account limits per agent (5h / 7d / spend, reset times). `cmds ls` shows a short agent summary per pane, `cmds stats` the limits |
@@ -139,8 +140,9 @@ Bundle (`state.export` result, JSON):
      "second": {"pane": {"kind": "terminal", "host": "home", "remoteCwd": "~/srv"}}}}}]}
 ```
 
-Pane kinds: `terminal` (`cwd`, or `host` + `remoteCwd` for an SSH pane), `browser` (`url`), `preview` (`path`,
-`format`?). `focusedPaneIndex` and the agent sessions count panes in reading order. Import checks everything
+Pane kinds: `terminal` (`cwd`, or `host` + `remoteCwd` for an SSH pane), `browser` (`url`, `emulation`? =
+`{device?, size?: {width, height}, userAgent?, colorScheme?}`, the device size and color scheme; older cmds ignore
+it), `preview` (`path`, `format`?). `focusedPaneIndex` and the agent sessions count panes in reading order. Import checks everything
 before creating anything: format and version (a newer version is refused), at most 4 MB, 100 workspaces, 500 panes
 and 24 split levels, absolute (or `~/`) paths without control characters, SSH hosts and remote directories as for
 `cmds new --ssh`, browser URLs http/https/file only, session ids of the plain form `cmds resume` types, sessions

@@ -19,22 +19,37 @@ final class BrowserPane: NSView {
     /// Settings default the page zoom was last set to.
     private var appliedDefaultZoom = AppSettings.shared.browserZoom
 
+    // Device sizes, user agent and color scheme (BrowserPane+Device.swift, #168).
+    /// Settings changed by the user or the API (the session saves them).
+    var onEmulationChange: (() -> Void)?
+    var emulation: BrowserEmulation
+    /// Page zoom while the page fills the pane; a device size scales the page to fit instead.
+    var fillZoom = AppSettings.shared.browserZoom
+    /// Holds the web view: the whole area, or a device-sized frame scaled to fit.
+    let viewportHost = ViewportHostView()
+    /// CSS width, breakpoint range and scale.
+    let breakpointLabel = NSTextField(labelWithString: "")
+    let deviceButton = BrowserPane.toolbarButton("ipad.and.iphone", label: String(localized: "Device Size"))
+    var breakpointRefresh: DispatchWorkItem?
+
     var currentURL: URL? { webView.url }
     var pageTitle: String { webView.title ?? "" }
 
-    init() {
+    init(emulation: BrowserEmulation = BrowserEmulation()) {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.preferences.isElementFullscreenEnabled = true
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
+        self.emulation = emulation
         super.init(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
         buildLayout()
         observe()
         observeZoomSetting()
+        startEmulation()
     }
 
     @available(*, unavailable)
@@ -147,14 +162,16 @@ final class BrowserPane: NSView {
         return (try? JSONDecoder().decode(JSONValue.self, from: data)) ?? .string(json)
     }
 
-    /// PNG of the visible page.
+    /// PNG of the visible page; with a device size, at that size (not scaled down to the pane).
     func snapshot() async throws -> Data {
         // A pane of a workspace that is not shown has no window; render it off screen meanwhile.
         let offscreen = OffscreenRenderHost(hosting: webView)
         defer { offscreen?.release() }
         if offscreen != nil { try await Task.sleep(for: OffscreenRenderHost.paintDelay) }
+        let configuration = WKSnapshotConfiguration()
+        if let size = emulation.size { configuration.snapshotWidth = NSNumber(value: size.width) }
         let image: NSImage = try await withCheckedThrowingContinuation { continuation in
-            webView.takeSnapshot(with: nil) { image, error in
+            webView.takeSnapshot(with: configuration) { image, error in
                 if let image { continuation.resume(returning: image) } else {
                     continuation.resume(throwing: error ?? RPCError(code: 500, message: "snapshot failed"))
                 }
@@ -220,23 +237,27 @@ final class BrowserPane: NSView {
         addressField.action = #selector(addressSubmitted)
         addressField.onFocus = { [weak self] in self?.onFocus?() }
 
-        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, addressField])
+        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, addressField, breakpointLabel, deviceButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 6
         toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
         toolbar.translatesAutoresizingMaskIntoConstraints = false
-        webView.translatesAutoresizingMaskIntoConstraints = false
+        // A narrow pane drops the indicator before squeezing the address field.
+        toolbar.setVisibilityPriority(.detachOnlyIfNecessary, for: breakpointLabel)
+        buildDeviceControls()
+        viewportHost.translatesAutoresizingMaskIntoConstraints = false
+        viewportHost.addSubview(webView)
         addSubview(toolbar)
-        addSubview(webView)
+        addSubview(viewportHost)
         NSLayoutConstraint.activate([
             toolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
             toolbar.topAnchor.constraint(equalTo: topAnchor),
             toolbar.heightAnchor.constraint(equalToConstant: 30),
-            webView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            webView.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
-            webView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            viewportHost.leadingAnchor.constraint(equalTo: leadingAnchor),
+            viewportHost.trailingAnchor.constraint(equalTo: trailingAnchor),
+            viewportHost.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+            viewportHost.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
         updateButtons()
     }
@@ -254,6 +275,12 @@ final class BrowserPane: NSView {
             },
             webView.observe(\.canGoForward) { [weak self] _, _ in
                 MainActor.assumeIsolated { self?.updateButtons() }
+            },
+            webView.observe(\.isLoading) { [weak self] webView, _ in
+                MainActor.assumeIsolated { if !webView.isLoading { self?.scheduleBreakpointRefresh() } }
+            },
+            NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+                MainActor.assumeIsolated { self?.applyColorScheme() }
             },
         ]
     }
@@ -312,10 +339,16 @@ extension BrowserPane: TextSizeActions {
         let zoom = AppSettings.shared.browserZoom
         guard zoom != appliedDefaultZoom else { return }
         appliedDefaultZoom = zoom
-        webView.pageZoom = zoom
+        setFillZoom(zoom)
     }
 
-    @objc func cmdsTextBigger(_ sender: Any?) { webView.pageZoom = PageZoomSteps.bigger(webView.pageZoom) }
-    @objc func cmdsTextSmaller(_ sender: Any?) { webView.pageZoom = PageZoomSteps.smaller(webView.pageZoom) }
-    @objc func cmdsTextActualSize(_ sender: Any?) { webView.pageZoom = AppSettings.shared.browserZoom }
+    // With a device size the page is scaled to fit the pane, so the zoom applies once it fills the pane again.
+    @objc func cmdsTextBigger(_ sender: Any?) { setFillZoom(PageZoomSteps.bigger(fillZoom)) }
+    @objc func cmdsTextSmaller(_ sender: Any?) { setFillZoom(PageZoomSteps.smaller(fillZoom)) }
+    @objc func cmdsTextActualSize(_ sender: Any?) { setFillZoom(AppSettings.shared.browserZoom) }
+
+    private func setFillZoom(_ zoom: Double) {
+        fillZoom = zoom
+        layoutWebView()
+    }
 }

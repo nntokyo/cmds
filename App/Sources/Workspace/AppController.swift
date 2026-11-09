@@ -462,6 +462,16 @@ final class AppController {
         try await browser(paneID: paneID).snapshot()
     }
 
+    /// `browser.set_viewport`: applies `change` (none: just reports) and returns the settings with the current `scale`.
+    func browserSetViewport(paneID: String, change: BrowserViewportChange) throws -> JSONValue {
+        let browser = try browser(paneID: paneID)
+        let emulation = try browser.apply(change)
+        guard case .object(var result) = emulation.json else { return emulation.json }
+        browser.layoutSubtreeIfNeeded()
+        result["scale"] = .number((browser.deviceScale * 1000).rounded() / 1000)
+        return .object(result)
+    }
+
     // MARK: - Preview
 
     /// `pane.open_file`: shows a local file in a preview pane split off `paneID` (default: focused pane). When
@@ -802,7 +812,10 @@ final class AppController {
             switch split.content {
             case .leaf(let id):
                 let pane = workspace.panes[id]
-                if pane?.kind == .browser { return .browser(url: pane?.url) }
+                if pane?.kind == .browser {
+                    let emulation = pane?.browser?.emulation
+                    return .browser(url: pane?.url, emulation: emulation?.isDefault == false ? emulation : nil)
+                }
                 if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
                 if let files = pane?.files {
                     return .files(path: files.folder, showHidden: files.showHidden ? true : nil,
@@ -880,8 +893,10 @@ final class AppController {
                 let account = accounts[leafIndex - 1]
                 return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil,
                                                   account: account).id)
-            case .browser(let url):
-                return SplitNode(paneID: makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url).id)
+            case .browser(let url, let emulation):
+                // Checked again: a hand-edited session.json must not reach WebKit with odd values.
+                return SplitNode(paneID: makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url,
+                                                  emulation: (try? emulation?.validated()) ?? nil).id)
             case .preview(let path, let format):
                 // A missing file shows a placeholder (and appears when it is created again).
                 let target = PreviewTarget(path: path, format: format.flatMap(PreviewFormat.init(rawValue:)))
@@ -965,8 +980,10 @@ final class AppController {
     }
 
     /// `account`: a terminal whose environment has the account's `CLAUDE_CONFIG_DIR` (AppController+Accounts).
+    /// `emulation`: a browser's device size, user agent and color scheme, set before its first request.
     private func makePane(kind: PaneKind, in workspace: Workspace, cwd: String?, command: String?, url: String?,
-                          file: PreviewTarget? = nil, account: ClaudeAccount? = nil) -> Pane {
+                          file: PreviewTarget? = nil, account: ClaudeAccount? = nil,
+                          emulation: BrowserEmulation? = nil) -> Pane {
         let id = makePaneID()
         let pane: Pane
         switch kind {
@@ -978,7 +995,7 @@ final class AppController {
             pane.claudeAccount = account?.name
             if pane.workingDirectory == nil { pane.workingDirectory = cwd }
         case .browser:
-            let browser = BrowserPane()
+            let browser = BrowserPane(emulation: emulation ?? BrowserEmulation())
             pane = Pane(id: id, workspaceID: workspace.id, browser: browser)
             if let url, !url.isEmpty { browser.navigate(to: url) } else { browser.showStartPage() }
         case .preview:

@@ -103,10 +103,12 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `browser.navigate` | `pane`, `url` | – |
 | `browser.eval` | `pane`, `script` | `{"value": ...}` (JSON-serializable result) |
 | `browser.get_url` | `pane` | `{"url", "title"}` |
-| `browser.snapshot` | `pane` | `{"png_base64"}` |
+| `browser.snapshot` | `pane` | `{"png_base64"}` (with a device size: the page at that size, not scaled to the pane) |
+| `browser.set_viewport` | `pane`, `device?` (a preset id, `WIDTHxHEIGHT` or `off`) or `width?` + `height?` (CSS pixels, 100–4096), `rotate?` (swap width and height), `userAgent?` (`""` = WebKit's own; without it a new size brings the preset's user agent, custom sizes and `off` WebKit's own), `colorScheme?` (`system` / `light` / `dark`) | `BrowserEmulation`; only what is given changes, no params just reads (`cmds browser device`; [guide](../guide/workspaces-and-panes.md#device-sizes-and-color-scheme)) |
 | `events.subscribe` | – | `{"subscribed": true}`, then events (below) on the same connection |
 | `debug.preview_snapshot` | `pane` (a preview pane) | `{"png_base64"}`; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
 | `debug.show_settings` | – | `{"window"}` (window number); opens cmds › Settings…; DEBUG builds only, for tests |
+| `debug.browser` | `pane` (a browser pane) | `{"indicator", "indicatorToolTip", "webViewFrame", "webViewSize", "scale", "pageZoom", "appearance", "menu", "png_base64"}`: the toolbar's width and breakpoint text, the web view's frame, the device menu's items and the pane drawn without its page; DEBUG builds only, for tests |
 | `debug.close_alert` | `id?` | `{"worktree": null}` when closing the workspace from the sidebar does not ask about a worktree, else `{"worktree", "text", "buttons"}` (the alert, not shown); DEBUG builds only, for tests |
 | `debug.schedule_clock` | `offset` (seconds) | `{"now"}`: moves the schedule runner's clock by `offset` (a simulated sleep) and checks what fell due, as after a wake; DEBUG builds only, for tests |
 
@@ -189,5 +191,11 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   such as `confirmed`, `unconfirmed`, `commandTyped`, `otherProgram`, `agentBusy`, `paneNotFound`, `ambiguousTarget`,
   `notCodex`, `skippedByUser`, `missed`; `cmds schedule history`
   prints its English text), `workspace?`, `pane?`, `account?`.
+- `BrowserEmulation` (result of `browser.set_viewport`) = `device` (preset id, kept after rotating; `null` for a
+  custom size or none), `width`, `height` (CSS pixels; `null` when the page fills the pane), `userAgent` (`null` =
+  WebKit's own), `colorScheme` (`system` / `light` / `dark`), `scale` (what the page is shown at, 1 when it fits).
+  Presets: `iphone-se` 375×667, `iphone` 393×852, `iphone-pro-max` 440×956, `pixel` 412×915, `ipad` 820×1180,
+  `ipad-landscape` 1180×820, `desktop-1280` 1280×800, `desktop-1440` 1440×900, `desktop-1920` 1920×1080
+  (`cmds --json browser device --list` adds their pixel ratio and user agent; `DevicePreset` in CmdsCore).
 - Dates are Unix epoch seconds (decoding also takes milliseconds and ISO 8601); unknown agent names decode as
   `other`, malformed fields are dropped instead of failing.
