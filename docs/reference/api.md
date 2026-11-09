@@ -45,6 +45,8 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `system.ping` | – | `{"pong": true}` |
 | `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
 | `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits], "keepAwake": KeepAwakeStatus}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known; `keepAwake` = `idleAssertion`, `displayAssertion`, `lidCloseDisabled` (system `SleepDisabled`), `lidCloseByCmds`, `lidCloseAvailable`, `onBattery`, see [Keeping the Mac awake](../internals/architecture.md#keeping-the-mac-awake)) |
+| `system.processes` | `limit?` (1–500, default 20), `workspace?`, `pane?`, `leftover?` (bool: only leftovers) | `{"processes": [ProcessEntry], "total", "totalMemoryBytes"}`: processes started from cmds terminals (also after their pane or workspace closed), heaviest first; `total` and `totalMemoryBytes` before the limit. From the 2-s scan, nothing is spawned. Local socket only (#193) |
+| `system.kill_process` | `pid`, `force?` (SIGKILL instead of SIGTERM), `started?` (`ProcessEntry.started`) | `{"pid", "signal": "TERM"\|"KILL", "name"}`. Only a process the latest scan lists (same pid and start time): any other pid, pid 1 and the app are refused (403), a `started` that no longer matches is 409, a gone pid 404. Local socket only (#193) |
 | `sync.status` | – | `SyncStatusReport` (iOS sync: `enabled`, `state`, `port`, `fingerprint`, `bonjour`, `pairingWindowOpen`, `pairedDevices`, `bluetooth` {`allowed`, `disabledByEnvironment`, `authorization`, `managerState`, `advertising`, `psm`, `channels`, `status`}, `remote` {`enabled`, `host`, `relayPort`, `forwarding`, `status`}, `clients` [{`deviceName`, `authenticated`, `peer`, `path`, `subscribedPanes`, `bytesSent`, `bytesReceived`, `connectedSince`, `connectedSeconds`}]); local socket only, see [Testing on a device](../internals/testing.md#testing-sync-on-a-device) |
 | `sync.devices` | – | `[SyncPairedDevice]`: `id`, `name`, `pairedAt`, `lastSeen` (ISO 8601), `connectedFrom` (peers of open sessions); no tokens; local socket only |
 | `sync.revoke` | `id` | `{revoked}`: unpairs that device and closes its sessions (`invalidToken`); the others stay paired; 404 for an unknown id; local socket only |
@@ -166,7 +168,10 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   in seconds since 1970), `newer?` (`left`/`right`), `action?` (`toRight`, `toLeft`, `trashLeft`, `trashRight`) and
   `conflict` (two-way: modified on a side, which one is not known).
 - `SystemStats` = `cpuPercent` (0–100, all cores), `memoryUsedBytes`, `memoryTotalBytes`, `memoryPressure` (1 normal,
-  2 warning, 4 critical; optional).
+  2 warning, 4 critical; optional), `swapUsedBytes`, `swapTotalBytes` (optional; omitted by apps before #193).
+- `ProcessEntry` = `pid`, `name`, `command?` (executable and arguments, cut at 300 characters), `pane?`, `workspace`,
+  `memoryBytes` (physical footprint), `cpuPercent?` (100 = one core), `started` (seconds since 1970, µs precision),
+  `leftover?` (`true` when its pane or workspace no longer exists, or it is older than the app; omitted otherwise).
 - `AgentUsage` = `agent` (`claude`/`codex`/`other`), `updatedAt`, `limits` and optional `model`, `effort`,
   `sessionID`, `contextUsedPercent`, `contextTokens`, `contextWindow`, `contextOver200k`, `costUSD`,
   `sessionDurationMs`, `apiDurationMs`, `linesAdded`, `linesRemoved`, `cacheHitRatio` (0–1), `cacheWarm`,

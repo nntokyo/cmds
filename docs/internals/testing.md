@@ -101,6 +101,13 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   page; `cmds browser snapshot` has the page at the device size. Relaunch to check the setting is restored.
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
+- `debug.memory {workspace?}` (DEBUG builds, #193) returns the "memory is short" notification's title and body as
+  they would be posted now (without waiting for the pressure), the sidebar footer's leftover row (null when there is
+  none) and, with `workspace`, the top-process lines of its usage tooltip. Leftover processes in an isolated instance:
+  split a pane, `cmds send --pane P --enter 'nohup sleep 9999 >/dev/null 2>&1 &'` (and e.g. a Homebrew
+  `python3 -m http.server`), close the pane, then `cmds top --leftover` lists them as leftover and `cmds kill PID` stops
+  them; `cmds kill` of a `sleep` started outside cmds, of pid 1 or of the app's pid is refused. `cmds mcp` with that
+  instance's `CMDS_PANE_ID` answers `system_stats` and `list_processes`.
 - `cmds mcp` terminal tools (#171), in an isolated instance: run `cmds mcp` with `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID`
   of a terminal pane the test created and `CMDS_SUPPORT_DIR` set, write JSON-RPC lines to it (`initialize`, then
   `tools/call` terminal_split with a command, terminal_read, terminal_send, list_panes, list_ports), and check that

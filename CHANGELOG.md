@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Memory (#193): `cmds stats` and `system.stats` show swap used (`swapUsedBytes`, `swapTotalBytes`). `cmds top` lists
+  the heaviest processes started from cmds terminals (memory, CPU, pane, workspace, command; socket
+  `system.processes`), also *leftover* ones whose pane or workspace was closed but which still run (a dev server
+  started with `&`, a test runner, a browser driver); `cmds top --leftover` lists only those. `cmds kill PID [--force]`
+  (socket `system.kill_process`) stops one of them and refuses any other pid, checked by the app. The sidebar footer
+  shows "N leftover processes · X GB" with a list and Stop buttons, the workspace usage tooltip its three heaviest
+  processes, and a notification warns when the memory pressure stays at warning for a minute (at most every 30
+  minutes; Settings › General › Memory). `cmds mcp` gains `system_stats` (with `advice: ok|wait` before heavy jobs)
+  and `list_processes`. Not available from SSH panes.
+
 - `cmds mcp`: terminal tools for agents that only speak MCP (#171). `terminal_split` opens a terminal pane beside the
   agent's terminal without taking the focus and types a command into its shell (the pane and its output stay when the
   command exits); `terminal_read` (screen or last lines with scrollback) and `terminal_send` (text, Return) reach only
