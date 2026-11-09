@@ -37,6 +37,9 @@ public enum TerminalTextSearch {
         case invalidRegex(String)
     }
 
+    /// `matches` checks for cancellation once per this many rows.
+    static let rowsPerCancelCheck = 512
+
     /// Hits in reading order (top row first, left to right). Empty for an empty query; zero-length regex matches are
     /// skipped. At most `limit` hits. Checks `Task.isCancelled` now and then and returns what it has so far.
     public static func matches(_ query: String, in rows: [String], firstRow: Int = 0,
@@ -55,7 +58,7 @@ public enum TerminalTextSearch {
         }
         var hits: [TerminalSearchMatch] = []
         for (index, row) in rows.enumerated() {
-            if index % 512 == 0, Task.isCancelled { break }
+            if index % rowsPerCancelCheck == 0, Task.isCancelled { break }
             let found = regex.map { Self.ranges(of: $0, in: row) } ?? Self.ranges(of: query, in: row, caseSensitive: options.caseSensitive)
             for range in found {
                 let column = TerminalCells.width(of: String(row[row.startIndex..<range.lowerBound]))
