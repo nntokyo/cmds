@@ -374,6 +374,17 @@ final class FilesTableView: NSTableView, NSMenuItemValidation {
         return super.validateProposedFirstResponder(responder, for: event)
     }
 
+    /// ⇧⌘G is also Edit › Find › Find Previous (the terminal's find bar), a menu key equivalent that would take it
+    /// before `keyDown`: the list claims it first while it has the keyboard.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
+        if let pane, window?.firstResponder === self, event.keyCode == Self.gKeyCode, flags == [.command, .shift] {
+            pane.goToFolder()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override func keyDown(with event: NSEvent) {
         guard let pane else { return super.keyDown(with: event) }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])

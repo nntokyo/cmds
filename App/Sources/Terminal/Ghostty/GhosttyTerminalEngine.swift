@@ -74,7 +74,7 @@ final class GhosttyTerminalSurface: TerminalSurface {
 
     func focus() {
         guard let window = surfaceView.window else { return }
-        window.makeFirstResponder(surfaceView)
+        window.makeFirstResponder(surfaceView.keyboardRedirect ?? surfaceView)
     }
 
     /// One line per viewport row (soft-wrapped rows are NOT joined, so line N is screen row N and
@@ -195,6 +195,64 @@ final class GhosttyTerminalSurface: TerminalSurface {
         let row = Int(((c.y - o.y) * scale / cellH).rounded())
         guard (0..<rows).contains(row) else { return nil }
         return (row, col)
+    }
+
+    // MARK: Search
+
+    func search(_ needle: String) {
+        searchTotal = nil
+        searchSelected = nil
+        surfaceView.performBinding("search:\(needle)")
+    }
+
+    func navigateSearch(next: Bool) {
+        surfaceView.performBinding(next ? "navigate_search:next" : "navigate_search:previous")
+    }
+
+    func endSearch() {
+        searchTotal = nil
+        searchSelected = nil
+        surfaceView.performBinding("end_search")
+    }
+
+    /// Read row by row like `historyRows` (exact screen points reach the whole history with cmds' patch).
+    func screenRows(_ range: Range<Int>) -> [String]? {
+        guard let surface = surfaceView.surface else { return nil }
+        let cols = Int(ghostty_surface_size(surface).columns)
+        guard cols > 0 else { return nil }
+        var rows: [String] = []
+        rows.reserveCapacity(range.count)
+        for row in range {
+            guard let text = readRow(surface, GHOSTTY_POINT_SCREEN, row, cols: cols) else { return nil }
+            rows.append(text)
+        }
+        return rows
+    }
+
+    func scroll(toRow row: Int) {
+        surfaceView.performBinding("scroll_to_row:\(max(0, row))")
+    }
+
+    /// From the position libghostty reports for the cell (`tl_px`: its left edge and its text baseline, in points
+    /// from the top-left). The baseline sits about a fifth of a cell above the cell's bottom; close enough for an
+    /// outline around a hit.
+    func cellRect(viewportRow row: Int, column: Int, width: Int) -> NSRect? {
+        guard let surface = surfaceView.surface else { return nil }
+        let size = ghostty_surface_size(surface)
+        let cell = surfaceView.convertFromBacking(NSSize(width: Int(size.cell_width_px), height: Int(size.cell_height_px)))
+        guard cell.width > 0, cell.height > 0 else { return nil }
+        let point = Self.cell(GHOSTTY_POINT_VIEWPORT, col: column, row: row)
+        guard let read = read(surface, ghostty_selection_s(top_left: point, bottom_right: point, rectangle: false)),
+              read.y >= 0 else { return nil }
+        let top = read.y - cell.height * 0.8
+        let height = surfaceView.bounds.height
+        return NSRect(x: read.x, y: height - top - cell.height, width: cell.width * CGFloat(max(width, 1)),
+                      height: cell.height)
+    }
+
+    var keyboardRedirect: NSView? {
+        get { surfaceView.keyboardRedirect }
+        set { surfaceView.keyboardRedirect = newValue }
     }
 
     func close() {
@@ -325,6 +383,32 @@ final class GhosttyTerminalSurface: TerminalSurface {
     func handleCloseRequest() {
         close()
     }
+
+    /// libghostty's `start_search` / `search_selection` (a key binding of the user's config; cmds' own ⌘F is a menu
+    /// item that never reaches libghostty).
+    func handleStartSearch(_ needle: String?) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, !self.closed else { return }
+                self.delegate?.terminalSurface(self, didRequestSearch: needle)
+            }
+        }
+    }
+
+    /// SEARCH_TOTAL / SEARCH_SELECTED from libghostty's search thread; each reports one figure, so the other is kept.
+    private var searchTotal: Int?
+    private var searchSelected: Int?
+
+    func handleSearchUpdate(total: Int?? = .none, selected: Int?? = .none) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, !self.closed else { return }
+                if case .some(let total) = total { self.searchTotal = total }
+                if case .some(let selected) = selected { self.searchSelected = selected }
+                self.delegate?.terminalSurface(self, searchDidUpdate: self.searchTotal, selected: self.searchSelected)
+            }
+        }
+    }
 }
 
 /// Shown only if libghostty cannot be initialized: a read-only text view with the error.
@@ -355,6 +439,13 @@ private final class FallbackSurface: TerminalSurface {
     func scrollbar() -> TerminalScrollbar? { nil }
     func historyRows(maxRows: Int) -> [String]? { [] } // `visibleText()` already has all of it
     func historyStyledRows(maxRows: Int) -> [StyledRow]? { [] }
+    func search(_ needle: String) {}
+    func navigateSearch(next: Bool) {}
+    func endSearch() {}
+    func screenRows(_ range: Range<Int>) -> [String]? { nil }
+    func scroll(toRow row: Int) {}
+    func cellRect(viewportRow row: Int, column: Int, width: Int) -> NSRect? { nil }
+    var keyboardRedirect: NSView?
     var cursorPosition: (row: Int, col: Int)? { nil }
     var gridSize: (rows: Int, cols: Int)? { nil }
     var foregroundProcessGroupID: pid_t? { nil }

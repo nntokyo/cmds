@@ -33,12 +33,20 @@ protocol TerminalSurfaceDelegate: AnyObject {
     func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool
     /// The user pressed a key that went to the terminal (not for text sent through the API).
     func terminalSurfaceDidReceiveKeyInput(_ surface: TerminalSurface)
+    /// A key binding of the user's terminal config asked for the search UI (libghostty's `start_search`,
+    /// `search_selection`); `needle` is the text to search for, if any.
+    func terminalSurface(_ surface: TerminalSurface, didRequestSearch needle: String?)
+    /// libghostty's search counted its hits (`total`, nil while unknown) or selected one (`selected`: 0 is the first
+    /// one selected, at the bottom; nil when none is).
+    func terminalSurface(_ surface: TerminalSurface, searchDidUpdate total: Int?, selected: Int?)
 }
 
 extension TerminalSurfaceDelegate {
     func terminalSurfaceChildDidExit(_ surface: TerminalSurface) {}
     func terminalSurfaceDidReceiveKeyInput(_ surface: TerminalSurface) {}
     func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool { false }
+    func terminalSurface(_ surface: TerminalSurface, didRequestSearch needle: String?) {}
+    func terminalSurface(_ surface: TerminalSurface, searchDidUpdate total: Int?, selected: Int?) {}
 }
 
 @MainActor
@@ -84,6 +92,26 @@ protocol TerminalSurface: AnyObject {
     /// `historyRows` with each row's colours and attributes, as `visibleStyledRows` reads the screen's.
     func historyStyledRows(maxRows: Int) -> [StyledRow]?
     func close()
+
+    // MARK: Search (⌘F, TerminalFind)
+
+    /// Starts or changes the engine's own search (libghostty: plain text, ASCII case-insensitive, on its own thread):
+    /// it highlights every hit, selects one and scrolls to it, and reports `searchDidUpdate`. "" stops searching.
+    func search(_ needle: String)
+    /// Selects the next hit (`next`, going up towards older output) or the previous one and scrolls to it.
+    func navigateSearch(next: Bool)
+    /// Ends the engine's search and removes its highlights.
+    func endSearch()
+    /// Rows `range` of the whole screen (0 is the top of the history, `scrollbar().total` rows), one entry per
+    /// displayed row as `historyRows` reads them; nil when a row could not be read.
+    func screenRows(_ range: Range<Int>) -> [String]?
+    /// Scrolls so that screen row `row` (as in `screenRows`) is the top row of the viewport, or as close as it goes.
+    func scroll(toRow row: Int)
+    /// Where `width` cells from `column` of viewport row `row` are, in `view`'s coordinates; nil if unknown.
+    func cellRect(viewportRow row: Int, column: Int, width: Int) -> NSRect?
+    /// While set, the terminal does not take the keyboard (the find bar is open): it refuses first responder, and
+    /// clicks and `focus()` focus this view instead.
+    var keyboardRedirect: NSView? { get set }
 }
 
 @MainActor

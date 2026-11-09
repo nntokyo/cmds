@@ -31,7 +31,16 @@ final class GhosttySurfaceView: NSView {
     private var cursor: NSCursor = .iBeam
     private var alertShowing = false
 
-    override var acceptsFirstResponder: Bool { true }
+    /// While set (the find bar is open), the terminal never takes the keyboard: it refuses first responder and a click
+    /// on it focuses this view instead, so no key reaches the program.
+    weak var keyboardRedirect: NSView? {
+        didSet {
+            guard let keyboardRedirect, window?.firstResponder === self else { return }
+            window?.makeFirstResponder(keyboardRedirect)
+        }
+    }
+
+    override var acceptsFirstResponder: Bool { keyboardRedirect == nil }
 
     init(app: ghostty_app_t, config: TerminalLaunchConfig) {
         // Non-zero initial frame so the renderer has a drawable before layout.
@@ -309,6 +318,14 @@ final class GhosttySurfaceView: NSView {
         let loc = content.convert(event.locationInWindow, from: nil)
         guard content.hitTest(loc) === self else { return event }
         suppressNextLeftMouseUp = false
+        if let keyboardRedirect {
+            // The find bar is open: the click focuses its field (and still selects text in the terminal).
+            let editing = (window.firstResponder as? NSText)?.delegate as AnyObject?
+            if editing !== keyboardRedirect, window.firstResponder !== keyboardRedirect {
+                window.makeFirstResponder(keyboardRedirect)
+            }
+            return event
+        }
         guard window.firstResponder !== self else { return event }
         if NSApp.isActive && window.isKeyWindow {
             // Click only moves focus between panes; don't report it to the program.
@@ -670,7 +687,9 @@ final class GhosttySurfaceView: NSView {
 
     // MARK: - Edit actions
 
-    private func performBinding(_ action: String) -> Bool {
+    /// Runs a libghostty binding action (`copy_to_clipboard`, `search:<text>`, …).
+    @discardableResult
+    func performBinding(_ action: String) -> Bool {
         guard let surface else { return false }
         return action.withCString { ghostty_surface_binding_action(surface, $0, UInt(action.utf8.count)) }
     }
