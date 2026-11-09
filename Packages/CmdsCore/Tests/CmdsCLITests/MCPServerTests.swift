@@ -256,7 +256,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(timedOut?["isError"], .bool(true))
         XCTAssertTrue(text(timedOut)?.contains("timed out") == true)
         failure = CLIError.failure("method not found: browser.console")
-        XCTAssertTrue(text(callTool(server, "browser_console", #"{"pane":"p4"}"#))?.contains("update cmds") == true)
+        XCTAssertEqual(text(callTool(server, "browser_console", #"{"pane":"p4"}"#)), "this cmds app has no browser.console; update cmds")
         failure = nil
     }
 
@@ -509,6 +509,13 @@ final class MCPServerTests: XCTestCase {
         replies["system.stats"] = stats(2)
         let wait = try XCTUnwrap(text(callTool(server(), "system_stats")))
         XCTAssertTrue(wait.hasPrefix("advice: wait"), wait)
+        XCTAssertEqual(wait, """
+            advice: wait (memory pressure is warning: do not start another build, test run or dev server; wait until it is normal, or run one at a time)
+            memory pressure: warning
+            memory: 11.2 / 16 GB used
+            swap: 3.9 / 5 GB used
+            CPU: 23% of all cores
+            """)
         XCTAssertTrue(wait.contains("memory pressure: warning"), wait)
         XCTAssertTrue(wait.contains("memory: 11.2 / 16 GB used"), wait)
         XCTAssertTrue(wait.contains("swap: 3.9 / 5 GB used"), wait)
@@ -542,6 +549,8 @@ final class MCPServerTests: XCTestCase {
         ]), "total": 4, "totalMemoryBytes": 3_379_560_448])
         let lines = try XCTUnwrap(text(callTool(server(), "list_processes"))).split(separator: "\n").map(String.init)
         XCTAssertEqual(lines.count, 3, "\(lines)")
+        XCTAssertEqual(lines, ["30  3.0 GB  pane p7  [leftover: its pane or workspace was closed]  node 30.js",
+                               "20  100 MB  pane p9  node 20.js", "10  1.0 MB  pane p1 (yours)  node 10.js"])
         XCTAssertTrue(lines[0].hasPrefix("30  3.0 GB  pane p7  [leftover") && lines[0].hasSuffix("node 30.js"), lines[0])
         XCTAssertTrue(lines[1].hasPrefix("20  100 MB  pane p9  node 20.js"), lines[1])
         XCTAssertTrue(lines[2].hasPrefix("10  1.0 MB  pane p1 (yours)"), lines[2])
@@ -559,6 +568,20 @@ final class MCPServerTests: XCTestCase {
         let result = callTool(server, "list_processes")
         XCTAssertEqual(result?["isError"], .bool(true))
         XCTAssertEqual(text(result), "this cmds app has no system.processes; update cmds")
+    }
+
+    func testSystemStatsAndListProcessesRejectUnexpectedReplies() {
+        replies["system.stats"] = .string("x")
+        XCTAssertEqual(text(callTool(server(), "system_stats")), "the app returned unexpected stats")
+        paneKinds = ["p1": .terminal]
+        replies["system.processes"] = .string("x")
+        XCTAssertEqual(text(callTool(server(), "list_processes")), "the app returned an unexpected process list")
+        // Other app errors pass through unchanged.
+        let server = MCPServer(environment: ["CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1"]) { method, _, _ in
+            if method == "system.processes" { throw CLIError.failure("pid 3 is not a process") }
+            return .array([])
+        }
+        XCTAssertEqual(text(callTool(server, "list_processes")), "pid 3 is not a process")
     }
 
     func testAppErrorsBecomeToolErrors() {
