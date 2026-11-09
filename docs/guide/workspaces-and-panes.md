@@ -1,7 +1,7 @@
 # Workspaces and panes
 
 > Everyday use of the Mac app: workspaces and the sidebar, splits, the tiled view, browser and preview panes, SSH workspaces,
-> session restore, keeping the Mac awake, settings (text size) and the app's language.
+> worktree workspaces, session restore, keeping the Mac awake, settings (text size) and the app's language.
 
 All key equivalents: [reference/shortcuts.md](../reference/shortcuts.md). Everything here can also be scripted with
 the [`cmds` CLI](../reference/cli.md).
@@ -219,6 +219,59 @@ _cmds_location() { printf '\033]7;file://localhost%s\007' "$PWD"; cmds-remote.sh
 
 The `printf` alone gives the cwd (no process, no helper needed); `cmds-remote.sh prompt` adds the git branch (one
 `git` + one socket call per prompt; drop it if that is too slow). Local git is never consulted for remote paths.
+
+## Worktree workspaces
+
+Agents working side by side in one checkout get in each other's way. A worktree workspace gives each its own branch
+and folder (a [git worktree](https://git-scm.com/docs/git-worktree)) that shares the repository's history.
+
+### Creating one
+
+- **File › New Worktree Workspace…** (⌥⌘N), or **New Worktree Workspace…** in a workspace's sidebar menu: the
+  repository (prefilled with the selected workspace's), the new branch, optionally the base, the location and a command
+  to start (e.g. `claude`).
+- `cmds new --worktree BRANCH [--base REF] [--path DIR] [--cwd DIR] [-- cmd…]`, e.g.
+  `cmds new --worktree fix-login -- claude`.
+
+cmds runs `git fetch` (a failure, e.g. offline, is only a warning: the branch then starts from what was fetched
+before), then `git worktree add --no-track -b BRANCH PATH BASE`, and opens the workspace in the new folder.
+
+- **Base**: default is the repository's default branch, the remote's when there is one (`origin/HEAD`, e.g.
+  `origin/main`; else `main` or `master`). A name you give is taken as the remote's branch when it has one, else as a
+  local branch, tag or commit. The new branch has no upstream, so a plain `git push` never goes to the base; push it
+  with `git push -u origin BRANCH`.
+- **Location**: default `<repo>-worktrees/<branch>` next to the repository (`~/src/app` → `~/src/app-worktrees/fix-login`;
+  `/` in the branch becomes `-`). It is outside the repository's working tree, so its build tools, searches, file
+  watchers and `git status` never see the other worktrees, and on the same volume. A location inside the repository is
+  refused.
+- An existing branch name (local, or on the remote after the fetch) and an existing folder are errors; nothing is
+  created then.
+
+cmds remembers the worktrees it created in `worktrees.json` in its support folder; only those are ever offered for
+removal. `cmds ls --json` shows them as `worktree` of their workspace. Session restore keeps the workspace in its
+worktree.
+
+### Show Changes
+
+**Show Changes** in a workspace's sidebar menu (any local git repository; `cmds changes [ws]`) opens a diff preview of
+what the branch did since it left its base: the commits, then one diff from the merge base to the working tree
+(commits, staged and unstaged changes together, untracked files included). The base is the worktree's for one cmds
+created, else the repository's default branch. Nothing is fetched. Choosing it again refreshes the same preview.
+
+### Removing the worktree
+
+Closing a workspace whose worktree cmds created (×, its sidebar menu, ⇧⌘W) asks: **Close Workspace** keeps the
+worktree, **Close and Remove Worktree** also removes it with `git worktree remove` (never `rm -rf`, never `--force`).
+Removing is refused, and the workspace stays open, while the worktree has
+
+- uncommitted changes (also staged ones) or untracked files,
+- commits that are on no remote branch and not on its base (push them, or merge them into the base),
+- or a `git worktree lock`.
+
+Files git ignores (build output, `node_modules`, `.env` files listed in `.gitignore`) go with the folder; the branch
+stays (delete it with `git branch -d` once merged). Worktrees created with `git worktree add` or another tool, and a
+worktree another open workspace is in, are never offered. `cmds close [ws] --remove-worktree` does the same from a
+script.
 
 ## Session restore
 
