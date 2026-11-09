@@ -352,6 +352,9 @@ final class APIServer {
         case "browser.get_url":
             let location = try controller.browserLocation(paneID: try browserPaneID(params))
             return ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
+        case "browser.set_responsive":
+            return try controller.browserSetResponsive(paneID: try browserPaneID(params),
+                                                       change: try BrowserResponsiveChange(params: params.value))
         case "browser.set_viewport":
             return try controller.browserSetViewport(paneID: try browserPaneID(params),
                                                      change: try BrowserViewportChange(params: params.value))

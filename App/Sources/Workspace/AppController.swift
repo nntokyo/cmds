@@ -463,6 +463,11 @@ final class AppController {
         try await browser(paneID: paneID).snapshot(request)
     }
 
+    /// `browser.set_responsive`: the responsive view on, off or changed (none: just reports).
+    func browserSetResponsive(paneID: String, change: BrowserResponsiveChange) throws -> JSONValue {
+        try browser(paneID: paneID).applyResponsive(change)
+    }
+
     /// `browser.set_viewport`: applies `change` (none: just reports) and returns the settings with the current `scale`.
     func browserSetViewport(paneID: String, change: BrowserViewportChange) throws -> JSONValue {
         let browser = try browser(paneID: paneID)
@@ -815,7 +820,8 @@ final class AppController {
                 let pane = workspace.panes[id]
                 if pane?.kind == .browser {
                     let emulation = pane?.browser?.emulation
-                    return .browser(url: pane?.url, emulation: emulation?.isDefault == false ? emulation : nil)
+                    return .browser(url: pane?.url, emulation: emulation?.isDefault == false ? emulation : nil,
+                                    responsive: pane?.browser?.responsive)
                 }
                 if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
                 if let files = pane?.files {
@@ -894,10 +900,12 @@ final class AppController {
                 let account = accounts[leafIndex - 1]
                 return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil,
                                                   account: account).id)
-            case .browser(let url, let emulation):
+            case .browser(let url, let emulation, let responsive):
                 // Checked again: a hand-edited session.json must not reach WebKit with odd values.
-                return SplitNode(paneID: makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url,
-                                                  emulation: (try? emulation?.validated()) ?? nil).id)
+                let pane = makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url,
+                                    emulation: (try? emulation?.validated()) ?? nil)
+                if let responsive = (try? responsive?.validated()) ?? nil { pane.browser?.setResponsive(responsive) }
+                return SplitNode(paneID: pane.id)
             case .preview(let path, let format):
                 // A missing file shows a placeholder (and appears when it is created again).
                 let target = PreviewTarget(path: path, format: format.flatMap(PreviewFormat.init(rawValue:)))
