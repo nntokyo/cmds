@@ -22,6 +22,8 @@ final class ResponsiveView: NSView {
     /// How long a frame we navigated ignores its own URL changes after its load finished.
     static let settleTime: TimeInterval = 1
     static let scrollHandlerName = "cmdsResponsiveScroll"
+    /// How long a file:// page waits after a change before every frame reloads (saves come in bursts).
+    static let fileReloadDelay: TimeInterval = 0.2
 
     private final class Frame {
         let webView: WKWebView
@@ -68,15 +70,9 @@ final class ResponsiveView: NSView {
             let webView: WKWebView
             if index == 0 {
                 webView = primary
-                let agent = target.preset?.userAgent ?? primaryUserAgent
-                if webView.customUserAgent != agent {
-                    webView.customUserAgent = agent
-                    if Self.isPage(webView.url) { webView.reload() }
-                }
+                webView.setUserAgent(target.preset?.userAgent ?? primaryUserAgent)
             } else {
-                let configuration = WKWebViewConfiguration()
-                configuration.websiteDataStore = primary.configuration.websiteDataStore
-                configuration.preferences.isElementFullscreenEnabled = true
+                let configuration = BrowserPane.webViewConfiguration(websiteDataStore: primary.configuration.websiteDataStore)
                 webView = WKWebView(frame: .zero, configuration: configuration)
                 webView.customUserAgent = target.preset?.userAgent ?? primaryUserAgent
                 webView.appearance = primary.appearance
@@ -93,7 +89,7 @@ final class ResponsiveView: NSView {
             attachScrollScript(webView)
             observe(frame)
             frames.append(frame)
-            if index > 0, let url = syncedURL, Self.isPage(url) { load(url, in: frame) }
+            if index > 0, let url = syncedURL, BrowserPane.isWebPage(url) { load(url, in: frame) }
         }
         watchFile()
     }
@@ -137,10 +133,7 @@ final class ResponsiveView: NSView {
                 frame.webView.navigationDelegate = nil
             }
         }
-        if primary.customUserAgent != primaryUserAgent {
-            primary.customUserAgent = primaryUserAgent
-            if Self.isPage(primary.url) { primary.reload() }
-        }
+        primary.setUserAgent(primaryUserAgent)
         frames.removeAll()
     }
 
@@ -175,11 +168,6 @@ final class ResponsiveView: NSView {
 
     // MARK: - Navigation sync
 
-    private static func isPage(_ url: URL?) -> Bool {
-        guard let scheme = url?.scheme?.lowercased() else { return false }
-        return ["http", "https", "file"].contains(scheme)
-    }
-
     private func load(_ url: URL, in frame: Frame) {
         frame.loadingFromSync = true
         if url.isFileURL {
@@ -208,7 +196,7 @@ final class ResponsiveView: NSView {
     }
 
     private func urlChanged(_ url: URL?, in source: Frame) {
-        guard let url, Self.isPage(url), !source.settling, url != syncedURL else { return }
+        guard let url, BrowserPane.isWebPage(url), !source.settling, url != syncedURL else { return }
         syncedURL = url
         for frame in frames where frame !== source && frame.webView.url != url {
             load(url, in: frame)
@@ -236,7 +224,7 @@ final class ResponsiveView: NSView {
             }
         }
         reloadWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.fileReloadDelay, execute: work)
     }
 
     // MARK: - Scroll sync

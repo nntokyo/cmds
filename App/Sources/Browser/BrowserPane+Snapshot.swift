@@ -33,7 +33,7 @@ extension BrowserPane {
         if request.targets.isEmpty {
             return [try await OffscreenRenderHost.rendering(webView) { try await Self.capture(webView, request: request, device: nil) }]
         }
-        guard let url = webView.url, ["http", "https", "file"].contains(url.scheme?.lowercased() ?? "") else {
+        guard let url = webView.url, Self.isWebPage(url) else {
             throw RPCError.invalidParams("the pane shows no web page to capture at other sizes")
         }
         var images: [BrowserSnapshotImage] = []

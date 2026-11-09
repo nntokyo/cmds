@@ -42,10 +42,7 @@ final class BrowserPane: NSView {
     var pageTitle: String { webView.title ?? "" }
 
     init(emulation: BrowserEmulation = BrowserEmulation()) {
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
-        configuration.preferences.isElementFullscreenEnabled = true
-        webView = WKWebView(frame: .zero, configuration: configuration)
+        webView = WKWebView(frame: .zero, configuration: Self.webViewConfiguration(websiteDataStore: .default()))
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
         self.emulation = emulation
@@ -206,6 +203,20 @@ final class BrowserPane: NSView {
         webView.navigationDelegate = nil
     }
 
+    /// A browser pane's web view settings (also the responsive view's extra frames, with the pane's data store).
+    static func webViewConfiguration(websiteDataStore: WKWebsiteDataStore) -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = websiteDataStore
+        configuration.preferences.isElementFullscreenEnabled = true
+        return configuration
+    }
+
+    /// An http, https or file page (what can be loaded again elsewhere, and what a server or file gives).
+    static func isWebPage(_ url: URL?) -> Bool {
+        guard let scheme = url?.scheme?.lowercased() else { return false }
+        return ["http", "https", "file"].contains(scheme)
+    }
+
     static func url(fromUserInput raw: String) -> URL? {
         let input = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !input.isEmpty else { return nil }
@@ -327,6 +338,16 @@ final class BrowserPane: NSView {
     @objc private func addressSubmitted() {
         navigate(to: addressField.stringValue)
         window?.makeFirstResponder(webView)
+    }
+}
+
+extension WKWebView {
+    /// Sends `agent` from now on (nil: WebKit's own). A web page shown is reloaded: servers see a new user agent only
+    /// with a new request.
+    func setUserAgent(_ agent: String?) {
+        guard customUserAgent != agent else { return }
+        customUserAgent = agent
+        if BrowserPane.isWebPage(url) { reload() }
     }
 }
 
