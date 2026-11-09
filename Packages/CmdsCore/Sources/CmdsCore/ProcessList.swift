@@ -211,6 +211,9 @@ public struct ProcessKillRequest: Equatable, Sendable {
         ["pid": .number(Double(pid)), "force": force ? .bool(true) : nil, "started": started.map { .number($0) }]
     }
 
+    /// The signal it sends as `ProcessKillResult.signal` names it: `KILL` with `force`, else `TERM`.
+    public var signalName: String { force ? "KILL" : "TERM" }
+
     /// Checks the request against the latest scan. Only a process the scan attributed to a cmds terminal, still the
     /// same process (same start time), never pid 1 or the app itself.
     /// - Parameters:

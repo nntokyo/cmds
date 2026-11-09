@@ -154,6 +154,8 @@ final class ProcessListTests: XCTestCase {
         XCTAssertEqual(ProcessKillRequest(pid: 42).params.compactMapValues { $0 }, ["pid": 42])
         XCTAssertEqual(ProcessKillRequest(pid: 42, force: true, started: 1.5).params.compactMapValues { $0 },
                        ["pid": 42, "force": true, "started": 1.5])
+        XCTAssertEqual(ProcessKillRequest(pid: 42).signalName, "TERM")
+        XCTAssertEqual(ProcessKillRequest(pid: 42, force: true).signalName, "KILL")
     }
 
     func testKillOnlyTheScannedProcessNeverPidOneOrTheApp() throws {

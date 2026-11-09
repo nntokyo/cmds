@@ -68,6 +68,8 @@ final class LeftoverProcessesController: NSViewController {
     /// Processes already sent SIGTERM (pid → start): their button sends SIGKILL.
     private var terminated: [Int32: Double] = [:]
     private var shownKey = ""
+    /// Rows shown; the summary points to `cmds top --leftover` for the rest.
+    private static let maxRows = 30
 
     init(controller: AppController) {
         self.controller = controller
@@ -109,10 +111,10 @@ final class LeftoverProcessesController: NSViewController {
         shownKey = key
         for view in stack.arrangedSubviews { stack.removeView(view) }
         terminated = terminated.filter { pid, started in list.processes.contains { $0.pid == pid && $0.started == started } }
-        for process in list.processes.prefix(30) { stack.addArrangedSubview(row(process)) }
+        for process in list.processes.prefix(Self.maxRows) { stack.addArrangedSubview(row(process)) }
         summary.stringValue = list.total == 0
             ? String(localized: "No leftover processes.")
-            : LeftoverIndicator.title(list) + (list.total > 30 ? " · " + String(localized: "see cmds top --leftover") : "")
+            : LeftoverIndicator.title(list) + (list.total > Self.maxRows ? " · " + String(localized: "see cmds top --leftover") : "")
     }
 
     private func row(_ process: ProcessEntry) -> NSView {

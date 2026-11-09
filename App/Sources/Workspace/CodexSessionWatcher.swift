@@ -44,7 +44,7 @@ struct AgentProcessRef: Equatable {
         guard pid > 0, proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size, info.pbi_status != 5 /* SZOMB */ else {
             return nil
         }
-        return info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec
+        return info.startMicroseconds
     }
 }
 
