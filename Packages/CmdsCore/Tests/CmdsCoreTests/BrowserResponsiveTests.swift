@@ -42,6 +42,24 @@ final class BrowserResponsiveTests: XCTestCase {
                        ["pixel", "desktop-1920"])
     }
 
+    /// The API, CLI and MCP show these messages as they are.
+    func testChangeErrorMessages() {
+        let cases: [(JSONValue, String)] = [
+            (["on": "yes"], "on must be a boolean"),
+            (["devices": [1, 2]], "devices must be strings"),
+            (["devices": 3], "devices must be a list of presets or WIDTHxHEIGHT"),
+            (["syncScroll": 1], "syncScroll must be a boolean"),
+            (["on": false, "devices": ["iphone", "ipad"]], "devices with on: false"),
+            (["devices": ["iphone"]], "a responsive view has 2–4 devices (got 1)"),
+            (["devices": "iphone,nokia"], "unknown device \"nokia\": use a preset (iphone-se, iphone, iphone-pro-max, pixel, ipad, ipad-landscape, desktop-1280, desktop-1440, desktop-1920) or WIDTHxHEIGHT"),
+        ]
+        for (params, message) in cases {
+            XCTAssertThrowsError(try BrowserResponsiveChange(params: params), "\(params)") {
+                XCTAssertEqual(($0 as? RPCError)?.message, message)
+            }
+        }
+    }
+
     func testJSONAndSummary() {
         XCTAssertEqual(BrowserResponsive.summary(BrowserResponsive().json), "responsive view: iphone, ipad, desktop-1440")
         XCTAssertEqual(BrowserResponsive.summary(BrowserResponsive(devices: ["a", "b"], syncScroll: false).json),
