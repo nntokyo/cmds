@@ -26,17 +26,21 @@ final class OffscreenRenderHost {
         let root = Self.root(of: view, below: nil)
         self.root = root
         let size = root.frame.width >= 1 && root.frame.height >= 1 ? root.frame.size : Self.defaultSize
-        window = RenderOnlyWindow(contentRect: NSRect(origin: NSPoint(x: -20_000, y: -20_000), size: size),
-                          styleMask: [.borderless], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        window.ignoresMouseEvents = true
-        window.collectionBehavior = [.transient, .ignoresCycle]
+        window = RenderOnlyWindow(offscreenAt: NSPoint(x: -20_000, y: -20_000), size: size)
         window.autorecalculatesKeyViewLoop = false
         window.hosts = 1
         root.frame = NSRect(origin: .zero, size: size)
         window.contentView?.addSubview(root)
         window.orderFrontRegardless()
         root.layoutSubtreeIfNeeded()
+    }
+
+    /// Runs `body` while `view` renders: when it is in no window, in an off-screen one meanwhile (after `paintDelay`).
+    static func rendering<T>(_ view: NSView, _ body: () async throws -> T) async throws -> T {
+        let offscreen = OffscreenRenderHost(hosting: view)
+        defer { offscreen?.release() }
+        if offscreen != nil { try await Task.sleep(for: paintDelay) }
+        return try await body()
     }
 
     /// The topmost ancestor of `view` below `container` (nil: the topmost ancestor).
@@ -60,6 +64,14 @@ final class OffscreenRenderHost {
 final class RenderOnlyWindow: NSWindow {
     /// Live `OffscreenRenderHost`s using this window.
     var hosts = 0
+
+    /// A borderless window at `origin` (outside the screen) that ignores the mouse and stays out of window cycling.
+    convenience init(offscreenAt origin: NSPoint, size: NSSize) {
+        self.init(contentRect: NSRect(origin: origin, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
+        isReleasedWhenClosed = false
+        ignoresMouseEvents = true
+        collectionBehavior = [.transient, .ignoresCycle]
+    }
 
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
