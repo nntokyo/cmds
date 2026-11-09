@@ -24,9 +24,7 @@ extension TerminalFind {
             await debugWaitUntilSettled()
         case "next", "previous":
             navigate(next: action == "next")
-            await debugWaitUntilSettled()
-            // libghostty reports the new selection from its search thread.
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            await debugWaitForSelection()
         case "close": close()
         case "key", "menuKey":
             guard let chars = params?["chars"]?.stringValue, !chars.isEmpty,
@@ -48,9 +46,7 @@ extension TerminalFind {
                     window.sendEvent(event)
                 }
             }
-            await debugWaitUntilSettled()
-            // libghostty reports a new selection from its search thread.
-            try? await Task.sleep(nanoseconds: 300_000_000)
+            await debugWaitForSelection()
         default: throw RPCError.invalidParams("unknown action \(action)")
         }
         var state = debugState
@@ -66,6 +62,12 @@ extension TerminalFind {
         for _ in 0..<200 where !debugSettled {
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
+    }
+
+    /// Settled, then a moment more: libghostty reports a new selection from its search thread.
+    private func debugWaitForSelection() async {
+        await debugWaitUntilSettled()
+        try? await Task.sleep(nanoseconds: 300_000_000)
     }
 
     /// US-layout key codes for the characters tests type (Escape and Return included).

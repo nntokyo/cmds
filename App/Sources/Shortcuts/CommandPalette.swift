@@ -18,6 +18,8 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
     private let items: [CommandPaletteItem]
     private(set) var results: [(item: CommandPaletteItem, result: FuzzyMatch.Result)] = []
     private var closing = false
+    /// Rows Page Up / Page Down move.
+    private static let pageRows = 8
 
     /// Opens the palette over `window` (closing one that is open).
     @discardableResult
@@ -143,15 +145,15 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
     private func filter() {
         results = FuzzyMatch.rank(items, query: field.stringValue) { $0.candidate }
         table.reloadData()
-        if !results.isEmpty {
-            table.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
-            table.scrollRowToVisible(0)
-        }
+        if !results.isEmpty { select(row: 0) }
     }
 
     private func move(_ delta: Int) {
         guard !results.isEmpty else { return }
-        let row = min(max(table.selectedRow + delta, 0), results.count - 1)
+        select(row: min(max(table.selectedRow + delta, 0), results.count - 1))
+    }
+
+    private func select(row: Int) {
         table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
         table.scrollRowToVisible(row)
     }
@@ -177,8 +179,8 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
         switch selector {
         case #selector(NSResponder.moveUp(_:)): move(-1)
         case #selector(NSResponder.moveDown(_:)): move(1)
-        case #selector(NSResponder.scrollPageUp(_:)), #selector(NSResponder.pageUp(_:)): move(-8)
-        case #selector(NSResponder.scrollPageDown(_:)), #selector(NSResponder.pageDown(_:)): move(8)
+        case #selector(NSResponder.scrollPageUp(_:)), #selector(NSResponder.pageUp(_:)): move(-Self.pageRows)
+        case #selector(NSResponder.scrollPageDown(_:)), #selector(NSResponder.pageDown(_:)): move(Self.pageRows)
         case #selector(NSResponder.insertNewline(_:)): run()
         case #selector(NSResponder.cancelOperation(_:)): close()
         default: return false
@@ -236,13 +238,15 @@ private final class PaletteRowView: NSTableCellView {
     private let detail = NSTextField(labelWithString: "")
     private let kind = NSTextField(labelWithString: "")
     private let shortcut = NSTextField(labelWithString: "")
+    private static let titleFont = NSFont.systemFont(ofSize: 13)
+    private static let matchedFont = NSFont.boldSystemFont(ofSize: 13)
 
     init() {
         super.init(frame: .zero)
         identifier = Self.identifier
         icon.symbolConfiguration = .init(pointSize: 13, weight: .regular)
         icon.contentTintColor = .secondaryLabelColor
-        title.font = .systemFont(ofSize: 13)
+        title.font = Self.titleFont
         title.lineBreakMode = .byTruncatingTail
         detail.font = .systemFont(ofSize: 11)
         detail.textColor = .secondaryLabelColor
@@ -282,8 +286,17 @@ private final class PaletteRowView: NSTableCellView {
 
     func show(_ item: CommandPaletteItem, positions: [Int]) {
         icon.image = NSImage(systemSymbolName: item.kind.symbol, accessibilityDescription: nil)
-        let attributed = NSMutableAttributedString(string: item.title, attributes: [.font: NSFont.systemFont(ofSize: 13)])
-        let characters = Array(item.title)
+        title.attributedStringValue = Self.highlighted(item.title, positions: positions)
+        detail.stringValue = item.detail
+        detail.isHidden = item.detail.isEmpty
+        kind.stringValue = item.kind.label
+        shortcut.stringValue = item.shortcut
+    }
+
+    /// `title` with the characters at `positions` (`FuzzyMatch.Result.positions`: `Character` offsets) in bold.
+    private static func highlighted(_ title: String, positions: [Int]) -> NSAttributedString {
+        let attributed = NSMutableAttributedString(string: title, attributes: [.font: titleFont])
+        let characters = Array(title)
         var offset = 0
         var utf16Offsets: [Int] = []
         utf16Offsets.reserveCapacity(characters.count)
@@ -293,12 +306,8 @@ private final class PaletteRowView: NSTableCellView {
         }
         for position in positions where position < characters.count {
             let range = NSRange(location: utf16Offsets[position], length: characters[position].utf16.count)
-            attributed.addAttributes([.font: NSFont.boldSystemFont(ofSize: 13)], range: range)
+            attributed.addAttributes([.font: matchedFont], range: range)
         }
-        title.attributedStringValue = attributed
-        detail.stringValue = item.detail
-        detail.isHidden = item.detail.isEmpty
-        kind.stringValue = item.kind.label
-        shortcut.stringValue = item.shortcut
+        return attributed
     }
 }

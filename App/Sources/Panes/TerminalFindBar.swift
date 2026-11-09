@@ -44,19 +44,14 @@ final class TerminalFindBar: NSVisualEffectView, NSTextFieldDelegate {
         countLabel.alignment = .right
         countLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
 
-        caseButton.target = self
-        caseButton.action = #selector(optionChanged)
-        regexButton.target = self
-        regexButton.action = #selector(optionChanged)
-        let next = Self.button(symbol: "chevron.up", tip: String(localized: "Next (⌘G, Return)"))
-        next.target = self
-        next.action = #selector(nextClicked)
-        let previous = Self.button(symbol: "chevron.down", tip: String(localized: "Previous (⇧⌘G, ⇧Return)"))
-        previous.target = self
-        previous.action = #selector(previousClicked)
-        let close = Self.button(symbol: "xmark", tip: String(localized: "Close (Esc)"))
-        close.target = self
-        close.action = #selector(closeClicked)
+        for toggle in [caseButton, regexButton] {
+            toggle.target = self
+            toggle.action = #selector(optionChanged)
+        }
+        let next = button(symbol: "chevron.up", tip: String(localized: "Next (⌘G, Return)"), action: #selector(nextClicked))
+        let previous = button(symbol: "chevron.down", tip: String(localized: "Previous (⇧⌘G, ⇧Return)"),
+                              action: #selector(previousClicked))
+        let close = button(symbol: "xmark", tip: String(localized: "Close (Esc)"), action: #selector(closeClicked))
 
         let stack = NSStackView(views: [field, countLabel, caseButton, regexButton, next, previous, close])
         stack.orientation = .horizontal
@@ -78,6 +73,9 @@ final class TerminalFindBar: NSVisualEffectView, NSTextFieldDelegate {
     var matchCase: Bool { caseButton.state == .on }
     var regex: Bool { regexButton.state == .on }
 
+    /// The search field is being edited (it has the keyboard).
+    var fieldHasKeyboard: Bool { (window?.firstResponder as? NSText)?.delegate === field }
+
     /// Red text for a regular expression that does not compile.
     func setInvalid(_ invalid: Bool) {
         field.textColor = invalid ? .systemRed : .labelColor
@@ -95,9 +93,9 @@ final class TerminalFindBar: NSVisualEffectView, NSTextFieldDelegate {
         return button
     }
 
-    private static func button(symbol: String, tip: String) -> NSButton {
+    private func button(symbol: String, tip: String, action: Selector) -> NSButton {
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: tip) ?? NSImage()
-        let button = NSButton(image: image, target: nil, action: nil)
+        let button = NSButton(image: image, target: self, action: action)
         button.bezelStyle = .recessed
         button.isBordered = false
         button.controlSize = .small

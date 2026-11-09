@@ -55,50 +55,66 @@ struct CommandPaletteItem {
         return SourceTitles(table: table)
     }()
 
+    /// Between a menu command's menus (`View › Split`).
+    private static let menuPathSeparator = " › "
+
     /// Workspaces and their panes (sidebar order), recent agent sessions, listening ports, then the enabled menu
     /// commands. Call while `window` has the keyboard: menu items are validated against its first responder.
     static func collect(controller: AppController, window: NSWindow) -> [CommandPaletteItem] {
-        var items: [CommandPaletteItem] = []
-        var panes: [CommandPaletteItem] = []
-        var ports: [CommandPaletteItem] = []
-        for workspace in controller.workspaces {
+        var items = workspaces(controller) + panes(controller) + sessions(controller) + ports(controller)
+        if let menu = NSApp.mainMenu { items += commands(in: menu, path: []) }
+        return items
+    }
+
+    private static func workspaces(_ controller: AppController) -> [CommandPaletteItem] {
+        controller.workspaces.map { workspace in
             let id = workspace.id
             let place = [workspace.workingDirectory?.abbreviatingHome, workspace.gitBranch].compactMap { $0 }
-            items.append(CommandPaletteItem(kind: .workspace, title: workspace.displayTitle,
-                                            detail: place.joined(separator: " · ")) { [weak controller] in
+            return CommandPaletteItem(kind: .workspace, title: workspace.displayTitle,
+                                      detail: place.joined(separator: " · ")) { [weak controller] in
                 try? controller?.selectWorkspace(id: id)
-            })
-            for pane in workspace.orderedPanes {
+            }
+        }
+    }
+
+    private static func panes(_ controller: AppController) -> [CommandPaletteItem] {
+        controller.workspaces.flatMap { workspace in
+            workspace.orderedPanes.map { pane in
                 let paneID = pane.id
                 let title = pane.agentTopic ?? DefaultTitle.localized(pane.title)
                 // The model keeps default titles in English (DefaultTitle). Same as the shown text in English.
                 let english = "\(pane.agentTopic ?? pane.title) \(workspace.displayTitle) · "
                     + sourceTitles.englishOrSame(pane.kind.label)
-                panes.append(CommandPaletteItem(kind: .pane, title: title,
-                                                detail: "\(workspace.displayTitle) · \(pane.kind.label)",
-                                                alternates: [english]) { [weak controller] in
+                return CommandPaletteItem(kind: .pane, title: title,
+                                          detail: "\(workspace.displayTitle) · \(pane.kind.label)",
+                                          alternates: [english]) { [weak controller] in
                     try? controller?.focusPane(id: paneID)
-                })
-            }
-            for port in workspace.ports {
-                ports.append(CommandPaletteItem(kind: .port, title: "localhost:\(port)",
-                                                detail: String(localized: "Open in a browser split — \(workspace.displayTitle)")) { [weak controller] in
-                    controller?.openPort(port, workspaceID: id)
-                })
+                }
             }
         }
-        items += panes
+    }
+
+    private static func sessions(_ controller: AppController) -> [CommandPaletteItem] {
         let now = Date()
-        for session in controller.agentHistory.recent() {
-            items.append(CommandPaletteItem(kind: .session, title: RecentAgentSessionsMenu.title(session, now: now),
-                                            detail: session.cwd?.abbreviatingHome ?? "") { [weak controller] in
+        return controller.agentHistory.recent().map { session in
+            CommandPaletteItem(kind: .session, title: RecentAgentSessionsMenu.title(session, now: now),
+                               detail: session.cwd?.abbreviatingHome ?? "") { [weak controller] in
                 guard let controller else { return }
                 RecentAgentSessionsMenu.open(session, controller: controller)
-            })
+            }
         }
-        items += ports
-        if let menu = NSApp.mainMenu { items += commands(in: menu, path: []) }
-        return items
+    }
+
+    private static func ports(_ controller: AppController) -> [CommandPaletteItem] {
+        controller.workspaces.flatMap { workspace in
+            let id = workspace.id
+            return workspace.ports.map { port in
+                CommandPaletteItem(kind: .port, title: "localhost:\(port)",
+                                   detail: String(localized: "Open in a browser split — \(workspace.displayTitle)")) { [weak controller] in
+                    controller?.openPort(port, workspaceID: id)
+                }
+            }
+        }
     }
 
     /// Menu commands that would be enabled now. Skips submenus filled when they open (Recent Agent Sessions: the
@@ -107,6 +123,7 @@ struct CommandPaletteItem {
     private static func commands(in menu: NSMenu, path: [String]) -> [CommandPaletteItem] {
         menu.update()
         var items: [CommandPaletteItem] = []
+        let englishPath = path.map(sourceTitles.englishOrSame).joined(separator: menuPathSeparator)
         for item in menu.items where !item.isSeparatorItem && !item.isHidden {
             if let submenu = item.submenu {
                 guard submenu.delegate == nil, submenu !== NSApp.servicesMenu else { continue }
@@ -117,9 +134,8 @@ struct CommandPaletteItem {
                   action != #selector(CommandRouter.showCommandPalette(_:)),
                   action != #selector(CommandRouter.selectWorkspace(_:)) else { continue }
             let target = item.target
-            let englishPath = path.map(sourceTitles.englishOrSame).joined(separator: " › ")
             let alternates = sourceTitles.english(for: item.title).map { "\($0) \(englishPath)" }
-            items.append(CommandPaletteItem(kind: .command, title: item.title, detail: path.joined(separator: " › "),
+            items.append(CommandPaletteItem(kind: .command, title: item.title, detail: path.joined(separator: menuPathSeparator),
                                             shortcut: shortcut(of: item), alternates: alternates) { [weak item] in
                 guard let item else { return }
                 NSApp.sendAction(action, to: target, from: item)
