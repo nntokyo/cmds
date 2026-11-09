@@ -77,6 +77,18 @@ final class ProcessListTests: XCTestCase {
         XCTAssertTrue(list.processes[0].command?.hasSuffix("…") == true)
     }
 
+    func testShortCommand() {
+        func entry(_ command: String?) -> ProcessEntry {
+            ProcessEntry(pid: 1, name: "Python", command: command, workspace: "w1", memoryBytes: 0, started: 0)
+        }
+        XCTAssertEqual(entry("/opt/homebrew/Cellar/python/3.15/bin/Python -m http.server 8000").shortCommand(),
+                       "Python -m http.server 8000")
+        XCTAssertEqual(entry("-/bin/zsh").shortCommand(), "zsh")
+        XCTAssertEqual(entry("node server.js").shortCommand(), "node server.js")
+        XCTAssertEqual(entry(nil).shortCommand(), "Python")
+        XCTAssertEqual(entry("node " + String(repeating: "a", count: 100)).shortCommand(maxLength: 10), "node aaaa…")
+    }
+
     func testListRequestValidation() throws {
         XCTAssertEqual(try ProcessListRequest(params: nil), ProcessListRequest())
         let request = try ProcessListRequest(params: ["limit": 5, "workspace": "w1", "pane": "p2", "leftover": true])

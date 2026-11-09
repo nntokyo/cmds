@@ -73,14 +73,13 @@ extension AppController {
         }
         parts.append(String(localized: "Close what you do not need, or wait before starting another build.",
                             comment: "memory warning notification"))
-        return (title, parts.joined(separator: " "))
+        return (title, parts.joined(separator: "\n"))
     }
 
     /// Workspace tooltip: its top `count` processes, one line each (`node server.js  1.2 GB`).
     func topProcessLines(workspaceID: String, count: Int = 3) -> [String] {
         processList(ProcessListRequest(limit: count, workspace: workspaceID)).processes.map { process in
-            let command = process.command.map { String($0.prefix(40)) } ?? process.name
-            return "\(command)  \(ResourceFormat.bytes(process.memoryBytes))"
+            return "\(process.shortCommand())  \(ResourceFormat.bytes(process.memoryBytes))"
                 + (process.isLeftover ? " " + String(localized: "(leftover)", comment: "process whose pane was closed") : "")
         }
     }

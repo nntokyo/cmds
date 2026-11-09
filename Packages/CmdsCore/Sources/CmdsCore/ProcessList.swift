@@ -81,6 +81,16 @@ public struct ProcessEntry: Codable, Equatable, Sendable {
     }
 
     public var isLeftover: Bool { leftover == true }
+
+    /// The command with the executable's folder dropped (`Python -m http.server 8000`), cut at `maxLength`; the name
+    /// when there is no command. For tooltips and other narrow places.
+    public func shortCommand(maxLength: Int = 48) -> String {
+        guard let command, !command.isEmpty else { return name }
+        var words = command.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: false).map(String.init)
+        if words[0].contains("/") { words[0] = (words[0] as NSString).lastPathComponent }
+        let text = words.joined(separator: " ")
+        return text.count > maxLength ? String(text.prefix(maxLength - 1)) + "…" : text
+    }
 }
 
 /// Result of `system.processes`.

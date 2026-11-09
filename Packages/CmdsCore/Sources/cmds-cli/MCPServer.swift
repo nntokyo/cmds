@@ -560,7 +560,7 @@ final class MCPServer {
                 if process.pane == envPane { where_ += " (yours)" }
                 let cpu = process.cpuPercent.map { "  CPU \(ResourceFormat.percent($0))" } ?? ""
                 return "\(process.pid)  \(ResourceFormat.bytes(process.memoryBytes))\(cpu)  \(where_)"
-                    + (process.isLeftover ? "  [leftover: its pane was closed]" : "")
+                    + (process.isLeftover ? "  [leftover: its pane or workspace was closed]" : "")
                     + "  \(Format.oneLine(process.command ?? process.name))"
             }
             return [Self.text(lines.joined(separator: "\n"))]
