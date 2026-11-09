@@ -603,8 +603,7 @@ final class SidebarViewController: NSViewController {
 
     @objc private func newWorktreeClicked(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String, let workspace = controller.workspace(id: id) else { return }
-        WorktreeSheet.present(in: view.window, controller: controller,
-                              directory: workspace.isRemote ? nil : workspace.workingDirectory)
+        WorktreeSheet.present(in: view.window, controller: controller, directory: workspace.localWorkingDirectory)
     }
 
     @objc private func clearNotificationClicked(_ sender: NSMenuItem) {

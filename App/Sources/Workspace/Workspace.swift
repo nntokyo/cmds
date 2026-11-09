@@ -63,6 +63,9 @@ final class Workspace {
     /// SSH host, never change the workspace's location.)
     var isRemote: Bool { focusedPane?.ssh != nil }
 
+    /// `workingDirectory` when it is on this Mac (nil for an SSH pane's remote directory).
+    var localWorkingDirectory: String? { isRemote ? nil : workingDirectory }
+
     /// Host of the focused SSH pane (nil when the focused pane is local).
     var remoteHost: String? { focusedPane?.ssh?.launch.host }
 

@@ -38,9 +38,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     /// ⌥⌘N: a workspace in a new git worktree of the selected workspace's repository (WorktreeSheet).
     @objc func newWorktreeWorkspace(_ sender: Any?) {
         windowController?.showWindow(nil)
-        let selected = controller.selectedWorkspace
         WorktreeSheet.present(in: windowController?.window, controller: controller,
-                              directory: selected?.isRemote == false ? selected?.workingDirectory : nil)
+                              directory: controller.selectedWorkspace?.localWorkingDirectory)
     }
 
     @objc func installRemoteHelper(_ sender: Any?) {
