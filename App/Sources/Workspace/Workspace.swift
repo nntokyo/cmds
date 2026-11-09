@@ -55,7 +55,12 @@ final class Workspace {
     }
 
     /// `:3000  :5173` (sidebar row and rail tooltip).
-    var portsText: String { ports.map { ":\($0)" }.joined(separator: "  ") }
+    var portsText: String { Self.portsText(ports) }
+
+    /// Between the ports of `portsText`.
+    static let portSeparator = "  "
+
+    static func portsText(_ ports: [Int]) -> String { ports.map { ":\($0)" }.joined(separator: portSeparator) }
 
     var hasTerminal: Bool { panes.values.contains { $0.kind == .terminal } }
 
