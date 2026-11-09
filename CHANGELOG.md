@@ -84,6 +84,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Mac: Show Changes' diff file (in the temporary folder, `cmds-changes/<workspace>`) is deleted when its workspace
+  closes, and is no longer written when the workspace closed while git ran (#176). They used to stay until macOS
+  cleaned the temporary folder.
+
 - Mac: the command palette also matches English names in a localized UI (#186). With the app in Japanese, "split"
   or "browser" found nothing; menu commands now also match their English titles and menu path, and panes their
   English kind and default title (`split` finds 右に分割, `browser` ブラウザを分割して開く and browser panes).

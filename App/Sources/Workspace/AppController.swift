@@ -243,6 +243,7 @@ final class AppController {
         let tiled = tiledWorkspaceIDs
         workspaces.remove(at: index)
         workspaceDidClose(workspace.id)
+        removeChangesFolder(workspaceID: workspace.id)
         if selectedWorkspaceID == workspace.id {
             // Stay in the tiled view when another tile is left: the next tile takes the keyboard.
             let remainingTiles = tiledWorkspaceIDs
