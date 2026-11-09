@@ -437,27 +437,7 @@ extension CLI {
             let value = result["value"] ?? .null
             if case .string(let string) = value { print(string) } else { ctx.printJSON(value) }
         },
-        Command(name: "browser snapshot", usage: "browser snapshot [--pane P] [-o file.png]",
-                summary: "Save a PNG of a browser pane's visible page.",
-                details: "Without -o the PNG is written to stdout when it is not a terminal.\n" + browserPaneNote,
-                options: ["pane", "output"], aliases: ["o": "output"]) { ctx in
-            try ctx.args.expectPositionals(0...0, usage: "cmds browser snapshot [--pane P] [-o file.png]")
-            let result = try ctx.call("browser.snapshot", browserTarget(ctx), timeout: 120)
-            if ctx.json { return ctx.printJSON(result) }
-            guard let base64 = result["png_base64"]?.stringValue, let png = Data(base64Encoded: base64) else {
-                throw CLIError.failure("snapshot returned no image")
-            }
-            if let output = ctx.args[option: "output"] {
-                do { try png.write(to: URL(fileURLWithPath: absolutePath(output))) } catch {
-                    throw CLIError.failure("cannot write \(output): \(error.localizedDescription)")
-                }
-                print(absolutePath(output))
-            } else if isatty(STDOUT_FILENO) == 0 {
-                FileHandle.standardOutput.write(png)
-            } else {
-                throw CLIError.usage("refusing to write PNG to a terminal; use -o file.png")
-            }
-        },
+        browserSnapshotCommand,
         browserDeviceCommand,
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",

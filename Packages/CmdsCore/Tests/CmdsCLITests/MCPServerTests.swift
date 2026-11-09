@@ -120,6 +120,39 @@ final class MCPServerTests: XCTestCase {
         XCTAssertTrue(definition?["description"]?.stringValue?.contains("device pixel ratio") == true)
     }
 
+    /// browser_snapshot (#169): full page, element and several devices, one image per size after a line naming it.
+    func testSnapshotVariants() {
+        let server = server()
+        replies["browser.snapshot"] = BrowserSnapshotImage.result([
+            BrowserSnapshotImage(device: "iphone", width: 393, height: 2000, png: Data([1])),
+            BrowserSnapshotImage(device: "ipad", width: 820, height: 1800, png: Data([2])),
+        ])
+        let result = callTool(server, "browser_snapshot", #"{"pane":"p4","fullPage":true,"devices":["iphone","ipad"]}"#)
+        XCTAssertEqual(result?["isError"], .bool(false))
+        let content = result?["content"]?.arrayValue ?? []
+        XCTAssertEqual(content.map { $0["type"]?.stringValue ?? "" }, ["text", "image", "text", "image"])
+        XCTAssertEqual(content[0]["text"]?.stringValue, "iphone, full page, 393×2000 CSS px")
+        XCTAssertEqual(content[3]["data"]?.stringValue, Data([2]).base64EncodedString())
+        XCTAssertEqual(requests.last?.params["fullPage"] ?? nil, .bool(true))
+        XCTAssertEqual(requests.last?.params["devices"] ?? nil, .array(["iphone", "ipad"]))
+        XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p4"))
+
+        // A plain snapshot stays one image.
+        XCTAssertEqual(callTool(server, "browser_snapshot")?["content"]?.arrayValue?.map { $0["type"]?.stringValue ?? "" }, ["image"])
+
+        // Bad arguments are refused before anything is sent.
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_snapshot", #"{"device":"nokia"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
+
+        // An app older than #169 ignores the params and returns the visible page: say so instead of passing it off.
+        replies["browser.snapshot"] = .object(["png_base64": "AQ=="])
+        let old = callTool(server, "browser_snapshot", #"{"selector":"h1"}"#)
+        XCTAssertEqual(old?["isError"], .bool(true))
+        XCTAssertTrue(text(old)?.contains("update cmds") == true)
+        XCTAssertEqual(callTool(server, "browser_snapshot")?["isError"], .bool(false))
+    }
+
     func testBrowserToolsWithoutAnOpenedPaneTargetTheWorkspace() {
         _ = callTool(server(), "browser_url")
         XCTAssertNil(requests.last?.params["pane"] ?? nil)

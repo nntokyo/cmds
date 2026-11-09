@@ -29,6 +29,8 @@ cmds の MCP サーバー（`cmds mcp`。ツール名 `browser_open` / `browser_
 
 - 開く: `B=$(cmds browser open --no-focus <URL>)`。同じペインで別のページへは `cmds browser navigate --pane "$B" <URL>`。
 - 見る: `cmds browser snapshot --pane "$B" -o /tmp/cmds-page.png`（Read ツールで見る）、`cmds browser url --pane "$B"`。
+  ページ全体は `--full`、要素だけは `--selector '#id'`、スマホ・タブレット・デスクトップを一度に撮るなら
+  `--full --device iphone,ipad,desktop-1440 -o /tmp/shot.png`（`shot-iphone.png` などに分かれて保存される）。
 - 読む・操作する: `cmds browser eval --pane "$B" '<JavaScript>'`（結果は JSON で出る）。例:
   `'document.body.innerText.slice(0, 2000)'`、`'document.querySelector("button[type=submit]").click()'`、
   入力欄は値を設定してから `input` イベントを送る（`el.value = "x"; el.dispatchEvent(new Event("input", {bubbles: true}))`）。

@@ -66,6 +66,11 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
   `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. Point it only at folders the test created.
+- Browser screenshots (#169): a local page several screens tall with coloured bands and an element below the fold
+  (`--full` is one image of the whole page; `--selector` the element, also after navigating to `page.html#element`,
+  which scrolls the pane; the pane's scroll position written to `document.title` stays), a page over 16384 px tall
+  (refused), `--device iphone,ipad,desktop-1440 -o shot.png` (three files), a pane of a workspace that is not shown,
+  and `cmds mcp` with `browser_snapshot` `devices` (text + image per size).
 - Browser device sizes (#168): open a local test page that writes `innerWidth`, `devicePixelRatio`,
   `matchMedia('(prefers-color-scheme: dark)').matches` and `navigator.userAgent` into `document.title` on load and
   resize, set sizes and schemes with `cmds browser device --pane P …`, and read them back with `cmds browser url

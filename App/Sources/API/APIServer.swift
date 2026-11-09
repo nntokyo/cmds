@@ -85,11 +85,12 @@ final class APIServer {
                     await respond(id, to: connection) { try await self.worktreeRequest(method, params) }
                 }
             case "browser.snapshot":
+                // Unknown params are refused (BrowserSnapshotRequest.knownParams), so newer clients get a clear error.
+                let request = try BrowserSnapshotRequest(params: params.value)
                 let pane = try browserPaneID(params)
                 Task { @MainActor in
                     await respond(id, to: connection) {
-                        let png = try await self.controller.browserSnapshot(paneID: pane)
-                        return ["png_base64": .string(png.base64EncodedString())]
+                        BrowserSnapshotImage.result(try await self.controller.browserSnapshot(paneID: pane, request: request))
                     }
                 }
             #if DEBUG
