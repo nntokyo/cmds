@@ -24,7 +24,7 @@ cmds の中では、Web ページを開く・確認するときに Chrome（Clau
 `cmds browser` でブラウザペインを開く。ページがターミナルの隣に出て、ユーザーがエージェントの見ている画面をその場で確かめられる。
 cmds の MCP サーバー（`cmds mcp`。ツール名 `browser_open` / `browser_eval` / `browser_snapshot` / `open_file` / `close_pane` など）が
 使えるなら、同じことをそのツールで行う（スクリーンショットが画像で直接返る）。`close_pane` は、自分のターミナルから開いたペイン
-（CLI の `cmds browser open` / `cmds open` で開いたもの、MCP サーバーの再起動前に開いたものも含む）を閉じられる。
+（CLI の `cmds browser open` / `cmds open` / `cmds split` で開いたもの、MCP サーバーの再起動前に開いたものも含む）を閉じられる。
 `close_pane` が断ったペインは自分のターミナルから開いたものではないので、ユーザーに頼まれたときだけ `cmds close-pane <id>` で閉じる。以下は CLI での手順。
 
 - 開く: `B=$(cmds browser open --no-focus <URL>)`。同じペインで別のページへは `cmds browser navigate --pane "$B" <URL>`。
@@ -54,6 +54,13 @@ Chrome を使うのは次のときだけ:
 P=$(cmds split down --no-focus -- npm run dev)    # 新しいペインの ID が出力される
 sleep 5; cmds read --pane "$P" --scrollback 100    # 起動ログを確認
 ```
+
+MCP なら `terminal_split`（`command: "npm run dev"`, `direction: "down"`）で開き、`terminal_read`（`lines: 100`）で読み、
+`terminal_send`（`text: "\u0003"` で Ctrl-C、`enter: true` で Return）で操作する。`terminal_split` はコマンドをシェルに入力するので、
+コマンドが終了してもペインと出力は残る。`terminal_read` / `terminal_send` が使えるのは自分のターミナルから開いたターミナルペイン
+（`terminal_split` または `cmds split`）だけで、自分のペインやユーザー・他のエージェントのペインは断られる。それらを読む・入力するのは、
+ユーザーに頼まれたときに `cmds read` / `cmds send` で行う。待ち受け中のポートは `list_ports`（CLI: `cmds ports`）で確かめ、
+`browser_open` で開く。
 
 Web 画面を開いて確認する（スクリーンショットは Read ツールで見る）:
 
