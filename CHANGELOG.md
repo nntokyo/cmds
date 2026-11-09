@@ -44,6 +44,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   same and returns one image per size; socket `browser.snapshot` answers with `images`. An older app gives a clear
   "update cmds" error instead of a visible-page image (#169).
 
+- Mac: responsive view. Browser panes can show one page at phone, tablet and desktop size side by side (device menu ›
+  Responsive View, `cmds browser responsive [URL]`, MCP `browser_responsive`); 2–4 sizes. Navigating in any frame
+  loads the page in the others, scrolling keeps them at the same proportion of their page (Sync Scrolling), Reload
+  reloads them all and a `file://` page reloads when saved. Screenshots of such a pane have one image per frame.
+  Kept across relaunches; each frame is its own WebKit process, freed when the view is turned off (#170).
+
 ### Changed
 
 - Mac: browser pages follow the Mac's light or dark appearance by default; before, they were always dark (#168).

@@ -132,6 +132,33 @@ cmds browser eval 'document.title'                   # run JavaScript, print the
 cmds browser snapshot -o /tmp/page.png               # PNG of the visible page
 ```
 
+### Responsive view
+
+**Responsive View** in the device menu (the button at the right end of the browser toolbar) shows the page at
+phone, tablet and desktop size side by side in one pane (iPhone 16, iPad Air, 1440×900), each frame at its own
+width and user agent, all scaled by the same factor to fit the pane:
+
+```sh
+cmds browser responsive http://localhost:3000               # opens it in a new browser split
+cmds browser responsive --devices iphone-se,pixel,ipad,desktop-1920   # 2–4 sizes, left to right
+cmds browser responsive --no-sync-scroll                    # keep scrolling per frame
+cmds browser responsive --off                               # show the page once again
+```
+
+- **Navigation** follows you: following a link, submitting, going back or typing an address in any frame loads the
+  new address in the others. A frame that cmds sent to an address ignores its own address changes until a second
+  after that page loaded, so a site that redirects phones elsewhere (`m.` sites) does not bounce the frames around.
+- **Scrolling** (Sync Scrolling, on by default) moves the other frames to the same *proportion* of their page: half
+  way down the phone page is half way down the desktop page, as the same content is taller at narrower widths.
+  The position is the share of the scrollable height (`scrollY / (scrollHeight − innerHeight)`), so sections line
+  up only roughly where layouts differ a lot.
+- **Reload** (⌘R) reloads every frame; a `file://` page reloads by itself when the file is saved.
+- The address bar, `cmds browser eval` / `url` / `navigate` and the iPhone use the first frame. `cmds browser
+  snapshot` (and the MCP `browser_snapshot`) returns one image per frame (`-o shot.png` writes `shot-<device>.png`).
+- Each frame is its own WebKit process (memory): at most four, freed when you turn the view off or close the pane.
+  The view and its sizes are kept across relaunches and in exported workspaces; the pane's own device size and user
+  agent apply again when the view is off. Older cmds versions show the page once.
+
 ### Screenshots
 
 `cmds browser snapshot` captures what the pane shows; it can also capture more without scrolling or resizing the

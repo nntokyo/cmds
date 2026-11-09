@@ -57,6 +57,18 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
   URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
   (the file is on the server). Session restore keeps preview panes (path, forced format).
+- **Responsive view** (`Browser/ResponsiveView.swift`, `BrowserPane+Responsive.swift`; settings, requests and scroll
+  math in `CmdsCore/BrowserResponsive.swift`; #170): still a `browser` pane (no new `PaneKind`, no sync protocol
+  change: the iPhone shows the first frame's URL). The pane's own `WKWebView` becomes the first frame; the others are
+  web views sharing its website data store, each its own WebContent process, removed in `close()` (view off, pane
+  closed). All frames are laid out at their device size in one `ViewportHostView` scaled by a common factor (labels
+  above, unscaled). Navigation: a frame's URL change (KVO, so link clicks, form posts, history and `pushState` alike)
+  is loaded in the others unless that frame is still loading, or settling for a second after, a URL the view gave it
+  (keeps per-UA redirects from bouncing). Scrolling: `ResponsiveScroll.frameScript` in the `.defaultClient` world
+  posts the scroll fraction of the scrollable height to the `cmdsResponsiveScroll` handler (a timer, not
+  `requestAnimationFrame`, which WebKit pauses in covered windows); the others scroll to the same fraction via
+  `__cmdsScrollTo`, whose own scroll event is ignored for 150 ms. A `FileWatcher` reloads every frame when a
+  `file://` page changes. Saved as `browser.responsive` in session.json and `responsive` in bundles (optional keys).
 - **Browser screenshots** (`Browser/BrowserPane+Snapshot.swift`, params and answer in `CmdsCore/BrowserSnapshot.swift`;
   #169): the visible page is `takeSnapshot`. `takeSnapshot` paints only what is on screen (a rect below the fold comes
   out blank), so a full page or an element is WebKit's PDF of the view (`pdf(configuration:)`; no rect = the whole
