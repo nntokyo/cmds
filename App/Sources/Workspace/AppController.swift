@@ -458,8 +458,9 @@ final class AppController {
         try await browser(paneID: paneID).evaluateJavaScript(script)
     }
 
-    func browserSnapshot(paneID: String) async throws -> Data {
-        try await browser(paneID: paneID).snapshot()
+    func browserSnapshot(paneID: String, request: BrowserSnapshotRequest = BrowserSnapshotRequest()) async throws
+        -> [BrowserSnapshotImage] {
+        try await browser(paneID: paneID).snapshot(request)
     }
 
     /// `browser.set_viewport`: applies `change` (none: just reports) and returns the settings with the current `scale`.

@@ -170,6 +170,12 @@ final class BrowserPane: NSView {
         if offscreen != nil { try await Task.sleep(for: OffscreenRenderHost.paintDelay) }
         let configuration = WKSnapshotConfiguration()
         if let size = emulation.size { configuration.snapshotWidth = NSNumber(value: size.width) }
+        return try await Self.png(of: webView, configuration: configuration)
+    }
+
+    /// PNG of `configuration`'s part of `webView` (its rect may reach beyond the visible page: WebKit paints the
+    /// document for it).
+    static func png(of webView: WKWebView, configuration: WKSnapshotConfiguration) async throws -> Data {
         let image: NSImage = try await withCheckedThrowingContinuation { continuation in
             webView.takeSnapshot(with: configuration) { image, error in
                 if let image { continuation.resume(returning: image) } else {
