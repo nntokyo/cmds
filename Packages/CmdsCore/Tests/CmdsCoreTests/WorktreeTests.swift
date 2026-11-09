@@ -69,6 +69,7 @@ final class WorktreeTests: XCTestCase {
     func testDefaultPathIsASiblingFolderOfTheRepository() {
         XCTAssertEqual(WorktreePaths.defaultPath(repository: "/src/app", branch: "fix-login"), "/src/app-worktrees/fix-login")
         XCTAssertEqual(WorktreePaths.defaultPath(repository: "/src/app/", branch: "feature/a/b"), "/src/app-worktrees/feature-a-b")
+        XCTAssertEqual(WorktreePaths.defaultParent(repository: "/src/app"), "/src/app-worktrees")
     }
 
     func testCanonicalResolvesLinksOfTheExistingPart() {
@@ -206,9 +207,18 @@ final class WorktreeTests: XCTestCase {
         XCTAssertTrue(changes.text.contains("+++ b/committed.txt"), changes.text)
         XCTAssertTrue(changes.text.contains("+changed"), changes.text)
         XCTAssertTrue(changes.text.contains("+++ b/untracked.txt"), changes.text)
+        // The `#` lines on top: what is compared, then the commits.
+        let lines = changes.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        XCTAssertTrue(lines[0].hasPrefix("# Changes in \(record.path) (changes) since origin/master (merge base "), lines[0])
+        XCTAssertTrue(lines[0].hasSuffix("), working tree included"), lines[0])
+        XCTAssertEqual(lines[1], "# Commits (newest first):")
+        XCTAssertTrue(lines[2].hasPrefix("#   ") && lines[2].hasSuffix(" add committed"), lines[2])
+        XCTAssertEqual(lines[3], "")
+        XCTAssertTrue(lines[4].hasPrefix("diff --git "), lines[4])
         // Without a base: the repository's default branch.
         XCTAssertEqual(try Worktrees.changes(in: record.path, base: nil).base, "origin/master")
-        XCTAssertTrue(try Worktrees.changes(in: repo, base: nil).text.contains("# No changes"))
+        let unchanged = try Worktrees.changes(in: repo, base: nil).text
+        XCTAssertTrue(unchanged.contains("\n# No commits since origin/master.\n\n# No changes in the working tree"), unchanged)
     }
 
     // MARK: - Remove

@@ -4,6 +4,10 @@ import Foundation
 /// Worktree workspaces (docs/guide/workspaces-and-panes.md "Worktree workspaces"): `cmds new --worktree`,
 /// `cmds changes`, `cmds close --remove-worktree`.
 extension CLI {
+    /// Seconds to wait for the app: creating a worktree fetches first; Show Changes and removing run git locally.
+    static let worktreeCreateTimeout: TimeInterval = 180
+    static let worktreeGitTimeout: TimeInterval = 120
+
     static let newUsage = "cmds new [--title T] [--cwd DIR | DIR] [--account NAME|auto] [--worktree BRANCH [--base REF] [--path DIR]] [-- command…]"
 
     /// Params of `workspace.create` for a local `cmds new` (with or without `--worktree`). Relative `--cwd` / `--path`
@@ -66,7 +70,7 @@ extension CLI {
             """) { ctx in
         try ctx.args.expectPositionals(0...1, usage: "cmds changes [workspace]")
         let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.envWorkspace
-        let result = try ctx.call("workspace.changes", ["id": id.json], timeout: 120)
+        let result = try ctx.call("workspace.changes", ["id": id.json], timeout: worktreeGitTimeout)
         ctx.printResult(result, field: "pane")
     }
 }
