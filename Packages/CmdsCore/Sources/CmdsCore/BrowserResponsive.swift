@@ -142,7 +142,8 @@ public enum ResponsiveScroll {
             setTimeout(() => {
               pending = false;
               const r = range();
-              window.webkit.messageHandlers.cmdsResponsiveScroll.postMessage({ fraction: r > 0 ? window.scrollY / r : 0 });
+              const handler = window.webkit && window.webkit.messageHandlers.cmdsResponsiveScroll;
+              if (handler) handler.postMessage({ fraction: r > 0 ? window.scrollY / r : 0 });
             }, 50);
           }, { passive: true });
         })();

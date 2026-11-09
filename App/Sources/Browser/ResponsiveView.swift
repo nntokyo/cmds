@@ -128,7 +128,8 @@ final class ResponsiveView: NSView {
             frame.observations.removeAll()
             let controller = frame.webView.configuration.userContentController
             controller.removeScriptMessageHandler(forName: Self.scrollHandlerName, contentWorld: .defaultClient)
-            controller.removeAllUserScripts()  // only ours: browser panes add none of their own
+            // The scroll script stays (WebKit cannot remove one user script; the pane's console capture is another):
+            // without its handler it posts nothing, and turning the view on again does not add it twice.
             frame.label.removeFromSuperview()
             frame.webView.removeFromSuperview()
             if index > 0 {
@@ -244,8 +245,10 @@ final class ResponsiveView: NSView {
         let controller = webView.configuration.userContentController
         controller.removeScriptMessageHandler(forName: Self.scrollHandlerName, contentWorld: .defaultClient)
         controller.add(scrollHandler, contentWorld: .defaultClient, name: Self.scrollHandlerName)
-        controller.addUserScript(WKUserScript(source: ResponsiveScroll.frameScript, injectionTime: .atDocumentEnd,
-                                              forMainFrameOnly: true, in: .defaultClient))
+        if !controller.userScripts.contains(where: { $0.source == ResponsiveScroll.frameScript }) {
+            controller.addUserScript(WKUserScript(source: ResponsiveScroll.frameScript, injectionTime: .atDocumentEnd,
+                                                  forMainFrameOnly: true, in: .defaultClient))
+        }
         // The page already shown (the primary's) gets it now.
         webView.evaluateJavaScript(ResponsiveScroll.frameScript, in: nil, in: .defaultClient) { _ in }
     }

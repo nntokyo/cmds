@@ -23,6 +23,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let previewZoomPopup = NSPopUpButton()
     private let subagentsPopup = NSPopUpButton()
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show in menu bar"), target: nil, action: nil)
+    private let inspectableCheckbox = NSButton(checkboxWithTitle: String(localized: "Allow Safari's Web Inspector"), target: nil, action: nil)
     /// Settings › Sidebar: what the rows and the footer show (#107).
     private let sidebarItemCheckboxes = SettingsWindowController.checkboxes(for: SidebarItem.self)
     /// Settings › Menu Bar: one checkbox per part of the item (#105).
@@ -124,6 +125,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
         menuBarCheckbox.target = self
         menuBarCheckbox.action = #selector(menuBarToggled)
+        inspectableCheckbox.target = self
+        inspectableCheckbox.action = #selector(inspectableToggled)
         for checkbox in Array(menuBarOptionCheckboxes.values) + Array(sidebarItemCheckboxes.values) {
             checkbox.target = self
             checkbox.action = #selector(optionToggled(_:))
@@ -149,6 +152,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.header(String(localized: "Browser and Preview")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Browser page zoom:")), browserZoomPopup],
             [Self.label(String(localized: "Preview zoom:")), previewZoomPopup],
+            [NSGridCell.emptyContentView, inspectableCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
         ]
         let sidebar: [[NSView]] = [[Self.label(String(localized: "Text size:")), sidebarControl]]
             + sidebarRows(SidebarItem.rowItems, String(localized: "Show in each workspace:", comment: "Settings › Sidebar"))
@@ -310,6 +315,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         select(settings.previewZoom, in: previewZoomPopup)
         subagentsPopup.selectItem(at: subagentsPopup.indexOfItem(withRepresentedObject: settings.showSubagents.rawValue))
         menuBarCheckbox.state = settings.showInMenuBar ? .on : .off
+        inspectableCheckbox.state = settings.browserInspectable ? .on : .off
         for (item, checkbox) in sidebarItemCheckboxes { checkbox.state = settings.sidebar(item) ? .on : .off }
         for (option, checkbox) in menuBarOptionCheckboxes {
             checkbox.state = settings.menuBar(option) ? .on : .off
@@ -389,6 +395,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     @objc private func subagentsChanged() {
         let raw = subagentsPopup.selectedItem?.representedObject as? String
         settings.showSubagents = raw.flatMap(SubagentDisplay.init(rawValue:)) ?? .tiled
+    }
+
+    @objc private func inspectableToggled() {
+        settings.browserInspectable = inspectableCheckbox.state == .on
     }
 
     @objc private func menuBarToggled() {

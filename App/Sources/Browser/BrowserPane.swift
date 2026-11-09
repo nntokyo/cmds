@@ -33,6 +33,10 @@ final class BrowserPane: NSView {
     var breakpointRefresh: DispatchWorkItem?
     /// The responsive view while it is on (BrowserPane+Responsive.swift, #170); `webView` is then its first frame.
     var responsiveView: ResponsiveView?
+    /// Console messages and errors of the page (BrowserPane+DevTools.swift, #167).
+    var consoleBuffer = ConsoleBuffer()
+    /// The DOM event the page-world console hook hands messages over with (random, so pages cannot fake it).
+    let consoleEventName = "cmds-console-" + UUID().uuidString
 
     var currentURL: URL? { webView.url }
     var pageTitle: String { webView.title ?? "" }
@@ -52,6 +56,7 @@ final class BrowserPane: NSView {
         observe()
         observeZoomSetting()
         startEmulation()
+        startDevTools()
     }
 
     @available(*, unavailable)

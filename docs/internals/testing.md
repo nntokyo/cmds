@@ -66,6 +66,11 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
   `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. Point it only at folders the test created.
+- Browser DevTools (#167): a local page that logs at every level, throws an uncaught error and leaves a promise
+  rejection unhandled on load, with a form (text field, select, checkbox, button) whose `input` / `change` / `click`
+  handlers write what they saw into `document.title` (read with `cmds browser url`); the same page served with a
+  strict CSP (`default-src 'self'; script-src 'self'`, e.g. a tiny local server or `<meta http-equiv>`): console,
+  tree, fill and click by ref and by selector, wait-for that finds text and one that times out, and `--follow`.
 - Responsive view (#170): `debug.browser {pane}` also returns `responsive` = each frame's device, URL, title and
   frame. With a local page that writes its width and scroll fraction into `document.title`, and query-string hooks
   that scroll the phone frame or navigate the desktop frame after 3 s (page scripts, no input injection): navigation

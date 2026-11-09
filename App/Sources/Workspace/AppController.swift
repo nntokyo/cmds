@@ -463,6 +463,18 @@ final class AppController {
         try await browser(paneID: paneID).snapshot(request)
     }
 
+    /// `browser.snapshot_tree` / `click` / `fill` / `wait_for` (#167).
+    func browserPageAction(paneID: String, _ action: BrowserPageAction) async throws -> JSONValue {
+        let browser = try browser(paneID: paneID)
+        switch action {
+        case .tree(let selector, let maxNodes): return try await browser.pageTree(selector: selector, maxNodes: maxNodes)
+        case .click(let target): return try await browser.click(target)
+        case .fill(let target, let value): return try await browser.fill(target, value: value)
+        case .waitFor(let selector, let text, let timeout):
+            return try await browser.waitFor(selector: selector, text: text, timeout: timeout)
+        }
+    }
+
     /// `browser.set_responsive`: the responsive view on, off or changed (none: just reports).
     func browserSetResponsive(paneID: String, change: BrowserResponsiveChange) throws -> JSONValue {
         try browser(paneID: paneID).applyResponsive(change)

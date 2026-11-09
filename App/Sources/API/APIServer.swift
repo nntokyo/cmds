@@ -84,6 +84,13 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.worktreeRequest(method, params) }
                 }
+            case "browser.snapshot_tree", "browser.click", "browser.fill", "browser.wait_for":
+                // Page scripts that may wait (wait_for up to a minute): BrowserPane+DevTools.swift, #167.
+                let pane = try browserPaneID(params)
+                let action = try BrowserPageAction(method: request.method, params: params.value)
+                Task { @MainActor in
+                    await respond(id, to: connection) { try await self.controller.browserPageAction(paneID: pane, action) }
+                }
             case "browser.snapshot":
                 // Unknown params are refused (BrowserSnapshotRequest.knownParams), so newer clients get a clear error.
                 let request = try BrowserSnapshotRequest(params: params.value)
@@ -362,6 +369,10 @@ final class APIServer {
         case "browser.get_url":
             let location = try controller.browserLocation(paneID: try browserPaneID(params))
             return ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
+        case "browser.console":
+            let request = try BrowserConsoleRequest(params: params.value)
+            return try controller.browser(paneID: try browserPaneID(params))
+                .console(level: request.level, since: request.since, limit: request.limit, clear: request.clear)
         case "browser.set_responsive":
             return try controller.browserSetResponsive(paneID: try browserPaneID(params),
                                                        change: try BrowserResponsiveChange(params: params.value))
