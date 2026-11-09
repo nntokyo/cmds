@@ -172,8 +172,7 @@ final class APIServer {
             case "debug.sidebar_port":
                 // Tests only: a click on port `index` (default 0) of a workspace's sidebar row (#171).
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))
-                let sidebar = (controller.window?.contentViewController as? NSSplitViewController)?
-                    .splitViewItems.first?.viewController as? SidebarViewController
+                let sidebar = (controller.window?.windowController as? MainWindowController)?.sidebar
                 guard let port = sidebar?.debugClickPort(workspaceID: workspace.id, index: try params.int("index") ?? 0) else {
                     throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
                 }

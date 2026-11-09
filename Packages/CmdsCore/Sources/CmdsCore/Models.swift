@@ -125,3 +125,16 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.worktree = worktree
     }
 }
+
+/// A TCP port a process in a workspace listens on (`WorkspaceInfo.ports`), opened as `url` (`cmds ports`, MCP
+/// list_ports, a click on a port in the sidebar, the command palette; #171).
+public enum ListeningPort {
+    public static func url(_ port: Int) -> String { "http://localhost:\(port)" }
+}
+
+extension Sequence where Element == WorkspaceInfo {
+    /// Every listening port with its workspace, in workspace (sidebar) order.
+    public var listeningPorts: [(workspace: WorkspaceInfo, port: Int)] {
+        flatMap { workspace in workspace.ports.map { (workspace: workspace, port: $0) } }
+    }
+}
