@@ -58,6 +58,27 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         try? controller.closeWorkspace(id: nil)
     }
 
+    // MARK: Find and command palette
+
+    /// The focused pane when it is a terminal with a surface (not a disconnected SSH pane's overlay).
+    private var focusedTerminalPane: Pane? {
+        guard let pane = controller.focusedPane, pane.kind == .terminal, pane.terminal != nil,
+              pane.container.overlay == nil else { return nil }
+        return pane
+    }
+
+    /// ⌘F: the focused terminal's find bar (TerminalFind).
+    @objc func find(_ sender: Any?) { focusedTerminalPane?.find.open() }
+    /// ⌘G / ⇧⌘G: next (up, older output) / previous hit.
+    @objc func findNext(_ sender: Any?) { focusedTerminalPane?.find.navigate(next: true) }
+    @objc func findPrevious(_ sender: Any?) { focusedTerminalPane?.find.navigate(next: false) }
+
+    /// ⇧⌘P: CommandPalette over the main window.
+    @objc func showCommandPalette(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        CommandPalette.present(controller: controller, over: windowController?.window)
+    }
+
     // MARK: Workspace
 
     @objc func selectWorkspace(_ sender: NSMenuItem) { controller.selectWorkspace(at: sender.tag) }
@@ -352,6 +373,10 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
+        case #selector(find(_:)):
+            return focusedTerminalPane != nil
+        case #selector(findNext(_:)), #selector(findPrevious(_:)):
+            return focusedTerminalPane?.find.isOpen == true
         case #selector(browserReload(_:)):
             if controller.focusedDisconnectedSSHPane != nil {
                 menuItem.title = String(localized: "Reconnect SSH")

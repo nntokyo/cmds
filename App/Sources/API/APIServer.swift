@@ -144,6 +144,16 @@ final class APIServer {
                 let alert = WorktreeCloseAlert.make(workspace: workspace, record: record)
                 connection.reply(id: id, result: ["worktree": .string(record.path), "text": .string(alert.informativeText),
                                                   "buttons": .array(alert.buttons.map { .string($0.title) })])
+            case "debug.find":
+                // Tests only: drive a terminal pane's find bar (TerminalFind+Debug.swift) without UI scripting.
+                let pane = try controller.resolvePane(try params.string("pane"))
+                guard pane.kind == .terminal, pane.terminal != nil else { throw RPCError.invalidParams("not a terminal pane") }
+                Task { @MainActor in
+                    await respond(id, to: connection) { try await pane.find.debugPerform(params.value) }
+                }
+            case "debug.palette":
+                // Tests only: the command palette (CommandPalette+Debug.swift).
+                connection.reply(id: id, result: try CommandPalette.debugPerform(params.value, controller: controller))
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 SettingsWindowController.shared.showSettings(nil)

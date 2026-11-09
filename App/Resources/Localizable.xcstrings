@@ -1181,6 +1181,16 @@
         }
       }
     },
+    "Agent Session": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントセッション"
+          }
+        }
+      }
+    },
     "Agent model, context and cost": {
       "comment": "Settings › Sidebar › Show in each workspace",
       "localizations": {
@@ -2120,6 +2130,16 @@
         }
       }
     },
+    "Close (Esc)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる（Esc）"
+          }
+        }
+      }
+    },
     "Close Pane": {
       "localizations": {
         "ja": {
@@ -2176,6 +2196,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Codexは今、上限に達していません。"
+          }
+        }
+      }
+    },
+    "Command": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンド"
+          }
+        }
+      }
+    },
+    "Command Palette…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドパレット…"
           }
         }
       }
@@ -3383,6 +3423,46 @@
         }
       }
     },
+    "Find": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索"
+          }
+        }
+      }
+    },
+    "Find Next": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次を検索"
+          }
+        }
+      }
+    },
+    "Find Previous": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前を検索"
+          }
+        }
+      }
+    },
+    "Find…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "検索…"
+          }
+        }
+      }
+    },
     "First prompt:": {
       "localizations": {
         "ja": {
@@ -4435,6 +4515,16 @@
         }
       }
     },
+    "Match Case": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大文字と小文字を区別"
+          }
+        }
+      }
+    },
     "Measuring CPU and memory…": {
       "localizations": {
         "ja": {
@@ -4939,6 +5029,16 @@
         }
       }
     },
+    "Next (⌘G, Return)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次へ（⌘G、Return）"
+          }
+        }
+      }
+    },
     "Next Run": {
       "localizations": {
         "ja": {
@@ -5423,6 +5523,16 @@
         }
       }
     },
+    "Open in a browser split — %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザを分割して開く — %@"
+          }
+        }
+      }
+    },
     "Open in a pane: choose to show it.": {
       "localizations": {
         "ja": {
@@ -5624,6 +5734,16 @@
         }
       }
     },
+    "Port": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポート"
+          }
+        }
+      }
+    },
     "Preparing…": {
       "localizations": {
         "ja": {
@@ -5660,6 +5780,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "プレビューの拡大率:"
+          }
+        }
+      }
+    },
+    "Previous (⇧⌘G, ⇧Return)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前へ（⇧⌘G、⇧Return）"
           }
         }
       }
@@ -5792,6 +5922,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "やり直す"
+          }
+        }
+      }
+    },
+    "Regular Expression": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正規表現"
           }
         }
       }
@@ -6489,6 +6629,16 @@
         }
       }
     },
+    "Search workspaces, panes, commands, sessions and ports": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペース、ペイン、コマンド、セッション、ポートを検索"
+          }
+        }
+      }
+    },
     "Select All": {
       "localizations": {
         "ja": {
@@ -7022,6 +7172,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "一部の項目を同期できませんでした。"
+          }
+        }
+      }
+    },
+    "Space": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スペース"
           }
         }
       }
