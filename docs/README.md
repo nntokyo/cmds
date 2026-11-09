@@ -10,7 +10,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 | Document | What it covers |
 |---|---|
 | [guide/getting-started.md](guide/getting-started.md) | Install, first workspace, basic moves, the `cmds` command, where data is kept |
-| [guide/workspaces-and-panes.md](guide/workspaces-and-panes.md) | Workspaces and sidebar, splits, attention ring, browser and preview panes, SSH workspaces, session restore, keeping the Mac awake, language |
+| [guide/workspaces-and-panes.md](guide/workspaces-and-panes.md) | Workspaces and sidebar, splits, attention ring, browser and preview panes, SSH workspaces, worktree workspaces, session restore, keeping the Mac awake, language |
 | [guide/files.md](guide/files.md) | Files panes: browsing a folder, preview, copy and move between two panes, conflicts, rename, Trash, Follow Terminal, dropping files on a terminal, folders on SSH hosts, the transfer queue |
 | [guide/iphone.md](guide/iphone.md) | The iPhone/iPad companion: pairing (QR or manual), what it shows, local network / Bluetooth / SSH relay, troubleshooting |
 | [guide/schedules.md](guide/schedules.md) | Schedules: start a workspace or continue a Claude Code session at a time, on weekdays or when a limit resets; safety rules, missed runs, history |
