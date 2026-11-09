@@ -519,7 +519,7 @@ final class MCPServer {
             lines.append("CPU: \(ResourceFormat.wholePercent(system.cpuPercent)) of all cores")
             return [Self.text(lines.joined(separator: "\n"))]
         case "list_processes":
-            let panes = try decodePanes(try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout))
+            let panes = try workspacePanes()
             var mine: Set<String> = Set(panes.filter { $0.openedBy == envPane }.map(\.id))
             if let envPane { mine.insert(envPane) }
             let result: JSONValue
@@ -529,9 +529,7 @@ final class MCPServer {
             } catch let error as CLIError where error.message.contains("method not found") {
                 throw ToolError(message: "this cmds app has no system.processes; update cmds")
             }
-            guard let list = try? result.decode(ProcessList.self) else {
-                throw ToolError(message: "the app returned an unexpected process list")
-            }
+            let list = try decode(result, as: ProcessList.self, what: "process list")
             let shown = list.processes.filter { $0.isLeftover || $0.pane.map(mine.contains) == true }
             guard !shown.isEmpty else { return [Self.text("No processes in your panes and no leftovers.")] }
             let lines = shown.map { process -> String in
