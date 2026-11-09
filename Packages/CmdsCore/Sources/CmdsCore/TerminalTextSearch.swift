@@ -56,8 +56,8 @@ public enum TerminalTextSearch {
         var hits: [TerminalSearchMatch] = []
         for (index, row) in rows.enumerated() {
             if index % 512 == 0, Task.isCancelled { break }
-            let ranges = regex.map { ranges(of: $0, in: row) } ?? ranges(of: query, in: row, caseSensitive: options.caseSensitive)
-            for range in ranges {
+            let found = regex.map { Self.ranges(of: $0, in: row) } ?? Self.ranges(of: query, in: row, caseSensitive: options.caseSensitive)
+            for range in found {
                 let column = TerminalCells.width(of: String(row[row.startIndex..<range.lowerBound]))
                 hits.append(TerminalSearchMatch(row: firstRow + index, column: column,
                                                 width: TerminalCells.width(of: String(row[range]))))
