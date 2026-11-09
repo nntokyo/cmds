@@ -4,13 +4,16 @@ import Foundation
 extension CLI {
     static let commands: [Command] = [
         Command(name: "ping", usage: "ping", summary: "Check that the app is reachable.") { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds ping")
             let result = try ctx.call("system.ping")
             ctx.json ? ctx.printJSON(result) : print("pong")
         },
         Command(name: "quit", usage: "quit", summary: "Quit the app without the running-agents confirmation (for scripted updates).") { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds quit")
             try ctx.call("app.quit")
         },
         Command(name: "identify", usage: "identify", summary: "Show app version, pid and socket path.") { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds identify")
             let result = try ctx.call("system.identify")
             if ctx.json { return ctx.printJSON(result) }
             print("cmds \(result["version"]?.stringValue ?? "?")  pid \(result["pid"]?.intValue ?? 0)  \(result["socketPath"]?.stringValue ?? "")")
@@ -18,6 +21,7 @@ extension CLI {
         Command(name: "ls", usage: "ls", summary: "List workspaces and their panes.",
                 details: "Markers: * selected workspace, > focused pane, ! needs attention. "
                     + "CPU/memory: see `cmds stats`.") { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds ls")
             let result = try ctx.call("workspace.list")
             if ctx.json { return ctx.printJSON(result) }
             let workspaces = try perform { try result.decode([WorkspaceInfo].self) }
@@ -180,7 +184,7 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             print("unpaired \(device.name) (\(device.id))")
         },
-        Command(name: "new", usage:"new [--title T] [--cwd DIR] [--account NAME|auto] [--worktree BRANCH [--base REF] [--path DIR]] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
+        Command(name: "new", usage:"new [--title T] [--cwd DIR | DIR] [--account NAME|auto] [--worktree BRANCH [--base REF] [--path DIR]] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
                 summary: "Create a workspace (in the current directory by default) and select it.",
                 details: """
                     --ssh opens an SSH workspace: the pane runs your `ssh HOST` (respecting ~/.ssh/config) and forwards a
@@ -195,12 +199,14 @@ extension CLI {
                     (also on the remote), an existing path or a path inside the repository is an error. Closing the
                     workspace in the app offers to remove the worktree (`cmds close --remove-worktree`).
                     E.g. `cmds new --worktree fix-login -- claude`.
+                    A bare DIR is the same as --cwd DIR (not both); it must be an existing directory. A command goes
+                    after --.
                     """,
                 options: ["title", "cwd", "ssh", "remote-cwd", "account", "worktree", "base", "path"]) { ctx in
             if let host = ctx.args[option: "ssh"] {
                 guard ctx.args[option: "cwd"] == nil, ctx.args.rest == nil, ctx.args[option: "account"] == nil,
-                      ctx.args[option: "worktree"] == nil else {
-                    throw CLIError.usage("--ssh takes --remote-cwd, not --cwd, --account, --worktree or a command")
+                      ctx.args[option: "worktree"] == nil, ctx.args.positionals.isEmpty else {
+                    throw CLIError.usage("--ssh takes --remote-cwd, not --cwd, a directory, --account, --worktree or a command")
                 }
                 let result = try ctx.call("workspace.create", [
                     "ssh": .string(host),
@@ -314,11 +320,13 @@ extension CLI {
         },
         Command(name: "remote-helper", usage: "remote-helper",
                 summary: "Print cmds-remote.sh, the sh client for servers reached through an SSH pane (docs/internals/ssh.md).",
-                details: "E.g. `cmds remote-helper > cmds-remote.sh` to copy it yourself. In the app: Pane → Install Remote Helper….") { _ in
+                details: "E.g. `cmds remote-helper > cmds-remote.sh` to copy it yourself. In the app: Pane → Install Remote Helper….") { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds remote-helper")
             print(RemoteHelperScript.source, terminator: "")
         },
         Command(name: "panes", usage: "panes [--workspace W]", summary: "List the panes of a workspace.",
                 options: ["workspace"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds panes [--workspace W]")
             let result = try ctx.call("pane.list", ["workspace": ctx.workspace.json])
             if ctx.json { return ctx.printJSON(result) }
             let panes = try perform { try result.decode([PaneInfo].self) }
@@ -443,6 +451,7 @@ extension CLI {
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",
                 details: "Events: notification, workspace.changed, pane.changed, workspaces.changed, schedule.changed, schedule.run.") { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds events")
             let client = try ctx.connect(timeout: 30)
             _ = try perform { try client.call("events.subscribe") }
             client.setTimeout(nil)
