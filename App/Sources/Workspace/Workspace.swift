@@ -14,6 +14,9 @@ final class Workspace {
 
     /// Working directory of the focused terminal pane.
     var workingDirectory: String?
+    /// The worktree cmds created this workspace in (`cmds new --worktree`; canonical path), kept when the terminal
+    /// leaves it. Saved with the session.
+    var worktreePath: String?
     var gitBranch: String?
     var ports: [Int] = []
     var notificationText: String?
@@ -106,7 +109,17 @@ final class Workspace {
         WorkspaceInfo(id: id, title: title, selected: selected, gitBranch: gitBranch,
                       workingDirectory: workingDirectory, ports: ports, notificationText: notificationText,
                       attention: attention, panes: paneInfos(), layout: root?.layoutNode,
-                      cpuPercent: cpuPercent, memoryBytes: memoryBytes, remoteHost: remoteHost)
+                      cpuPercent: cpuPercent, memoryBytes: memoryBytes, remoteHost: remoteHost,
+                      worktree: createdWorktree?.info)
+    }
+
+    /// The worktree cmds created that this workspace is in: the one it was created in, else the one its local
+    /// directory is in. nil for any other folder, also for worktrees cmds did not create.
+    var createdWorktree: WorktreeRecord? {
+        let registry = WorktreeRegistry.shared
+        if let worktreePath, let record = registry.record(at: worktreePath) { return record }
+        guard !isRemote, let workingDirectory else { return nil }
+        return registry.record(containing: workingDirectory)
     }
 
     func paneInfos() -> [PaneInfo] {

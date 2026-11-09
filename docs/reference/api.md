@@ -77,9 +77,10 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `state.import` | `bundle` (object or JSON text), `mode?` (`append` default / `replace`), `resume?` (`ask`/`always`/`never`, default: the app setting) | `{"workspaces": [id], "panes", "closed", "resume", "offers": [{"workspace", "pane", "agent", "sessionID", "command"?}]}`; validates the bundle first; local socket only |
 | `remote.location` | `pane?`, `cwd?`, `branch?` | – (SSH panes: remote cwd/branch from `cmds-remote.sh prompt`) |
 | `workspace.list` | – | `[WorkspaceInfo]` |
-| `workspace.create` | `title?`, `cwd?`, `command?`, `account?` (Claude account name or `auto`) or `ssh` (host), `remoteCwd?` | `WorkspaceInfo` |
+| `workspace.create` | `title?`, `cwd?`, `command?`, `account?` (Claude account name or `auto`) or `ssh` (host), `remoteCwd?`; with `worktree` (new branch): also `base?` (branch, remote branch or commit; default: the repository's default branch) and `worktreePath?` (absolute; default `<repo>-worktrees/<branch>` next to the repository); `cwd` is then a folder in the repository (default: the selected workspace's) | `WorkspaceInfo`, with `warning` when `git fetch` failed. git runs off the main thread; an existing branch (local or on the remote), an existing path or one inside the repository is an error ([Worktree workspaces](../guide/workspaces-and-panes.md#worktree-workspaces)) |
+| `workspace.changes` | `id?` | `{"pane", "path"}`: Show Changes, the diff (commits since the base, merge base → working tree, untracked files) written to `path` and shown in the workspace's diff preview pane (kept focus) |
 | `workspace.select` | `id` | – |
-| `workspace.close` | `id` | – |
+| `workspace.close` | `id`, `removeWorktree?` | – ; with `removeWorktree: true` `{"removed", "branch"}`: also removes the worktree cmds created for the workspace (`git worktree remove`), or fails and leaves the workspace open when it has uncommitted changes, untracked files or unpushed commits, when cmds did not create it or another workspace is in it |
 | `view.tile` | one of `off: true`, `all: true`, `workspaces` ([id], at least two); `active?` (workspace to give the keyboard); `zoom?` (bool: show the active tile alone); no params = query | `TileStatus` `{"mode": "off"/"all"/"selected", "workspaces": [id] (display order), "active"?, "zoomed"?, "hidden"}` (`hidden` = left out beyond 9), `"rows"?` ([[id]], top to bottom: only while the user's dragged arrangement is shown; `workspaces` lists the same ids in reading order). Calling with `workspaces` resets to the automatic layout. [Tiled view](../guide/workspaces-and-panes.md#tiled-view); local socket only |
 | `workspace.rename` | `id`, `title` | – |
 | `pane.list` | `workspace?` | `[PaneInfo]` |
@@ -106,6 +107,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `events.subscribe` | – | `{"subscribed": true}`, then events (below) on the same connection |
 | `debug.preview_snapshot` | `pane` (a preview pane) | `{"png_base64"}`; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
 | `debug.show_settings` | – | `{"window"}` (window number); opens cmds › Settings…; DEBUG builds only, for tests |
+| `debug.close_alert` | `id?` | `{"worktree": null}` when closing the workspace from the sidebar does not ask about a worktree, else `{"worktree", "text", "buttons"}` (the alert, not shown); DEBUG builds only, for tests |
 | `debug.schedule_clock` | `offset` (seconds) | `{"now"}`: moves the schedule runner's clock by `offset` (a simulated sleep) and checks what fell due, as after a wake; DEBUG builds only, for tests |
 
 ## Events
@@ -133,7 +135,8 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
 - `WorkspaceInfo` (also used by events and the sync protocol) = `id`, `title`, `selected`, `gitBranch?`,
   `workingDirectory?`, `ports`, `notificationText?`, `attention`, `panes` (`[PaneInfo]`), `layout?` (split tree), and
   optional `cpuPercent` (100 = one core), `memoryBytes` (physical footprint), `remoteHost` (while the focused pane is
-  an SSH pane).
+  an SSH pane), `worktree` = `{path, branch, base}` (the git worktree cmds created the workspace in; never for
+  worktrees made otherwise).
 - `PaneInfo` = `id`, `kind` (`terminal` / `browser` / `preview` / `files`), `title`, `focused`, `attention`,
   `workingDirectory?` (files: the listed folder), `url?` (browser), `file?` (preview: absolute path), `remote?` =
   `{host, connected, branch?}` (SSH panes; files panes on a host, `connected` false until it was listed, e.g. after a

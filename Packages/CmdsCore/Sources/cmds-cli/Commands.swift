@@ -95,6 +95,7 @@ extension CLI {
         importCommand,
     ] + scheduleCommands + filesCommands + [  // ScheduleCommands.swift, FilesCommands.swift
         mcpCommand,  // MCPServer.swift
+        changesCommand,  // WorktreeCommands.swift
         Command(name: "stats", usage: "stats [--watch [seconds]]",
                 summary: "Show CPU and memory use of the Mac and of each workspace's processes.",
                 details: """
@@ -179,7 +180,7 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             print("unpaired \(device.name) (\(device.id))")
         },
-        Command(name: "new", usage:"new [--title T] [--cwd DIR] [--account NAME|auto] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
+        Command(name: "new", usage:"new [--title T] [--cwd DIR] [--account NAME|auto] [--worktree BRANCH [--base REF] [--path DIR]] [-- command…] | new --ssh HOST [--remote-cwd DIR] [--title T]",
                 summary: "Create a workspace (in the current directory by default) and select it.",
                 details: """
                     --ssh opens an SSH workspace: the pane runs your `ssh HOST` (respecting ~/.ssh/config) and forwards a
@@ -187,11 +188,19 @@ extension CLI {
                     the server (absolute or ~/…).
                     --account gives the pane's shell the Claude account's CLAUDE_CONFIG_DIR (cmds accounts); auto = the
                     first account without a limit. E.g. `cmds new --account work -- claude`.
+                    --worktree opens the workspace in a new git worktree of the repository of --cwd (default: the current
+                    directory): cmds fetches, creates branch BRANCH from --base (default: the repository's default branch,
+                    preferring the remote's, e.g. origin/main) and the worktree in --path (default:
+                    <repo>-worktrees/<branch> next to the repository, `/` in the branch becoming `-`). An existing branch
+                    (also on the remote), an existing path or a path inside the repository is an error. Closing the
+                    workspace in the app offers to remove the worktree (`cmds close --remove-worktree`).
+                    E.g. `cmds new --worktree fix-login -- claude`.
                     """,
-                options: ["title", "cwd", "ssh", "remote-cwd", "account"]) { ctx in
+                options: ["title", "cwd", "ssh", "remote-cwd", "account", "worktree", "base", "path"]) { ctx in
             if let host = ctx.args[option: "ssh"] {
-                guard ctx.args[option: "cwd"] == nil, ctx.args.rest == nil, ctx.args[option: "account"] == nil else {
-                    throw CLIError.usage("--ssh takes --remote-cwd, not --cwd, --account or a command")
+                guard ctx.args[option: "cwd"] == nil, ctx.args.rest == nil, ctx.args[option: "account"] == nil,
+                      ctx.args[option: "worktree"] == nil else {
+                    throw CLIError.usage("--ssh takes --remote-cwd, not --cwd, --account, --worktree or a command")
                 }
                 let result = try ctx.call("workspace.create", [
                     "ssh": .string(host),
@@ -200,13 +209,10 @@ extension CLI {
                 ])
                 return ctx.printResult(result, field: "id")
             }
-            let cwd = ctx.args[option: "cwd"] ?? FileManager.default.currentDirectoryPath
-            let result = try ctx.call("workspace.create", [
-                "title": ctx.args[option: "title"].json,
-                "cwd": .string(absolutePath(cwd)),
-                "command": shellCommand(ctx.args.rest ?? []).json,
-                "account": ctx.args[option: "account"].json,
-            ])
+            let params = try newWorkspaceParams(ctx.args, currentDirectory: FileManager.default.currentDirectoryPath)
+            // Creating a worktree fetches first.
+            let result = try ctx.call("workspace.create", params, timeout: params["worktree"] == nil ? 60 : 180)
+            printWarning(of: result)
             ctx.printResult(result, field: "id")
         },
         Command(name: "select", usage: "select <workspace-id|index|title>",
@@ -250,9 +256,21 @@ extension CLI {
             if status.hidden > 0 { line += "  (\(status.hidden) more not shown)" }
             print(line)
         },
-        Command(name: "close", usage: "close [workspace]", summary: "Close a workspace (default: the current one).") { ctx in
-            try ctx.args.expectPositionals(0...1, usage: "cmds close [workspace]")
+        Command(name: "close", usage: "close [workspace] [--remove-worktree]", summary: "Close a workspace (default: the current one).",
+                details: """
+                    --remove-worktree also removes the workspace's worktree with `git worktree remove`, only when cmds
+                    created it (`cmds new --worktree`) and no other workspace is in it. It is refused, and the workspace
+                    stays open, when the worktree has uncommitted changes, untracked files or commits that are on no
+                    remote branch and not on its base. Files git ignores go with the folder; the branch stays.
+                    """,
+                flags: ["remove-worktree"]) { ctx in
+            try ctx.args.expectPositionals(0...1, usage: "cmds close [workspace] [--remove-worktree]")
             let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.envWorkspace
+            if ctx.args.has("remove-worktree") {
+                let result = try ctx.call("workspace.close", ["id": id.json, "removeWorktree": true], timeout: 120)
+                if ctx.json { return ctx.printJSON(result) }
+                return print("removed worktree \(result["removed"]?.stringValue ?? "")")
+            }
             try ctx.call("workspace.close", ["id": id.json])
         },
         Command(name: "rename", usage: "rename [workspace] <title>",

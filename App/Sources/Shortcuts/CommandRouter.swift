@@ -35,13 +35,28 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         SSHConnectSheet.present(in: windowController?.window, controller: controller)
     }
 
+    /// ⌥⌘N: a workspace in a new git worktree of the selected workspace's repository (WorktreeSheet).
+    @objc func newWorktreeWorkspace(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        let selected = controller.selectedWorkspace
+        WorktreeSheet.present(in: windowController?.window, controller: controller,
+                              directory: selected?.isRemote == false ? selected?.workingDirectory : nil)
+    }
+
     @objc func installRemoteHelper(_ sender: Any?) {
         guard let pane = controller.focusedPane else { return }
         RemoteHelperInstaller.confirmAndInstall(pane: pane, window: windowController?.window)
     }
 
     @objc func closePane(_ sender: Any?) { try? controller.closePane(id: nil) }
-    @objc func closeWorkspace(_ sender: Any?) { try? controller.closeWorkspace(id: nil) }
+    @objc func closeWorkspace(_ sender: Any?) {
+        // A worktree cmds created: ask whether to remove it too.
+        if let workspace = controller.selectedWorkspace, controller.worktreeToRemove(onClosing: workspace) != nil {
+            windowController?.sidebar.confirmClose(workspaceID: workspace.id)
+            return
+        }
+        try? controller.closeWorkspace(id: nil)
+    }
 
     // MARK: Workspace
 

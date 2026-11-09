@@ -36,6 +36,9 @@ struct SessionState: Codable {
         /// The opener of each browser, preview or files pane opened from a terminal pane of the workspace (`Pane.openedBy`,
         /// #165). Added later: older sessions lack it, older versions ignore it.
         var paneOpeners: [PaneOpener]? = nil
+        /// The worktree cmds created the workspace in (`Workspace.worktreePath`, #172). Added later: older sessions lack
+        /// it, older versions ignore it.
+        var worktree: String? = nil
     }
 
     /// The pane at `paneIndex` was opened from the terminal pane at `openerIndex` (reading order of `layout`).
@@ -128,7 +131,7 @@ enum SessionStore {
 
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
-        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners
+        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners, worktree
     }
 
     init(from decoder: Decoder) throws {
@@ -146,6 +149,7 @@ extension SessionState.WorkspaceState {
         paneTags = tags.isEmpty ? nil : tags
         let openers = (try? c.decodeIfPresent([Lossy<SessionState.PaneOpener>].self, forKey: .paneOpeners))?.compactMap(\.value) ?? []
         paneOpeners = openers.isEmpty ? nil : openers
+        worktree = try? c.decodeIfPresent(String.self, forKey: .worktree)
     }
 }
 

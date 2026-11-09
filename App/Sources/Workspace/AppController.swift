@@ -844,7 +844,8 @@ final class AppController {
                 agentSessions: agentSessions.isEmpty ? nil : agentSessions,
                 paneAccounts: paneAccounts.isEmpty ? nil : paneAccounts,
                 paneTags: paneTags.isEmpty ? nil : paneTags,
-                paneOpeners: paneOpeners.isEmpty ? nil : paneOpeners)
+                paneOpeners: paneOpeners.isEmpty ? nil : paneOpeners,
+                worktree: workspace.worktreePath)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -907,6 +908,7 @@ final class AppController {
         for saved in state.workspaces {
             let workspace = makeWorkspace()
             workspace.customTitle = saved.title
+            workspace.worktreePath = saved.worktree
             leafIndex = 0
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
