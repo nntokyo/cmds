@@ -57,7 +57,7 @@ public struct BrowserSnapshotRequest: Equatable, Sendable {
         let text = raw.trimmingCharacters(in: .whitespaces)
         if let preset = DevicePreset.named(text) { return Target(preset: preset) }
         if let size = try ViewportSize.parse(text) { return Target(size: size) }
-        throw RPCError.invalidParams("unknown device \"\(text.prefix(40))\": use a preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))) or WIDTHxHEIGHT")
+        throw RPCError.invalidParams("unknown device \"\(text.prefix(40))\": use a preset (\(DevicePreset.idList)) or WIDTHxHEIGHT")
     }
 
     /// `pane?`/`workspace?` (ignored here), `fullPage?`, `selector?`, `device?` (preset or `WIDTHxHEIGHT`), `devices?`
@@ -69,42 +69,21 @@ public struct BrowserSnapshotRequest: Equatable, Sendable {
         if let unknown = object.keys.filter({ !Self.knownParams.contains($0) }).sorted().first {
             throw RPCError.invalidParams("browser.snapshot does not support the parameter \"\(unknown.prefix(40))\" (unsupported by this cmds app)")
         }
-        func value(_ key: String) -> JSONValue? {
-            if case .null? = object[key] { return nil }
-            return object[key]
-        }
-        switch value("fullPage") {
-        case nil: break
-        case .bool(let flag)?: fullPage = flag
-        default: throw RPCError.invalidParams("fullPage must be a boolean")
-        }
-        switch value("selector") {
-        case nil: break
-        case .string(let text)?:
+        let values = RequestParams(params)
+        fullPage = try values.bool("fullPage") ?? false
+        if let text = try values.string("selector") {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { throw RPCError.invalidParams("selector is empty") }
             guard trimmed.count <= Self.maxSelectorLength else { throw RPCError.invalidParams("selector is too long") }
             selector = trimmed
-        default: throw RPCError.invalidParams("selector must be a string")
         }
-        func integer(_ key: String) throws -> Int? {
-            switch value(key) {
-            case nil: return nil
-            case .number(let number)? where number.rounded() == number && abs(number) < 1e6: return Int(number)
-            default: throw RPCError.invalidParams("\(key) must be a whole number of CSS pixels")
-            }
-        }
-        let given = ["device", "devices", "width"].filter { value($0) != nil }
+        let given = ["device", "devices", "width"].filter { values[$0] != nil }
         guard given.count <= 1 else { throw RPCError.invalidParams("give only one of device, devices and width") }
-        if value("height") != nil, value("width") == nil {
+        if values["height"] != nil, values["width"] == nil {
             throw RPCError.invalidParams("height goes with width")
         }
-        switch value("device") {
-        case nil: break
-        case .string(let text)?: targets = [try Self.parseTarget(text)]
-        default: throw RPCError.invalidParams("device must be a string")
-        }
-        switch value("devices") {
+        if let text = try values.string("device") { targets = [try Self.parseTarget(text)] }
+        switch values["devices"] {
         case nil: break
         case .array(let items)?:
             targets = try items.map { item in
@@ -117,8 +96,8 @@ public struct BrowserSnapshotRequest: Equatable, Sendable {
             guard !targets.isEmpty else { throw RPCError.invalidParams("devices is empty") }
         default: throw RPCError.invalidParams("devices must be a list of presets or WIDTHxHEIGHT")
         }
-        if let width = try integer("width") {
-            let size = ViewportSize(width: width, height: try integer("height") ?? Self.defaultHeight)
+        if let width = try values.cssPixels("width") {
+            let size = ViewportSize(width: width, height: try values.cssPixels("height") ?? Self.defaultHeight)
             try size.validate()
             targets = [Target(size: size)]
         }
@@ -151,6 +130,11 @@ public struct BrowserSnapshotRequest: Equatable, Sendable {
     /// The error for a capture taller than `maxHeight`.
     public static func tooTall(_ height: Int) -> RPCError {
         RPCError.invalidParams("the page is \(height) CSS pixels tall, over the \(maxHeight) px limit of a snapshot; capture an element (selector) instead")
+    }
+
+    /// The error for a capture wider than `maxHeight` (the same limit applies to both sides).
+    public static func tooWide(_ width: Int) -> RPCError {
+        RPCError.invalidParams("the capture is \(width) CSS pixels wide, over the \(maxHeight) px limit")
     }
 }
 

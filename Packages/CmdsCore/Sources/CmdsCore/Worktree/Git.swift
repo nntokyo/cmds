@@ -50,7 +50,7 @@ public enum Git {
         environment["LC_ALL"] = "C"
         guard let completion = CommandOutput.complete(executable, ["-C", directory] + arguments, environment: environment,
                                                       timeout: timeout) else {
-            throw WorktreeError.gitFailed(command: "git " + (arguments.first ?? ""), message: "did not finish in time")
+            throw failure(arguments, "did not finish in time")
         }
         return Output(status: completion.status, stdout: completion.stdout,
                       stderr: String(decoding: completion.stderr, as: UTF8.self))
@@ -59,11 +59,35 @@ public enum Git {
     /// stdout of a command that must succeed; throws `.gitFailed` with git's message otherwise.
     @discardableResult
     public static func check(_ arguments: [String], in directory: String, timeout: TimeInterval = timeout) throws -> String {
+        try checkedOutput(arguments, in: directory, timeout: timeout).text
+    }
+
+    /// The output of a command that must succeed (for its raw stdout); throws `.gitFailed` with git's message otherwise.
+    public static func checkedOutput(_ arguments: [String], in directory: String, timeout: TimeInterval = timeout) throws -> Output {
         let output = try run(arguments, in: directory, timeout: timeout)
-        guard output.succeeded else {
-            throw WorktreeError.gitFailed(command: "git " + (arguments.first ?? ""), message: output.message)
-        }
-        return output.text
+        guard output.succeeded else { throw failure(arguments, output.message) }
+        return output
+    }
+
+    /// `.gitFailed` naming the git subcommand (`git diff failed: …`).
+    private static func failure(_ arguments: [String], _ message: String) -> WorktreeError {
+        .gitFailed(command: "git " + (arguments.first ?? ""), message: message)
+    }
+
+    /// `ref` (`refs/heads/main`, `refs/remotes/origin/main`) exists.
+    static func refExists(_ ref: String, in directory: String) throws -> Bool {
+        try run(["show-ref", "--verify", "--quiet", ref], in: directory).succeeded
+    }
+
+    /// `name` (branch, tag, commit) names a commit.
+    static func isCommit(_ name: String, in directory: String) throws -> Bool {
+        try run(["rev-parse", "--verify", "--quiet", name + "^{commit}"], in: directory).succeeded
+    }
+
+    /// The branch checked out in `directory`'s working tree; nil when HEAD is detached.
+    static func currentBranch(in directory: String) throws -> String? {
+        let head = try run(["symbolic-ref", "--quiet", "--short", "HEAD"], in: directory)
+        return head.succeeded && !head.text.isEmpty ? head.text : nil
     }
 }
 #endif

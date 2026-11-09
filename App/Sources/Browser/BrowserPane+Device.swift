@@ -11,6 +11,10 @@ import CmdsCore
 extension BrowserPane {
     /// Space around a device-sized page.
     static let deviceMargin: CGFloat = 8
+    /// How long the breakpoint indicator waits for layout and loading to settle before reading the page.
+    static let breakpointRefreshDelay: TimeInterval = 0.25
+    /// What Custom Size… offers while the page fills the pane (iPhone SE).
+    static let defaultCustomSize = ViewportSize(width: 375, height: 667)
 
     /// The scale the page is shown at (1 when it fills the pane or fits unscaled).
     var deviceScale: Double {
@@ -38,11 +42,7 @@ extension BrowserPane {
         guard new != old else { return }
         emulation = new
         // In the responsive view the frames send their devices' user agents; this one applies when it ends.
-        if new.userAgent != old.userAgent, responsiveView == nil {
-            webView.customUserAgent = new.userAgent
-            // Servers see the new user agent only with a new request.
-            if let scheme = webView.url?.scheme, ["http", "https", "file"].contains(scheme) { webView.reload() }
-        }
+        if new.userAgent != old.userAgent, responsiveView == nil { webView.setUserAgent(new.userAgent) }
         if new.scheme != old.scheme { applyColorScheme() }
         if new.size != old.size { layoutWebView() }
         updateDeviceButton()
@@ -105,8 +105,8 @@ extension BrowserPane {
         var tip = String(localized: "Device Size")
         if let responsive {
             tip += " — " + String(localized: "Responsive View") + " (\(responsive.devices.joined(separator: ", ")))"
-        } else if let size = emulation.size {
-            tip += " — " + [emulation.preset?.name, size.description].compactMap { $0 }.joined(separator: " ")
+        } else if let sizeName = emulation.sizeName {
+            tip += " — " + sizeName
         }
         deviceButton.toolTip = tip
     }
@@ -117,7 +117,7 @@ extension BrowserPane {
             MainActor.assumeIsolated { self?.refreshBreakpoints() }
         }
         breakpointRefresh = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.breakpointRefreshDelay, execute: item)
     }
 
     /// Reads the CSS width and the media queries of the page (in cmds' own script world, so the page's scripts do not
@@ -205,12 +205,11 @@ extension BrowserPane {
         let agents = NSMenu()
         agents.addItem(item(String(localized: "WebKit Default"), #selector(userAgentChosen(_:)), on: emulation.userAgent == nil,
                             object: ""))
-        let known = [DevicePreset.iPhoneUserAgent, DevicePreset.androidUserAgent, DevicePreset.iPadUserAgent]
-        for agent in known {
+        for agent in DevicePreset.userAgents {
             agents.addItem(item(BrowserEmulation.userAgentName(agent), #selector(userAgentChosen(_:)),
                                 on: emulation.userAgent == agent, object: agent))
         }
-        let customAgent = emulation.userAgent.flatMap { known.contains($0) ? nil : $0 }
+        let customAgent = emulation.userAgent.flatMap { DevicePreset.userAgents.contains($0) ? nil : $0 }
         agents.addItem(item(String(localized: "Custom…"), #selector(customUserAgentChosen), on: customAgent != nil))
         let agentItem = NSMenuItem(title: String(localized: "User Agent"), action: nil, keyEquivalent: "")
         agentItem.submenu = agents
@@ -251,7 +250,7 @@ extension BrowserPane {
     }
 
     @objc private func customSizeChosen() {
-        let current = emulation.size ?? ViewportSize(width: 375, height: 667)
+        let current = emulation.size ?? Self.defaultCustomSize
         let width = NSTextField(string: String(current.width)), height = NSTextField(string: String(current.height))
         let times = NSTextField(labelWithString: "×")
         let row = NSStackView(views: [width, times, height])

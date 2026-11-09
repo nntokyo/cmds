@@ -31,8 +31,16 @@ final class TerminalFind {
     /// The engine search is running (plain mode with text).
     private var engineSearching = false
 
-    /// Rows read per slice, then the main thread is let go for a moment.
+    /// Rows read per slice, then the main thread is let go for `slicePause` nanoseconds.
     private static let rowsPerSlice = 1500
+    private static let slicePause: UInt64 = 1_000_000
+    /// Seconds to wait after a change before searching: longer for needles shorter than `shortNeedle` characters,
+    /// which match a lot (as Ghostty does).
+    private static let shortNeedle = 3
+    private static let shortNeedleDelay = 0.3
+    private static let delay = 0.05
+    /// How often the outline follows the selected hit (output and the user's scrolling move it).
+    private static let markerRefreshInterval: TimeInterval = 0.25
     /// The own search reads at most this many rows from the bottom.
     static let maxRows = 200_000
 
@@ -79,8 +87,7 @@ final class TerminalFind {
         guard let bar else { return }
         stopSearching()
         self.bar = nil
-        let hadKeyboard = (bar.window?.firstResponder as? NSText)?.delegate === bar.field
-        bar.removeFromSuperview()
+        let hadKeyboard = bar.fieldHasKeyboard
         pane.container.setFindBar(nil)
         pane.terminal?.keyboardRedirect = nil
         if refocus, hadKeyboard { pane.terminal?.focus() }
@@ -95,8 +102,7 @@ final class TerminalFind {
 
     private func textOrOptionsChanged() {
         debounce?.cancel()
-        // Short needles match a lot: wait for more typing, as Ghostty does.
-        let delay = text.count < 3 && !text.isEmpty ? 0.3 : 0.05
+        let delay = text.count < Self.shortNeedle && !text.isEmpty ? Self.shortNeedleDelay : Self.delay
         let work = DispatchWorkItem { [weak self] in
             MainActor.assumeIsolated { self?.runSearch() }
         }
@@ -106,27 +112,20 @@ final class TerminalFind {
 
     /// Runs the current text and options now (also what `debug.find` uses after setting them).
     func runSearch() {
-        debounce?.cancel()
-        debounce = nil
+        cancelDebounce()
         guard let terminal = pane.terminal, isOpen else { return }
         let needle = text, options = options
-        searchTask?.cancel()
-        searchTask = nil
-        clearOwnSearch()
-        if needle.isEmpty {
-            if engineSearching { terminal.endSearch() }
-            engineSearching = false
-            engineTotal = nil
-            engineSelected = nil
-        } else if options.isPlain {
+        cancelOwnSearch()
+        if !needle.isEmpty, options.isPlain {
             engineTotal = nil
             engineSelected = nil
             engineSearching = true
             terminal.search(needle)
         } else {
-            if engineSearching { terminal.endSearch() }
-            engineSearching = false
-            searchTask = Task { [weak self] in await self?.searchRows(needle, options: options) }
+            endEngineSearch()
+            if !needle.isEmpty {
+                searchTask = Task { [weak self] in await self?.searchRows(needle, options: options) }
+            }
         }
         updateCount()
     }
@@ -145,7 +144,7 @@ final class TerminalFind {
             rows.append(contentsOf: slice)
             row = end
             // Let events and drawing through between slices.
-            try? await Task.sleep(nanoseconds: 1_000_000)
+            try? await Task.sleep(nanoseconds: Self.slicePause)
         }
         // Rows pruned past the scrollback limit while reading shift the rest; the next change searches again.
         let found: Result<[TerminalSearchMatch], Error> = await Task.detached(priority: .userInitiated) {
@@ -156,7 +155,7 @@ final class TerminalFind {
         case .success(let matches):
             hits = matches
             invalidPattern = false
-            let viewportBottom = terminal.scrollbar().map { $0.offset + $0.rows - 1 }
+            let viewportBottom = terminal.scrollbar().map { $0.viewport.upperBound - 1 }
             hitIndex = TerminalTextSearch.nearestIndex(in: hits, atOrAbove: viewportBottom)
             showSelectedHit()
         case .failure:
@@ -184,24 +183,20 @@ final class TerminalFind {
 
     /// Scrolls the selected hit to a third of the way down the viewport and outlines it.
     private func showSelectedHit() {
-        guard let terminal = pane.terminal, let index = hitIndex, let hit = hits[safe: index] else { return }
-        let rows = terminal.scrollbar()?.rows ?? 0
-        if let bar = terminal.scrollbar(), !(bar.offset..<(bar.offset + bar.rows)).contains(hit.row) {
-            terminal.scroll(toRow: hit.row - rows / 3)
+        guard let terminal = pane.terminal, let hit = selectedHit else { return }
+        if let bar = terminal.scrollbar(), !bar.viewport.contains(hit.row) {
+            terminal.scroll(toRow: hit.row - bar.rows / 3)
         }
         updateMarker()
         if markerTimer == nil {
-            // Output and the user's scrolling move the hit; follow it.
-            markerTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            markerTimer = Timer.scheduledTimer(withTimeInterval: Self.markerRefreshInterval, repeats: true) { [weak self] _ in
                 MainActor.assumeIsolated { self?.updateMarker() }
             }
         }
     }
 
     private func updateMarker() {
-        guard let terminal = pane.terminal, let index = hitIndex, let hit = hits[safe: index],
-              let bar = terminal.scrollbar(),
-              (bar.offset..<(bar.offset + bar.rows)).contains(hit.row),
+        guard let terminal = pane.terminal, let hit = selectedHit, let bar = terminal.scrollbar(), bar.viewport.contains(hit.row),
               let rect = terminal.cellRect(viewportRow: hit.row - bar.offset, column: hit.column, width: hit.width) else {
             marker?.isHidden = true
             return
@@ -215,27 +210,41 @@ final class TerminalFind {
         marker.isHidden = false
     }
 
-    private func clearOwnSearch() {
+    private var selectedHit: TerminalSearchMatch? { hitIndex.flatMap { hits[safe: $0] } }
+
+    /// Reading or matching rows, or a change not searched yet (the count shows `…`).
+    private var ownSearchPending: Bool { searchTask != nil || debounce != nil }
+
+    private func cancelDebounce() {
+        debounce?.cancel()
+        debounce = nil
+    }
+
+    /// Stops reading / matching and drops the own search's hits and outline.
+    private func cancelOwnSearch() {
+        searchTask?.cancel()
+        searchTask = nil
         hits = []
         hitIndex = nil
         invalidPattern = false
         markerTimer?.invalidate()
         markerTimer = nil
-        marker?.removeFromSuperview()
         marker = nil
         pane.container.setFindMarker(nil)
     }
 
-    private func stopSearching() {
-        debounce?.cancel()
-        debounce = nil
-        searchTask?.cancel()
-        searchTask = nil
-        clearOwnSearch()
+    /// Ends libghostty's search (and its highlights) if it runs.
+    private func endEngineSearch() {
         if engineSearching { pane.terminal?.endSearch() }
         engineSearching = false
         engineTotal = nil
         engineSelected = nil
+    }
+
+    private func stopSearching() {
+        cancelDebounce()
+        cancelOwnSearch()
+        endEngineSearch()
     }
 
     // MARK: Engine events
@@ -259,7 +268,7 @@ final class TerminalFind {
             if let selected = engineSelected { return "\(selected + 1)/\(total)" }
             return total == 0 ? "0" : "-/\(total)"
         }
-        if searchTask != nil || debounce != nil { return "…" }
+        if ownSearchPending { return "…" }
         guard let index = hitIndex else { return "0" }
         return "\(hits.count - index)/\(hits.count)"
     }
@@ -282,14 +291,14 @@ final class TerminalFind {
         var state: [String: JSONValue] = [
             "open": .bool(isOpen), "text": .string(text), "count": .string(countText),
             "caseSensitive": .bool(options.caseSensitive), "regex": .bool(options.regex),
-            "engine": .bool(engineSearching), "searching": .bool(searchTask != nil || debounce != nil),
+            "engine": .bool(engineSearching), "searching": .bool(ownSearchPending),
             "hits": .number(Double(engineSearching ? (engineTotal ?? -1) : hits.count)),
             "terminalHasKeyboard": .bool(pane.terminal.map { $0.view.window?.firstResponder === $0.view } ?? false),
         ]
-        if let bar, let window = bar.window {
-            state["fieldHasKeyboard"] = .bool((window.firstResponder as? NSText)?.delegate === bar.field)
+        if let bar, bar.window != nil {
+            state["fieldHasKeyboard"] = .bool(bar.fieldHasKeyboard)
         }
-        if let index = hitIndex, let hit = hits[safe: index] {
+        if let hit = selectedHit {
             state["hit"] = ["row": .number(Double(hit.row)), "column": .number(Double(hit.column)),
                             "width": .number(Double(hit.width))]
             state["markerVisible"] = .bool(marker?.isHidden == false)
@@ -315,4 +324,9 @@ final class TerminalFind {
         bar?.field.stringValue = text
     }
     #endif
+}
+
+private extension TerminalScrollbar {
+    /// Screen rows in the viewport.
+    var viewport: Range<Int> { offset..<(offset + rows) }
 }

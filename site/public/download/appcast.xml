@@ -7,24 +7,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.15.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.15.1</link>
-      <sparkle:version>24</sparkle:version>
-      <sparkle:shortVersionString>0.15.1</sparkle:shortVersionString>
+      <title>cmds 0.16.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.16.0</link>
+      <sparkle:version>25</sparkle:version>
+      <sparkle:shortVersionString>0.16.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 08 Nov 2026 08:12:06 GMT</pubDate>
+      <pubDate>Mon, 09 Nov 2026 17:20:00 GMT</pubDate>
       <description><![CDATA[
-<h3>修正</h3>
-<p>ペインの Claude Code のセッションを別のアカウントに移すとき、「Claude Codeが終了しませんでした」で止まることが多かった問題を直しました。Claude Code は 1 回目の Ctrl-C から約 0.7 秒以内に 2 回目を受けたときだけ終了しますが、cmds の送る間隔が長すぎました。いまは 2 回の Ctrl-C を同時に送ります。</p>
+<h3>追加</h3>
+<ul>
+<li>ブラウザペインでレスポンシブ表示を確認できます。iPhone・Pixel・iPad・デスクトップの大きさで表示し、回転、ライト/ダーク表示、ブレークポイントの表示も切り替えられます。スマホ・タブレット・PC の大きさを 1 つのペインに並べて表示し、移動とスクロールを連動させることもできます。</li>
+<li>ブラウザのスクリーンショットを、ページ全体・要素ひとつ・複数の端末サイズで撮れます（<code>cmds browser snapshot</code>、MCP）。</li>
+<li>エージェント向けの開発者ツール：ページのコンソールとエラーの記録、ページの要素一覧、クリック・入力・表示待ちを CLI と MCP から使えます。設定で Safari の Web インスペクタも使えます。</li>
+<li>ターミナル内の検索（⌘F、大文字小文字・正規表現）とコマンドパレット（⇧⌘P）。日本語表示でも英語のコマンド名で探せます。</li>
+<li>エージェントを並行して動かすためのワークツリーワークスペース（ファイル › 新規ワークツリーワークスペース…）と「変更を表示」。</li>
+<li><code>cmds mcp</code> に、自分で開いたターミナルを操作するツールとポート一覧を追加しました。サイドバーのポートをクリックするとブラウザで開きます。</li>
+</ul>
+<h3>変更</h3>
+<p>ブラウザのページは、既定で Mac のライト/ダーク表示に従います。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
-<h3>Fixed</h3>
-<p>Moving a pane's Claude Code session to another account often stopped with "Claude Code did not quit": Claude Code quits only on a second Ctrl-C within about 0.7 s of the first, and cmds sent them too far apart. Both Ctrl-Cs now go out at once.</p>
+<h3>Added</h3>
+<ul>
+<li>Browser panes check responsive layouts: iPhone, Pixel, iPad and desktop sizes, rotation, light/dark, a breakpoint indicator, and a responsive view showing phone, tablet and desktop side by side with navigation and scrolling in sync.</li>
+<li>Browser screenshots of the whole page, one element, or several device sizes (<code>cmds browser snapshot</code>, MCP).</li>
+<li>DevTools for agents: the page's console and errors, a page tree, click, fill and wait for, from the CLI and MCP; Safari's Web Inspector can be allowed in Settings.</li>
+<li>Find in a terminal (⌘F, match case, regular expressions) and a command palette (⇧⌘P) that also finds English command names in a localized UI.</li>
+<li>Worktree workspaces for agents working side by side (File › New Worktree Workspace…) with Show Changes.</li>
+<li><code>cmds mcp</code> terminal tools for panes the agent opened, and listening ports; clicking a port in the sidebar opens it in a browser.</li>
+</ul>
+<h3>Changed</h3>
+<p>Browser pages follow the Mac's light or dark appearance by default.</p>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.15.1/cmds-0.15.1.dmg" length="15369980" type="application/octet-stream" sparkle:edSignature="5v1wn7eVarF7g9Y7QqR+UbZqj7gGwpYaiUE3/aKrZ8XwNVHEIornjElzpuMZ9N8rlIlWnagxg4YQiC60J5GvCg=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.16.0/cmds-0.16.0.dmg" length="15927210" type="application/octet-stream" sparkle:edSignature="JL77c+/bJ57MsJlJatt9Oj1iRXe+gjLPqwPTBj9Ub4Y4lMZTOYwEzIb2vrG3/zRy6Ev42gzYakyxczYVdTKMBg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 5RXuVQ13OE+2M6w0wb07pPKebNyjN0vuQCVmKTMTGWSwawrPWBOyCc2ezsz0PwfMP18LbyGSCQgkjFyNUPfZBw==
-length: 2083
+edSignature: o+ZJSeF/qf70oEZX8aCV0XrheJ5e0ziGK5fSp2SMhWMSb04c/ngfRRJ/B/Rojpal3ApEJExhlvl4rNxCW71MDQ==
+length: 4078
 -->

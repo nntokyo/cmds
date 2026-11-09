@@ -55,13 +55,21 @@ final class Workspace {
     }
 
     /// `:3000  :5173` (sidebar row and rail tooltip).
-    var portsText: String { ports.map { ":\($0)" }.joined(separator: "  ") }
+    var portsText: String { Self.portsText(ports) }
+
+    /// Between the ports of `portsText`.
+    static let portSeparator = "  "
+
+    static func portsText(_ ports: [Int]) -> String { ports.map { ":\($0)" }.joined(separator: portSeparator) }
 
     var hasTerminal: Bool { panes.values.contains { $0.kind == .terminal } }
 
     /// The focused pane is an SSH pane: `workingDirectory`/`gitBranch` are on its host. (Files panes, also those on an
     /// SSH host, never change the workspace's location.)
     var isRemote: Bool { focusedPane?.ssh != nil }
+
+    /// `workingDirectory` when it is on this Mac (nil for an SSH pane's remote directory).
+    var localWorkingDirectory: String? { isRemote ? nil : workingDirectory }
 
     /// Host of the focused SSH pane (nil when the focused pane is local).
     var remoteHost: String? { focusedPane?.ssh?.launch.host }

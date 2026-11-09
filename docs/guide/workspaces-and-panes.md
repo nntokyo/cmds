@@ -372,6 +372,7 @@ worktree.
 what the branch did since it left its base: the commits, then one diff from the merge base to the working tree
 (commits, staged and unstaged changes together, untracked files included). The base is the worktree's for one cmds
 created, else the repository's default branch. Nothing is fetched. Choosing it again refreshes the same preview.
+The diff is a file in the temporary folder, deleted when the workspace closes.
 
 ### Removing the worktree
 

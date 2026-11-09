@@ -205,6 +205,12 @@ final class MCPServerTests: XCTestCase {
         let count = requests.count
         XCTAssertEqual(callTool(server, "browser_responsive", #"{"devices":["iphone"]}"#)?["isError"], .bool(true))
         XCTAssertEqual(callTool(server, "browser_responsive", #"{"url":"http://x.test","pane":"p2"}"#)?["isError"], .bool(true))
+        // #203: a non-boolean off is refused, not taken as on.
+        let sent = requests.count
+        let refused = callTool(server, "browser_responsive", #"{"pane":"p2","off":"yes"}"#)
+        XCTAssertEqual(refused?["isError"], .bool(true))
+        XCTAssertEqual(text(refused), "off must be a boolean")
+        XCTAssertEqual(requests.count, sent)
         XCTAssertEqual(requests.count, count)
 
         // A responsive pane's plain snapshot: one labelled image per frame.
@@ -391,6 +397,21 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(callTool(server, "terminal_read")?["isError"], .bool(true))  // missing pane
     }
 
+    /// The refusals name the tool and what it would have done.
+    func testTerminalRefusalsNameTheToolAndAction() {
+        let server = server()
+        XCTAssertEqual(text(callTool(server, "terminal_read", #"{"pane":"p1"}"#)),
+                       "p1 is your own terminal; terminal_read acts only on panes opened from it (terminal_split).")
+        XCTAssertEqual(text(callTool(server, "terminal_send", #"{"pane":"p1","text":"x"}"#)),
+                       "p1 is your own terminal; terminal_send acts only on panes opened from it (terminal_split).")
+        XCTAssertTrue(text(callTool(server, "terminal_read", #"{"pane":"p5"}"#))?
+            .hasPrefix("p5 was not opened from your terminal (p1), so you may not read it: ") == true)
+        XCTAssertTrue(text(callTool(server, "terminal_send", #"{"pane":"p5","text":"x"}"#))?
+            .hasPrefix("p5 was not opened from your terminal (p1), so you may not type into it: ") == true)
+        replies["workspace.list"] = .string("?")
+        XCTAssertEqual(text(callTool(server, "list_ports")), "the app returned an unexpected workspace list")
+    }
+
     /// The app checks the opener too (it may have changed since the list): its refusal reaches the agent.
     func testTheAppsRefusalIsAToolError() {
         let server = MCPServer(environment: ["CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1"]) { method, _, _ in
@@ -430,6 +451,19 @@ final class MCPServerTests: XCTestCase {
             """)
         replies["workspace.list"] = .array([])
         XCTAssertEqual(text(callTool(server(), "list_ports")), "No listening ports.")
+    }
+
+    /// `cmds ports` (#171): one line per port in workspace order, * the current workspace.
+    func testCLIPortsFormat() {
+        let workspaces = [WorkspaceInfo(id: "w1", title: "app", selected: true, ports: [3000, 5173]),
+                          WorkspaceInfo(id: "w2", title: "api", selected: false, ports: [8080])]
+        XCTAssertEqual(Format.ports(workspaces, currentWorkspace: "w2"), """
+              http://localhost:3000  w1  app
+              http://localhost:5173  w1  app
+            * http://localhost:8080  w2  api
+
+            """)
+        XCTAssertEqual(Format.ports([], currentWorkspace: nil), "no listening ports\n")
     }
 
     func testClosePaneClosesATerminalPaneTheServerSplit() {

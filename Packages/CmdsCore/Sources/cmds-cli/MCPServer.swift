@@ -177,14 +177,14 @@ final class MCPServer {
                 "pane": browserPane,
                 "fullPage": .object(["type": "boolean", "description": .string("Capture the whole page (up to \(BrowserSnapshotRequest.maxHeight) CSS pixels tall).")]),
                 "selector": string("CSS selector of one element to capture (the first match)."),
-                "device": string("Capture at a preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))) or WIDTHxHEIGHT instead of the pane's size."),
+                "device": string("Capture at a preset (\(DevicePreset.idList)) or WIDTHxHEIGHT instead of the pane's size."),
                 "devices": .object(["type": "array", "items": .object(["type": "string"]),
                                     "description": "Several presets or WIDTHxHEIGHT sizes in one call, e.g. [\"iphone\", \"ipad\", \"desktop-1440\"] (phone, tablet, desktop)."]),
              ]),
         Tool(name: "browser_set_viewport",
              description: "Show a cmds browser pane at a device size (the page gets that CSS layout width and height, scaled to fit the pane), with a user agent and light/dark color scheme, to check responsive layouts. Only the arguments given change; without any it returns the current settings. \(CLI.browserDeviceLimits)",
              properties: [
-                "device": string("A preset (\(DevicePreset.all.map(\.id).joined(separator: ", "))), WIDTHxHEIGHT in CSS pixels (e.g. 375x667), or \"off\" to fill the pane again. A preset also sets its user agent."),
+                "device": string("A preset (\(DevicePreset.idList)), WIDTHxHEIGHT in CSS pixels (e.g. 375x667), or \"off\" to fill the pane again. A preset also sets its user agent."),
                 "rotate": .object(["type": "boolean", "description": "Swap width and height (landscape / portrait)."]),
                 "userAgent": string("User agent to send; \"\" = WebKit's own."),
                 "colorScheme": .object(["type": "string", "enum": ["system", "light", "dark"],
@@ -294,6 +294,11 @@ final class MCPServer {
         return value
     }
 
+    /// `body`, with a bad argument it reports (`RPCError`) as the tool's error: nothing is sent.
+    private func toolArguments<T>(_ body: () throws -> T) throws -> T {
+        do { return try body() } catch let error as RPCError { throw ToolError(message: error.message) }
+    }
+
     /// The id of the pane a request opened, remembered (also for browser_* defaults).
     private func recordOpenedPane(_ result: JSONValue) throws -> String {
         guard let id = result["id"]?.stringValue else { throw ToolError(message: "the app returned no pane id") }
@@ -353,12 +358,7 @@ final class MCPServer {
             if case .string(let string) = value { return [Self.text(string)] }
             return [Self.text(encodeJSON(value, pretty: false))]
         case "browser_snapshot":
-            let request: BrowserSnapshotRequest
-            do {
-                request = try BrowserSnapshotRequest(params: arguments)
-            } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let request = try toolArguments { try BrowserSnapshotRequest(params: arguments) }
             let result = try browserCall("browser.snapshot", arguments, request.params,
                                          timeout: request.targets.isEmpty ? Self.pageTimeout : Self.devicesTimeout)
             guard let images = BrowserSnapshotImage.images(from: result) else {
@@ -376,19 +376,11 @@ final class MCPServer {
                 return [Self.text("\(size)\(what), \(image.width)×\(image.height) CSS px"), Self.image(image)]
             }
         case "browser_set_viewport":
-            let change: BrowserViewportChange
-            do {
-                change = try BrowserViewportChange(params: arguments)
-            } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let change = try toolArguments { try BrowserViewportChange(params: arguments) }
             let result = try browserCall("browser.set_viewport", arguments, change.params, timeout: Self.requestTimeout)
             return [Self.text(BrowserEmulation(json: result).summary)]
         case "browser_console":
-            let request: BrowserConsoleRequest
-            do { request = try BrowserConsoleRequest(params: arguments) } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let request = try toolArguments { try BrowserConsoleRequest(params: arguments) }
             let result = try devToolsCall("browser.console", arguments, request.params)
             let entries = (try? result["entries"]?.decode([ConsoleEntry].self)) ?? []
             var lines = entries.map { $0.line() }
@@ -396,10 +388,7 @@ final class MCPServer {
             return [Self.text(lines.isEmpty ? "No console messages." : lines.joined(separator: "\n"))]
         case "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for":
             let method = "browser." + name.dropFirst("browser_".count)
-            let action: BrowserPageAction
-            do { action = try BrowserPageAction(method: method, params: arguments) } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let action = try toolArguments { try BrowserPageAction(method: method, params: arguments) }
             let result = try devToolsCall(method, arguments, action.params)
             switch action {
             case .tree:
@@ -413,17 +402,14 @@ final class MCPServer {
                 return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
             }
         case "browser_responsive":
-            let change: BrowserResponsiveChange
-            do {
-                var params = arguments
-                if case .object(var object) = arguments, object["off"]?.boolValue == true {
-                    object["on"] = .bool(false)
-                    params = .object(object)
-                }
-                change = try BrowserResponsiveChange(params: params)
-            } catch let error as RPCError {
-                throw ToolError(message: error.message)
+            var request = arguments
+            if case .object(var object) = arguments, let off = object["off"], off != .null {
+                guard case .bool(let isOff) = off else { throw ToolError(message: "off must be a boolean") }  // #203
+                if isOff { object["on"] = .bool(false) }
+                object["off"] = nil
+                request = .object(object)
             }
+            let change = try toolArguments { try BrowserResponsiveChange(params: request) }
             var params = change.params
             if change.on == nil { params["on"] = .bool(true) }
             if let url = nonEmpty(arguments["url"]?.stringValue) {
@@ -478,7 +464,7 @@ final class MCPServer {
                      Self.requestTimeout)
             return [Self.text("Opened terminal pane \(id) running: \(command)")]
         case "terminal_read":
-            let pane = try ownTerminalPane(try argument(arguments, "pane"), action: "read")
+            let pane = try ownTerminalPane(try argument(arguments, "pane"), for: .read)
             var lines: Int?
             if let value = arguments["lines"], value != .null {
                 guard let count = value.intValue, count > 0 else { throw ToolError(message: "lines must be a positive number") }
@@ -490,15 +476,15 @@ final class MCPServer {
             let text = result["text"]?.stringValue ?? ""
             return [Self.text(text.isEmpty ? "(the pane shows no text)" : text)]
         case "terminal_send":
-            let pane = try ownTerminalPane(try argument(arguments, "pane"), action: "type into")
-            var text = try argument(arguments, "text", allowEmpty: arguments["enter"]?.boolValue == true)
-            if arguments["enter"]?.boolValue == true { text += "\n" }
+            let pane = try ownTerminalPane(try argument(arguments, "pane"), for: .send)
+            let enter = arguments["enter"]?.boolValue == true
+            var text = try argument(arguments, "text", allowEmpty: enter)
+            if enter { text += "\n" }
             try call("pane.send_text", ["pane": .string(pane), "text": .string(text), "openedBy": envPane.json],
                      Self.requestTimeout)
             return [Self.text("Typed into \(pane).")]
         case "list_panes":
-            let result = try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout)
-            let panes = try decodePanes(result)
+            let panes = try workspacePanes()
             let lines = panes.map { pane -> String in
                 var marks: [String] = []
                 if pane.id == envPane { marks.append("yours") }
@@ -510,18 +496,11 @@ final class MCPServer {
             }
             return [Self.text(lines.isEmpty ? "No panes." : lines.joined(separator: "\n"))]
         case "list_ports":
-            let result = try call("workspace.list", [:], Self.requestTimeout)
-            let workspaces: [WorkspaceInfo]
-            do {
-                workspaces = try result.decode([WorkspaceInfo].self)
-            } catch {
-                throw ToolError(message: "the app returned an unexpected workspace list")
-            }
-            let lines = workspaces.flatMap { workspace in
-                workspace.ports.map { port in
-                    let mine = workspace.id == envWorkspace ? " (your workspace)" : ""
-                    return "http://localhost:\(port)  \(workspace.id) \(workspace.title)\(mine)"
-                }
+            let workspaces = try decode(try call("workspace.list", [:], Self.requestTimeout), as: [WorkspaceInfo].self,
+                                        what: "workspace list")
+            let lines = workspaces.listeningPorts.map { workspace, port in
+                let mine = workspace.id == envWorkspace ? " (your workspace)" : ""
+                return "\(ListeningPort.url(port))  \(workspace.id) \(workspace.title)\(mine)"
             }
             return [Self.text(lines.isEmpty ? "No listening ports." : lines.joined(separator: "\n"))]
         case "system_stats":
@@ -598,18 +577,25 @@ final class MCPServer {
         }
     }
 
+    /// What terminal_read and terminal_send do to a pane (`ownTerminalPane`'s refusals name it).
+    private enum TerminalAccess {
+        case read, send
+
+        var tool: String { self == .read ? "terminal_read" : "terminal_send" }
+        var verb: String { self == .read ? "read" : "type into" }
+    }
+
     /// `pane` if it is a terminal pane opened from our terminal (`PaneInfo.openedBy`, #165), checked here as well
     /// as by the app (`openedBy` on pane.read_text / pane.send_text), so an app without that check refuses too. Never
     /// our own pane, nor any other.
-    private func ownTerminalPane(_ pane: String, action: String) throws -> String {
+    private func ownTerminalPane(_ pane: String, for access: TerminalAccess) throws -> String {
         guard let envPane else { throw ToolError(message: "\(pane) was not opened by this server") }
         guard pane != envPane else {
-            throw ToolError(message: "\(pane) is your own terminal; terminal_\(action == "read" ? "read" : "send") acts only on panes opened from it (terminal_split).")
+            throw ToolError(message: "\(pane) is your own terminal; \(access.tool) acts only on panes opened from it (terminal_split).")
         }
-        let panes = try decodePanes(try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout))
-        guard let info = panes.first(where: { $0.id == pane }), info.openedBy == envPane else {
+        guard let info = try workspacePanes().first(where: { $0.id == pane }), info.openedBy == envPane else {
             throw ToolError(message: """
-                \(pane) was not opened from your terminal (\(envPane)), so you may not \(action) it: terminal_read and \
+                \(pane) was not opened from your terminal (\(envPane)), so you may not \(access.verb) it: terminal_read and \
                 terminal_send act only on terminal panes opened from your terminal (terminal_split, `cmds split`). Open \
                 one with terminal_split; read or type into other panes only when the user asks, with `cmds read` / \
                 `cmds send`.
@@ -619,11 +605,18 @@ final class MCPServer {
         return pane
     }
 
-    private func decodePanes(_ result: JSONValue) throws -> [PaneInfo] {
+    /// The panes of our workspace (`pane.list`).
+    private func workspacePanes() throws -> [PaneInfo] {
+        try decode(try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout), as: [PaneInfo].self,
+                   what: "pane list")
+    }
+
+    /// An app reply decoded as `type`; anything else is "the app returned an unexpected `what`".
+    private func decode<T: Decodable>(_ result: JSONValue, as type: T.Type, what: String) throws -> T {
         do {
-            return try result.decode([PaneInfo].self)
+            return try result.decode(type)
         } catch {
-            throw ToolError(message: "the app returned an unexpected pane list")
+            throw ToolError(message: "the app returned an unexpected \(what)")
         }
     }
 

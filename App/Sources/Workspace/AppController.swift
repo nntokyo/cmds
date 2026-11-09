@@ -247,6 +247,7 @@ final class AppController {
         let tiled = tiledWorkspaceIDs
         workspaces.remove(at: index)
         workspaceDidClose(workspace.id)
+        removeChangesFolder(workspaceID: workspace.id)
         if selectedWorkspaceID == workspace.id {
             // Stay in the tiled view when another tile is left: the next tile takes the keyboard.
             let remainingTiles = tiledWorkspaceIDs
@@ -461,7 +462,7 @@ final class AppController {
     func openPort(_ port: Int, workspaceID: String) {
         guard let workspace = workspace(id: workspaceID) else { return }
         try? selectWorkspace(id: workspaceID)
-        _ = try? openBrowser(paneID: workspace.focusedPaneID, url: "http://localhost:\(port)")
+        _ = try? openBrowser(paneID: workspace.focusedPaneID, url: ListeningPort.url(port))
     }
 
     func browser(paneID: String) throws -> BrowserPane {

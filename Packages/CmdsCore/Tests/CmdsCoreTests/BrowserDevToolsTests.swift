@@ -62,6 +62,26 @@ final class BrowserDevToolsTests: XCTestCase {
         }
     }
 
+    /// The API, CLI and MCP show these messages as they are.
+    func testConsoleRequestMessages() {
+        let cases: [(JSONValue, String)] = [
+            (["level": "loud"], "level must be debug, log, info, warn or error"),
+            (["level": 3], "level must be a string"),
+            (["since": -1], "since must be a non-negative whole number"),
+            (["limit": 1.5], "limit must be a non-negative whole number"),
+            (["clear": "yes"], "clear must be a boolean"),
+        ]
+        for (params, message) in cases {
+            XCTAssertThrowsError(try BrowserConsoleRequest(params: params), "\(params)") {
+                XCTAssertEqual(($0 as? RPCError)?.message, message)
+            }
+        }
+        let entry = ConsoleEntry(message: ["level": "log", "text": "x", "url": String(repeating: "u", count: 3_000),
+                                           "location": String(repeating: "l", count: 3_000)])
+        XCTAssertEqual(entry?.url?.count, 2_048)
+        XCTAssertEqual(entry?.location?.count, 2_048)
+    }
+
     func testTargets() throws {
         XCTAssertEqual(try ElementTarget.parse("e12"), .ref("e12"))
         XCTAssertEqual(try ElementTarget.parse(" #submit "), .selector("#submit"))

@@ -42,10 +42,7 @@ final class BrowserPane: NSView {
     var pageTitle: String { webView.title ?? "" }
 
     init(emulation: BrowserEmulation = BrowserEmulation()) {
-        let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
-        configuration.preferences.isElementFullscreenEnabled = true
-        webView = WKWebView(frame: .zero, configuration: configuration)
+        webView = WKWebView(frame: .zero, configuration: Self.webViewConfiguration(websiteDataStore: .default()))
         webView.allowsBackForwardNavigationGestures = true
         webView.allowsMagnification = true
         self.emulation = emulation
@@ -156,12 +153,25 @@ final class BrowserPane: NSView {
             }
             return .success(Self.decodeEvaluation(result))
         }
+        /// While on, the console hook ignores the error event of the expression form's failure to parse (#201).
+        func quietConsole(_ on: Bool) async {
+            _ = try? await webView.callAsyncJavaScript(
+                "document.dispatchEvent(new CustomEvent(name, { detail: on }));",
+                arguments: ["name": consoleEventName + "-quiet", "on": on], in: nil, contentWorld: .page)
+        }
+        await quietConsole(true)
+        let expression: Result<Result<JSONValue, NSError>, Error>
+        do { expression = .success(try await run("await (\n\(script)\n)")) } catch { expression = .failure(error) }
+        await quietConsole(false)
         let result: Result<JSONValue, NSError>
-        do {
-            result = try await run("await (\n\(script)\n)")
-        } catch let error as WKError where error.code == .javaScriptExceptionOccurred
-                    && (error.userInfo[Self.javaScriptExceptionMessageKey] as? String)?.hasPrefix("SyntaxError") == true {
+        switch expression {
+        case .success(let value):
+            result = value
+        case .failure(let error as WKError) where error.code == .javaScriptExceptionOccurred
+                && (error.userInfo[Self.javaScriptExceptionMessageKey] as? String)?.hasPrefix("SyntaxError") == true:
             result = try await run("await (async () => {\n\(script)\n})()")
+        case .failure(let error):
+            throw error
         }
         return try result.get()
     }
@@ -174,12 +184,11 @@ final class BrowserPane: NSView {
     /// PNG of the visible page; with a device size, at that size (not scaled down to the pane).
     func snapshot() async throws -> Data {
         // A pane of a workspace that is not shown has no window; render it off screen meanwhile.
-        let offscreen = OffscreenRenderHost(hosting: webView)
-        defer { offscreen?.release() }
-        if offscreen != nil { try await Task.sleep(for: OffscreenRenderHost.paintDelay) }
-        let configuration = WKSnapshotConfiguration()
-        if let size = emulation.size { configuration.snapshotWidth = NSNumber(value: size.width) }
-        return try await Self.png(of: webView, configuration: configuration)
+        try await OffscreenRenderHost.rendering(webView) {
+            let configuration = WKSnapshotConfiguration()
+            if let size = emulation.size { configuration.snapshotWidth = NSNumber(value: size.width) }
+            return try await Self.png(of: webView, configuration: configuration)
+        }
     }
 
     /// PNG of `configuration`'s part of `webView` (its rect may reach beyond the visible page: WebKit paints the
@@ -205,6 +214,20 @@ final class BrowserPane: NSView {
         observations.removeAll()
         webView.stopLoading()
         webView.navigationDelegate = nil
+    }
+
+    /// A browser pane's web view settings (also the responsive view's extra frames, with the pane's data store).
+    static func webViewConfiguration(websiteDataStore: WKWebsiteDataStore) -> WKWebViewConfiguration {
+        let configuration = WKWebViewConfiguration()
+        configuration.websiteDataStore = websiteDataStore
+        configuration.preferences.isElementFullscreenEnabled = true
+        return configuration
+    }
+
+    /// An http, https or file page (what can be loaded again elsewhere, and what a server or file gives).
+    static func isWebPage(_ url: URL?) -> Bool {
+        guard let scheme = url?.scheme?.lowercased() else { return false }
+        return ["http", "https", "file"].contains(scheme)
     }
 
     static func url(fromUserInput raw: String) -> URL? {
@@ -328,6 +351,16 @@ final class BrowserPane: NSView {
     @objc private func addressSubmitted() {
         navigate(to: addressField.stringValue)
         window?.makeFirstResponder(webView)
+    }
+}
+
+extension WKWebView {
+    /// Sends `agent` from now on (nil: WebKit's own). A web page shown is reloaded: servers see a new user agent only
+    /// with a new request.
+    func setUserAgent(_ agent: String?) {
+        guard customUserAgent != agent else { return }
+        customUserAgent = agent
+        if BrowserPane.isWebPage(url) { reload() }
     }
 }
 

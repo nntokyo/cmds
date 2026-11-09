@@ -563,7 +563,7 @@ final class PortsLabel: NSTextField {
     var ports: [Int] = [] {
         didSet {
             guard ports != oldValue else { return }
-            stringValue = ports.map { ":\($0)" }.joined(separator: "  ")
+            stringValue = Workspace.portsText(ports)
             window?.invalidateCursorRects(for: self)
         }
     }
@@ -581,13 +581,10 @@ final class PortsLabel: NSTextField {
     #if DEBUG
     /// For `debug.sidebar_port`: clicks the middle of port `index`'s text, as the mouse would. Returns the port opened.
     func debugClick(index: Int) -> Int? {
-        guard ports.indices.contains(index) else { return nil }
-        let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)]
-        let before = ports.prefix(index).map { ":\($0)  " }.joined()
-        let start = (before as NSString).size(withAttributes: attributes).width
-        let width = (":\(ports[index])" as NSString).size(withAttributes: attributes).width
-        let inset = cell?.titleRect(forBounds: bounds).minX ?? 0
-        guard let port = port(at: inset + start + width / 2) else { return nil }
+        let spans = portSpans()
+        guard spans.indices.contains(index), let port = port(at: (spans[index].start + spans[index].end) / 2) else {
+            return nil
+        }
         onClick?(port)
         return port
     }
@@ -595,17 +592,23 @@ final class PortsLabel: NSTextField {
 
     /// The port whose text (`:3000` plus half the gap on each side) is under `x`; the last one past the end.
     func port(at x: CGFloat) -> Int? {
-        guard !ports.isEmpty else { return nil }
-        let attributes: [NSAttributedString.Key: Any] = [.font: font ?? NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)]
-        let inset = (cell?.titleRect(forBounds: bounds).minX ?? 0)
-        var text = ""
-        for (index, port) in ports.enumerated() {
-            if index > 0 { text += "  " }
-            text += ":\(port)"
-            let end = (text as NSString).size(withAttributes: attributes).width + inset
-            let gap = ("  " as NSString).size(withAttributes: attributes).width / 2
-            if x <= end + gap { return port }
+        let spans = portSpans()
+        guard let last = spans.last else { return nil }
+        let gap = textWidth(Workspace.portSeparator) / 2
+        return spans.first { x <= $0.end + gap }?.port ?? last.port
+    }
+
+    /// Where each port's `:3000` is drawn, from its start to its end in the label's coordinates.
+    private func portSpans() -> [(port: Int, start: CGFloat, end: CGFloat)] {
+        let inset = cell?.titleRect(forBounds: bounds).minX ?? 0
+        return ports.indices.map { index in
+            let before = index == 0 ? "" : Workspace.portsText(Array(ports.prefix(index))) + Workspace.portSeparator
+            let through = Workspace.portsText(Array(ports.prefix(index + 1)))
+            return (ports[index], inset + textWidth(before), inset + textWidth(through))
         }
-        return ports.last
+    }
+
+    private func textWidth(_ text: String) -> CGFloat {
+        (text as NSString).size(withAttributes: [.font: font ?? NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)]).width
     }
 }

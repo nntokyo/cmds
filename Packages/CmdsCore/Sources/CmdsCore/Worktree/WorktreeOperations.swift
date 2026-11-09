@@ -84,7 +84,7 @@ public enum Worktrees {
         let format = try Git.run(["check-ref-format", "--branch", name], in: root)
         guard format.succeeded, format.text == name else { throw WorktreeError.invalidBranch(raw) }
         let refs = ["refs/heads/" + name] + (remote.map { ["refs/remotes/\($0)/\(name)"] } ?? [])
-        for ref in refs where try Git.run(["show-ref", "--verify", "--quiet", ref], in: root).succeeded {
+        for ref in refs where try Git.refExists(ref, in: root) {
             throw WorktreeError.branchExists(name)
         }
         return name
@@ -101,17 +101,13 @@ public enum Worktrees {
     static func startPoint(_ raw: String, in repository: Repository) throws -> String {
         let base = raw.trimmingCharacters(in: .whitespaces)
         guard !base.isEmpty, !base.hasPrefix("-") else { throw WorktreeError.unknownBase(raw) }
-        func exists(_ ref: String) throws -> Bool {
-            try Git.run(["show-ref", "--verify", "--quiet", ref], in: repository.root).succeeded
-        }
+        func exists(_ ref: String) throws -> Bool { try Git.refExists(ref, in: repository.root) }
         if repository.remotes.contains(where: { base.hasPrefix($0 + "/") }), try exists("refs/remotes/" + base) {
             return base
         }
         if let remote = repository.remote, try exists("refs/remotes/\(remote)/\(base)") { return "\(remote)/\(base)" }
         if try exists("refs/heads/" + base) { return base }
-        if try Git.run(["rev-parse", "--verify", "--quiet", base + "^{commit}"], in: repository.root).succeeded {
-            return base
-        }
+        if try Git.isCommit(base, in: repository.root) { return base }
         throw WorktreeError.unknownBase(raw)
     }
 
@@ -126,8 +122,7 @@ public enum Worktrees {
         for name in ["main", "master"] {
             if let base = try? startPoint(name, in: repository) { return base }
         }
-        let current = try Git.run(["symbolic-ref", "--quiet", "--short", "HEAD"], in: repository.root)
-        if current.succeeded, !current.text.isEmpty, let base = try? startPoint(current.text, in: repository) {
+        if let current = try Git.currentBranch(in: repository.root), let base = try? startPoint(current, in: repository) {
             return base
         }
         throw WorktreeError.noDefaultBranch
@@ -158,26 +153,39 @@ public enum Worktrees {
         let repository = try repository(of: directory)
         let top = try Git.check(["rev-parse", "--show-toplevel"], in: directory)
         let base = try requestedBase.map { try startPoint($0, in: repository) } ?? defaultBase(in: repository)
-        let head = try Git.run(["symbolic-ref", "--quiet", "--short", "HEAD"], in: top)
-        let branch = head.succeeded && !head.text.isEmpty ? head.text : nil
+        let branch = try Git.currentBranch(in: top)
         let mergeBase = try Git.run(["merge-base", base, "HEAD"], in: top)
         let from = mergeBase.succeeded ? mergeBase.text : base
 
         var text = "# Changes in \(top)" + (branch.map { " (\($0))" } ?? "") + " since \(base)"
         text += mergeBase.succeeded ? " (merge base \(from.prefix(10)))" : ""
         text += ", working tree included\n"
+        text += try commitLines(since: base, in: top) + "\n"
+
+        let diff = try Git.checkedOutput(["diff", "--no-color", "--no-ext-diff", "--no-textconv", from, "--"], in: top)
+        var body = String(decoding: diff.stdout, as: UTF8.self)
+        try appendUntrackedFiles(in: top, to: &body)
+        if body.utf8.count > maxDiffSize {
+            body = String(decoding: body.utf8.prefix(maxDiffSize), as: UTF8.self) + "\n# … cut: the diff is too long.\n"
+        }
+        text += body.isEmpty ? "# No changes in the working tree compared with the merge base.\n" : body
+        return Changes(text: text, base: base, branch: branch, root: top)
+    }
+
+    /// Show Changes' `#` lines for the commits `base..HEAD`, newest first (at most `maxCommits`).
+    private static func commitLines(since base: String, in top: String) throws -> String {
         let log = try Git.check(["log", "--no-color", "--no-decorate", "--format=%h %s", "-n", String(maxCommits + 1),
                                  "\(base)..HEAD"], in: top)
         let commits = log.split(separator: "\n")
-        text += commits.isEmpty ? "# No commits since \(base).\n" : "# Commits (newest first):\n"
+        var text = commits.isEmpty ? "# No commits since \(base).\n" : "# Commits (newest first):\n"
         for commit in commits.prefix(maxCommits) { text += "#   \(commit)\n" }
         if commits.count > maxCommits { text += "#   …\n" }
-        text += "\n"
+        return text
+    }
 
-        let diff = try Git.run(["diff", "--no-color", "--no-ext-diff", "--no-textconv", from, "--"], in: top)
-        guard diff.succeeded else { throw WorktreeError.gitFailed(command: "git diff", message: diff.message) }
-        var body = String(decoding: diff.stdout, as: UTF8.self)
-
+    /// Adds the untracked files of the working tree at `top` to `body` as diffs from nothing, until `body` reaches
+    /// `maxDiffSize`; beyond `maxUntracked` files or `maxUntrackedSize` bytes, a `#` line names the file instead.
+    private static func appendUntrackedFiles(in top: String, to body: inout String) throws {
         let untracked = try Git.run(["ls-files", "--others", "--exclude-standard", "-z"], in: top)
         let files = untracked.stdout.split(separator: 0).map { String(decoding: $0, as: UTF8.self) }
         for (index, file) in files.enumerated() {
@@ -192,11 +200,6 @@ public enum Worktrees {
             let added = try Git.run(["diff", "--no-index", "--no-color", "--no-ext-diff", "--", "/dev/null", file], in: top)
             if added.status <= 1 { body += String(decoding: added.stdout, as: UTF8.self) }
         }
-        if body.utf8.count > maxDiffSize {
-            body = String(decoding: body.utf8.prefix(maxDiffSize), as: UTF8.self) + "\n# … cut: the diff is too long.\n"
-        }
-        text += body.isEmpty ? "# No changes in the working tree compared with the merge base.\n" : body
-        return Changes(text: text, base: base, branch: branch, root: top)
     }
 
     // MARK: - Remove
@@ -211,15 +214,12 @@ public enum Worktrees {
             return [.notAWorktree]
         }
         var refusals: [WorktreeRefusal] = entry.locked ? [.locked] : []
-        let status = try Git.run(["status", "--porcelain=v1", "-z", "--untracked-files=all"], in: record.path)
-        guard status.succeeded else { throw WorktreeError.gitFailed(command: "git status", message: status.message) }
+        let status = try Git.checkedOutput(["status", "--porcelain=v1", "-z", "--untracked-files=all"], in: record.path)
         let counts = WorktreeOutput.countStatus(status.stdout)
         if counts.changed > 0 { refusals.append(.uncommittedChanges(counts.changed)) }
         if counts.untracked > 0 { refusals.append(.untrackedFiles(counts.untracked)) }
         var notPushed = ["rev-list", "--count", "HEAD", "--not", "--remotes"]
-        if try Git.run(["rev-parse", "--verify", "--quiet", record.base + "^{commit}"], in: record.path).succeeded {
-            notPushed.append(record.base)
-        }
+        if try Git.isCommit(record.base, in: record.path) { notPushed.append(record.base) }
         let unpushed = Int(try Git.check(notPushed, in: record.path)) ?? 0
         if unpushed > 0 { refusals.append(.unpushedCommits(unpushed)) }
         return refusals
@@ -233,9 +233,7 @@ public enum Worktrees {
         guard refusals.isEmpty else { throw WorktreeError.refused(refusals) }
         try Git.check(["worktree", "remove", record.path], in: record.repository)
         let parent = URL(fileURLWithPath: record.path).deletingLastPathComponent()
-        let defaultParent = URL(fileURLWithPath: WorktreePaths.defaultPath(repository: record.repository, branch: "x"))
-            .deletingLastPathComponent()
-        if WorktreePaths.canonical(parent.path) == WorktreePaths.canonical(defaultParent.path),
+        if WorktreePaths.canonical(parent.path) == WorktreePaths.canonical(WorktreePaths.defaultParent(repository: record.repository)),
            (try? FileManager.default.contentsOfDirectory(atPath: parent.path))?.isEmpty == true {
             try? FileManager.default.removeItem(at: parent)
         }

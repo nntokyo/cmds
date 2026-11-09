@@ -172,8 +172,7 @@ final class APIServer {
             case "debug.sidebar_port":
                 // Tests only: a click on port `index` (default 0) of a workspace's sidebar row (#171).
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))
-                let sidebar = (controller.window?.contentViewController as? NSSplitViewController)?
-                    .splitViewItems.first?.viewController as? SidebarViewController
+                let sidebar = (controller.window?.windowController as? MainWindowController)?.sidebar
                 guard let port = sidebar?.debugClickPort(workspaceID: workspace.id, index: try params.int("index") ?? 0) else {
                     throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
                 }
@@ -569,7 +568,7 @@ final class APIServer {
             if let path = request.path, !path.hasPrefix("/") {
                 throw RPCError.invalidParams("worktreePath must be absolute: \(path)")
             }
-            let directory = try params.string("cwd") ?? controller.selectedWorkspace.flatMap { $0.isRemote ? nil : $0.workingDirectory }
+            let directory = try params.string("cwd") ?? controller.selectedWorkspace?.localWorkingDirectory
             guard let directory else { throw RPCError.invalidParams("missing param: cwd (a folder in the repository)") }
             let account = try controller.resolveAccountParam(try params.string("account"))
             let created = try await controller.createWorktreeWorkspace(

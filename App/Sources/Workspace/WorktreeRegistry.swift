@@ -14,12 +14,12 @@ final class WorktreeRegistry {
     private init() {
         let loaded = WorktreeStore.load(from: url)
         records = loaded.records
+        saveBlocked = loaded.saveBlocked
         if let error = loaded.error {
             if let moved = loaded.movedAside {
                 NSLog("cmds: could not read the worktree list (\(error)); moved it to \(moved.path)")
             } else {
                 NSLog("cmds: could not read the worktree list (\(error)); not saving it this run")
-                saveBlocked = true
             }
         }
     }

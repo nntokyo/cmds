@@ -70,6 +70,33 @@ final class BrowserDeviceTests: XCTestCase {
         XCTAssertEqual(try BrowserViewportChange.parseColorScheme("Auto"), .system)
     }
 
+    /// The API, CLI and MCP show these messages as they are.
+    func testChangeErrorMessages() {
+        let presets = "iphone-se, iphone, iphone-pro-max, pixel, ipad, ipad-landscape, desktop-1280, desktop-1440, desktop-1920"
+        let cases: [(JSONValue, String)] = [
+            (["device": "nokia"], "unknown device \"nokia\": use a preset (\(presets)), WIDTHxHEIGHT or off"),
+            (["device": 3], "device must be a string"),
+            (["userAgent": 3], "userAgent must be a string"),
+            (["colorScheme": true], "colorScheme must be a string"),
+            (["colorScheme": "sepia"], "colorScheme must be \"light\", \"dark\" or \"system\""),
+            (["width": 300.5, "height": 400], "width must be a whole number of CSS pixels"),
+            (["width": 300, "height": "400"], "height must be a whole number of CSS pixels"),
+            (["width": 300], "width and height go together"),
+            (["device": "iphone", "width": 300, "height": 400], "give either device or width and height"),
+            (["width": 30, "height": 400], "width and height must be 100–4096 CSS pixels (got 30×400)"),
+            (["rotate": "yes"], "rotate must be a boolean"),
+            (["userAgent": "a\u{7}"], "userAgent contains control characters"),
+        ]
+        for (params, message) in cases {
+            XCTAssertThrowsError(try BrowserViewportChange(params: params), "\(params)") {
+                XCTAssertEqual(($0 as? RPCError)?.message, message)
+            }
+        }
+        XCTAssertThrowsError(try BrowserViewportChange(rotate: true).applied(to: BrowserEmulation())) {
+            XCTAssertEqual(($0 as? RPCError)?.message, "nothing to rotate: the pane has no device size (choose one first)")
+        }
+    }
+
     func testApplying() throws {
         let iphone = try XCTUnwrap(DevicePreset.named("iphone-se"))
         var state = try BrowserViewportChange(size: .preset(iphone), colorScheme: .dark).applied(to: BrowserEmulation())

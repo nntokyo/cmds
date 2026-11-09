@@ -62,8 +62,8 @@ public struct ConsoleEntry: Codable, Equatable, Sendable {
         self.init(level: level, source: (message["source"] as? String).flatMap(Source.init(rawValue:)) ?? .console,
                   text: String(text.prefix(ConsoleBuffer.maxTextLength)),
                   time: (message["time"] as? NSNumber).map { $0.doubleValue / 1000 } ?? Date().timeIntervalSince1970,
-                  url: (message["url"] as? String).map { String($0.prefix(2048)) },
-                  location: (message["location"] as? String).map { String($0.prefix(2048)) })
+                  url: (message["url"] as? String).map { String($0.prefix(ConsoleBuffer.maxURLLength)) },
+                  location: (message["location"] as? String).map { String($0.prefix(ConsoleBuffer.maxURLLength)) })
     }
 
     /// `12:03:04 error  Uncaught TypeError: x is undefined (app.js:3:9)`.
@@ -83,6 +83,8 @@ public struct ConsoleBuffer: Sendable {
     public static let defaultCapacity = 1_000
     /// Longest message kept (the page script cuts there too).
     public static let maxTextLength = 4_000
+    /// Longest page URL and error location kept.
+    public static let maxURLLength = 2_048
 
     public let capacity: Int
     public private(set) var entries: [ConsoleEntry] = []
@@ -171,8 +173,14 @@ public enum ConsoleCapture {
               return original.apply(this, args);
             };
           }
+          // cmds' eval fallback on pages that refuse eval first tries the script as an expression; a statement list
+          // fails to parse there and WebKit reports that as an error event ("Script error.", no file). The pane
+          // turns this on around that try (#201).
+          let quiet = false;
+          document.addEventListener(name + '-quiet', (event) => { quiet = event.detail === true; });
           window.addEventListener('error', (event) => {
             if (!(event instanceof ErrorEvent)) return;  // resource load errors have no message
+            if (quiet && !event.filename) return;
             const where = event.filename ? event.filename + ':' + event.lineno + ':' + event.colno : undefined;
             send({ level: 'error', source: 'error', text: event.message || text(event.error), time: Date.now(),
                    url: location.href, location: where });
@@ -235,30 +243,24 @@ public struct BrowserConsoleRequest: Equatable, Sendable {
     }
 
     public init(params: JSONValue?) throws {
+        let values = RequestParams(params)
         self.init()
-        switch params?["level"] {
-        case nil, .null?: break
-        case .string(let raw)?:
+        if let raw = try values.string("level") {
             guard let level = ConsoleEntry.Level(rawValue: raw.lowercased() == "warning" ? "warn" : raw.lowercased()) else {
                 throw RPCError.invalidParams("level must be debug, log, info, warn or error")
             }
             self.level = level
-        default: throw RPCError.invalidParams("level must be a string")
         }
         func count(_ key: String) throws -> Int? {
-            switch params?[key] {
-            case nil, .null?: return nil
+            switch values[key] {
+            case nil: return nil
             case .number(let value)? where value >= 0 && value.rounded() == value && value < 1e12: return Int(value)
             default: throw RPCError.invalidParams("\(key) must be a non-negative whole number")
             }
         }
         since = try count("since")
         limit = try count("limit")
-        switch params?["clear"] {
-        case nil, .null?: break
-        case .bool(let flag)?: clear = flag
-        default: throw RPCError.invalidParams("clear must be a boolean")
-        }
+        clear = try values.bool("clear") ?? false
     }
 
     public var params: [String: JSONValue?] {

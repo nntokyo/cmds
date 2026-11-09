@@ -69,11 +69,16 @@ public enum WorktreePaths {
     /// to the repository, with `/` in the branch name replaced by `-`. Outside the repository's working tree (its
     /// build tools, searches, file watchers and `git status` never see it) and on the same volume.
     public static func defaultPath(repository: String, branch: String) -> String {
-        let repo = URL(fileURLWithPath: canonical(repository), isDirectory: true)
         let folder = branch.replacingOccurrences(of: "/", with: "-")
-        return repo.deletingLastPathComponent()
-            .appendingPathComponent(repo.lastPathComponent + "-worktrees", isDirectory: true)
+        return URL(fileURLWithPath: defaultParent(repository: repository), isDirectory: true)
             .appendingPathComponent(folder, isDirectory: true).path
+    }
+
+    /// The folder of the default paths: `<parent>/<repo>-worktrees`.
+    public static func defaultParent(repository: String) -> String {
+        let repo = URL(fileURLWithPath: canonical(repository), isDirectory: true)
+        return repo.deletingLastPathComponent()
+            .appendingPathComponent(repo.lastPathComponent + "-worktrees", isDirectory: true).path
     }
 
     /// `path` with `.`/`..` removed and symbolic links of its existing part resolved (`/tmp/x` → `/private/tmp/x`),

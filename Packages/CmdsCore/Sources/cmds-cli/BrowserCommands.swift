@@ -1,8 +1,24 @@
 import CmdsCore
 import Foundation
 
-// `cmds browser device`: device size, user agent and color scheme of a browser pane (#168, docs/reference/cli.md).
+// `cmds browser device` (device size, user agent and color scheme, #168), `browser snapshot` (#169) and
+// `browser responsive` (#170), docs/reference/cli.md; and the helpers the browser commands share.
 extension CLI {
+    /// `body`, with a bad value it reports (`RPCError`) as a usage error: nothing is sent.
+    static func usageError<T>(_ body: () throws -> T) throws -> T {
+        do { return try body() } catch let error as RPCError { throw CLIError.usage(error.message) }
+    }
+
+    /// `ctx.call`; an app without `method` (older than the feature) fails with `unsupported`.
+    static func callNewMethod(_ ctx: Context, _ method: String, _ params: [String: JSONValue?], unsupported: String,
+                              timeout: TimeInterval = 60) throws -> JSONValue {
+        do {
+            return try ctx.call(method, params, timeout: timeout)
+        } catch let error as CLIError where error.message.contains("method not found") {
+            throw CLIError.failure(unsupported)
+        }
+    }
+
     /// What WKWebView does not emulate (also in the MCP tool and the pane's Device menu).
     static let browserDeviceLimits = """
         This sets the layout width and height, the user agent and prefers-color-scheme. WebKit on the Mac does not \
@@ -32,12 +48,8 @@ extension CLI {
             return print(presetTable(), terminator: "")
         }
         let change = try browserViewportChange(ctx.args)
-        let result: JSONValue
-        do {
-            result = try ctx.call("browser.set_viewport", browserTarget(ctx).merging(change.params) { $1 })
-        } catch let error as CLIError where error.message.contains("method not found") {
-            throw CLIError.failure("this cmds app has no device sizes for browser panes; update cmds")
-        }
+        let result = try callNewMethod(ctx, "browser.set_viewport", browserTarget(ctx).merging(change.params) { $1 },
+                                       unsupported: "this cmds app has no device sizes for browser panes; update cmds")
         if ctx.json { return ctx.printJSON(result) }
         print(BrowserEmulation(json: result).summary)
     }
@@ -110,11 +122,8 @@ extension CLI {
         try ctx.args.expectPositionals(0...1, usage: usage)
         let change = try browserResponsiveChange(ctx.args)
         func setResponsive(_ target: [String: JSONValue?]) throws -> JSONValue {
-            do {
-                return try ctx.call("browser.set_responsive", target.merging(change.params) { $1 })
-            } catch let error as CLIError where error.message.contains("method not found") {
-                throw CLIError.failure("this cmds app has no responsive view; update cmds")
-            }
+            try callNewMethod(ctx, "browser.set_responsive", target.merging(change.params) { $1 },
+                              unsupported: "this cmds app has no responsive view; update cmds")
         }
         if let url = ctx.args.positionals.first {
             guard ctx.args[option: "pane"] == nil else { throw CLIError.usage("give either --pane or a URL") }
@@ -140,11 +149,7 @@ extension CLI {
         if let devices = args[option: "devices"] { params["devices"] = .string(devices) }
         if args.has("sync-scroll") { params["syncScroll"] = .bool(true) }
         if args.has("no-sync-scroll") { params["syncScroll"] = .bool(false) }
-        do {
-            return try BrowserResponsiveChange(params: .object(params))
-        } catch let error as RPCError {
-            throw CLIError.usage(error.message)
-        }
+        return try usageError { try BrowserResponsiveChange(params: .object(params)) }
     }
 
     /// The request a command line asks for; bad values are usage errors (nothing is sent).
@@ -153,11 +158,7 @@ extension CLI {
         if args.has("full") { params["fullPage"] = .bool(true) }
         if let selector = args[option: "selector"] { params["selector"] = .string(selector) }
         if let devices = args[option: "device"] { params["devices"] = .string(devices) }
-        do {
-            return try BrowserSnapshotRequest(params: .object(params))
-        } catch let error as RPCError {
-            throw CLIError.usage(error.message)
-        }
+        return try usageError { try BrowserSnapshotRequest(params: .object(params)) }
     }
 
     /// `output` for one image; `name-<device>.png` for each of several.
@@ -171,15 +172,13 @@ extension CLI {
 
     /// The change a command line asks for; bad values are usage errors (nothing is sent).
     static func browserViewportChange(_ args: Arguments) throws -> BrowserViewportChange {
-        do {
+        try usageError {
             var change = BrowserViewportChange()
             if let device = args.positionals.first { change.size = try BrowserViewportChange.parseSize(device) }
             change.rotate = args.has("rotate")
             if let agent = args[option: "ua"] { change.userAgent = try BrowserEmulation.checkedUserAgent(agent) ?? "" }
             change.colorScheme = try args[option: "scheme"].map(BrowserViewportChange.parseColorScheme)
             return change
-        } catch let error as RPCError {
-            throw CLIError.usage(error.message)
         }
     }
 

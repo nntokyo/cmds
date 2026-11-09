@@ -21,9 +21,21 @@ extension AppController {
 
     // MARK: - Show Changes
 
-    /// Folder of the diffs Show Changes writes (one per workspace, replaced each time).
-    private static var changesDirectory: URL {
+    /// Folder of the diff Show Changes writes for a workspace (`$TMPDIR/cmds-changes/<workspace>`, replaced each time).
+    static func changesFolder(workspaceID: String) -> URL {
         FileManager.default.temporaryDirectory.appendingPathComponent("cmds-changes", isDirectory: true)
+            .appendingPathComponent(workspaceID, isDirectory: true)
+    }
+
+    /// A closed workspace's Show Changes diff goes with it (`closeWorkspace`; #176).
+    func removeChangesFolder(workspaceID: String) {
+        let folder = Self.changesFolder(workspaceID: workspaceID)
+        guard FileManager.default.fileExists(atPath: folder.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: folder)
+        } catch {
+            NSLog("cmds: could not remove the Show Changes diff \(folder.path): \(error)")
+        }
     }
 
     /// Show Changes: the workspace's branch compared with its base (the worktree's for one cmds created, else the
@@ -37,8 +49,10 @@ extension AppController {
         }
         let base = workspace.createdWorktree?.base
         let changes = try await Self.git { try Worktrees.changes(in: directory, base: base) }
+        // The workspace may have closed while git ran: then nothing is written (its folder is already gone).
+        let current = try resolveWorkspace(workspace.id)
 
-        let folder = Self.changesDirectory.appendingPathComponent(workspace.id, isDirectory: true)
+        let folder = Self.changesFolder(workspaceID: workspace.id)
         let name = (changes.branch ?? (changes.root as NSString).lastPathComponent).replacingOccurrences(of: "/", with: "-")
         let file = folder.appendingPathComponent("\(name) changes.diff")
         do {
@@ -47,8 +61,6 @@ extension AppController {
         } catch {
             throw RPCError(code: 500, message: "cannot write the diff: \(error.localizedDescription)")
         }
-        // The workspace may have closed while git ran.
-        let current = try resolveWorkspace(workspace.id)
         if let existing = current.orderedPanes.first(where: { pane in
             pane.preview.map { $0.path.hasPrefix(folder.path + "/") } ?? false
         }), let preview = existing.preview {
