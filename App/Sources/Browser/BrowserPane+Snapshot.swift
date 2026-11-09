@@ -84,8 +84,11 @@ extension BrowserPane {
         if request.fullPage || metrics.element != nil {
             // takeSnapshot paints only what is on screen (the rest comes out blank); WebKit's PDF of the view covers
             // the whole document, so parts below the fold come from it.
+            // Its rect is in document coordinates (from the top of the page, whatever the scroll position).
             let pdf = WKPDFConfiguration()
-            if metrics.element != nil { pdf.rect = configuration.rect }
+            if metrics.element != nil {
+                pdf.rect = configuration.rect.offsetBy(dx: metrics.scrollX * zoom, dy: metrics.scrollY * zoom)
+            }
             png = try pngFromPDF(try await webView.pdf(configuration: pdf), scale: scale / zoom)
         } else {
             png = try await Self.png(of: webView, configuration: configuration)
