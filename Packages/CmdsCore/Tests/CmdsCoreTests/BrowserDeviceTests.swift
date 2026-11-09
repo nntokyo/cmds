@@ -35,6 +35,14 @@ final class BrowserDeviceTests: XCTestCase {
         XCTAssertEqual(ViewportSize(width: 390, height: 844).description, "390×844")
     }
 
+    func testScaleToFit() {
+        let desktop = ViewportSize(width: 1920, height: 1080)
+        XCTAssertEqual(desktop.scaleToFit(width: 960, height: 2000), 0.5)
+        XCTAssertEqual(desktop.scaleToFit(width: 3000, height: 540), 0.5)
+        XCTAssertEqual(ViewportSize(width: 375, height: 667).scaleToFit(width: 800, height: 900), 1)
+        XCTAssertEqual(desktop.scaleToFit(width: 0, height: 0), 1)
+    }
+
     func testChangeFromParams() throws {
         XCTAssertTrue(try BrowserViewportChange(params: nil).isEmpty)
         XCTAssertTrue(try BrowserViewportChange(params: ["pane": "p2"]).isEmpty)

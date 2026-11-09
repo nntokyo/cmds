@@ -21,6 +21,12 @@ public struct ViewportSize: Codable, Equatable, Hashable, Sendable {
     /// `390×844`.
     public var description: String { "\(width)×\(height)" }
 
+    /// The scale that fits this size into `width`×`height` points, never above 1 (a larger pane shows it at 100%).
+    public func scaleToFit(width: Double, height: Double) -> Double {
+        guard width > 0, height > 0 else { return 1 }
+        return min(1, width / Double(self.width), height / Double(self.height))
+    }
+
     /// `WIDTHxHEIGHT` (`x`, `X` or `×`), each side within `range`; nil when the text is not of that form.
     public static func parse(_ text: String) throws -> ViewportSize? {
         let parts = text.trimmingCharacters(in: .whitespaces).lowercased()
@@ -347,35 +353,37 @@ public enum Breakpoints {
             visit(sheet.cssRules);
           } catch (e) {}
         }
-        return { width: window.innerWidth, queries: queries.slice(0, 5000) };
+        return { width: window.innerWidth, queries: [...new Set(queries)].slice(0, 2000) };
         """
 
     /// Pixels per `em` / `rem` in media queries (the initial font size, not the page's).
     static let pixelsPerEm = 16.0
 
+    /// Width conditions of media queries (Level 3 `min-`/`max-width` and Level 4 ranges) and their threshold.
+    private static let widthPatterns: [(NSRegularExpression, @Sendable (Double) -> Int)] = {
+        let number = #"(-?\d+(?:\.\d+)?)\s*(px|em|rem)?"#
+        let from: @Sendable (Double) -> Int = { Int($0.rounded(.up)) }  // the value is the first width of the upper side
+        let after: @Sendable (Double) -> Int = { Int($0.rounded(.down)) + 1 }  // the value is the last width below
+        let patterns: [(String, @Sendable (Double) -> Int)] = [
+            (#"min-width\s*:\s*"# + number, from), (#"max-width\s*:\s*"# + number, after),
+            (#"\bwidth\s*>=\s*"# + number, from), (#"\bwidth\s*>\s*"# + number, after),
+            (#"\bwidth\s*<=\s*"# + number, after), (#"\bwidth\s*<\s*"# + number, from),
+            (number + #"\s*<=\s*width\b"#, from), (number + #"\s*<\s*width\b"#, after),
+            (number + #"\s*>=\s*width\b"#, after), (number + #"\s*>\s*width\b"#, from),
+        ]
+        return patterns.map { (try! NSRegularExpression(pattern: $0.0), $0.1) }
+    }()
+
     /// The widths at which a layout switches (the CSS width from which the larger side applies), sorted and unique:
     /// `min-width: 768px` → 768, `max-width: 767px` → 768, `width < 768px` → 768, `width <= 767.98px` → 768.
     public static func thresholds(fromMediaQueries queries: [String]) -> [Int] {
         var found = Set<Int>()
-        let number = #"(-?\d+(?:\.\d+)?)\s*(px|em|rem)?"#
-        let patterns: [(String, (Double) -> Int)] = [
-            (#"min-width\s*:\s*"# + number, { Int($0.rounded(.up)) }),
-            (#"max-width\s*:\s*"# + number, { Int($0.rounded(.down)) + 1 }),
-            (#"\bwidth\s*>=\s*"# + number, { Int($0.rounded(.up)) }),
-            (#"\bwidth\s*>\s*"# + number, { Int($0.rounded(.down)) + 1 }),
-            (#"\bwidth\s*<=\s*"# + number, { Int($0.rounded(.down)) + 1 }),
-            (#"\bwidth\s*<\s*"# + number, { Int($0.rounded(.up)) }),
-            (number + #"\s*<=\s*width\b"#, { Int($0.rounded(.up)) }),
-            (number + #"\s*<\s*width\b"#, { Int($0.rounded(.down)) + 1 }),
-            (number + #"\s*>=\s*width\b"#, { Int($0.rounded(.down)) + 1 }),
-            (number + #"\s*>\s*width\b"#, { Int($0.rounded(.up)) }),
-        ]
-        for query in queries {
+        for query in Set(queries) {
             let text = query.lowercased()
-            // `device-width` / `min-device-width` are a different feature (the screen, not the viewport).
-            for (pattern, threshold) in patterns {
-                guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            guard text.contains("width") else { continue }
+            for (regex, threshold) in widthPatterns {
                 for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+                    // `device-width` (`min-device-width` never matches) is the screen, not the viewport.
                     if let whole = Range(match.range, in: text), text[..<whole.lowerBound].hasSuffix("device-") { continue }
                     guard let valueRange = Range(match.range(at: 1), in: text), var value = Double(text[valueRange]) else { continue }
                     if let unitRange = Range(match.range(at: 2), in: text), text[unitRange] != "px" { value *= pixelsPerEm }
