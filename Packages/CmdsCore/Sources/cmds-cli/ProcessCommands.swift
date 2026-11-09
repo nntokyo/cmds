@@ -3,15 +3,6 @@ import Foundation
 
 // `cmds top` / `cmds kill`: the processes started from cmds terminals, and stopping leftovers (#193).
 extension CLI {
-    /// A system.processes / system.kill_process request; an app without the method says to update.
-    static func processCall(_ ctx: Context, _ method: String, _ params: [String: JSONValue?]) throws -> JSONValue {
-        do {
-            return try ctx.call(method, params)
-        } catch let error as CLIError where error.message.contains("method not found") {
-            throw CLIError.failure("this cmds app has no \(method); update cmds")
-        }
-    }
-
     static let processCommands: [Command] = [
         Command(name: "top", usage: "top [--leftover] [--limit N] [--workspace W] [--pane P]",
                 summary: "List the heaviest processes started from cmds terminals: memory, CPU, pane, workspace, command.",
@@ -35,7 +26,7 @@ extension CLI {
                 }
                 request.limit = limit
             }
-            let result = try processCall(ctx, "system.processes", request.params)
+            let result = try callNewMethod(ctx, "system.processes", request.params)
             if ctx.json { return ctx.printJSON(result) }
             let list = try perform { try result.decode(ProcessList.self) }
             let titles = workspaceTitles((try? ctx.call("workspace.list").decode([WorkspaceInfo].self)) ?? [])
@@ -52,7 +43,7 @@ extension CLI {
             try ctx.args.expectPositionals(1...1, usage: "cmds kill <pid> [--force]")
             guard let pid = Int32(ctx.args.positionals[0]), pid > 0 else { throw CLIError.usage("pid must be a positive number") }
             let request = ProcessKillRequest(pid: pid, force: ctx.args.has("force"))
-            let result = try processCall(ctx, "system.kill_process", request.params)
+            let result = try callNewMethod(ctx, "system.kill_process", request.params)
             if ctx.json { return ctx.printJSON(result) }
             let outcome = try perform { try result.decode(ProcessKillResult.self) }
             print("sent \(outcome.signal) to \(outcome.pid) (\(outcome.name))")

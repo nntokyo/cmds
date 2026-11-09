@@ -113,6 +113,51 @@ final class ProcessListTests: XCTestCase {
         }
     }
 
+    func testRequestErrorMessages() {
+        func message(_ body: () throws -> Any) -> String? {
+            do {
+                _ = try body()
+                return nil
+            } catch {
+                return (error as? RPCError)?.message
+            }
+        }
+        let list: [(JSONValue, String)] = [
+            (["limit": 0], "limit must be a whole number from 1 to 500"),
+            (["limit": .null, "workspace": .null, "pane": .null, "leftover": .null, "x": 1], ""),
+            (["limit": "5"], "limit must be a whole number from 1 to 500"),
+            (["workspace": 3], "workspace must be a non-empty string"),
+            (["pane": ""], "pane must be a non-empty string"),
+            (["leftover": "yes"], "leftover must be a boolean"),
+            (["x"], "params must be an object"),
+            ("x", "params must be an object"),
+        ]
+        for (params, expected) in list {
+            XCTAssertEqual(message { try ProcessListRequest(params: params) }, expected.isEmpty ? nil : expected, "\(params)")
+        }
+        XCTAssertEqual(try ProcessListRequest(params: .null), ProcessListRequest())
+        let kill: [(JSONValue?, String)] = [
+            (nil, "pid must be a positive whole number"),
+            (.null, "pid must be a positive whole number"),
+            (["pid": .null], "pid must be a positive whole number"),
+            (["pid": "42"], "pid must be a positive whole number"),
+            (["pid": 2_147_483_648], "pid must be a positive whole number"),
+            (["pid": 42, "force": 1], "force must be a boolean"),
+            (["pid": 42, "started": "now"], "started must be seconds since 1970"),
+            (["pid": 42, "started": 0], "started must be seconds since 1970"),
+            (["pid": 42, "force": .null, "started": .null], ""),
+            (["pid": 2_147_483_647, "force": false], ""),
+        ]
+        for (params, expected) in kill {
+            XCTAssertEqual(message { try ProcessKillRequest(params: params) }, expected.isEmpty ? nil : expected, "\(String(describing: params))")
+        }
+        XCTAssertEqual(ProcessKillRequest(pid: 42).params.compactMapValues { $0 }, ["pid": 42])
+        XCTAssertEqual(ProcessKillRequest(pid: 42, force: true, started: 1.5).params.compactMapValues { $0 },
+                       ["pid": 42, "force": true, "started": 1.5])
+        XCTAssertEqual(ProcessKillRequest(pid: 42).signalName, "TERM")
+        XCTAssertEqual(ProcessKillRequest(pid: 42, force: true).signalName, "KILL")
+    }
+
     func testKillOnlyTheScannedProcessNeverPidOneOrTheApp() throws {
         let scanned = [process(500, "w1", nil, memory: 1)]
         let start = launch + 500

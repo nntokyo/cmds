@@ -9,13 +9,14 @@ extension CLI {
         do { return try body() } catch let error as RPCError { throw CLIError.usage(error.message) }
     }
 
-    /// `ctx.call`; an app without `method` (older than the feature) fails with `unsupported`.
-    static func callNewMethod(_ ctx: Context, _ method: String, _ params: [String: JSONValue?], unsupported: String,
+    /// `ctx.call`; an app without `method` (older than the feature) fails with `unsupported`, by default
+    /// `CLIError.olderApp(method)`.
+    static func callNewMethod(_ ctx: Context, _ method: String, _ params: [String: JSONValue?], unsupported: String? = nil,
                               timeout: TimeInterval = 60) throws -> JSONValue {
         do {
             return try ctx.call(method, params, timeout: timeout)
-        } catch let error as CLIError where error.message.contains("method not found") {
-            throw CLIError.failure(unsupported)
+        } catch let error as CLIError where error.isMethodNotFound {
+            throw CLIError.failure(unsupported ?? CLIError.olderApp(method))
         }
     }
 

@@ -16,6 +16,12 @@ struct CLIError: Error {
 
     static func usage(_ message: String) -> CLIError { CLIError(message: message, code: .usage) }
     static func failure(_ message: String) -> CLIError { CLIError(message: message, code: .failure) }
+
+    /// The app does not know the method (`RPCError.methodNotFound`): it is older than the feature.
+    var isMethodNotFound: Bool { message.contains("method not found") }
+
+    /// What a command or MCP tool says when the app has no `method`.
+    static func olderApp(_ method: String) -> String { "this cmds app has no \(method); update cmds" }
 }
 
 /// Parsed command line of one subcommand: `--opt value`, `--opt=value`, `--flag`, positionals and `-- rest…`.

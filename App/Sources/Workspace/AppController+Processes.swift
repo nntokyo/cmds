@@ -15,7 +15,7 @@ extension AppController {
         var info = proc_bsdinfo()
         let size = Int32(MemoryLayout<proc_bsdinfo>.size)
         guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
-        return info.pbi_start_tvsec &* 1_000_000 &+ info.pbi_start_tvusec
+        return info.startMicroseconds
     }
 
     /// Result of `system.processes`.
@@ -41,7 +41,7 @@ extension AppController {
             let reason = String(cString: strerror(errno))
             throw RPCError(code: 500, message: "could not stop \(process.pid): \(reason)")
         }
-        return ProcessKillResult(pid: process.pid, signal: request.force ? "KILL" : "TERM", name: process.name)
+        return ProcessKillResult(pid: process.pid, signal: request.signalName, name: process.name)
     }
 
     /// Feeds the pressure reading to the alarm; posts the notification when it fires (Settings › General).
