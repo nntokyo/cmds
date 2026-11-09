@@ -70,9 +70,7 @@ struct CommandPaletteItem {
             for port in workspace.ports {
                 ports.append(CommandPaletteItem(kind: .port, title: "localhost:\(port)",
                                                 detail: String(localized: "Open in a browser split — \(workspace.displayTitle)")) { [weak controller] in
-                    guard let controller, let workspace = controller.workspace(id: id) else { return }
-                    try? controller.selectWorkspace(id: id)
-                    _ = try? controller.openBrowser(paneID: workspace.focusedPaneID, url: "http://localhost:\(port)")
+                    controller?.openPort(port, workspaceID: id)
                 })
             }
         }

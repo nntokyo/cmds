@@ -285,8 +285,8 @@ final class AppController {
     /// Splits `paneID` (default: focused pane) and focuses the new pane.
     /// New terminals start in the source pane's directory unless `cwd` is given. With `focus: false` the source
     /// pane keeps focus (scripts and agents opening a helper pane must not take the user's keyboard).
-    /// `recordOpener` (API requests naming their pane): a browser, preview or files pane split off a terminal pane
-    /// remembers it as its opener (`Pane.openedBy`, #165).
+    /// `recordOpener` (API requests naming their pane): a pane split off a terminal pane remembers it as its opener
+    /// (`Pane.openedBy`): the agent there may close it (#165), and read and type into it if it is a terminal (#171).
     @discardableResult
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
                url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
@@ -319,7 +319,7 @@ final class AppController {
             let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? localSource ?? localWorkspace ?? NSHomeDirectory()
             pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account)
         }
-        if recordOpener, pane.kind != .terminal, source.kind == .terminal { pane.openedBy = source.id }
+        if recordOpener, source.kind == .terminal { pane.openedBy = source.id }
         workspace.zoomedPaneID = nil
         leaf.split(axis: direction.axis, newPaneID: pane.id)
         guard focus else {
@@ -372,8 +372,19 @@ final class AppController {
         if workspace.id == selectedWorkspaceID { focusSelectedPaneView() }
     }
 
-    func sendText(paneID: String?, text: String) throws {
+    /// With `openedBy` (`cmds mcp` terminal_send, #171): only into a pane opened from that terminal pane.
+    func sendText(paneID: String?, text: String, openedBy: String? = nil) throws {
+        try checkOpener(paneID, openedBy)
         try terminal(for: paneID).sendText(text)
+    }
+
+    /// `openedBy` given: the pane must have been opened from that pane (`Pane.openedBy`), never be it.
+    private func checkOpener(_ paneID: String?, _ openedBy: String?) throws {
+        guard let openedBy else { return }
+        let pane = try resolvePane(paneID)
+        guard pane.id != openedBy, pane.openedBy == openedBy else {
+            throw RPCError.invalidParams("pane \(pane.id) was not opened from pane \(openedBy)")
+        }
     }
 
     /// Like `sendText`, but printable text arrives as keystrokes rather than a paste.
@@ -382,7 +393,9 @@ final class AppController {
     }
 
     /// Visible screen text, or scrollback + screen capped to `scrollback` lines.
-    func readText(paneID: String?, scrollback: Int? = nil) throws -> String {
+    /// With `openedBy` (`cmds mcp` terminal_read, #171): only a pane opened from that terminal pane.
+    func readText(paneID: String?, scrollback: Int? = nil, openedBy: String? = nil) throws -> String {
+        try checkOpener(paneID, openedBy)
         let terminal = try terminal(for: paneID)
         if let scrollback { return terminal.scrollbackText(maxLines: scrollback) }
         return terminal.visibleText()
@@ -437,6 +450,14 @@ final class AppController {
     @discardableResult
     func openBrowser(paneID: String? = nil, url: String, focus: Bool = true, recordOpener: Bool = false) throws -> PaneInfo {
         try split(paneID: paneID, direction: .right, kind: .browser, url: url, focus: focus, recordOpener: recordOpener)
+    }
+
+    /// `http://localhost:PORT` in a browser split of the workspace's focused pane, showing the workspace (a click on a
+    /// port in the sidebar, the command palette; #171).
+    func openPort(_ port: Int, workspaceID: String) {
+        guard let workspace = workspace(id: workspaceID) else { return }
+        try? selectWorkspace(id: workspaceID)
+        _ = try? openBrowser(paneID: workspace.focusedPaneID, url: "http://localhost:\(port)")
     }
 
     func browser(paneID: String) throws -> BrowserPane {
@@ -946,7 +967,7 @@ final class AppController {
             restoreScheduleTags(saved.paneTags, in: workspace)
             for entry in saved.paneOpeners ?? [] {
                 guard let opener = ids[safe: entry.openerIndex], workspace.panes[opener]?.kind == .terminal,
-                      let pane = ids[safe: entry.paneIndex].flatMap({ workspace.panes[$0] }), pane.kind != .terminal else {
+                      let pane = ids[safe: entry.paneIndex].flatMap({ workspace.panes[$0] }), pane.id != opener else {
                     continue
                 }
                 pane.openedBy = opener

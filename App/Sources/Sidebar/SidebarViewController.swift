@@ -627,6 +627,15 @@ final class SidebarViewController: NSViewController {
 
     /// The row's × and the context menu: asks first while an agent is still around in the workspace, and offers to
     /// remove a worktree cmds created for it (WorktreeCloseAlert).
+    #if DEBUG
+    /// For `debug.sidebar_port`: clicks port `index` in the workspace's row (expanded sidebar). Returns the port opened.
+    func debugClickPort(workspaceID: String, index: Int) -> Int? {
+        guard let row = rows.firstIndex(where: { $0.workspaceID == workspaceID }),
+              let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: true) as? WorkspaceCellView else { return nil }
+        return cell.debugPortsLabel?.debugClick(index: index)
+    }
+    #endif
+
     func confirmClose(workspaceID id: String) {
         guard let workspace = controller.workspace(id: id) else { return }
         if let record = controller.worktreeToRemove(onClosing: workspace) {
@@ -693,6 +702,7 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
         let cell = tableView.makeView(withIdentifier: WorkspaceCellView.identifier, owner: nil) as? WorkspaceCellView
             ?? WorkspaceCellView()
         cell.onClose = { [weak self] id in self?.confirmClose(workspaceID: id) }
+        cell.onOpenPort = { [weak self] id, port in self?.controller.openPort(port, workspaceID: id) }
         cell.configure(with: workspace, index: globalIndex(of: workspace))
         return cell
     }

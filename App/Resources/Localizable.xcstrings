@@ -2140,6 +2140,16 @@
         }
       }
     },
+    "Click a port to open it in a browser split": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポートをクリックすると、ブラウザを分割して開きます"
+          }
+        }
+      }
+    },
     "Close": {
       "localizations": {
         "ja": {
