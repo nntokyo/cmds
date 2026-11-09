@@ -373,10 +373,7 @@ final class MCPServer {
             let result = try browserCall("browser.set_viewport", arguments, change.params, timeout: Self.requestTimeout)
             return [Self.text(BrowserEmulation(json: result).summary)]
         case "browser_console":
-            let request: BrowserConsoleRequest
-            do { request = try BrowserConsoleRequest(params: arguments) } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let request = try toolArguments { try BrowserConsoleRequest(params: arguments) }
             let result = try devToolsCall("browser.console", arguments, request.params)
             let entries = (try? result["entries"]?.decode([ConsoleEntry].self)) ?? []
             var lines = entries.map { $0.line() }
@@ -384,10 +381,7 @@ final class MCPServer {
             return [Self.text(lines.isEmpty ? "No console messages." : lines.joined(separator: "\n"))]
         case "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for":
             let method = "browser." + name.dropFirst("browser_".count)
-            let action: BrowserPageAction
-            do { action = try BrowserPageAction(method: method, params: arguments) } catch let error as RPCError {
-                throw ToolError(message: error.message)
-            }
+            let action = try toolArguments { try BrowserPageAction(method: method, params: arguments) }
             let result = try devToolsCall(method, arguments, action.params)
             switch action {
             case .tree:
