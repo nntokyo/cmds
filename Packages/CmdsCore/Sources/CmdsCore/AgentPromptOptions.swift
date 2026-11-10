@@ -43,6 +43,9 @@ public struct AgentPromptOptions: Equatable, Sendable {
     /// Lines of one option (a long wrapped label or a description), beyond which the block is not a menu.
     static let maxLinesPerOption = 6
     static let cursorMarks: Set<Character> = ["❯", "›", ">", "▶"]
+    /// Lines of text the question is looked for in above option 1, and the blank lines in a row that may stand between them.
+    static let maxQuestionLines = 4
+    static let maxBlankLinesAboveOptions = 2
 
     /// The menu at the bottom of `text` (a pane's visible screen, rows separated by "\n"); nil when there is none.
     public static func parse(_ text: String) -> AgentPromptOptions? {
@@ -133,12 +136,12 @@ public struct AgentPromptOptions: Equatable, Sendable {
         var texts: [String] = []
         var blanks = 0
         var i = index - 1
-        while i >= 0, texts.count < 4 {
+        while i >= 0, texts.count < maxQuestionLines {
             let line = lines[i]
             i -= 1
             if isBlank(line) {
                 blanks += 1
-                if blanks > 2 { break }
+                if blanks > maxBlankLinesAboveOptions { break }
                 continue
             }
             if isBorder(line) || optionLine(line) != nil { break }
