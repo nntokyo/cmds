@@ -27,7 +27,7 @@ the same jobs here ([ci.md](ci.md)).
 
 | Package | Command | Covers |
 |---|---|---|
-| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), cells per character for the phone's grid (`TerminalCellsTests`), the widget's file (`WidgetSnapshotTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
+| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), agents' numbered choices for the menu bar's reply panel (`AgentPromptOptionsTests`), cells per character for the phone's grid (`TerminalCellsTests`), the widget's file (`WidgetSnapshotTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
 | `Packages/CmdsCore` | `swift test --filter 'SFTP\|FileLocation\|SSHFileCommand\|RemoteEdit\|FolderSync'` | the SFTP codec and client, ssh arguments and failure classification, `HOST:PATH`, the server Trash, the transfer job and queue, editing a server's file (download, save, the conflict answers, upload timing), and comparing and syncing folders (plans, one-way and two-way runs, the Trash, items changed since the comparison, retry) (in-process server, no network) |
 | `Packages/CmdsCore` | `swift test --filter CmdsCLITests` | the CLI's English output, `cmds schedule` argument mapping (`ScheduleCLITests`), the `cmds mcp` server with the app API stubbed (`MCPServerTests`) |
 | `Packages/CmdsSSH` | `swift test` (in that directory; fetches swift-nio-ssh and friends on first run) | the SSH tunnel; the end-to-end part needs a throwaway sshd ([below](#remote-access-via-ssh)) |
@@ -88,6 +88,15 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   does, `query` filters, `run {index?}` runs a result as Return does, `close`; returns the results (kind, title,
   detail, shortcut, score), the selected row, the selected workspace and focused pane. Menu commands are collected
   when it opens; in an instance that is not the active app, those that need a key window are missing.
+- `debug.menubar_reply {action?, workspace?, number?, text?, key?, snapshot?}` (DEBUG builds, #213): `open`
+  (default; `workspace`) opens the menu bar's reply panel as choosing the workspace in the menu does, but without
+  taking the keyboard; `state`, `pick {number}` (an option, as its button or 1–9), `reply {text}` (as Return in the
+  field: paste, then Return), `key {key}` (`escape`, `up`, `down`, `enter`, `interrupt`: the key bar), `next` /
+  `previous` (⌘↓ / ⌘↑), `openInCmds` (⌘↩), `close`. Returns the workspace and pane, the header lines, a note when the
+  pane or workspace closed, the mirror's text, the parsed question and options, the window number and frame;
+  `snapshot: true` adds `png_base64` (without the window's translucency). Isolated instances leave the menu bar item
+  off: `defaults write tokyo.n-n.cmds.isolated.<hash> ShowInMenuBar -bool true` puts it under the icon. Drive only a
+  pane the test created (e.g. a script that prints a `❯ 1. Yes` / `  2. No` prompt and reads a line).
 - Browser screenshots (#169): a local page several screens tall with coloured bands and an element below the fold
   (`--full` is one image of the whole page; `--selector` the element, also after navigating to `page.html#element`,
   which scrolls the pane; the pane's scroll position written to `document.title` stays), a page over 16384 px tall
