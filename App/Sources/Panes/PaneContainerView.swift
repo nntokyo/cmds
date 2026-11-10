@@ -22,6 +22,8 @@ final class PaneContainerView: NSView {
     let dragHandle: PaneDragHandleView
     /// Height of the strip along the top edge where the grip appears.
     private static let handleZoneHeight: CGFloat = 22
+    /// The tracking area of that strip; replaced (only it) when the bounds change.
+    private var handleZone: NSTrackingArea?
 
     init(paneID: String, content: NSView) {
         self.paneID = paneID
@@ -121,9 +123,11 @@ final class PaneContainerView: NSView {
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
+        if let handleZone { removeTrackingArea(handleZone) }
         let zone = NSRect(x: 0, y: bounds.height - Self.handleZoneHeight, width: bounds.width, height: Self.handleZoneHeight)
-        addTrackingArea(NSTrackingArea(rect: zone, options: [.mouseEnteredAndExited, .activeInKeyWindow], owner: self))
+        let area = NSTrackingArea(rect: zone, options: [.mouseEnteredAndExited, .activeInKeyWindow], owner: self)
+        addTrackingArea(area)
+        handleZone = area
     }
 
     override func mouseEntered(with event: NSEvent) {
