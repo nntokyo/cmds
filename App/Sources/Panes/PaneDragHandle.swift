@@ -20,6 +20,16 @@ extension NSDraggingInfo {
 @MainActor
 final class PaneDragHandleView: NSView, NSDraggingSource {
     static let size = NSSize(width: 44, height: 12)
+    /// The bar drawn in the grip: inset from its sides and top, and its thickness.
+    private static let barInset: CGFloat = 6
+    private static let barTop: CGFloat = 3
+    private static let barThickness: CGFloat = 4
+    /// How far the mouse moves with the button down before the drag starts (a click does nothing).
+    private static let dragThreshold: CGFloat = 3
+    /// The drag image: a label at most this wide, this tall, held this far from its left end.
+    private static let dragImageMaxWidth: CGFloat = 280
+    private static let dragImageHeight: CGFloat = 24
+    private static let dragImageGrabOffset: CGFloat = 20
 
     let paneID: String
     /// The title shown in the drag image.
@@ -48,9 +58,10 @@ final class PaneDragHandleView: NSView, NSDraggingSource {
     override var isFlipped: Bool { true }
 
     override func draw(_ dirtyRect: NSRect) {
-        let bar = NSRect(x: 6, y: 3, width: bounds.width - 12, height: 4)
+        let bar = NSRect(x: Self.barInset, y: Self.barTop, width: bounds.width - 2 * Self.barInset,
+                         height: Self.barThickness)
         NSColor.labelColor.withAlphaComponent(hovered || isDragging ? 0.75 : 0.4).setFill()
-        NSBezierPath(roundedRect: bar, xRadius: 2, yRadius: 2).fill()
+        NSBezierPath(roundedRect: bar, xRadius: Self.barThickness / 2, yRadius: Self.barThickness / 2).fill()
     }
 
     override func resetCursorRects() {
@@ -75,7 +86,8 @@ final class PaneDragHandleView: NSView, NSDraggingSource {
 
     override func mouseDragged(with event: NSEvent) {
         guard let start = mouseDownPoint,
-              hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) >= 3 else { return }
+              hypot(event.locationInWindow.x - start.x, event.locationInWindow.y - start.y) >= Self.dragThreshold
+        else { return }
         mouseDownPoint = nil
         beginDrag(with: event)
     }
@@ -89,19 +101,19 @@ final class PaneDragHandleView: NSView, NSDraggingSource {
         // Terminal surfaces draw with Metal and do not snapshot: a label with the pane's title instead.
         let image = Self.dragImage(title: title?() ?? "")
         let local = convert(event.locationInWindow, from: nil)
-        dragItem.setDraggingFrame(NSRect(x: local.x - 20, y: local.y - image.size.height / 2, width: image.size.width,
-                                         height: image.size.height), contents: image)
+        dragItem.setDraggingFrame(NSRect(x: local.x - Self.dragImageGrabOffset, y: local.y - image.size.height / 2,
+                                         width: image.size.width, height: image.size.height), contents: image)
         isDragging = true
         needsDisplay = true
         beginDraggingSession(with: [dragItem], event: event, source: self)
     }
 
-    /// A rounded label: grip glyph and the title, at most 280 pt wide.
+    /// A rounded label: grip glyph and the title, at most `dragImageMaxWidth` wide.
     private static func dragImage(title: String) -> NSImage {
         let text = NSAttributedString(string: "⠿  " + (title.isEmpty ? String(localized: "Pane") : title), attributes: [
             .font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.white,
         ])
-        let size = NSSize(width: min(text.size().width + 20, 280), height: 24)
+        let size = NSSize(width: min(text.size().width + 20, dragImageMaxWidth), height: dragImageHeight)
         return NSImage(size: size, flipped: false) { rect in
             NSColor.controlAccentColor.withAlphaComponent(0.85).setFill()
             NSBezierPath(roundedRect: rect, xRadius: 6, yRadius: 6).fill()
