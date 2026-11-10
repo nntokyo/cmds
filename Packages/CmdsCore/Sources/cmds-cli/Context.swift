@@ -19,8 +19,15 @@ struct Context {
 
     /// `--pane` if given, else the pane we run in.
     var pane: String? { args[option: "pane"] ?? envPane }
-    /// `--workspace` if given, else the workspace we run in.
-    var workspace: String? { args[option: "workspace"] ?? envWorkspace }
+    /// `--workspace` if given, else the workspace we run in now (`currentWorkspace`).
+    func workspace() -> String? { args[option: "workspace"] ?? currentWorkspace() }
+
+    /// The workspace the pane we run in is in now. `CMDS_WORKSPACE_ID` names the one it started in, and a pane can be
+    /// moved to another (#218), so this asks the app (`workspace.list`); CMDS_WORKSPACE_ID when it cannot tell.
+    func currentWorkspace() -> String? {
+        guard let pane = envPane, let list = try? call("workspace.list").decode([WorkspaceInfo].self) else { return envWorkspace }
+        return workspaceID(containing: pane, in: list) ?? envWorkspace
+    }
 
     func connect(timeout: TimeInterval? = 60) throws -> CmdsClient {
         do {
@@ -66,6 +73,11 @@ func perform<T>(_ body: () throws -> T) throws -> T {
 func object(_ pairs: [String: JSONValue?]) -> JSONValue? {
     let values = pairs.compactMapValues { $0 }
     return values.isEmpty ? nil : .object(values)
+}
+
+/// The workspace that has `pane` among its panes.
+func workspaceID(containing pane: String, in workspaces: [WorkspaceInfo]) -> String? {
+    workspaces.first { $0.panes.contains { $0.id == pane } }?.id
 }
 
 /// Workspace id → title (the first one wins for duplicate ids).

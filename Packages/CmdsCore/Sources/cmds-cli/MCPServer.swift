@@ -74,6 +74,14 @@ final class MCPServer {
     var insideCmds: Bool { envPane != nil }
     private var envWorkspace: String? { nonEmpty(environment[CmdsEnv.workspaceID]) }
 
+    /// The workspace our pane is in now: CMDS_WORKSPACE_ID names the one it started in, and panes can be moved (#218).
+    /// Asks the app; CMDS_WORKSPACE_ID when it cannot tell.
+    private func currentWorkspace() -> String? {
+        guard let envPane, let list = try? call("workspace.list", [:], Self.requestTimeout).decode([WorkspaceInfo].self)
+        else { return envWorkspace }
+        return workspaceID(containing: envPane, in: list) ?? envWorkspace
+    }
+
     /// Reads messages until stdin closes.
     func serve() {
         while let line = readLine(strippingNewline: true) {
@@ -322,7 +330,7 @@ final class MCPServer {
                 openedPanes.removeAll { $0 == pane }
             }
         }
-        return try send(["workspace": envWorkspace.json])
+        return try send(["workspace": currentWorkspace().json])
     }
 
     /// A DevTools request (#167); an app without the method says to update.
@@ -554,7 +562,7 @@ final class MCPServer {
             return [Self.text("Closed \(pane).")]
         case "set_status":
             let text = try argument(arguments, "text", allowEmpty: true)
-            try call("sidebar.set_status", ["workspace": envWorkspace.json, "text": .string(text)], Self.requestTimeout)
+            try call("sidebar.set_status", ["workspace": currentWorkspace().json, "text": .string(text)], Self.requestTimeout)
             return [Self.text(text.isEmpty ? "Cleared the status." : "Status set.")]
         default:
             throw ToolError(message: "unknown tool: \(name)")
@@ -591,7 +599,7 @@ final class MCPServer {
 
     /// The panes of our workspace (`pane.list`).
     private func workspacePanes() throws -> [PaneInfo] {
-        try decode(try call("pane.list", ["workspace": envWorkspace.json], Self.requestTimeout), as: [PaneInfo].self,
+        try decode(try call("pane.list", ["workspace": currentWorkspace().json], Self.requestTimeout), as: [PaneInfo].self,
                    what: "pane list")
     }
 
