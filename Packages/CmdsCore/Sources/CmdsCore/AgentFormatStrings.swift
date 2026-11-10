@@ -36,10 +36,13 @@ extension AgentFormat {
         case inDuration(String)
         /// Short label of the spend limit (`spend $12/$50`).
         case spendLabel
+        /// Short label of a reached limit whose window is unknown (`limit 100%`, Codex's usage limit).
+        case usageLimitLabel
         // Limit titles.
         case fiveHourLimit
         case sevenDayLimit
         case spendLimit
+        case usageLimit
         /// `1h limit` (other windows).
         case windowLimit(String)
         // Limit lines: `5-hour limit 40% used · resets 15:30 (in 2h10m) · 62% of the window elapsed`.
@@ -86,9 +89,11 @@ extension AgentFormat {
             case .daysAgo(let d): return "\(d) d ago"
             case .inDuration(let d): return " (in \(d))"
             case .spendLabel: return "spend"
+            case .usageLimitLabel: return "limit"
             case .fiveHourLimit: return "5-hour limit"
             case .sevenDayLimit: return "7-day limit"
             case .spendLimit: return "Spend limit"
+            case .usageLimit: return "Usage limit"
             case .windowLimit(let label): return "\(label) limit"
             case .limitUsed(let title, let percent): return "\(title) \(percent) used"
             case .spendUsed(let title, let used, let limit, let percent): return "\(title) \(used) of \(limit) (\(percent))"

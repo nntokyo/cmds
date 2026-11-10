@@ -2,9 +2,10 @@ import Foundation
 
 /// Reads the usage figures out of Codex CLI session files (`$CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl`).
 ///
-/// PRIVACY: these files hold the user's conversations. Only lines mentioning `token_count` (usage events) or
-/// `turn_context` (model and reasoning effort) are decoded, into types that have just those fields; everything
-/// else is skipped unparsed and nothing read here is logged or stored beyond the resulting figures.
+/// PRIVACY: these files hold the user's conversations. Only lines mentioning `token_count` (usage events),
+/// `turn_context` (model and reasoning effort) or `usage_limit_exceeded` (a turn refused at the usage limit) are
+/// decoded, into types that have just those fields; everything else is skipped unparsed and nothing read here is
+/// logged or stored beyond the resulting figures (of a refused turn: that the limit was reached and its reset time).
 public enum CodexRollout {
     /// Tokens Codex assumes for its own prompt when computing "context left" (codex-rs `BASELINE_TOKENS`).
     public static let baselineTokens = 12_000
@@ -30,8 +31,24 @@ public enum CodexRollout {
         public var plan: String?
         public var model: String?
         public var effort: String?
+        /// Set by a turn refused at the account's usage limit after the newest `limits`; a later usage event with
+        /// figures clears it.
+        public var limitReached: LimitReached?
 
         public init() {}
+
+        /// Codex refused a turn because the account hit its usage limit (`codex_error_info: usage_limit_exceeded`).
+        public struct LimitReached: Equatable, Sendable {
+            /// When it was written.
+            public var date: Date?
+            /// When Codex said it can be used again (from its message); nil when not understood.
+            public var resetsAt: Date?
+
+            public init(date: Date?, resetsAt: Date?) {
+                self.date = date
+                self.resetsAt = resetsAt
+            }
+        }
 
         public var hasUsage: Bool { last != nil || total != nil }
 
@@ -46,6 +63,9 @@ public enum CodexRollout {
             if !newer.limits.isEmpty {
                 limits = newer.limits
                 limitsDate = newer.limitsDate
+                limitReached = newer.limitReached
+            } else if let reached = newer.limitReached {
+                limitReached = reached
             }
             plan = newer.plan ?? plan
             model = newer.model ?? model
@@ -74,12 +94,31 @@ public enum CodexRollout {
             return usage
         }
 
-        /// Account limits from the newest usage event that had them.
+        /// Account limits from the newest usage event that had them, with a reached limit on top: the window whose
+        /// reset matches Codex's message goes to 100 %, else a `UsageLimit.usageLimit` at 100 % (with that reset, or
+        /// none when unknown) is added.
         public func accountLimits(fallbackDate: Date) -> AgentLimits? {
-            guard !limits.isEmpty else { return nil }
-            return AgentLimits(agent: .codex, limits: limits, plan: plan, updatedAt: limitsDate ?? fallbackDate)
+            guard let reached = limitReached else {
+                guard !limits.isEmpty else { return nil }
+                return AgentLimits(agent: .codex, limits: limits, plan: plan, updatedAt: limitsDate ?? fallbackDate)
+            }
+            var windows = limits
+            if let reset = reached.resetsAt,
+               let index = windows.firstIndex(where: { window in
+                   window.resetsAt.map { abs($0.timeIntervalSince(reset)) <= CodexRollout.resetMatchTolerance } ?? false
+               }) {
+                windows[index].usedPercent = max(windows[index].usedPercent, 100)
+            } else {
+                windows.append(UsageLimit(id: UsageLimit.usageLimit, usedPercent: 100, resetsAt: reached.resetsAt))
+            }
+            return AgentLimits(agent: .codex, limits: windows, plan: plan,
+                               updatedAt: max(reached.date ?? fallbackDate, limitsDate ?? .distantPast))
         }
     }
+
+    /// A reset in Codex's limit message (minute precision, local time) belongs to a known window whose `resets_at`
+    /// is this close.
+    static let resetMatchTolerance: TimeInterval = 15 * 60
 
     /// Codex's "context left" turned around: share of the window above the baseline that the last turn used.
     public static func contextUsedPercent(tokens: Int, window: Int) -> Double {
@@ -104,7 +143,8 @@ public enum CodexRollout {
                 defer { start = end + 1 }
                 consumed = end + 1
                 let line = UnsafeRawBufferPointer(start: base + start, count: end - start)
-                guard line.count > 2, contains(line, tokenCountMarker) || contains(line, turnContextMarker),
+                guard line.count > 2,
+                      contains(line, tokenCountMarker) || contains(line, turnContextMarker) || contains(line, usageLimitMarker),
                       let entry = try? decoder.decode(Line.self, from: Data(line)) else { continue }
                 apply(entry, to: &snapshot)
             }
@@ -144,6 +184,7 @@ public enum CodexRollout {
 
     private static let tokenCountMarker = Array(#""token_count""#.utf8)
     private static let turnContextMarker = Array(#""turn_context""#.utf8)
+    private static let usageLimitMarker = Array(#""usage_limit_exceeded""#.utf8)
 
     private struct Line: Decodable {
         var timestamp: String?
@@ -157,6 +198,25 @@ public enum CodexRollout {
         var rate_limits: Lenient<RateLimits>?
         var model: Lenient<String>?
         var effort: Lenient<String>?
+        /// `task_complete` (Codex 0.16x): `{message, codex_error_info}`.
+        var error: Lenient<TurnError>?
+        /// An `error` event: the same fields on the payload.
+        var message: Lenient<String>?
+        var codex_error_info: Lenient<JSONValue>?
+    }
+
+    private struct TurnError: Decodable {
+        var message: Lenient<String>?
+        var codex_error_info: Lenient<JSONValue>?
+    }
+
+    /// `"usage_limit_exceeded"`, or the single key of `{"usage_limit_exceeded": {…}}`.
+    private static func errorCode(_ value: JSONValue?) -> String? {
+        switch value {
+        case .string(let code)?: return code
+        case .object(let object)? where object.count == 1: return object.keys.first
+        default: return nil
+        }
     }
 
     /// A field of another shape decodes as nil instead of failing the line.
@@ -219,7 +279,19 @@ public enum CodexRollout {
         let date = entry.timestamp.flatMap(FlexibleDate.date(from:))
         switch entry.type {
         case "event_msg":
-            guard let payload = entry.payload, payload.type?.value == "token_count" else { return }
+            guard let payload = entry.payload else { return }
+            if payload.type?.value == "task_complete" || payload.type?.value == "error" {
+                // Only the error code is looked at, and only the reset time is taken from the message.
+                let error = payload.error?.value
+                let code = errorCode(error?.codex_error_info?.value ?? payload.codex_error_info?.value)
+                guard code == "usage_limit_exceeded" else { return }
+                let message = error?.message?.value ?? payload.message?.value
+                snapshot.limitReached = .init(date: date, resetsAt: message.flatMap {
+                    limitReset(fromMessage: $0, eventDate: date ?? Date())
+                })
+                return
+            }
+            guard payload.type?.value == "token_count" else { return }
             if let info = payload.info?.value, info.total_token_usage != nil || info.last_token_usage != nil {
                 snapshot.total = info.total_token_usage?.tokens ?? snapshot.total
                 snapshot.last = info.last_token_usage?.tokens ?? snapshot.last
@@ -235,6 +307,7 @@ public enum CodexRollout {
                     snapshot.limits = windows
                     snapshot.limitsDate = date
                     snapshot.plan = rates.plan_type ?? snapshot.plan
+                    snapshot.limitReached = nil
                 }
             }
         case "turn_context":
@@ -258,6 +331,63 @@ public enum CodexRollout {
             resetsAt = eventDate.addingTimeInterval(seconds)
         }
         return UsageLimit(id: id, usedPercent: used, resetsAt: resetsAt, windowMinutes: window.window_minutes)
+    }
+
+    // MARK: - Reset time of a reached limit
+
+    /// The reset time in Codex's usage-limit message: `… try again at Dec 7th, 2026 11:05 PM.` (also without the
+    /// year, the ordinal suffix or the date, `11:05 PM`) in `timeZone` (Codex formats it in the Mac's local time), or
+    /// `… try again in 3 hours 20 minutes.` counted from `eventDate`. Nil when there is none or it is not understood.
+    public static func limitReset(fromMessage message: String, eventDate: Date, timeZone: TimeZone = .current) -> Date? {
+        let text = message.replacingOccurrences(of: "\u{202F}", with: " ").replacingOccurrences(of: "\u{00A0}", with: " ")
+        if let range = text.range(of: "try again in ", options: .caseInsensitive) {
+            return duration(in: String(text[range.upperBound...])).map { eventDate.addingTimeInterval($0) }
+        }
+        guard let range = text.range(of: "try again at ", options: .caseInsensitive) else { return nil }
+        var value = String(text[range.upperBound...])
+        // The sentence ends at the first dot (the date has none).
+        if let end = value.firstIndex(where: { $0 == "." || $0 == "\n" }) { value = String(value[..<end]) }
+        value = value.replacingOccurrences(of: #"(\d)(st|nd|rd|th)\b"#, with: "$1", options: [.regularExpression, .caseInsensitive])
+        value = value.trimmingCharacters(in: .whitespaces)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = calendar
+        formatter.timeZone = timeZone
+        formatter.defaultDate = calendar.startOfDay(for: eventDate) // the parts not written: the event's day, 0 seconds
+        // A date written without the year or the day is the next one at or after the event (a minute of slack).
+        let earliest = eventDate.addingTimeInterval(-60)
+        let formats: [(String, Calendar.Component?)] = [
+            ("MMM d, yyyy h:mm a", nil), ("MMMM d, yyyy h:mm a", nil), ("MMM d yyyy h:mm a", nil),
+            ("MMM d, h:mm a", .year), ("MMMM d, h:mm a", .year), ("MMM d h:mm a", .year), ("h:mm a", .day), ("HH:mm", .day),
+        ]
+        for (format, step) in formats {
+            formatter.dateFormat = format
+            guard var date = formatter.date(from: value) else { continue }
+            if let step, date < earliest, let next = calendar.date(byAdding: step, value: 1, to: date) { date = next }
+            return date
+        }
+        return nil
+    }
+
+    /// `3 hours 20 minutes`, `2 days`, `45 min` up to the end of the sentence → seconds; nil without any.
+    private static func duration(in text: String) -> TimeInterval? {
+        let sentence = text.split(separator: ".", maxSplits: 1).first.map(String.init) ?? text
+        guard let regex = try? NSRegularExpression(pattern: #"(\d+)\s*(day|hour|hr|minute|min|second|sec)s?\b"#,
+                                                   options: .caseInsensitive) else { return nil }
+        let seconds: [String: TimeInterval] = ["day": 86400, "hour": 3600, "hr": 3600, "minute": 60, "min": 60,
+                                               "second": 1, "sec": 1]
+        let ns = sentence as NSString
+        var total: TimeInterval = 0
+        var found = false
+        for match in regex.matches(in: sentence, range: NSRange(location: 0, length: ns.length)) {
+            guard let count = Double(ns.substring(with: match.range(at: 1))),
+                  let unit = seconds[ns.substring(with: match.range(at: 2)).lowercased()] else { continue }
+            total += count * unit
+            found = true
+        }
+        return found ? total : nil
     }
 
     private static func contains(_ haystack: UnsafeRawBufferPointer, _ needle: [UInt8]) -> Bool {

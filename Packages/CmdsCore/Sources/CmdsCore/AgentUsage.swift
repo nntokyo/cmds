@@ -35,6 +35,9 @@ public struct UsageLimit: Codable, Equatable, Sendable, Identifiable {
     public static let fiveHour = "five_hour"
     public static let sevenDay = "seven_day"
     public static let spend = "spend"
+    /// A usage limit the agent reported as reached without saying which window it belongs to (Codex's
+    /// `usage_limit_exceeded`): 100 % until `resetsAt`, or for `AgentLimits.unknownResetLifetime` without one.
+    public static let usageLimit = "usage_limit"
 
     /// `five_hour`, `seven_day`, `spend`, or another window name as reported.
     public var id: String
@@ -274,10 +277,17 @@ public struct AgentLimits: Codable, Equatable, Sendable, Identifiable {
         self.updatedAt = updatedAt
     }
 
+    /// How long a reached `UsageLimit.usageLimit` without a reset time counts after `updatedAt` (Codex did not say
+    /// when it can be used again; a newer usage event with figures replaces it sooner).
+    public static let unknownResetLifetime: TimeInterval = 24 * 3600
+
     /// Without the windows that have reset since (their usage is unknown); nil when none is left.
     public func active(at now: Date) -> AgentLimits? {
         var copy = self
-        copy.limits = limits.filter { !$0.hasReset(at: now) }
+        let unknownResetExpired = now.timeIntervalSince(updatedAt) > Self.unknownResetLifetime
+        copy.limits = limits.filter {
+            !$0.hasReset(at: now) && !($0.id == UsageLimit.usageLimit && $0.resetsAt == nil && unknownResetExpired)
+        }
         return copy.limits.isEmpty ? nil : copy
     }
 
