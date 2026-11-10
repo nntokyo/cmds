@@ -7,21 +7,21 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.18.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.18.0</link>
-      <sparkle:version>27</sparkle:version>
-      <sparkle:shortVersionString>0.18.0</sparkle:shortVersionString>
+      <title>cmds 0.19.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.19.0</link>
+      <sparkle:version>28</sparkle:version>
+      <sparkle:shortVersionString>0.19.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Tue, 10 Nov 2026 17:25:04 GMT</pubDate>
+      <pubDate>Tue, 10 Nov 2026 19:40:40 GMT</pubDate>
       <description><![CDATA[
 <p>Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).</p>
 <h3>Added</h3>
-<ul><li>Menu bar: answer a waiting agent without switching to cmds (#213). Choosing a workspace in the menu bar menu opens a panel under the icon with a live view of the pane's last lines, the agent's numbered choices as buttons (Claude Code, Codex; keys 1–9 pick them), a reply field (Return sends; empty, it presses Return) and Esc / ↑ / ↓ / ⏎ / ⌃C keys. ⌘↩ opens the pane in cmds, ⌘↑ / ⌘↓ go to the other workspaces, Esc or a click elsewhere closes it. Hold ⌥ in the menu to open a workspace in cmds as before; Settings › Menu Bar › Reply from the menu bar turns the panel off.</li></ul>
+<ul><li>Move panes within a workspace, to another workspace or into a new one, with what runs in them (#218): drag the grip that appears at a pane's top edge onto another pane's edge (split there) or centre (swap), onto a workspace in the sidebar, or out of the window (new workspace); Pane › Swap with Pane Left / Right / Up / Down (⌥⇧⌘ + arrow keys), Move to Workspace…, Move to New Workspace; <code>cmds pane move</code> / <code>cmds pane swap</code> and <code>pane.move</code> / <code>pane.swap</code>.</li></ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.18.0/cmds-0.18.0.dmg" length="16095979" type="application/octet-stream" sparkle:edSignature="SQjz1H+gPpAN6cmwSQTNHHoQuWu8f8GKxKlQXcTviEtX6wO4XtyN7BdBoymB1VgIynvNSQHM+VmqhHbqilAfDg=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.19.0/cmds-0.19.0.dmg" length="15763751" type="application/octet-stream" sparkle:edSignature="QpS/B+o3/DHE5b9/OQ7tcJcHohnpgjKFUpGPT22JRvXs8cNuSn2nXv4KH2ykfIj/hCQkNGArx7CJQHb/AP0WCw=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: FLkQFeUcPxbxCXKdyQMMv9VFe3hIp7AQXv9ncidgMG3Fb/ieVAWvOlXXUF/HwHJpKj0tEPcy0k5yQIYeUlwiCQ==
-length: 1995
+edSignature: qV1kKvObNPP6Z9YQmHEzh3UU/PRXoAdz7ez2feqHPs8+yK+B+9XaSK5ilIj36faOrabTOyaZC7oXrvmQJVTtAw==
+length: 1903
 -->
