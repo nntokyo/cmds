@@ -121,7 +121,7 @@ public struct AgentPromptOptions: Equatable, Sendable {
             options.append(Option(number: parsed.number, label: label, selected: parsed.selected))
             numberColumns.append(parsed.numberColumn)
         }
-        guard options.count >= 2, options.count { $0.selected } == 1,
+        guard options.count >= 2, options.count(where: { $0.selected }) == 1,
               let low = numberColumns.min(), let high = numberColumns.max(), high - low <= 1 else { return nil }
 
         return AgentPromptOptions(question: question(above: optionIndices[0], in: lines), options: options)
