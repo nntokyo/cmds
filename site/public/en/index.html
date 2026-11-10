@@ -72,7 +72,7 @@
       <div class="grid">
         <div class="card"><h3>Vertical tabs</h3><p>Every workspace shows its git branch, directory, listening ports, and the agent's state (Working, Needs Input, Done) and task. Filter them, or group them by project.</p></div>
         <div class="card"><h3>Notification ring</h3><p>When an agent asks for permission or input, its pane lights up orange and the sidebar shows the message. <kbd>⇧⌘U</kbd> jumps to the latest. Works with OSC 9/777, the bell and <code>cmds notify</code>.</p></div>
-        <div class="card"><h3>Menu bar</h3><p>While you work in other apps, the menu bar icon shows how many workspaces need you (orange) and how many agents work (blue, with a turning ring). Its menu has ring charts for CPU, memory and your AI limits, and a widget shows the same; choose what it shows.</p></div>
+        <div class="card"><h3>Menu bar</h3><p>While you work in other apps, the menu bar icon shows how many workspaces need you (orange) and how many agents work (blue, with a turning ring). Its menu has ring charts for CPU, memory and your AI limits, and you can answer a waiting agent right from the menu bar, without switching to cmds. A widget shows the same; choose what it shows.</p></div>
         <div class="card"><h3>In-app browser</h3><p>A WebKit browser next to your terminal for your dev server, where agents also open and check pages instead of Chrome (the <code>cmds mcp</code> MCP server, or <code>cmds browser</code>).</p></div>
         <div class="card"><h3>Splits and tiled view</h3><p>Nested right/down splits and pane zoom. Show up to nine workspaces as live tiles, e.g. five Claude Code sessions at once; drag them in from the sidebar.</p></div>
         <div class="card"><h3>File preview</h3><p>Images, PDF, video and Office files (Quick Look), GitHub-style Markdown and coloured diffs, reloaded when the file changes. <kbd>⌘</kbd>-click a path in the terminal to open it.</p></div>
@@ -140,7 +140,8 @@
           <ul class="checks">
             <li><strong>Badges</strong>: orange counts the workspaces that need you, blue those with an agent working; a ring turns around it while they work. A red dot appears when a limit passes 95% or memory runs short.</li>
             <li><strong>Ring charts</strong>: CPU, memory and the Claude Code / Codex 5-hour and 7-day limits, with the time left to their reset ("in 2h10m"). Orange from 80%, red from 95%.</li>
-            <li><strong>Agent activity</strong>: every workspace with a state mark, what the agent is doing or asking, and how long it has waited for you. ⌘1–⌘9 jump to its pane.</li>
+            <li><strong>Agent activity</strong>: every workspace with a state mark, what the agent is doing or asking, and how long it has waited for you.</li>
+            <li><strong>Reply from the menu bar</strong>: choose a workspace (⌘1–⌘9) and a panel opens under the icon with the pane's latest screen; pick the agent's choices with buttons or number keys, or type a reply, without switching to cmds. Hold ⌥ to jump to its pane instead.</li>
             <li><strong>Widget</strong>: the same on the desktop or in Notification Center. Small shows the badges and the workspace waiting longest; medium the list and the rings. Click to jump to a workspace.</li>
             <li><strong>Make it yours</strong>: choose what the icon and the menu show in Settings › Menu Bar, and what each sidebar row and the footer show in Settings › Sidebar.</li>
           </ul>
