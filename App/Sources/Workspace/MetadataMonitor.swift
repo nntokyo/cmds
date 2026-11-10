@@ -56,8 +56,10 @@ final class MetadataMonitor {
         // Each pane's pty foreground group identifies its tty, hence every process running in it.
         var foregroundGroups: [pid_t: String] = [:]
         var paneGroups: [pid_t: String] = [:]
+        var paneWorkspaces: [String: String] = [:]
         for workspace in controller.workspaces {
             for pane in workspace.panes.values {
+                paneWorkspaces[pane.id] = workspace.id
                 if let group = pane.terminal?.foregroundProcessGroupID {
                     foregroundGroups[group] = workspace.id
                     paneGroups[group] = pane.id
@@ -70,7 +72,8 @@ final class MetadataMonitor {
         let codexWatcher = codexWatcher
         queue.async { [weak self] in
             let started = DispatchTime.now().uptimeNanoseconds
-            let scan = scanner.scan(foregroundGroups: foregroundGroups, paneGroups: paneGroups)
+            let scan = scanner.scan(foregroundGroups: foregroundGroups, paneGroups: paneGroups,
+                                    paneWorkspaces: paneWorkspaces)
             let codex = codexWatcher.update(scan.codexProcesses)
             let system = systemSampler.sample()
             let scanned = DispatchTime.now().uptimeNanoseconds
@@ -171,7 +174,9 @@ final class ProcessScanner: @unchecked Sendable {
     /// - Parameters:
     ///   - foregroundGroups: foreground process group of each terminal pane's pty → workspace ID.
     ///   - paneGroups: the same groups → pane ID (to place agent processes in panes).
-    func scan(foregroundGroups: [pid_t: String], paneGroups: [pid_t: String] = [:]) -> ProcessScan {
+    ///   - paneWorkspaces: every open pane → its workspace now (a moved pane's processes follow it, #218).
+    func scan(foregroundGroups: [pid_t: String], paneGroups: [pid_t: String] = [:],
+              paneWorkspaces: [String: String] = [:]) -> ProcessScan {
         let pids = allPIDs()
         var identities: [ProcessIdentity] = []
         identities.reserveCapacity(pids.count)
@@ -236,7 +241,8 @@ final class ProcessScanner: @unchecked Sendable {
             var origin: ProcessOrigins.Origin?
             if let detail = details[identity.pid] {
                 origin = origins.resolve(ProcessKey(pid: identity.pid, start: detail.start),
-                                         workspace: workspaces[identity.pid], pane: panes[identity.pid])
+                                         workspace: workspaces[identity.pid], pane: panes[identity.pid])?
+                    .following(paneWorkspaces)
             }
             guard let workspace = origin?.workspace ?? workspaces[identity.pid] else { continue }
             if let sample = usageSample(pid: identity.pid, parentPID: identity.parentPID, workspace: workspace) {
