@@ -117,3 +117,37 @@ final class TerminalPaletteTests: XCTestCase {
         XCTAssertEqual(TerminalPalette.ansi.count, 16)
     }
 }
+
+/// A style's text colour and background, as the phone's screen and the Mac's menu bar reply panel draw them (#214).
+final class TerminalStyleColorsTests: XCTestCase {
+    /// Colours as names: "fg" / "bg" the screen's own, "p1" a palette index, "x*0.55" faint.
+    private func colors(_ attributes: TerminalStyle.Attributes = [], fg: TerminalColor? = nil,
+                        bg: TerminalColor? = nil) -> (foreground: String, background: String?) {
+        TerminalStyle(attributes: attributes, foreground: fg, background: bg).colors(
+            foreground: "fg", background: "bg",
+            color: { color in
+                if case .palette(let index) = color { return "p\(index)" }
+                return "rgb"
+            },
+            faint: { "\($0)*\(TerminalStyle.faintOpacity)" })
+    }
+
+    func testColors() {
+        XCTAssertTrue(colors() == ("fg", nil))
+        XCTAssertTrue(colors(fg: .palette(1), bg: .palette(4)) == ("p1", "p4"))
+        XCTAssertTrue(colors(bg: .rgb(1, 2, 3)) == ("fg", "rgb"))
+        // Inverse swaps them; without a background the text takes the screen's.
+        XCTAssertTrue(colors(.inverse, fg: .palette(1), bg: .palette(4)) == ("p4", "p1"))
+        XCTAssertTrue(colors(.inverse) == ("bg", "fg"))
+        XCTAssertTrue(colors(.inverse, fg: .palette(2)) == ("bg", "p2"))
+        // Faint dims the text after the swap.
+        XCTAssertTrue(colors(.faint, fg: .palette(1)) == ("p1*0.55", nil))
+        XCTAssertTrue(colors([.faint, .inverse], bg: .palette(4)) == ("p4*0.55", "fg"))
+        // Invisible text takes the background (dimmed or not).
+        XCTAssertTrue(colors(.invisible, fg: .palette(1)) == ("bg", nil))
+        XCTAssertTrue(colors([.invisible, .faint], fg: .palette(1), bg: .palette(4)) == ("p4", "p4"))
+        XCTAssertTrue(colors([.invisible, .inverse], fg: .palette(1)) == ("p1", "p1"))
+        // Other attributes leave the colours alone.
+        XCTAssertTrue(colors([.bold, .italic, .underline, .strikethrough], fg: .palette(1)) == ("p1", nil))
+    }
+}

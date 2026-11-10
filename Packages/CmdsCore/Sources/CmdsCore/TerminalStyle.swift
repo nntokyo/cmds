@@ -340,3 +340,22 @@ public enum TerminalPalette {
         }
     }
 }
+
+extension TerminalStyle {
+    /// What faint text keeps of its colour's opacity.
+    public static let faintOpacity = 0.55
+
+    /// Text colour and background (nil: the screen's own) of the style, in the caller's colour type: inverse swaps
+    /// them, faint dims the text (`faint`, with `faintOpacity`), invisible text takes the background's colour. The
+    /// phone's screen (`TerminalGrid.colors`) and the Mac's menu bar reply panel (#213) draw styles with it alike.
+    public func colors<Color>(foreground defaultForeground: Color, background defaultBackground: Color,
+                              color: (TerminalColor) -> Color,
+                              faint: (Color) -> Color) -> (foreground: Color, background: Color?) {
+        var foreground = self.foreground.map(color) ?? defaultForeground
+        var background = self.background.map(color)
+        if attributes.contains(.inverse) { (foreground, background) = (background ?? defaultBackground, foreground) }
+        if attributes.contains(.faint) { foreground = faint(foreground) }
+        if attributes.contains(.invisible) { foreground = background ?? defaultBackground }
+        return (foreground, background)
+    }
+}
