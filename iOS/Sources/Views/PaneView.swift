@@ -659,16 +659,10 @@ enum TerminalGrid {
     static let background = Color(white: 0.08)
 
     /// Text colour and background (nil: the screen's own) of a style: inverse swaps them, faint dims the text,
-    /// invisible text takes the background's colour.
+    /// invisible text takes the background's colour (`TerminalStyle.colors`, shared with the Mac's menu bar reply panel).
     static func colors(_ style: TerminalStyle) -> (foreground: Color, background: Color?) {
-        var fg = style.foreground.map(color) ?? foreground
-        var bg = style.background.map(color)
-        if style.attributes.contains(.inverse) {
-            (fg, bg) = (bg ?? background, fg)
-        }
-        if style.attributes.contains(.faint) { fg = fg.opacity(0.55) }
-        if style.attributes.contains(.invisible) { fg = bg ?? background }
-        return (fg, bg)
+        style.colors(foreground: foreground, background: background, color: color,
+                     faint: { $0.opacity(TerminalStyle.faintOpacity) })
     }
 
     static func color(_ color: TerminalColor) -> Color {

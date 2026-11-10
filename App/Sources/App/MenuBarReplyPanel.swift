@@ -485,14 +485,12 @@ final class MenuBarReplyPanel: NSObject, NSWindowDelegate, NSTextFieldDelegate {
         return result
     }
 
-    /// As the iPhone draws a style (`PaneView.colors`): inverse swaps the colours, faint dims the text, invisible text
-    /// takes the background's colour.
+    /// As the iPhone draws a style (`TerminalStyle.colors`, also behind `PaneView.colors`): inverse swaps the colours,
+    /// faint dims the text, invisible text takes the background's colour.
     private static func attributes(_ style: TerminalStyle) -> [NSAttributedString.Key: Any] {
-        var foreground = style.foreground.map(color) ?? mirrorForeground
-        var background = style.background.map(color)
-        if style.attributes.contains(.inverse) { (foreground, background) = (background ?? mirrorBackground, foreground) }
-        if style.attributes.contains(.faint) { foreground = foreground.withAlphaComponent(0.55) }
-        if style.attributes.contains(.invisible) { foreground = background ?? mirrorBackground }
+        let (foreground, background) = style.colors(foreground: mirrorForeground, background: mirrorBackground,
+                                                    color: color,
+                                                    faint: { $0.withAlphaComponent(TerminalStyle.faintOpacity) })
         var attributes: [NSAttributedString.Key: Any] = [
             .font: style.attributes.contains(.bold) ? mirrorBoldFont : mirrorFont, .foregroundColor: foreground,
         ]
