@@ -55,7 +55,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SyncRemoteAccess.shared.activate()
         KeepAwakeManager.shared.start()
         Updater.shared.start()
-        menuBarItem = MenuBarStatusItem(controller: controller) { [weak self] id in self?.showWorkspace(id: id) }
+        menuBarItem = MenuBarStatusItem(controller: controller) { [weak self] id, pane in self?.showWorkspace(id: id, pane: pane) }
         menuBarItem?.start()
         widgetPublisher = WidgetPublisher(controller: controller)
         widgetPublisher?.start()
@@ -109,13 +109,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return alert.runModal() == .alertFirstButtonReturn ? .terminateNow : .terminateCancel
     }
 
-    /// Brings the main window forward (menu bar item); on workspace `id` if given, at its pane that needs the user if
-    /// there is one.
-    private func showWorkspace(id: String?) {
+    /// Brings the main window forward (menu bar item); on workspace `id` if given, at `pane` (the reply panel's, #213)
+    /// or else its pane that needs the user if there is one.
+    private func showWorkspace(id: String?, pane paneID: String? = nil) {
         NSApp.activate()
         windowController.showWindow(nil)
         guard let id, let workspace = controller.workspace(id: id) else { return }
-        if let pane = workspace.orderedPanes.first(where: { $0.attention || $0.agentActivity == .needsInput }) {
+        if let paneID, workspace.panes[paneID] != nil {
+            try? controller.focusPane(id: paneID)
+        } else if let pane = workspace.orderedPanes.first(where: { $0.attention || $0.agentActivity == .needsInput }) {
             try? controller.focusPane(id: pane.id)
         } else {
             try? controller.selectWorkspace(id: id)

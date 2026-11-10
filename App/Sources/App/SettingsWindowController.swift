@@ -183,6 +183,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, option(.limitRings)],
             [NSGridCell.emptyContentView, option(.contextRings)],
             [NSGridCell.emptyContentView, option(.workspaces)],
+            [NSGridCell.emptyContentView, option(.replyPanel)],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Choosing a workspace opens a panel under the icon to answer its agent without switching to cmds; hold ⌥ to open it in cmds instead."))],
         ]
         let updates: [[NSView]] = [
             [NSGridCell.emptyContentView, checkUpdatesCheckbox],
@@ -328,6 +330,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             checkbox.state = settings.menuBar(option) ? .on : .off
             checkbox.isEnabled = settings.showInMenuBar
                 && (option != .animation || settings.menuBar(.workingBadge))  // the arc circles the working badge
+                && (option != .replyPanel || settings.menuBar(.workspaces))  // replies to the workspaces listed
         }
         refreshUpdates()
     }

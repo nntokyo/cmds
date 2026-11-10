@@ -24,6 +24,19 @@ enum AgentOverview {
         }
     }
 
+    /// The state in words, as the sidebar badge says it (the menu bar's reply panel, #213).
+    static func stateTitle(_ state: MenuBarSummary.State) -> String {
+        let badge: AgentActivityStyle.Badge
+        switch state {
+        case .needsUser: badge = .needsInput
+        case .working: badge = .working
+        case .done: badge = .done
+        case .idle: badge = .idle
+        case .stopped: badge = .stopped
+        }
+        return badge.text
+    }
+
     /// When a workspace that needs the user started to wait: its oldest unanswered call.
     static func waitingSince(_ workspace: Workspace) -> Date? {
         workspace.panes.values.filter(\.attention).compactMap(\.attentionDate).min()

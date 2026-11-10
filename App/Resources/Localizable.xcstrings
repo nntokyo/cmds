@@ -908,6 +908,17 @@
         }
       }
     },
+    "1–9 pick an option · ⌘↑ ⌘↓ other workspaces · ⌘↩ open in cmds · esc closes": {
+      "comment": "menu bar reply panel: keyboard hints",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1〜9で選択 · ⌘↑ ⌘↓で他のワークスペース · ⌘↩でcmdsで開く · escで閉じる"
+          }
+        }
+      }
+    },
     "5-hour limit": {
       "comment": "agent usage limit",
       "localizations": {
@@ -2056,6 +2067,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "選択…"
+          }
+        }
+      }
+    },
+    "Choosing a workspace opens a panel under the icon to answer its agent without switching to cmds; hold ⌥ to open it in cmds instead.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースを選ぶと、アイコンの下にパネルが開き、cmdsに切り替えずにエージェントに答えられます。⌥を押しながら選ぶとcmdsで開きます。"
           }
         }
       }
@@ -5877,6 +5898,17 @@
         }
       }
     },
+    "Open in cmds": {
+      "comment": "menu bar reply panel: shows the pane in the main window",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsで開く"
+          }
+        }
+      }
+    },
     "Open one with File › New Files Pane (⇧⌘E), then compare the two folders.": {
       "localizations": {
         "ja": {
@@ -5913,6 +5945,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "開く…"
+          }
+        }
+      }
+    },
+    "Option %lld: %@": {
+      "comment": "menu bar reply panel: a choice of the agent (VoiceOver)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Option %1$lld: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択肢%1$lld：%2$@"
           }
         }
       }
@@ -5994,6 +6043,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペイン%@（表示中）"
+          }
+        }
+      }
+    },
+    "Pane screen": {
+      "comment": "menu bar reply panel: the mirror of the pane's screen (VoiceOver)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインの画面"
           }
         }
       }
@@ -6520,6 +6580,67 @@
         }
       }
     },
+    "Replies go to %@": {
+      "comment": "menu bar reply panel: the pane that gets the reply (its title)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返信先：%@"
+          }
+        }
+      }
+    },
+    "Replies go to pane %lld of %lld: %@": {
+      "comment": "menu bar reply panel: the pane that gets the reply (number, panes, its title)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Replies go to pane %1$lld of %2$lld: %3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返信先：ペイン%1$lld/%2$lld：%3$@"
+          }
+        }
+      }
+    },
+    "Reply": {
+      "comment": "menu bar reply panel: the reply field (VoiceOver)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返信"
+          }
+        }
+      }
+    },
+    "Reply (Return sends; empty, it presses Return)": {
+      "comment": "menu bar reply panel: placeholder of the reply field",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "返信（Returnで送信。空のままならReturnだけを送ります）"
+          }
+        }
+      }
+    },
+    "Reply from the menu bar": {
+      "comment": "Settings › Menu Bar › Menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メニューバーから返信"
+          }
+        }
+      }
+    },
     "Repository:": {
       "localizations": {
         "ja": {
@@ -7029,6 +7150,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべてを選択"
+          }
+        }
+      }
+    },
+    "Send Control-C": {
+      "comment": "menu bar reply panel: key bar button (VoiceOver, tooltip)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Control-Cを送る"
+          }
+        }
+      }
+    },
+    "Send Down Arrow": {
+      "comment": "menu bar reply panel: key bar button (VoiceOver, tooltip)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下矢印を送る"
+          }
+        }
+      }
+    },
+    "Send Escape": {
+      "comment": "menu bar reply panel: key bar button (VoiceOver, tooltip)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escapeを送る"
+          }
+        }
+      }
+    },
+    "Send Return": {
+      "comment": "menu bar reply panel: key bar button (VoiceOver, tooltip)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Returnを送る"
+          }
+        }
+      }
+    },
+    "Send Up Arrow": {
+      "comment": "menu bar reply panel: key bar button (VoiceOver, tooltip)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上矢印を送る"
           }
         }
       }
@@ -8861,6 +9037,17 @@
         }
       }
     },
+    "This pane has closed.": {
+      "comment": "menu bar reply panel",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このペインは閉じられました。"
+          }
+        }
+      }
+    },
     "This server's host key has changed since it was saved in known_hosts. Someone may be intercepting the connection; check the key before connecting again.": {
       "localizations": {
         "ja": {
@@ -8887,6 +9074,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "このセッションは再開できません。"
+          }
+        }
+      }
+    },
+    "This workspace has closed.": {
+      "comment": "menu bar reply panel",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースは閉じられました。"
           }
         }
       }

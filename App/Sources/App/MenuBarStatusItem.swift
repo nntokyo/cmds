@@ -5,12 +5,15 @@ import CmdsCore
 /// The menu bar item (#95), drawn rather than written: the cmds glyph with an orange badge (workspaces that need the
 /// user, orange in the sidebar) and an accent badge circled by a turning arc while agents work. Its menu shows ring
 /// charts for CPU, memory, the agents' account limits and their context windows, then every workspace with an agent and a mark for what it
-/// is doing (and, when it needs the user, since when); choosing one (or ⌘1…⌘9) brings cmds forward on it. A red dot
-/// on the icon warns of a limit at 95 % or critical memory pressure (#105). Settings › Menu Bar chooses what shows.
+/// is doing (and, when it needs the user, since when); choosing one (or ⌘1…⌘9) opens the reply panel on it
+/// (`MenuBarReplyPanel`, #213), or with ⌥ (or that setting off) brings cmds forward on it. A red dot on the icon warns
+/// of a limit at 95 % or critical memory pressure (#105). Settings › Menu Bar chooses what shows.
 @MainActor
 final class MenuBarStatusItem: NSObject, NSMenuDelegate {
+    /// The app's item (`debug.menubar_reply`).
+    private(set) static weak var shared: MenuBarStatusItem?
     private let controller: AppController
-    private let showWorkspace: (String?) -> Void
+    private let showWorkspace: (String?, String?) -> Void
     private var item: NSStatusItem?
     private var subscription: AnyCancellable?
     private var usageSubscription: AnyCancellable?
@@ -42,14 +45,16 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     private static let turn: TimeInterval = 1.2
     private static let steps = 12
 
-    /// `showWorkspace` brings the main window forward, on a workspace if one is given.
-    init(controller: AppController, showWorkspace: @escaping (String?) -> Void) {
+    /// `showWorkspace` brings the main window forward, on a workspace if one is given, at a pane if one is given (else
+    /// at the workspace's pane that waits).
+    init(controller: AppController, showWorkspace: @escaping (String?, String?) -> Void) {
         self.controller = controller
         self.showWorkspace = showWorkspace
         super.init()
     }
 
     func start() {
+        Self.shared = self
         subscription = controller.changes.sink { [weak self] _ in self?.update() }
         usageSubscription = controller.usageChanges.sink { [weak self] in
             guard let self else { return }
@@ -158,7 +163,11 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         return system || !limits.isEmpty || !contexts.isEmpty
     }
 
-    func menuWillOpen(_ menu: NSMenu) { menuIsOpen = true }
+    /// The reply panel closes: the menu may open it on another workspace.
+    func menuWillOpen(_ menu: NSMenu) {
+        menuIsOpen = true
+        MenuBarReplyPanel.current?.close()
+    }
 
     func menuDidClose(_ menu: NSMenu) {
         menuIsOpen = false
@@ -187,6 +196,7 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         itemStates = [:]
         highlightedItem = nil
         let entries = AppSettings.shared.menuBar(.workspaces) ? summary.entries : []
+        let reply = AppSettings.shared.menuBar(.replyPanel)
         for (index, entry) in entries.enumerated() {
             guard let workspace = controller.workspace(id: entry.id), let state = entry.state else { continue }
             let item = workspaceItem(workspace, state: state)
@@ -197,6 +207,20 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
             if state == .working { workingMenuItems.append(item) }
             itemStates[ObjectIdentifier(item)] = state
             menu.addItem(item)
+            if reply {
+                // With ⌥ held: bring cmds forward on it, as before the reply panel.
+                let open = workspaceItem(workspace, state: state)
+                open.action = #selector(openWorkspaceInCmds(_:))
+                if #available(macOS 14.4, *) {
+                    open.subtitle = String(localized: "Open in cmds", comment: "menu bar reply panel: shows the pane in the main window")
+                }
+                open.keyEquivalent = item.keyEquivalent
+                open.keyEquivalentModifierMask = item.keyEquivalentModifierMask.union(.option)
+                open.isAlternate = true
+                if state == .working { workingMenuItems.append(open) }
+                itemStates[ObjectIdentifier(open)] = state
+                menu.addItem(open)
+            }
         }
         if entries.isEmpty, AppSettings.shared.menuBar(.workspaces) {
             let none = NSMenuItem(title: String(localized: "No agents working", comment: "menu bar item: nothing waits or works"),
@@ -233,12 +257,29 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         text.count > length ? String(text.prefix(length - 1)) + "…" : text
     }
 
+    /// The reply panel on the workspace (Settings › Menu Bar › Reply from the menu bar), else cmds on it.
     @objc private func openWorkspace(_ sender: NSMenuItem) {
         guard let id = sender.representedObject as? String else { return }
-        showWorkspace(id)
+        guard AppSettings.shared.menuBar(.replyPanel) else { return showWorkspace(id, nil) }
+        // After the menu has closed, so the panel takes the keyboard.
+        DispatchQueue.main.async { [weak self] in self?.presentReply(workspaceID: id) }
     }
 
-    @objc private func openApp() { showWorkspace(nil) }
+    @objc private func openWorkspaceInCmds(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        showWorkspace(id, nil)
+    }
+
+    /// The reply panel on `workspaceID`, under the item. `takeKeyboard` false: tests (it must not take the keyboard).
+    @discardableResult
+    func presentReply(workspaceID: String, takeKeyboard: Bool = true) -> MenuBarReplyPanel? {
+        MenuBarReplyPanel.present(workspaceID: workspaceID, controller: controller, anchor: item?.button,
+                                  takeKeyboard: takeKeyboard) { [weak self] workspace, pane in
+            self?.showWorkspace(workspace, pane)
+        }
+    }
+
+    @objc private func openApp() { showWorkspace(nil, nil) }
 
     @objc private func openSettings() {
         NSApp.activate()

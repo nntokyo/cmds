@@ -414,14 +414,30 @@ Codex account limits (5-hour, 7-day, …) with the time to their reset (`in 2h10
 than a day away) — green, orange from 80 %, red from 95 %. Below them it lists every workspace where an agent ran,
 with a mark for its state (orange "!" needs you, turning arc working, green check done, grey dot idle) and, in small
 type, the agent and what it is doing or asking — for those that need you, since when (`3 min ago`). Those that need
-you come first; choosing one (or ⌘1…⌘9 while the menu is open) brings cmds forward on it, at the pane that waits.
-**Menu Bar Settings…** at the bottom opens Settings.
+you come first; choosing one (or ⌘1…⌘9 while the menu is open) opens the reply panel on it (below); hold ⌥ to bring
+cmds forward on it instead, at the pane that waits. **Menu Bar Settings…** at the bottom opens Settings.
+
+The **reply panel** opens under the icon and lets you answer an agent without leaving the app you are in (cmds' window
+stays where it is):
+
+- At the top: the workspace, the agent's state and since when, and the pane your reply goes to (the pane that waits,
+  else the agent's).
+- The last lines of that pane's screen, in colour and updated live (read only; scroll up for the rest of the screen).
+- When the agent shows a numbered choice — Claude Code's permission prompts and questions, Codex's approvals — its
+  options as buttons; **1**–**9** pick one while the reply field is empty. cmds only shows options that sit at the
+  bottom of the screen with the agent's cursor (`❯`, `›`) on one of them, so a numbered list in the agent's answer is
+  not mistaken for a choice.
+- A reply field: Return pastes the text into the pane and presses Return; with the field empty, Return just presses
+  Return (the option the agent's cursor is on). The keys next to it send **esc**, **↑**, **↓**, **⏎** and **^C**.
+- **Open in cmds** (⌘↩) brings cmds forward at that pane. ⌘↑ / ⌘↓ go to the previous / next workspace of the menu.
+  Esc or a click outside closes the panel. If the pane or workspace closes meanwhile, the panel says so.
 
 Settings › **Menu Bar** (also **Menu Bar Settings…** in the menu) lets you keep only what you want to see. **Show in
 menu bar** turns the item off. For the icon: **Number of agents working** (the blue badge), **Red dot when a limit or
 memory runs short**, **Animate while agents work** (off keeps the arc still, as does System Settings › Accessibility ›
 Display › Reduce motion). For the menu: **CPU and memory**, **AI limits (Claude Code, Codex)**, **Workspaces with
-agents**. All are on by default; the orange badge always shows. Isolated test instances (`CMDS_SUPPORT_DIR`) leave the
+agents**, **Reply from the menu bar** (off: choosing a workspace brings cmds forward on it, as ⌥ does). All are on by
+default; the orange badge always shows. Isolated test instances (`CMDS_SUPPORT_DIR`) leave the
 item off unless their own setting turns it on.
 
 ### Widget
