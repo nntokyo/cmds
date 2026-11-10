@@ -77,9 +77,9 @@ final class MCPServer {
     /// The workspace our pane is in now: CMDS_WORKSPACE_ID names the one it started in, and panes can be moved (#218).
     /// Asks the app; CMDS_WORKSPACE_ID when it cannot tell.
     private func currentWorkspace() -> String? {
-        guard let envPane, let list = try? call("workspace.list", [:], Self.requestTimeout).decode([WorkspaceInfo].self)
-        else { return envWorkspace }
-        return workspaceID(containing: envPane, in: list) ?? envWorkspace
+        currentWorkspaceID(pane: envPane, started: envWorkspace) {
+            try call("workspace.list", [:], Self.requestTimeout).decode([WorkspaceInfo].self)
+        }
     }
 
     /// Reads messages until stdin closes.

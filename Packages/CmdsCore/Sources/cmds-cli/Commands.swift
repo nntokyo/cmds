@@ -38,7 +38,7 @@ extension CLI {
             try ctx.args.expectPositionals(0...0, usage: "cmds ports [--workspace W]")
             let result = try ctx.call("workspace.list")
             var workspaces = try perform { try result.decode([WorkspaceInfo].self) }
-            let current = ctx.envPane.flatMap { workspaceID(containing: $0, in: workspaces) } ?? ctx.envWorkspace
+            let current = currentWorkspaceID(pane: ctx.envPane, started: ctx.envWorkspace) { workspaces }
             if let id = ctx.args[option: "workspace"] {
                 workspaces = workspaces.filter { $0.id == id }
                 guard !workspaces.isEmpty else { throw CLIError.failure("workspace not found: \(id)") }
@@ -161,7 +161,7 @@ extension CLI {
                     let snapshot = try perform { try result.decode(StatsSnapshot.self) }
                     let list = try perform { try client.call("workspace.list").decode([WorkspaceInfo].self) }
                     let titles = workspaceTitles(list)
-                    let current = ctx.envPane.flatMap { workspaceID(containing: $0, in: list) } ?? ctx.envWorkspace
+                    let current = currentWorkspaceID(pane: ctx.envPane, started: ctx.envWorkspace) { list }
                     let text = Format.stats(snapshot, titles: titles, currentWorkspace: current)
                     if interval != nil, terminal { print("\u{1B}[H\u{1B}[2J", terminator: "") } // clear screen
                     print(text, terminator: "")

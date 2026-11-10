@@ -25,8 +25,7 @@ struct Context {
     /// The workspace the pane we run in is in now. `CMDS_WORKSPACE_ID` names the one it started in, and a pane can be
     /// moved to another (#218), so this asks the app (`workspace.list`); CMDS_WORKSPACE_ID when it cannot tell.
     func currentWorkspace() -> String? {
-        guard let pane = envPane, let list = try? call("workspace.list").decode([WorkspaceInfo].self) else { return envWorkspace }
-        return workspaceID(containing: pane, in: list) ?? envWorkspace
+        currentWorkspaceID(pane: envPane, started: envWorkspace) { try call("workspace.list").decode([WorkspaceInfo].self) }
     }
 
     func connect(timeout: TimeInterval? = 60) throws -> CmdsClient {
@@ -78,6 +77,14 @@ func object(_ pairs: [String: JSONValue?]) -> JSONValue? {
 /// The workspace that has `pane` among its panes.
 func workspaceID(containing pane: String, in workspaces: [WorkspaceInfo]) -> String? {
     workspaces.first { $0.panes.contains { $0.id == pane } }?.id
+}
+
+/// The workspace `pane` (CMDS_PANE_ID) is in now (#218): `started` (CMDS_WORKSPACE_ID) names the one it started in,
+/// and a pane can be moved to another. `started` without a pane, when `workspaces` (only called with a pane) throws,
+/// or when no workspace has the pane. One lookup for the CLI and `cmds mcp`.
+func currentWorkspaceID(pane: String?, started: String?, workspaces: () throws -> [WorkspaceInfo]) -> String? {
+    guard let pane, let list = try? workspaces() else { return started }
+    return workspaceID(containing: pane, in: list) ?? started
 }
 
 /// Workspace id → title (the first one wins for duplicate ids).

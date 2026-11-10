@@ -128,7 +128,7 @@ final class WorkspaceContentViewController: NSViewController {
 
     private func dragUpdated(_ info: NSDraggingInfo) -> NSDragOperation {
         if let pane = info.cmdsPaneID {
-            let drop = paneDropTarget(moving: pane, at: view.convert(info.draggingLocation, from: nil))
+            let drop = paneDropTarget(moving: pane, info)
             dropHighlight.show(drop?.highlight)
             return drop == nil ? [] : .move
         }
@@ -142,10 +142,11 @@ final class WorkspaceContentViewController: NSViewController {
 
     private func performDrop(_ info: NSDraggingInfo) -> Bool {
         if let pane = info.cmdsPaneID {
-            guard let drop = paneDropTarget(moving: pane, at: view.convert(info.draggingLocation, from: nil)) else { return false }
+            guard let drop = paneDropTarget(moving: pane, info) else { return false }
             dropHighlight.show(nil)
             // After the drag session, like tile drops: the move rebuilds the views, the dragged grip's included.
-            DispatchQueue.main.async { [weak self] in self?.dropPane(pane, on: drop.target, side: drop.side) }
+            let paneDrop = PaneDrop(on: drop.target, side: drop.side)
+            DispatchQueue.main.async { [weak self] in self?.controller.dropPane(pane, paneDrop) }
             return true
         }
         guard let drop = dropTarget(for: info) else { return false }
@@ -173,18 +174,10 @@ final class WorkspaceContentViewController: NSViewController {
         return nil
     }
 
-    /// Splits `target` on `side` with the dragged pane, or swaps the two (the dragged pane keeps the keyboard).
-    func dropPane(_ paneID: String, on target: String, side: PaneSide?) {
-        do {
-            if let side {
-                try controller.movePane(paneID: paneID, beside: target, side: side)
-            } else {
-                try controller.swapPanes(a: paneID, b: target)
-                try controller.focusPane(id: paneID)
-            }
-        } catch {
-            NSSound.beep()
-        }
+    /// `paneDropTarget(moving:at:)` at the mouse of a drag.
+    private func paneDropTarget(moving: String, _ info: NSDraggingInfo)
+        -> (target: String, side: PaneSide?, highlight: NSRect)? {
+        paneDropTarget(moving: moving, at: view.convert(info.draggingLocation, from: nil))
     }
 
     /// Tiles of the tiled view by workspace id (empty in the single view).
