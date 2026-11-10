@@ -117,7 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let id, let workspace = controller.workspace(id: id) else { return }
         if let paneID, workspace.panes[paneID] != nil {
             try? controller.focusPane(id: paneID)
-        } else if let pane = workspace.orderedPanes.first(where: { $0.attention || $0.agentActivity == .needsInput }) {
+        } else if let pane = AgentOverview.waitingPane(in: workspace.orderedPanes) {
             try? controller.focusPane(id: pane.id)
         } else {
             try? controller.selectWorkspace(id: id)

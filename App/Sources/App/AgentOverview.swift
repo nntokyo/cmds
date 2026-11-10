@@ -42,6 +42,12 @@ enum AgentOverview {
         workspace.panes.values.filter(\.attention).compactMap(\.attentionDate).min()
     }
 
+    /// The first of `panes` that waits for the user: an unanswered call or an agent asking (#213). The menu bar's
+    /// reply panel passes a workspace's terminal panes, "Open in cmds" all of its panes.
+    static func waitingPane(in panes: [Pane]) -> Pane? {
+        panes.first { $0.attention || $0.agentActivity == .needsInput }
+    }
+
     /// The agent, what it does (or, when it needs the user, what it asks) and its running subagents:
     /// `Claude · Add login validation · ⧉ 2`. `age` puts how long it has waited first.
     static func detail(_ workspace: Workspace, state: MenuBarSummary.State, age: Bool) -> String {

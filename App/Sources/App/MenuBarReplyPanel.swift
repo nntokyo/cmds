@@ -85,7 +85,7 @@ final class MenuBarReplyPanel: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     /// focuses), else the agent's, else the focused terminal pane.
     static func targetPane(in workspace: Workspace) -> Pane? {
         let terminals = workspace.orderedPanes.filter { $0.terminal != nil }
-        return terminals.first { $0.attention || $0.agentActivity == .needsInput }
+        return AgentOverview.waitingPane(in: terminals)
             ?? workspace.primaryAgent.flatMap { agent in terminals.first { $0 === agent.pane } }
             ?? terminals.first { $0.id == workspace.focusedPaneID }
             ?? terminals.first
