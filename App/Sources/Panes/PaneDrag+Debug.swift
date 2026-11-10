@@ -35,7 +35,7 @@ enum PaneDragDebug {
             result["dropTarget"] = .string(drop.target)
             result["side"] = drop.side.map { .string($0.rawValue) } ?? .string("center")
             result["highlight"] = rect(drop.highlight)
-            content.dropPane(paneID, on: drop.target, side: drop.side)
+            controller.dropPane(paneID, PaneDrop(on: drop.target, side: drop.side))
         } else if let row = params?["row"]?.stringValue {
             guard window.sidebar.debugDropPane(paneID, onWorkspace: row) else {
                 throw RPCError.invalidParams("the row of \(row) does not take this pane")

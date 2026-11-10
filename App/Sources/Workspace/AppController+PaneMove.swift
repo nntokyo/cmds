@@ -1,6 +1,21 @@
 import AppKit
 import CmdsCore
 
+/// Where a dragged pane is dropped (#218): on another pane's edge or centre in the content area, or on a sidebar row.
+enum PaneDrop: Equatable {
+    /// Beside the pane `target`, on `side` (an edge).
+    case beside(target: String, side: PaneSide)
+    /// In place of the pane `target`, which takes the dragged pane's place (the centre).
+    case swap(target: String)
+    /// Into the workspace, beside its focused pane (its sidebar row).
+    case workspace(String)
+
+    /// On the pane `target`: beside it on `side`, or a swap for the centre (nil).
+    init(on target: String, side: PaneSide?) {
+        self = side.map { .beside(target: target, side: $0) } ?? .swap(target: target)
+    }
+}
+
 /// Moving and swapping panes (#218; docs/guide/workspaces-and-panes.md "Moving panes"): by drag, Pane menu, `pane.move`
 /// and `pane.swap`. A moved pane is the same `Pane`: its id, terminal (processes, scrollback), web view, agent state,
 /// attention and opener stay; only its container is re-parented when the views are rebuilt. Zoom is cleared in the
@@ -108,6 +123,24 @@ extension AppController {
         let keyboard = focusedPane
         exchange(a, of: first, with: b, of: second)
         finishSwap(between: first, and: second, keyboard: keyboard === a || keyboard === b ? keyboard : nil)
+    }
+
+    /// Performs a dragged pane's drop (content area, sidebar rows, `debug.pane_drag`); a drop that cannot be done
+    /// beeps. After a swap the dragged pane has the keyboard.
+    func dropPane(_ paneID: String, _ drop: PaneDrop) {
+        do {
+            switch drop {
+            case .beside(let target, let side):
+                try movePane(paneID: paneID, beside: target, side: side)
+            case .swap(let target):
+                try swapPanes(a: paneID, b: target)
+                try focusPane(id: paneID)
+            case .workspace(let workspaceID):
+                try movePane(paneID: paneID, toWorkspace: workspaceID)
+            }
+        } catch {
+            NSSound.beep()
+        }
     }
 
     // MARK: - Steps

@@ -810,7 +810,7 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
         reorderHint.isHidden = true
         if let pane = info.cmdsPaneID {
             guard let target = paneDropWorkspace(pane, row: row) else { return false }
-            DispatchQueue.main.async { [weak self] in self?.movePane(pane, toWorkspace: target.workspaceID) }
+            DispatchQueue.main.async { [weak self] in self?.controller.dropPane(pane, .workspace(target.workspaceID)) }
             return true
         }
         let ids = info.cmdsWorkspaceIDs
@@ -891,22 +891,13 @@ extension SidebarViewController {
         return (row, workspace.id)
     }
 
-    /// Moves the pane into the workspace beside its focused pane and shows it there.
-    func movePane(_ paneID: String, toWorkspace workspaceID: String) {
-        do {
-            try controller.movePane(paneID: paneID, toWorkspace: workspaceID)
-        } catch {
-            NSSound.beep()
-        }
-    }
-
     #if DEBUG
     /// Tests only (`debug.pane_drag` target `row`): the drop the table would take for a pane over the row showing
     /// `workspaceID`, performed like a real one. False when the row would refuse it.
     func debugDropPane(_ paneID: String, onWorkspace workspaceID: String) -> Bool {
         guard let row = (0..<tableView.numberOfRows).first(where: { self.workspace(atRow: $0)?.id == workspaceID }),
               let target = paneDropWorkspace(paneID, row: row) else { return false }
-        movePane(paneID, toWorkspace: target.workspaceID)
+        controller.dropPane(paneID, .workspace(target.workspaceID))
         return true
     }
     #endif
