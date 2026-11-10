@@ -79,9 +79,9 @@ func workspaceID(containing pane: String, in workspaces: [WorkspaceInfo]) -> Str
     workspaces.first { $0.panes.contains { $0.id == pane } }?.id
 }
 
-/// The workspace `pane` (CMDS_PANE_ID) is in now (#218): `started` (CMDS_WORKSPACE_ID) names the one it started in, and
-/// a pane can be moved to another. `started` without a pane, when `workspaces` (only called with a pane) throws, or when
-/// no workspace has the pane. One lookup for the CLI and `cmds mcp`.
+/// The workspace `pane` (CMDS_PANE_ID) is in now (#218): `started` (CMDS_WORKSPACE_ID) names the one it started in,
+/// and a pane can be moved to another. `started` without a pane, when `workspaces` (only called with a pane) throws,
+/// or when no workspace has the pane. One lookup for the CLI and `cmds mcp`.
 func currentWorkspaceID(pane: String?, started: String?, workspaces: () throws -> [WorkspaceInfo]) -> String? {
     guard let pane, let list = try? workspaces() else { return started }
     return workspaceID(containing: pane, in: list) ?? started

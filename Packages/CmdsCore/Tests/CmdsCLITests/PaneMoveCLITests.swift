@@ -70,7 +70,7 @@ final class PaneMoveCLITests: XCTestCase {
         XCTAssertNil(workspaceID(containing: "p9", in: list))
     }
 
-    /// CMDS_WORKSPACE_ID when outside a pane (no request), when the list cannot be read, or when no workspace has the pane.
+    /// CMDS_WORKSPACE_ID outside a pane (no request), when the list cannot be read, or when no workspace has the pane.
     func testCurrentWorkspaceFallsBackToTheStartingOne() {
         struct Unreachable: Error {}
         let pane = PaneInfo(id: "p3", kind: .terminal, title: "t", focused: false, attention: false)
