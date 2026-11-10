@@ -9,6 +9,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
+  only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
+  show other text files as text; the same for files opened while browsing a files pane.
+
+## [0.17.0] - 2026-11-10
+
+Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
+
+### Added
+
 - Memory (#193): `cmds stats` and `system.stats` show swap used (`swapUsedBytes`, `swapTotalBytes`). `cmds top` lists
   the heaviest processes started from cmds terminals (memory, CPU, pane, workspace, command; socket
   `system.processes`), also *leftover* ones whose pane or workspace was closed but which still run (a dev server
@@ -18,10 +28,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   processes, and a notification warns when the memory pressure stays at warning for a minute (at most every 30
   minutes; Settings › General › Memory). `cmds mcp` gains `system_stats` (with `advice: ok|wait` before heavy jobs)
   and `list_processes`. Not available from SSH panes.
-
-- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
-  only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
-  show other text files as text; the same for files opened while browsing a files pane.
 
 ## [0.16.0] - 2026-11-10
 
@@ -583,7 +589,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.16.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.17.0...master
+[0.17.0]: https://github.com/nntokyo/cmds/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nntokyo/cmds/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/nntokyo/cmds/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/nntokyo/cmds/compare/v0.14.0...v0.15.0

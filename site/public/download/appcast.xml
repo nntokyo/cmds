@@ -7,42 +7,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.16.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.16.0</link>
-      <sparkle:version>25</sparkle:version>
-      <sparkle:shortVersionString>0.16.0</sparkle:shortVersionString>
+      <title>cmds 0.17.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.17.0</link>
+      <sparkle:version>26</sparkle:version>
+      <sparkle:shortVersionString>0.17.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Mon, 09 Nov 2026 17:20:00 GMT</pubDate>
+      <pubDate>Mon, 09 Nov 2026 18:15:55 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
 <ul>
-<li>ブラウザペインでレスポンシブ表示を確認できます。iPhone・Pixel・iPad・デスクトップの大きさで表示し、回転、ライト/ダーク表示、ブレークポイントの表示も切り替えられます。スマホ・タブレット・PC の大きさを 1 つのペインに並べて表示し、移動とスクロールを連動させることもできます。</li>
-<li>ブラウザのスクリーンショットを、ページ全体・要素ひとつ・複数の端末サイズで撮れます（<code>cmds browser snapshot</code>、MCP）。</li>
-<li>エージェント向けの開発者ツール：ページのコンソールとエラーの記録、ページの要素一覧、クリック・入力・表示待ちを CLI と MCP から使えます。設定で Safari の Web インスペクタも使えます。</li>
-<li>ターミナル内の検索（⌘F、大文字小文字・正規表現）とコマンドパレット（⇧⌘P）。日本語表示でも英語のコマンド名で探せます。</li>
-<li>エージェントを並行して動かすためのワークツリーワークスペース（ファイル › 新規ワークツリーワークスペース…）と「変更を表示」。</li>
-<li><code>cmds mcp</code> に、自分で開いたターミナルを操作するツールとポート一覧を追加しました。サイドバーのポートをクリックするとブラウザで開きます。</li>
+<li>メモリの使い道が分かるようになりました。<code>cmds top</code> で cmds のターミナルから起動した重いプロセスを、<code>cmds top --leftover</code> でペインやワークスペースを閉じたあとも動き続けているプロセス（開発サーバー、テスト、ブラウザなど）を一覧でき、<code>cmds kill</code> で止められます（cmds から起動したもの以外は止めません）。</li>
+<li>サイドバーに「残存プロセス N 個」を表示し、一覧から止められます。ワークスペースのツールチップには重いプロセス上位 3 件を表示します。</li>
+<li>メモリ不足が 1 分続くと通知します（設定 › 一般 › 「メモリが不足したら通知」）。<code>cmds stats</code> にスワップの使用量を表示します。</li>
+<li><code>cmds mcp</code> に <code>system_stats</code>（重い処理を始めてよいかの目安つき）と <code>list_processes</code> を追加しました。</li>
 </ul>
-<h3>変更</h3>
-<p>ブラウザのページは、既定で Mac のライト/ダーク表示に従います。</p>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Added</h3>
 <ul>
-<li>Browser panes check responsive layouts: iPhone, Pixel, iPad and desktop sizes, rotation, light/dark, a breakpoint indicator, and a responsive view showing phone, tablet and desktop side by side with navigation and scrolling in sync.</li>
-<li>Browser screenshots of the whole page, one element, or several device sizes (<code>cmds browser snapshot</code>, MCP).</li>
-<li>DevTools for agents: the page's console and errors, a page tree, click, fill and wait for, from the CLI and MCP; Safari's Web Inspector can be allowed in Settings.</li>
-<li>Find in a terminal (⌘F, match case, regular expressions) and a command palette (⇧⌘P) that also finds English command names in a localized UI.</li>
-<li>Worktree workspaces for agents working side by side (File › New Worktree Workspace…) with Show Changes.</li>
-<li><code>cmds mcp</code> terminal tools for panes the agent opened, and listening ports; clicking a port in the sidebar opens it in a browser.</li>
+<li>See where memory goes: <code>cmds top</code> lists the heaviest processes started from cmds terminals, <code>cmds top --leftover</code> those still running after their pane or workspace closed (dev servers, test runners, browsers), and <code>cmds kill</code> stops one (only processes started from cmds).</li>
+<li>The sidebar shows "N leftover processes" with a list and Stop buttons; a workspace's tooltip shows its three heaviest processes.</li>
+<li>A notification when memory stays short for a minute (Settings › General › Warn when memory is short); <code>cmds stats</code> shows swap use.</li>
+<li><code>cmds mcp</code> adds <code>system_stats</code> (with advice on whether to start a heavy job) and <code>list_processes</code>.</li>
 </ul>
-<h3>Changed</h3>
-<p>Browser pages follow the Mac's light or dark appearance by default.</p>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.16.0/cmds-0.16.0.dmg" length="15927210" type="application/octet-stream" sparkle:edSignature="JL77c+/bJ57MsJlJatt9Oj1iRXe+gjLPqwPTBj9Ub4Y4lMZTOYwEzIb2vrG3/zRy6Ev42gzYakyxczYVdTKMBg=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.17.0/cmds-0.17.0.dmg" length="16031921" type="application/octet-stream" sparkle:edSignature="5Z6T3dElbiHMBY/tco1P8x7fPkLH2ngEak50l5HrLLHYlCzLX3viuA/Gv2dCx5uiysDCFjcgVJD7SL+UXUvaDQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: o+ZJSeF/qf70oEZX8aCV0XrheJ5e0ziGK5fSp2SMhWMSb04c/ngfRRJ/B/Rojpal3ApEJExhlvl4rNxCW71MDQ==
-length: 4078
+edSignature: 4jDx1C+ZrtBSwK5jqwdK92Hol89V2Mexj/AQWD4CGFOuin851mj7/II5m1hW5wf6nCqDwCQ85QUMMcSlwHp6Cg==
+length: 3231
 -->
