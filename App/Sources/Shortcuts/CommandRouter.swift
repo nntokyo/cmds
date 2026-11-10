@@ -279,8 +279,12 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     private func swap(_ direction: FocusDirection) {
         guard let pane = controller.focusedPane, let other = windowController?.content.neighbor(of: pane.id, direction: direction)
         else { return NSSound.beep() }
-        try? controller.swapPanes(a: pane.id, b: other)
-        try? controller.focusPane(id: pane.id)
+        do {
+            try controller.swapPanes(a: pane.id, b: other)
+            try controller.focusPane(id: pane.id)
+        } catch {
+            NSSound.beep()  // as a drop that cannot be done (#223)
+        }
     }
 
     /// Pane › Move to Workspace…: a picker of the other workspaces (and a new one) in the command palette's panel.
@@ -291,8 +295,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     }
 
     @objc func moveToNewWorkspace(_ sender: Any?) {
-        guard let pane = controller.focusedPane else { return }
-        _ = try? controller.movePaneToNewWorkspace(paneID: pane.id)
+        guard let pane = controller.focusedPane else { return NSSound.beep() }
+        controller.movePaneToNewWorkspaceFromUI(paneID: pane.id)
     }
 
     /// ⇧⌘↩: zooms the active tile in the tiled view, else the focused pane.

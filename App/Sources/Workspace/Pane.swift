@@ -85,7 +85,7 @@ final class Pane {
             container.dragHandle.title = { [weak self] in self.map { $0.agentTopic ?? DefaultTitle.localized($0.title) } ?? "" }
             container.dragHandle.onDraggedOutOfWindow = { [weak self] in
                 guard let self else { return }
-                _ = try? self.controller?.movePaneToNewWorkspace(paneID: self.id)
+                self.controller?.movePaneToNewWorkspaceFromUI(paneID: self.id)
             }
         }
     }

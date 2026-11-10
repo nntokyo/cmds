@@ -68,11 +68,16 @@ final class PaneDragHandleView: NSView, NSDraggingSource {
         addCursorRect(bounds, cursor: isDragging ? .closedHand : .openHand)
     }
 
+    /// Its hover area; replaced alone, so AppKit's own areas (tooltip, cursor rect) stay (#223).
+    private var hoverArea: NSTrackingArea?
+
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
-        trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
-                                       owner: self))
+        if let hoverArea { removeTrackingArea(hoverArea) }
+        let area = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect],
+                                  owner: self)
+        addTrackingArea(area)
+        hoverArea = area
     }
 
     override func mouseEntered(with event: NSEvent) { hovered = true }
