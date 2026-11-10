@@ -70,7 +70,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>Install and first launch</h2>
       <ol>
-        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.18.0/cmds-0.18.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
+        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.19.0/cmds-0.19.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
         <li>If the macOS firewall is on, macOS asks about incoming connections. Choose <strong>Allow</strong> if you want to use the iPhone/iPad companion; the terminal works either way.</li>
         <li>Allow notifications, so panes that need you can notify you while cmds is in the background.</li>
         <li>Updates are automatic (0.2.0 and later): cmds checks once a day, downloads a new version and installs it when cmds quits. <strong>cmds › Check for Updates…</strong> installs it now; turn it off in <strong>cmds › Settings… › Updates</strong>.</li>
@@ -93,6 +93,7 @@
       <ul>
         <li><kbd>⌘N</kbd> opens a workspace, <kbd>⌘1</kbd>…<kbd>⌘9</kbd> switch, <kbd>⇧⌘R</kbd> (or a double-click) renames. Drag rows to reorder.</li>
         <li><kbd>⌘D</kbd> splits right, <kbd>⇧⌘D</kbd> down. <kbd>⌥⌘</kbd> + arrows move between panes, <kbd>⇧⌘↩</kbd> zooms a pane, <kbd>⌘W</kbd> closes it.</li>
+        <li><strong>Moving panes</strong>: drag the grip that appears at a pane's top edge onto another pane's edge to split there, onto its centre to swap the two, onto a workspace in the sidebar to move it there, or out of the window for a new workspace. Also Pane › Swap with Pane Left / Right / Up / Down (<kbd>⌥⇧⌘</kbd> + arrows), Move to Workspace…, Move to New Workspace, and <code>cmds pane move</code> / <code>cmds pane swap</code>. Programs in terminals and browser pages keep running.</li>
         <li>Each sidebar row shows the git branch, directory, listening ports, the agent's state and task, and the latest notification. <kbd>⌥⌘F</kbd> filters; View › Group Workspaces by Project groups them.</li>
         <li>When a program in a pane you are not looking at sends a notification (OSC 9/777, the bell, <code>cmds notify</code>), the pane lights up with an <strong>orange ring</strong>. <kbd>⇧⌘U</kbd> jumps to the latest.</li>
       </ul>
@@ -336,6 +337,7 @@ cmds schedule history   # past runs</code></pre>
             <tr><td>Rename workspace</td><td><kbd>⇧⌘R</kbd></td></tr>
             <tr><td>Split right / down</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
             <tr><td>Move between panes</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
+            <tr><td>Swap with the neighbouring pane</td><td><kbd>⌥⇧⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>Zoom pane (tile)</td><td><kbd>⇧⌘↩</kbd></td></tr>
             <tr><td>Tile all workspaces</td><td><kbd>⌃⌘T</kbd></td></tr>
             <tr><td>Jump to latest attention</td><td><kbd>⇧⌘U</kbd></td></tr>

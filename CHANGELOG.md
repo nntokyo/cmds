@@ -9,13 +9,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
+  only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
+  show other text files as text; the same for files opened while browsing a files pane.
+
+## [0.19.0] - 2026-11-11
+
+Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
+
+### Added
+
 - Move panes within a workspace, to another workspace or into a new one, with what runs in them (#218): drag the grip
   that appears at a pane's top edge onto another pane's edge (split there) or centre (swap), onto a workspace in the
   sidebar, or out of the window (new workspace); Pane › Swap with Pane Left / Right / Up / Down (⌥⇧⌘ + arrow keys),
   Move to Workspace…, Move to New Workspace; `cmds pane move` / `cmds pane swap` and `pane.move` / `pane.swap`.
-- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
-  only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
-  show other text files as text; the same for files opened while browsing a files pane.
 
 ## [0.18.0] - 2026-11-11
 
@@ -605,7 +612,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.18.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.19.0...master
+[0.19.0]: https://github.com/nntokyo/cmds/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/nntokyo/cmds/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/nntokyo/cmds/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nntokyo/cmds/compare/v0.15.1...v0.16.0

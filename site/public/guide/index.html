@@ -70,7 +70,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>インストールと初回起動</h2>
       <ol>
-        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.18.0/cmds-0.18.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
+        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.19.0/cmds-0.19.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
         <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
         <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
         <li>ウィンドウを閉じても cmds とターミナル（エージェント）は動き続けます。Dock のアイコンか <kbd>⌘N</kbd> でウィンドウが戻ります。エージェントの実行中に終了しようとすると確認が出ます。</li>
@@ -94,6 +94,7 @@
       <ul>
         <li><kbd>⌘N</kbd> で新しいワークスペース、<kbd>⌘1</kbd>…<kbd>⌘9</kbd> で切り替え、<kbd>⇧⌘R</kbd>（またはダブルクリック）で名前を変更。行はドラッグで並べ替えられます。</li>
         <li><kbd>⌘D</kbd> で右に、<kbd>⇧⌘D</kbd> で下に分割。<kbd>⌥⌘</kbd>＋矢印でペイン間を移動、<kbd>⇧⌘↩</kbd> でペインをズーム、<kbd>⌘W</kbd> で閉じます。</li>
+        <li><strong>ペインの移動</strong>：ペインの上端にマウスを乗せると出るつまみをドラッグし、別のペインの端に落とすとその側に分割、中央に落とすと入れ替え、サイドバーのワークスペースに落とすとそこへ移動、ウィンドウの外に落とすと新しいワークスペースになります。ペイン › 左右上下のペインと入れ替え（<kbd>⌥⇧⌘</kbd>＋矢印）、別のワークスペースへ移動…、新しいワークスペースへ移動 や <code>cmds pane move</code> / <code>cmds pane swap</code> でも。ターミナルのプログラムやブラウザのページはそのまま続きます。</li>
         <li>サイドバーの各行には、Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態とタスク、最新の通知が表示されます。<kbd>⌥⌘F</kbd> で絞り込み、表示 › ワークスペースをプロジェクトでまとめる も使えます。</li>
         <li>見ていないペインのプログラムが通知（OSC 9/777、ベル、<code>cmds notify</code>）を出すと、そのペインが<strong>オレンジのリング</strong>で光ります。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。</li>
       </ul>
@@ -337,6 +338,7 @@ cmds schedule history   # 実行履歴</code></pre>
             <tr><td>ワークスペース名を変更</td><td><kbd>⇧⌘R</kbd></td></tr>
             <tr><td>右に分割 / 下に分割</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
             <tr><td>ペイン間の移動</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
+            <tr><td>隣のペインと入れ替え</td><td><kbd>⌥⇧⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>ペイン（タイル）のズーム</td><td><kbd>⇧⌘↩</kbd></td></tr>
             <tr><td>すべてのワークスペースを並べて表示</td><td><kbd>⌃⌘T</kbd></td></tr>
             <tr><td>最新の通知へジャンプ</td><td><kbd>⇧⌘U</kbd></td></tr>
