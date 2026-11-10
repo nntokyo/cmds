@@ -13,6 +13,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
 
+## [0.18.0] - 2026-11-11
+
+Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
+
+### Added
+
+- Menu bar: answer a waiting agent without switching to cmds (#213). Choosing a workspace in the menu bar menu opens a
+  panel under the icon with a live view of the pane's last lines, the agent's numbered choices as buttons (Claude
+  Code, Codex; keys 1–9 pick them), a reply field (Return sends; empty, it presses Return) and Esc / ↑ / ↓ / ⏎ / ⌃C
+  keys. ⌘↩ opens the pane in cmds, ⌘↑ / ⌘↓ go to the other workspaces, Esc or a click elsewhere closes it. Hold ⌥ in
+  the menu to open a workspace in cmds as before; Settings › Menu Bar › Reply from the menu bar turns the panel off.
+
 ## [0.17.0] - 2026-11-10
 
 Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
@@ -589,7 +601,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.17.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.18.0...master
+[0.18.0]: https://github.com/nntokyo/cmds/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/nntokyo/cmds/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/nntokyo/cmds/compare/v0.15.1...v0.16.0
 [0.15.1]: https://github.com/nntokyo/cmds/compare/v0.15.0...v0.15.1
