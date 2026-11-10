@@ -16,7 +16,9 @@ English, whatever the app's language: scripts and agents parse them
 ## Targeting
 
 Inside a cmds terminal the CLI sends `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` as explicit params, so commands act on
-*that* pane/workspace even when another one is focused. `--pane P` / `--workspace W` override this. Outside cmds,
+*that* pane/workspace even when another one is focused. The workspace is the one the pane is in now: a
+[moved](../guide/workspaces-and-panes.md#moving-panes) pane keeps the `CMDS_WORKSPACE_ID` it started with, so the CLI
+looks its pane up (`workspace.list`) first. `--pane P` / `--workspace W` override this. Outside cmds,
 the focused pane of the selected workspace is used. Browser commands without `--pane` use the focused browser pane of
 the current workspace, else its first browser pane.
 
@@ -50,6 +52,8 @@ else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `
 | `cmds split [right\|down] [--pane P] [--browser URL \| --ssh HOST [--remote-cwd DIR]] [--cwd DIR] [--account NAME\|auto] [--no-focus] [-- cmd…]` | Split a pane; prints the new pane id (`--no-focus` keeps the keyboard where it is). The new pane remembers the terminal it was split from, so an agent there may close it, and read and type into a terminal one, with `cmds mcp` (#165, #171). Splitting an SSH pane without `--cwd`/command connects to the same host again. `--account` as for `cmds new` (local terminals only); without it the new pane does not take the split pane's account |
 | `cmds panes [--workspace W]` | List panes |
 | `cmds focus <pane>` / `cmds close-pane [pane]` | Focus / close a pane |
+| `cmds pane move <pane> [--to WS] [--beside P] [--side left\|right\|top\|bottom] [--new-workspace] [--no-focus]` | Move a pane: `--beside P` on `--side` (default right) of pane P (in P's workspace, also within its own), `--to WS` (id, 1-based index or title) into that workspace beside its focused pane, `--new-workspace` into a new workspace after its own (a pane alone in its workspace stays). What runs in it keeps running (same pane id, processes, scrollback, page); a workspace left without panes closes. `--no-focus` keeps the keyboard and the shown workspace. Prints the workspace the pane is in now (`--json`: `{pane, workspace}`). See [Moving panes](../guide/workspaces-and-panes.md#moving-panes) |
+| `cmds pane swap <a> <b>` | Swap the places of two panes, in one workspace or across two |
 | `cmds send [--pane P] [--enter] <text…\|->` | Type text into a terminal (`-` reads stdin; `--enter`/`-e` appends Return) |
 | `cmds read [--pane P] [--scrollback N \| -n N]` | Print the screen, or the last N lines including scrollback |
 | `cmds notify [--title T] [--pane P] <body…>` | Light the attention ring + sidebar text (+ macOS notification when cmds is in the background) |

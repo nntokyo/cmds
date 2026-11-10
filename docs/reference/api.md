@@ -96,6 +96,8 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `transfer.clear` | – | – (removes finished transfers) |
 | `pane.reconnect` | `pane?` | – (restarts an SSH pane's `ssh`) |
 | `pane.focus` | `pane` | – |
+| `pane.move` | `pane`, and one of: `beside` (a pane, in its workspace, also the moved pane's own) with `side?` (`left`/`right`/`top`/`bottom`, default `right`), `workspace` (beside its focused pane; with `beside`, must be that pane's), `newWorkspace: true` (a new workspace after the pane's own; a pane alone in its workspace stays); `focus?` (default true: the pane takes the keyboard and its workspace is shown) | `{"pane", "workspace"}` (where it is now). The pane keeps its id and what runs in it; an emptied workspace closes; zoom is cleared in the workspaces involved (#218). Not from SSH panes' sockets |
+| `pane.swap` | `a`, `b` (two panes, in one workspace or two) | – (they exchange places; each workspace keeps the place of its focused pane focused). Not from SSH panes' sockets |
 | `pane.close` | `pane`, `openedBy?` (a terminal pane: close only a pane opened from it, else an invalid-params error) | – |
 | `pane.send_text` | `pane?`, `text`, `openedBy?` (a terminal pane: type only into a pane opened from it, never into it, else an invalid-params error; `cmds mcp` terminal_send) | – |
 | `pane.read_text` | `pane?`, `scrollback?` (lines), `openedBy?` (as for `pane.send_text`; `cmds mcp` terminal_read) | `{"text": ...}` |
@@ -118,6 +120,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `debug.show_settings` | – | `{"window"}` (window number); opens cmds › Settings…; DEBUG builds only, for tests |
 | `debug.browser` | `pane` (a browser pane) | `{"indicator", "indicatorToolTip", "webViewFrame", "webViewSize", "scale", "pageZoom", "appearance", "menu", "png_base64"}`: the toolbar's width and breakpoint text, the web view's frame, the device menu's items and the pane drawn without its page; DEBUG builds only, for tests |
 | `debug.close_alert` | `id?` | `{"worktree": null}` when closing the workspace from the sidebar does not ask about a worktree, else `{"worktree", "text", "buttons"}` (the alert, not shown); DEBUG builds only, for tests |
+| `debug.pane_drag` | `pane`, and `target` (a pane on screen) with `zone?` (`left`/`right`/`top`/`bottom`/`center`), or `row` (a workspace id: its sidebar row), or `outside: true` | `{"state": {"workspace", "inWindow", "focused", "frame"?, "grip", "grid"?, "firstResponder"?}, "dropTarget"?, "side"?, "highlight"?}`: drops the pane as a drag of its grip would (#218); without a target only reports; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
 | `debug.schedule_clock` | `offset` (seconds) | `{"now"}`: moves the schedule runner's clock by `offset` (a simulated sleep) and checks what fell due, as after a wake; DEBUG builds only, for tests |
 
 ## Events
@@ -127,7 +130,7 @@ connection closes:
 
 | Event | Params |
 |---|---|
-| `workspaces.changed` | `workspaces`: `[WorkspaceInfo]` (workspaces added, removed or reordered) |
+| `workspaces.changed` | `workspaces`: `[WorkspaceInfo]` (workspaces added, removed or reordered, selection changed, a pane moved between workspaces) |
 | `workspace.changed` | `workspace` (id), `info`: `WorkspaceInfo` |
 | `pane.changed` | `workspace`, `pane` (ids), `info`: `PaneInfo` |
 | `notification` | `workspace`, `pane`, `title` (or `null`), `body` |
