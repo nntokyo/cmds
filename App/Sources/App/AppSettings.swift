@@ -46,6 +46,8 @@ enum MenuBarOption: String, OnByDefaultOption {
     case contextRings = "MenuBarContextRings"
     /// Menu: the workspaces with an agent.
     case workspaces = "MenuBarWorkspaces"
+    /// Menu: choosing a workspace opens the reply panel instead of bringing cmds forward (#213).
+    case replyPanel = "MenuBarReplyPanel"
 
     var title: String {
         switch self {
@@ -56,6 +58,7 @@ enum MenuBarOption: String, OnByDefaultOption {
         case .limitRings: return String(localized: "AI limits (Claude Code, Codex)", comment: "Settings › Menu Bar › Menu")
         case .contextRings: return String(localized: "Context of each agent (ctx)", comment: "Settings › Menu Bar › Menu")
         case .workspaces: return String(localized: "Workspaces with agents", comment: "Settings › Menu Bar › Menu")
+        case .replyPanel: return String(localized: "Reply from the menu bar", comment: "Settings › Menu Bar › Menu")
         }
     }
 }

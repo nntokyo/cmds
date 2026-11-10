@@ -169,6 +169,9 @@ final class APIServer {
             case "debug.palette":
                 // Tests only: the command palette (CommandPalette+Debug.swift).
                 connection.reply(id: id, result: try CommandPalette.debugPerform(params.value, controller: controller))
+            case "debug.menubar_reply":
+                // Tests only: the menu bar's reply panel (MenuBarReplyPanel+Debug.swift, #213).
+                connection.reply(id: id, result: try MenuBarReplyPanel.debugPerform(params.value, controller: controller))
             case "debug.sidebar_port":
                 // Tests only: a click on port `index` (default 0) of a workspace's sidebar row (#171).
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))
