@@ -7,34 +7,21 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.17.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.17.0</link>
-      <sparkle:version>26</sparkle:version>
-      <sparkle:shortVersionString>0.17.0</sparkle:shortVersionString>
+      <title>cmds 0.18.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.18.0</link>
+      <sparkle:version>27</sparkle:version>
+      <sparkle:shortVersionString>0.18.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Mon, 09 Nov 2026 18:15:55 GMT</pubDate>
+      <pubDate>Tue, 10 Nov 2026 17:25:04 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
-<ul>
-<li>メモリの使い道が分かるようになりました。<code>cmds top</code> で cmds のターミナルから起動した重いプロセスを、<code>cmds top --leftover</code> でペインやワークスペースを閉じたあとも動き続けているプロセス（開発サーバー、テスト、ブラウザなど）を一覧でき、<code>cmds kill</code> で止められます（cmds から起動したもの以外は止めません）。</li>
-<li>サイドバーに「残存プロセス N 個」を表示し、一覧から止められます。ワークスペースのツールチップには重いプロセス上位 3 件を表示します。</li>
-<li>メモリ不足が 1 分続くと通知します（設定 › 一般 › 「メモリが不足したら通知」）。<code>cmds stats</code> にスワップの使用量を表示します。</li>
-<li><code>cmds mcp</code> に <code>system_stats</code>（重い処理を始めてよいかの目安つき）と <code>list_processes</code> を追加しました。</li>
-</ul>
-<p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
+<p>Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).</p>
 <h3>Added</h3>
-<ul>
-<li>See where memory goes: <code>cmds top</code> lists the heaviest processes started from cmds terminals, <code>cmds top --leftover</code> those still running after their pane or workspace closed (dev servers, test runners, browsers), and <code>cmds kill</code> stops one (only processes started from cmds).</li>
-<li>The sidebar shows "N leftover processes" with a list and Stop buttons; a workspace's tooltip shows its three heaviest processes.</li>
-<li>A notification when memory stays short for a minute (Settings › General › Warn when memory is short); <code>cmds stats</code> shows swap use.</li>
-<li><code>cmds mcp</code> adds <code>system_stats</code> (with advice on whether to start a heavy job) and <code>list_processes</code>.</li>
-</ul>
-<p>Mac only; the iPhone/iPad app is unchanged.</p>
+<ul><li>Menu bar: answer a waiting agent without switching to cmds (#213). Choosing a workspace in the menu bar menu opens a panel under the icon with a live view of the pane's last lines, the agent's numbered choices as buttons (Claude Code, Codex; keys 1–9 pick them), a reply field (Return sends; empty, it presses Return) and Esc / ↑ / ↓ / ⏎ / ⌃C keys. ⌘↩ opens the pane in cmds, ⌘↑ / ⌘↓ go to the other workspaces, Esc or a click elsewhere closes it. Hold ⌥ in the menu to open a workspace in cmds as before; Settings › Menu Bar › Reply from the menu bar turns the panel off.</li></ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.17.0/cmds-0.17.0.dmg" length="16031921" type="application/octet-stream" sparkle:edSignature="5Z6T3dElbiHMBY/tco1P8x7fPkLH2ngEak50l5HrLLHYlCzLX3viuA/Gv2dCx5uiysDCFjcgVJD7SL+UXUvaDQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.18.0/cmds-0.18.0.dmg" length="16095979" type="application/octet-stream" sparkle:edSignature="SQjz1H+gPpAN6cmwSQTNHHoQuWu8f8GKxKlQXcTviEtX6wO4XtyN7BdBoymB1VgIynvNSQHM+VmqhHbqilAfDg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 4jDx1C+ZrtBSwK5jqwdK92Hol89V2Mexj/AQWD4CGFOuin851mj7/II5m1hW5wf6nCqDwCQ85QUMMcSlwHp6Cg==
-length: 3231
+edSignature: FLkQFeUcPxbxCXKdyQMMv9VFe3hIp7AQXv9ncidgMG3Fb/ieVAWvOlXXUF/HwHJpKj0tEPcy0k5yQIYeUlwiCQ==
+length: 1995
 -->
