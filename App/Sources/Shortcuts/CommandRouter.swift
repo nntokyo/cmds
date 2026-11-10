@@ -356,7 +356,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W
             Workspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[
             Split right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩
-            Focus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U
+            Focus pane ⌥⌘←/→/↑/↓ · Swap pane ⌥⇧⌘←/→/↑/↓ · Latest attention ⇧⌘U
             Browser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]
             Open in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it
             New Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files

@@ -31,6 +31,10 @@ final class PaneContainerView: NSView {
         wantsLayer = true
         pin(content)
         dragHandle.isHidden = true
+        let size = PaneDragHandleView.size
+        dragHandle.frame = NSRect(x: (bounds.width - size.width) / 2, y: bounds.height - size.height,
+                                  width: size.width, height: size.height)
+        dragHandle.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin]  // top centre
         addSubview(dragHandle)
         ring.frame = bounds
         ring.autoresizingMask = [.width, .height]
@@ -113,13 +117,6 @@ final class PaneContainerView: NSView {
             view.topAnchor.constraint(equalTo: topAnchor),
             view.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
-    }
-
-    override func layout() {
-        super.layout()
-        let size = PaneDragHandleView.size
-        dragHandle.frame = NSRect(x: (bounds.width - size.width) / 2, y: bounds.height - size.height,
-                                  width: size.width, height: size.height)
     }
 
     override func updateTrackingAreas() {

@@ -43,6 +43,7 @@ enum PaneDragDebug {
         } else if params?["outside"]?.boolValue == true {
             pane.container.dragHandle.onDraggedOutOfWindow?()
         }
+        window.content.view.layoutSubtreeIfNeeded()
         result["state"] = state(of: pane, controller: controller)
         return .object(result)
     }
@@ -68,6 +69,8 @@ enum PaneDragDebug {
             "focused": .bool(controller.workspace(id: pane.workspaceID)?.focusedPaneID == pane.id),
         ]
         if container.window != nil { state["frame"] = rect(container.convert(container.bounds, to: nil)) }
+        // The grip, in the pane's coordinates (origin bottom-left): top centre whatever the pane's size.
+        state["grip"] = rect(container.dragHandle.frame)
         if let grid = pane.terminal?.gridSize {
             state["grid"] = ["rows": .number(Double(grid.rows)), "cols": .number(Double(grid.cols))]
         }
