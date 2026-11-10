@@ -38,6 +38,9 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Split right | ⌘D | Pane |
 | Split down | ⇧⌘D | Pane |
 | Focus pane left / right / up / down | ⌥⌘← / ⌥⌘→ / ⌥⌘↑ / ⌥⌘↓ | Pane |
+| Swap the focused pane with the pane left / right / above / below (also across tiles) | ⌥⇧⌘← / ⌥⇧⌘→ / ⌥⇧⌘↑ / ⌥⇧⌘↓ | Pane |
+| Move the focused pane to another workspace (picker) / to a new workspace | – | Pane › Move to Workspace… / Move to New Workspace |
+| Move a pane by drag | drag the grip at the pane's top edge | – |
 | Zoom pane (toggle; zooms the tile in the tiled view) | ⇧⌘↩ | View |
 | Jump to latest attention pane | ⇧⌘U | Pane |
 | Find in the terminal (find bar; Esc closes) | ⌘F | Edit › Find |

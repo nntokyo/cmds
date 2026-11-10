@@ -13,7 +13,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `Packages/CmdsSSH` | SSH client for the companion's remote access (swift-nio-ssh); only the iOS app links it, so the Mac app and CLI do not pull in SwiftNIO. `Scripts/test-relay-sshd.sh` runs a throwaway sshd for its tests. |
 | `App/Sources/App` | App delegate, main window, language menu (`AppLanguage`), keep-awake (`KeepAwake.swift`), settings (`AppSettings`: UserDefaults, own suite for isolated instances; `SettingsWindowController`; the terminal font is a Ghostty config override loaded from a temporary file and pushed with `ghostty_app_update_config`), localized texts for core errors. |
 | `App/Sources/Terminal` | `TerminalSurface.swift` (contract) + `Ghostty/` (libghostty implementation, plus a standalone debug harness). |
-| `App/Sources/Workspace` | Workspace/pane model, split tree, `AppController` (single source of truth, main actor), session store, export/import, SSH sessions, metadata/CPU sampling, Codex session watcher. |
+| `App/Sources/Workspace` | Workspace/pane model (the split tree itself is `CmdsCore/SplitTree.swift`), `AppController` (single source of truth, main actor), session store, export/import, SSH sessions, metadata/CPU sampling, Codex session watcher. |
 | `App/Sources/Sidebar` | Vertical tabs: title, git branch, cwd, listening ports, coding agent (model, context, cost, 5-hour limit), CPU/memory, latest notification text, attention dot. Footer: account limits per agent (Claude, Codex) and Mac-wide CPU and memory meters. Compact rail variant. |
 | `App/Sources/Panes` | Split container views, pane container with notification ring, SSH connect sheet and overlay, agent resume banner. |
 | `App/Sources/Browser` | WKWebView browser pane. |
@@ -127,6 +127,16 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   active tile. Pane containers are re-parented, never recreated; `GhosttySurfaceView.viewDidMoveToWindow` re-reads
   size, scale, occlusion and whether it really is first responder. Divider ratios are kept per tiling set and grid
   shape; `session.json` stores `tiling` and `tileLayouts` (optional, by workspace index).
+- **Moving panes** (`Workspace/AppController+PaneMove.swift`, tree operations and `pane.move` params in
+  `CmdsCore/SplitTree.swift` / `PaneMove.swift`, the grip in `Panes/PaneDragHandle.swift`; #218): a move takes the leaf
+  out of one tree (its sibling takes the parent's place) and splits the target leaf evenly on a side; a swap exchanges
+  two leaves' ids. The `Pane` object moves between the workspaces' `panes` and its `workspaceID` changes; nothing is
+  recreated, the containers are re-parented on the next render like tiles. An SSH pane's scoped socket is re-pinned to
+  the new workspace. Processes keep their `CMDS_WORKSPACE_ID`: the metadata scan maps a process's pane to the pane's
+  workspace now (`ProcessOrigins.Origin.following`), and the CLI / `cmds mcp` look up their pane's workspace. Drags
+  carry the pane id (`.cmdsPane`): the content view hit-tests panes (`TileDropZone` → `PaneSide`, centre = swap),
+  the sidebar takes drops on rows, and the grip moves the pane into a new workspace when the drag ends outside the
+  window without Esc.
 - **Attention / notification ring**: a pane lights up (colored ring border) when its program sends OSC 9/777,
   rings the bell, or `cmds notify` targets it — and the pane is not the focused pane of the key window.
   Focusing the pane clears it. The workspace row in the sidebar shows a dot + the latest notification text.

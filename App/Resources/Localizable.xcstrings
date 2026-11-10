@@ -3324,6 +3324,17 @@
         }
       }
     },
+    "Drag to move the pane": {
+      "comment": "Tooltip of the grip at the top of a pane (#218)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグしてペインを移動"
+          }
+        }
+      }
+    },
     "Each account is a Claude Code config directory (CLAUDE_CONFIG_DIR) that you sign in to yourself once: open a workspace with the account, run claude and type /login. cmds keeps only the names and paths, never credentials. When an account hits its limit, cmds offers to continue the session with the next account.": {
       "localizations": {
         "ja": {
@@ -5027,6 +5038,17 @@
         }
       }
     },
+    "Move Pane": {
+      "comment": "Accessibility label of the pane's drag grip (#218)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインを移動"
+          }
+        }
+      }
+    },
     "Move Tile Down": {
       "localizations": {
         "ja": {
@@ -5087,6 +5109,27 @@
         }
       }
     },
+    "Move the pane to workspace…": {
+      "comment": "Placeholder of the Move to Workspace picker (#218)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインの移動先のワークスペース…"
+          }
+        }
+      }
+    },
+    "Move to New Workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ワークスペースへ移動"
+          }
+        }
+      }
+    },
     "Move to Other Pane": {
       "localizations": {
         "ja": {
@@ -5123,6 +5166,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ゴミ箱に移動（右）"
+          }
+        }
+      }
+    },
+    "Move to Workspace…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースへ移動…"
           }
         }
       }
@@ -5334,12 +5387,12 @@
         }
       }
     },
-    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nNew Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files\nToggle sidebar ⌘B · Rename workspace ⇧⌘R\nTile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩": {
+    "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Swap pane ⌥⇧⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nNew Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files\nToggle sidebar ⌘B · Rename workspace ⇧⌘R\nTile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\n新規ファイル一覧ペイン ⇧⌘E・一覧で：Return 開く・Space プレビュー・F5/F6 もう一方のペインにコピー/移動・F2 名前変更・F7 新規フォルダ・⌘⌫ ゴミ箱・⌘↑ 上の階層・⇧⌘. 非表示ファイル\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R\n並べて表示：サイドバーで ⌘-クリック／⇧-クリック · すべてを並べて表示 ⌃⌘T · タイルを拡大 ⇧⌘↩"
+            "value": "新規ワークスペース ⌘N · ペインを閉じる ⌘W · ワークスペースを閉じる ⇧⌘W\nワークスペース1〜9 ⌘1…⌘9 · 次／前 ⌃Tab / ⌃⇧Tab、⇧⌘] / ⇧⌘[\n右に分割 ⌘D · 下に分割 ⇧⌘D · ペインを拡大 ⇧⌘↩\nペインにフォーカス ⌥⌘←/→/↑/↓ · ペインを入れ替え ⌥⇧⌘←/→/↑/↓ · 最新の通知 ⇧⌘U\nブラウザを分割 ⇧⌘B · アドレス ⌘L · 再読み込み ⌘R · 戻る ⌘[ · 進む ⌘]\nプレビューで開く ⇧⌘O · ターミナルのファイルパスを ⌘-クリックでプレビュー\n新規ファイル一覧ペイン ⇧⌘E・一覧で：Return 開く・Space プレビュー・F5/F6 もう一方のペインにコピー/移動・F2 名前変更・F7 新規フォルダ・⌘⌫ ゴミ箱・⌘↑ 上の階層・⇧⌘. 非表示ファイル\nサイドバーを表示／隠す ⌘B · ワークスペース名を変更 ⇧⌘R\n並べて表示：サイドバーで ⌘-クリック／⇧-クリック · すべてを並べて表示 ⌃⌘T · タイルを拡大 ⇧⌘↩"
           }
         }
       }
@@ -8038,6 +8091,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用スワップ%1$@ / %2$@"
+          }
+        }
+      }
+    },
+    "Swap with Pane Down": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下のペインと入れ替え"
+          }
+        }
+      }
+    },
+    "Swap with Pane Left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左のペインと入れ替え"
+          }
+        }
+      }
+    },
+    "Swap with Pane Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右のペインと入れ替え"
+          }
+        }
+      }
+    },
+    "Swap with Pane Up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上のペインと入れ替え"
           }
         }
       }

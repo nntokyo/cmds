@@ -108,6 +108,15 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   --pane P` (or `cmds browser eval`). `debug.browser {pane}` (DEBUG builds) returns the toolbar's width and
   breakpoint text, the web view's frame and size, the scale, the device menu's items and the pane drawn without its
   page; `cmds browser snapshot` has the page at the device size. Relaunch to check the setting is restored.
+- `debug.pane_drag {pane, target?, zone?, row?, outside?}` (DEBUG builds, #218) drops a pane as a drag of its grip
+  would: on `target`'s `zone` (`left`/`right`/`top`/`bottom`/`center`, the middle of that band as laid out now, through
+  the content area's hit test), on the sidebar `row` of a workspace, or `outside` the window; without one it reports.
+  Returns the pane's workspace, frame, grip frame, terminal grid and whether its terminal has the keyboard (and what
+  the hit test found). With a loop (`while true; do date; sleep 1; done`) and a shell in panes the test created, check after each
+  move that the loop's output goes on (`cmds read`), the shell takes input (`cmds send`, then `tput cols; tput lines`
+  matches the new grid), a browser pane keeps its page state (`cmds browser eval`), `cmds top --workspace` lists the
+  loop under its new workspace, and session.json after a relaunch has the new layout. The grip's hover and a real
+  mouse drag (Esc cancels) need a person.
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
 - `debug.memory {workspace?}` (DEBUG builds, #193) returns the "memory is short" notification's title and body as

@@ -196,7 +196,7 @@ final class SidebarViewController: NSViewController {
         tableView.delegate = self
         tableView.target = self
         tableView.doubleAction = #selector(renameClicked)
-        tableView.registerForDraggedTypes([.cmdsWorkspace])
+        tableView.registerForDraggedTypes([.cmdsWorkspace, .cmdsPane])
         // ⌥ narrows the mask to copy: keep drags working with it held.
         tableView.setDraggingSourceOperationMask([.move, .copy, .generic], forLocal: true)
         tableView.onMouseDownEnded = { [weak self] wasClick in self?.mouseDownEnded(wasClick: wasClick) }
@@ -439,7 +439,7 @@ final class SidebarViewController: NSViewController {
         return fields.contains { $0?.localizedStandardContains(query) == true }
     }
 
-    private func workspace(atRow row: Int) -> Workspace? {
+    fileprivate func workspace(atRow row: Int) -> Workspace? {
         rows[safe: row]?.workspaceID.flatMap(controller.workspace(id:))
     }
 
@@ -780,6 +780,13 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
 
     func tableView(_ tableView: NSTableView, validateDrop info: NSDraggingInfo, proposedRow row: Int,
                    proposedDropOperation dropOperation: NSTableView.DropOperation) -> NSDragOperation {
+        if let pane = info.cmdsPaneID {
+            // A pane dropped on a workspace row moves into that workspace (#218): always "on" the row under the mouse.
+            let under = tableView.row(at: tableView.convert(info.draggingLocation, from: nil))
+            guard let target = paneDropWorkspace(pane, row: dropOperation == .on ? row : under) else { return [] }
+            tableView.setDropRow(target.row, dropOperation: .on)
+            return .move
+        }
         guard !info.cmdsWorkspaceIDs.isEmpty else { return [] }
         if info.isCmdsTileDrag {
             // A tile header dropped on the sidebar leaves the tiled view.
@@ -801,6 +808,11 @@ extension SidebarViewController: NSTableViewDataSource, NSTableViewDelegate {
     func tableView(_ tableView: NSTableView, acceptDrop info: NSDraggingInfo, row: Int,
                    dropOperation: NSTableView.DropOperation) -> Bool {
         reorderHint.isHidden = true
+        if let pane = info.cmdsPaneID {
+            guard let target = paneDropWorkspace(pane, row: row) else { return false }
+            DispatchQueue.main.async { [weak self] in self?.movePane(pane, toWorkspace: target.workspaceID) }
+            return true
+        }
         let ids = info.cmdsWorkspaceIDs
         if info.isCmdsTileDrag {
             guard let id = ids.first else { return false }
@@ -866,4 +878,36 @@ extension SidebarViewController: NSSearchFieldDelegate {
             return false
         }
     }
+}
+
+// MARK: - Dropping panes on rows (#218)
+
+extension SidebarViewController {
+    /// The row's workspace when `paneID` may be dropped on it (a workspace row that is not the pane's own).
+    fileprivate func paneDropWorkspace(_ paneID: String, row: Int) -> (row: Int, workspaceID: String)? {
+        guard row >= 0, let workspace = workspace(atRow: row), workspace.id != controller.workspaceID(forPane: paneID) else {
+            return nil
+        }
+        return (row, workspace.id)
+    }
+
+    /// Moves the pane into the workspace beside its focused pane and shows it there.
+    func movePane(_ paneID: String, toWorkspace workspaceID: String) {
+        do {
+            try controller.movePane(paneID: paneID, toWorkspace: workspaceID)
+        } catch {
+            NSSound.beep()
+        }
+    }
+
+    #if DEBUG
+    /// Tests only (`debug.pane_drag` target `row`): the drop the table would take for a pane over the row showing
+    /// `workspaceID`, performed like a real one. False when the row would refuse it.
+    func debugDropPane(_ paneID: String, onWorkspace workspaceID: String) -> Bool {
+        guard let row = (0..<tableView.numberOfRows).first(where: { self.workspace(atRow: $0)?.id == workspaceID }),
+              let target = paneDropWorkspace(paneID, row: row) else { return false }
+        movePane(paneID, toWorkspace: target.workspaceID)
+        return true
+    }
+    #endif
 }

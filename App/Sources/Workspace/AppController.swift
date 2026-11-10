@@ -277,6 +277,11 @@ final class AppController {
         emit(.workspaces)
     }
 
+    /// Adds a workspace made elsewhere (a pane moved into a new one, AppController+PaneMove) at `index`. No emit.
+    func insertWorkspace(_ workspace: Workspace, at index: Int) {
+        workspaces.insert(workspace, at: max(0, min(index, workspaces.count)))
+    }
+
     /// Sets the sidebar notification text without lighting the ring.
     func setStatus(workspaceID: String?, text: String) throws {
         let workspace = try resolveWorkspace(workspaceID)
@@ -780,7 +785,7 @@ final class AppController {
     }
 
     /// Workspace cwd/branch from the pane: local panes ask git here, SSH panes use what their remote shell reported.
-    private func updateLocation(of workspace: Workspace, from pane: Pane) {
+    func updateLocation(of workspace: Workspace, from pane: Pane) {
         workspace.workingDirectory = pane.workingDirectory
         if let ssh = pane.ssh {
             workspace.gitBranch = ssh.remoteBranch
@@ -1019,7 +1024,7 @@ final class AppController {
         isWindowKey && pane.workspaceID == selectedWorkspaceID && focusedPane === pane
     }
 
-    private func makeWorkspace() -> Workspace {
+    func makeWorkspace() -> Workspace {
         defer { nextWorkspaceNumber += 1 }
         return Workspace(id: "w\(nextWorkspaceNumber)")
     }
@@ -1088,7 +1093,7 @@ final class AppController {
         return pane
     }
 
-    private func applyFocus(_ pane: Pane, in workspace: Workspace) {
+    func applyFocus(_ pane: Pane, in workspace: Workspace) {
         let wasRemote = workspace.isRemote
         workspace.focusedPaneID = pane.id
         pane.focusedAt = Date()
@@ -1110,7 +1115,7 @@ final class AppController {
     }
 
     /// Makes the selected workspace's focused pane first responder (after the UI has rebuilt).
-    private func focusSelectedPaneView() {
+    func focusSelectedPaneView() {
         focusedPane?.focus()
     }
 

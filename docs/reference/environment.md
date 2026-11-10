@@ -9,7 +9,7 @@ Names are defined in `CmdsEnv` (`Packages/CmdsCore/Sources/CmdsCore/RPC.swift`) 
 | Variable | Value |
 |---|---|
 | `CMDS_SOCKET_PATH` | Absolute path of the app's API socket ([api.md](api.md#socket)). |
-| `CMDS_WORKSPACE_ID` | Id of the pane's workspace (`w1`, …). |
+| `CMDS_WORKSPACE_ID` | Id of the workspace the pane was opened in (`w1`, …). A pane [moved](../guide/workspaces-and-panes.md#moving-panes) to another workspace keeps it, so the CLI and `cmds mcp` look up the workspace their `CMDS_PANE_ID` is in now and use this only when the app cannot tell. |
 | `CMDS_PANE_ID` | Id of the pane itself (`p1`, …). The CLI sends it so commands act on *this* pane even when another one is focused. Ids are reassigned when cmds restarts. |
 | `CMDS_SUPPORT_DIR` | Only in terminals of an isolated instance: the resolved absolute support directory, so the CLI there talks to that instance. |
 | `PATH` | The bundled CLI's directory (`cmds.app/Contents/Resources/bin`) comes first, so `cmds` is on `PATH`. |

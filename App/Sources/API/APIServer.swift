@@ -11,7 +11,8 @@ import CmdsCore
 final class APIServer {
     private let controller: AppController
     private let server: SocketServer
-    private let scope: RemoteScope?
+    /// Its workspace changes when the SSH pane is moved (`SSHSession.updateAPIScope`, #218).
+    var scope: RemoteScope?
     private var subscriptions: [Int: AnyCancellable] = [:]
 
     init(controller: AppController, path: String? = nil, scope: RemoteScope? = nil) {
@@ -169,6 +170,9 @@ final class APIServer {
             case "debug.palette":
                 // Tests only: the command palette (CommandPalette+Debug.swift).
                 connection.reply(id: id, result: try CommandPalette.debugPerform(params.value, controller: controller))
+            case "debug.pane_drag":
+                // Tests only: drop a pane on a pane's edge or centre, a sidebar row or outside the window (#218).
+                connection.reply(id: id, result: try PaneDragDebug.perform(params.value, controller: controller))
             case "debug.menubar_reply":
                 // Tests only: the menu bar's reply panel (MenuBarReplyPanel+Debug.swift, #213).
                 connection.reply(id: id, result: try MenuBarReplyPanel.debugPerform(params.value, controller: controller))
@@ -380,6 +384,16 @@ final class APIServer {
             try controller.focusPane(id: try params.required("pane"))
         case "pane.close":
             try controller.closePane(id: try params.string("pane"), openedBy: try params.string("openedBy"))
+        case "pane.move":
+            // #218. Like pane.split, not in RemoteAPIPolicy.allowedMethods: SSH-pane sockets get 403.
+            let move = try PaneMoveRequest(params: params.value)
+            let workspace = move.newWorkspace
+                ? try controller.movePaneToNewWorkspace(paneID: move.pane, focus: move.focus)
+                : try controller.movePane(paneID: move.pane, toWorkspace: move.workspace, beside: move.beside,
+                                          side: move.side, focus: move.focus)
+            return ["pane": .string(move.pane), "workspace": .string(workspace)]
+        case "pane.swap":
+            try controller.swapPanes(a: try params.required("a"), b: try params.required("b"))
         case "pane.send_text":
             try controller.sendText(paneID: try params.string("pane"), text: try params.required("text"),
                                     openedBy: try params.string("openedBy"))

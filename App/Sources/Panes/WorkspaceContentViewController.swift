@@ -51,7 +51,7 @@ final class WorkspaceContentViewController: NSViewController {
 
     override func loadView() {
         let view = ContentDropView()
-        view.registerForDraggedTypes([.cmdsWorkspace])
+        view.registerForDraggedTypes([.cmdsWorkspace, .cmdsPane])
         view.onUpdate = { [weak self] info in self?.dragUpdated(info) ?? [] }
         view.onExit = { [weak self] in self?.dropHighlight.show(nil) }
         view.onPerform = { [weak self] info in self?.performDrop(info) ?? false }
@@ -127,6 +127,11 @@ final class WorkspaceContentViewController: NSViewController {
     }
 
     private func dragUpdated(_ info: NSDraggingInfo) -> NSDragOperation {
+        if let pane = info.cmdsPaneID {
+            let drop = paneDropTarget(moving: pane, at: view.convert(info.draggingLocation, from: nil))
+            dropHighlight.show(drop?.highlight)
+            return drop == nil ? [] : .move
+        }
         guard let drop = dropTarget(for: info) else {
             dropHighlight.show(nil)
             return []
@@ -136,6 +141,13 @@ final class WorkspaceContentViewController: NSViewController {
     }
 
     private func performDrop(_ info: NSDraggingInfo) -> Bool {
+        if let pane = info.cmdsPaneID {
+            guard let drop = paneDropTarget(moving: pane, at: view.convert(info.draggingLocation, from: nil)) else { return false }
+            dropHighlight.show(nil)
+            // After the drag session, like tile drops: the move rebuilds the views, the dragged grip's included.
+            DispatchQueue.main.async { [weak self] in self?.dropPane(pane, on: drop.target, side: drop.side) }
+            return true
+        }
         guard let drop = dropTarget(for: info) else { return false }
         dropHighlight.show(nil)
         // After the drag session: the drop rebuilds the tiles, the header that started a tile drag included.
@@ -144,6 +156,35 @@ final class WorkspaceContentViewController: NSViewController {
             self?.controller.dropOnTile(moving, target: target, zone: zone)
         }
         return true
+    }
+
+    // MARK: - Dropping panes (#218)
+
+    /// The pane under `point` (this view's flipped coordinates) other than the dragged one, the side it would go to
+    /// (nil: the centre, a swap) and the highlight. Works across the tiles of the tiled view.
+    func paneDropTarget(moving: String, at point: NSPoint) -> (target: String, side: PaneSide?, highlight: NSRect)? {
+        for pane in visiblePanes {
+            let frame = pane.container.convert(pane.container.bounds, to: view)
+            guard frame.contains(point) else { continue }
+            guard pane.id != moving else { return nil }
+            let side = PaneSide(zone: TileDropZone.zone(at: point, in: frame))
+            return (pane.id, side, side?.highlight(in: frame) ?? frame)
+        }
+        return nil
+    }
+
+    /// Splits `target` on `side` with the dragged pane, or swaps the two (the dragged pane keeps the keyboard).
+    func dropPane(_ paneID: String, on target: String, side: PaneSide?) {
+        do {
+            if let side {
+                try controller.movePane(paneID: paneID, beside: target, side: side)
+            } else {
+                try controller.swapPanes(a: paneID, b: target)
+                try controller.focusPane(id: paneID)
+            }
+        } catch {
+            NSSound.beep()
+        }
     }
 
     /// Tiles of the tiled view by workspace id (empty in the single view).

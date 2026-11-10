@@ -69,7 +69,7 @@ extension CLI {
             preview pane, else in a new one to the right (the keyboard stays where it is). Prints the preview pane id.
             """) { ctx in
         try ctx.args.expectPositionals(0...1, usage: "cmds changes [workspace]")
-        let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.envWorkspace
+        let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.currentWorkspace()
         let result = try ctx.call("workspace.changes", ["id": id.json], timeout: worktreeGitTimeout)
         ctx.printResult(result, field: "pane")
     }

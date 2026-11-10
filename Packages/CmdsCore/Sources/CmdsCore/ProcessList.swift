@@ -275,6 +275,14 @@ public struct ProcessOrigins: Sendable {
             self.workspace = workspace
             self.pane = pane
         }
+
+        /// In the workspace its pane is in now (`paneWorkspaces`: pane → workspace): a pane moved to another workspace
+        /// takes its processes along (#218; they keep the `CMDS_WORKSPACE_ID` they started with). A closed pane's
+        /// processes stay where they started.
+        public func following(_ paneWorkspaces: [String: String]) -> Origin {
+            guard let pane, let current = paneWorkspaces[pane], current != workspace else { return self }
+            return Origin(workspace: current, pane: pane)
+        }
     }
 
     private var origins: [Key: Origin] = [:]

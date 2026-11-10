@@ -70,6 +70,12 @@ final class SSHSession {
         return true
     }
 
+    /// The pane moved to another workspace (#218): requests from the server reach that one (its `sidebar.set_status`,
+    /// `pane.list`, `workspace.list`; the remote helper never names a workspace, the scope pins it).
+    func updateAPIScope(_ scope: RemoteScope) {
+        api?.scope = scope
+    }
+
     func stopAPI() {
         api?.stop()
         api = nil

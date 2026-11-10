@@ -171,6 +171,20 @@ enum MainMenu {
             menu.addItem(item(title, action, String(Character(UnicodeScalar(key)!)), [.command, .option], target: router))
         }
         menu.addItem(.separator())
+        // Moving panes (#218): ⇧ added to the focus keys. Not ⌃⇧⌘ (Move Tile) nor ⌃⌥⌘ (window managers).
+        let swaps: [(String.LocalizationValue, Int, Selector)] = [
+            ("Swap with Pane Left", NSLeftArrowFunctionKey, #selector(CommandRouter.swapLeft(_:))),
+            ("Swap with Pane Right", NSRightArrowFunctionKey, #selector(CommandRouter.swapRight(_:))),
+            ("Swap with Pane Up", NSUpArrowFunctionKey, #selector(CommandRouter.swapUp(_:))),
+            ("Swap with Pane Down", NSDownArrowFunctionKey, #selector(CommandRouter.swapDown(_:))),
+        ]
+        for (title, key, action) in swaps {
+            menu.addItem(item(title, action, String(Character(UnicodeScalar(key)!)), [.command, .option, .shift],
+                              target: router))
+        }
+        menu.addItem(item("Move to Workspace…", #selector(CommandRouter.moveToWorkspace(_:)), "", target: router))
+        menu.addItem(item("Move to New Workspace", #selector(CommandRouter.moveToNewWorkspace(_:)), "", target: router))
+        menu.addItem(.separator())
         menu.addItem(item("Jump to Latest Attention", #selector(CommandRouter.jumpToAttention(_:)), "u", [.command, .shift], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Resume Agent Session", #selector(CommandRouter.resumeAgentSession(_:)), "", target: router))

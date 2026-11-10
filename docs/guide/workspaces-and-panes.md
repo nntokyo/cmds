@@ -73,6 +73,32 @@ pane: Needs Input, then Working, Idle, Stopped. Plain shells get no state.
 - ⌥⌘ + arrow keys move the focus; **View › Zoom Pane** (⇧⌘↩) shows one pane alone until toggled back.
 - ⌘W closes the focused pane, ⇧⌘W the workspace.
 
+### Moving panes
+
+A pane can move within its workspace, to another workspace or into a new one. It stays the same pane: its id,
+the processes in a terminal (dev servers, agent sessions) and its scrollback, a browser's page, a preview or files
+pane's place, its agent state and attention ring all go with it. A workspace left without panes closes, as when its
+last pane is closed.
+
+- **Drag**: move the mouse to the top edge of a pane; a small grip appears in the middle. Drag it
+  - onto another pane's edge: the pane goes to that side of it (left, right, top or bottom, half of its space),
+  - onto another pane's centre: the two swap places,
+  - onto a workspace row in the sidebar: into that workspace, beside its focused pane,
+  - out of the window: into a new workspace after its own.
+
+  A translucent area shows where it will go. In the tiled view it works between tiles too. Esc, or dropping anywhere
+  else, leaves the pane where it was.
+- **Pane › Swap with Pane Left / Right / Up / Down** (⌥⇧⌘ + arrow keys) swaps the focused pane with its neighbour on
+  screen (in the tiled view also one in the next tile); the pane keeps the keyboard.
+- **Pane › Move to Workspace…** lists the other workspaces in the command palette's panel (type to filter, Return
+  moves the pane there); **Move to New Workspace** opens a new workspace with the focused pane.
+- From scripts: `cmds pane move <pane> --beside P [--side left|right|top|bottom]`, `--to WS`, `--new-workspace`, and
+  `cmds pane swap <a> <b>` ([CLI](../reference/cli.md)).
+
+The moved pane takes the keyboard and its workspace is shown (`--no-focus` keeps them where they are); zoom is cleared
+in the workspaces involved. Programs in a moved terminal keep the `CMDS_WORKSPACE_ID` they started with; `cmds` and
+`cmds mcp` there use the workspace the pane is in now, and their ports, CPU and memory count for that workspace.
+
 ## Finding text in a terminal
 
 **Edit › Find › Find…** (⌘F) in a terminal pane opens a find bar in its top-right corner. Type to search the

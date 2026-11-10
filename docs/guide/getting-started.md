@@ -24,7 +24,8 @@ build from source as described in the [README](../../README.md#build-from-source
 cmds opens with one workspace: a terminal in your home directory, listed as a vertical tab in the sidebar.
 
 - **⌘N** new workspace, **⌘1…⌘9** switch, **⇧⌘R** rename (or double-click the tab).
-- **⌘D** split right, **⇧⌘D** split down, **⌥⌘ + arrows** move between panes, **⇧⌘↩** zoom one pane, **⌘W** close it.
+- **⌘D** split right, **⇧⌘D** split down, **⌥⌘ + arrows** move between panes, **⌥⇧⌘ + arrows** swap them (or drag the grip at a
+  pane's top edge; [Moving panes](workspaces-and-panes.md#moving-panes)), **⇧⌘↩** zoom one pane, **⌘W** close it.
 - **⇧⌘B** opens a browser next to the terminal; **⇧⌘O** shows a file (image, PDF, Markdown, diff, …) in a preview
   pane, and **⌘-click** on a file path in the terminal does the same.
 - **⇧⌘N** opens an SSH workspace on a server from your `~/.ssh/config`.

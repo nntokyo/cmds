@@ -38,6 +38,7 @@ extension CLI {
             try ctx.args.expectPositionals(0...0, usage: "cmds ports [--workspace W]")
             let result = try ctx.call("workspace.list")
             var workspaces = try perform { try result.decode([WorkspaceInfo].self) }
+            let current = ctx.envPane.flatMap { workspaceID(containing: $0, in: workspaces) } ?? ctx.envWorkspace
             if let id = ctx.args[option: "workspace"] {
                 workspaces = workspaces.filter { $0.id == id }
                 guard !workspaces.isEmpty else { throw CLIError.failure("workspace not found: \(id)") }
@@ -48,7 +49,7 @@ extension CLI {
                      "workspace": .string(workspace.id), "title": .string(workspace.title)]
                 }))
             }
-            print(Format.ports(workspaces, currentWorkspace: ctx.envWorkspace), terminator: "")
+            print(Format.ports(workspaces, currentWorkspace: current), terminator: "")
         },
         Command(name: "agents", usage: "agents [--subagents [--pane P]]",
                 summary: "Show usage of the AI coding agents in cmds panes (Claude Code, Codex) and account limits.",
@@ -160,7 +161,8 @@ extension CLI {
                     let snapshot = try perform { try result.decode(StatsSnapshot.self) }
                     let list = try perform { try client.call("workspace.list").decode([WorkspaceInfo].self) }
                     let titles = workspaceTitles(list)
-                    let text = Format.stats(snapshot, titles: titles, currentWorkspace: ctx.envWorkspace)
+                    let current = ctx.envPane.flatMap { workspaceID(containing: $0, in: list) } ?? ctx.envWorkspace
+                    let text = Format.stats(snapshot, titles: titles, currentWorkspace: current)
                     if interval != nil, terminal { print("\u{1B}[H\u{1B}[2J", terminator: "") } // clear screen
                     print(text, terminator: "")
                     if interval != nil, !terminal { print("") }
@@ -295,7 +297,7 @@ extension CLI {
                     """,
                 flags: ["remove-worktree"]) { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds close [workspace] [--remove-worktree]")
-            let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.envWorkspace
+            let id = try ctx.args.positionals.first.map { try resolveWorkspace(ctx, $0) } ?? ctx.currentWorkspace()
             if ctx.args.has("remove-worktree") {
                 let result = try ctx.call("workspace.close", ["id": id.json, "removeWorktree": true],
                                           timeout: worktreeGitTimeout)
@@ -308,7 +310,7 @@ extension CLI {
                 summary: "Rename a workspace (default: the current one). An empty title restores the automatic name.") { ctx in
             try ctx.args.expectPositionals(1...2, usage: "cmds rename [workspace] <title>")
             let positionals = ctx.args.positionals
-            let id = positionals.count == 2 ? try resolveWorkspace(ctx, positionals[0]) : ctx.envWorkspace
+            let id = positionals.count == 2 ? try resolveWorkspace(ctx, positionals[0]) : ctx.currentWorkspace()
             try ctx.call("workspace.rename", ["id": id.json, "title": .string(positionals.last!)])
         },
         Command(name: "split", usage: "split [right|down] [--pane P] [--browser URL | --ssh HOST [--remote-cwd DIR]] [--cwd DIR] [--account NAME|auto] [--no-focus] [-- command…]",
@@ -352,7 +354,7 @@ extension CLI {
         Command(name: "panes", usage: "panes [--workspace W]", summary: "List the panes of a workspace.",
                 options: ["workspace"]) { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds panes [--workspace W]")
-            let result = try ctx.call("pane.list", ["workspace": ctx.workspace.json])
+            let result = try ctx.call("pane.list", ["workspace": ctx.workspace().json])
             if ctx.json { return ctx.printJSON(result) }
             let panes = try perform { try result.decode([PaneInfo].self) }
             for pane in panes { print(Format.pane(pane, currentPane: ctx.envPane)) }
@@ -364,6 +366,33 @@ extension CLI {
         Command(name: "close-pane", usage: "close-pane [pane]", summary: "Close a pane (default: the current one).") { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds close-pane [pane]")
             try ctx.call("pane.close", ["pane": (ctx.args.positionals.first ?? ctx.envPane).json])
+        },
+        Command(name: "pane move",
+                usage: "pane move <pane> [--to WS] [--beside P] [--side left|right|top|bottom] [--new-workspace] [--no-focus]",
+                summary: "Move a pane beside another pane, into another workspace or into a new workspace.",
+                details: """
+                    --beside P puts it on --side (default right) of pane P, in P's workspace (also within its own).
+                    --to WS (id, 1-based index or title) puts it into that workspace beside its focused pane.
+                    --new-workspace opens a new workspace with it, after its own (a pane alone in its workspace stays).
+                    What runs in the pane keeps running. A workspace left without panes closes. --no-focus keeps the
+                    keyboard and the shown workspace where they are. Prints the workspace the pane is in now.
+                    """,
+                options: ["to", "beside", "side"], flags: ["new-workspace", "no-focus"]) { ctx in
+            let usage = "cmds pane move <pane> [--to WS] [--beside P] [--side SIDE] [--new-workspace] [--no-focus]"
+            try ctx.args.expectPositionals(1...1, usage: usage)
+            let request = try paneMoveParams(ctx.args)
+            var params = request.params
+            if let selector = ctx.args[option: "to"] { params["workspace"] = .string(try resolveWorkspace(ctx, selector)) }
+            let result = try ctx.call("pane.move", params)
+            ctx.printResult(result, field: "workspace")
+        },
+        Command(name: "pane swap", usage: "pane swap <a> <b>",
+                summary: "Swap the places of two panes (in one workspace or across two).") { ctx in
+            try ctx.args.expectPositionals(2...2, usage: "cmds pane swap <a> <b>")
+            let (a, b) = (ctx.args.positionals[0], ctx.args.positionals[1])
+            guard a != b else { throw CLIError.usage("give two different panes") }
+            let result = try ctx.call("pane.swap", ["a": .string(a), "b": .string(b)])
+            if ctx.json { ctx.printJSON(result) }
         },
         Command(name: "send", usage: "send [--pane P] [--enter] <text…|->",
                 summary: "Type text into a terminal pane.",
@@ -400,7 +429,7 @@ extension CLI {
                 summary: "Set the workspace's sidebar text without ringing (empty text clears it).",
                 options: ["workspace"]) { ctx in
             guard !ctx.args.positionals.isEmpty else { throw CLIError.usage("usage: cmds status [--workspace W] <text…>") }
-            try ctx.call("sidebar.set_status", ["workspace": ctx.workspace.json,
+            try ctx.call("sidebar.set_status", ["workspace": ctx.workspace().json,
                                                 "text": .string(ctx.args.positionals.joined(separator: " "))])
         },
         Command(name: "open", usage: "open [--pane P] [--down] [--no-focus] [--diff] <file|->",
@@ -551,7 +580,30 @@ extension CLI {
     /// `--pane` if given, else a workspace hint so the app can pick a browser pane in our workspace.
     static func browserTarget(_ ctx: Context) -> [String: JSONValue?] {
         if let pane = ctx.args[option: "pane"] { return ["pane": .string(pane)] }
-        return ["workspace": ctx.envWorkspace.json]
+        return ["workspace": ctx.currentWorkspace().json]
+    }
+
+    /// `pane.move` params of `cmds pane move` (#218), checked before anything is sent; `--to` is resolved later (it
+    /// asks the app). Usage errors for a missing or doubled destination and an unknown side.
+    static func paneMoveParams(_ args: Arguments) throws -> (params: [String: JSONValue?], to: String?) {
+        let to = args[option: "to"]
+        let beside = args[option: "beside"]
+        let side = args[option: "side"]
+        let fresh = args.has("new-workspace")
+        if fresh, to != nil || beside != nil || side != nil {
+            throw CLIError.usage("--new-workspace cannot be combined with --to, --beside or --side")
+        }
+        guard fresh || to != nil || beside != nil else { throw CLIError.usage("give --to WS, --beside P or --new-workspace") }
+        if let side, PaneSide(rawValue: side) == nil { throw CLIError.usage("--side must be left, right, top or bottom") }
+        guard let pane = args.positionals.first, !pane.isEmpty else { throw CLIError.usage("give the pane to move") }
+        if beside == pane { throw CLIError.usage("a pane cannot be moved beside itself") }
+        return ([
+            "pane": .string(pane),
+            "beside": beside.json,
+            "side": side.json,
+            "newWorkspace": fresh ? true : nil,
+            "focus": args.has("no-focus") ? false : nil,
+        ], to)
     }
 
     /// Accepts a workspace id (`w3`), a 1-based index or an exact title.

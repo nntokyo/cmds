@@ -6,7 +6,9 @@ import CmdsCore
 @MainActor
 final class Pane {
     let id: String
-    let workspaceID: String
+    /// Changes only when the pane is moved to another workspace (AppController+PaneMove, #218). Programs in the pane
+    /// keep the `CMDS_WORKSPACE_ID` they started with.
+    var workspaceID: String
     let kind: PaneKind
     /// nil for browsers, and for an SSH pane restored from the session until the user connects it.
     private(set) var terminal: TerminalSurface?
@@ -78,7 +80,15 @@ final class Pane {
     /// Last time the pane took focus (the "other" files pane is the one used most recently).
     var focusedAt = Date.distantPast
 
-    weak var controller: AppController?
+    weak var controller: AppController? {
+        didSet {
+            container.dragHandle.title = { [weak self] in self.map { $0.agentTopic ?? DefaultTitle.localized($0.title) } ?? "" }
+            container.dragHandle.onDraggedOutOfWindow = { [weak self] in
+                guard let self else { return }
+                _ = try? self.controller?.movePaneToNewWorkspace(paneID: self.id)
+            }
+        }
+    }
 
     /// The find bar (⌘F) of a terminal pane.
     private(set) lazy var find = TerminalFind(pane: self)

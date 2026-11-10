@@ -271,6 +271,30 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func focusRight(_ sender: Any?) { windowController?.focusNeighbor(.right) }
     @objc func focusUp(_ sender: Any?) { windowController?.focusNeighbor(.up) }
     @objc func focusDown(_ sender: Any?) { windowController?.focusNeighbor(.down) }
+    /// ⌥⇧⌘ + arrow: swaps the focused pane with its neighbour on screen (also across tiles; #218).
+    @objc func swapLeft(_ sender: Any?) { swap(.left) }
+    @objc func swapRight(_ sender: Any?) { swap(.right) }
+    @objc func swapUp(_ sender: Any?) { swap(.up) }
+    @objc func swapDown(_ sender: Any?) { swap(.down) }
+    private func swap(_ direction: FocusDirection) {
+        guard let pane = controller.focusedPane, let other = windowController?.content.neighbor(of: pane.id, direction: direction)
+        else { return NSSound.beep() }
+        try? controller.swapPanes(a: pane.id, b: other)
+        try? controller.focusPane(id: pane.id)
+    }
+
+    /// Pane › Move to Workspace…: a picker of the other workspaces (and a new one) in the command palette's panel.
+    @objc func moveToWorkspace(_ sender: Any?) {
+        guard let pane = controller.focusedPane else { return }
+        windowController?.showWindow(nil)
+        CommandPalette.presentWorkspacePicker(movingPane: pane.id, controller: controller, over: windowController?.window)
+    }
+
+    @objc func moveToNewWorkspace(_ sender: Any?) {
+        guard let pane = controller.focusedPane else { return }
+        _ = try? controller.movePaneToNewWorkspace(paneID: pane.id)
+    }
+
     /// ⇧⌘↩: zooms the active tile in the tiled view, else the focused pane.
     @objc func toggleZoom(_ sender: Any?) {
         if controller.isTiling { controller.toggleTileZoom() } else { try? controller.toggleZoom() }
@@ -332,7 +356,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W
             Workspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[
             Split right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩
-            Focus pane ⌥⌘←/→/↑/↓ · Latest attention ⇧⌘U
+            Focus pane ⌥⌘←/→/↑/↓ · Swap pane ⌥⇧⌘←/→/↑/↓ · Latest attention ⇧⌘U
             Browser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]
             Open in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it
             New Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files
@@ -437,6 +461,18 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
              #selector(splitDown(_:)), #selector(openBrowser(_:)), #selector(renameWorkspace(_:)),
              #selector(focusLeft(_:)), #selector(focusRight(_:)), #selector(focusUp(_:)), #selector(focusDown(_:)):
             return controller.focusedPane != nil
+        case #selector(swapLeft(_:)), #selector(swapRight(_:)), #selector(swapUp(_:)), #selector(swapDown(_:)):
+            let directions: [Selector: FocusDirection] = [#selector(swapLeft(_:)): .left, #selector(swapRight(_:)): .right,
+                                                          #selector(swapUp(_:)): .up, #selector(swapDown(_:)): .down]
+            guard let pane = controller.focusedPane, let action = menuItem.action, let direction = directions[action] else {
+                return false
+            }
+            return windowController?.content.neighbor(of: pane.id, direction: direction) != nil
+        case #selector(moveToWorkspace(_:)):
+            guard let workspace = controller.selectedWorkspace, controller.focusedPane != nil else { return false }
+            return controller.workspaces.count > 1 || workspace.panes.count > 1
+        case #selector(moveToNewWorkspace(_:)):
+            return controller.focusedPane != nil && (controller.selectedWorkspace?.panes.count ?? 0) > 1
         case #selector(toggleCompactSidebar(_:)):
             menuItem.state = windowController?.sidebar.isCompact == true ? .on : .off
             return true
