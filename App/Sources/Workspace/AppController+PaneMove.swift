@@ -34,12 +34,14 @@ extension AppController {
             target = focused
         }
         guard target !== pane else { throw RPCError.invalidParams("a pane cannot be moved beside itself") }
+        // Checked before anything changes, so a failure leaves both trees as they were.
+        guard destination.root?.leaf(for: target.id) != nil else { throw RPCError.notFound("pane not found: \(target.id)") }
 
         let sourceWasSelected = source.id == selectedWorkspaceID
         let wasFocused = source.focusedPaneID == pane.id
         detach(pane, from: source)
-        guard let leaf = destination.root?.leaf(for: target.id) else { throw RPCError.notFound("pane not found: \(target.id)") }
-        leaf.insert(pane.id, side: side)
+        // Looked up again: taking the pane out collapses its parent, which may now hold the target's leaf.
+        destination.root?.leaf(for: target.id)?.insert(pane.id, side: side)
         attach(pane, to: destination, from: source)
         if focus || destination === source && wasFocused {
             applyFocus(pane, in: destination)
@@ -104,6 +106,16 @@ extension AppController {
             return
         }
         let keyboard = focusedPane
+        exchange(a, of: first, with: b, of: second)
+        finishSwap(between: first, and: second, keyboard: keyboard === a || keyboard === b ? keyboard : nil)
+    }
+
+    // MARK: - Steps
+
+    /// Swaps the workspaces of `a` and `b` across `first` and `second` (their leaves already exchanged): each workspace
+    /// keeps the place of its focused pane focused, a sidebar notification text goes along with its pane, and the
+    /// location follows the focused terminal.
+    private func exchange(_ a: Pane, of first: Workspace, with b: Pane, of second: Workspace) {
         let firstFocused = first.focusedPaneID
         let secondFocused = second.focusedPaneID
         let firstNote = first.notificationPaneID == a.id ? note(of: first) : nil
@@ -121,8 +133,12 @@ extension AppController {
         for workspace in [first, second] {
             if let focused = workspace.focusedPane, focused.kind == .terminal { updateLocation(of: workspace, from: focused) }
         }
-        if let keyboard, keyboard === a || keyboard === b,
-           let landed = workspace(id: keyboard.workspaceID), landed.id != selectedWorkspaceID,
+    }
+
+    /// Emits and focuses after a swap across two workspaces. `keyboard`, one of the swapped panes that had the
+    /// keyboard, keeps it when it landed in a tile on screen: its workspace becomes the selected one.
+    private func finishSwap(between first: Workspace, and second: Workspace, keyboard: Pane?) {
+        if let keyboard, let landed = workspace(id: keyboard.workspaceID), landed.id != selectedWorkspaceID,
            isTiling, tiledWorkspaceIDs.contains(landed.id) {
             setSelectedWorkspace(landed.id)
             applyFocus(keyboard, in: landed)
@@ -134,8 +150,6 @@ extension AppController {
         emit(.workspace(id: second.id))
         if first.id == selectedWorkspaceID || second.id == selectedWorkspaceID { focusSelectedPaneView() }
     }
-
-    // MARK: - Steps
 
     /// Takes `pane` out of `source`'s tree; a source that keeps panes focuses the one that followed it in reading order.
     private func detach(_ pane: Pane, from source: Workspace) {
