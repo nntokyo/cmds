@@ -91,7 +91,7 @@ struct CommandPaletteItem {
         if own.panes.count > 1 {
             items.append(CommandPaletteItem(kind: .command, title: String(localized: "New Workspace"), detail: "",
                                             alternates: ["New Workspace"]) { [weak controller] in
-                _ = try? controller?.movePaneToNewWorkspace(paneID: paneID)
+                controller?.movePaneToNewWorkspaceFromUI(paneID: paneID)
             })
         }
         return items

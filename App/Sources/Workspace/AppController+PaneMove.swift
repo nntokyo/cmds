@@ -101,6 +101,13 @@ extension AppController {
         return destination.id
     }
 
+    /// `movePaneToNewWorkspace` from the Pane menu, the palette or a pane dragged out of the window: beeps when nothing
+    /// moved (a workspace's only pane, a failure), as a drop that cannot be done does (#223).
+    func movePaneToNewWorkspaceFromUI(paneID: String) {
+        let before = workspace(id: (try? resolvePane(paneID))?.workspaceID ?? "")?.id
+        guard let moved = try? movePaneToNewWorkspace(paneID: paneID), moved != before else { return NSSound.beep() }
+    }
+
     /// Exchanges the places of two panes, in one workspace or across two (Pane › Swap with Pane…, a pane dropped on
     /// another one's centre, `pane.swap`). Each workspace keeps the place of its focused pane focused; the pane with
     /// the keyboard keeps it when it lands in a workspace on screen.
