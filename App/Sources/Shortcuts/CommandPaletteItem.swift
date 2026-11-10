@@ -77,6 +77,26 @@ struct CommandPaletteItem {
         }
     }
 
+    /// Where Move to Workspace… can put `paneID` (#218): every other workspace in sidebar order, then a new workspace.
+    static func moveDestinations(for paneID: String, controller: AppController) -> [CommandPaletteItem] {
+        guard let pane = controller.pane(id: paneID), let own = controller.workspace(id: pane.workspaceID) else { return [] }
+        var items = controller.workspaces.filter { $0 !== own }.map { workspace in
+            let id = workspace.id
+            let place = [workspace.workingDirectory?.abbreviatingHome, workspace.gitBranch].compactMap { $0 }
+            return CommandPaletteItem(kind: .workspace, title: workspace.displayTitle,
+                                      detail: place.joined(separator: " · ")) { [weak controller] in
+                do { try controller?.movePane(paneID: paneID, toWorkspace: id) } catch { NSSound.beep() }
+            }
+        }
+        if own.panes.count > 1 {
+            items.append(CommandPaletteItem(kind: .command, title: String(localized: "New Workspace"), detail: "",
+                                            alternates: ["New Workspace"]) { [weak controller] in
+                _ = try? controller?.movePaneToNewWorkspace(paneID: paneID)
+            })
+        }
+        return items
+    }
+
     private static func panes(_ controller: AppController) -> [CommandPaletteItem] {
         controller.workspaces.flatMap { workspace in
             workspace.orderedPanes.map { pane in

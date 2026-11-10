@@ -18,12 +18,20 @@ final class PaneContainerView: NSView {
     /// Covers the content (SSH panes: Disconnected / Reconnect); below the ring.
     private(set) var overlay: NSView?
 
+    /// The grip that moves the pane by drag (#218); shown while the mouse is near the top edge.
+    let dragHandle: PaneDragHandleView
+    /// Height of the strip along the top edge where the grip appears.
+    private static let handleZoneHeight: CGFloat = 22
+
     init(paneID: String, content: NSView) {
         self.paneID = paneID
         self.content = content
+        dragHandle = PaneDragHandleView(paneID: paneID)
         super.init(frame: NSRect(x: 0, y: 0, width: 400, height: 300))
         wantsLayer = true
         pin(content)
+        dragHandle.isHidden = true
+        addSubview(dragHandle)
         ring.frame = bounds
         ring.autoresizingMask = [.width, .height]
         addSubview(ring)
@@ -105,6 +113,31 @@ final class PaneContainerView: NSView {
             view.topAnchor.constraint(equalTo: topAnchor),
             view.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
+    }
+
+    override func layout() {
+        super.layout()
+        let size = PaneDragHandleView.size
+        dragHandle.frame = NSRect(x: (bounds.width - size.width) / 2, y: bounds.height - size.height,
+                                  width: size.width, height: size.height)
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        let zone = NSRect(x: 0, y: bounds.height - Self.handleZoneHeight, width: bounds.width, height: Self.handleZoneHeight)
+        addTrackingArea(NSTrackingArea(rect: zone, options: [.mouseEnteredAndExited, .activeInKeyWindow], owner: self))
+    }
+
+    override func mouseEntered(with event: NSEvent) {
+        guard dragHandle.isHidden else { return }
+        // Above banners and the find bar that came later; the ring stays on top.
+        addSubview(dragHandle, positioned: .below, relativeTo: ring)
+        dragHandle.isHidden = false
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        if !dragHandle.isDragging { dragHandle.isHidden = true }
     }
 
     override func didAddSubview(_ subview: NSView) {

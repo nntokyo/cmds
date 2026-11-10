@@ -33,7 +33,23 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
         return palette
     }
 
-    private init(controller: AppController, parent: NSWindow, items: [CommandPaletteItem]) {
+    /// Pane › Move to Workspace… (#218): the same panel listing the workspaces `paneID` can move to (beside their
+    /// focused pane), then New Workspace when the pane is not alone in its own.
+    @discardableResult
+    static func presentWorkspacePicker(movingPane paneID: String, controller: AppController,
+                                       over window: NSWindow?) -> CommandPalette? {
+        current?.close()
+        guard let window else { return nil }
+        let palette = CommandPalette(controller: controller, parent: window,
+                                     items: CommandPaletteItem.moveDestinations(for: paneID, controller: controller),
+                                     placeholder: String(localized: "Move the pane to workspace…",
+                                                         comment: "Placeholder of the Move to Workspace picker (#218)"))
+        current = palette
+        palette.show()
+        return palette
+    }
+
+    private init(controller: AppController, parent: NSWindow, items: [CommandPaletteItem], placeholder: String? = nil) {
         self.controller = controller
         self.parent = parent
         self.items = items
@@ -41,6 +57,7 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
                              styleMask: [.borderless], backing: .buffered, defer: false)
         super.init()
         build()
+        if let placeholder { field.placeholderString = placeholder }
         filter()
     }
 
