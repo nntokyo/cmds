@@ -69,4 +69,16 @@ final class PaneMoveCLITests: XCTestCase {
         XCTAssertEqual(workspaceID(containing: "p3", in: list), "w2")
         XCTAssertNil(workspaceID(containing: "p9", in: list))
     }
+
+    /// CMDS_WORKSPACE_ID when outside a pane (no request), when the list cannot be read, or when no workspace has the pane.
+    func testCurrentWorkspaceFallsBackToTheStartingOne() {
+        struct Unreachable: Error {}
+        let pane = PaneInfo(id: "p3", kind: .terminal, title: "t", focused: false, attention: false)
+        let list = [WorkspaceInfo(id: "w2", title: "b", selected: false, attention: false, panes: [pane])]
+        XCTAssertEqual(currentWorkspaceID(pane: "p3", started: "w1") { list }, "w2")
+        XCTAssertEqual(currentWorkspaceID(pane: "p9", started: "w1") { list }, "w1")
+        XCTAssertEqual(currentWorkspaceID(pane: "p3", started: "w1") { throw Unreachable() }, "w1")
+        XCTAssertEqual(currentWorkspaceID(pane: nil, started: "w1") { XCTFail("asked without a pane"); return list }, "w1")
+        XCTAssertNil(currentWorkspaceID(pane: nil, started: nil) { list })
+    }
 }
