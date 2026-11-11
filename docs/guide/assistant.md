@@ -91,6 +91,14 @@ after the assistant is done.
 
 Settings › Assistant also chooses the voice and its rate, or **Show answers without speaking**.
 
+**Personal Voice.** Your own Personal Voice (made in System Settings › Accessibility › Personal Voice) can speak the
+answers: click **Use my Personal Voice…**, allow cmds when macOS asks, and pick it in the Voice list, marked
+"(Personal Voice)". Only Personal Voices that speak the app's language are listed; if yours speaks another language
+(often English only), Settings says so and answers in this language use the system voice. Settings also says when
+cmds was not allowed, when this Mac does not support it, or when you have none yet, with a button to System Settings.
+Speech stays on this Mac; cmds never records or copies a voice. The permission belongs to the app, so a Debug build
+(cmds Dev) asks again.
+
 ## Privacy and cost
 
 - Speech is recognised on this Mac (SpeechAnalyzer). What is not addressed to the assistant is dropped at once; no

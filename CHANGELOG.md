@@ -20,7 +20,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   「全部のセッションを確認して」, also only the waiting or working ones) and acts on several at once ("approve all",
   「apiとwebに…と伝えて」) on one card, and takes instructions in your own words ("tell the api agent to fix the failing
   test"): Claude Code without tools works out the target and the message, always shown on the card before anything is
-  sent (Settings › Assistant › Use Claude to understand free commands).
+  sent (Settings › Assistant › Use Claude to understand free commands). It can speak with your own Personal Voice
+  (Settings › Assistant › Use my Personal Voice…), and uses the system voice for a language your Personal Voice does
+  not speak.
 
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and

@@ -656,3 +656,43 @@ final class AssistantManySessionsTests: XCTestCase {
         XCTAssertTrue(prompt.hasSuffix("Utterance: approve api"))
     }
 }
+
+/// The assistant's voice list and its Personal Voice fallback, without the Personal Voice permission (#243).
+final class AssistantVoicesTests: XCTestCase {
+    private let kyoko = AssistantVoices.Voice(identifier: "kyoko", name: "Kyoko", language: "ja-JP", quality: 2)
+    private let otoya = AssistantVoices.Voice(identifier: "otoya", name: "Otoya", language: "ja-JP", quality: 1)
+    private let samantha = AssistantVoices.Voice(identifier: "samantha", name: "Samantha", language: "en-US", quality: 1)
+    private let mine = AssistantVoices.Voice(identifier: "personal.en", name: "Ryo", language: "en-US", isPersonal: true)
+
+    func testTheListHasTheLanguagesSystemVoicesAndPersonalVoicesApart() {
+        let voices = [otoya, samantha, mine, kyoko]
+        XCTAssertEqual(AssistantVoices.system(voices, language: "ja-JP"), [kyoko, otoya])
+        XCTAssertEqual(AssistantVoices.system(voices, language: "en-US"), [samantha])
+        XCTAssertEqual(AssistantVoices.personal(voices, language: "en-US"), [mine])
+        XCTAssertEqual(AssistantVoices.personal(voices, language: "ja-JP"), [])
+    }
+
+    func testAPersonalVoiceThatCannotSpeakTheLanguageFallsBackToTheSystemVoice() {
+        let voices = [kyoko, samantha, mine]
+        XCTAssertEqual(AssistantVoices.resolve(chosen: "personal.en", among: voices, language: "en-US").voice, mine)
+        let japanese = AssistantVoices.resolve(chosen: "personal.en", among: voices, language: "ja-JP")
+        XCTAssertNil(japanese.voice)
+        XCTAssertTrue(japanese.fellBack)
+        // Gone (permission withdrawn, voice deleted): the system voice.
+        XCTAssertTrue(AssistantVoices.resolve(chosen: "personal.en", among: [kyoko], language: "en-US").fellBack)
+        let system = AssistantVoices.resolve(chosen: nil, among: voices, language: "ja-JP")
+        XCTAssertNil(system.voice)
+        XCTAssertFalse(system.fellBack)
+        XCTAssertEqual(AssistantVoices.resolve(chosen: "kyoko", among: voices, language: "ja_JP").voice, kyoko)
+    }
+
+    func testWhatSettingsSaysAboutPersonalVoice() {
+        XCTAssertEqual(AssistantVoices.personalVoiceState(.notDetermined, voices: [kyoko], language: "ja-JP"), .notRequested)
+        XCTAssertEqual(AssistantVoices.personalVoiceState(.denied, voices: [kyoko], language: "ja-JP"), .denied)
+        XCTAssertEqual(AssistantVoices.personalVoiceState(.unsupported, voices: [kyoko], language: "ja-JP"), .unsupported)
+        XCTAssertEqual(AssistantVoices.personalVoiceState(.authorized, voices: [kyoko], language: "ja-JP"), .noneCreated)
+        XCTAssertEqual(AssistantVoices.personalVoiceState(.authorized, voices: [kyoko, mine], language: "en-US"), .available([mine]))
+        XCTAssertEqual(AssistantVoices.personalVoiceState(.authorized, voices: [kyoko, mine], language: "ja-JP"),
+                       .otherLanguagesOnly(["en-US"]))
+    }
+}

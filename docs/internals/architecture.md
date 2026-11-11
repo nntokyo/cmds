@@ -367,6 +367,12 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   folder, 90 s, no permission-skipping flag); the prompt holds only the utterance, the date and time, the time zone
   and the locale, never screen text. `AssistantWeb.speakable` drops a "Sources:" list, links, URLs and Markdown. The
   HUD's `ClaudeMark` shows "Asking Claude…" while `claude -p` runs and "Claude" under its answer.
+- **Voice**: `AssistantVoice` (`AVSpeechSynthesizer`, on the Mac only). The list and the fallback are plain values in
+  `AssistantVoices` (CmdsCore): `system` / `personal` voices for the app's language, `resolve` (the chosen voice if
+  it still exists and speaks the language, else the system voice), `personalVoiceState` (Settings' note: not asked,
+  denied, unsupported, none created, available, other languages only). Personal Voices (`voiceTraits` contains
+  `.isPersonalVoice`) appear only after `AVSpeechSynthesizer.requestPersonalVoiceAuthorization`, which only
+  Settings' "Use my Personal Voice…" button calls (the permission is per app: cmds Dev in Debug).
 - **Keys and HUD**: the HUD is a `.nonactivatingPanel` that can never become key; Return / Enter / Esc are Carbon hot
   keys registered only while a card shows (ignored for 0.8 s after it appears), ⌥⌘J likewise; isolated instances
   register none. Phase 2 hook: `AssistantController.workspacesChanged(_:)` (proactive announcements).

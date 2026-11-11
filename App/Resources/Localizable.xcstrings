@@ -295,6 +295,17 @@
         }
       }
     },
+    "%@ (Personal Voice)": {
+      "comment": "Settings › Assistant › Voice: the user's own Personal Voice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（パーソナルボイス）"
+          }
+        }
+      }
+    },
     "%@ account": {
       "localizations": {
         "ja": {
@@ -6907,6 +6918,28 @@
         }
       }
     },
+    "Personal Voice Settings…": {
+      "comment": "Settings › Assistant: opens System Settings › Accessibility › Personal Voice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスの設定…"
+          }
+        }
+      }
+    },
+    "Personal Voice is not available on this Mac.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacではパーソナルボイスを使えません。"
+          }
+        }
+      }
+    },
     "Phones": {
       "localizations": {
         "ja": {
@@ -9450,6 +9483,17 @@
         }
       }
     },
+    "The chosen voice is not available: the system voice speaks.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだ声が使えないため、システムの声で読み上げます。"
+          }
+        }
+      }
+    },
     "The code is valid only while this window is open; it changes in %@ and after each pairing.": {
       "localizations": {
         "ja": {
@@ -10694,6 +10738,17 @@
         }
       }
     },
+    "Use my Personal Voice…": {
+      "comment": "Settings › Assistant: asks macOS whether cmds may use the user's Personal Voice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のパーソナルボイスを使う…"
+          }
+        }
+      }
+    },
     "Use only your own accounts. You are responsible for following Anthropic’s terms for each account.": {
       "localizations": {
         "ja": {
@@ -11164,6 +11219,17 @@
         }
       }
     },
+    "You have no Personal Voice yet. Create one in System Settings › Accessibility › Personal Voice.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスがまだありません。システム設定 › アクセシビリティ › パーソナルボイスで作成してください。"
+          }
+        }
+      }
+    },
     "You may be asked for an administrator password.": {
       "localizations": {
         "ja": {
@@ -11174,12 +11240,45 @@
         }
       }
     },
+    "Your Personal Voice is in the list above.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスは上の一覧から選べます。"
+          }
+        }
+      }
+    },
+    "Your Personal Voice speaks %@ only, so answers in this language use the system voice.": {
+      "comment": "Settings › Assistant: the Personal Voice cannot speak the app's language",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスは%@にしか対応していないため、この言語の回答はシステムの声で読み上げます。"
+          }
+        }
+      }
+    },
     "Your changes stay in the edited copy. Save it again, or retry in Window › Transfers.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "変更は編集用のコピーに残っています。もう一度保存するか、ウインドウ › 転送で再試行してください。"
+          }
+        }
+      }
+    },
+    "Your own Personal Voice can speak the answers. cmds asks macOS first; it never records or copies a voice.": {
+      "comment": "Settings › Assistant: Personal Voice not asked yet",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のパーソナルボイスで回答を読み上げられます。cmdsは先にmacOSに許可を求めます。声を録音したり複製したりはしません。"
           }
         }
       }
@@ -11338,6 +11437,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsにマイクの使用が許可されていません。システム設定 › プライバシーとセキュリティ › マイクで許可してください。"
+          }
+        }
+      }
+    },
+    "cmds may not use your Personal Voice. Allow it in System Settings › Accessibility › Personal Voice.": {
+      "comment": "Settings › Assistant: Personal Voice denied",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsはパーソナルボイスの使用を許可されていません。システム設定 › アクセシビリティ › パーソナルボイスで許可してください。"
           }
         }
       }
