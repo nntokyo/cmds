@@ -2615,6 +2615,17 @@
         }
       }
     },
+    "Claude Code": {
+      "comment": "Settings › Assistant: section header (what the assistant asks Claude Code)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code"
+          }
+        }
+      }
+    },
     "Claude Code did not quit. Quit it yourself, then try again.": {
       "localizations": {
         "ja": {
@@ -7200,6 +7211,17 @@
         }
       }
     },
+    "Privacy and Safety": {
+      "comment": "Settings › Assistant: section header (what is heard, where answers come from, confirmations)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プライバシーと安全"
+          }
+        }
+      }
+    },
     "Processes started from cmds terminals that still run after their pane or workspace was closed. Click to see and stop them.": {
       "localizations": {
         "ja": {
@@ -9048,6 +9070,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "右に分割"
+          }
+        }
+      }
+    },
+    "Spoken Answers": {
+      "comment": "Settings › Assistant: section header (the voice, its rate, muting)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み上げ"
           }
         }
       }

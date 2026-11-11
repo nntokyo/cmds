@@ -225,11 +225,19 @@ final class APIServer {
                 } else {
                     SettingsWindowController.shared.showSettings(nil)
                 }
+                // A scrolled tab's rows from the top or the bottom, and the tab drawn off screen (#264).
+                if let scroll = try params.string("scroll") {
+                    SettingsWindowController.shared.debugScroll(toBottom: scroll == "bottom")
+                }
                 let frame = SettingsWindowController.shared.window?.frame ?? .zero
-                connection.reply(id: id, result: [
+                var result: [String: JSONValue] = [
                     "window": .number(Double(SettingsWindowController.shared.window?.windowNumber ?? 0)),
                     "frame": .array([frame.minX, frame.minY, frame.width, frame.height].map { .number(Double($0)) }),
-                ])
+                ]
+                if try params.bool("snapshot") == true {
+                    result["png_base64"] = SettingsWindowController.shared.debugSnapshot().map { .string($0) } ?? .null
+                }
+                connection.reply(id: id, result: .object(result))
             #endif
             case "events.subscribe":
                 subscribe(connection)
