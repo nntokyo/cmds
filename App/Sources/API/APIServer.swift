@@ -435,6 +435,9 @@ final class APIServer {
         case "browser.set_responsive":
             return try controller.browserSetResponsive(paneID: try browserPaneID(params),
                                                        change: try BrowserResponsiveChange(params: params.value))
+        case "browser.watch":
+            return try controller.browserWatch(paneID: try browserPaneID(params),
+                                               change: try BrowserWatchChange(params: params.value))
         case "browser.set_viewport":
             return try controller.browserSetViewport(paneID: try browserPaneID(params),
                                                      change: try BrowserViewportChange(params: params.value))

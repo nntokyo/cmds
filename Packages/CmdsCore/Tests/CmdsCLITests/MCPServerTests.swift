@@ -95,7 +95,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
                         "browser_console", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
-                        "browser_responsive", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
+                        "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
                         "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
@@ -258,6 +258,22 @@ final class MCPServerTests: XCTestCase {
         failure = CLIError.failure("method not found: browser.console")
         XCTAssertEqual(text(callTool(server, "browser_console", #"{"pane":"p4"}"#)), "this cmds app has no browser.console; update cmds")
         failure = nil
+    }
+
+    /// browser_watch (#252): on unless off, a relative dir is refused before anything is sent.
+    func testWatch() {
+        let server = server()
+        replies["browser.watch"] = BrowserWatch.json(BrowserWatch(folder: "/p"), active: true)
+        XCTAssertEqual(text(callTool(server, "browser_watch", #"{"pane":"p2"}"#)), "watching /p")
+        XCTAssertEqual(requests.last?.params["on"] ?? nil, .bool(true))
+        XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p2"))
+        replies["browser.watch"] = BrowserWatch.json(nil)
+        XCTAssertEqual(text(callTool(server, "browser_watch", #"{"pane":"p2","off":true}"#)), "off")
+        XCTAssertEqual(requests.last?.params["off"] ?? nil, .bool(true))
+        XCTAssertNil(requests.last?.params["on"] ?? nil)
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_watch", #"{"pane":"p2","dir":"site"}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
     }
 
     func testBrowserToolsWithoutAnOpenedPaneTargetTheWorkspace() {

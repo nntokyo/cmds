@@ -231,6 +231,32 @@ cmds browser responsive --off                               # show the page once
   The view and its sizes are kept across relaunches and in exported workspaces; the pane's own device size and user
   agent apply again when the view is off. Older cmds versions show the page once.
 
+### Reload on file changes
+
+For a page without hot reload (a `file://` page, a static or server-rendered dev server), the eye button in the
+browser toolbar, or **View › Reload on File Changes**, reloads the page whenever files in a folder change:
+
+```sh
+cmds browser watch                      # on, for the workspace's folder
+cmds browser watch --dir site/public    # another folder (relative to the current directory)
+cmds browser watch --status             # print the state
+cmds browser watch --off
+```
+
+- **Folder**: the workspace's folder by default (else the folder of a `file://` page); **Choose Folder…** in the
+  eye button's menu or `--dir` changes it. Subfolders count.
+- **Ignored**: `.git`, `node_modules`, build folders (`build`, `DerivedData`, `Pods`, `target`, `__pycache__`), dot
+  folders and dot files, and editor backups (`name~`), which tools rewrite on their own. A page served from such a
+  folder (`file:///…/build/index.html`) still reloads for the files in its own folder.
+- **Debounced**: a save that writes several files reloads once, 0.3 s after the last change (at least every 2 s
+  while a folder keeps changing).
+- **Local pages only**: `file://`, `localhost` (and `*.localhost`), `127.0.0.1` and `::1`. A page on the web does not
+  reload, so a link away from your dev server stops the reloads, until you turn on **Also Reload Remote Pages**
+  (`--remote`).
+- **Only on screen**: the folder is watched while the pane is shown; changes made while its workspace was hidden
+  reload the page once when you come back. The button is filled while it is on; its tooltip says when it is paused.
+- Per pane, not kept across relaunches. AI agents can turn it on with the MCP tool `browser_watch`.
+
 ### Screenshots
 
 `cmds browser snapshot` captures what the pane shows; it can also capture more without scrolling or resizing the

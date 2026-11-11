@@ -331,6 +331,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             focusedBrowser?.reload()
         }
     }
+    /// View › Reload on File Changes: the focused browser pane's watch on or off (#252).
+    @objc func browserToggleWatch(_ sender: Any?) { focusedBrowser?.toggleWatch() }
     /// ⌘[ / ⌘]: the focused browser's or files pane's history.
     @objc func browserBack(_ sender: Any?) {
         if let files = focusedFiles { files.goBack() } else { focusedBrowser?.goBack() }
@@ -438,6 +440,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             if let files = focusedFiles { return !files.forwardStack.isEmpty }
             return focusedBrowser != nil
         case #selector(browserFocusAddress(_:)):
+            return focusedBrowser != nil
+        case #selector(browserToggleWatch(_:)):
+            menuItem.state = focusedBrowser?.watch != nil ? .on : .off
             return focusedBrowser != nil
         case #selector(filesToggleHidden(_:)):
             menuItem.state = focusedFiles?.showHidden == true ? .on : .off

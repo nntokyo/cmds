@@ -234,6 +234,14 @@ final class MCPServer {
                 "syncScroll": .object(["type": "boolean", "description": "Scroll the other frames along (default true)."]),
                 "off": .object(["type": "boolean", "description": "Show the page once again."]),
              ]),
+        Tool(name: "browser_watch",
+             description: "Reload a cmds browser pane's page whenever files in a folder change (debounced; .git, node_modules, build folders and dot files are ignored), e.g. a file:// page or a dev server without hot reload while you edit its files. Only local pages (file://, localhost) reload unless remote is true. Returns the state.",
+             properties: [
+                "pane": browserPane,
+                "dir": string("Absolute folder to watch. Default: the folder watched before, else the workspace's folder."),
+                "remote": .object(["type": "boolean", "description": "Reload remote (non-local) pages too."]),
+                "off": .object(["type": "boolean", "description": "Stop reloading on file changes."]),
+             ]),
         Tool(name: "open_file",
              description: "Show a file on this Mac (image, PDF, video, Office, text/code, rendered Markdown, coloured diff) in a cmds preview pane split to the right, without taking the focus. The pane reloads when the file changes. Returns the pane id.",
              properties: ["path": string("Absolute path (relative paths are resolved against the server's working directory)."),
@@ -415,6 +423,13 @@ final class MCPServer {
             case .waitFor:
                 return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
             }
+        case "browser_watch":
+            var change = try toolArguments { try BrowserWatchChange(params: arguments) }
+            if !change.off { change.turnsOn = true }
+            let result = try newMethod("browser.watch") {
+                try browserCall("browser.watch", arguments, change.params, timeout: Self.requestTimeout)
+            }
+            return [Self.text(BrowserWatch.summary(result))]
         case "browser_responsive":
             var request = arguments
             if case .object(var object) = arguments, let off = object["off"], off != .null {

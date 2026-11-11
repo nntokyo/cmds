@@ -82,6 +82,31 @@ final class PaneArgumentCLITests: XCTestCase {
         XCTAssertEqual(off, BrowserResponsiveChange(on: false))
     }
 
+    /// `cmds browser watch` (#252): conflicting options are usage errors; --dir is made absolute.
+    func testBrowserWatch() throws {
+        for bad in [["--off", "--dir", "/a"], ["--off", "--status"], ["--remote", "--no-remote"], ["--off", "--remote"],
+                    ["--status", "--no-remote"], ["p2"]] {
+            XCTAssertEqual(exitCode(["browser", "watch"] + bad), CLIError.Code.usage.rawValue, "\(bad)")
+        }
+        XCTAssertEqual(exitCode(["browser", "watch", "--pane", "p2"]), CLIError.Code.unavailable.rawValue)
+
+        let options: Set<String> = ["pane", "dir"]
+        let flags: Set<String> = ["off", "status", "remote", "no-remote"]
+        func change(_ words: [String]) throws -> BrowserWatchChange {
+            try CLI.browserWatchChange(try Arguments(words, options: options, flags: flags))
+        }
+        var on = BrowserWatchChange()
+        on.turnsOn = true
+        XCTAssertEqual(try change([]), on)
+        XCTAssertTrue(try change(["--status"]).isQuery)
+        XCTAssertEqual(try change(["--off"]), BrowserWatchChange(off: true))
+        let relative = try change(["--dir", "site", "--remote"])
+        XCTAssertEqual(relative.folder, absolutePath("site"))
+        XCTAssertTrue(relative.folder?.hasPrefix("/") == true)
+        XCTAssertEqual(relative.remote, true)
+        XCTAssertEqual(relative.params["on"] ?? nil, .bool(true))
+    }
+
     /// `cmds browser device` (#168): bad sizes and schemes are usage errors before anything is sent.
     func testBrowserDevice() throws {
         XCTAssertEqual(exitCode(["browser", "device", "nokia"]), CLIError.Code.usage.rawValue)
