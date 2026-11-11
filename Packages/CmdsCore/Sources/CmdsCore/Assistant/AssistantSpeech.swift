@@ -157,7 +157,21 @@ public struct AssistantStrings: Sendable {
 
     public func callAsFunction(_ line: AssistantLine) -> String { text(line) }
 
-    public func join(_ lines: [AssistantLine]) -> String { lines.map(text).joined(separator: separator) }
+    public func join(_ lines: [AssistantLine]) -> String { joined(lines.map(text)) }
+
+    /// Sentences one after the other. Without a separator (Japanese), one that ends in a Latin letter, digit or mark
+    /// (an agent's question as it asked it: "…now?") still gets a space before the next.
+    public func joined(_ sentences: [String]) -> String {
+        var result = ""
+        for (index, sentence) in sentences.enumerated() {
+            if index > 0 {
+                let latinEnd = result.last.map { $0.isASCII && !$0.isWhitespace } ?? false
+                result += separator.isEmpty && latinEnd ? " " : separator
+            }
+            result += sentence
+        }
+        return result
+    }
 }
 
 /// The spoken status (#243): the whole picture, or one workspace.

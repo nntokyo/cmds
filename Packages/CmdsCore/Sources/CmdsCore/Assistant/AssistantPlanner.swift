@@ -150,7 +150,7 @@ public enum AssistantPlanner {
             let planned = plan(first, world: world, strings: strings, directoryExists: directoryExists, folders: folders,
                                executable: executable)
             guard case .propose(let action, let prompt) = planned, intents.count > 1 else { return planned }
-            return .propose(action, prompt: prompt + strings.separator + strings(next(intents[1], world: world)))
+            return .propose(action, prompt: strings.joined([prompt, strings(next(intents[1], world: world))]))
         case .pauseListening: return .pauseListening
         case .stop: return .stop
         case .confirm: return .confirm
