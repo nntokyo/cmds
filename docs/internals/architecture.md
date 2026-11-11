@@ -370,6 +370,28 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   most 400 characters), which then goes through the planner and the card like any command; a question, no `claude` or
   a failure falls back to answering it as a question. On-device guided generation was tried and rejected: it named
   workspaces "agent", classed questions as instructions and tripped its guardrails on 「確認させて」.
+- **Vocabulary and misheard names**: `AssistantListener` sets `AnalysisContext.contextualStrings[.general]` (Speech,
+  macOS 26 SDK) from `AssistantVocabulary.contextualStrings` (names, Claude Code, Codex, cmds, workspace titles and
+  agents), refreshed on `StateChange.workspaces` / `.workspace`. `AssistantVocabulary.normalizingAgents` rewrites
+  Claude Code as misheard (クロトコート, cloud code); `readings` / `soundDistance` compare names by how they sound
+  (letter names, vowels as sounds, romaji in katakana; edit distance ≤ 1 from 3 characters, ≤ 2 from 6), used only as
+  the last tier of `AssistantWorld.find` (`soundsLike`, closest ones; several → ask back) and in `mentioned(in:)` for
+  `mightBeCommand`. The interpreter's prompt gets the likely misheard names as hints.
+- **Several requests, starts and tasks**: `AssistantIntent.compound` splits at 、/,/then/after 「起動して」 (never quoted or
+  dictated text) when every clause parses; a task clause after a start (`AssistantLaunch.request`: 「書かせて」 →
+  「書いてください」, "have it fix…") becomes its `task`; a start without a place takes the place another clause names.
+  `.sequence` plans the first (its card adds `AssistantPlanner.next`), the controller queues the rest and goes on
+  (`AssistantMachine.proceed`) after the answer is spoken or the card's action ran; no / expiry / a new request drops
+  the queue. `.startAgent(kind, place?, task?)`: workspace folder, path, `AssistantPlaces.find` under the project
+  folders (depth 3, repositories first), else `recentID` (5 min) / `focusedID`, else ask. The command is
+  `AssistantLaunch.command` (single-quoted task, control characters and leading dashes removed, 400 characters);
+  Debug builds take `CMDS_ASSISTANT_AGENT_EXECUTABLE` instead of `claude` / `codex` for tests. `.delegate` replies to
+  the running agent of that kind, else starts one. The on-device model answers `AssistantModelReply.actionMarker` for
+  actions; that or an apology (`isAction`) goes to the interpreter (kind `start` too), else `.cannotTell`.
+- **Follow-through**: `AssistantTaskWatch` follows panes started with a task or replied to (agent panes), fed from
+  `AppController.changes` with `pane.agentActivity` and the workspace's notification text: needs input → one line,
+  busy then idle → done (and forgotten), exit / 4 h / never started → forgotten. Spoken with `speakOnly` when the
+  assistant is free (idle, listening, paused), else after; `assistantReportTasks` (default on).
 - **Acting**: confirmed actions run in `AssistantController.run` through `AppController.sendText` + `typeText("\r")`
   after `ScheduleRunTiming.enterDelay` (as the reply panel), `typeText` of the digit, or `createWorkspace(cwd:command:
   select: false)`; the pane must still be in the same workspace.

@@ -65,10 +65,16 @@ public struct AssistantWorld: Equatable, Sendable {
     /// In sidebar order.
     public var workspaces: [Workspace]
     public var now: Date
+    /// The workspace selected in the window.
+    public var focusedID: String?
+    /// The workspace the last request was about (a few minutes ago at most).
+    public var recentID: String?
 
-    public init(workspaces: [Workspace], now: Date = Date()) {
+    public init(workspaces: [Workspace], now: Date = Date(), focusedID: String? = nil, recentID: String? = nil) {
         self.workspaces = workspaces
         self.now = now
+        self.focusedID = focusedID
+        self.recentID = recentID
     }
 
     /// Workspaces with an agent, those that need the user first (the menu bar's order).
@@ -91,8 +97,10 @@ public struct AssistantWorld: Equatable, Sendable {
     }
 
     /// The workspace `name` means: its title (exact, then the start, then a part of it, case, width and kana folded),
-    /// its number in the sidebar ("2", "workspace 2"), or the agent running in it when only one runs it ("Codex").
-    /// No name: the one workspace that needs the user, if exactly one does.
+    /// its number in the sidebar ("2", "workspace 2"), the agent running in it when only one runs it ("Codex"), and
+    /// last a title that sounds like it as speech recognition may have heard it (エーピーアイ or EPA for api:
+    /// `AssistantVocabulary.soundDistance`, the closest ones only). No name: the one workspace that needs the user, if
+    /// exactly one does.
     public func find(_ name: String?) -> Match {
         guard let name, !AssistantText.key(name).isEmpty else {
             let waiting = workspaces.filter { $0.state == .needsUser }
@@ -116,7 +124,32 @@ public struct AssistantWorld: Equatable, Sendable {
         ] where !matches.isEmpty {
             return matches.count == 1 ? .found(matches[0].workspace) : .ambiguous(matches.map(\.workspace))
         }
-        return .notFound
+        let heard = soundsLike(name)
+        return heard.isEmpty ? .notFound : heard.count == 1 ? .found(heard[0]) : .ambiguous(heard)
+    }
+
+    /// The workspaces whose title sounds closest to `name` as heard (none when none is close enough).
+    public func soundsLike(_ name: String) -> [Workspace] {
+        let scored = workspaces.compactMap { workspace in
+            AssistantVocabulary.soundDistance(name, workspace.title).map { (workspace: workspace, distance: $0) }
+        }
+        guard let best = scored.map(\.distance).min() else { return [] }
+        return scored.filter { $0.distance == best }.map(\.workspace)
+    }
+
+    /// Workspaces an utterance names, also as misheard ("EPAの進捗" names api): by title, or a word that sounds like one.
+    public func mentioned(in utterance: String) -> [Workspace] {
+        let key = AssistantText.key(utterance)
+        var found: [Workspace] = workspaces.filter { workspace in
+            let title = AssistantText.key(workspace.title)
+            return title.count >= 2 && key.contains(title)
+        }
+        for word in AssistantVocabulary.nameCandidates(in: utterance) {
+            for workspace in soundsLike(word) where !found.contains(where: { $0.id == workspace.id }) {
+                found.append(workspace)
+            }
+        }
+        return found
     }
 
     public enum PaneMatch: Equatable, Sendable {

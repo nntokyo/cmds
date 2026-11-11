@@ -30,10 +30,18 @@ public enum AssistantLine: Equatable, Sendable {
     case noQuestion(workspace: String)
     case noSuchOption(workspace: String, number: Int)
     case unknownPlace(String)
+    /// No place said (or none found) for a start.
+    case whereToStart
+    /// Several project folders fit (at most three, shortened).
+    case whichFolder([String])
     // Confirming.
     case confirmReply(text: String, workspace: String)
     case confirmChoice(number: Int, label: String, workspace: String)
     case confirmStart(agent: String, place: String)
+    case confirmStartTask(agent: String, place: String, task: String)
+    /// After a card, in an utterance with several requests: what comes next.
+    case thenStatus(workspace: String)
+    case thenNext
     case confirmReplyMany(text: String, workspaces: [String])
     case confirmApproveMany(workspaces: [String])
     /// Sessions left out of a card for several (unclear pane, nothing asked).
@@ -63,6 +71,12 @@ public enum AssistantLine: Equatable, Sendable {
     case claudeNotFound
     /// A web question, but `claude -p` failed or took too long.
     case webFailed
+    /// An action the assistant could not work out (instead of the on-device model's apology).
+    case cannotTell
+    // Follow-through on a task it gave.
+    case taskDone(agent: String, workspace: String)
+    case taskAsks(agent: String, workspace: String, question: String)
+    case taskNeedsYou(agent: String, workspace: String)
 
     public var english: String {
         switch self {
@@ -89,9 +103,14 @@ public enum AssistantLine: Equatable, Sendable {
         case .noQuestion(let workspace): return "\(workspace) isn't asking anything."
         case .noSuchOption(let workspace, let number): return "\(workspace) has no option \(number)."
         case .unknownPlace(let name): return "I don't know a workspace or folder called \(name)."
+        case .whereToStart: return "Which folder should I start it in?"
+        case .whichFolder(let folders): return "Which folder: \(folders.joined(separator: ", "))?"
         case .confirmReply(let text, let workspace): return "Send “\(text)” to \(workspace)?"
         case .confirmChoice(let number, let label, let workspace): return "Choose \(number), “\(label)”, in \(workspace)?"
         case .confirmStart(let agent, let place): return "Start \(agent) in \(place)?"
+        case .confirmStartTask(let agent, let place, let task): return "Start \(agent) in \(place) with “\(task)”?"
+        case .thenStatus(let workspace): return "Then I'll tell you how \(workspace) is doing."
+        case .thenNext: return "Then I'll go on with the rest."
         case .confirmReplyMany(let text, let workspaces): return "Send “\(text)” to \(workspaces.joined(separator: ", "))?"
         case .confirmApproveMany(let workspaces): return "Choose option 1 in \(workspaces.joined(separator: ", "))?"
         case .leftOut(let workspaces): return "Left out: \(workspaces.joined(separator: ", "))."
@@ -116,6 +135,10 @@ public enum AssistantLine: Equatable, Sendable {
         case .modelUnavailable: return "I can only answer about the workspaces: the on-device model isn't available."
         case .claudeNotFound: return "I can't search the web: Claude Code (claude) isn't installed."
         case .webFailed: return "I couldn't get an answer from Claude: it failed or took too long."
+        case .cannotTell: return "I couldn't tell what to do. Try “start Claude in api” or “tell api to run the tests”."
+        case .taskDone(let agent, let workspace): return "\(agent) in \(workspace) is done."
+        case .taskAsks(let agent, let workspace, let question): return "\(agent) in \(workspace) needs you: \(question)"
+        case .taskNeedsYou(let agent, let workspace): return "\(agent) in \(workspace) needs you."
         }
     }
 }

@@ -69,14 +69,22 @@ public enum AssistantClaude {
 
     // MARK: On-device model
 
-    /// The on-device model's instructions. `web`: it answers `AssistantWeb.marker` when it needs the web.
-    public static func modelInstructions(language: String, web: Bool) -> String {
-        let base = """
+    /// The on-device model's instructions. `web`: it answers `AssistantWeb.marker` when it needs the web. `actions`
+    /// (free questions only, not summaries): it answers `AssistantModelReply.actionMarker` when asked to act.
+    public static func modelInstructions(language: String, web: Bool, actions: Bool = false) -> String {
+        var text = """
         You are the voice assistant of cmds, a terminal app where AI coding agents work. \(brevity) Answer in \
-        \(language). You cannot run commands or change anything; never claim you did.
+        \(language). You cannot run commands or change anything yourself; never claim you did.
         """
-        guard web else { return base }
-        return base + """
+        if actions {
+            text += """
+             Never apologise and never say you cannot do something: if the user asks for something to be done in the \
+            app or by an agent (start, launch or open Claude Code or Codex, send, tell, approve, run, fix, write…), \
+            answer exactly \(AssistantModelReply.actionMarker) and nothing else: the request is then handled as a command.
+            """
+        }
+        guard web else { return text }
+        return text + """
          You have no internet. If answering needs current or outside information you do not have (weather, news, \
         prices, schedules, recent events, facts you are unsure of) or the user asks you to search, answer exactly \
         \(AssistantWeb.marker) and nothing else: the question is then searched on the web.
@@ -116,4 +124,26 @@ public enum AssistantClaude {
         arguments(prompt: AssistantInterpretation.prompt(utterance: utterance, world: world, language: language),
                   model: interpreterModel, tools: noToolArguments)
     }
+}
+
+/// What the on-device model's answer means beyond its words (#243): an action it was asked for (it answers
+/// `actionMarker`, or apologises that it cannot: 「申し訳ありませんが、アプリの起動はできません」). Such an answer is never
+/// spoken; the request goes to the interpreter instead, else the assistant says how to ask.
+public enum AssistantModelReply {
+    /// What the on-device model answers, alone, when it was asked to do something. Never spoken.
+    public static let actionMarker = "[[ACTION]]"
+
+    /// The marker (also half-broken), or an apology / refusal to act.
+    public static func isAction(_ answer: String) -> Bool {
+        let text = AssistantText.folded(answer)
+        if text.contains("[[action") || text.contains("action]]") || text.trimmingCharacters(in: CharacterSet(charactersIn: "[] .。")) == "action" { return true }
+        return refusals.contains { $0.occurs(in: text) }
+    }
+
+    /// 「申し訳ありませんが…できません」, "I'm sorry, I can't…", "I am unable to…" (the Japanese folded like the answer).
+    static let refusals: [Pattern] = [
+        Pattern(AssistantText.folded(#"(申し訳(ありません|ございません|ない)|すみません|ごめんなさい)[^。]{0,40}(できません|できない|出来ません|いたしかねます)"#)),
+        Pattern(AssistantText.folded(#"(起動|実行|操作|開く|開始|送信|承認|立ち上げ)[^。]{0,12}(できません|できない|出来ません)"#)),
+        Pattern(#"\b(i can't|i cannot|i can not|i'm unable to|i am unable to|i'm not able to|i am not able to)\b[^.]{0,30}\b(start|launch|open|run|execute|perform|do that|do this|send|approve|control|operate)\b"#),
+    ]
 }

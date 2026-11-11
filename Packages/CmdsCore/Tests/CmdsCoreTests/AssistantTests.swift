@@ -96,10 +96,10 @@ final class AssistantIntentTests: XCTestCase {
     }
 
     func testStartAgent() {
-        XCTAssertEqual(parse("start Claude in cmds"), .startAgent(.claude, place: "cmds"))
-        XCTAssertEqual(parse("launch a new codex session in ~/src/app"), .startAgent(.codex, place: "~/src/app"))
-        XCTAssertEqual(parse("cmdsでクロードを起動して"), .startAgent(.claude, place: "cmds"))
-        XCTAssertEqual(parse("apiでcodexを始めて"), .startAgent(.codex, place: "api"))
+        XCTAssertEqual(parse("start Claude in cmds"), .startAgent(.claude, place: "cmds", task: nil))
+        XCTAssertEqual(parse("launch a new codex session in ~/src/app"), .startAgent(.codex, place: "~/src/app", task: nil))
+        XCTAssertEqual(parse("cmdsでクロードを起動して"), .startAgent(.claude, place: "cmds", task: nil))
+        XCTAssertEqual(parse("apiでcodexを始めて"), .startAgent(.codex, place: "api", task: nil))
     }
 
     func testYesNoPauseStop() {
@@ -268,12 +268,12 @@ final class AssistantPlannerTests: XCTestCase {
 
     func testStartAgentInAWorkspacesFolder() {
         guard case .propose(let action, let prompt) = plan("start claude in web") else { return XCTFail() }
-        XCTAssertEqual(action.kind, .startAgent(.claude, directory: "/tmp/web"))
+        XCTAssertEqual(action.kind, .startAgent(.claude, directory: "/tmp/web", task: nil))
         XCTAssertEqual(action.text, "claude")
         XCTAssertEqual(prompt, "Start Claude in /tmp/web? Say yes or press Return.")
-        XCTAssertEqual(plan("start codex in nowhere"), .askBack("I don't know a workspace or folder called nowhere."))
-        let path = AssistantPlanner.plan(.startAgent(.codex, place: "/tmp/x"), world: world(), strings: .english) { $0 == "/tmp/x" }
-        if case .propose(let action, _) = path { XCTAssertEqual(action.kind, .startAgent(.codex, directory: "/tmp/x")) } else { XCTFail() }
+        XCTAssertEqual(plan("start codex in nowhere"), .askBack("I don't know a workspace or folder called nowhere. Which folder should I start it in?"))
+        let path = AssistantPlanner.plan(.startAgent(.codex, place: "/tmp/x", task: nil), world: world(), strings: .english) { $0 == "/tmp/x" }
+        if case .propose(let action, _) = path { XCTAssertEqual(action.kind, .startAgent(.codex, directory: "/tmp/x", task: nil)) } else { XCTFail() }
     }
 
     func testQuestionsGoToTheModel() {

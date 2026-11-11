@@ -28,7 +28,7 @@ enum AssistantBrain {
     /// A free question, with the workspaces' status as context. `web`: the model answers `AssistantWeb.marker` when it
     /// needs the web (the caller then asks Claude).
     static func answer(_ question: String, status: String, language: AssistantLanguage, web: Bool = false) async throws -> String {
-        try await respond(prompt: "Workspaces now: \(status)\n\nQuestion: \(question)", instructions: AssistantClaude.modelInstructions(language: language.name, web: web))
+        try await respond(prompt: "Workspaces now: \(status)\n\nQuestion: \(question)", instructions: AssistantClaude.modelInstructions(language: language.name, web: web, actions: true))
     }
 
     /// What a workspace's agent is doing, from the facts and the end of its screen: one short sentence.

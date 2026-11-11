@@ -8,8 +8,8 @@ public struct AssistantAction: Equatable, Sendable {
         case reply
         /// Type the option's number.
         case choose(Int)
-        /// A new workspace in `directory` running the agent.
-        case startAgent(AgentKind, directory: String)
+        /// A new workspace in `directory` running the agent (`text`: the command line), with `task` as its first prompt.
+        case startAgent(AgentKind, directory: String, task: String?)
     }
 
     public var kind: Kind
@@ -101,9 +101,11 @@ public enum AssistantPlan: Equatable, Sendable {
 }
 
 public enum AssistantPlanner {
-    /// `directoryExists` checks a folder said as a path (`~/src/app`).
+    /// `directoryExists` checks a folder said as a path (`~/src/app`); `folders` finds a project folder by name
+    /// (`AssistantPlaces.find`); `executable` replaces `claude` / `codex` in a start's command (Debug tests only).
     public static func plan(_ intent: AssistantIntent, world: AssistantWorld, strings: AssistantStrings,
-                            directoryExists: (String) -> Bool = { _ in false }) -> AssistantPlan {
+                            directoryExists: (String) -> Bool = { _ in false }, folders: (String) -> [String] = { _ in [] },
+                            executable: String? = nil) -> AssistantPlan {
         switch intent {
         case .status:
             return .answer(AssistantReport.status(world, strings: strings))
@@ -133,25 +135,24 @@ public enum AssistantPlanner {
             return choose(1, name, world: world, strings: strings)
         case .choose(let name, let number):
             return choose(number, name, world: world, strings: strings)
-        case .startAgent(let kind, let place):
-            let directory: String
-            switch world.find(place) {
-            case .found(let workspace) where workspace.directory != nil:
-                directory = workspace.directory!
-            case .ambiguous(let workspaces):
-                return .askBack(strings(.whichWorkspace(workspaces.map(\.title))))
-            default:
-                guard place.hasPrefix("/") || place.hasPrefix("~"), directoryExists(place) else {
-                    return .askBack(strings(.unknownPlace(place)))
-                }
-                directory = place
+        case .startAgent(let kind, let place, let task):
+            return start(kind, place: place, task: task, world: world, strings: strings, directoryExists: directoryExists,
+                         folders: folders, executable: executable)
+        case .delegate(let kind, let place, let task):
+            // The agent already running there takes it; else a new one is started there with it.
+            if case .found(let workspace) = world.find(place), case .found(let pane) = AssistantWorld.targetPane(in: workspace),
+               let agent = pane.agent, AssistantText.key(agent).hasPrefix(AssistantText.key(kind.displayName)) {
+                return plan(.reply(target: workspace.title, text: task), world: world, strings: strings)
             }
-            let command = kind == .codex ? "codex" : "claude"
-            let shown = (directory as NSString).abbreviatingWithTildeInPath
-            let action = AssistantAction(kind: .startAgent(kind, directory: directory), workspaceID: nil,
-                                         workspaceTitle: shown, paneID: nil, paneTitle: nil, text: command,
-                                         reasons: AssistantSafety.reasons(text: command, sshPane: false))
-            return propose(action, line: .confirmStart(agent: kind.displayName, place: shown), strings: strings)
+            return start(kind, place: place, task: task, world: world, strings: strings, directoryExists: directoryExists,
+                         folders: folders, executable: executable)
+        case .sequence(let intents):
+            // The first now; the app goes on with the rest after it (and after its card). A card says what comes next.
+            guard let first = intents.first else { return .ask("") }
+            let planned = plan(first, world: world, strings: strings, directoryExists: directoryExists, folders: folders,
+                               executable: executable)
+            guard case .propose(let action, let prompt) = planned, intents.count > 1 else { return planned }
+            return .propose(action, prompt: prompt + strings.separator + strings(next(intents[1], world: world)))
         case .pauseListening: return .pauseListening
         case .stop: return .stop
         case .confirm: return .confirm
@@ -173,6 +174,62 @@ public enum AssistantPlanner {
                                               paneID: pane.id, paneTitle: pane.title, text: "1", label: option.label,
                                               reasons: AssistantSafety.reasons(text: "", context: context, sshPane: pane.isSSH)))
             } line: { titles in .confirmApproveMany(workspaces: titles) }
+        }
+    }
+
+    /// Starting an agent: in the folder of the workspace named (also as misheard), a folder path, or a project folder
+    /// of that name; without a place, where the last request was about, else the selected workspace. Never a guess:
+    /// otherwise it asks which folder.
+    private static func start(_ kind: AgentKind, place: String?, task: String?, world: AssistantWorld, strings: AssistantStrings,
+                              directoryExists: (String) -> Bool, folders: (String) -> [String], executable: String?) -> AssistantPlan {
+        let directory: String
+        if let place {
+            switch world.find(place) {
+            case .found(let workspace) where workspace.directory != nil:
+                directory = workspace.directory!
+            case .ambiguous(let workspaces):
+                return .askBack(strings(.whichWorkspace(workspaces.map(\.title))))
+            default:
+                if place.hasPrefix("/") || place.hasPrefix("~") {
+                    guard directoryExists(place) else { return .askBack(strings.join([.unknownPlace(place), .whereToStart])) }
+                    directory = place
+                } else {
+                    let found = folders(place)
+                    switch found.count {
+                    case 0: return .askBack(strings.join([.unknownPlace(place), .whereToStart]))
+                    case 1: directory = found[0]
+                    default: return .askBack(strings(.whichFolder(found.prefix(3).map(abbreviated))))
+                    }
+                }
+            }
+        } else if let id = world.recentID ?? world.focusedID, let workspace = world.workspace(id: id),
+                  let folder = workspace.directory {
+            directory = folder
+        } else {
+            return .askBack(strings(.whereToStart))
+        }
+        let task = task.flatMap(AssistantLaunch.cleaned)
+        let command = AssistantLaunch.command(kind, task: task, executable: executable)
+        let shown = abbreviated(directory)
+        let action = AssistantAction(kind: .startAgent(kind, directory: directory, task: task), workspaceID: nil,
+                                     workspaceTitle: shown, paneID: nil, paneTitle: nil, text: command,
+                                     reasons: AssistantSafety.reasons(text: task ?? command, sshPane: false))
+        let line: AssistantLine = task.map { .confirmStartTask(agent: kind.displayName, place: shown, task: $0) }
+            ?? .confirmStart(agent: kind.displayName, place: shown)
+        return propose(action, line: line, strings: strings)
+    }
+
+    /// `~/Source/app` for a folder in the home folder.
+    static func abbreviated(_ path: String) -> String { (path as NSString).abbreviatingWithTildeInPath }
+
+    /// What a card says comes after it, in an utterance with several requests.
+    public static func next(_ intent: AssistantIntent, world: AssistantWorld) -> AssistantLine {
+        switch intent {
+        case .workspaceStatus(let name), .summary(let name?, _):
+            if case .found(let workspace) = world.find(name) { return .thenStatus(workspace: workspace.title) }
+            return .thenNext
+        default:
+            return .thenNext
         }
     }
 
