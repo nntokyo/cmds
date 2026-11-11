@@ -64,7 +64,7 @@ private extension AssistantLine {
         case .confirmStart(let agent, let place): return String(localized: "Start \(agent) in \(place)?", comment: "assistant: confirmation question")
         case .sayYesOrPressReturn: return String(localized: "Say yes or press Return.", comment: "assistant: how to confirm")
         case .pressReturnToConfirm: return String(localized: "This one needs Return or a click.", comment: "assistant: how to confirm a dangerous action")
-        case .voiceNotEnough: return String(localized: "Please press Return or click Send for this one.", comment: "assistant: a spoken yes is not enough")
+        case .voiceNotEnough: return String(localized: "Please press Return or click the button for this one.", comment: "assistant: a spoken yes is not enough")
         case .sent(let workspace): return String(localized: "Sent to \(workspace).", comment: "assistant")
         case .started(let agent, let place): return String(localized: "Started \(agent) in \(place).", comment: "assistant")
         case .failed: return String(localized: "That didn't work: the pane is gone or busy.", comment: "assistant")

@@ -109,6 +109,13 @@ final class AssistantIntentTests: XCTestCase {
         for text in ["turn off", "goodbye", "おやすみ", "アシスタントを終了"] { XCTAssertEqual(parse(text), .stop, text) }
     }
 
+    func testAnswerToWhichOneRetargets() {
+        XCTAssertEqual(AssistantIntent.approve(target: "ap").retargeted("api-v2"), .approve(target: "api-v2"))
+        XCTAssertEqual(AssistantIntent.reply(target: nil, text: "go").retargeted("the web workspace"), .reply(target: "web", text: "go"))
+        XCTAssertEqual(AssistantIntent.choose(target: nil, option: 2).retargeted("apiの"), .choose(target: "api", option: 2))
+        XCTAssertNil(AssistantIntent.status.retargeted("api"))
+    }
+
     func testAnythingElseIsAQuestion() {
         XCTAssertEqual(parse("what is a monad"), .question("what is a monad"))
         XCTAssertEqual(parse("今日の天気は？"), .question("今日の天気は"))

@@ -36,6 +36,21 @@ public enum AssistantIntent: Equatable, Sendable {
         }
     }
 
+    /// The same request aimed at another workspace: the answer to "Which one: api, api-v2?" ("api-v2").
+    /// nil for intents without a workspace.
+    public func retargeted(_ answer: String) -> AssistantIntent? {
+        guard let target = Self.target(answer) else { return nil }
+        switch self {
+        case .workspaceStatus: return .workspaceStatus(target: target)
+        case .summary(_, let detailed): return .summary(target: target, detailed: detailed)
+        case .reply(_, let text): return .reply(target: target, text: text)
+        case .approve: return .approve(target: target)
+        case .choose(_, let option): return .choose(target: target, option: option)
+        case .startAgent(let kind, _): return .startAgent(kind, place: target)
+        default: return nil
+        }
+    }
+
     public static func parse(_ command: String) -> AssistantIntent {
         let text = AssistantText.trimmed(command.precomposedStringWithCompatibilityMapping
             .split(whereSeparator: \.isWhitespace).joined(separator: " "))

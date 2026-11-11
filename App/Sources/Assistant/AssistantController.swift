@@ -212,7 +212,12 @@ final class AssistantController {
             return
         case .wake:
             refresh()
-        case .handle(let intent):
+        case .handle(var intent):
+            // The answer to "Which one?": the request asked back about, aimed at the workspace named.
+            if let previous = askedBack, case .question(let answer) = intent, let retargeted = previous.retargeted(answer) {
+                intent = retargeted
+            }
+            askedBack = nil
             assistantLog.info("assistant command: \(String(describing: intent).prefix(24), privacy: .private)")
             refresh()
             let world = AgentOverview.assistantWorld(controller)
@@ -221,7 +226,7 @@ final class AssistantController {
                 return FileManager.default.fileExists(atPath: (path as NSString).expandingTildeInPath, isDirectory: &isFolder)
                     && isFolder.boolValue
             }
-            carryOut(plan, world: world)
+            carryOut(plan, world: world, asked: intent)
         case .execute(let action):
             run(action)
         case .cancelled:
@@ -236,11 +241,17 @@ final class AssistantController {
 
     // MARK: Answers
 
-    private func carryOut(_ plan: AssistantPlan, world: AssistantWorld) {
+    /// The request the assistant asked back about ("Which one: api, api-v2?"), until the next command.
+    private var askedBack: AssistantIntent?
+
+    private func carryOut(_ plan: AssistantPlan, world: AssistantWorld, asked: AssistantIntent) {
         let strings = AssistantStrings.localized
         switch plan {
-        case .answer(let text), .askBack(let text):
+        case .answer(let text):
             say(text)
+        case .askBack(let text):
+            say(text)
+            askedBack = asked
         case .propose(let action, let prompt):
             needsKey = false
             pendingShownAt = Date()

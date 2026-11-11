@@ -74,6 +74,13 @@ final class AssistantHUD: NSObject {
         background.layer?.borderWidth = 1
         background.layer?.borderColor = AssistantPalette.cyan.withAlphaComponent(0.35).cgColor
         panel.contentView = background
+        // A dark glass over the blur, so the HUD reads the same over any desktop.
+        let tint = NSView()
+        tint.wantsLayer = true
+        tint.layer?.backgroundColor = NSColor(srgbRed: 0.02, green: 0.06, blue: 0.1, alpha: 0.72).cgColor
+        tint.autoresizingMask = [.width, .height]
+        tint.frame = background.bounds
+        background.addSubview(tint)
 
         phaseLabel.font = .monospacedSystemFont(ofSize: 10.5, weight: .semibold)
         phaseLabel.textColor = AssistantPalette.cyan
@@ -100,9 +107,7 @@ final class AssistantHUD: NSObject {
         targetLabel.textColor = AssistantPalette.amber
         textBox.font = .monospacedSystemFont(ofSize: 12.5, weight: .regular)
         textBox.textColor = .white
-        textBox.drawsBackground = true
-        textBox.backgroundColor = NSColor.black.withAlphaComponent(0.35)
-        textBox.preferredMaxLayoutWidth = Self.width - 60
+        textBox.preferredMaxLayoutWidth = Self.width - 80
         textBox.isSelectable = true
         reasonLabel.font = .systemFont(ofSize: 11)
         reasonLabel.textColor = AssistantPalette.amber
@@ -129,7 +134,14 @@ final class AssistantHUD: NSObject {
         card.layer?.borderWidth = 1
         card.layer?.borderColor = AssistantPalette.amber.withAlphaComponent(0.6).cgColor
         card.layer?.backgroundColor = AssistantPalette.amber.withAlphaComponent(0.08).cgColor
-        for view in [targetLabel, textBox, reasonLabel, buttons] { card.addArrangedSubview(view) }
+        // The exact text, in a dark box across the card.
+        let textFrame = NSStackView(views: [textBox])
+        textFrame.edgeInsets = NSEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
+        textFrame.wantsLayer = true
+        textFrame.layer?.cornerRadius = 6
+        textFrame.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.45).cgColor
+        for view in [targetLabel, textFrame, reasonLabel, buttons] { card.addArrangedSubview(view) }
+        textFrame.widthAnchor.constraint(equalTo: card.widthAnchor, constant: -24).isActive = true
         buttons.widthAnchor.constraint(equalTo: card.widthAnchor, constant: -24).isActive = true
 
         let root = NSStackView(views: [top, wave, rings, card])

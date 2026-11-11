@@ -6779,17 +6779,6 @@
         }
       }
     },
-    "Please press Return or click Send for this one.": {
-      "comment": "assistant: a spoken yes is not enough",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "これはReturnキーを押すか「送信」をクリックしてください。"
-          }
-        }
-      }
-    },
     "Pop-up": {
       "localizations": {
         "ja": {
@@ -11821,6 +11810,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバ上の“%@”はもうファイルではありません。何もアップロードしませんでした。"
+          }
+        }
+      }
+    },
+    "Please press Return or click the button for this one.": {
+      "comment": "assistant: a spoken yes is not enough",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これはReturnキーを押すかボタンをクリックしてください。"
           }
         }
       }

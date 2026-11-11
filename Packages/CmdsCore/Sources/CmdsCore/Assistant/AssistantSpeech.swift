@@ -81,7 +81,7 @@ public enum AssistantLine: Equatable, Sendable {
         case .confirmStart(let agent, let place): return "Start \(agent) in \(place)?"
         case .sayYesOrPressReturn: return "Say yes or press Return."
         case .pressReturnToConfirm: return "This one needs Return or a click."
-        case .voiceNotEnough: return "Please press Return or click Send for this one."
+        case .voiceNotEnough: return "Please press Return or click the button for this one."
         case .sent(let workspace): return "Sent to \(workspace)."
         case .started(let agent, let place): return "Started \(agent) in \(place)."
         case .failed: return "That didn't work: the pane is gone or busy."
