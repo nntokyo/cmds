@@ -15,7 +15,7 @@ extension AgentOverview {
                 return AssistantWorld.Pane(
                     id: pane.id, title: pane.title, isSSH: pane.ssh != nil, agent: pane.agentUsage?.agent.displayName,
                     waiting: pane.attention || pane.agentActivity == .needsInput, prompt: prompt,
-                    promptContext: prompt == nil ? [] : Array(lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.suffix(16)))
+                    promptContext: prompt == nil ? [] : Array(lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.suffix(AssistantTuning.promptContextLines)))
             }
             return AssistantWorld.Workspace(
                 id: workspace.id, title: workspace.displayTitle, state: state,

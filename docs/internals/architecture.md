@@ -21,7 +21,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `+Remote` folders on SSH hosts; `GitStatusReader`), `RemoteConnections` (one SFTP connection per host), `TransferCenter` (the transfer queue, `transfer.*`) and the Transfers window. Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git; `FileLocation`, `SFTPPacket`/`SFTPClient`, `SSHFileConnection`, `FileTree`, `RemoteTrash`, `TransferJob`/`TransferQueue`; [files-sftp.md](files-sftp.md)). |
 | `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs, the 1-minute notice), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), pane tags, the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`, `ScheduleTarget`). |
 | `Widget/Sources` | The cmds widget (#96, WidgetKit extension `CmdsWidget`, embedded at `cmds.app/Contents/PlugIns/CmdsWidget.appex`). It reads `widget.json` (CmdsCore `WidgetSnapshot`), which `WidgetPublisher` in the app writes to the support folder; the extension is sandboxed with a read-only exception for that one file (`Widget/CmdsWidget.entitlements`, resolved from the real home, not the sandbox container). The menu bar item and the widget share `AgentOverview`. Clicks open `cmds://workspace/<id>`. |
-| `App/Sources/Assistant` | The voice assistant (#243, macOS 26+): `AssistantController` (ties it together), `AssistantListener` (microphone → SpeechAnalyzer), `AssistantVoice` (AVSpeechSynthesizer), `AssistantBrain` (Foundation Models, `claude -p`), `AssistantHUD` / `AssistantOrbView` (the panel), `AssistantHotkeys` (Carbon hot keys), Settings › Assistant, `debug.assistant`. Rules in `CmdsCore/Assistant`. |
+| `App/Sources/Assistant` | The voice assistant (#243, macOS 26+): `AssistantController` (ties it together), `AssistantListener` (microphone → SpeechAnalyzer), `AssistantVoice` (AVSpeechSynthesizer), `AssistantBrain` (Foundation Models, `claude -p`; the process: `AssistantClaudeProcess`), `AssistantTuning` (timings and caps), `AssistantHUD` / `AssistantOrbView` (the panel), `AssistantHotkeys` (Carbon hot keys), Settings › Assistant, `debug.assistant`. Rules in `CmdsCore/Assistant`. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
@@ -364,7 +364,7 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   answer takes only short utterances (`AssistantAddressing.isShortFollowUp`: ≤ 8 words, ≤ 20 Japanese characters);
   the hotkey's and the name alone's take any. Each new request (`.handle`, `.wake` while busy, the hotkey, a confirmed
   or cancelled card) increments `AssistantMachine.request`; `AssistantController.interrupt()` then stops the voice and
-  cancels the `think` task, whose `claude -p` process `AssistantBrain.runClaude` terminates in its cancellation
+  cancels the `think` task, whose `claude -p` process `AssistantClaudeProcess.run` terminates in its cancellation
   handler, and `answer(_:request:)` refuses a late answer for an older request. "Asking Claude…" is tied to the
   request it was for. A name-prefixed yes / no while a card is being read out confirms or cancels it; anything else
   by name replaces the card.
@@ -385,7 +385,7 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   workspace or speaks of agents, sessions, all of them) goes to `AssistantBrain.interpret` (Settings › Assistant ›
   Use Claude to understand free commands, `AssistantInterpreter`, on unless false): `claude -p <prompt>
   --output-format text --model haiku --tools ""` plus the isolation flags (below), 30 s, with only the utterance and the
-  workspaces' names, agents and states (`AssistantInterpretation.prompt`). Its one JSON object
+  workspaces' names, agents and states (`AssistantClaude.interpreterPrompt`). Its one JSON object
   (`kind` instruct / reply / approve / check / question, `targets`, `filter`, `text`, `detailed`) is parsed by
   `AssistantInterpretation.parse` and turned into an intent by `intent(in:)` (made-up names dropped, one line, at
   most 400 characters), which then goes through the planner and the card like any command; a question, no `claude` or

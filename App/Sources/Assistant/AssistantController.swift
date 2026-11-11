@@ -33,13 +33,11 @@ final class AssistantController {
     private var timer: Timer?
     /// Each spoken answer's number: only the latest one's end moves the machine on.
     private var speech = 0
-    /// The HUD stays this long after the assistant went back to standing by.
-    private static let hudLinger: TimeInterval = 6
+    /// When the HUD hides, after the assistant went back to standing by (`AssistantTuning.hudLinger`).
     private var hideAt: Date?
     /// The user said yes to an action that needs Return or a click.
     private var needsKey = false
-    /// Return / Esc are ignored this long after a card appears (a Return already on its way to the terminal).
-    private static let confirmArmDelay: TimeInterval = 0.8
+    /// When the card appeared: Return / Esc are ignored just after (`AssistantTuning.confirmArmDelay`).
     private var pendingShownAt: Date?
     /// Whether the microphone is used; `debug.assistant` turns the assistant on without it.
     private var usesMicrophone = true
@@ -56,7 +54,6 @@ final class AssistantController {
     private var createdForQueue: Set<String> = []
     /// The workspace the last request was about, and when: a start without a place goes there.
     private var recent: (id: String, at: Date)?
-    private static let recentFor: TimeInterval = 300
     /// Sessions the assistant started with a task or sent an instruction to, followed until their agent is done
     /// (Settings › Assistant › Report on tasks I gave).
     private var taskWatch = AssistantTaskWatch()
@@ -241,7 +238,7 @@ final class AssistantController {
         switch key {
         case .listen: hotkey()
         case .confirm, .enter, .cancel:
-            if let shown = pendingShownAt, Date().timeIntervalSince(shown) < Self.confirmArmDelay { return }
+            if let shown = pendingShownAt, Date().timeIntervalSince(shown) < AssistantTuning.confirmArmDelay { return }
             self.key(key == .cancel ? .cancel : .confirm)
         }
     }
@@ -326,7 +323,7 @@ final class AssistantController {
         var world = AgentOverview.assistantWorld(controller)
         world.workspaces.removeAll { createdForQueue.contains($0.id) }
         world.focusedID = controller.selectedWorkspaceID
-        if let recent, Date().timeIntervalSince(recent.at) < Self.recentFor { world.recentID = recent.id }
+        if let recent, Date().timeIntervalSince(recent.at) < AssistantTuning.recentFor { world.recentID = recent.id }
         return world
     }
 
@@ -360,11 +357,11 @@ final class AssistantController {
             pendingShownAt = Date()
             say(prompt, proposing: action)
         case .summarize(let workspaceID, let paneID, let detailed, let fallback):
-            let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? ""
+            let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? ""
             think(capped: !detailed) { await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed) }
         case .summarizeEach(let items, let detailed):
             // One session after the other, a line each (spoken in turn, listed on the HUD).
-            let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? "" }
+            let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? "" }
             think {
                 var lines: [String] = []
                 for (item, screen) in zip(items, screens) {
@@ -478,7 +475,7 @@ final class AssistantController {
             let text = try await AssistantBrain.webAnswer(question: question, language: language)
             markAnsweredByClaude(request)
             return text
-        } catch AssistantBrain.ClaudeFailure.notFound {
+        } catch AssistantClaudeProcess.Failure.notFound {
             return strings(.claudeNotFound)
         } catch {
             assistantLog.error("assistant web answer failed: \(String(describing: error), privacy: .public)")
@@ -545,7 +542,7 @@ final class AssistantController {
     /// Speaks without changing the state (a note while a card waits, or after turning off).
     private func speakOnly(_ text: String) {
         lastSpoken = text
-        if isOn { hideAt = Date().addingTimeInterval(Self.hudLinger) }
+        if isOn { hideAt = Date().addingTimeInterval(AssistantTuning.hudLinger) }
         hudNote = text
         machine.voiceStarted(text)
         refresh()
@@ -631,7 +628,7 @@ final class AssistantController {
 
     private func startTimer() {
         guard timer == nil else { return }
-        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: AssistantTuning.tickInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)
@@ -656,7 +653,7 @@ final class AssistantController {
         if active {
             hideAt = nil
         } else if hideAt == nil, hud.isVisible {
-            hideAt = Date().addingTimeInterval(Self.hudLinger)
+            hideAt = Date().addingTimeInterval(AssistantTuning.hudLinger)
         }
         // The microphone taken by the hotkey while paused goes off again.
         if temporaryMicrophone, phase == .paused {
