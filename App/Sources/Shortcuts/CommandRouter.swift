@@ -238,6 +238,39 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         if let window = windowController?.window { alert.beginSheetModal(for: window, completionHandler: handle) } else { handle(alert.runModal()) }
     }
 
+    /// Pane › Export Scrollback… (#253): the focused terminal's whole scrollback to a file the user picks (mode 0600;
+    /// the save panel has already asked about replacing an existing file). Optionally with ANSI colours.
+    @objc func exportScrollback(_ sender: Any?) {
+        guard let pane = focusedTerminalPane else { return NSSound.beep() }
+        windowController?.showWindow(nil)
+        let panel = NSSavePanel()
+        let name = pane.title.isEmpty ? "Terminal" : pane.title
+        panel.nameFieldStringValue = ScrollbackExport.fileName(title: name)
+        panel.allowedContentTypes = [.plainText]
+        panel.allowsOtherFileTypes = true
+        panel.message = String(localized: "The pane's whole scrollback. It may contain passwords or tokens; the file is readable only by you.")
+        let colours = NSButton(checkboxWithTitle: String(localized: "Keep colors (ANSI escape codes)"), target: nil, action: nil)
+        colours.state = .off
+        let accessory = NSView(frame: NSRect(x: 0, y: 0, width: 320, height: 32))
+        colours.frame.origin = NSPoint(x: 12, y: 8)
+        colours.sizeToFit()
+        accessory.addSubview(colours)
+        panel.accessoryView = accessory
+        let paneID = pane.id
+        let save: (NSApplication.ModalResponse) -> Void = { [weak self] response in
+            guard let self, response == .OK, let url = panel.url else { return }
+            let ansi = colours.state == .on
+            Task { @MainActor in
+                do {
+                    _ = try await self.controller.exportScrollback(paneID: paneID, path: url.path, ansi: ansi, force: true)
+                } catch {
+                    self.showTransferError(String(localized: "Cannot export the scrollback"), error)
+                }
+            }
+        }
+        if let window = windowController?.window { panel.beginSheetModal(for: window, completionHandler: save) } else { save(panel.runModal()) }
+    }
+
     private func showTransferError(_ title: String, _ error: Error) {
         let alert = NSAlert()
         alert.alertStyle = .warning
@@ -400,7 +433,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
-        case #selector(find(_:)):
+        case #selector(find(_:)), #selector(exportScrollback(_:)):
             return focusedTerminalPane != nil
         case #selector(findNext(_:)), #selector(findPrevious(_:)):
             return focusedTerminalPane?.find.isOpen == true

@@ -85,6 +85,18 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.worktreeRequest(method, params) }
                 }
+            case "pane.export":
+                // #253: read in chunks with the main actor free between them (AppController.exportScrollback). Not in
+                // RemoteAPIPolicy.allowedMethods: SSH panes' sockets cannot write files on this Mac.
+                let pane = try params.string("pane")
+                let path = try params.required("path")
+                let ansi = try params.bool("ansi") ?? false
+                let force = try params.bool("force") ?? false
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        try await self.controller.exportScrollback(paneID: pane, path: path, ansi: ansi, force: force)
+                    }
+                }
             case "browser.snapshot_tree", "browser.click", "browser.fill", "browser.wait_for":
                 // Page scripts that may wait (wait_for up to a minute): BrowserPane+DevTools.swift, #167.
                 let pane = try browserPaneID(params)

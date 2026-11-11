@@ -411,6 +411,30 @@ final class AppController {
         return terminal.visibleText()
     }
 
+    /// `pane.export` and Pane › Export Scrollback… (#253): the pane's whole scrollback and screen, as plain text or
+    /// with `ansi` colours, into a new file at `path` (absolute; an existing one only with `force`) with mode 0600.
+    /// Read in chunks of rows (`ScrollbackExport.Job`) with the main actor free between them, written beside the target
+    /// and moved into place at the end, so a failure leaves no partial file. Returns `{path, rows, lost, bytes}`.
+    func exportScrollback(paneID: String?, path: String, ansi: Bool, force: Bool) async throws -> JSONValue {
+        let terminal = try terminal(for: paneID)
+        let target = try ScrollbackExport.validatedPath(path, force: force)
+        guard let scrollbar = terminal.scrollbar() else { throw RPCError(code: 500, message: "cannot read the terminal") }
+        let writer = try PrivateFileWriter(path: target, force: force)
+        var job = ScrollbackExport.Job(scrollbar: scrollbar, ansi: ansi)
+        do {
+            while !job.isDone {
+                try writer.write(try job.step(scrollbar: terminal.scrollbar()) { terminal.screenText($0, ansi: $1) })
+                await Task.yield()  // input, drawing and other requests go on between chunks
+            }
+            try writer.finish()
+        } catch {
+            writer.cancel()
+            throw error
+        }
+        return ["path": .string(target), "rows": .number(Double(job.rowsWritten)), "lost": .number(Double(job.lost)),
+                "bytes": .number(Double(writer.bytes))]
+    }
+
     /// Up to `maxRows` rows above the pane's visible screen, oldest first; nil when output got in the way
     /// (`TerminalSurface.historyRows`).
     func historyRows(paneID: String?, maxRows: Int) throws -> [String]? {

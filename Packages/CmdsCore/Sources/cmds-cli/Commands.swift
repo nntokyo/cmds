@@ -394,6 +394,25 @@ extension CLI {
             let result = try ctx.call("pane.swap", ["a": .string(a), "b": .string(b)])
             if ctx.json { ctx.printJSON(result) }
         },
+        Command(name: "pane export", usage: "pane export [--pane P] [--ansi] [--force] <file>",
+                summary: "Write a terminal pane's whole scrollback to a file.",
+                details: """
+                    The history and the screen as plain text (wrapped lines joined), or with --ansi the colours and
+                    attributes as ANSI escape codes (view with `less -R`). The file is created with mode 0600, as it may
+                    hold secrets; an existing file is refused unless --force. Relative paths are resolved against the
+                    current directory. Long histories are read in chunks while the pane keeps running; rows that the
+                    scrollback limit drops meanwhile are counted as lost. Prints the file and the number of rows.
+                    """,
+                options: ["pane"], flags: ["ansi", "force"]) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds pane export [--pane P] [--ansi] [--force] <file>")
+            let path = absolutePath(ctx.args.positionals[0])
+            let result = try CLI.callNewMethod(ctx, "pane.export", [
+                "pane": ctx.pane.json, "path": .string(path),
+                "ansi": ctx.args.has("ansi") ? true : nil, "force": ctx.args.has("force") ? true : nil,
+            ], timeout: 600)
+            if ctx.json { return ctx.printJSON(result) }
+            print(ScrollbackExport.summary(result))
+        },
         Command(name: "send", usage: "send [--pane P] [--enter] <text…|->",
                 summary: "Type text into a terminal pane.",
                 details: "Words are joined with spaces; `-` reads the text from stdin. --enter (-e) appends a newline (Return).",

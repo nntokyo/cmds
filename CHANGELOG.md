@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   (Settings › Assistant › Use my Personal Voice…), and uses the system voice for a language your Personal Voice does
   not speak.
 
+- Terminal panes: Pane › Export Scrollback… (`cmds pane export`, API `pane.export`) writes the whole scrollback to a
+  file as plain text, or with colours as ANSI escape codes; the file is readable only by you (0600), an existing file
+  is replaced only when asked, and long histories are read in chunks while the pane keeps running (#253).
+
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.

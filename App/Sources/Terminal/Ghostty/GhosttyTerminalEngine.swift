@@ -229,6 +229,22 @@ final class GhosttyTerminalSurface: TerminalSurface {
         return rows
     }
 
+    /// One selection from the first cell of `rows.lowerBound` to the last of `rows.upperBound` in screen points (cmds'
+    /// patch reaches the whole history with them); libghostty's text reader joins soft-wrapped rows.
+    func screenText(_ rows: ClosedRange<Int>, ansi: Bool) -> String? {
+        guard let surface = surfaceView.surface, rows.lowerBound >= 0 else { return nil }
+        let cols = Int(ghostty_surface_size(surface).columns)
+        guard cols > 0 else { return nil }
+        let selection = ghostty_selection_s(top_left: Self.cell(GHOSTTY_POINT_SCREEN, col: 0, row: rows.lowerBound),
+                                            bottom_right: Self.cell(GHOSTTY_POINT_SCREEN, col: cols - 1, row: rows.upperBound),
+                                            rectangle: false)
+        guard ansi else { return read(surface, selection)?.text }
+        var text = ghostty_text_s()
+        guard ghostty_surface_read_text_vt(surface, selection, &text) else { return nil }
+        defer { ghostty_surface_free_text(surface, &text) }
+        return Self.string(from: text)
+    }
+
     func scroll(toRow row: Int) {
         surfaceView.performBinding("scroll_to_row:\(max(0, row))")
     }
@@ -443,6 +459,7 @@ private final class FallbackSurface: TerminalSurface {
     func navigateSearch(next: Bool) {}
     func endSearch() {}
     func screenRows(_ range: Range<Int>) -> [String]? { nil }
+    func screenText(_ rows: ClosedRange<Int>, ansi: Bool) -> String? { nil }
     func scroll(toRow row: Int) {}
     func cellRect(viewportRow row: Int, column: Int, width: Int) -> NSRect? { nil }
     var keyboardRedirect: NSView?

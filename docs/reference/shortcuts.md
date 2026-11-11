@@ -44,6 +44,7 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Zoom pane (toggle; zooms the tile in the tiled view) | ⇧⌘↩ | View |
 | Jump to latest attention pane | ⇧⌘U | Pane |
 | Find in the terminal (find bar; Esc closes) | ⌘F | Edit › Find |
+| Export the focused terminal's scrollback to a file | – | Pane › Export Scrollback… |
 | Next / previous hit (also Return / ⇧Return in the find bar) | ⌘G / ⇧⌘G | Edit › Find |
 | Close pane | ⌘W | File |
 | Open browser split | ⇧⌘B | File |

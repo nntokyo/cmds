@@ -72,6 +72,14 @@ final class RemoteAPIPolicyTests: XCTestCase {
         XCTAssertFalse(RemoteAPIPolicy.allowedMethods.contains { $0.hasPrefix("files.") || $0.hasPrefix("transfer.") })
     }
 
+    /// Exporting a scrollback writes a file on this Mac: local socket only, also for the pane itself (#253).
+    func testRefusesScrollbackExport() {
+        XCTAssertThrowsError(try RemoteAPIPolicy.authorize(method: "pane.export", params: ["pane": "p1", "path": "/tmp/x"],
+                                                           scope: scope)) { error in
+            XCTAssertEqual((error as? RPCError)?.code, 403)
+        }
+    }
+
     func testFiltersResults() {
         let workspaces: JSONValue = [
             ["id": "w1", "panes": [["id": "p1"]]],
