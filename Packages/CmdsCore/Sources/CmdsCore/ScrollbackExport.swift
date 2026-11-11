@@ -8,6 +8,12 @@ public enum ScrollbackExport {
     public static let chunkRows = 2000
     /// How far past a chunk's end a step looks for a line that ends there (not soft-wrapped into the next row).
     public static let boundarySearchRows = 200
+    /// The export file's mode: only the owner reads it (a scrollback may hold passwords or tokens).
+    public static let fileMode: mode_t = 0o600
+    /// The title used for a pane without one (`fileName`).
+    static let untitled = "Terminal"
+    /// Characters of a pane's title kept in the suggested file name.
+    static let fileNameTitleLimit = 60
 
     /// `path` checked for `pane.export`: absolute, its folder exists, not a folder itself, and not an existing file
     /// unless `force`. Returns it standardized.
@@ -35,8 +41,10 @@ public enum ScrollbackExport {
         let cleaned = title.trimmingCharacters(in: .whitespacesAndNewlines).unicodeScalars
             .map { CharacterSet.controlCharacters.contains($0) || "/:\\".unicodeScalars.contains($0) ? "-" : Character($0) }
         var base = String(cleaned).trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".")))
-        if base.count > 60 { base = String(base.prefix(60)).trimmingCharacters(in: .whitespaces) }
-        return (base.isEmpty ? "Terminal" : base) + " scrollback.txt"
+        if base.count > fileNameTitleLimit {
+            base = String(base.prefix(fileNameTitleLimit)).trimmingCharacters(in: .whitespaces)
+        }
+        return (base.isEmpty ? untitled : base) + " scrollback.txt"
     }
 
     /// One line for `cmds pane export`: `wrote 1234 rows to /path (56789 bytes)`, plus the rows lost.
@@ -68,6 +76,9 @@ public enum ScrollbackExport {
     }
 
     static let reset = "\u{1B}[0m"
+
+    /// The terminal (its surface or scrollbar) cannot be read at all.
+    public static var cannotReadTerminal: RPCError { RPCError(code: 500, message: "cannot read the terminal") }
 
     /// One export: rows `next ..< end` in absolute numbering (screen row + rows pruned so far), so rows that the
     /// scrollback limit drops while it runs are counted as `lost` instead of shifting what is read.
@@ -106,19 +117,19 @@ public enum ScrollbackExport {
         /// newline.
         public mutating func step(scrollbar: TerminalScrollbar?, read: (ClosedRange<Int>, Bool) -> String?) throws -> String {
             guard !isDone else { return "" }
-            guard let bar = scrollbar else { throw RPCError(code: 500, message: "cannot read the terminal") }
+            guard let bar = scrollbar else { throw ScrollbackExport.cannotReadTerminal }
             var first = next - bar.pruned
             if first < 0 {
                 lost += min(-first, end - next)
                 next = min(bar.pruned, end)
                 first = 0
-                if isDone { return hasText ? "\n" : "" }
+                if isDone { return ending }
             }
             let available = min(end - bar.pruned, bar.total)  // a cleared history can be shorter
             guard first < available else {
                 lost += end - next  // gone with a cleared history
                 next = end
-                return hasText ? "\n" : ""
+                return ending
             }
             var last = min(first + chunkRows, available) - 1
             if last < available - 1 {
@@ -138,9 +149,12 @@ public enum ScrollbackExport {
             if started { chunk = "\n" + chunk }
             started = true
             next += last - first + 1
-            if isDone, hasText { chunk += "\n" }
+            if isDone { chunk += ending }
             return chunk
         }
+
+        /// What the export ends with once done: a newline after some text, nothing for an empty one.
+        private var ending: String { hasText ? "\n" : "" }
     }
 }
 
@@ -160,17 +174,17 @@ public final class PrivateFileWriter {
         let url = URL(fileURLWithPath: path)
         temporaryPath = url.deletingLastPathComponent()
             .appendingPathComponent(".\(url.lastPathComponent).cmds-\(UUID().uuidString.prefix(8))").path
-        descriptor = open(temporaryPath, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+        descriptor = open(temporaryPath, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, ScrollbackExport.fileMode)
         guard descriptor >= 0 else { throw Self.error("cannot create a file in", url.deletingLastPathComponent().path) }
-        fchmod(descriptor, 0o600)  // whatever the umask
+        fchmod(descriptor, ScrollbackExport.fileMode)  // whatever the umask
     }
 
     public func write(_ text: String) throws {
-        guard descriptor >= 0 else { throw RPCError(code: 500, message: "the export file is closed") }
-        var data = Array(text.utf8)
+        guard descriptor >= 0 else { throw Self.closed }
+        let data = Array(text.utf8)
         var offset = 0
         while offset < data.count {
-            let written = data.withUnsafeMutableBytes { buffer in
+            let written = data.withUnsafeBytes { buffer in
                 Darwin.write(descriptor, buffer.baseAddress! + offset, buffer.count - offset)
             }
             if written < 0 {
@@ -182,12 +196,11 @@ public final class PrivateFileWriter {
             offset += written
         }
         bytes += data.count
-        data.removeAll()
     }
 
     /// Moves the file into place.
     public func finish() throws {
-        guard descriptor >= 0 else { throw RPCError(code: 500, message: "the export file is closed") }
+        guard descriptor >= 0 else { throw Self.closed }
         let synced = fsync(descriptor) == 0
         close(descriptor)
         descriptor = -1
@@ -213,6 +226,8 @@ public final class PrivateFileWriter {
     }
 
     deinit { cancel() }
+
+    private static var closed: RPCError { RPCError(code: 500, message: "the export file is closed") }
 
     private static func error(_ what: String, _ path: String) -> RPCError {
         RPCError(code: 500, message: "\(what) \(path): \(String(cString: strerror(errno)))")

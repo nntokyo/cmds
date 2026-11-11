@@ -418,7 +418,7 @@ final class AppController {
     func exportScrollback(paneID: String?, path: String, ansi: Bool, force: Bool) async throws -> JSONValue {
         let terminal = try terminal(for: paneID)
         let target = try ScrollbackExport.validatedPath(path, force: force)
-        guard let scrollbar = terminal.scrollbar() else { throw RPCError(code: 500, message: "cannot read the terminal") }
+        guard let scrollbar = terminal.scrollbar() else { throw ScrollbackExport.cannotReadTerminal }
         let writer = try PrivateFileWriter(path: target, force: force)
         var job = ScrollbackExport.Job(scrollbar: scrollbar, ansi: ansi)
         do {
