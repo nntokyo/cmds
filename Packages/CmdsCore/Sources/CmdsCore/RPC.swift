@@ -114,10 +114,19 @@ public enum CmdsEnv {
         if let override = supportDirectoryOverride(environment: environment) {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
-        return URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        return supportFolderURL(home: NSHomeDirectory(), folderName: folderName)
+    }
+
+    /// `<home>/Library/Application Support/<folderName>`: a build's support folder (the app's, its CLI's and its
+    /// widget's).
+    public static func supportFolderURL(home: String, folderName: String) -> URL {
+        URL(fileURLWithPath: home, isDirectory: true)
             .appendingPathComponent("Library/Application Support", isDirectory: true)
             .appendingPathComponent(folderName, isDirectory: true)
     }
+
+    /// The socket's name in the support folder.
+    static let socketFileName = "cmds.sock"
 
     /// Absolute `$CMDS_SUPPORT_DIR` (tilde expanded), or nil when not running isolated.
     public static func supportDirectoryOverride(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
@@ -176,7 +185,7 @@ public enum CmdsEnv {
         if supportDirectoryOverride(environment: environment) == nil, let path = environment[socketPath], !path.isEmpty {
             return path
         }
-        return supportDirectoryURL(environment: environment, folderName: folderName).appendingPathComponent("cmds.sock").path
+        return supportDirectoryURL(environment: environment, folderName: folderName).appendingPathComponent(socketFileName).path
     }
 
     /// The socket the app listens on: as `defaultSocketPath`, except that a build with its own support folder (Debug)
@@ -185,7 +194,7 @@ public enum CmdsEnv {
     public static func appSocketPath(environment: [String: String] = ProcessInfo.processInfo.environment,
                                      folderName: String = supportFolderName) -> String {
         guard folderName == defaultSupportFolderName else {
-            return supportDirectoryURL(environment: environment, folderName: folderName).appendingPathComponent("cmds.sock").path
+            return supportDirectoryURL(environment: environment, folderName: folderName).appendingPathComponent(socketFileName).path
         }
         return defaultSocketPath(environment: environment, folderName: folderName)
     }

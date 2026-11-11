@@ -97,10 +97,7 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
     /// `NSHomeDirectory()` is its container. Isolated instances (`CMDS_SUPPORT_DIR`) write theirs elsewhere, so they
     /// never change the user's widget.
     public static func defaultURL(home: String = realHomeDirectory(), folderName: String = CmdsEnv.supportFolderName) -> URL {
-        URL(fileURLWithPath: home, isDirectory: true)
-            .appendingPathComponent("Library/Application Support", isDirectory: true)
-            .appendingPathComponent(folderName, isDirectory: true)
-            .appendingPathComponent(fileName)
+        CmdsEnv.supportFolderURL(home: home, folderName: folderName).appendingPathComponent(fileName)
     }
 
     /// The account's home folder from the user database, not `$HOME` or the sandbox container.
