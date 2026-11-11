@@ -1380,6 +1380,17 @@
         }
       }
     },
+    "limit" : {
+      "comment" : "short label of an agent's usage limit that was reached (limit 100%)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "上限"
+          }
+        }
+      }
+    },
     "Line mode" : {
       "localizations" : {
         "ja" : {
@@ -3167,6 +3178,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "更新：%@"
+          }
+        }
+      }
+    },
+    "Usage limit" : {
+      "comment" : "agent usage limit that was reached (window unknown)",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "利用上限"
           }
         }
       }

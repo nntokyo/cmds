@@ -187,6 +187,15 @@ Code: `CmdsCore/AgentUsage.swift`, `AgentFormat.swift`, `ClaudeStatusLine.swift`
   write, for resumed sessions). Files are read only when size/mtime change, only the appended bytes (≤ 256 KB tail);
   only lines mentioning `token_count`/`turn_context` are decoded, into types holding just the usage fields. Context
   % uses Codex's own formula (12k baseline). Usage is dropped when the pane has no Codex process left.
+- Codex account limits (#227): `token_count` events whose windows are null keep the known ones; a `task_complete`
+  / `error` event with `codex_error_info: usage_limit_exceeded` (lines found by that marker) sets
+  `Snapshot.limitReached` with the reset parsed from the message (`CodexRollout.limitReset`, local time) and is
+  cleared by a later event with figures. `accountLimits` turns it into the matching window at 100 % (reset within
+  15 min) or an extra `UsageLimit.usageLimit` at 100 % (no reset: dropped by `active(at:)` 24 h after `updatedAt`).
+  Besides the panes' files the watcher follows, for limits only, the 4 newest rollout files of today's and
+  yesterday's folders under `$CODEX_HOME/sessions` (else `~/.codex/sessions`) modified within 6 h (folders listed
+  every 15 s, ≤ 64 KB tail). The newest limits are saved in `codex-limits.json` (`CodexLimitsStore`, support
+  folder) when the figures change and restored at launch.
 - Usage without updates for 3 min is marked `stale` (idle agent, dimmed). Limits whose `resetsAt` passed are left
   out. Report-driven updates go through `usageChanges` (coalesced to 4/s); only appearing/disappearing agents emit
   `pane` changes (row height).

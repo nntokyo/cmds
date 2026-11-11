@@ -25,9 +25,12 @@ private func localizedAgentText(_ text: AgentFormat.Text) -> String {
     case .daysAgo(let d): return String(localized: "\(d) d ago", comment: "age of agent figures")
     case .inDuration(let d): return String(localized: " (in \(d))", comment: "after a limit's reset time: 15:30 (in 2h10m)")
     case .spendLabel: return String(localized: "spend", comment: "short label of an agent's spend limit (spend $12/$50)")
+    case .usageLimitLabel:
+        return String(localized: "limit", comment: "short label of an agent's usage limit that was reached (limit 100%)")
     case .fiveHourLimit: return String(localized: "5-hour limit", comment: "agent usage limit")
     case .sevenDayLimit: return String(localized: "7-day limit", comment: "agent usage limit")
     case .spendLimit: return String(localized: "Spend limit", comment: "agent usage limit")
+    case .usageLimit: return String(localized: "Usage limit", comment: "agent usage limit that was reached (window unknown)")
     case .windowLimit(let label): return String(localized: "\(label) limit", comment: "agent usage limit of a window (1h limit)")
     case .limitUsed(let title, let percent):
         return String(localized: "\(title) \(percent) used", comment: "agent usage limit: 5-hour limit 40% used")

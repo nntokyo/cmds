@@ -295,7 +295,8 @@ cmds types into Codex only when its stricter idle rules hold.
 
 Usage needs no setup: cmds finds the session file of each `codex` running in a pane (also when the shared app-server
 daemon writes it) and reads only its session id and directory (`session_meta`), usage events (`token_count`) and model
-(`turn_context`) — never the conversation.
+(`turn_context`) — never the conversation. Of a turn Codex refuses at the account's usage limit (`task_complete` with
+`usage_limit_exceeded`) it keeps only that the limit was reached and the reset time from the message.
 
 ## Antigravity CLI
 
@@ -323,7 +324,17 @@ Claude's spend limit; orange from 80 %, red from 95 %, reset times in the toolti
 `cmds agents` lists everything (`cmds ls` has a short summary per pane, `cmds stats` the limits).
 
 - **Claude Code**: add `cmds hook claude-status` to the status line ([above](#usage-and-limits-status-line)).
-- **Codex**: nothing to configure.
+- **Codex**: nothing to configure. Account limits come from the session files of Codex in panes and, for runs no pane
+  shows (`codex exec`, `codex review` started by an agent), from the 4 newest session files of today and yesterday
+  modified in the last 6 hours (`$CODEX_HOME/sessions`, else `~/.codex/sessions`; checked every 15 s, only the end
+  of each file, usage events only).
+  - **Limit reached**: when Codex refuses a turn because the account hit its usage limit, the window whose reset
+    matches Codex's "try again at …" time shows 100 %; if none does, a `limit` 100 % entry with that reset is added
+    (rings, sidebar footer, red dot, `cmds agents`, `agent.list`, schedules waiting for Codex's limit). It stays until
+    the reset passes or a newer usage event with figures arrives. When the message has no time cmds understands, the
+    entry has no reset and is dropped after 24 hours.
+  - **Kept across launches**: the newest Codex limits are saved in `codex-limits.json` in the support folder and read
+    at launch; windows that have reset since are left out.
 
 Data older than 3 minutes is dimmed (idle agent); it disappears when the agent exits. How it is collected:
 [internals/architecture.md](../internals/architecture.md#agent-usage).
