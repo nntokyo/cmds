@@ -145,7 +145,7 @@ open build/dd/Build/Products/Debug/cmds.app
 | [ワークスペースとペイン](docs/guide/workspaces-and-panes.md) | [ソケットAPI](docs/reference/api.md) | [同期プロトコル](docs/internals/sync-protocol.md) |
 | [iPhoneとiPad](docs/guide/iphone.md) | [キーボードショートカット](docs/reference/shortcuts.md) | [SSHペイン](docs/internals/ssh.md) |
 | [AIコーディングエージェント](docs/guide/ai-agents.md) | [環境変数](docs/reference/environment.md) | [ローカライズ](docs/internals/localization.md) |
-| | | [テスト](docs/internals/testing.md) |
+| [音声アシスタント](docs/guide/assistant.md) | | [テスト](docs/internals/testing.md) |
 | | | [リリース](docs/internals/release.md) |
 
 目次：[docs/README.md](docs/README.md)。変更履歴：[CHANGELOG.md](CHANGELOG.md)。

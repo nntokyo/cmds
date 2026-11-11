@@ -9,6 +9,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Mac (macOS 26 and later): a voice assistant, "JARVIS" (beta, free for now). Turned on in Settings › Assistant or
+  the menu bar item, it listens on this Mac for its name (ジャービス / Jarvis) and answers in Japanese or English:
+  which workspaces need you, what an agent is doing (Apple's on-device model), a detailed summary on request
+  (`claude -p`). It can reply to an agent, approve or pick an option and start Claude Code or Codex, always shown first
+  in a floating HUD and run only after yes or Return (Return or a click for deletes, pushes, deploys and SSH panes)
+  (#243).
+
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.

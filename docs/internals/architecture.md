@@ -21,6 +21,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `+Remote` folders on SSH hosts; `GitStatusReader`), `RemoteConnections` (one SFTP connection per host), `TransferCenter` (the transfer queue, `transfer.*`) and the Transfers window. Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git; `FileLocation`, `SFTPPacket`/`SFTPClient`, `SSHFileConnection`, `FileTree`, `RemoteTrash`, `TransferJob`/`TransferQueue`; [files-sftp.md](files-sftp.md)). |
 | `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs, the 1-minute notice), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), pane tags, the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`, `ScheduleTarget`). |
 | `Widget/Sources` | The cmds widget (#96, WidgetKit extension `CmdsWidget`, embedded at `cmds.app/Contents/PlugIns/CmdsWidget.appex`). It reads `widget.json` (CmdsCore `WidgetSnapshot`), which `WidgetPublisher` in the app writes to the support folder; the extension is sandboxed with a read-only exception for that one file (`Widget/CmdsWidget.entitlements`, resolved from the real home, not the sandbox container). The menu bar item and the widget share `AgentOverview`. Clicks open `cmds://workspace/<id>`. |
+| `App/Sources/Assistant` | The voice assistant (#243, macOS 26+): `AssistantController` (ties it together), `AssistantListener` (microphone → SpeechAnalyzer), `AssistantVoice` (AVSpeechSynthesizer), `AssistantBrain` (Foundation Models, `claude -p`), `AssistantHUD` / `AssistantOrbView` (the panel), `AssistantHotkeys` (Carbon hot keys), Settings › Assistant, `debug.assistant`. Rules in `CmdsCore/Assistant`. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
@@ -310,6 +311,38 @@ CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/
 - **Events**: `ScheduleRunner.changes` (separate from `AppController.changes`) → socket events `schedule.changed`,
   `schedule.run`. `schedule.*` is not in `RemoteAPIPolicy.allowedMethods`.
 - **Logging**: `Logger` category `schedule` with ids, states and reason codes only; prompts and commands never.
+
+## Voice assistant
+
+What the user sees: [guide/assistant.md](../guide/assistant.md). Code: `App/Sources/Assistant`; rules (unit-tested)
+in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
+
+- **Availability**: `#available(macOS 26.0, *)` around everything (`AssistantController.start` in `AppDelegate`, the
+  Settings tab, the menu bar items, `debug.assistant`); `Speech` and `FoundationModels` are weakly linked, so cmds
+  still launches on macOS 14. `PaidFeatures.isUnlocked(.assistant)` gates it: unlocked while the feature is in
+  `PaidFeatures.betaFree` (now), in Debug builds (`developmentBuild`, set under `#if DEBUG`) or by the licence
+  provider (`NoLicenceProvider` until the subscription, #244). No environment variable or default unlocks anything.
+- **Listening**: `AssistantListener` taps `AVAudioEngine`'s input, converts to
+  `SpeechAnalyzer.bestAvailableAudioFormat` on the audio thread (`AudioPump`, created outside the main actor) and
+  feeds a `SpeechTranscriber` for the app's language (`AssistantLanguage`: ja_JP / en_US), downloading its asset once.
+  Only final results leave it, as text. Nothing is written; partial results only drive the level.
+- **Rules**: `AssistantAddressing` (name prefix after an optional greeting, folded for width, case and kana; or the
+  follow-up window), `AssistantMachine` (off → idle → listening / thinking / speaking / confirming, paused; follow-up
+  8 s, echo guard 0.6 s after speaking, confirmation timeout 60 s; only yes/no count without the name while a card
+  waits), `AssistantIntent` (regular-expression grammar, Japanese and English; the rest is a question),
+  `AssistantPlanner` with `AssistantWorld` (built by `AgentOverview.assistantWorld` from the menu bar's summary, each
+  terminal pane's waiting flag and `AgentPromptOptions`): answers, summaries, questions back, or an `AssistantAction`
+  to confirm. A pane is chosen only when unique (the one waiting, else the one agent, else the one terminal).
+  `AssistantSafety` marks text (and an approved prompt's screen) that needs Return or a click.
+- **Acting**: confirmed actions run in `AssistantController.run` through `AppController.sendText` + `typeText("\r")`
+  after `ScheduleRunTiming.enterDelay` (as the reply panel), `typeText` of the digit, or `createWorkspace(cwd:command:
+  select: false)`; the pane must still be in the same workspace.
+- **Answers**: `AssistantReport` texts through `AssistantStrings.localized` (String Catalog); summaries and questions
+  by `SystemLanguageModel.default` (never Private Cloud Compute, 20 s limit); a detailed summary by `claude -p
+  --output-format text --disallowedTools …` in an empty temporary folder, screen text on stdin, 90 s limit.
+- **Keys and HUD**: the HUD is a `.nonactivatingPanel` that can never become key; Return / Enter / Esc are Carbon hot
+  keys registered only while a card shows (ignored for 0.8 s after it appears), ⌥⌘J likewise; isolated instances
+  register none. Phase 2 hook: `AssistantController.workspacesChanged(_:)` (proactive announcements).
 
 ## Keeping the Mac awake
 
