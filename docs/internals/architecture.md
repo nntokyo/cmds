@@ -376,11 +376,12 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
 - **Answers**: `AssistantReport` texts through `AssistantStrings.localized` (String Catalog); summaries and questions
   by `SystemLanguageModel.default` (never Private Cloud Compute, 20 s limit); a detailed summary by `claude -p
   --output-format text --model sonnet --tools ""` (no tools: the screen text is untrusted) in an empty temporary
-  folder, screen text on stdin, 90 s limit. The assistant runs Claude Code isolated from the user's settings: every
-  call (`AssistantClaude`, argument lists unit-tested) adds `--setting-sources "" --no-session-persistence
-  --strict-mcp-config`, so the user's CLAUDE.md, hooks (including `cmds hook claude`), output style and plugins are
-  not loaded, no MCP server starts and no session is saved under `~/.claude/projects` (`--bare` is not used: it
-  ignores the OAuth sign-in); the process environment has no `CMDS_*` variables, so nothing can attribute it to a
+  folder (always `$TMPDIR/cmds-assistant`), screen text on stdin, 90 s limit. The assistant runs Claude Code isolated
+  from the user's settings: every call (`AssistantClaude`, argument lists unit-tested) adds `--setting-sources ""
+  --no-session-persistence --strict-mcp-config`, so the user's CLAUDE.md, hooks (including `cmds hook claude`),
+  output style and plugins are not loaded, no MCP server starts and no session transcript is saved (Claude Code still
+  makes an empty project folder under `~/.claude/projects` for the working directory: one, as it never changes;
+  `--bare` is not used: it ignores the OAuth sign-in); the process environment has no `CMDS_*` variables, so nothing can attribute it to a
   pane. Models are named constants: `interpreterModel` haiku, `answerModel` sonnet (not the user's default).
   Web questions (`AssistantWeb`, CmdsCore; Settings › Assistant › Use Claude for web questions, `AssistantWeb`
   defaults key, on unless false): `AssistantWeb.needsWeb` sends a question straight to `AssistantBrain.webAnswer`

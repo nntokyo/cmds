@@ -95,12 +95,13 @@ enum AssistantBrain {
                                    input: nil, timeout: interpreterTimeout)
     }
 
-    /// Runs `claude` in an empty temporary folder, stopped after `timeout`: its standard output, trimmed.
+    /// Runs `claude` in an empty temporary folder, stopped after `timeout`: its standard output, trimmed. The folder is
+    /// always the same one (no tool can write to it): Claude Code still makes an (empty) project folder under
+    /// `~/.claude/projects` for its working directory, and so makes only one.
     private static func runClaude(arguments: [String], input: String?, timeout: TimeInterval = claudeTimeout) async throws -> String {
         guard let executable = claudeExecutable() else { throw ClaudeFailure.notFound }
-        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-assistant-\(UUID().uuidString)")
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-assistant")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: folder) }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
