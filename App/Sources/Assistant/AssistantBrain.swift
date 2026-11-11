@@ -79,8 +79,9 @@ enum AssistantBrain {
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// The tools `claude -p` may not use: anything that runs, writes or fetches.
-    static let deniedTools = "Bash,Edit,MultiEdit,Write,NotebookEdit,WebFetch,WebSearch,Task"
+    /// `claude -p` gets no tools at all (`--tools ""`) and no MCP servers (`--strict-mcp-config` without a config): the
+    /// screen text it summarises is untrusted and could ask for anything, and a summary of standard input needs none.
+    static let toolArguments = ["--tools", "", "--strict-mcp-config"]
 
     /// A longer summary by Claude Code, run headless. The screen text goes in on standard input.
     static func detailedSummary(facts: String, screen: String, language: AssistantLanguage) async throws -> String {
@@ -96,7 +97,7 @@ enum AssistantBrain {
         defer { try? FileManager.default.removeItem(at: folder) }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = ["-p", prompt, "--output-format", "text", "--disallowedTools", deniedTools]
+        process.arguments = ["-p", prompt, "--output-format", "text"] + toolArguments
         process.currentDirectoryURL = folder
         let input = Pipe()
         let output = Pipe()

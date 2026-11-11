@@ -339,7 +339,7 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   select: false)`; the pane must still be in the same workspace.
 - **Answers**: `AssistantReport` texts through `AssistantStrings.localized` (String Catalog); summaries and questions
   by `SystemLanguageModel.default` (never Private Cloud Compute, 20 s limit); a detailed summary by `claude -p
-  --output-format text --disallowedTools …` in an empty temporary folder, screen text on stdin, 90 s limit.
+  --output-format text --tools "" --strict-mcp-config` (no tools, no MCP servers: the screen text is untrusted) in an empty temporary folder, screen text on stdin, 90 s limit.
 - **Keys and HUD**: the HUD is a `.nonactivatingPanel` that can never become key; Return / Enter / Esc are Carbon hot
   keys registered only while a card shows (ignored for 0.8 s after it appears), ⌥⌘J likewise; isolated instances
   register none. Phase 2 hook: `AssistantController.workspacesChanged(_:)` (proactive announcements).
