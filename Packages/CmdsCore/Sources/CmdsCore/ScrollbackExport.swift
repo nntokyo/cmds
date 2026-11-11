@@ -176,7 +176,12 @@ public final class PrivateFileWriter {
             .appendingPathComponent(".\(url.lastPathComponent).cmds-\(UUID().uuidString.prefix(8))").path
         descriptor = open(temporaryPath, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, ScrollbackExport.fileMode)
         guard descriptor >= 0 else { throw Self.error("cannot create a file in", url.deletingLastPathComponent().path) }
-        fchmod(descriptor, ScrollbackExport.fileMode)  // whatever the umask
+        // Whatever the umask (the file is created with at most this mode, so a failure here leaves it no more open).
+        guard fchmod(descriptor, ScrollbackExport.fileMode) == 0 else {
+            let error = Self.error("cannot set the mode of", temporaryPath)
+            cancel()
+            throw error
+        }
     }
 
     public func write(_ text: String) throws {

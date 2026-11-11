@@ -63,6 +63,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   selected workspace; several requests in one sentence (「Claude Code を立ち上げて、API の進捗を教えて」) are done one
   after the other, the next after the card. The on-device model no longer apologises that it cannot start apps: a
   request to act goes to the command interpreter instead (#243).
+- Browser reload on file changes: a watched folder that is removed or moved, or one macOS cannot watch, no longer
+  stops the reloads silently. The eye button turns red with the reason in its tooltip and menu, and
+  `cmds browser watch` / `browser.watch` report it (`error`, `active: false`); watching resumes when the folder is
+  back. **Choose Folder…** and **Also Reload Remote Pages** beep when they fail, like the button itself (#259).
 
 ## [0.21.0] - 2026-11-11
 

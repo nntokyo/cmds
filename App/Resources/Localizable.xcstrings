@@ -6542,6 +6542,26 @@
         }
       }
     },
+    "Not watching: the folder cannot be watched.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "監視していません：このフォルダは監視できません。"
+          }
+        }
+      }
+    },
+    "Not watching: the folder was removed or moved.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "監視していません：フォルダが削除または移動されました。"
+          }
+        }
+      }
+    },
     "Nothing to sync": {
       "localizations": {
         "ja": {
