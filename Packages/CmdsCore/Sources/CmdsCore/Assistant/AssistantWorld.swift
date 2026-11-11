@@ -156,6 +156,12 @@ public struct AssistantWorld: Equatable, Sendable {
         case found(Pane)
         case ambiguous([Pane])
         case none
+
+        /// The pane, when it is clear.
+        public var found: Pane? {
+            if case .found(let pane) = self { return pane }
+            return nil
+        }
     }
 
     /// The pane an action on `workspace` goes to, only when it is clear: the one pane that waits; else the one pane
