@@ -133,6 +133,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         if #available(macOS 26.0, *) { problem = AssistantController.shared?.problem }
         statusNote.stringValue = problem ?? ""
         statusNote.isHidden = problem == nil
+        // The whole grid row, so no empty gap (with its row spacing) stays where the note would be.
+        if let grid = statusNote.superview as? NSGridView { grid.cell(for: statusNote)?.row?.isHidden = problem == nil }
     }
 
     /// The voices for the app's language (the system's, then the user's Personal Voices that speak it), rebuilt when
