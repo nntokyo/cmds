@@ -136,8 +136,18 @@ public enum AssistantModelReply {
     /// The marker (also half-broken), or an apology / refusal to act.
     public static func isAction(_ answer: String) -> Bool {
         let text = AssistantText.folded(answer)
-        if text.contains("[[action") || text.contains("action]]") || text.trimmingCharacters(in: CharacterSet(charactersIn: "[] .。")) == "action" { return true }
+        if text.contains("[[action") || text.contains("action]]") || text.trimmingCharacters(in: markerCharacters) == "action" { return true }
         return refusals.contains { $0.occurs(in: text) }
+    }
+
+    /// What may surround a marker the model half-broke ("[ACTION]", "ACTION.").
+    static let markerCharacters = CharacterSet(charactersIn: "[] .。")
+
+    /// Whether the on-device model's one-sentence summary of a session can be said: not empty, no action marker or
+    /// refusal, and not a bracketed word alone ("[START]"). Otherwise the facts are said instead.
+    public static func isSummary(_ text: String) -> Bool {
+        let bare = text.trimmingCharacters(in: markerCharacters)
+        return !(text.isEmpty || isAction(text) || (text.hasPrefix("[") && !bare.contains(" ")))
     }
 
     /// 「申し訳ありませんが…できません」, "I'm sorry, I can't…", "I am unable to…" (the Japanese folded like the answer).

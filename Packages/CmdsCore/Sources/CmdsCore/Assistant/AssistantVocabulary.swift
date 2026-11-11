@@ -23,7 +23,7 @@ public enum AssistantVocabulary {
         var seen = Set<String>()
         var out: [String] = []
         for word in names + fixedWords + titles + agents {
-            let value = word.split(whereSeparator: \.isNewline).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+            let value = AssistantText.oneLine(word)
             guard !AssistantText.key(value).isEmpty, value.count <= 60, seen.insert(value.lowercased()).inserted else { continue }
             out.append(value)
             if out.count == maxContextualStrings { break }

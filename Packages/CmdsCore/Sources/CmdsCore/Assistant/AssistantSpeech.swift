@@ -222,7 +222,7 @@ public enum AssistantReport {
 
     /// Long titles and questions are cut for speech.
     static func clip(_ text: String) -> String {
-        let flat = text.split(whereSeparator: \.isNewline).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        let flat = AssistantText.oneLine(text)
         return flat.count > 120 ? String(flat.prefix(119)) + "…" : flat
     }
 }

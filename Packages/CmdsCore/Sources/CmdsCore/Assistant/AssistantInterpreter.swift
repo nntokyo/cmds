@@ -93,7 +93,7 @@ public struct AssistantInterpretation: Equatable, Sendable, Decodable {
         case .working: .working
         case .named: named
         }
-        let message = text.split(whereSeparator: \.isNewline).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+        let message = AssistantText.oneLine(text)
         switch kind {
         case .question:
             return nil

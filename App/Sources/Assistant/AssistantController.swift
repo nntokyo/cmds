@@ -419,9 +419,7 @@ final class AssistantController {
             // One sentence a session ("api: テストを実行中。").
             let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language))
             // A marker or a bracketed word ("[START]") is no summary.
-            let bare = summary.trimmingCharacters(in: CharacterSet(charactersIn: "[] .。"))
-            return summary.isEmpty || AssistantModelReply.isAction(summary) || (summary.hasPrefix("[") && !bare.contains(" "))
-                ? facts : summary
+            return AssistantModelReply.isSummary(summary) ? summary : facts
         } catch {
             assistantLog.error("assistant summary of \(workspaceID, privacy: .public) failed: \(String(describing: error), privacy: .public)")
             return facts

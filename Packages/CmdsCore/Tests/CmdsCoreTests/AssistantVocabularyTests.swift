@@ -299,6 +299,21 @@ final class AssistantVocabularyTests: XCTestCase {
         XCTAssertFalse(AssistantClaude.modelInstructions(language: "Japanese", web: false).contains(AssistantModelReply.actionMarker))
     }
 
+    func testOnDeviceSummariesThatAreNoSummary() {
+        XCTAssertTrue(AssistantModelReply.isSummary("Running the tests."))
+        XCTAssertTrue(AssistantModelReply.isSummary("[WIP] running the tests."))
+        XCTAssertTrue(AssistantModelReply.isSummary("テストを実行中。"))
+        XCTAssertFalse(AssistantModelReply.isSummary(""))
+        XCTAssertFalse(AssistantModelReply.isSummary("[START]"))
+        XCTAssertFalse(AssistantModelReply.isSummary("[[ACTION]]"))
+        XCTAssertFalse(AssistantModelReply.isSummary("申し訳ありませんが、操作はできません。"))
+    }
+
+    func testOneLine() {
+        XCTAssertEqual(AssistantText.oneLine("  Run\nthe tests?\r\n "), "Run the tests?")
+        XCTAssertEqual(AssistantText.oneLine("api"), "api")
+    }
+
     // MARK: Follow-through
 
     func testFollowThroughOnAStartedTask() {
