@@ -377,11 +377,7 @@ final class AssistantController {
             if settings.assistantInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
                 let request = machine.request
                 return think(capped: true) {
-                    if let intent = await self.interpret(question, world: world) {
-                        guard !Task.isCancelled, self.machine.request == request, self.machine.phase == .thinking else { return nil }
-                        self.handle(intent)
-                        return nil
-                    }
+                    if await self.handleAsCommand(question, world: world, request: request) { return nil }
                     return await self.answer(question, world: world, interpreted: true)
                 }
             }
@@ -404,10 +400,9 @@ final class AssistantController {
         guard !screen.isEmpty else { return facts }
         do {
             if detailed {
-                let request = claudeStarted()
-                defer { claudeStopped(request) }
-                let summary = try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language)
-                markAnsweredByClaude(request)
+                let summary = try await askingClaude(answers: true) {
+                    try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language)
+                }
                 return AssistantBrevity.first(3, of: summary)
             }
             guard AssistantBrain.modelAvailable else { return facts }
@@ -435,12 +430,8 @@ final class AssistantController {
             let answer = try await AssistantBrain.answer(question, status: status, language: language, web: web)
             if web, AssistantWeb.answerNeedsWeb(answer) { return await webAnswer(question) }
             if AssistantModelReply.isAction(answer) {
-                let request = machine.request
-                if !interpreted, settings.assistantInterpreter, let intent = await interpret(question, world: world) {
-                    guard !Task.isCancelled, machine.request == request, machine.phase == .thinking else { return nil }
-                    handle(intent)
-                    return nil
-                }
+                if !interpreted, settings.assistantInterpreter,
+                   await handleAsCommand(question, world: world, request: machine.request) { return nil }
                 return strings(.cannotTell)
             }
             let text = AssistantWeb.withoutMarker(answer)
@@ -452,10 +443,10 @@ final class AssistantController {
 
     /// A free command as an intent, by the interpreter; nil when it is a question, `claude` is missing or fails.
     private func interpret(_ utterance: String, world: AssistantWorld) async -> AssistantIntent? {
-        let request = claudeStarted()
-        defer { claudeStopped(request) }
         do {
-            let output = try await AssistantBrain.interpret(utterance: utterance, world: world, language: language)
+            let output = try await askingClaude {
+                try await AssistantBrain.interpret(utterance: utterance, world: world, language: language)
+            }
             let intent = AssistantInterpretation.parse(output)?.intent(in: world)
             assistantLog.info("assistant interpreted a free command: \(intent.map { String(describing: $0).prefix(24) } ?? "question", privacy: .private)")
             return intent
@@ -469,12 +460,8 @@ final class AssistantController {
     /// or takes too long.
     private func webAnswer(_ question: String) async -> String {
         let strings = AssistantStrings.localized
-        let request = claudeStarted()
-        defer { claudeStopped(request) }
         do {
-            let text = try await AssistantBrain.webAnswer(question: question, language: language)
-            markAnsweredByClaude(request)
-            return text
+            return try await askingClaude(answers: true) { try await AssistantBrain.webAnswer(question: question, language: language) }
         } catch AssistantClaudeProcess.Failure.notFound {
             return strings(.claudeNotFound)
         } catch {
@@ -489,21 +476,26 @@ final class AssistantController {
     /// The answer being worked out came from Claude Code.
     private var claudeAnswered = false
 
-    /// `claude` starts for the current request: its number.
-    private func claudeStarted() -> Int {
-        claudeWorkingFor = machine.request
+    /// A `claude -p` call for the current request, with "Asking Claude…" on the HUD while it runs (when it ends or is
+    /// stopped, a newer request's mark stays). `answers`: what it returns is the answer, labelled as Claude's (not when
+    /// the user has moved on since).
+    private func askingClaude<T>(answers: Bool = false, _ call: () async throws -> T) async rethrows -> T {
+        let request = machine.request
+        claudeWorkingFor = request
         refresh()
-        return machine.request
+        defer { if claudeWorkingFor == request { claudeWorkingFor = nil } }
+        let result = try await call()
+        if answers, machine.request == request { claudeAnswered = true }
+        return result
     }
 
-    /// `claude` ended (or was stopped); a newer request's mark stays.
-    private func claudeStopped(_ request: Int) {
-        if claudeWorkingFor == request { claudeWorkingFor = nil }
-    }
-
-    /// The answer to `request` came from Claude (not when the user has moved on since).
-    private func markAnsweredByClaude(_ request: Int) {
-        if machine.request == request { claudeAnswered = true }
+    /// A free command the rules did not understand, worked out by the interpreter and planned like any other (unless
+    /// the user has moved on from `request` meanwhile). False when the interpreter makes no command of it: then it is a
+    /// question.
+    private func handleAsCommand(_ utterance: String, world: AssistantWorld, request: Int) async -> Bool {
+        guard let intent = await interpret(utterance, world: world) else { return false }
+        if !Task.isCancelled, machine.request == request, machine.phase == .thinking { handle(intent) }
+        return true
     }
     /// The answer shown came from Claude Code (a small label on the HUD).
     private var answerByClaude = false
