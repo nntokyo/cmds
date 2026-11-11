@@ -107,6 +107,17 @@ final class BrowserWatchTests: XCTestCase {
                        "watching /p (remote pages too) (paused: pane not on screen or page not local)")
     }
 
+    func testJSONAndSummaryWithProblem() {
+        let json = BrowserWatch.json(BrowserWatch(folder: "/p"), active: false, problem: .folderMissing)
+        XCTAssertEqual(json, ["on": true, "folder": "/p", "remote": false, "active": false,
+                              "error": "the folder was removed or moved"])
+        XCTAssertEqual(BrowserWatch.summary(json), "watching /p (not watching: the folder was removed or moved)")
+        let cannot = BrowserWatch.json(BrowserWatch(folder: "/p"), active: false, problem: .cannotWatch)
+        XCTAssertEqual(BrowserWatch.summary(cannot), "watching /p (not watching: cannot watch the folder)")
+        // Off: no error to report.
+        XCTAssertEqual(BrowserWatch.json(nil, problem: .cannotWatch), ["on": false, "remote": false])
+    }
+
     func testDebounce() {
         var debounce = WatchDebounce()
         let t0 = Date(timeIntervalSinceReferenceDate: 0)

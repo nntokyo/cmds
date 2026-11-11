@@ -77,12 +77,28 @@ public struct BrowserWatch: Equatable, Sendable {
         return url.deletingLastPathComponent().standardizedFileURL.path
     }
 
-    /// API and CLI form: `{"on", "folder"?, "remote", "active"?}` (`active`: watching now; a pane off screen or on a
-    /// page that does not reload is not).
-    public static func json(_ watch: BrowserWatch?, active: Bool? = nil) -> JSONValue {
+    /// Why a watch is not watching though the pane is on screen (`browser.watch`'s `error`; the toolbar shows it too).
+    public enum Problem: Equatable, Sendable {
+        /// FSEvents did not start for the folder.
+        case cannotWatch
+        /// The folder is gone (removed or moved); watching resumes when a folder appears there again.
+        case folderMissing
+
+        public var message: String {
+            switch self {
+            case .cannotWatch: return "cannot watch the folder"
+            case .folderMissing: return "the folder was removed or moved"
+            }
+        }
+    }
+
+    /// API and CLI form: `{"on", "folder"?, "remote", "active"?, "error"?}` (`active`: watching now; a pane off screen
+    /// or on a page that does not reload is not, nor one with a `problem`, reported as `error`).
+    public static func json(_ watch: BrowserWatch?, active: Bool? = nil, problem: Problem? = nil) -> JSONValue {
         var object: [String: JSONValue] = ["on": .bool(watch != nil), "remote": .bool(watch?.remote ?? false)]
         if let watch { object["folder"] = .string(watch.folder) }
         if let active { object["active"] = .bool(active) }
+        if watch != nil, let problem { object["error"] = .string(problem.message) }
         return .object(object)
     }
 
@@ -91,7 +107,11 @@ public struct BrowserWatch: Equatable, Sendable {
         guard json["on"]?.boolValue == true, let folder = json["folder"]?.stringValue else { return "off" }
         var line = "watching \(folder)"
         if json["remote"]?.boolValue == true { line += " (remote pages too)" }
-        if json["active"]?.boolValue == false { line += " (paused: pane not on screen or page not local)" }
+        if let error = json["error"]?.stringValue {
+            line += " (not watching: \(error))"
+        } else if json["active"]?.boolValue == false {
+            line += " (paused: pane not on screen or page not local)"
+        }
         return line
     }
 }

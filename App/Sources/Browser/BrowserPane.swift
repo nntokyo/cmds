@@ -49,6 +49,8 @@ final class BrowserPane: NSView {
     var watch: BrowserWatch?
     /// Running while the pane is in a window and its page may reload.
     var directoryWatcher: DirectoryWatcher?
+    /// Why the watcher wanted on screen is not watching (FSEvents did not start, or the folder is gone).
+    var watchProblem: BrowserWatch.Problem?
     /// When the watcher stopped for the pane going off screen: what changed since is replayed when it is back.
     var watchEventID: FSEventStreamEventId?
     var watchDebounce = WatchDebounce()

@@ -147,7 +147,9 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `document.title` on load), `node_modules/` and `.git/`, opened as `file://` in a browser pane of a workspace whose
   folder it is; `cmds browser watch --pane P`, then edit `index.html` (title changes; `debug.browser` `watchReloads`
   counts reloads), touch files in `node_modules`/`.git` and a dot file (no reload), write several files at once (one
-  reload). Select another workspace, edit, come back: one reload. `--off`, and a remote URL (`active: false`).
+  reload). Select another workspace, edit, come back: one reload. `--off`, and a remote URL (`active: false`). Move the
+  folder away: `--status` says `not watching: the folder was removed or moved` (`error`; the eye turns red); move it
+  back and edit: one reload (#259).
 - `debug.pane_drag {pane, target?, zone?, row?, outside?}` (DEBUG builds, #218) drops a pane as a drag of its grip
   would: on `target`'s `zone` (`left`/`right`/`top`/`bottom`/`center`, the middle of that band as laid out now, through
   the content area's hit test), on the sidebar `row` of a workspace, or `outside` the window; without one it reports.

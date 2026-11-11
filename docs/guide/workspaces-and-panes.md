@@ -274,7 +274,8 @@ cmds browser watch --off
   reload, so a link away from your dev server stops the reloads, until you turn on **Also Reload Remote Pages**
   (`--remote`).
 - **Only on screen**: the folder is watched while the pane is shown; changes made while its workspace was hidden
-  reload the page once when you come back. The button is filled while it is on; its tooltip says when it is paused.
+  reload the page once when you come back. The button is filled while it is on; its tooltip says when it is paused. It turns red when the folder is removed or moved (watching resumes when it
+  is back) or cannot be watched; the tooltip and the menu say why.
 - Per pane, not kept across relaunches. AI agents can turn it on with the MCP tool `browser_watch`.
 
 ### Screenshots
