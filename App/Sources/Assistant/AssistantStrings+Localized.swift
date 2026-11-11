@@ -25,6 +25,8 @@ struct AssistantLanguage: Equatable {
     var voiceLanguage: String { isJapanese ? "ja-JP" : "en-US" }
     /// For the on-device model's instructions.
     var name: String { isJapanese ? "Japanese" : "English" }
+    /// Names in a sentence: `api, web` / `api、web`.
+    func list(_ items: [String]) -> String { items.joined(separator: isJapanese ? "、" : ", ") }
 }
 
 private extension AssistantLine {
@@ -51,10 +53,10 @@ private extension AssistantLine {
         case .optionsOffered(let count, let first): return String(localized: "\(count) options, the first is \(first).", comment: "assistant: the agent's numbered choices")
         case .notFound(let name): return String(localized: "I can't find a workspace called \(name).", comment: "assistant")
         case .whichWorkspace(let titles):
-            return String(localized: "Which one: \(titles.joined(separator: ", "))?", comment: "assistant: asks back when several workspaces fit")
+            return String(localized: "Which one: \(AssistantLanguage.current.list(titles))?", comment: "assistant: asks back when several workspaces fit")
         case .nobodyWaiting: return String(localized: "No workspace is waiting for you. Which one do you mean?", comment: "assistant")
         case .unclearPane(let workspace, let panes):
-            return String(localized: "\(workspace) has several panes (\(panes.joined(separator: ", "))). Please use the reply panel.", comment: "assistant: it cannot tell which pane to send to")
+            return String(localized: "\(workspace) has several panes (\(AssistantLanguage.current.list(panes))). Please use the reply panel.", comment: "assistant: it cannot tell which pane to send to")
         case .noQuestion(let workspace): return String(localized: "\(workspace) isn't asking anything.", comment: "assistant")
         case .noSuchOption(let workspace, let number): return String(localized: "\(workspace) has no option \(number).", comment: "assistant")
         case .unknownPlace(let name): return String(localized: "I don't know a workspace or folder called \(name).", comment: "assistant")

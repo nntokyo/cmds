@@ -208,7 +208,11 @@ final class APIServer {
                 connection.reply(id: id, result: .object(result))
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
-                SettingsWindowController.shared.showSettings(nil)
+                if let tab = try params.string("tab").flatMap(SettingsTab.init(rawValue:)) {
+                    SettingsWindowController.shared.show(tab: tab)
+                } else {
+                    SettingsWindowController.shared.showSettings(nil)
+                }
                 connection.reply(id: id, result: ["window": .number(Double(SettingsWindowController.shared.window?.windowNumber ?? 0))])
             #endif
             case "events.subscribe":

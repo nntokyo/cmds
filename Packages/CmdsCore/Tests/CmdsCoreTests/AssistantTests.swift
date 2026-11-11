@@ -213,6 +213,12 @@ final class AssistantPlannerTests: XCTestCase {
         XCTAssertEqual(plan("approve web"), .answer("web isn't asking anything."))
     }
 
+    func testJapaneseChooseWithAPartialName() {
+        let two = world([.init(id: "w4", title: "api-v2", state: .needsUser, panes: [.init(id: "p4", title: "zsh", waiting: true, prompt: yesNo)])])
+        XCTAssertEqual(AssistantIntent.parse("apで1番を選んで"), .choose(target: "ap", option: 1))
+        XCTAssertEqual(plan("apで1番を選んで", two), .askBack("Which one: api, api-v2?"))
+    }
+
     func testAmbiguousTargetsAskBack() {
         let two = world([.init(id: "w4", title: "api-v2", state: .needsUser, panes: [.init(id: "p4", title: "zsh", waiting: true, prompt: yesNo)])])
         XCTAssertEqual(plan("approve", two), .askBack("Which one: api, api-v2?"))

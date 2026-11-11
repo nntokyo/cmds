@@ -211,7 +211,7 @@ final class AssistantHUD: NSObject {
                 let lead = content.needsKey
                     ? String(localized: "A spoken yes is not enough here: press Return or click.", comment: "assistant HUD")
                     : String(localized: "Needs Return or a click:", comment: "assistant HUD: before the reasons")
-                reasonLabel.stringValue = ([lead] + reasons).joined(separator: " ")
+                reasonLabel.stringValue = ([lead] + reasons).joined(separator: AssistantLanguage.current.isJapanese ? "" : " ")
             } else {
                 reasonLabel.stringValue = String(localized: "Say “yes” or press Return. “No” or Esc cancels.", comment: "assistant HUD")
             }

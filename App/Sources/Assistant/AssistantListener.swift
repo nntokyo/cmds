@@ -30,6 +30,8 @@ final class AssistantListener {
     private var pump: AudioPump?
     private var results: Task<Void, Never>?
     private(set) var isRunning = false
+    /// Cleared by `stop()`: a start still waiting (a privacy prompt, the language download) then gives up.
+    private var wanted = false
 
     /// Asks for the microphone (and, for the transcriber, speech recognition) the first time; macOS shows its own
     /// prompts, worded by NSMicrophoneUsageDescription / NSSpeechRecognitionUsageDescription.
@@ -52,8 +54,10 @@ final class AssistantListener {
     }
 
     func start(locale: Locale) async throws {
-        guard !isRunning else { return }
+        guard !isRunning, !wanted else { return }
+        wanted = true
         try await Self.authorize()
+        guard wanted else { return }
         guard let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else { throw Failure.languageUnsupported }
         let transcriber = SpeechTranscriber(locale: supported, transcriptionOptions: [], reportingOptions: [.volatileResults],
                                             attributeOptions: [])
@@ -64,10 +68,17 @@ final class AssistantListener {
         guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber]) else {
             throw Failure.noAudioFormat
         }
+        guard wanted else { return }
         let analyzer = SpeechAnalyzer(modules: [transcriber])
         let (stream, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
         try await analyzer.start(inputSequence: stream)
         self.analyzer = analyzer
+        guard wanted else {
+            continuation.finish()
+            await analyzer.cancelAndFinishNow()
+            self.analyzer = nil
+            return
+        }
 
         results = Task { [weak self] in
             do {
@@ -88,17 +99,28 @@ final class AssistantListener {
 
         let input = engine.inputNode
         let inputFormat = input.outputFormat(forBus: 0)
-        let pump = AudioPump(from: inputFormat, to: format, continuation: continuation) { [weak self] level in
-            DispatchQueue.main.async { MainActor.assumeIsolated { self?.onLevel?(level) } }
+        let pump = AudioPump(from: inputFormat, to: format, continuation: continuation) { level in
+            DispatchQueue.main.async { MainActor.assumeIsolated { AssistantListener.current?.onLevel?(level) } }
         }
         self.pump = pump
-        input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { buffer, _ in pump.push(buffer) }
+        Self.current = self
+        Self.installTap(on: input, format: inputFormat, pump: pump)
         engine.prepare()
         try engine.start()
         isRunning = true
     }
 
+    /// The listener the audio thread reports levels to.
+    private static weak var current: AssistantListener?
+
+    /// The tap block runs on the audio thread: made outside the main actor, so it is not isolated to it (a block
+    /// formed in a main-actor method would trap when called there).
+    private nonisolated static func installTap(on input: AVAudioInputNode, format: AVAudioFormat, pump: AudioPump) {
+        input.installTap(onBus: 0, bufferSize: 2048, format: format) { buffer, _ in pump.push(buffer) }
+    }
+
     func stop() {
+        wanted = false
         guard isRunning || analyzer != nil else { return }
         isRunning = false
         engine.inputNode.removeTap(onBus: 0)
@@ -127,11 +149,11 @@ private final class AudioPump: @unchecked Sendable {
     private let converter: AVAudioConverter?
     private let format: AVAudioFormat
     private let continuation: AsyncStream<AnalyzerInput>.Continuation
-    private let level: (Float) -> Void
+    private let level: @Sendable (Float) -> Void
     private var lastLevel = Date.distantPast
 
     init(from input: AVAudioFormat, to format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation,
-         level: @escaping (Float) -> Void) {
+         level: @escaping @Sendable (Float) -> Void) {
         converter = input == format ? nil : AVAudioConverter(from: input, to: format)
         self.format = format
         self.continuation = continuation

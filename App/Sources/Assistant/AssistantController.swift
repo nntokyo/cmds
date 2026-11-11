@@ -87,7 +87,7 @@ final class AssistantController {
         hotkeys?.setListen(isOn ? settings.assistantHotkey : .off)
         if settings.assistantEnabled, isUnlocked, !isOn {
             turnOn()
-        } else if !settings.assistantEnabled, isOn {
+        } else if !settings.assistantEnabled, isOn, usesMicrophone {
             turnOff()
         }
         refresh()
@@ -98,9 +98,11 @@ final class AssistantController {
     /// `microphone` false: text only (`debug.assistant`).
     func turnOn(microphone: Bool = true) {
         guard isUnlocked else { return }
-        usesMicrophone = microphone
-        if !settings.assistantEnabled { settings.assistantEnabled = true }
         guard !isOn else { return }
+        usesMicrophone = microphone
+        // Remembered for the next launch, but not the text-only mode of `debug.assistant`: a relaunched test instance
+        // must never start the microphone (and with it a privacy prompt) by itself.
+        if microphone, !settings.assistantEnabled { settings.assistantEnabled = true }
         machine.turnOn()
         problem = nil
         hotkeys?.setListen(settings.assistantHotkey)
