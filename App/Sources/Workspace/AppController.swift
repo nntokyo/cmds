@@ -54,7 +54,7 @@ final class AppController {
     private(set) var selectedWorkspaceID: String?
     /// The main window; used to decide whether a focused pane is actually visible to the user.
     weak var window: NSWindow?
-    let socketPath = CmdsEnv.defaultSocketPath()
+    let socketPath = CmdsEnv.appSocketPath()
 
     /// Fires synchronously on the main actor after every state change.
     var changes: AnyPublisher<StateChange, Never> { subject.eraseToAnyPublisher() }

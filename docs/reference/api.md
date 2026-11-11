@@ -7,7 +7,8 @@ hand. Server: `App/Sources/API/APIServer.swift`; wire types: `Packages/CmdsCore/
 
 ## Socket
 
-- Path: `~/Library/Application Support/cmds/cmds.sock` (mode 0600), or `$CMDS_SUPPORT_DIR/cmds.sock` for an isolated
+- Path: `~/Library/Application Support/cmds/cmds.sock` (mode 0600; `…/cmds-dev/cmds.sock` for a Debug build, which
+  ignores an inherited `CMDS_SOCKET_PATH`), or `$CMDS_SUPPORT_DIR/cmds.sock` for an isolated
   instance ([environment.md](environment.md)).
 - Only processes of the same user may connect (the peer uid is checked).
 - SSH panes get their own restricted socket per pane, which is forwarded to the server; it accepts only an allowlist

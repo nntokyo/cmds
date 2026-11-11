@@ -52,9 +52,16 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `tokyo.n-n.cmds.dev.widget`), named "cmds Dev", URL scheme `cmds-dev://`, defaults domain `tokyo.n-n.cmds.dev`.
   So they need their own privacy grants (Screen Recording, Accessibility, Full Disk Access, …: grant them to the
   Debug build when a test needs them) and can never take over the grants, `cmds://` handler, default-browser choice
-  or widget of the installed release (`tokyo.n-n.cmds`). The support folder is not part of that: without
-  `CMDS_SUPPORT_DIR` a Debug build uses `~/Library/Application Support/cmds` like the release, so always start it
-  isolated. When done with a build you launched, `pluginkit -r …/cmds.app/Contents/PlugIns/CmdsWidget.appex` and
+  or widget of the installed release (`tokyo.n-n.cmds`). Without `CMDS_SUPPORT_DIR` a Debug build uses its own
+  support folder, `~/Library/Application Support/cmds-dev` (#247: Info.plist key `CMDSSupportFolderName`, set from
+  `CMDS_SUPPORT_FOLDER` in `project.yml` for the app, the widget and the bundled CLI): its own `session.json`,
+  `cmds.sock`, `widget.json` (the Debug widget reads that one), sync identity (keychain suffix `cmds-dev`) and paired
+  devices. It never listens on an inherited `CMDS_SOCKET_PATH`, and its bundled CLI talks to
+  `…/cmds-dev/cmds.sock` by default (in a terminal, to the pane's app via `CMDS_SOCKET_PATH`, as always). So a Debug
+  build reopened without its environment no longer restores the release's workspaces or resumes its agent sessions;
+  Debug builds and isolated instances also tell macOS not to reopen them at login (`disableRelaunchOnLogin`). Still
+  start test instances isolated, so each test has its own throwaway folder; remove `cmds-dev` when you launched a
+  Debug build without it. When done with a build you launched, `pluginkit -r …/cmds.app/Contents/PlugIns/CmdsWidget.appex` and
   `lsregister -u …/cmds.app` (`/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister`)
   forget it again.
 - `CMDS_SYNC_DISABLED=1` skips the iOS sync server (no Bonjour advert, no port). To test sync instead, see

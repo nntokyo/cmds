@@ -17,7 +17,8 @@ struct SyncIdentity {
 /// keychain ignores a custom certificate label and names it after its common name).
 ///
 /// An isolated instance (`CMDS_SUPPORT_DIR`) uses its own items (label and tag carry a suffix derived from
-/// that directory), so a test instance never reads, replaces or deletes the identity of the app in use.
+/// that directory), so a test instance never reads, replaces or deletes the identity of the app in use; so does a
+/// Debug build (suffix `cmds-dev`).
 final class SyncIdentityStore {
     enum StoreError: LocalizedError {
         case keychain(String, OSStatus)
@@ -44,9 +45,12 @@ final class SyncIdentityStore {
         tag = Data(("tokyo.n-n.cmds.sync-identity" + (scope.map { ".\($0)" } ?? "")).utf8)
     }
 
-    /// nil for the normal app; "test-<hash of CMDS_SUPPORT_DIR>" for an isolated instance.
+    /// nil for the normal app; "test-<hash of CMDS_SUPPORT_DIR>" for an isolated instance; the support folder name
+    /// (`cmds-dev`) for a Debug build without it, which has its own paired devices too (#247).
     static func currentScope(environment: [String: String] = ProcessInfo.processInfo.environment) -> String? {
-        guard let directory = CmdsEnv.supportDirectoryOverride(environment: environment) else { return nil }
+        guard let directory = CmdsEnv.supportDirectoryOverride(environment: environment) else {
+            return CmdsEnv.isDevelopmentBuild ? CmdsEnv.supportFolderName : nil
+        }
         let digest = SHA256.hash(data: Data(directory.utf8))
         return "test-" + digest.prefix(6).map { String(format: "%02x", $0) }.joined()
     }

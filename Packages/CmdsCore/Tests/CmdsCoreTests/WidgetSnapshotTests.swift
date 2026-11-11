@@ -50,6 +50,9 @@ final class WidgetSnapshotTests: XCTestCase {
     func testDefaultFileIsInTheRealHomesSupportFolder() {
         XCTAssertEqual(WidgetSnapshot.defaultURL(home: "/Users/someone").path,
                        "/Users/someone/Library/Application Support/cmds/widget.json")
+        // The Debug widget reads its own app's folder (#247).
+        XCTAssertEqual(WidgetSnapshot.defaultURL(home: "/Users/someone", folderName: "cmds-dev").path,
+                       "/Users/someone/Library/Application Support/cmds-dev/widget.json")
         XCTAssertTrue(WidgetSnapshot.realHomeDirectory().hasPrefix("/"))
     }
 }

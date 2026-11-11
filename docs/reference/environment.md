@@ -33,7 +33,8 @@ by default it uses the first of those that exists.
 ## Read by the `cmds` CLI
 
 Socket resolution, first match wins: `--socket PATH`, then `$CMDS_SUPPORT_DIR/cmds.sock`, then `$CMDS_SOCKET_PATH`,
-then `~/Library/Application Support/cmds/cmds.sock`. `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` are the default targets
+then `~/Library/Application Support/cmds/cmds.sock` (`…/cmds-dev/cmds.sock` for the CLI bundled in a Debug build,
+#247). `CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` are the default targets
 ([cli.md](cli.md#targeting)).
 
 ## App switches (isolated and test instances)

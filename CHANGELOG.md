@@ -59,6 +59,10 @@ Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next
 
 - Building from source: Debug builds are a separate app, "cmds Dev" (`tokyo.n-n.cmds.dev`, URL scheme `cmds-dev`),
   so they no longer take over the release's macOS privacy permissions such as Screen Recording (#236).
+- Building from source: Debug builds keep their workspaces, sessions and API socket in
+  `~/Library/Application Support/cmds-dev` (their bundled `cmds` CLI and widget follow), and macOS no longer reopens
+  them, or isolated instances, after a restart: a Debug build reopened without its environment had restored the
+  installed cmds' workspaces and resumed its Claude sessions a second time (#247).
 
 ## [0.20.0] - 2026-11-11
 
