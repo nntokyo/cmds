@@ -345,5 +345,12 @@ final class AssistantController {
         machine.speechFinished(now: Date())
         refresh()
     }
+
+    /// `debug.assistant` `problem`: shows `text` as the problem (microphone denied…) without touching the microphone;
+    /// nil clears it.
+    func debugSetProblem(_ text: String?) {
+        problem = text
+        refresh()
+    }
     #endif
 }

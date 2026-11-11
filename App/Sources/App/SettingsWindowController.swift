@@ -35,6 +35,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let accountsButton = NSButton(title: String(localized: "Manage…"), target: nil, action: nil)
     private let schedulesButton = NSButton(title: String(localized: "Open…"), target: nil, action: nil)
     private var observer: NSObjectProtocol?
+    private var assistantObserver: NSObjectProtocol?
     private var tabController: NSTabViewController?
     /// Settings › Assistant (#243), shown on macOS 26 and later.
     private let assistantPane = AssistantSettingsPane()
@@ -52,6 +53,14 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         buildContent()
         observer = NotificationCenter.default.addObserver(forName: AppSettings.didChange, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { SettingsWindowController.shared.refresh() }
+        }
+        // The assistant's problem row comes and goes while Settings is open (the microphone refused after turning
+        // it on here).
+        if #available(macOS 26.0, *) {
+            assistantObserver = NotificationCenter.default.addObserver(forName: AssistantController.didChange, object: nil,
+                                                                       queue: .main) { _ in
+                MainActor.assumeIsolated { SettingsWindowController.shared.assistantPane.refreshProblem() }
+            }
         }
     }
 

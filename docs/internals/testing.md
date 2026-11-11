@@ -164,7 +164,9 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   remembered, so a relaunch starts nothing; keep it muted), `hear {text}` injects a recognised utterance (an
   unaddressed one is dropped as from speech; after an answer wait 1 s, the echo guard), `speak {text}` makes it
   "say" a text without a voice and stay speaking until `spoken` (its own voice heard back, barge-in by name; `state`
-  has `request`, `voiceActive`, `followUpSeconds`, `claudeWorking`), `key {key: confirm|cancel}`
+  has `request`, `voiceActive`, `followUpSeconds`, `claudeWorking`), `problem {text?}` shows a problem as if the
+  microphone had failed (none clears it; Settings › Assistant's orange row comes and goes while Settings is open, the
+  window growing and shrinking with it; `debug.show_settings` returns the window's `frame`), `key {key: confirm|cancel}`
   / `click {button: …}` answer the card, `state` returns the phase, transcript, answer, pending action and the HUD's
   texts, `snapshot: true` the HUD drawn off screen (or `screencapture -l <window>`). Isolated instances register no
   global keys (⌥⌘J, Return / Esc while a card shows), so `confirmationKeys` stays false there. Fake agents for it:
