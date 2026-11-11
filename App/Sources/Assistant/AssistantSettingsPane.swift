@@ -19,6 +19,9 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
                                        target: nil, action: nil)
     private let interpreterCheckbox = NSButton(checkboxWithTitle: String(localized: "Use Claude to understand free commands", comment: "Settings › Assistant: commands in free words are interpreted by claude -p without tools"),
                                                target: nil, action: nil)
+    private let reportTasksCheckbox = NSButton(checkboxWithTitle: String(localized: "Report on tasks I gave", comment: "Settings › Assistant: say when a session the assistant started or instructed is done or needs you"),
+                                               target: nil, action: nil)
+    private let foldersField = NSTextField()
     private let hotkeyPopup = NSPopUpButton()
     private let statusNote = NSTextField(wrappingLabelWithString: "")
     private let personalButton = NSButton(title: String(localized: "Use my Personal Voice…", comment: "Settings › Assistant: asks macOS whether cmds may use the user's Personal Voice"),
@@ -70,6 +73,12 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         webCheckbox.action = #selector(webToggled)
         interpreterCheckbox.target = self
         interpreterCheckbox.action = #selector(interpreterToggled)
+        reportTasksCheckbox.target = self
+        reportTasksCheckbox.action = #selector(reportTasksToggled)
+        foldersField.placeholderString = AssistantPlaces.defaultRoots.joined(separator: ", ")
+        foldersField.delegate = self
+        foldersField.widthAnchor.constraint(equalToConstant: 300).isActive = true
+        foldersField.setAccessibilityLabel(String(localized: "Project folders", comment: "Settings › Assistant"))
         for hotkey in AssistantHotkey.allCases {
             hotkeyPopup.addItem(withTitle: hotkey.title)
             hotkeyPopup.lastItem?.representedObject = hotkey.rawValue
@@ -98,6 +107,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
             [NSGridCell.emptyContentView, note(String(localized: "Weather, news, prices and “search…” go to Claude Code (claude -p) with web search only. This uses your Claude Code usage.", comment: "Settings › Assistant: under Use Claude for web questions"))],
             [NSGridCell.emptyContentView, interpreterCheckbox],
             [NSGridCell.emptyContentView, note(String(localized: "Instructions in your own words (“tell api's Claude to write the login tests”) are worked out by Claude Code without any tools, from your words and the workspaces' names only, and shown on a card before anything is sent. This uses your Claude Code usage.", comment: "Settings › Assistant: under Use Claude to understand free commands"))],
+            [label(String(localized: "Project folders:", comment: "Settings › Assistant: where folders said by name are looked for")), foldersField],
+            [NSGridCell.emptyContentView, note(String(localized: "“Start Claude in cmds and have it write the login tests”: a workspace of that name, else a folder of that name up to three levels inside these folders (comma separated; repositories first). The card shows the folder and the first prompt before anything starts.", comment: "Settings › Assistant: under Project folders"))],
+            [NSGridCell.emptyContentView, reportTasksCheckbox],
+            [NSGridCell.emptyContentView, note(String(localized: "Says in one sentence when a session it started with a task, or gave an instruction to, is done or asks you something. Other sessions are not announced.", comment: "Settings › Assistant: under Report on tasks I gave"))],
             [NSGridCell.emptyContentView, note(String(localized: "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary and web questions ask Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.", comment: "Settings › Assistant"))],
         ]
     }
@@ -113,6 +126,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         mutedCheckbox.state = settings.assistantMuted ? .on : .off
         webCheckbox.state = settings.assistantWeb ? .on : .off
         interpreterCheckbox.state = settings.assistantInterpreter ? .on : .off
+        reportTasksCheckbox.state = settings.assistantReportTasks ? .on : .off
+        if foldersField.currentEditor() == nil { foldersField.stringValue = settings.assistantProjectFolders }
         hotkeyPopup.selectItem(at: hotkeyPopup.indexOfItem(withRepresentedObject: settings.assistantHotkey.rawValue))
         var problem: String?
         if #available(macOS 26.0, *) { problem = AssistantController.shared?.problem }
@@ -197,7 +212,11 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
     }
 
     func controlTextDidEndEditing(_ notification: Notification) {
-        settings.assistantNames = namesField.stringValue
+        if (notification.object as? NSTextField) === foldersField {
+            settings.assistantProjectFolders = foldersField.stringValue
+        } else {
+            settings.assistantNames = namesField.stringValue
+        }
     }
 
     @objc private func styleChanged() {
@@ -222,6 +241,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
 
     @objc private func interpreterToggled() {
         settings.assistantInterpreter = interpreterCheckbox.state == .on
+    }
+
+    @objc private func reportTasksToggled() {
+        settings.assistantReportTasks = reportTasksCheckbox.state == .on
     }
 
     @objc private func hotkeyChanged() {

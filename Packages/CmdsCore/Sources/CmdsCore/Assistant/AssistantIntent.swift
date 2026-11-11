@@ -16,8 +16,15 @@ public enum AssistantIntent: Equatable, Sendable {
     case approve(target: String?)
     /// Pick numbered option `option` (1–9).
     case choose(target: String?, option: Int)
-    /// Start Claude Code or Codex in a new workspace at `place` (a workspace name or a folder).
-    case startAgent(AgentKind, place: String)
+    /// Start Claude Code or Codex in a new workspace at `place` (a workspace name or a folder; nil: none said), with
+    /// `task` as its first prompt.
+    case startAgent(AgentKind, place: String?, task: String?)
+    /// Give `task` to the agent in `place`: to the one running there, else to a new one started there
+    /// (「api で Claude にこのバグを直させて」).
+    case delegate(AgentKind, place: String, task: String)
+    /// Several requests in one utterance, in order (「Claude Code を立ち上げて、api の進捗を教えて」): each is planned,
+    /// and confirmed if it acts, after the one before.
+    case sequence([AssistantIntent])
     case pauseListening
     /// Turn the assistant off.
     case stop
@@ -37,7 +44,8 @@ public enum AssistantIntent: Equatable, Sendable {
     /// Whether carrying it out sends something to a pane or starts a session (always confirmed first).
     public var acts: Bool {
         switch self {
-        case .reply, .approve, .choose, .startAgent, .replyMany, .approveMany: return true
+        case .reply, .approve, .choose, .startAgent, .delegate, .replyMany, .approveMany: return true
+        case .sequence(let intents): return intents.contains(where: \.acts)
         default: return false
         }
     }
@@ -52,15 +60,30 @@ public enum AssistantIntent: Equatable, Sendable {
         case .reply(_, let text): return .reply(target: target, text: text)
         case .approve: return .approve(target: target)
         case .choose(_, let option): return .choose(target: target, option: option)
-        case .startAgent(let kind, _): return .startAgent(kind, place: target)
+        case .startAgent(let kind, _, let task): return .startAgent(kind, place: target, task: task)
+        case .delegate(let kind, _, let task): return .delegate(kind, place: target, task: task)
         default: return nil
         }
     }
 
+    /// What `command` asks: one rule matching the whole of it; else several requests one after the other
+    /// (`compound`); else the same with "Claude Code" as it is often misheard (クロトコート) written right; else a
+    /// question.
     public static func parse(_ command: String) -> AssistantIntent {
         let text = AssistantText.trimmed(command.precomposedStringWithCompatibilityMapping
             .split(whereSeparator: \.isWhitespace).joined(separator: " "))
         guard !text.isEmpty else { return .question("") }
+        if let compound = compound(text) { return compound }
+        let whole = single(text)
+        if case .question = whole {
+            let normalized = AssistantVocabulary.normalizingAgents(text)
+            if normalized != text, case let again = single(normalized), again != .question(normalized) { return again }
+        }
+        return whole
+    }
+
+    /// One request: the first rule that matches the whole text, or a question.
+    static func single(_ text: String) -> AssistantIntent {
         for rule in rules {
             guard let groups = rule.pattern.match(text),
                   let intent = rule.make(groups.map { $0.map(AssistantText.trimmed) }) else { continue }
@@ -74,6 +97,75 @@ public enum AssistantIntent: Equatable, Sendable {
             return intent
         }
         return .question(text)
+    }
+
+    // MARK: Several requests in one
+
+    /// Where an utterance may hold several requests: 、 , 。 ; "then"; after 「起動して」 and the like; before "and have it…".
+    private static let clauseBreak = Pattern(
+        #"\s*(?:[、,，。;；]\s*(?:and then |then |and |そして|それから|あと(?:で|は)?)?|\s+and then\s+|\s+then\s+|そして|それから)\s*|(?<=起動して|立ち上げて|開始して|開いて|始めて|スタートして)(?=\S)|\s+(?=and (?:have|let|get|make|tell|ask) (?:it|him|her|them|claude|codex)\b)"#)
+
+    /// Two or more requests said in one utterance, each matching a rule on its own (a task after a start goes with it:
+    /// 「Claude Code を起動して、ログイン画面のテストを書かせて」 is one start with that task). A start without a place
+    /// takes the workspace another part names. nil unless every part is understood; quoted text is never split.
+    static func compound(_ text: String) -> AssistantIntent? {
+        guard !text.contains(where: { "「」『』\"“”".contains($0) }) else { return nil }
+        let range = NSRange(text.startIndex..., in: text)
+        let marked = clauseBreak.regex.stringByReplacingMatches(in: text, options: [], range: range, withTemplate: "\u{1F}")
+        let clauses = marked.split(separator: "\u{1F}").map { AssistantText.trimmed(String($0)) }.filter { !$0.isEmpty }
+        guard clauses.count > 1 else { return nil }
+        var intents: [AssistantIntent] = []
+        for clause in clauses {
+            // A task for the agent just started ("then tell it to…", 「…を書かせて」) before any other reading.
+            if case .startAgent(let kind, let place, nil)? = intents.last, let task = AssistantLaunch.request(clause) {
+                intents[intents.count - 1] = .startAgent(kind, place: place, task: task)
+                continue
+            }
+            var intent = single(clause)
+            if case .question = intent {
+                let normalized = AssistantVocabulary.normalizingAgents(clause)
+                intent = single(normalized)
+            }
+            switch intent {
+            case .question:
+                // A task for the agent just started: 「ログイン画面のテストを書かせて」, "and have it fix the tests".
+                guard case .startAgent(let kind, let place, nil)? = intents.last,
+                      let task = AssistantLaunch.request(clause, plainRequest: true) else { return nil }
+                intents[intents.count - 1] = .startAgent(kind, place: place, task: task)
+            case .confirm, .cancel, .pauseListening, .stop, .sequence:
+                return nil
+            default:
+                // Dictated text may go on after a comma: never split it.
+                if let last = intents.last, last.dictates { return nil }
+                intents.append(intent)
+            }
+        }
+        // A start without a place: where another part of the utterance points.
+        let named = intents.lazy.compactMap(\.workspaceName).first
+        intents = intents.map { intent in
+            if case .startAgent(let kind, nil, let task) = intent, let named { return .startAgent(kind, place: named, task: task) }
+            return intent
+        }
+        return intents.count == 1 ? intents[0] : .sequence(intents)
+    }
+
+    /// It sends the user's own words (text that may go on after a comma).
+    var dictates: Bool {
+        switch self {
+        case .reply, .replyMany: return true
+        default: return false
+        }
+    }
+
+    /// The workspace this request is about, as said.
+    var workspaceName: String? {
+        switch self {
+        case .workspaceStatus(let target): return target
+        case .summary(let target, _), .reply(let target, _), .approve(let target), .choose(let target, _): return target
+        case .startAgent(_, let place, _): return place
+        case .delegate(_, let place, _): return place
+        default: return nil
+        }
     }
 
     // MARK: Grammar
@@ -94,7 +186,9 @@ public enum AssistantIntent: Equatable, Sendable {
         for prefix in ["the workspace ", "workspace ", "the ", "ワークスペース"] where value.lowercased().hasPrefix(prefix) {
             value = String(value.dropFirst(prefix.count))
         }
-        for suffix in [" workspace", "ワークスペース", "のペイン", "のエージェント"] where value.lowercased().hasSuffix(suffix) {
+        for suffix in [" workspace", " repository", " repo", " folder", " directory", " project", "ワークスペース", "のペイン",
+                       "のエージェント", "のリポジトリ", "リポジトリ", "のフォルダ", "フォルダ", "のディレクトリ", "ディレクトリ",
+                       "のプロジェクト", "プロジェクト"] where value.lowercased().hasSuffix(suffix) && value.count > suffix.count {
             value = String(value.dropLast(suffix.count))
         }
         while let last = value.last, "のはでにをってがも".contains(last), value.count > 1 { value.removeLast() }
@@ -116,6 +210,11 @@ public enum AssistantIntent: Equatable, Sendable {
         if value.hasPrefix("codex") || value.hasPrefix("コーデックス") || value.hasPrefix("コデックス") { return .codex }
         return nil
     }
+
+    /// The agents as said (after `AssistantVocabulary.normalizingAgents`).
+    private static let agentWords = #"claude code|claude|クロードコード|クロード|クラウドコード|クラウド|codex|コーデックス|コデックス"#
+    /// Starting it, in Japanese.
+    private static let startWords = #"(?:を)?(?:起動して|起動|開始して|開始|始めて|立ち上げて|開いて|スタートして|スタート|動かして)(?:ください)?"#
 
     private static let detailWords = Pattern("(detail|in depth|thorough|with claude|詳しく|詳細|しっかり|クロードで|claudeで)")
 
@@ -195,14 +294,22 @@ public enum AssistantIntent: Equatable, Sendable {
         },
         Rule(#"[「『"“](.+)[」』"”]と?(?:返信|返事|回答|送信|送)(?:して|って)?"#) { groups in groups[0].map { .reply(target: nil, text: $0) } },
 
-        // Starting a session.
-        Rule(#"(?:start|launch|open|run)(?: a)?(?: new)? (claude(?: code)?|codex)(?: session)? (?:in|for|on|at) (.+)"#) { groups in
-            guard let kind = agent(groups[0]), let place = target(groups[1]) else { return nil }
-            return .startAgent(kind, place: place)
+        // Starting a session, with a task or without.
+        Rule(#"(?:start|launch|open|run|fire up|spin up)(?: up)?(?: a)?(?: new)? (claude code|claude|codex)(?: session)?(?: (?:in|for|on|at) (.+?))?(?:,? (?:and |then )*((?:have|let|get|make|tell|ask) (?:it|him|her|them)(?: to)? .+))?"#) { groups in
+            guard let kind = agent(groups[0]) else { return nil }
+            let task = groups[2].flatMap { AssistantLaunch.request($0) }
+            if groups[2] != nil, task == nil { return nil }
+            return .startAgent(kind, place: target(groups[1]), task: task)
         },
-        Rule(#"(.+?)(?:で|に|の)(claude(?: code)?|クロード(?:コード)?|クラウド(?:コード)?|codex|コーデックス|コデックス)を?(?:起動|開始|始めて|立ち上げて|スタート)(?:して)?(?:ください)?"#) { groups in
-            guard let kind = agent(groups[1]), let place = target(groups[0]) else { return nil }
-            return .startAgent(kind, place: place)
+        Rule(#"(?:(.+?)\s*(?:で|に|の)\s*)?(\#(agentWords))\s*\#(startWords)"#) { groups in
+            guard let kind = agent(groups[1]) else { return nil }
+            return .startAgent(kind, place: target(groups[0]), task: nil)
+        },
+        // A task for an agent: 「api で Claude にこのバグを直させて」「api の Claude にテストを書くよう指示して」.
+        Rule(#"(.+?)\s*(?:で|の)\s*(\#(agentWords))\s*に\s*(.+)"#) { groups in
+            guard let kind = agent(groups[1]), let place = target(groups[0]), let text = groups[2],
+                  let task = AssistantLaunch.request(text) else { return nil }
+            return .delegate(kind, place: place, task: task)
         },
 
         // Summaries.
@@ -224,7 +331,10 @@ public enum AssistantIntent: Equatable, Sendable {
         Rule(#"(.+?)(?:は|って|の方は)(?:今|いま)?(?:何|なに|何を|なにを)(?:してる|やってる|している|しています|してますか|してるの)"#) { groups in
             target(groups[0]).map { .workspaceStatus(target: $0) }
         },
-        Rule(#"(.+?)の(?:状況|状態|進捗|様子)(?:は|を教えて|はどう|どう)?(?:ですか)?"#) { groups in
+        Rule(#"(?:(?:tell me|give me|what(?:'s| is)) )?(?:the )?(?:status|progress) (?:of|on|for) (.+)"#) { groups in
+            target(groups[0]).map { .workspaceStatus(target: $0) }
+        },
+        Rule(#"(.+?)の(?:状況|状態|進捗|様子)(?:情報|状況)?(?:は|を|が)?(?:教えて|知りたい|はどう|どう|どうなってる|確認して)?(?:ください)?(?:ですか)?"#) { groups in
             target(groups[0]).flatMap { ["全体", "みんな", "全部", "エージェント"].contains($0) ? nil : .workspaceStatus(target: $0) }
         },
 

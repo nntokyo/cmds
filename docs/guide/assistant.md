@@ -44,7 +44,10 @@ It understands the app's language (cmds › Language): Japanese or English.
 | "reply to api: run the tests" / 「apiに『テストを実行して』と返信」 | Offers to type the text into the agent's pane and press Return |
 | "approve api" / 「apiを承認して」 | Offers to pick option 1 of the agent's question |
 | "choose 2 for api" / 「apiで2番を選んで」 | Offers to pick that option |
-| "start Claude in web" / 「webでクロードを起動して」 | Offers a new workspace in that workspace's folder (or a folder path) running `claude` / `codex` |
+| "start Claude in web" / 「webでクロードを起動して」 | Offers a new workspace in that workspace's folder, a project folder of that name, or a folder path, running `claude` / `codex` |
+| 「cmds のリポジトリで Claude Code を起動して、ログイン画面のテストを書かせて」, "start Claude in api and have it fix the failing tests" | The same, with that task as the new agent's first prompt (shown on the card) |
+| 「api で Claude にこのバグを直させて」 | Gives the task to the Claude running in api; if none runs there, offers to start one with it |
+| 「Claude Code を立ち上げて、API の進捗を教えて」 | Several requests in one: done one after the other, the next after the card |
 | "tell api and web to run the tests" / 「apiとwebに『テストを実行して』と伝えて」 | Offers to send the same text to each of them, on one card |
 | "approve all" / 「入力待ちのものに全部はいと答えて」 | Offers to pick option 1 in every workspace that asks, on one card |
 | "check all sessions" / 「全部のセッションを確認して」, 「入力待ちのセッションを全部見て」 | Goes through every session (or the waiting / working ones) and says what each agent is doing, one line each; 「詳しく」 / "in detail" uses Claude Code |
@@ -71,6 +74,25 @@ under the answer. Claude gets only what you said, today's date, your time zone a
 answers in a sentence (asking back only when it cannot tell, such as which place). It takes a few seconds to a minute and uses
 your Claude Code usage; when `claude` is missing or fails, the assistant says so. Turned off, every question goes to
 the on-device model as before.
+
+**Starting agents with work to do.** The place is a workspace (its folder) or a folder of that name up to three levels
+inside your project folders (Settings › Assistant › Project folders; by default ~/Source, ~/Developer, ~/Projects and
+~/src, those that exist; git repositories first, not searched inside). When several folders fit it names up to three
+and asks which; when none does, 「どのフォルダで起動しますか？」. Without a place, it starts where the last request was
+about, else in the selected workspace. The agent runs in a new workspace as `claude '<task>'` (`codex '<task>'`): the
+task is one quoted argument, so nothing in it reaches the shell, and no permission-skipping flag is ever added. A
+spoken yes starts it, unless the task mentions deleting, pushing or deploying (then Return or a click).
+
+**Follow-through.** For a session it started with a task, or gave an instruction to, it says in one sentence when the
+agent is done (「api の Claude が完了しました」) or asks you something (「api の Claude が確認を求めています: …」), from the
+agent state cmds already shows (no screen is read). Settings › Assistant › **Report on tasks I gave** (on by default);
+other sessions are never announced.
+
+**Misheard names.** Speech recognition is told to expect the assistant's names, Claude Code, Codex, cmds and your
+workspaces' names. 「クロトコート」 or "cloud code" still means Claude Code, and a workspace name heard in katakana or as
+other letters (エーピーアイ, or EPA for api) finds the workspace when none is called exactly that; when two sound alike,
+it asks which. When Apple's on-device model is asked to do something, it does not answer: the request goes to the
+interpreter, else the assistant says how to ask.
 
 Without a workspace name, "approve" and "choose" go to the one workspace that waits for you. When a name fits
 several workspaces, or a workspace has several panes that could be meant, it asks back instead of guessing; answer

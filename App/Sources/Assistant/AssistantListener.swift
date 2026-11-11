@@ -2,6 +2,8 @@ import AVFoundation
 import Speech
 import os
 
+private let listenerLog = Logger(subsystem: "tokyo.n-n.cmds", category: "assistant")
+
 /// The microphone, transcribed on the Mac (#243): `AVAudioEngine` feeds `SpeechAnalyzer` with a `SpeechTranscriber`
 /// for the app's language. Only finished utterances leave this class (`onUtterance`), as text; the caller drops those
 /// not addressed to the assistant right away. Audio is never written anywhere, and partial results are only used to
@@ -32,6 +34,29 @@ final class AssistantListener {
     private(set) var isRunning = false
     /// Cleared by `stop()`: a start still waiting (a privacy prompt, the language download) then gives up.
     private var wanted = false
+    /// Words recognition should expect (`AnalysisContext.contextualStrings`): the assistant's names, Claude Code,
+    /// Codex, cmds, the workspaces' titles and agents.
+    private var vocabulary: [String] = []
+
+    /// The words to expect, now and for the next start.
+    func setVocabulary(_ words: [String]) {
+        vocabulary = words
+        guard let analyzer else { return }
+        let context = Self.context(words)
+        Task {
+            do {
+                try await analyzer.setContext(context)
+            } catch {
+                listenerLog.error("assistant vocabulary not set: \(String(describing: error), privacy: .public)")
+            }
+        }
+    }
+
+    private static func context(_ words: [String]) -> AnalysisContext {
+        let context = AnalysisContext()
+        context.contextualStrings = [.general: words]
+        return context
+    }
 
     /// Asks for the microphone (and, for the transcriber, speech recognition) the first time; macOS shows its own
     /// prompts, worded by NSMicrophoneUsageDescription / NSSpeechRecognitionUsageDescription.
@@ -70,6 +95,11 @@ final class AssistantListener {
         }
         guard wanted else { return }
         let analyzer = SpeechAnalyzer(modules: [transcriber])
+        do {
+            try await analyzer.setContext(Self.context(vocabulary))
+        } catch {
+            listenerLog.error("assistant vocabulary not set: \(String(describing: error), privacy: .public)")
+        }
         let (stream, continuation) = AsyncStream.makeStream(of: AnalyzerInput.self)
         try await analyzer.start(inputSequence: stream)
         self.analyzer = analyzer

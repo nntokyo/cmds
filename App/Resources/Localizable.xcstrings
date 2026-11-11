@@ -413,6 +413,57 @@
         }
       }
     },
+    "%@ in %@ is done.": {
+      "comment": "assistant: a session it gave a task to finished its turn",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ in %2$@ is done."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@の%1$@が完了しました。"
+          }
+        }
+      }
+    },
+    "%@ in %@ needs you.": {
+      "comment": "assistant: a session it gave a task to waits for the user",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ in %2$@ needs you."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@の%1$@が確認を求めています。"
+          }
+        }
+      }
+    },
+    "%@ in %@ needs you: %@": {
+      "comment": "assistant: a session it gave a task to asks something",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ in %2$@ needs you: %3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@の%1$@が確認を求めています: %3$@"
+          }
+        }
+      }
+    },
     "%@ in %@.": {
       "comment": "assistant: which agent runs in a workspace",
       "localizations": {
@@ -4635,6 +4686,17 @@
         }
       }
     },
+    "I couldn't tell what to do. Try “start Claude in api” or “tell api to run the tests”.": {
+      "comment": "assistant: an action it could not work out",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "何をすればよいかわかりませんでした。「apiでクロードを起動して」「apiにテストを実行するよう伝えて」のように言ってください。"
+          }
+        }
+      }
+    },
     "I don't know a workspace or folder called %@.": {
       "comment": "assistant",
       "localizations": {
@@ -7038,6 +7100,28 @@
         }
       }
     },
+    "Project folders": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロジェクトフォルダ"
+          }
+        }
+      }
+    },
+    "Project folders:": {
+      "comment": "Settings › Assistant: where folders said by name are looked for",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロジェクトフォルダ:"
+          }
+        }
+      }
+    },
     "Prompt cache %@ hits": {
       "comment": "prompt cache hit ratio",
       "localizations": {
@@ -7469,6 +7553,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "メニューバーから返信"
+          }
+        }
+      }
+    },
+    "Report on tasks I gave": {
+      "comment": "Settings › Assistant: say when a session the assistant started or instructed is done or needs you",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "頼んだ作業の結果を知らせる"
           }
         }
       }
@@ -7925,6 +8020,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "「はい」と言うかReturnキーで実行、「いいえ」かescで取り消します。"
+          }
+        }
+      }
+    },
+    "Says in one sentence when a session it started with a task, or gave an instruction to, is done or asks you something. Other sessions are not announced.": {
+      "comment": "Settings › Assistant: under Report on tasks I gave",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業を頼んで起動したセッションや指示を送ったセッションが完了したとき、または確認を求めたときに、ひとことで知らせます。ほかのセッションは知らせません。"
           }
         }
       }
@@ -8813,6 +8919,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "待機中"
+          }
+        }
+      }
+    },
+    "Start %@ in %@ with “%@”?": {
+      "comment": "assistant: confirmation question; task = the first prompt the new agent gets",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Start %1$@ in %2$@ with “%3$@”?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@で%1$@を起動して「%3$@」と頼みますか？"
           }
         }
       }
@@ -10082,6 +10205,28 @@
         }
       }
     },
+    "Then I'll go on with the rest.": {
+      "comment": "assistant: after a card, the rest of what was asked follows",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのあと残りを続けます。"
+          }
+        }
+      }
+    },
+    "Then I'll tell you how %@ is doing.": {
+      "comment": "assistant: after a card, what it does next (several requests in one)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "そのあと%@の状況を伝えます。"
+          }
+        }
+      }
+    },
     "There are already 50 schedules.": {
       "localizations": {
         "ja": {
@@ -11024,6 +11169,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイミング："
+          }
+        }
+      }
+    },
+    "Which folder should I start it in?": {
+      "comment": "assistant: asks where to start Claude Code or Codex",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どのフォルダで起動しますか？"
+          }
+        }
+      }
+    },
+    "Which folder: %@?": {
+      "comment": "assistant: several project folders fit the name said",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どのフォルダですか: %@？"
           }
         }
       }
@@ -12130,6 +12297,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバ上の“%@”はもうファイルではありません。何もアップロードしませんでした。"
+          }
+        }
+      }
+    },
+    "“Start Claude in cmds and have it write the login tests”: a workspace of that name, else a folder of that name up to three levels inside these folders (comma separated; repositories first). The card shows the folder and the first prompt before anything starts.": {
+      "comment": "Settings › Assistant: under Project folders",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「cmds のリポジトリで Claude Code を起動して、ログイン画面のテストを書かせて」: その名前のワークスペース、なければこれらのフォルダ（カンマ区切り）の 3 階層下までにある同じ名前のフォルダ（リポジトリ優先）で起動します。起動の前に、フォルダと最初の指示をカードで確認します。"
           }
         }
       }

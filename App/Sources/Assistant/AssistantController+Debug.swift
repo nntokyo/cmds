@@ -8,7 +8,7 @@ import CmdsCore
 /// answer the confirmation card as Return / Esc or its buttons would.
 @available(macOS 26.0, *)
 extension AssistantController {
-    /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
+    /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
     /// `speak` (`text`: speaking it without a voice until `spoken`), `spoken`,
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons). `snapshot`
     /// adds the HUD drawn off screen (`png_base64`; without the window's translucency).
@@ -20,6 +20,8 @@ extension AssistantController {
             if let mute = params?["mute"]?.boolValue { AppSettings.shared.assistantMuted = mute }
             if let web = params?["web"]?.boolValue { AppSettings.shared.assistantWeb = web }
             if let interpreter = params?["interpreter"]?.boolValue { AppSettings.shared.assistantInterpreter = interpreter }
+            if let report = params?["reportTasks"]?.boolValue { AppSettings.shared.assistantReportTasks = report }
+            if let folders = params?["projectFolders"]?.stringValue { AppSettings.shared.assistantProjectFolders = folders }
             if let style = params?["style"]?.stringValue.flatMap(AssistantStyle.init(rawValue:)) {
                 AppSettings.shared.assistantStyle = style
             }
@@ -70,6 +72,9 @@ extension AssistantController {
             "web": .bool(AppSettings.shared.assistantWeb),
             "interpreter": .bool(AppSettings.shared.assistantInterpreter),
             "hudVisible": .bool(hud.isVisible),
+            "queued": .array(debugQueued.map(JSONValue.string)),
+            "watching": .array(debugWatching.map(JSONValue.string)),
+            "vocabulary": .array(debugVocabulary.map(JSONValue.string)),
             "hud": .object(hud.debugTexts.mapValues(JSONValue.string)),
             "window": .number(Double(hud.panel.windowNumber)),
         ]

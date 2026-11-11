@@ -299,6 +299,18 @@ public struct AssistantMachine: Equatable, Sendable {
         return .cancelled
     }
 
+    /// Goes on with the next request of the same utterance once the one before has been answered (and its card
+    /// confirmed): a new request, worked out now. False when the assistant is not free (a card waits, it speaks).
+    @discardableResult
+    public mutating func proceed() -> Bool {
+        guard phase == .listening || phase == .idle, pending == nil, !voiceActive else { return false }
+        phase = .thinking
+        followUpUntil = nil
+        followUpAfterAnswer = false
+        request += 1
+        return true
+    }
+
     /// Back to listening for the name (after an action ran without anything to say).
     public mutating func settle() {
         guard phase == .thinking else { return }

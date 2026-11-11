@@ -58,10 +58,18 @@ private extension AssistantLine {
         case .noQuestion(let workspace): return String(localized: "\(workspace) isn't asking anything.", comment: "assistant")
         case .noSuchOption(let workspace, let number): return String(localized: "\(workspace) has no option \(number).", comment: "assistant")
         case .unknownPlace(let name): return String(localized: "I don't know a workspace or folder called \(name).", comment: "assistant")
+        case .whereToStart: return String(localized: "Which folder should I start it in?", comment: "assistant: asks where to start Claude Code or Codex")
+        case .whichFolder(let folders):
+            return String(localized: "Which folder: \(AssistantLanguage.current.list(folders))?", comment: "assistant: several project folders fit the name said")
         case .confirmReply(let text, let workspace): return String(localized: "Send “\(text)” to \(workspace)?", comment: "assistant: confirmation question")
         case .confirmChoice(let number, let label, let workspace):
             return String(localized: "Choose \(number), “\(label)”, in \(workspace)?", comment: "assistant: confirmation question")
         case .confirmStart(let agent, let place): return String(localized: "Start \(agent) in \(place)?", comment: "assistant: confirmation question")
+        case .confirmStartTask(let agent, let place, let task):
+            return String(localized: "Start \(agent) in \(place) with “\(task)”?", comment: "assistant: confirmation question; task = the first prompt the new agent gets")
+        case .thenStatus(let workspace):
+            return String(localized: "Then I'll tell you how \(workspace) is doing.", comment: "assistant: after a card, what it does next (several requests in one)")
+        case .thenNext: return String(localized: "Then I'll go on with the rest.", comment: "assistant: after a card, the rest of what was asked follows")
         case .confirmReplyMany(let text, let workspaces):
             return String(localized: "Send “\(text)” to \(AssistantLanguage.current.list(workspaces))?", comment: "assistant: confirmation question for several sessions")
         case .confirmApproveMany(let workspaces):
@@ -92,6 +100,14 @@ private extension AssistantLine {
             return String(localized: "I can only answer about the workspaces: the on-device model isn't available.", comment: "assistant: Apple Intelligence is off or unsupported")
         case .claudeNotFound:
             return String(localized: "I can't search the web: Claude Code (claude) isn't installed.", comment: "assistant: a web question, but claude is missing")
+        case .cannotTell:
+            return String(localized: "I couldn't tell what to do. Try “start Claude in api” or “tell api to run the tests”.", comment: "assistant: an action it could not work out")
+        case .taskDone(let agent, let workspace):
+            return String(localized: "\(agent) in \(workspace) is done.", comment: "assistant: a session it gave a task to finished its turn")
+        case .taskAsks(let agent, let workspace, let question):
+            return String(localized: "\(agent) in \(workspace) needs you: \(question)", comment: "assistant: a session it gave a task to asks something")
+        case .taskNeedsYou(let agent, let workspace):
+            return String(localized: "\(agent) in \(workspace) needs you.", comment: "assistant: a session it gave a task to waits for the user")
         case .webFailed:
             return String(localized: "I couldn't get an answer from Claude: it failed or took too long.", comment: "assistant: claude -p for a web question failed or timed out")
         }

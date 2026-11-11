@@ -55,8 +55,11 @@ extension AppSettings {
     static let assistantHotkeyKey = "AssistantHotkey"
     static let assistantWebKey = "AssistantWeb"
     static let assistantInterpreterKey = "AssistantInterpreter"
+    static let assistantReportTasksKey = "AssistantReportTasks"
+    static let assistantProjectFoldersKey = "AssistantProjectFolders"
     static let assistantKeys = [assistantEnabledKey, assistantNamesKey, assistantStyleKey, assistantVoiceKey, assistantRateKey,
-                                assistantMutedKey, assistantHotkeyKey, assistantWebKey, assistantInterpreterKey]
+                                assistantMutedKey, assistantHotkeyKey, assistantWebKey, assistantInterpreterKey,
+                                assistantReportTasksKey, assistantProjectFoldersKey]
 
     /// The rates the voice may take (AVSpeechUtterance rates; 0.5 is the system default).
     static let assistantRateRange: ClosedRange<Double> = 0.35...0.65
@@ -110,6 +113,20 @@ extension AppSettings {
     var assistantInterpreter: Bool {
         get { defaults.object(forKey: Self.assistantInterpreterKey) == nil ? true : defaults.bool(forKey: Self.assistantInterpreterKey) }
         set { set(newValue ? nil : false, forKey: Self.assistantInterpreterKey) }
+    }
+
+    /// Say when a session the assistant started with a task, or gave an instruction to, is done or needs the user
+    /// (`AssistantTaskWatch`). On unless the user turns it off; other sessions are never announced.
+    var assistantReportTasks: Bool {
+        get { defaults.object(forKey: Self.assistantReportTasksKey) == nil ? true : defaults.bool(forKey: Self.assistantReportTasksKey) }
+        set { set(newValue ? nil : false, forKey: Self.assistantReportTasksKey) }
+    }
+
+    /// Where a folder said by name is looked for when an agent is started there (`AssistantPlaces`), comma separated;
+    /// empty: ~/Source, ~/Developer, ~/Projects and ~/src.
+    var assistantProjectFolders: String {
+        get { defaults.string(forKey: Self.assistantProjectFoldersKey) ?? "" }
+        set { set(newValue.trimmingCharacters(in: .whitespaces).isEmpty ? nil : newValue, forKey: Self.assistantProjectFoldersKey) }
     }
 
     var assistantHotkey: AssistantHotkey {

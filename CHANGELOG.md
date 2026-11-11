@@ -23,6 +23,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   sent (Settings › Assistant › Use Claude to understand free commands). It can speak with your own Personal Voice
   (Settings › Assistant › Use my Personal Voice…), and uses the system voice for a language your Personal Voice does
   not speak.
+- Voice assistant (Mac): start Claude Code or Codex with work to do. 「cmds のリポジトリで Claude Code を起動して、ログイン
+  画面のテストを書かせて」, "start Claude in api and have it fix the failing tests": one card shows the folder, the agent
+  and the exact first prompt, and the new workspace runs `claude '<prompt>'` (one quoted argument, no other flags)
+  after yes or Return. The place is a workspace (its folder) or a folder of that name in your project folders
+  (Settings › Assistant › Project folders; ~/Source, ~/Developer, ~/Projects and ~/src by default; repositories
+  first; several fit: it asks which). 「api で Claude にこのバグを直させて」 gives the task to the Claude already running
+  there, else starts one. For a session it started with a task or gave an instruction to, it says when the agent is
+  done or asks you something (Settings › Assistant › Report on tasks I gave, on by default) (#243).
 
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
@@ -39,6 +47,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   per session; of a long answer only the first sentence is spoken and the HUD shows the rest. Claude Code runs for it
   without your CLAUDE.md, hooks, output style or plugins, saves no sessions, uses Sonnet (Haiku for free commands),
   and its runs no longer show up as agent activity in cmds (#243).
+- Voice assistant (Mac): misheard names. Speech recognition now expects the assistant's names, Claude Code, Codex,
+  cmds and your workspaces' names; 「クロトコート」 / "cloud code" count as Claude Code, and a workspace name heard in
+  katakana or as other letters (エーピーアイ, EPA for api) finds the workspace when no other is called so (otherwise
+  it asks which). 「Claude Code を立ち上げて」 without a place starts it where the last request was about or in the
+  selected workspace; several requests in one sentence (「Claude Code を立ち上げて、API の進捗を教えて」) are done one
+  after the other, the next after the card. The on-device model no longer apologises that it cannot start apps: a
+  request to act goes to the command interpreter instead (#243).
 
 ## [0.21.0] - 2026-11-11
 
