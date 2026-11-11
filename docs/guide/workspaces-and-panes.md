@@ -115,6 +115,26 @@ scrollback and the screen; the count shows the selected hit and the total (`3/12
   leaves the keyboard in the bar.
 - A Ghostty keybinding for `start_search` or `search_selection` in your Ghostty config opens the same bar.
 
+## Exporting the scrollback
+
+**Pane › Export Scrollback…** writes the focused terminal's whole scrollback and screen to a file you pick, as plain
+text (lines that wrapped are joined), or with **Keep colors** the colours and attributes as ANSI escape codes (view
+them with `less -R` or `cat`). From a terminal:
+
+```sh
+cmds pane export ~/logs/build.txt                # this pane; prints the file and the number of rows
+cmds pane export --pane p3 --ansi /tmp/p3.ansi   # another pane, with colours
+cmds pane export --force ~/logs/build.txt        # replace an existing file
+```
+
+- The file is created readable only by you (mode 0600): a scrollback can hold passwords, tokens and keys that were
+  printed. It is written next to the target under a temporary name and moved into place when complete, so a failed
+  export leaves no partial file. The CLI refuses an existing file without `--force` (the save panel asks first).
+- A long history is read in chunks while the pane keeps running. Rows that the scrollback limit drops while a busy
+  pane is being exported are left out and counted ("… older rows were dropped").
+- A full-screen program (vim, less, htop) shows its own screen, not the history: the export has that screen only.
+- Not available from SSH panes' sockets (it writes a file on this Mac).
+
 ## Command palette
 
 **View › Command Palette…** (⇧⌘P) opens a search over:

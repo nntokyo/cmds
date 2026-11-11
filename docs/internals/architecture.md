@@ -153,6 +153,17 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
 - **SSH pane** ([ssh.md](ssh.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
   forwarded to the server (`ssh -R`); `PaneInfo.remote` = `{host, connected, branch?}`, `WorkspaceInfo.remoteHost`
   while the focused pane is one (its cwd/branch are then remote). Survives `ssh` exiting (Reconnect overlay).
+- **Scrollback export** (`AppController.exportScrollback`, `CommandRouter.exportScrollback`; chunking, path checks and
+  the file in `CmdsCore/ScrollbackExport.swift`; [guide](../guide/workspaces-and-panes.md#exporting-the-scrollback),
+  #253): `TerminalSurface.screenText(rows, ansi:)` reads screen rows as one non-rectangular selection
+  (`ghostty_surface_read_text` / cmds' `ghostty_surface_read_text_vt`; exact screen points reach the whole history
+  with the patch), which joins soft-wrapped rows. `ScrollbackExport.Job` reads 2000 rows per step, numbered absolutely
+  (screen row + `TerminalScrollbar.pruned`), so rows pruned during the export are counted as `lost` instead of shifting
+  the read; a step ends where a two-row probe shows a line ending on a non-blank row (no soft wrap, nothing trimmed at
+  the edges), searching up to 200 rows past the chunk. The main actor yields between steps. `PrivateFileWriter` writes
+  a temporary `.<name>.cmds-…` file beside the target (`O_EXCL | O_NOFOLLOW`, `fchmod 0600`) and renames it into place
+  at the end (`renamex_np(RENAME_EXCL)` without force), so the target never sees a partial or world-readable file and
+  a symlink there is replaced, not followed. Not in `RemoteAPIPolicy.allowedMethods`.
 - **Tiled view** (`Workspace/AppController+Tiling.swift`, `Panes/TileViews.swift`, grid math in
   `CmdsCore/TileLayout.swift`): `tileMode` (off / all visible sidebar rows / a chosen set) decides which workspaces
   `WorkspaceContentViewController` shows as `WorkspaceTileView`s in a `TileGridView`; the selected workspace is the

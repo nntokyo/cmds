@@ -20,6 +20,15 @@ final class PaneArgumentCLITests: XCTestCase {
         XCTAssertEqual(exitCode(["read"]), CLIError.Code.unavailable.rawValue)
     }
 
+    /// `cmds pane export` (#253): one file, the pane only as --pane.
+    func testPaneExport() {
+        XCTAssertEqual(exitCode(["pane", "export"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["pane", "export", "p2", "out.txt"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["pane", "export", "--colors", "out.txt"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["pane", "export", "--pane", "p2", "--ansi", "--force", "out.txt"]),
+                       CLIError.Code.unavailable.rawValue)
+    }
+
     func testBrowserReadsRejectABarePaneID() {
         XCTAssertEqual(exitCode(["browser", "url", "p2"]), CLIError.Code.usage.rawValue)
         XCTAssertEqual(exitCode(["browser", "snapshot", "p2"]), CLIError.Code.usage.rawValue)

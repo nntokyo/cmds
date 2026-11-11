@@ -126,6 +126,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `snapshot: true` adds `png_base64` (without the window's translucency). Isolated instances leave the menu bar item
   off: `defaults write tokyo.n-n.cmds.isolated.<hash> ShowInMenuBar -bool true` puts it under the icon. Drive only a
   pane the test created (e.g. a script that prints a `❯ 1. Yes` / `  2. No` prompt and reads a line).
+- Scrollback export (#253): in a pane the test created, a script prints 30,000 numbered lines (every 1000th longer
+  than the pane is wide, every 500th in colour) and writes the same text to a file; `cmds pane export --pane P
+  out.txt` must give mode 0600 and that text (wrapped lines joined), again refused without `--force`, `--force` over
+  a 0644 file leaves 0600, `--ansi` with the escape codes stripped equals the plain file. Then export a second pane
+  while it prints 1.5 million lines (rows pruned meanwhile are reported as lost, the app keeps answering), and once
+  more after it finished (no gaps in the numbering).
 - Browser screenshots (#169): a local page several screens tall with coloured bands and an element below the fold
   (`--full` is one image of the whole page; `--selector` the element, also after navigating to `page.html#element`,
   which scrolls the pane; the pane's scroll position written to `document.title` stays), a page over 16384 px tall

@@ -102,6 +102,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `pane.close` | `pane`, `openedBy?` (a terminal pane: close only a pane opened from it, else an invalid-params error) | – |
 | `pane.send_text` | `pane?`, `text`, `openedBy?` (a terminal pane: type only into a pane opened from it, never into it, else an invalid-params error; `cmds mcp` terminal_send) | – |
 | `pane.read_text` | `pane?`, `scrollback?` (lines), `openedBy?` (as for `pane.send_text`; `cmds mcp` terminal_read) | `{"text": ...}` |
+| `pane.export` | `pane?`, `path` (absolute; its folder must exist), `ansi?` (colours as SGR escape codes), `force?` (replace an existing file) | `{"path", "rows", "lost", "bytes"}`: the whole scrollback and screen of a terminal pane written to a new file with mode 0600 (written beside it and renamed into place; a symlink at `path` is replaced, never written through). Plain text has wrapped lines joined. Read in chunks of rows with other requests handled in between; `rows` = screen rows written, `lost` = rows the scrollback limit dropped before they were read. An existing file without `force`, a relative path or a missing folder: invalid params. Refused (403) on SSH panes' sockets. [Guide](../guide/workspaces-and-panes.md#exporting-the-scrollback) |
 | `notify` | `pane?`, `title?`, `body` | – |
 | `sidebar.set_status` | `workspace?`, `text` | – (sets the sidebar text without ringing; `""` clears) |
 | `browser.open` | `pane?` (terminal to split from), `url`, `focus?` (default true) | `PaneInfo` |

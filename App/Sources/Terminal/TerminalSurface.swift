@@ -105,6 +105,11 @@ protocol TerminalSurface: AnyObject {
     /// Rows `range` of the whole screen (0 is the top of the history, `scrollbar().total` rows), one entry per
     /// displayed row as `historyRows` reads them; nil when a row could not be read.
     func screenRows(_ range: Range<Int>) -> [String]?
+    /// Rows `rows` of the whole screen (as in `screenRows`) read as one selection, the way copying them reads: lines
+    /// that wrapped joined, rows ended with "\n", blank rows at the end left out. `ansi`: with the SGR sequences of
+    /// their colours and attributes (`ghostty_surface_read_text_vt`). nil when they could not be read. Pane › Export
+    /// Scrollback reads the history in such chunks (`ScrollbackExport.Job`, #253).
+    func screenText(_ rows: ClosedRange<Int>, ansi: Bool) -> String?
     /// Scrolls so that screen row `row` (as in `screenRows`) is the top row of the viewport, or as close as it goes.
     func scroll(toRow row: Int)
     /// Where `width` cells from `column` of viewport row `row` are, in `view`'s coordinates; nil if unknown.

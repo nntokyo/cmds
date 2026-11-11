@@ -2255,6 +2255,16 @@
         }
       }
     },
+    "Cannot export the scrollback": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクロールバックを書き出せません"
+          }
+        }
+      }
+    },
     "Cannot export workspaces": {
       "localizations": {
         "ja": {
@@ -4090,6 +4100,16 @@
         }
       }
     },
+    "Export Scrollback…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクロールバックを書き出す…"
+          }
+        }
+      }
+    },
     "Export Workspaces…": {
       "localizations": {
         "ja": {
@@ -5197,6 +5217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバの版を残す"
+          }
+        }
+      }
+    },
+    "Keep colors (ANSI escape codes)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "色を残す（ANSIエスケープコード）"
           }
         }
       }
@@ -9991,6 +10021,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペインでほかのプログラムが動いていました。"
+          }
+        }
+      }
+    },
+    "The pane's whole scrollback. It may contain passwords or tokens; the file is readable only by you.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ペインのスクロールバック全体です。パスワードやトークンが含まれることがあるため、ファイルはあなただけが読めるように作成されます。"
           }
         }
       }

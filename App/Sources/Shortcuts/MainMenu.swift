@@ -186,6 +186,8 @@ enum MainMenu {
         menu.addItem(item("Move to Workspace…", #selector(CommandRouter.moveToWorkspace(_:)), "", target: router))
         menu.addItem(item("Move to New Workspace", #selector(CommandRouter.moveToNewWorkspace(_:)), "", target: router))
         menu.addItem(.separator())
+        menu.addItem(item("Export Scrollback…", #selector(CommandRouter.exportScrollback(_:)), "", target: router))
+        menu.addItem(.separator())
         menu.addItem(item("Jump to Latest Attention", #selector(CommandRouter.jumpToAttention(_:)), "u", [.command, .shift], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Resume Agent Session", #selector(CommandRouter.resumeAgentSession(_:)), "", target: router))
