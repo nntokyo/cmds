@@ -264,7 +264,12 @@ final class AssistantController {
                 guard !screen.isEmpty else { return fallback }
                 do {
                     if detailed {
-                        return try await AssistantBrain.detailedSummary(facts: fallback, screen: screen, language: self.language)
+                        self.claudeWorking = true
+                        self.refresh()
+                        defer { self.claudeWorking = false }
+                        let summary = try await AssistantBrain.detailedSummary(facts: fallback, screen: screen, language: self.language)
+                        self.claudeAnswered = true
+                        return summary
                     }
                     guard AssistantBrain.modelAvailable else { return fallback }
                     let summary = try await AssistantBrain.summarize(facts: fallback, screen: screen, language: self.language)
@@ -275,11 +280,20 @@ final class AssistantController {
                 }
             }
         case .ask(let question):
+            // Weather, news, "search…": Claude with web search at once (Settings › Assistant, on by default).
+            let web = settings.assistantWeb
+            if web, AssistantWeb.needsWeb(question) {
+                return think { await self.webAnswer(question) }
+            }
             guard AssistantBrain.modelAvailable else { return say(strings(.modelUnavailable)) }
             let status = AssistantReport.status(world, strings: .english)
             think {
                 do {
-                    return try await AssistantBrain.answer(question, status: status, language: self.language)
+                    let answer = try await AssistantBrain.answer(question, status: status, language: self.language, web: web)
+                    // The on-device model says it needs current or outside information: ask Claude after all.
+                    if web, AssistantWeb.answerNeedsWeb(answer) { return await self.webAnswer(question) }
+                    let text = AssistantWeb.withoutMarker(answer)
+                    return text.isEmpty ? strings(.modelUnavailable) : text
                 } catch {
                     return strings(.modelUnavailable)
                 }
@@ -296,18 +310,46 @@ final class AssistantController {
         }
     }
 
+    /// A question for Claude Code with web search (`AssistantBrain.webAnswer`); a short note when it is missing, fails
+    /// or takes too long.
+    private func webAnswer(_ question: String) async -> String {
+        let strings = AssistantStrings.localized
+        claudeWorking = true
+        refresh()
+        defer { claudeWorking = false }
+        do {
+            let text = try await AssistantBrain.webAnswer(question: question, language: language)
+            claudeAnswered = true
+            return text
+        } catch AssistantBrain.ClaudeFailure.notFound {
+            return strings(.claudeNotFound)
+        } catch {
+            assistantLog.error("assistant web answer failed: \(String(describing: error), privacy: .public)")
+            return strings(.webFailed)
+        }
+    }
+
+    /// Claude Code is working on the answer (the HUD says so).
+    private var claudeWorking = false
+    /// The answer being worked out came from Claude Code.
+    private var claudeAnswered = false
+    /// The answer shown came from Claude Code (a small label on the HUD).
+    private var answerByClaude = false
+
     /// Works out an answer off the main actor's way, then says it (dropped when the assistant moved on).
     private func think(_ body: @escaping @MainActor () async -> String) {
         work?.cancel()
+        claudeAnswered = false
         work = Task { [weak self] in
             let text = await body()
             guard let self, !Task.isCancelled, self.machine.phase == .thinking else { return }
-            self.say(text)
+            self.say(text, byClaude: self.claudeAnswered)
         }
     }
 
     /// Shows and speaks an answer; the machine moves on when it has been said.
-    private func say(_ text: String, proposing action: AssistantAction? = nil) {
+    private func say(_ text: String, proposing action: AssistantAction? = nil, byClaude: Bool = false) {
+        answerByClaude = byClaude
         machine.answer(text, proposing: action, now: Date())
         refresh()
         speech += 1
@@ -423,7 +465,14 @@ final class AssistantController {
         }
         return AssistantHUDContent(phase: machine.phase, attention: world.needingUserCount > 0,
                                    transcript: machine.transcript, answer: hudNote ?? machine.answer ?? problem,
-                                   pending: machine.pending, needsKey: needsKey, rings: rings, style: settings.assistantStyle)
+                                   pending: machine.pending, needsKey: needsKey, rings: rings, style: settings.assistantStyle,
+                                   claude: claudeMark)
+    }
+
+    /// "Asking Claude" while it works on the answer; "Claude" under an answer that came from it.
+    private var claudeMark: AssistantHUDContent.ClaudeMark {
+        if machine.phase == .thinking { return claudeWorking ? .working : .none }
+        return answerByClaude && machine.answer != nil && hudNote == nil ? .answered : .none
     }
 
     /// Phase 2 hook (#243, proactive announcements, opt-in): called when the workspaces' states change, e.g. to say

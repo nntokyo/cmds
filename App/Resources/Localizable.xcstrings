@@ -691,12 +691,6 @@
     "%lld agents, nothing needs you.": {
       "comment": "assistant: spoken status",
       "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エージェント%lld件、対応が必要なものはありません。"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -713,6 +707,12 @@
                 }
               }
             }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェント%lld件、対応が必要なものはありません。"
           }
         }
       }
@@ -908,12 +908,6 @@
     "%lld need you.": {
       "comment": "assistant: spoken status (count of workspaces waiting for the user)",
       "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "応答待ち%lld件。"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -930,6 +924,12 @@
                 }
               }
             }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応答待ち%lld件。"
           }
         }
       }
@@ -1717,6 +1717,17 @@
         }
       }
     },
+    "Asking Claude…": {
+      "comment": "assistant HUD: claude -p works on the answer",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeに問い合わせ中…"
+          }
+        }
+      }
+    },
     "Assistant": {
       "comment": "Settings tab\nassistant HUD (VoiceOver)\nmenu bar item: turns the voice assistant on or off",
       "localizations": {
@@ -2450,6 +2461,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースを選ぶと、アイコンの下にパネルが開き、cmdsに切り替えずにエージェントに答えられます。⌥を押しながら選ぶとcmdsで開きます。"
+          }
+        }
+      }
+    },
+    "Claude": {
+      "comment": "assistant HUD: under an answer that came from Claude Code",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude"
           }
         }
       }
@@ -4542,6 +4564,17 @@
         }
       }
     },
+    "I can't search the web: Claude Code (claude) isn't installed.": {
+      "comment": "assistant: a web question, but claude is missing",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code（claude）がインストールされていないため、ウェブを検索できません。"
+          }
+        }
+      }
+    },
     "I cancelled it: no answer.": {
       "comment": "assistant: a confirmation timed out",
       "localizations": {
@@ -4549,6 +4582,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "応答がなかったので取り消しました。"
+          }
+        }
+      }
+    },
+    "I couldn't get an answer from Claude: it failed or took too long.": {
+      "comment": "assistant: claude -p for a web question failed or timed out",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeから回答を得られませんでした。失敗したか、時間がかかりすぎました。"
           }
         }
       }
@@ -6779,6 +6823,17 @@
         }
       }
     },
+    "Please press Return or click the button for this one.": {
+      "comment": "assistant: a spoken yes is not enough",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これはReturnキーを押すかボタンをクリックしてください。"
+          }
+        }
+      }
+    },
     "Pop-up": {
       "localizations": {
         "ja": {
@@ -8565,13 +8620,13 @@
         }
       }
     },
-    "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary asks Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.": {
+    "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary and web questions ask Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.": {
       "comment": "Settings › Assistant",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "音声はアプリの言語（cmds › 言語）でこのMac上で認識します。回答はワークスペースの情報とAppleのデバイス上のモデルから作り、詳しい要約だけClaude Code（claude -p）に頼みます。ペインへの入力やセッションの開始は、まず表示し、「はい」と言うかReturnキーを押してから実行します。削除・プッシュ・デプロイとSSHペインへの送信はReturnキーかクリックが必要です。"
+            "value": "音声はアプリの言語（cmds › 言語）でこのMac上で認識します。回答はワークスペースの情報とAppleのデバイス上のモデルから作り、詳しい要約とウェブが必要な質問だけClaude Code（claude -p）に頼みます。ペインへの入力やセッションの開始は、まず表示し、「はい」と言うかReturnキーを押してから実行します。削除・プッシュ・デプロイとSSHペインへの送信はReturnキーかクリックが必要です。"
           }
         }
       }
@@ -10462,6 +10517,17 @@
         }
       }
     },
+    "Use Claude for web questions": {
+      "comment": "Settings › Assistant: weather, news, “search…” go to claude -p with web search",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウェブが必要な質問はClaudeに聞く"
+          }
+        }
+      }
+    },
     "Use a relay port from 1024 to 65535.": {
       "localizations": {
         "ja": {
@@ -10536,12 +10602,6 @@
     "Waiting for %lld minutes.": {
       "comment": "assistant: how long a workspace has waited",
       "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld分待っています。"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -10558,6 +10618,12 @@
                 }
               }
             }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分待っています。"
           }
         }
       }
@@ -10639,6 +10705,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "メモリが不足したら通知"
+          }
+        }
+      }
+    },
+    "Weather, news, prices and “search…” go to Claude Code (claude -p) with web search only. This uses your Claude Code usage.": {
+      "comment": "Settings › Assistant: under Use Claude for web questions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天気・ニュース・価格や「検索して」は、ウェブ検索だけを許可したClaude Code（claude -p）に聞きます。Claude Codeの利用量を使います。"
           }
         }
       }
@@ -11810,17 +11887,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバ上の“%@”はもうファイルではありません。何もアップロードしませんでした。"
-          }
-        }
-      }
-    },
-    "Please press Return or click the button for this one.": {
-      "comment": "assistant: a spoken yes is not enough",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "これはReturnキーを押すかボタンをクリックしてください。"
           }
         }
       }

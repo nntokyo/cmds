@@ -340,6 +340,16 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
 - **Answers**: `AssistantReport` texts through `AssistantStrings.localized` (String Catalog); summaries and questions
   by `SystemLanguageModel.default` (never Private Cloud Compute, 20 s limit); a detailed summary by `claude -p
   --output-format text --tools "" --strict-mcp-config` (no tools, no MCP servers: the screen text is untrusted) in an empty temporary folder, screen text on stdin, 90 s limit.
+  Web questions (`AssistantWeb`, CmdsCore; Settings › Assistant › Use Claude for web questions, `AssistantWeb`
+  defaults key, on unless false): `AssistantWeb.needsWeb` sends a question straight to `AssistantBrain.webAnswer`
+  when it asks to search / ask Claude or is about something live (folded keyword lists for Japanese, regular
+  expressions for English); otherwise the on-device instructions tell the model to answer `[[NEEDS_WEB]]` alone, and
+  `answerNeedsWeb` (the marker, also broken or full width, or a "can't access the internet" sentence) falls back to
+  Claude; `withoutMarker` keeps the marker from being spoken. `webAnswer` runs `claude -p <prompt> --output-format
+  text --tools WebSearch,WebFetch --allowedTools WebSearch,WebFetch --strict-mcp-config` in the same way (empty
+  folder, 90 s, no permission-skipping flag); the prompt holds only the utterance, the date and time, the time zone
+  and the locale, never screen text. `AssistantWeb.speakable` drops a "Sources:" list, links, URLs and Markdown. The
+  HUD's `ClaudeMark` shows "Asking Claude…" while `claude -p` runs and "Claude" under its answer.
 - **Keys and HUD**: the HUD is a `.nonactivatingPanel` that can never become key; Return / Enter / Esc are Carbon hot
   keys registered only while a card shows (ignored for 0.8 s after it appears), ⌥⌘J likewise; isolated instances
   register none. Phase 2 hook: `AssistantController.workspacesChanged(_:)` (proactive announcements).

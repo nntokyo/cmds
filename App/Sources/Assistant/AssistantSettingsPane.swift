@@ -15,6 +15,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
     private let rateSlider = NSSlider()
     private let mutedCheckbox = NSButton(checkboxWithTitle: String(localized: "Show answers without speaking", comment: "Settings › Assistant"),
                                          target: nil, action: nil)
+    private let webCheckbox = NSButton(checkboxWithTitle: String(localized: "Use Claude for web questions", comment: "Settings › Assistant: weather, news, “search…” go to claude -p with web search"),
+                                       target: nil, action: nil)
     private let hotkeyPopup = NSPopUpButton()
     private let statusNote = NSTextField(wrappingLabelWithString: "")
     private var voiceLanguage = ""
@@ -43,6 +45,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         rateSlider.setAccessibilityLabel(String(localized: "Speaking rate", comment: "Settings › Assistant"))
         mutedCheckbox.target = self
         mutedCheckbox.action = #selector(mutedToggled)
+        webCheckbox.target = self
+        webCheckbox.action = #selector(webToggled)
         for hotkey in AssistantHotkey.allCases {
             hotkeyPopup.addItem(withTitle: hotkey.title)
             hotkeyPopup.lastItem?.representedObject = hotkey.rawValue
@@ -65,7 +69,9 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
             [label(String(localized: "Voice:", comment: "Settings › Assistant")), voicePopup],
             [label(String(localized: "Rate:", comment: "Settings › Assistant: speaking rate")), rateSlider],
             [NSGridCell.emptyContentView, mutedCheckbox],
-            [NSGridCell.emptyContentView, note(String(localized: "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary asks Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.", comment: "Settings › Assistant"))],
+            [NSGridCell.emptyContentView, webCheckbox],
+            [NSGridCell.emptyContentView, note(String(localized: "Weather, news, prices and “search…” go to Claude Code (claude -p) with web search only. This uses your Claude Code usage.", comment: "Settings › Assistant: under Use Claude for web questions"))],
+            [NSGridCell.emptyContentView, note(String(localized: "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary and web questions ask Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.", comment: "Settings › Assistant"))],
         ]
     }
 
@@ -78,6 +84,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         fillVoices()
         rateSlider.doubleValue = settings.assistantRate
         mutedCheckbox.state = settings.assistantMuted ? .on : .off
+        webCheckbox.state = settings.assistantWeb ? .on : .off
         hotkeyPopup.selectItem(at: hotkeyPopup.indexOfItem(withRepresentedObject: settings.assistantHotkey.rawValue))
         var problem: String?
         if #available(macOS 26.0, *) { problem = AssistantController.shared?.problem }
@@ -130,6 +137,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
 
     @objc private func mutedToggled() {
         settings.assistantMuted = mutedCheckbox.state == .on
+    }
+
+    @objc private func webToggled() {
+        settings.assistantWeb = webCheckbox.state == .on
     }
 
     @objc private func hotkeyChanged() {

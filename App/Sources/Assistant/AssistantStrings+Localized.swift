@@ -78,6 +78,10 @@ private extension AssistantLine {
         case .goodbye: return String(localized: "Assistant off.", comment: "assistant")
         case .modelUnavailable:
             return String(localized: "I can only answer about the workspaces: the on-device model isn't available.", comment: "assistant: Apple Intelligence is off or unsupported")
+        case .claudeNotFound:
+            return String(localized: "I can't search the web: Claude Code (claude) isn't installed.", comment: "assistant: a web question, but claude is missing")
+        case .webFailed:
+            return String(localized: "I couldn't get an answer from Claude: it failed or took too long.", comment: "assistant: claude -p for a web question failed or timed out")
         }
     }
 }

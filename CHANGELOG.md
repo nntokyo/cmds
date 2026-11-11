@@ -14,7 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   which workspaces need you, what an agent is doing (Apple's on-device model), a detailed summary on request
   (`claude -p`). It can reply to an agent, approve or pick an option and start Claude Code or Codex, always shown first
   in a floating HUD and run only after yes or Return (Return or a click for deletes, pushes, deploys and SSH panes)
-  (#243).
+  (#243). Questions that need the web (weather, news, prices, "search…" / 「検索して」) go to Claude Code with web
+  search only (Settings › Assistant › Use Claude for web questions, on by default; uses your Claude Code usage), also
+  when the on-device model finds it needs current information.
 
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and

@@ -53,8 +53,9 @@ extension AppSettings {
     static let assistantRateKey = "AssistantRate"
     static let assistantMutedKey = "AssistantMuted"
     static let assistantHotkeyKey = "AssistantHotkey"
+    static let assistantWebKey = "AssistantWeb"
     static let assistantKeys = [assistantEnabledKey, assistantNamesKey, assistantStyleKey, assistantVoiceKey, assistantRateKey,
-                                assistantMutedKey, assistantHotkeyKey]
+                                assistantMutedKey, assistantHotkeyKey, assistantWebKey]
 
     /// The rates the voice may take (AVSpeechUtterance rates; 0.5 is the system default).
     static let assistantRateRange: ClosedRange<Double> = 0.35...0.65
@@ -94,6 +95,13 @@ extension AppSettings {
     var assistantMuted: Bool {
         get { defaults.bool(forKey: Self.assistantMutedKey) }
         set { set(newValue ? true : nil, forKey: Self.assistantMutedKey) }
+    }
+
+    /// Questions that need the web (weather, news, "search…") go to Claude Code with web search (`AssistantWeb`). On
+    /// unless the user turns it off.
+    var assistantWeb: Bool {
+        get { defaults.object(forKey: Self.assistantWebKey) == nil ? true : defaults.bool(forKey: Self.assistantWebKey) }
+        set { set(newValue ? nil : false, forKey: Self.assistantWebKey) }
     }
 
     var assistantHotkey: AssistantHotkey {

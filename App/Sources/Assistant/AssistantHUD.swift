@@ -13,6 +13,14 @@ struct AssistantHUDContent: Equatable {
     var needsKey: Bool
     var rings: [AssistantRingsView.Ring]
     var style: AssistantStyle
+    /// Claude Code works on the answer, or gave it (a small label under the answer).
+    var claude: ClaudeMark = .none
+
+    enum ClaudeMark: Equatable {
+        case none
+        case working
+        case answered
+    }
 }
 
 /// The assistant's HUD (#243): a floating, non-activating panel at the top right of the screen that never takes the
@@ -34,6 +42,7 @@ final class AssistantHUD: NSObject {
     private let phaseLabel = NSTextField(labelWithString: "")
     private let transcriptLabel = NSTextField(wrappingLabelWithString: "")
     private let answerLabel = NSTextField(wrappingLabelWithString: "")
+    private let sourceLabel = NSTextField(labelWithString: "")
     private let card = NSStackView()
     private let targetLabel = NSTextField(labelWithString: "")
     private let textBox = NSTextField(wrappingLabelWithString: "")
@@ -92,7 +101,9 @@ final class AssistantHUD: NSObject {
             label.preferredMaxLayoutWidth = Self.textWidth
             label.isSelectable = false
         }
-        let texts = NSStackView(views: [phaseLabel, transcriptLabel, answerLabel])
+        sourceLabel.font = .systemFont(ofSize: 10, weight: .medium)
+        sourceLabel.textColor = .tertiaryLabelColor
+        let texts = NSStackView(views: [phaseLabel, transcriptLabel, answerLabel, sourceLabel])
         texts.orientation = .vertical
         texts.alignment = .leading
         texts.spacing = 5
@@ -201,6 +212,14 @@ final class AssistantHUD: NSObject {
         transcriptLabel.isHidden = content.transcript == nil
         answerLabel.stringValue = content.answer ?? ""
         answerLabel.isHidden = content.answer == nil
+        switch content.claude {
+        case .none: sourceLabel.stringValue = ""
+        case .working:
+            sourceLabel.stringValue = String(localized: "Asking Claude…", comment: "assistant HUD: claude -p works on the answer")
+        case .answered:
+            sourceLabel.stringValue = String(localized: "Claude", comment: "assistant HUD: under an answer that came from Claude Code")
+        }
+        sourceLabel.isHidden = content.claude == .none
         rings.rings = content.rings
         if let action = content.pending {
             card.isHidden = false
@@ -280,6 +299,7 @@ final class AssistantHUD: NSObject {
     #if DEBUG
     var debugTexts: [String: String] {
         ["phase": phaseLabel.stringValue, "transcript": transcriptLabel.stringValue, "answer": answerLabel.stringValue,
+         "source": sourceLabel.isHidden ? "" : sourceLabel.stringValue,
          "target": card.isHidden ? "" : targetLabel.stringValue, "text": card.isHidden ? "" : textBox.stringValue,
          "note": card.isHidden ? "" : reasonLabel.stringValue, "confirmButton": card.isHidden ? "" : confirmButton.title]
     }

@@ -408,3 +408,77 @@ final class PaidFeaturesTests: XCTestCase {
         XCTAssertEqual(PaidFeatures.unlock(.assistant, betaFree: [], developmentBuild: false, provider: Licensed()), .licence)
     }
 }
+
+/// Which free questions go to Claude Code with web search, and the on-device model's "needs the web" answer (#243).
+final class AssistantWebTests: XCTestCase {
+    func testTheUsersRealQuestionGoesToTheWeb() {
+        let command = "明日の船橋の天気を教えて。インターネットで検索して教えて"
+        XCTAssertEqual(AssistantIntent.parse(command), .question(command))
+        XCTAssertTrue(AssistantWeb.needsWeb(command))
+    }
+
+    func testExplicitRequestsInJapanese() {
+        for question in ["Swift 6.2の新機能を検索して", "このエラーメッセージを調べて", "ぐぐって", "ググってみて", "ネットで探して",
+                         "インターネットで確認して", "クロードに聞いて", "Claudeに聞いて", "ウェブで見て"] {
+            XCTAssertTrue(AssistantWeb.needsWeb(question), question)
+        }
+    }
+
+    func testLiveTopicsInJapanese() {
+        for question in ["明日の東京の天気は", "今日のニュースを教えて", "トヨタの株価は", "ドル円の為替は", "山手線の運行状況",
+                         "最新のXcodeのバージョンは", "天気予報", "台風どこにいる", "今日の試合の結果"] {
+            XCTAssertTrue(AssistantWeb.needsWeb(question), question)
+        }
+    }
+
+    func testExplicitRequestsAndLiveTopicsInEnglish() {
+        for question in ["search for the Swift 6.2 release notes", "look it up", "google the error", "ask Claude what a monad is",
+                         "check online", "what's the weather in Tokyo tomorrow", "Weather forecast for Osaka", "any news about Apple",
+                         "Apple stock price", "exchange rate dollar to yen", "today's headlines", "today’s top stories",
+                         "the latest version of Xcode", "who won the game last night", "train status on the Yamanote line"] {
+            XCTAssertTrue(AssistantWeb.needsWeb(question), question)
+        }
+    }
+
+    func testOrdinaryQuestionsStayOnDevice() {
+        for question in ["what is a monad", "explain binary search", "tell me a joke", "1たす1は", "モナドって何",
+                         "おすすめの変数名は", "what does git rebase do", "how do I write a for loop in Swift",
+                         "ハンドルの意味は", "Claude Codeとは何", "", "   "] {
+            XCTAssertFalse(AssistantWeb.needsWeb(question), question)
+        }
+    }
+
+    func testTheMarkerAndCantKnowAnswers() {
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb("[[NEEDS_WEB]]"))
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb(" [NEEDS_WEB] "))
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb("NEEDS_WEB"))
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb("［［ＮＥＥＤＳ＿ＷＥＢ］］"))
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb("申し訳ありませんが、インターネットで検索できません。天気予報アプリをご確認ください。"))
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb("リアルタイムの情報にはアクセスできません。"))
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb("Sorry, I can't browse the internet."))
+        XCTAssertTrue(AssistantWeb.answerNeedsWeb("I don't have access to real-time data."))
+        XCTAssertFalse(AssistantWeb.answerNeedsWeb("A monad is a way to chain computations."))
+        XCTAssertFalse(AssistantWeb.answerNeedsWeb("apiは入力を待っています。"))
+        XCTAssertFalse(AssistantWeb.answerNeedsWeb("I can't run commands, but api is waiting for you."))
+    }
+
+    func testTheMarkerIsNeverSpoken() {
+        XCTAssertEqual(AssistantWeb.withoutMarker("[[NEEDS_WEB]]"), "")
+        XCTAssertEqual(AssistantWeb.withoutMarker("It rains. [[needs_web]]"), "It rains.")
+        XCTAssertEqual(AssistantWeb.withoutMarker("A monad chains computations."), "A monad chains computations.")
+    }
+
+    func testClaudesAnswerIsMadeSpeakable() {
+        let answer = """
+        **明日**の船橋市は晴れです。最高気温は20度です。
+
+        Sources:
+        - [tenki.jp](https://tenki.jp/forecast/3/15/4510/12204/)
+        """
+        XCTAssertEqual(AssistantWeb.speakable(answer), "明日の船橋市は晴れです。最高気温は20度です。")
+        XCTAssertEqual(AssistantWeb.speakable("See [the forecast](https://example.com/a) (https://example.com/b) today."),
+                       "See the forecast today.")
+        XCTAssertEqual(AssistantWeb.speakable("# Weather\n- Sunny\n- 20 °C"), "Weather Sunny 20 °C")
+        XCTAssertEqual(AssistantWeb.speakable("晴れです。\n\n出典: tenki.jp"), "晴れです。")
+    }
+}

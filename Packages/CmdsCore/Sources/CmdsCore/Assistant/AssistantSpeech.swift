@@ -46,6 +46,10 @@ public enum AssistantLine: Equatable, Sendable {
     case paused
     case goodbye
     case modelUnavailable
+    /// A web question, but `claude` is not installed where the app looks.
+    case claudeNotFound
+    /// A web question, but `claude -p` failed or took too long.
+    case webFailed
 
     public var english: String {
         switch self {
@@ -92,6 +96,8 @@ public enum AssistantLine: Equatable, Sendable {
         case .paused: return "Listening paused."
         case .goodbye: return "Assistant off."
         case .modelUnavailable: return "I can only answer about the workspaces: the on-device model isn't available."
+        case .claudeNotFound: return "I can't search the web: Claude Code (claude) isn't installed."
+        case .webFailed: return "I couldn't get an answer from Claude: it failed or took too long."
         }
     }
 }

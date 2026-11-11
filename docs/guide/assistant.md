@@ -37,7 +37,19 @@ It understands the app's language (cmds › Language): Japanese or English.
 | "start Claude in web" / 「webでクロードを起動して」 | Offers a new workspace in that workspace's folder (or a folder path) running `claude` / `codex` |
 | "pause listening" / 「一時停止」 | Pauses the microphone |
 | "turn off" / 「おやすみ」 | Turns the assistant off |
+| "what's the weather in Funabashi tomorrow" / 「明日の船橋の天気を教えて」, "search …" / 「…を検索して」 | A web question for Claude Code (`claude -p` with web search only, see below) |
 | anything else | A question for Apple's on-device model (needs Apple Intelligence) |
+
+**Web questions.** The on-device model has no internet. With **Use Claude for web questions** on (Settings ›
+Assistant, on by default), a question goes to Claude Code instead when you ask to search (検索 / 調べて / ググって /
+ネットで / インターネット / Claudeに聞いて, search / look up / google / online / ask Claude) or when it is about something
+live (天気 / weather, ニュース / news, 株価 / stock price, 為替 / exchange rate, 運行 / train status, 今日の / today's,
+最新 / latest, scores…). Other questions still go to the on-device model first; when it says the answer needs current
+or outside information, Claude is asked after all. The HUD shows "Asking Claude…" meanwhile, and a small "Claude"
+under the answer. Claude gets only what you said, today's date, your time zone and locale (never screen text), and
+answers in a few spoken sentences, naming the place or date it assumed. It takes a few seconds to a minute and uses
+your Claude Code usage; when `claude` is missing or fails, the assistant says so. Turned off, every question goes to
+the on-device model as before.
 
 Without a workspace name, "approve" and "choose" go to the one workspace that waits for you. When a name fits
 several workspaces, or a workspace has several panes that could be meant, it asks back instead of guessing; answer
@@ -70,9 +82,9 @@ Settings › Assistant also chooses the voice and its rate, or **Show answers wi
 - Speech is recognised on this Mac (SpeechAnalyzer). What is not addressed to the assistant is dropped at once; no
   audio and no transcript is stored.
 - Answers come from the workspaces' state and Apple's on-device model. Nothing is sent to a server, except a detailed
-  summary you ask for: that runs `claude -p` (your Claude Code login) in an empty temporary folder, with the
-  screen's text as input, a read-only prompt, the tools that run or change things denied, no permission-skipping
-  flag, and a 90-second limit.
+  summary you ask for and web questions: both run `claude -p` (your Claude Code login) in an empty temporary folder,
+  without MCP servers or any permission-skipping flag, with a 90-second limit. A detailed summary gets the screen's
+  text as input and no tools at all; a web question gets only your words and only the WebSearch and WebFetch tools.
 - No paid API is used.
 
 ## Not yet
