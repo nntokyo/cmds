@@ -9,7 +9,8 @@ import CmdsCore
 @available(macOS 26.0, *)
 extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
-    /// `speak` (`text`: speaking it without a voice until `spoken`), `spoken`,
+    /// `speak` (`text`: speaking it without a voice until `spoken`), `spoken`, `problem` (`text`, none clears it: as
+    /// if the microphone had failed, for Settings' problem row),
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons). `snapshot`
     /// adds the HUD drawn off screen (`png_base64`; without the window's translucency).
     func debugPerform(_ params: JSONValue?) throws -> JSONValue {
@@ -34,6 +35,7 @@ extension AssistantController {
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
             debugSpeak(text)
         case "spoken": debugSpeechEnded()
+        case "problem": debugSetProblem(params?["text"]?.stringValue)
         case "hear":
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
             hear(text)

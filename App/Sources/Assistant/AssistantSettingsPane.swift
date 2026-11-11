@@ -129,8 +129,15 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         reportTasksCheckbox.state = settings.assistantReportTasks ? .on : .off
         if foldersField.currentEditor() == nil { foldersField.stringValue = settings.assistantProjectFolders }
         hotkeyPopup.selectItem(at: hotkeyPopup.indexOfItem(withRepresentedObject: settings.assistantHotkey.rawValue))
+        refreshProblem()
+    }
+
+    /// The assistant's problem (microphone denied…) above the settings; also when it comes or goes while Settings is
+    /// open (`AssistantController.didChange`). The window grows or shrinks with the row.
+    func refreshProblem() {
         var problem: String?
         if #available(macOS 26.0, *) { problem = AssistantController.shared?.problem }
+        guard statusNote.stringValue != (problem ?? "") || statusNote.isHidden != (problem == nil) else { return }
         statusNote.stringValue = problem ?? ""
         statusNote.isHidden = problem == nil
         // The whole grid row, so no empty gap (with its row spacing) stays where the note would be.

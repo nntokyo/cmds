@@ -5,7 +5,10 @@ import CmdsCore
 /// following the app's language, which is also the language it listens and speaks in.
 extension AssistantStrings {
     static var localized: AssistantStrings {
-        AssistantStrings(separator: AssistantLanguage.current.sentenceSeparator) { line in line.localized }
+        let language = AssistantLanguage.current
+        return AssistantStrings(separator: language.sentenceSeparator, listSeparator: language.listSeparator) { line in
+            line.localized
+        }
     }
 }
 
@@ -28,7 +31,8 @@ struct AssistantLanguage: Equatable {
     /// Between sentences: a space in English, nothing in Japanese.
     var sentenceSeparator: String { isJapanese ? "" : " " }
     /// Names in a sentence: `api, web` / `api、web`.
-    func list(_ items: [String]) -> String { items.joined(separator: isJapanese ? "、" : ", ") }
+    var listSeparator: String { isJapanese ? "、" : ", " }
+    func list(_ items: [String]) -> String { items.joined(separator: listSeparator) }
 }
 
 private extension AssistantLine {

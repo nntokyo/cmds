@@ -186,7 +186,7 @@ final class AssistantPlannerTests: XCTestCase {
             .init(id: $0, title: $0, state: .needsUser, agent: "Claude", panes: [.init(id: "p" + $0, title: "zsh", agent: "Claude", waiting: true, prompt: yesNo)])
         } + [.init(id: "w", title: "web", state: .working, agent: "Codex", topic: "Login form")], now: now)
         XCTAssertEqual(AssistantReport.status(many, strings: .english), "5 waiting: a, b, c, d +1. 1 working: web.")
-        let japanese = AssistantStrings(separator: "") { line in
+        let japanese = AssistantStrings(separator: "", listSeparator: "、") { line in
             switch line {
             case .waitingList(let count, let names): return "入力待ち\(count)件: \(names)。"
             case .workingList(let count, let names): return "作業中\(count)件: \(names)。"
@@ -197,7 +197,8 @@ final class AssistantPlannerTests: XCTestCase {
             .init(id: "1", title: "api", state: .needsUser), .init(id: "2", title: "api-v2", state: .needsUser),
             .init(id: "3", title: "web", state: .working),
         ], now: now)
-        XCTAssertEqual(AssistantReport.status(two, strings: japanese), "入力待ち2件: api, api-v2。作業中1件: web。")
+        XCTAssertEqual(AssistantReport.status(two, strings: japanese), "入力待ち2件: api、api-v2。作業中1件: web。")
+        XCTAssertEqual(AssistantReport.status(two, strings: .english), "2 waiting: api, api-v2. 1 working: web.")
     }
 
     func testWhatIsItDoing() {
@@ -988,5 +989,47 @@ final class AssistantVoicesTests: XCTestCase {
         XCTAssertEqual(AssistantVoices.personalVoiceState(.authorized, voices: [kyoko, mine], language: "en-US"), .available([mine]))
         XCTAssertEqual(AssistantVoices.personalVoiceState(.authorized, voices: [kyoko, mine], language: "ja-JP"),
                        .otherLanguagesOnly(["en-US"]))
+    }
+}
+
+/// Which utterance the voice is speaking: late callbacks of a stopped one end nothing (#261).
+final class AssistantUtterancesTests: XCTestCase {
+    func testNormalFinish() {
+        var utterances = AssistantUtterances<String>()
+        let first = utterances.start("first")
+        XCTAssertEqual(utterances.current, first)
+        XCTAssertEqual(utterances.ended(first), "first")
+        XCTAssertNil(utterances.current)
+        // didFinish after didCancel (the synthesizer may send both): the completion runs once.
+        XCTAssertNil(utterances.ended(first))
+        XCTAssertNil(utterances.stop())
+    }
+
+    func testCancelEndsTheCurrentOne() {
+        var utterances = AssistantUtterances<String>()
+        let first = utterances.start("first")
+        // Cancelled by the system, not by stop(): its didCancel ends it.
+        XCTAssertEqual(utterances.ended(first), "first")
+        XCTAssertNil(utterances.current)
+    }
+
+    func testStopThenSpeakAgainIgnoresTheFirstOnesLateCallbacks() {
+        var utterances = AssistantUtterances<String>()
+        let first = utterances.start("first")
+        // Barge-in or a new answer: stop() ends the first at once…
+        XCTAssertEqual(utterances.stop(), "first")
+        let second = utterances.start("second")
+        XCTAssertNotEqual(first, second)
+        // …and its didCancel and didFinish, delivered after the second was queued, do not end the second.
+        XCTAssertNil(utterances.ended(first))
+        XCTAssertNil(utterances.ended(first))
+        XCTAssertEqual(utterances.current, second)
+        XCTAssertEqual(utterances.ended(second), "second")
+    }
+
+    func testStopWithNothingSpokenIsNil() {
+        var utterances = AssistantUtterances<String>()
+        XCTAssertNil(utterances.stop())
+        XCTAssertNil(utterances.ended(1))
     }
 }

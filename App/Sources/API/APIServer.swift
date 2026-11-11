@@ -225,7 +225,11 @@ final class APIServer {
                 } else {
                     SettingsWindowController.shared.showSettings(nil)
                 }
-                connection.reply(id: id, result: ["window": .number(Double(SettingsWindowController.shared.window?.windowNumber ?? 0))])
+                let frame = SettingsWindowController.shared.window?.frame ?? .zero
+                connection.reply(id: id, result: [
+                    "window": .number(Double(SettingsWindowController.shared.window?.windowNumber ?? 0)),
+                    "frame": .array([frame.minX, frame.minY, frame.width, frame.height].map { .number(Double($0)) }),
+                ])
             #endif
             case "events.subscribe":
                 subscribe(connection)
