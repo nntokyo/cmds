@@ -11,6 +11,10 @@ final class BrowserPopupWindow: NSWindow, NSWindowDelegate {
     let webView: WKWebView
     var onClose: ((BrowserPopupWindow) -> Void)?
     private var observations: [NSKeyValueObservation] = []
+    /// The smallest the user can make the page (the page's own request is `BrowserPopupSize`).
+    static let minimumContentSize = NSSize(width: 200, height: 150)
+    /// The most a pop-up sits above the middle of its parent window.
+    static let maximumRaise: CGFloat = 80
 
     init(webView: WKWebView, contentSize: CGSize, over parent: NSWindow?) {
         self.webView = webView
@@ -21,7 +25,7 @@ final class BrowserPopupWindow: NSWindow, NSWindowDelegate {
         tabbingMode = .disallowed
         // Over the main window also in full screen.
         collectionBehavior = [.fullScreenAuxiliary]
-        contentMinSize = NSSize(width: 200, height: 150)
+        contentMinSize = Self.minimumContentSize
         contentView = webView
         delegate = self
         setAccessibilityIdentifier("cmds.browserPopup")
@@ -38,7 +42,7 @@ final class BrowserPopupWindow: NSWindow, NSWindowDelegate {
         let size = frame.size
         var origin = NSPoint(x: parent.frame.midX - size.width / 2, y: parent.frame.midY - size.height / 2)
         // A little higher than the middle, as alerts sit.
-        origin.y += min(parent.frame.height / 8, 80)
+        origin.y += min(parent.frame.height / 8, Self.maximumRaise)
         setFrame(constrainFrameRect(NSRect(origin: origin, size: size), to: parent.screen), display: false)
     }
 

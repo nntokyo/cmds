@@ -20,6 +20,8 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
     weak var pane: BrowserPane?
     private var popups: [BrowserPopupWindow] = []
     private var sheets: [PendingSheet] = []
+    /// The text field of a `prompt()` dialog.
+    static let promptFieldSize = NSSize(width: 300, height: 22)
 
     func attach(_ webView: WKWebView) {
         webView.uiDelegate = self
@@ -118,7 +120,7 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
         alert.addButton(withTitle: String(localized: "OK"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         let field = NSTextField(string: defaultText ?? "")
-        field.frame = NSRect(x: 0, y: 0, width: 300, height: 22)
+        field.frame = NSRect(origin: .zero, size: Self.promptFieldSize)
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
         present(alert, for: webView) { response in
