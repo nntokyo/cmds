@@ -87,11 +87,18 @@ struct CmdsWidgetContent: View {
         return Array((limits + machine).prefix(count))
     }
 
+    /// The app's URL scheme. Debug builds are a separate app ("cmds Dev") with their own scheme (#236, project.yml).
+    #if DEBUG
+    static let scheme = "cmds-dev"
+    #else
+    static let scheme = "cmds"
+    #endif
+
     static func url(_ workspaceID: String?) -> URL {
         guard let workspaceID, let escaped = workspaceID.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
-            return URL(string: "cmds://")!
+            return URL(string: "\(scheme)://")!
         }
-        return URL(string: "cmds://workspace/\(escaped)")!
+        return URL(string: "\(scheme)://workspace/\(escaped)")!
     }
 }
 

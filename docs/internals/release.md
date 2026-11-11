@@ -34,7 +34,13 @@ Compatibility rules worth keeping:
 | `cmds-cli` | Ad-hoc (`-`), re-signed when embedded | Hardened runtime on; re-signed with Developer ID inside the app |
 | `CmdsCompanion`, `CmdsDeviceDriver` (iOS) | Automatic signing, team `LY354RVYHA` | Development provisioning only (no App Store distribution yet) |
 
-A stable identity keeps the firewall allowance and notification permission across rebuilds. To build with your own
+A stable identity keeps the firewall allowance and notification permission across rebuilds. Debug builds of the
+Mac app have their own bundle identifier, `tokyo.n-n.cmds.dev` (widget `tokyo.n-n.cmds.dev.widget`), name "cmds
+Dev" and URL scheme `cmds-dev` (#236): macOS keys privacy grants (TCC), URL handlers, the default browser and
+widgets by bundle identifier and keeps one code requirement per grant, so a development-signed build sharing
+`tokyo.n-n.cmds` took the release's grants (Screen Recording …) away from it. Debug builds therefore get their own
+privacy grants. Release builds, and so every DMG, keep `tokyo.n-n.cmds` / `tokyo.n-n.cmds.widget` (the App ID of
+the passkeys entitlement request, #162). To build with your own
 Apple account, change `DEVELOPMENT_TEAM` for the three targets in `project.yml` (or pass `DEVELOPMENT_TEAM=<your
 team>` to `xcodebuild`) and regenerate the project. The iOS bundle identifiers (`tokyo.n-n.cmds.companion`,
 `tokyo.n-n.cmds.devicedriver`) belong to that team; with another team you may also need your own identifiers.

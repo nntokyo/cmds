@@ -127,11 +127,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// `cmds://workspace/<id>` (the widget, #96) opens cmds on that workspace; `cmds://` alone just brings it forward.
+    /// Debug builds register `cmds-dev://` instead (#236), so the release's widget never opens a development build.
     /// http(s) URLs (cmds chosen as the default browser, #162) open in a browser split beside the focused pane.
     func application(_ application: NSApplication, open urls: [URL]) {
         for url in urls {
             switch url.scheme?.lowercased() {
-            case "cmds":
+            case "cmds", "cmds-dev":
                 let parts = url.pathComponents.filter { $0 != "/" }
                 showWorkspace(id: url.host == "workspace" ? parts.first : nil)
             case "http", "https":

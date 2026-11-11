@@ -47,6 +47,15 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   wins over an inherited `CMDS_SOCKET_PATH`, so neither the instance nor a CLI given the variable can reach the
   live app. Such an instance also leaves the saved window/sidebar frames alone and does not activate itself on
   launch (it never takes keyboard focus from the app in use). Its terminals get the resolved absolute path.
+- Debug builds are a separate app to macOS (#236): bundle identifier `tokyo.n-n.cmds.dev` (widget
+  `tokyo.n-n.cmds.dev.widget`), named "cmds Dev", URL scheme `cmds-dev://`, defaults domain `tokyo.n-n.cmds.dev`.
+  So they need their own privacy grants (Screen Recording, Accessibility, Full Disk Access, …: grant them to the
+  Debug build when a test needs them) and can never take over the grants, `cmds://` handler, default-browser choice
+  or widget of the installed release (`tokyo.n-n.cmds`). The support folder is not part of that: without
+  `CMDS_SUPPORT_DIR` a Debug build uses `~/Library/Application Support/cmds` like the release, so always start it
+  isolated. When done with a build you launched, `pluginkit -r …/cmds.app/Contents/PlugIns/CmdsWidget.appex` and
+  `lsregister -u …/cmds.app` (`/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister`)
+  forget it again.
 - `CMDS_SYNC_DISABLED=1` skips the iOS sync server (no Bonjour advert, no port). To test sync instead, see
   [below](#sync-against-an-isolated-instance).
 - Settings that live in `UserDefaults` (language, keep-awake, resume mode, compact sidebar) are kept in memory only;

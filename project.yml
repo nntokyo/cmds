@@ -86,7 +86,9 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: cmds
+        # "cmds" / "cmds Dev" (CMDS_APP_NAME below).
+        CFBundleName: $(CMDS_APP_NAME)
+        CFBundleDisplayName: $(CMDS_APP_NAME)
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, ja]
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -115,12 +117,13 @@ targets:
         SUEnableAutomaticChecks: true
         SUAutomaticallyUpdate: true
         SUScheduledCheckInterval: 86400
-        # cmds://workspace/<id>, opened by the widget (#96, AppDelegate.application(_:open:)).
+        # cmds://workspace/<id>, opened by the widget (#96, AppDelegate.application(_:open:)); cmds-dev:// for Debug
+        # builds (CMDS_URL_SCHEME below).
         # http/https: cmds can be chosen as the default browser and opens those URLs in a browser pane. Apple requires
         # it of apps holding the passkeys entitlement for browsers (#162, com.apple.developer.web-browser.public-key-credential).
         CFBundleURLTypes:
-          - CFBundleURLName: tokyo.n-n.cmds
-            CFBundleURLSchemes: [cmds]
+          - CFBundleURLName: $(PRODUCT_BUNDLE_IDENTIFIER)
+            CFBundleURLSchemes: [$(CMDS_URL_SCHEME)]
           - CFBundleURLName: Web site URL
             CFBundleTypeRole: Viewer
             CFBundleURLSchemes: [http, https]
@@ -128,6 +131,8 @@ targets:
       base:
         PRODUCT_NAME: cmds
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds
+        CMDS_APP_NAME: cmds
+        CMDS_URL_SCHEME: cmds
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: App/cmds.entitlements
         ENABLE_HARDENED_RUNTIME: NO
@@ -137,6 +142,13 @@ targets:
         OTHER_LDFLAGS: ["-lc++"]
         ARCHS: arm64
       configs:
+        # Debug builds are a separate app to macOS (#236): privacy (TCC) grants, LaunchServices (URL scheme, default
+        # browser, widget) and UserDefaults are keyed by bundle identifier, so a development-signed build with the
+        # release's identifier took over the release's grants. Release keeps tokyo.n-n.cmds (Developer ID, passkeys).
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.dev
+          CMDS_APP_NAME: cmds Dev
+          CMDS_URL_SCHEME: cmds-dev
         # Release builds run under the hardened runtime (required for notarization). They are still signed with
         # "Apple Development" here so local Release builds need no keychain prompt; scripts/release/build-dmg.sh
         # re-signs the app with the Developer ID certificate for distribution (docs/internals/release.md).
@@ -169,7 +181,7 @@ targets:
     info:
       path: Widget/Info.plist
       properties:
-        CFBundleDisplayName: cmds
+        CFBundleDisplayName: $(CMDS_APP_NAME)
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, ja]
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -188,12 +200,17 @@ targets:
       base:
         PRODUCT_NAME: CmdsWidget
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.widget
+        CMDS_APP_NAME: cmds
         DEVELOPMENT_TEAM: LY354RVYHA
         CODE_SIGN_IDENTITY: "Apple Development"
         ENABLE_HARDENED_RUNTIME: NO
         ARCHS: arm64
         SKIP_INSTALL: YES
       configs:
+        # An extension's identifier must start with its app's (#236, tokyo.n-n.cmds.dev for Debug).
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.dev.widget
+          CMDS_APP_NAME: cmds Dev
         Release:
           ENABLE_HARDENED_RUNTIME: YES
   cmds-cli:

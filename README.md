@@ -72,6 +72,10 @@ open build/dd/Build/Products/Debug/cmds.app
 ```
 
 - The iOS companion is the `CmdsCompanion` scheme; run it on your device from Xcode.
+- The Debug build is "cmds Dev" (`tokyo.n-n.cmds.dev`), a separate app to macOS: it asks for its own privacy
+  permissions (Screen Recording etc.) and keeps its own preferences. It shares `~/Library/Application Support/cmds`
+  with an installed cmds, so do not run both at once; to try it next to the installed app, start it isolated
+  ([docs/internals/testing.md](docs/internals/testing.md#isolated-instances)).
 - **libghostty patches**: the app needs the patches in `vendor/ghostty-patches` (e.g. reading the scrollback without
   moving the viewport) and does not build against a plain GhosttyKit. `scripts/build-ghostty.sh` applies them to the
   submodule for the build and reverts them afterwards, so the submodule stays at its pinned upstream revision. Run it
