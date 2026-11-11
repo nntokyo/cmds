@@ -78,6 +78,9 @@ final class CodexSessionWatcher: @unchecked Sendable {
     static let recentWindow: TimeInterval = 6 * 3600
     static let recentMaxFiles = 4
     static let recentTailBytes: UInt64 = 64 * 1024
+    /// Today's and yesterday's day folders are listed for recent files.
+    private static let recentDays = 2
+    private static let secondsPerDay: TimeInterval = 86400
 
     /// `$CODEX_HOME/sessions` of cmds' own environment (as Codex resolves it), else `~/.codex/sessions`.
     static func sessionsDirectory(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
@@ -112,11 +115,14 @@ final class CodexSessionWatcher: @unchecked Sendable {
 
     func update(_ processes: [CodexProcess], now: Date = Date()) -> CodexWatchResult {
         var (result, read) = updatePanes(processes)
-        if let limits = recentLimits(now: now, skipping: read),
-           limits.updatedAt > (result.limits?.updatedAt ?? .distantPast) {
-            result.limits = limits
-        }
+        result.limits = Self.newer(recentLimits(now: now, skipping: read), than: result.limits)
         return result
+    }
+
+    /// `candidate` when it is newer than `current` (`updatedAt`), else `current`.
+    private static func newer(_ candidate: AgentLimits?, than current: AgentLimits?) -> AgentLimits? {
+        guard let candidate, candidate.updatedAt > (current?.updatedAt ?? .distantPast) else { return current }
+        return candidate
     }
 
     /// The pane part of `update`; also returns the files it read.
@@ -169,9 +175,8 @@ final class CodexSessionWatcher: @unchecked Sendable {
             result.usage[paneID] = state.snapshot.usage(sessionID: id, fallbackDate: state.modified)
         }
         for candidate in candidates {
-            guard let state = files[candidate.path],
-                  let limits = state.snapshot.accountLimits(fallbackDate: state.modified) else { continue }
-            if limits.updatedAt > (result.limits?.updatedAt ?? .distantPast) { result.limits = limits }
+            guard let state = files[candidate.path] else { continue }
+            result.limits = Self.newer(state.snapshot.accountLimits(fallbackDate: state.modified), than: result.limits)
         }
         return (result, Set(candidates.map(\.path)))
     }
@@ -181,23 +186,7 @@ final class CodexSessionWatcher: @unchecked Sendable {
     private func recentLimits(now: Date, skipping: Set<String>) -> AgentLimits? {
         if lastRecentScan.map({ now.timeIntervalSince($0) >= Self.recentScanInterval }) ?? true {
             lastRecentScan = now
-            var found: [(path: String, modified: Date)] = []
-            var calendar = Calendar(identifier: .gregorian)
-            calendar.timeZone = .current
-            for day in [now, now.addingTimeInterval(-86400)] {
-                let parts = calendar.dateComponents([.year, .month, .day], from: day)
-                guard let year = parts.year, let month = parts.month, let dayOfMonth = parts.day else { continue }
-                let folder = String(format: "%@/%04d/%02d/%02d", sessionsDirectory, year, month, dayOfMonth)
-                guard let names = try? FileManager.default.contentsOfDirectory(atPath: folder) else { continue }
-                for name in names where CodexRollout.isRolloutPath(name) {
-                    let path = (folder as NSString).appendingPathComponent(name)
-                    var info = stat()
-                    guard lstat(path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG else { continue }
-                    let modified = Date(timeIntervalSince1970: Double(info.st_mtimespec.tv_sec))
-                    if now.timeIntervalSince(modified) <= Self.recentWindow { found.append((path, modified)) }
-                }
-            }
-            let newest = found.sorted { $0.modified > $1.modified }.prefix(Self.recentMaxFiles).map(\.path)
+            let newest = recentFiles(now: now)
             recent = recent.filter { newest.contains($0.key) }
             for path in newest where recent[path] == nil { recent[path] = FileState() }
         }
@@ -209,18 +198,48 @@ final class CodexSessionWatcher: @unchecked Sendable {
             }
             readAppended(path, into: &state, tailBytes: Self.recentTailBytes)
             recent[path] = state
-            if let limits = state.snapshot.accountLimits(fallbackDate: state.modified),
-               limits.updatedAt > (best?.updatedAt ?? .distantPast) {
-                best = limits
-            }
+            best = Self.newer(state.snapshot.accountLimits(fallbackDate: state.modified), than: best)
         }
         return best
     }
 
-    /// Refreshes size/mtime/inode; a replaced or truncated file starts over.
-    private func fileState(path: String, previous: FileState?) -> FileState? {
+    /// The `recentMaxFiles` newest session files in the recent day folders modified in the last `recentWindow`.
+    private func recentFiles(now: Date) -> [String] {
+        var found: [(path: String, modified: Date)] = []
+        for folder in recentDayFolders(now: now) {
+            guard let names = try? FileManager.default.contentsOfDirectory(atPath: folder) else { continue }
+            for name in names where CodexRollout.isRolloutPath(name) {
+                let path = (folder as NSString).appendingPathComponent(name)
+                guard let info = Self.regularFileInfo(path) else { continue }
+                let modified = Date(timeIntervalSince1970: Double(info.st_mtimespec.tv_sec))
+                if now.timeIntervalSince(modified) <= Self.recentWindow { found.append((path, modified)) }
+            }
+        }
+        return found.sorted { $0.modified > $1.modified }.prefix(Self.recentMaxFiles).map(\.path)
+    }
+
+    /// `<sessions>/YYYY/MM/DD` of today and the days before (`recentDays`), in local time as Codex names them.
+    private func recentDayFolders(now: Date) -> [String] {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return (0..<Self.recentDays).compactMap { back in
+            let day = now.addingTimeInterval(-Double(back) * Self.secondsPerDay)
+            let parts = calendar.dateComponents([.year, .month, .day], from: day)
+            guard let year = parts.year, let month = parts.month, let dayOfMonth = parts.day else { return nil }
+            return String(format: "%@/%04d/%02d/%02d", sessionsDirectory, year, month, dayOfMonth)
+        }
+    }
+
+    /// `lstat` of a regular file (not a link, folder or missing path).
+    private static func regularFileInfo(_ path: String) -> stat? {
         var info = stat()
         guard lstat(path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG else { return nil }
+        return info
+    }
+
+    /// Refreshes size/mtime/inode; a replaced or truncated file starts over.
+    private func fileState(path: String, previous: FileState?) -> FileState? {
+        guard let info = Self.regularFileInfo(path) else { return nil }
         var state = previous ?? FileState()
         let inode = UInt64(info.st_ino)
         let size = UInt64(max(0, info.st_size))
