@@ -375,18 +375,23 @@ final class AssistantMachineTests: XCTestCase {
     }
 }
 
-/// The paid-feature gate (#244): no licence, no assistant, except in development builds.
+/// The paid-feature gate (#244): free during the beta, then a licence (or a development build).
 final class PaidFeaturesTests: XCTestCase {
     private struct Licensed: LicenceProvider {
         func isUnlocked(_ feature: PaidFeature) -> Bool { feature == .assistant }
     }
 
-    func testLockedWithoutLicence() {
-        XCTAssertFalse(PaidFeatures.isUnlocked(.assistant, developmentBuild: false, provider: NoLicenceProvider()))
+    func testTheAssistantIsFreeDuringTheBeta() {
+        XCTAssertTrue(PaidFeatures.betaFree.contains(.assistant))
+        XCTAssertEqual(PaidFeatures.unlock(.assistant, betaFree: PaidFeatures.betaFree, developmentBuild: false,
+                                           provider: NoLicenceProvider()), .beta)
+        XCTAssertTrue(PaidFeatures.isUnlocked(.assistant))
     }
 
-    func testDevelopmentBuildOrLicenceUnlocks() {
-        XCTAssertTrue(PaidFeatures.isUnlocked(.assistant, developmentBuild: true, provider: NoLicenceProvider()))
-        XCTAssertTrue(PaidFeatures.isUnlocked(.assistant, developmentBuild: false, provider: Licensed()))
+    func testAfterTheBetaALicenceOrADevelopmentBuildUnlocks() {
+        XCTAssertNil(PaidFeatures.unlock(.assistant, betaFree: [], developmentBuild: false, provider: NoLicenceProvider()))
+        XCTAssertEqual(PaidFeatures.unlock(.assistant, betaFree: [], developmentBuild: true, provider: NoLicenceProvider()),
+                       .developmentBuild)
+        XCTAssertEqual(PaidFeatures.unlock(.assistant, betaFree: [], developmentBuild: false, provider: Licensed()), .licence)
     }
 }
