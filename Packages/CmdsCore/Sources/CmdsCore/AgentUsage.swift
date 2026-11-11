@@ -281,6 +281,11 @@ public struct AgentLimits: Codable, Equatable, Sendable, Identifiable {
     /// when it can be used again; a newer usage event with figures replaces it sooner).
     public static let unknownResetLifetime: TimeInterval = 24 * 3600
 
+    /// A reached `UsageLimit.usageLimit` without a reset time: it lasts `unknownResetLifetime` from `updatedAt`.
+    public var hasUnknownReset: Bool {
+        limits.contains { $0.id == UsageLimit.usageLimit && $0.resetsAt == nil }
+    }
+
     /// Without the windows that have reset since (their usage is unknown); nil when none is left.
     public func active(at now: Date) -> AgentLimits? {
         var copy = self
