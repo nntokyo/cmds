@@ -5,7 +5,7 @@ import CmdsCore
 /// following the app's language, which is also the language it listens and speaks in.
 extension AssistantStrings {
     static var localized: AssistantStrings {
-        AssistantStrings(separator: AssistantLanguage.current.isJapanese ? "" : " ") { line in line.localized }
+        AssistantStrings(separator: AssistantLanguage.current.sentenceSeparator) { line in line.localized }
     }
 }
 
@@ -25,6 +25,8 @@ struct AssistantLanguage: Equatable {
     var voiceLanguage: String { isJapanese ? "ja-JP" : "en-US" }
     /// For the on-device model's instructions.
     var name: String { isJapanese ? "Japanese" : "English" }
+    /// Between sentences: a space in English, nothing in Japanese.
+    var sentenceSeparator: String { isJapanese ? "" : " " }
     /// Names in a sentence: `api, web` / `api、web`.
     func list(_ items: [String]) -> String { items.joined(separator: isJapanese ? "、" : ", ") }
 }

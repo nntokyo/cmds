@@ -191,7 +191,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         if chosenMissing {
             lines.append(String(localized: "The chosen voice is not available: the system voice speaks.", comment: "Settings › Assistant"))
         }
-        return lines.joined(separator: AssistantLanguage.current.isJapanese ? "" : " ")
+        return lines.joined(separator: AssistantLanguage.current.sentenceSeparator)
     }
 
     @objc private func personalVoiceClicked() {
