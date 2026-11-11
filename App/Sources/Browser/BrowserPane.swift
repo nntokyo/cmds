@@ -45,6 +45,8 @@ final class BrowserPane: NSView {
     private var downloadBannerHide: DispatchWorkItem?
     /// How long a finished download's notice stays.
     static let downloadNoticeTime: TimeInterval = 10
+    /// Space between the download notice and the page area's edges.
+    static let downloadNoticeInset: CGFloat = 8
 
     var currentURL: URL? { webView.url }
     var pageTitle: String { webView.title ?? "" }
@@ -228,8 +230,10 @@ final class BrowserPane: NSView {
         BrowserPageDelegate.detach(webView)
     }
 
+    #if DEBUG
     /// The text of the download notice shown (`debug.browser`).
     var downloadNoticeText: String? { downloadBanner?.toolTip }
+    #endif
 
     /// A download's notice at the bottom of the page area (nil: removes it; the top would cover the address bar).
     /// `onCancel` stops a running download.
@@ -240,28 +244,31 @@ final class BrowserPane: NSView {
         downloadBanner = nil
         guard let state else { return }
         let banner = BrowserDownloadBannerView(state: state)
-        banner.onDismiss = { [weak self, weak banner] in
-            guard let self, let banner, self.downloadBanner === banner else { return }
-            self.showDownload(nil)
-        }
+        banner.onDismiss = { [weak self, weak banner] in self?.removeDownloadNotice(banner) }
         banner.onCancel = { [weak self, weak banner] in
             onCancel?()
-            guard let self, let banner, self.downloadBanner === banner else { return }
-            self.showDownload(nil)
+            self?.removeDownloadNotice(banner)
         }
         downloadBanner = banner
         banner.translatesAutoresizingMaskIntoConstraints = false
         addSubview(banner)  // above the page and the responsive view
+        let inset = Self.downloadNoticeInset
         NSLayoutConstraint.activate([
-            banner.leadingAnchor.constraint(equalTo: viewportHost.leadingAnchor, constant: 8),
-            banner.trailingAnchor.constraint(lessThanOrEqualTo: viewportHost.trailingAnchor, constant: -8),
-            banner.bottomAnchor.constraint(equalTo: viewportHost.bottomAnchor, constant: -8),
+            banner.leadingAnchor.constraint(equalTo: viewportHost.leadingAnchor, constant: inset),
+            banner.trailingAnchor.constraint(lessThanOrEqualTo: viewportHost.trailingAnchor, constant: -inset),
+            banner.bottomAnchor.constraint(equalTo: viewportHost.bottomAnchor, constant: -inset),
         ])
         if case .finished = state {
             let hide = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.showDownload(nil) } }
             downloadBannerHide = hide
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.downloadNoticeTime, execute: hide)
         }
+    }
+
+    /// Removes `banner` when it is still the notice shown (a newer download's notice stays).
+    private func removeDownloadNotice(_ banner: BrowserDownloadBannerView?) {
+        guard let banner, downloadBanner === banner else { return }
+        showDownload(nil)
     }
 
     /// A browser pane's web view settings (also the responsive view's extra frames, with the pane's data store).
