@@ -5,7 +5,7 @@ import CmdsCore
 /// accounts and schedules (their own windows), automatic updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
 /// The tabs of Settings.
 enum SettingsTab: String {
-    case general, sidebar, agents, menuBar, updates
+    case general, sidebar, agents, menuBar, assistant, updates
 }
 
 @MainActor
@@ -36,6 +36,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let schedulesButton = NSButton(title: String(localized: "Open…"), target: nil, action: nil)
     private var observer: NSObjectProtocol?
     private var tabController: NSTabViewController?
+    /// Settings › Assistant (#243), shown on macOS 26 and later.
+    private let assistantPane = AssistantSettingsPane()
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
 
@@ -192,6 +194,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, updatesNote],
         ]
         fontPopup.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true
+        var assistantTab: [(SettingsTab, String, String, [[NSView]], [Int])] = []
+        if #available(macOS 26.0, *) {
+            assistantTab = [(.assistant, String(localized: "Assistant", comment: "Settings tab"), "waveform.circle",
+                             assistantPane.rows(label: Self.label, note: Self.note), [])]
+        }
 
         let tabs = NSTabViewController()
         tabs.tabStyle = .toolbar
@@ -200,6 +207,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             (.sidebar, String(localized: "Sidebar"), "sidebar.left", sidebar, []),
             (.agents, String(localized: "Agents"), "sparkles", agents, []),
             (.menuBar, String(localized: "Menu Bar"), "menubar.rectangle", menuBar, []),
+        ] + assistantTab + [
             (.updates, String(localized: "Updates"), "arrow.triangle.2.circlepath", updates, []),
         ] as [(SettingsTab, String, String, [[NSView]], [Int])] {
             let item = NSTabViewItem(viewController: Self.page(rows, headers: headers))
@@ -332,6 +340,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
                 && (option != .animation || settings.menuBar(.workingBadge))  // the arc circles the working badge
                 && (option != .replyPanel || settings.menuBar(.workspaces))  // replies to the workspaces listed
         }
+        assistantPane.refresh()
         refreshUpdates()
     }
 

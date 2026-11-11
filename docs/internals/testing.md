@@ -29,6 +29,7 @@ the same jobs here ([ci.md](ci.md)).
 |---|---|---|
 | `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), agents' numbered choices for the menu bar's reply panel (`AgentPromptOptionsTests`), cells per character for the phone's grid (`TerminalCellsTests`), a style's text and background colours as the phone and the reply panel draw them (`TerminalStyleColorsTests`), the widget's file (`WidgetSnapshotTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
 | `Packages/CmdsCore` | `swift test --filter 'SFTP\|FileLocation\|SSHFileCommand\|RemoteEdit\|FolderSync'` | the SFTP codec and client, ssh arguments and failure classification, `HOST:PATH`, the server Trash, the transfer job and queue, editing a server's file (download, save, the conflict answers, upload timing), and comparing and syncing folders (plans, one-way and two-way runs, the Trash, items changed since the comparison, retry) (in-process server, no network) |
+| `Packages/CmdsCore` | `swift test --filter 'Assistant\|PaidFeatures'` | the voice assistant (#243): addressing by name and the follow-up window (`AssistantAddressingTests`), Japanese and English commands (`AssistantIntentTests`), which actions a spoken yes may confirm (`AssistantSafetyTests`), finding the workspace and pane, asking back, the status text (`AssistantPlannerTests`), the HUD's state machine (`AssistantMachineTests`), the paid-feature gate and its free beta (`PaidFeaturesTests`) |
 | `Packages/CmdsCore` | `swift test --filter CmdsCLITests` | the CLI's English output, `cmds schedule` argument mapping (`ScheduleCLITests`), the `cmds mcp` server with the app API stubbed (`MCPServerTests`) |
 | `Packages/CmdsSSH` | `swift test` (in that directory; fetches swift-nio-ssh and friends on first run) | the SSH tunnel; the end-to-end part needs a throwaway sshd ([below](#remote-access-via-ssh)) |
 
@@ -138,6 +139,20 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   matches the new grid), a browser pane keeps its page state (`cmds browser eval`), `cmds top --workspace` lists the
   loop under its new workspace, and session.json after a relaunch has the new layout. The grip's hover and a real
   mouse drag (Esc cancels) need a person.
+- `debug.assistant {action?, …}` (DEBUG builds, macOS 26, #243) drives the voice assistant without a microphone or
+  speech: `on {mute: true}` turns it on text-only (the microphone is never started from here and the choice is not
+  remembered, so a relaunch starts nothing; keep it muted), `hear {text}` injects a recognised utterance (an
+  unaddressed one is dropped as from speech; after an answer wait 0.6 s, the echo guard), `key {key: confirm|cancel}`
+  / `click {button: …}` answer the card, `state` returns the phase, transcript, answer, pending action and the HUD's
+  texts, `snapshot: true` the HUD drawn off screen (or `screencapture -l <window>`). Isolated instances register no
+  global keys (⌥⌘J, Return / Esc while a card shows), so `confirmationKeys` stays false there. Fake agents for it:
+  `agent.claude_status` for a pane, `agent.claude_hook` `UserPromptSubmit` (working) / `Notification` (needs you), and
+  a script in a pane the test created that prints `❯ 1. Yes` / `  2. No` and reads a line (one that mentions
+  `rm -rf` above the question for the Return-or-click rule). Check: status, "what is X doing" (with Apple Intelligence
+  on: the model's summary, else the rule text), a reply cancelled by "no" and sent by "yes", an ambiguous name asking
+  back and the answer retargeting it, a dangerous text where "yes" is refused and a click sends it, Japanese with
+  `-AppleLanguages '(ja)'`, the quiet style, `debug.show_settings {tab: assistant}`. The microphone, speech
+  permission prompts, the hotkey, Return / Esc and real speech need a person on a Debug build outside isolation.
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
 - `debug.memory {workspace?}` (DEBUG builds, #193) returns the "memory is short" notification's title and body as

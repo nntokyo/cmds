@@ -82,6 +82,11 @@ targets:
       - sdk: CoreBluetooth.framework
       - sdk: UserNotifications.framework
       - sdk: WidgetKit.framework
+      # The voice assistant (#243, macOS 26+): weakly linked, FoundationModels does not exist before macOS 26.
+      - sdk: Speech.framework
+        weak: true
+      - sdk: FoundationModels.framework
+        weak: true
       - sdk: libc++.tbd
     info:
       path: App/Info.plist
@@ -101,7 +106,9 @@ targets:
         NSBluetoothAlwaysUsageDescription: cmds lets the iOS companion connect over Bluetooth when Wi‑Fi is off. The connection stays end-to-end encrypted.
         # Programs running in a terminal are attributed to cmds by macOS privacy prompts (see App/cmds.entitlements).
         NSAppleEventsUsageDescription: A program running in cmds would like to use AppleScript.
-        NSMicrophoneUsageDescription: A program running in cmds would like to use the microphone.
+        # Also the voice assistant (#243), which listens for its name when the user turns it on.
+        NSMicrophoneUsageDescription: cmds' assistant listens for its name when you turn it on, or a program running in cmds would like to use the microphone.
+        NSSpeechRecognitionUsageDescription: cmds' assistant recognises what you say to it on this Mac. Nothing heard is stored.
         NSCameraUsageDescription: A program running in cmds would like to use the camera.
         NSContactsUsageDescription: A program running in cmds would like to access your contacts.
         NSCalendarsUsageDescription: A program running in cmds would like to access your calendars.

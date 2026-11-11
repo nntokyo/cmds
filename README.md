@@ -144,7 +144,7 @@ All shortcuts: [docs/reference/shortcuts.md](docs/reference/shortcuts.md).
 | [Workspaces and panes](docs/guide/workspaces-and-panes.md) | [Socket API](docs/reference/api.md) | [Sync protocol](docs/internals/sync-protocol.md) |
 | [iPhone and iPad](docs/guide/iphone.md) | [Keyboard shortcuts](docs/reference/shortcuts.md) | [SSH panes](docs/internals/ssh.md) |
 | [AI coding agents](docs/guide/ai-agents.md) | [Environment variables](docs/reference/environment.md) | [Localization](docs/internals/localization.md) |
-| | | [Testing](docs/internals/testing.md) |
+| [Voice assistant](docs/guide/assistant.md) | | [Testing](docs/internals/testing.md) |
 | | | [Release](docs/internals/release.md) |
 
 Index: [docs/README.md](docs/README.md). Changes: [CHANGELOG.md](CHANGELOG.md).

@@ -59,6 +59,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Updater.shared.start()
         menuBarItem = MenuBarStatusItem(controller: controller) { [weak self] id, pane in self?.showWorkspace(id: id, pane: pane) }
         menuBarItem?.start()
+        // The voice assistant (#243): macOS 26 and later; turns itself on when the user had it on.
+        #if DEBUG
+        PaidFeatures.developmentBuild = true
+        #endif
+        if #available(macOS 26.0, *) { AssistantController.start(controller: controller) }
         widgetPublisher = WidgetPublisher(controller: controller)
         widgetPublisher?.start()
         TransferCenter.removeLeftoverParts()
