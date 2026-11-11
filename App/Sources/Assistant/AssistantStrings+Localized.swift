@@ -64,6 +64,20 @@ private extension AssistantLine {
         case .confirmChoice(let number, let label, let workspace):
             return String(localized: "Choose \(number), “\(label)”, in \(workspace)?", comment: "assistant: confirmation question")
         case .confirmStart(let agent, let place): return String(localized: "Start \(agent) in \(place)?", comment: "assistant: confirmation question")
+        case .confirmReplyMany(let text, let workspaces):
+            return String(localized: "Send “\(text)” to \(AssistantLanguage.current.list(workspaces))?", comment: "assistant: confirmation question for several sessions")
+        case .confirmApproveMany(let workspaces):
+            return String(localized: "Choose option 1 in \(AssistantLanguage.current.list(workspaces))?", comment: "assistant: confirmation question: say yes to several sessions")
+        case .leftOut(let workspaces):
+            return String(localized: "Left out: \(AssistantLanguage.current.list(workspaces)).", comment: "assistant: sessions not on the card (unclear pane or nothing asked)")
+        case .sentMany(let count): return String(localized: "Sent to \(count) sessions.", comment: "assistant")
+        case .failedIn(let workspaces):
+            return String(localized: "That didn't work in \(AssistantLanguage.current.list(workspaces)): the pane is gone or busy.", comment: "assistant")
+        case .noneWaiting: return String(localized: "No session is waiting for you.", comment: "assistant")
+        case .noneWorking: return String(localized: "No agent is working.", comment: "assistant")
+        case .nothingToDo: return String(localized: "There is nothing to send.", comment: "assistant")
+        case .session(let workspace, let summary):
+            return String(localized: "\(workspace): \(summary)", comment: "assistant: one session's line when going through them all")
         case .sayYesOrPressReturn: return String(localized: "Say yes or press Return.", comment: "assistant: how to confirm")
         case .pressReturnToConfirm: return String(localized: "This one needs Return or a click.", comment: "assistant: how to confirm a dangerous action")
         case .voiceNotEnough: return String(localized: "Please press Return or click the button for this one.", comment: "assistant: a spoken yes is not enough")
@@ -78,6 +92,10 @@ private extension AssistantLine {
         case .goodbye: return String(localized: "Assistant off.", comment: "assistant")
         case .modelUnavailable:
             return String(localized: "I can only answer about the workspaces: the on-device model isn't available.", comment: "assistant: Apple Intelligence is off or unsupported")
+        case .claudeNotFound:
+            return String(localized: "I can't search the web: Claude Code (claude) isn't installed.", comment: "assistant: a web question, but claude is missing")
+        case .webFailed:
+            return String(localized: "I couldn't get an answer from Claude: it failed or took too long.", comment: "assistant: claude -p for a web question failed or timed out")
         }
     }
 }

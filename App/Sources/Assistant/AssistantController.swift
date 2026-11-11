@@ -222,13 +222,7 @@ final class AssistantController {
             askedBack = nil
             assistantLog.info("assistant command: \(String(describing: intent).prefix(24), privacy: .private)")
             refresh()
-            let world = AgentOverview.assistantWorld(controller)
-            let plan = AssistantPlanner.plan(intent, world: world, strings: .localized) { path in
-                var isFolder: ObjCBool = false
-                return FileManager.default.fileExists(atPath: (path as NSString).expandingTildeInPath, isDirectory: &isFolder)
-                    && isFolder.boolValue
-            }
-            carryOut(plan, world: world, asked: intent)
+            handle(intent)
         case .execute(let action):
             run(action)
         case .cancelled:
@@ -246,6 +240,17 @@ final class AssistantController {
     /// The request the assistant asked back about ("Which one: api, api-v2?"), until the next command.
     private var askedBack: AssistantIntent?
 
+    /// Plans what was asked against the workspaces as they are now, and carries it out.
+    private func handle(_ intent: AssistantIntent) {
+        let world = AgentOverview.assistantWorld(controller)
+        let plan = AssistantPlanner.plan(intent, world: world, strings: .localized) { path in
+            var isFolder: ObjCBool = false
+            return FileManager.default.fileExists(atPath: (path as NSString).expandingTildeInPath, isDirectory: &isFolder)
+                && isFolder.boolValue
+        }
+        carryOut(plan, world: world, asked: intent)
+    }
+
     private func carryOut(_ plan: AssistantPlan, world: AssistantWorld, asked: AssistantIntent) {
         let strings = AssistantStrings.localized
         switch plan {
@@ -260,30 +265,33 @@ final class AssistantController {
             say(prompt, proposing: action)
         case .summarize(let workspaceID, let paneID, let detailed, let fallback):
             let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? ""
+            think { await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed) }
+        case .summarizeEach(let items, let detailed):
+            // One session after the other, a line each (spoken in turn, listed on the HUD).
+            let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? "" }
             think {
-                guard !screen.isEmpty else { return fallback }
-                do {
-                    if detailed {
-                        return try await AssistantBrain.detailedSummary(facts: fallback, screen: screen, language: self.language)
-                    }
-                    guard AssistantBrain.modelAvailable else { return fallback }
-                    let summary = try await AssistantBrain.summarize(facts: fallback, screen: screen, language: self.language)
-                    return summary.isEmpty ? fallback : summary
-                } catch {
-                    assistantLog.error("assistant summary of \(workspaceID, privacy: .public) failed: \(String(describing: error), privacy: .public)")
-                    return fallback
+                var lines: [String] = []
+                for (item, screen) in zip(items, screens) {
+                    if Task.isCancelled { return nil }
+                    let summary = await self.summary(of: item.workspaceID, facts: item.fallback, screen: screen, detailed: detailed)
+                    lines.append(strings(.session(workspace: item.title, summary: summary)))
                 }
+                return lines.joined(separator: "\n")
             }
         case .ask(let question):
-            guard AssistantBrain.modelAvailable else { return say(strings(.modelUnavailable)) }
-            let status = AssistantReport.status(world, strings: .english)
-            think {
-                do {
-                    return try await AssistantBrain.answer(question, status: status, language: self.language)
-                } catch {
-                    return strings(.modelUnavailable)
+            // A free command for the agents ("api の Claude にテストを書くよう指示して"): the interpreter (`claude -p`, no
+            // tools) turns it into a proposal, planned and confirmed like any other command. Else it is a question.
+            if settings.assistantInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
+                return think {
+                    if let intent = await self.interpret(question, world: world) {
+                        guard !Task.isCancelled, self.machine.phase == .thinking else { return nil }
+                        self.handle(intent)
+                        return nil
+                    }
+                    return await self.answer(question, world: world)
                 }
             }
+            think { await self.answer(question, world: world) }
         case .pauseListening:
             pause()
             speakOnly(strings(.paused))
@@ -296,18 +304,103 @@ final class AssistantController {
         }
     }
 
-    /// Works out an answer off the main actor's way, then says it (dropped when the assistant moved on).
-    private func think(_ body: @escaping @MainActor () async -> String) {
+    /// What a session's agent is doing: by the on-device model, or by `claude -p` when `detailed`; the facts when there
+    /// is no screen, no model or it fails.
+    private func summary(of workspaceID: String, facts: String, screen: String, detailed: Bool) async -> String {
+        guard !screen.isEmpty else { return facts }
+        do {
+            if detailed {
+                claudeWorking = true
+                refresh()
+                defer { claudeWorking = false }
+                let summary = try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language)
+                claudeAnswered = true
+                return summary
+            }
+            guard AssistantBrain.modelAvailable else { return facts }
+            let summary = try await AssistantBrain.summarize(facts: facts, screen: screen, language: language)
+            return summary.isEmpty ? facts : summary
+        } catch {
+            assistantLog.error("assistant summary of \(workspaceID, privacy: .public) failed: \(String(describing: error), privacy: .public)")
+            return facts
+        }
+    }
+
+    /// A free question: Claude with web search for weather, news, "search…" (Settings › Assistant, on by default),
+    /// else the on-device model, and Claude after all when the model answers that it needs current information.
+    private func answer(_ question: String, world: AssistantWorld) async -> String {
+        let strings = AssistantStrings.localized
+        let web = settings.assistantWeb
+        if web, AssistantWeb.needsWeb(question) { return await webAnswer(question) }
+        guard AssistantBrain.modelAvailable else { return strings(.modelUnavailable) }
+        let status = AssistantReport.status(world, strings: .english)
+        do {
+            let answer = try await AssistantBrain.answer(question, status: status, language: language, web: web)
+            if web, AssistantWeb.answerNeedsWeb(answer) { return await webAnswer(question) }
+            let text = AssistantWeb.withoutMarker(answer)
+            return text.isEmpty ? strings(.modelUnavailable) : text
+        } catch {
+            return strings(.modelUnavailable)
+        }
+    }
+
+    /// A free command as an intent, by the interpreter; nil when it is a question, `claude` is missing or fails.
+    private func interpret(_ utterance: String, world: AssistantWorld) async -> AssistantIntent? {
+        claudeWorking = true
+        refresh()
+        defer { claudeWorking = false }
+        do {
+            let output = try await AssistantBrain.interpret(utterance: utterance, world: world, language: language)
+            let intent = AssistantInterpretation.parse(output)?.intent(in: world)
+            assistantLog.info("assistant interpreted a free command: \(intent.map { String(describing: $0).prefix(24) } ?? "question", privacy: .private)")
+            return intent
+        } catch {
+            assistantLog.error("assistant interpreter failed: \(String(describing: error), privacy: .public)")
+            return nil
+        }
+    }
+
+    /// A question for Claude Code with web search (`AssistantBrain.webAnswer`); a short note when it is missing, fails
+    /// or takes too long.
+    private func webAnswer(_ question: String) async -> String {
+        let strings = AssistantStrings.localized
+        claudeWorking = true
+        refresh()
+        defer { claudeWorking = false }
+        do {
+            let text = try await AssistantBrain.webAnswer(question: question, language: language)
+            claudeAnswered = true
+            return text
+        } catch AssistantBrain.ClaudeFailure.notFound {
+            return strings(.claudeNotFound)
+        } catch {
+            assistantLog.error("assistant web answer failed: \(String(describing: error), privacy: .public)")
+            return strings(.webFailed)
+        }
+    }
+
+    /// Claude Code is working on the answer (the HUD says so).
+    private var claudeWorking = false
+    /// The answer being worked out came from Claude Code.
+    private var claudeAnswered = false
+    /// The answer shown came from Claude Code (a small label on the HUD).
+    private var answerByClaude = false
+
+    /// Works out an answer off the main actor's way, then says it (dropped when the assistant moved on; nil: the body
+    /// already went on another way).
+    private func think(_ body: @escaping @MainActor () async -> String?) {
         work?.cancel()
+        claudeAnswered = false
         work = Task { [weak self] in
             let text = await body()
-            guard let self, !Task.isCancelled, self.machine.phase == .thinking else { return }
-            self.say(text)
+            guard let self, let text, !Task.isCancelled, self.machine.phase == .thinking else { return }
+            self.say(text, byClaude: self.claudeAnswered)
         }
     }
 
     /// Shows and speaks an answer; the machine moves on when it has been said.
-    private func say(_ text: String, proposing action: AssistantAction? = nil) {
+    private func say(_ text: String, proposing action: AssistantAction? = nil, byClaude: Bool = false) {
+        answerByClaude = byClaude
         machine.answer(text, proposing: action, now: Date())
         refresh()
         speech += 1
@@ -347,28 +440,45 @@ final class AssistantController {
     private func run(_ action: AssistantAction) {
         let strings = AssistantStrings.localized
         pendingShownAt = nil
-        assistantLog.info("assistant runs a confirmed action in \(action.workspaceID ?? "new", privacy: .public)/\(action.paneID ?? "-", privacy: .public)")
+        // One card for several sessions: each goes to its own pane, checked again one by one.
+        let actions = action.all
+        if actions.count > 1 {
+            let failed = actions.filter { !send($0) }.map(\.workspaceTitle)
+            var lines: [AssistantLine] = []
+            if failed.count < actions.count { lines.append(.sentMany(count: actions.count - failed.count)) }
+            if !failed.isEmpty { lines.append(.failedIn(failed)) }
+            return say(strings.join(lines))
+        }
         switch action.kind {
         case .reply, .choose:
-            guard let paneID = action.paneID, let pane = controller.pane(id: paneID), pane.workspaceID == action.workspaceID,
-                  pane.terminal != nil else { return say(strings(.failed)) }
-            do {
-                if case .choose = action.kind {
-                    try controller.typeText(paneID: paneID, text: action.text)
-                } else {
-                    try controller.sendText(paneID: paneID, text: action.text)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + ScheduleRunTiming.enterDelay) { [controller] in
-                        try? controller.typeText(paneID: paneID, text: "\r")
-                    }
-                }
-                say(strings(.sent(workspace: action.workspaceTitle)))
-            } catch {
-                say(strings(.failed))
-            }
+            say(send(action) ? strings(.sent(workspace: action.workspaceTitle)) : strings(.failed))
         case .startAgent(let kind, let directory):
             let path = (directory as NSString).expandingTildeInPath
             controller.createWorkspace(cwd: path, command: action.text, select: false)
             say(strings(.started(agent: kind.displayName, place: action.workspaceTitle)))
+        }
+    }
+
+    /// Types a reply (then Return) or an option's digit into the action's pane, if it is still in the same workspace.
+    private func send(_ action: AssistantAction) -> Bool {
+        assistantLog.info("assistant runs a confirmed action in \(action.workspaceID ?? "new", privacy: .public)/\(action.paneID ?? "-", privacy: .public)")
+        guard let paneID = action.paneID, let pane = controller.pane(id: paneID), pane.workspaceID == action.workspaceID,
+              pane.terminal != nil else { return false }
+        do {
+            switch action.kind {
+            case .choose:
+                try controller.typeText(paneID: paneID, text: action.text)
+            case .reply:
+                try controller.sendText(paneID: paneID, text: action.text)
+                DispatchQueue.main.asyncAfter(deadline: .now() + ScheduleRunTiming.enterDelay) { [controller] in
+                    try? controller.typeText(paneID: paneID, text: "\r")
+                }
+            case .startAgent:
+                return false
+            }
+            return true
+        } catch {
+            return false
         }
     }
 
@@ -423,7 +533,14 @@ final class AssistantController {
         }
         return AssistantHUDContent(phase: machine.phase, attention: world.needingUserCount > 0,
                                    transcript: machine.transcript, answer: hudNote ?? machine.answer ?? problem,
-                                   pending: machine.pending, needsKey: needsKey, rings: rings, style: settings.assistantStyle)
+                                   pending: machine.pending, needsKey: needsKey, rings: rings, style: settings.assistantStyle,
+                                   claude: claudeMark)
+    }
+
+    /// "Asking Claude" while it works on the answer; "Claude" under an answer that came from it.
+    private var claudeMark: AssistantHUDContent.ClaudeMark {
+        if machine.phase == .thinking { return claudeWorking ? .working : .none }
+        return answerByClaude && machine.answer != nil && hudNote == nil ? .answered : .none
     }
 
     /// Phase 2 hook (#243, proactive announcements, opt-in): called when the workspaces' states change, e.g. to say

@@ -334,12 +334,45 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   terminal pane's waiting flag and `AgentPromptOptions`): answers, summaries, questions back, or an `AssistantAction`
   to confirm. A pane is chosen only when unique (the one waiting, else the one agent, else the one terminal).
   `AssistantSafety` marks text (and an approved prompt's screen) that needs Return or a click.
+- **Several sessions and free commands**: `AssistantScope` (named / all / waiting / working) in the intents
+  `checkAll`, `replyMany`, `approveMany` (rules for 「全部のセッションを確認して」, "approve all"…; "api と web に…" is split
+  by the planner when the whole is no title and each part finds one). `checkAll` plans `.summarizeEach` (one item per
+  agent pane, at most 8), summarised one after the other and listed on the HUD. `replyMany` / `approveMany` plan one
+  `AssistantAction` carrying the rest in `also` (`AssistantAction.batch` / `all`): one card, one confirmation; its
+  `confirmation` is the strictest of them (`allReasons`), so one dangerous text makes the whole card need Return or a
+  click. Named targets that are not found or not clear ask back; with a filter they are left out and named. What the
+  rules leave as a question and `AssistantInterpretation.mightBeCommand` thinks may be a command (it names a
+  workspace or speaks of agents, sessions, all of them) goes to `AssistantBrain.interpret` (Settings › Assistant ›
+  Use Claude to understand free commands, `AssistantInterpreter`, on unless false): `claude -p <prompt>
+  --output-format text --model haiku --tools "" --strict-mcp-config`, 30 s, with only the utterance and the
+  workspaces' names, agents and states (`AssistantInterpretation.prompt`). Its one JSON object
+  (`kind` instruct / reply / approve / check / question, `targets`, `filter`, `text`, `detailed`) is parsed by
+  `AssistantInterpretation.parse` and turned into an intent by `intent(in:)` (made-up names dropped, one line, at
+  most 400 characters), which then goes through the planner and the card like any command; a question, no `claude` or
+  a failure falls back to answering it as a question. On-device guided generation was tried and rejected: it named
+  workspaces "agent", classed questions as instructions and tripped its guardrails on 「確認させて」.
 - **Acting**: confirmed actions run in `AssistantController.run` through `AppController.sendText` + `typeText("\r")`
   after `ScheduleRunTiming.enterDelay` (as the reply panel), `typeText` of the digit, or `createWorkspace(cwd:command:
   select: false)`; the pane must still be in the same workspace.
 - **Answers**: `AssistantReport` texts through `AssistantStrings.localized` (String Catalog); summaries and questions
   by `SystemLanguageModel.default` (never Private Cloud Compute, 20 s limit); a detailed summary by `claude -p
   --output-format text --tools "" --strict-mcp-config` (no tools, no MCP servers: the screen text is untrusted) in an empty temporary folder, screen text on stdin, 90 s limit.
+  Web questions (`AssistantWeb`, CmdsCore; Settings › Assistant › Use Claude for web questions, `AssistantWeb`
+  defaults key, on unless false): `AssistantWeb.needsWeb` sends a question straight to `AssistantBrain.webAnswer`
+  when it asks to search / ask Claude or is about something live (folded keyword lists for Japanese, regular
+  expressions for English); otherwise the on-device instructions tell the model to answer `[[NEEDS_WEB]]` alone, and
+  `answerNeedsWeb` (the marker, also broken or full width, or a "can't access the internet" sentence) falls back to
+  Claude; `withoutMarker` keeps the marker from being spoken. `webAnswer` runs `claude -p <prompt> --output-format
+  text --tools WebSearch,WebFetch --allowedTools WebSearch,WebFetch --strict-mcp-config` in the same way (empty
+  folder, 90 s, no permission-skipping flag); the prompt holds only the utterance, the date and time, the time zone
+  and the locale, never screen text. `AssistantWeb.speakable` drops a "Sources:" list, links, URLs and Markdown. The
+  HUD's `ClaudeMark` shows "Asking Claude…" while `claude -p` runs and "Claude" under its answer.
+- **Voice**: `AssistantVoice` (`AVSpeechSynthesizer`, on the Mac only). The list and the fallback are plain values in
+  `AssistantVoices` (CmdsCore): `system` / `personal` voices for the app's language, `resolve` (the chosen voice if
+  it still exists and speaks the language, else the system voice), `personalVoiceState` (Settings' note: not asked,
+  denied, unsupported, none created, available, other languages only). Personal Voices (`voiceTraits` contains
+  `.isPersonalVoice`) appear only after `AVSpeechSynthesizer.requestPersonalVoiceAuthorization`, which only
+  Settings' "Use my Personal Voice…" button calls (the permission is per app: cmds Dev in Debug).
 - **Keys and HUD**: the HUD is a `.nonactivatingPanel` that can never become key; Return / Enter / Esc are Carbon hot
   keys registered only while a card shows (ignored for 0.8 s after it appears), ⌥⌘J likewise; isolated instances
   register none. Phase 2 hook: `AssistantController.workspacesChanged(_:)` (proactive announcements).

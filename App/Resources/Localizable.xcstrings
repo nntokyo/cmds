@@ -295,6 +295,17 @@
         }
       }
     },
+    "%@ (Personal Voice)": {
+      "comment": "Settings › Assistant › Voice: the user's own Personal Voice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（パーソナルボイス）"
+          }
+        }
+      }
+    },
     "%@ account": {
       "localizations": {
         "ja": {
@@ -610,6 +621,23 @@
         }
       }
     },
+    "%@: %@": {
+      "comment": "assistant: one session's line when going through them all",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：%2$@"
+          }
+        }
+      }
+    },
     "%@: its projects folder is renamed to %@ (kept, not deleted), then linked": {
       "localizations": {
         "en": {
@@ -691,12 +719,6 @@
     "%lld agents, nothing needs you.": {
       "comment": "assistant: spoken status",
       "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エージェント%lld件、対応が必要なものはありません。"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -713,6 +735,12 @@
                 }
               }
             }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェント%lld件、対応が必要なものはありません。"
           }
         }
       }
@@ -908,12 +936,6 @@
     "%lld need you.": {
       "comment": "assistant: spoken status (count of workspaces waiting for the user)",
       "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "応答待ち%lld件。"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -930,6 +952,12 @@
                 }
               }
             }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応答待ち%lld件。"
           }
         }
       }
@@ -991,6 +1019,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "このワークスペースのターミナルのプロセス%lld個"
+          }
+        }
+      }
+    },
+    "%lld sessions": {
+      "comment": "assistant HUD: a card for several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のセッション"
           }
         }
       }
@@ -1551,6 +1590,17 @@
         }
       }
     },
+    "All %lld ⏎": {
+      "comment": "assistant HUD: confirm button for a card with several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件すべて ⏎"
+          }
+        }
+      }
+    },
     "Allow": {
       "localizations": {
         "ja": {
@@ -1713,6 +1763,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "確認する"
+          }
+        }
+      }
+    },
+    "Asking Claude…": {
+      "comment": "assistant HUD: claude -p works on the answer",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeに問い合わせ中…"
           }
         }
       }
@@ -2413,6 +2474,17 @@
         }
       }
     },
+    "Choose option 1 in %@?": {
+      "comment": "assistant: confirmation question: say yes to several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@で1番を選びますか？"
+          }
+        }
+      }
+    },
     "Choose to resume it in a new workspace.": {
       "localizations": {
         "ja": {
@@ -2450,6 +2522,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースを選ぶと、アイコンの下にパネルが開き、cmdsに切り替えずにエージェントに答えられます。⌥を押しながら選ぶとcmdsで開きます。"
+          }
+        }
+      }
+    },
+    "Claude": {
+      "comment": "assistant HUD: under an answer that came from Claude Code",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude"
           }
         }
       }
@@ -4542,6 +4625,17 @@
         }
       }
     },
+    "I can't search the web: Claude Code (claude) isn't installed.": {
+      "comment": "assistant: a web question, but claude is missing",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code（claude）がインストールされていないため、ウェブを検索できません。"
+          }
+        }
+      }
+    },
     "I cancelled it: no answer.": {
       "comment": "assistant: a confirmation timed out",
       "localizations": {
@@ -4549,6 +4643,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "応答がなかったので取り消しました。"
+          }
+        }
+      }
+    },
+    "I couldn't get an answer from Claude: it failed or took too long.": {
+      "comment": "assistant: claude -p for a web question failed or timed out",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeから回答を得られませんでした。失敗したか、時間がかかりすぎました。"
           }
         }
       }
@@ -4723,6 +4828,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "インストールしました。新しいターミナルで`cmds --help`を実行してください。"
+          }
+        }
+      }
+    },
+    "Instructions in your own words (“tell api's Claude to write the login tests”) are worked out by Claude Code without any tools, from your words and the workspaces' names only, and shown on a card before anything is sent. This uses your Claude Code usage.": {
+      "comment": "Settings › Assistant: under Use Claude to understand free commands",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由な言い方の指示（「apiのClaudeにログイン画面のテストを書くよう指示して」）は、ツールを一切使わないClaude Codeが、話した言葉とワークスペース名だけから読み取ります。送る前に必ずカードで表示します。Claude Codeの利用量を使います。"
           }
         }
       }
@@ -5104,6 +5220,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "左が新しい"
+          }
+        }
+      }
+    },
+    "Left out: %@.": {
+      "comment": "assistant: sessions not on the card (unclear pane or nothing asked)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対象外：%@。"
           }
         }
       }
@@ -6010,6 +6137,17 @@
         }
       }
     },
+    "No agent is working.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中のエージェントはありません。"
+          }
+        }
+      }
+    },
     "No agent session is known": {
       "localizations": {
         "ja": {
@@ -6088,6 +6226,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションを持つペインがなく、フォルダも分かりません。"
+          }
+        }
+      }
+    },
+    "No session is waiting for you.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力待ちのセッションはありません。"
           }
         }
       }
@@ -6769,12 +6918,45 @@
         }
       }
     },
+    "Personal Voice Settings…": {
+      "comment": "Settings › Assistant: opens System Settings › Accessibility › Personal Voice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスの設定…"
+          }
+        }
+      }
+    },
+    "Personal Voice is not available on this Mac.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacではパーソナルボイスを使えません。"
+          }
+        }
+      }
+    },
     "Phones": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "スマートフォン"
+          }
+        }
+      }
+    },
+    "Please press Return or click the button for this one.": {
+      "comment": "assistant: a spoken yes is not enough",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これはReturnキーを押すかボタンをクリックしてください。"
           }
         }
       }
@@ -7916,7 +8098,7 @@
       }
     },
     "Send “%@” to %@?": {
-      "comment": "assistant: confirmation question",
+      "comment": "assistant: confirmation question\nassistant: confirmation question for several sessions",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -7966,6 +8148,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@に送信しました。"
+          }
+        }
+      }
+    },
+    "Sent to %lld sessions.": {
+      "comment": "assistant",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sent to %lld session."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sent to %lld sessions."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のセッションに送りました。"
           }
         }
       }
@@ -8565,13 +8776,13 @@
         }
       }
     },
-    "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary asks Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.": {
+    "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary and web questions ask Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.": {
       "comment": "Settings › Assistant",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "音声はアプリの言語（cmds › 言語）でこのMac上で認識します。回答はワークスペースの情報とAppleのデバイス上のモデルから作り、詳しい要約だけClaude Code（claude -p）に頼みます。ペインへの入力やセッションの開始は、まず表示し、「はい」と言うかReturnキーを押してから実行します。削除・プッシュ・デプロイとSSHペインへの送信はReturnキーかクリックが必要です。"
+            "value": "音声はアプリの言語（cmds › 言語）でこのMac上で認識します。回答はワークスペースの情報とAppleのデバイス上のモデルから作り、詳しい要約とウェブが必要な質問だけClaude Code（claude -p）に頼みます。ペインへの入力やセッションの開始は、まず表示し、「はい」と言うかReturnキーを押してから実行します。削除・プッシュ・デプロイとSSHペインへの送信はReturnキーかクリックが必要です。"
           }
         }
       }
@@ -9150,6 +9361,17 @@
         }
       }
     },
+    "That didn't work in %@: the pane is gone or busy.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ではできませんでした。ペインがないか、使用中です。"
+          }
+        }
+      }
+    },
     "That didn't work: the pane is gone or busy.": {
       "comment": "assistant",
       "localizations": {
@@ -9257,6 +9479,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "エージェントが作業中のままでした。"
+          }
+        }
+      }
+    },
+    "The chosen voice is not available: the system voice speaks.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選んだ声が使えないため、システムの声で読み上げます。"
           }
         }
       }
@@ -9933,6 +10166,17 @@
         }
       }
     },
+    "There is nothing to send.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送る相手がありません。"
+          }
+        }
+      }
+    },
     "They are not in the folder being synced from. Items on this Mac go to its Trash, items on a server to your Trash there (~/.local/share/Trash). Nothing is deleted.": {
       "localizations": {
         "ja": {
@@ -10462,12 +10706,45 @@
         }
       }
     },
+    "Use Claude for web questions": {
+      "comment": "Settings › Assistant: weather, news, “search…” go to claude -p with web search",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウェブが必要な質問はClaudeに聞く"
+          }
+        }
+      }
+    },
+    "Use Claude to understand free commands": {
+      "comment": "Settings › Assistant: commands in free words are interpreted by claude -p without tools",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由な言い方の指示をClaudeで読み取る"
+          }
+        }
+      }
+    },
     "Use a relay port from 1024 to 65535.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "中継ポートは1024〜65535の範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "Use my Personal Voice…": {
+      "comment": "Settings › Assistant: asks macOS whether cmds may use the user's Personal Voice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のパーソナルボイスを使う…"
           }
         }
       }
@@ -10536,12 +10813,6 @@
     "Waiting for %lld minutes.": {
       "comment": "assistant: how long a workspace has waited",
       "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld分待っています。"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -10558,6 +10829,12 @@
                 }
               }
             }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分待っています。"
           }
         }
       }
@@ -10639,6 +10916,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "メモリが不足したら通知"
+          }
+        }
+      }
+    },
+    "Weather, news, prices and “search…” go to Claude Code (claude -p) with web search only. This uses your Claude Code usage.": {
+      "comment": "Settings › Assistant: under Use Claude for web questions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "天気・ニュース・価格や「検索して」は、ウェブ検索だけを許可したClaude Code（claude -p）に聞きます。Claude Codeの利用量を使います。"
           }
         }
       }
@@ -10931,6 +11219,17 @@
         }
       }
     },
+    "You have no Personal Voice yet. Create one in System Settings › Accessibility › Personal Voice.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスがまだありません。システム設定 › アクセシビリティ › パーソナルボイスで作成してください。"
+          }
+        }
+      }
+    },
     "You may be asked for an administrator password.": {
       "localizations": {
         "ja": {
@@ -10941,12 +11240,45 @@
         }
       }
     },
+    "Your Personal Voice is in the list above.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスは上の一覧から選べます。"
+          }
+        }
+      }
+    },
+    "Your Personal Voice speaks %@ only, so answers in this language use the system voice.": {
+      "comment": "Settings › Assistant: the Personal Voice cannot speak the app's language",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パーソナルボイスは%@にしか対応していないため、この言語の回答はシステムの声で読み上げます。"
+          }
+        }
+      }
+    },
     "Your changes stay in the edited copy. Save it again, or retry in Window › Transfers.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "変更は編集用のコピーに残っています。もう一度保存するか、ウインドウ › 転送で再試行してください。"
+          }
+        }
+      }
+    },
+    "Your own Personal Voice can speak the answers. cmds asks macOS first; it never records or copies a voice.": {
+      "comment": "Settings › Assistant: Personal Voice not asked yet",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自分のパーソナルボイスで回答を読み上げられます。cmdsは先にmacOSに許可を求めます。声を録音したり複製したりはしません。"
           }
         }
       }
@@ -11105,6 +11437,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsにマイクの使用が許可されていません。システム設定 › プライバシーとセキュリティ › マイクで許可してください。"
+          }
+        }
+      }
+    },
+    "cmds may not use your Personal Voice. Allow it in System Settings › Accessibility › Personal Voice.": {
+      "comment": "Settings › Assistant: Personal Voice denied",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsはパーソナルボイスの使用を許可されていません。システム設定 › アクセシビリティ › パーソナルボイスで許可してください。"
           }
         }
       }
@@ -11810,17 +12153,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバ上の“%@”はもうファイルではありません。何もアップロードしませんでした。"
-          }
-        }
-      }
-    },
-    "Please press Return or click the button for this one.": {
-      "comment": "assistant: a spoken yes is not enough",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "これはReturnキーを押すかボタンをクリックしてください。"
           }
         }
       }
