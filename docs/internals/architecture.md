@@ -90,6 +90,27 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   `RenderOnlyWindow` outside the screen) loads the pane's URL, waits for `didFinish` (30 s limit) and 600 ms, is
   captured the same way and closed; one at a time, at most 4. Unknown params are refused, and the answer's `images`
   tells clients the app knows the new params (an older app ignores them and returns only `png_base64`).
+- **Browser pop-ups, dialogs and downloads** (`Browser/BrowserPageDelegate.swift`, `BrowserPopupWindow.swift`,
+  `BrowserDownloads.swift`; decisions, sizes and names in `CmdsCore/BrowserWindows.swift`;
+  [guide](../guide/workspaces-and-panes.md#pop-ups-dialogs-and-downloads), #235): one `BrowserPageDelegate` per pane
+  is the UI and navigation delegate of the pane's web view, the responsive view's other frames and the pane's
+  pop-ups. `createWebViewWith` (`BrowserNewWindow.decide`): a link activation without window features to a web page
+  opens a browser split beside the pane (`AppController.openBrowser`, focused only when the pane is the focused one;
+  `_blank` links have no opener in WebKit anyway), else the same pane; anything else (`window.open`, with or without
+  features, forms) is a `BrowserPopupWindow` whose `WKWebView` is made from the configuration WebKit passes (so
+  `window.opener` / `postMessage` work; it shares the pane's content controller, so the console hook runs there too),
+  sized by `BrowserPopupSize`, centred over the opener's window, `.fullScreenAuxiliary`, ⌘W handled by the window
+  (the menu's Close Pane has an explicit target). Pop-ups from a web view that is not in a visible window (hidden
+  workspace, `RenderOnlyWindow` during a snapshot) are refused. Alert / confirm / prompt and the open panel are sheets
+  on the asking web view's window, titled with the frame's origin (`BrowserDialogOrigin`); without a visible window, or
+  for a responsive frame that is loading a URL another frame navigated to (`ResponsiveView.isFollowing`), they get the
+  no-UI answers (OK, false, nil). Every pending completion handler is answered in `tearDown()` (WebKit raises for
+  dropped ones) before the pop-ups close. Downloads: `shouldPerformDownload`, a response WebKit cannot show or a
+  `Content-Disposition: attachment` become `WKDownload`s owned by `BrowserDownloads.shared` (they outlive the pane),
+  saved to ~/Downloads under `BrowserDownloadName.unique` (`name 2.ext`); WebKit sets `com.apple.quarantine`. The
+  notice is a `BrowserDownloadBannerView` at the bottom of the pane (the container's top banner would cover the
+  address bar). The snapshot `CaptureWebView` has no UI delegate: no windows, dialogs answered by WebKit, downloads
+  fail the capture.
 - **Browser pane device sizes** (`Browser/BrowserPane+Device.swift`, presets and settings in
   `CmdsCore/BrowserDevice.swift`; [guide](../guide/workspaces-and-panes.md#device-sizes-and-color-scheme), #168): the
   `WKWebView` sits in a `ViewportHostView` below the toolbar. Filling the pane, it takes the host's bounds and the page

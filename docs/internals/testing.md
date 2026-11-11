@@ -77,6 +77,18 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   from the first frame and from another one reaches all frames, the scroll fraction matches with Sync Scrolling and
   stays per frame without it, saving the file reloads every frame, relaunch restores the frames, and the number of
   `com.apple.WebKit.WebContent` processes drops by the extra frames when the view is turned off.
+- Browser pop-ups, dialogs and downloads (#235): `debug.browser {pane, answer?, text?}` also returns `popups` (title,
+  subtitle = host, URL, size, key), the `sheet` the page waits for (an alert's title, message, buttons and prompt
+  field, or `openPanel`) and the `download` notice's text; `answer` `ok` / `cancel` answers that sheet as its buttons
+  do, with `text` typed into a prompt or, for the open panel, the path of the file chosen. A local page (served on
+  127.0.0.1) with `window.open('/popup.html', 'x', 'width=480,height=520')` whose pop-up `postMessage`s its opener and
+  then calls `window.close()`, a `target="_blank"` link, alert / confirm / prompt (triggered from `setTimeout` in
+  `cmds browser eval`: a dialog blocks the page, so a synchronous eval or `cmds browser url` waits until it is
+  answered), a file input and links to a `download` file, a `Content-Disposition: attachment` response and an
+  `application/octet-stream` file: the opener sees the message and `closed`, the link opens a split, answers reach the
+  page, the file names are numbered, and in a workspace that is not shown (and during `cmds browser snapshot` of it)
+  no pop-up or sheet appears. Downloads land in the real ~/Downloads: delete the test files afterwards. Close a pane
+  with a pop-up and an open alert (no exception, the pop-up goes).
 - `debug.find {pane, action?, …}` (DEBUG builds) drives a terminal pane's find bar (#173) and returns its state
   (open, text, count, engine = libghostty's search, hits, the selected hit's row/column/width and marker frame for
   Match Case / regex, scrollbar, which of field and terminal has the keyboard): `open {text?, caseSensitive?,
