@@ -12,10 +12,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
-- Mac browser panes: pop-ups open in a small window that keeps its link to the page (Sign in with Google / Apple,
-  OAuth and payment pop-ups), `target="_blank"` links open in a new browser split, `alert` / `confirm` / `prompt`
-  appear as sheets naming the page's host, file fields open the file panel, and downloads are saved to the Downloads
-  folder with a notice in the pane (#235).
+
+## [0.21.0] - 2026-11-11
+
+Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
+
+### Added
+
+- Browser panes: pop-ups open in a small window that keeps its link to the page (Sign in with Google / Apple, OAuth
+  and payment pop-ups), `target="_blank"` links open in a new browser split, `alert` / `confirm` / `prompt` appear as
+  sheets naming the page's host, file fields open the file panel, and downloads are saved to the Downloads folder
+  with a notice in the pane (#235).
+
+### Fixed
+
+- A Codex usage limit reached without a reset time now expires a day after it was last seen, not first seen (#231).
+
+### Changed
+
+- Building from source: Debug builds are a separate app, "cmds Dev" (`tokyo.n-n.cmds.dev`, URL scheme `cmds-dev`),
+  so they no longer take over the release's macOS privacy permissions such as Screen Recording (#236).
 
 ## [0.20.0] - 2026-11-11
 
@@ -627,7 +643,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.20.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.21.0...master
+[0.21.0]: https://github.com/nntokyo/cmds/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/nntokyo/cmds/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/nntokyo/cmds/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/nntokyo/cmds/compare/v0.17.0...v0.18.0
