@@ -138,8 +138,25 @@ enum AssistantBrain {
         return spoken
     }
 
-    /// Runs `claude` in an empty temporary folder, stopped after `claudeTimeout`: its standard output, trimmed.
-    private static func runClaude(arguments: [String], input: String?) async throws -> String {
+    /// How long the interpreter may take (it is asked before anything is said).
+    static let interpreterTimeout: TimeInterval = 30
+
+    /// The interpreter's arguments: no tools, no MCP servers, the small model (it only fills in one JSON object).
+    static func interpreterArguments(utterance: String, world: AssistantWorld, language: AssistantLanguage) -> [String] {
+        let prompt = AssistantInterpretation.prompt(utterance: utterance, world: world, language: language.name)
+        return ["-p", prompt, "--output-format", "text", "--model", "haiku"] + toolArguments
+    }
+
+    /// A free command turned into one JSON object (`AssistantInterpretation`) by `claude -p` without any tools. It gets
+    /// only the utterance and the workspaces' names, agents and states, never screen text.
+    static func interpret(utterance: String, world: AssistantWorld, language: AssistantLanguage) async throws -> String {
+        brainLog.info("claude -p interpreter started")
+        return try await runClaude(arguments: interpreterArguments(utterance: utterance, world: world, language: language),
+                                   input: nil, timeout: interpreterTimeout)
+    }
+
+    /// Runs `claude` in an empty temporary folder, stopped after `timeout`: its standard output, trimmed.
+    private static func runClaude(arguments: [String], input: String?, timeout: TimeInterval = claudeTimeout) async throws -> String {
         guard let executable = claudeExecutable() else { throw ClaudeFailure.notFound }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-assistant-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -166,7 +183,7 @@ enum AssistantBrain {
                 done = true
                 continuation.resume(with: result)
             }
-            DispatchQueue.global().asyncAfter(deadline: .now() + claudeTimeout) {
+            DispatchQueue.global().asyncAfter(deadline: .now() + timeout) {
                 if process.isRunning {
                     process.terminate()
                     finish(.failure(ClaudeFailure.timedOut))

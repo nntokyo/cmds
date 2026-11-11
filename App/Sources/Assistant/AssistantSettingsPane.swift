@@ -17,6 +17,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
                                          target: nil, action: nil)
     private let webCheckbox = NSButton(checkboxWithTitle: String(localized: "Use Claude for web questions", comment: "Settings › Assistant: weather, news, “search…” go to claude -p with web search"),
                                        target: nil, action: nil)
+    private let interpreterCheckbox = NSButton(checkboxWithTitle: String(localized: "Use Claude to understand free commands", comment: "Settings › Assistant: commands in free words are interpreted by claude -p without tools"),
+                                               target: nil, action: nil)
     private let hotkeyPopup = NSPopUpButton()
     private let statusNote = NSTextField(wrappingLabelWithString: "")
     private var voiceLanguage = ""
@@ -47,6 +49,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         mutedCheckbox.action = #selector(mutedToggled)
         webCheckbox.target = self
         webCheckbox.action = #selector(webToggled)
+        interpreterCheckbox.target = self
+        interpreterCheckbox.action = #selector(interpreterToggled)
         for hotkey in AssistantHotkey.allCases {
             hotkeyPopup.addItem(withTitle: hotkey.title)
             hotkeyPopup.lastItem?.representedObject = hotkey.rawValue
@@ -71,6 +75,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
             [NSGridCell.emptyContentView, mutedCheckbox],
             [NSGridCell.emptyContentView, webCheckbox],
             [NSGridCell.emptyContentView, note(String(localized: "Weather, news, prices and “search…” go to Claude Code (claude -p) with web search only. This uses your Claude Code usage.", comment: "Settings › Assistant: under Use Claude for web questions"))],
+            [NSGridCell.emptyContentView, interpreterCheckbox],
+            [NSGridCell.emptyContentView, note(String(localized: "Instructions in your own words (“tell api's Claude to write the login tests”) are worked out by Claude Code without any tools, from your words and the workspaces' names only, and shown on a card before anything is sent. This uses your Claude Code usage.", comment: "Settings › Assistant: under Use Claude to understand free commands"))],
             [NSGridCell.emptyContentView, note(String(localized: "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary and web questions ask Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.", comment: "Settings › Assistant"))],
         ]
     }
@@ -85,6 +91,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         rateSlider.doubleValue = settings.assistantRate
         mutedCheckbox.state = settings.assistantMuted ? .on : .off
         webCheckbox.state = settings.assistantWeb ? .on : .off
+        interpreterCheckbox.state = settings.assistantInterpreter ? .on : .off
         hotkeyPopup.selectItem(at: hotkeyPopup.indexOfItem(withRepresentedObject: settings.assistantHotkey.rawValue))
         var problem: String?
         if #available(macOS 26.0, *) { problem = AssistantController.shared?.problem }
@@ -141,6 +148,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
 
     @objc private func webToggled() {
         settings.assistantWeb = webCheckbox.state == .on
+    }
+
+    @objc private func interpreterToggled() {
+        settings.assistantInterpreter = interpreterCheckbox.state == .on
     }
 
     @objc private func hotkeyChanged() {

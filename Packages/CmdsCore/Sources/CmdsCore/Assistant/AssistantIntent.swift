@@ -25,13 +25,19 @@ public enum AssistantIntent: Equatable, Sendable {
     case confirm
     /// "no" / "いいえ" / "cancel".
     case cancel
+    /// Go through every session in `scope` and say what each agent is doing (`detailed`: by `claude -p`).
+    case checkAll(AssistantScope, detailed: Bool)
+    /// Send `text` to the agents in `scope` (one card for all of them).
+    case replyMany(AssistantScope, text: String)
+    /// Pick option 1 for the agents in `scope` that ask (one card for all of them).
+    case approveMany(AssistantScope)
     /// Anything else.
     case question(String)
 
     /// Whether carrying it out sends something to a pane or starts a session (always confirmed first).
     public var acts: Bool {
         switch self {
-        case .reply, .approve, .choose, .startAgent: return true
+        case .reply, .approve, .choose, .startAgent, .replyMany, .approveMany: return true
         default: return false
         }
     }
@@ -61,6 +67,9 @@ public enum AssistantIntent: Equatable, Sendable {
             // "in detail" / "詳しく" asks for the longer summary by `claude -p`.
             if case .summary(let target, _) = intent, detailWords.occurs(in: text) {
                 return .summary(target: target, detailed: true)
+            }
+            if case .checkAll(let scope, _) = intent, detailWords.occurs(in: text) {
+                return .checkAll(scope, detailed: true)
             }
             return intent
         }
@@ -93,6 +102,14 @@ public enum AssistantIntent: Equatable, Sendable {
         return value.isEmpty ? nil : value
     }
 
+    /// Which sessions "all the waiting ones" / 「入力待ちの」 means.
+    private static func scope(_ word: String?) -> AssistantScope {
+        let value = AssistantText.folded(word ?? "")
+        if ["waiting", "pending"].contains(value) || value.hasPrefix("入力待チ") || value.hasPrefix("待ッテ") { return .waiting }
+        if ["working", "busy"].contains(value) || value.hasPrefix("作業中") || value.hasPrefix("動イテ") { return .working }
+        return .all
+    }
+
     private static func agent(_ word: String?) -> AgentKind? {
         let value = AssistantText.folded(word ?? "")
         if value.hasPrefix("claude") || value.hasPrefix("クロード") || value.hasPrefix("クラウド") { return .claude }
@@ -117,6 +134,26 @@ public enum AssistantIntent: Equatable, Sendable {
         Rule(#"(聞き取り|リスニング|聞くの|マイク)(を)?(一時停止|止めて|とめて|やめて|オフ)(して)?|一時停止(して)?|静かにして|ちょっと黙って"#) { _ in .pauseListening },
         Rule(#"(turn (yourself )?off|shut ?down|switch off|goodbye|good night|that's all)"#) { _ in .stop },
         Rule(#"(アシスタント|ジャービス)?(を)?(終了|オフ)(して)?|おやすみ|さようなら|もういいよ"#) { _ in .stop },
+
+        // Every session at once: approve all that wait, go through them all.
+        Rule(#"(?:approve|accept|allow|say yes to|answer yes to) (?:them all|all(?: of them)?|everything|every (?:one|agent|session)|each (?:one|agent|session)|all (?:the )?(?:waiting|pending)(?: ones| sessions| agents| workspaces)?)|yes to all|approve all(?: waiting)?"#) { _ in
+            .approveMany(.waiting)
+        },
+        Rule(#"(?:(?:入力待ち|待って(?:い)?る|確認待ち)の?(?:もの|セッション|ワークスペース|エージェント|やつ)?(?:に|は)?)?(?:全部|すべて|全て|みんな|全員)(?:に)?(?:はい|イエス|yes|オーケー|ok)(?:と|って)(?:答えて|返して|返事して|言って|送って)(?:ください)?|(?:入力待ち|待って(?:い)?る)の?(?:もの|セッション|ワークスペース|エージェント|やつ)?(?:を)?(?:全部|すべて|全て)(?:を)?(?:承認|許可)(?:して)?(?:ください)?|(?:全部|すべて|全て)(?:を)?(?:承認|許可)(?:して)?(?:ください)?"#) { _ in
+            .approveMany(.waiting)
+        },
+        Rule(#"(?:check|go through|review|summari[sz]e|look at|report on|tell me about)(?: on)? (?:all|every|each)(?: of)?(?: the)?(?: (waiting|working|busy|pending))?(?: (?:sessions?|workspaces?|agents?|ones?))?(?: one by one| in turn| in order)?(?: in detail)?"#) { groups in
+            .checkAll(scope(groups[0]), detailed: false)
+        },
+        Rule(#"(?:check|go through|review|summari[sz]e|look at)(?: on)? (?:the )?(waiting|working|busy|pending) (?:sessions|workspaces|agents|ones)(?: one by one| in turn| in order)?(?: in detail)?"#) { groups in
+            .checkAll(scope(groups[0]), detailed: false)
+        },
+        Rule(#"(?:(入力待ち|待って(?:い)?る|作業中|動いて(?:い)?る)の?)?(?:全部|すべて|全て|各|それぞれ)の?(?:セッション|ワークスペース|エージェント)?(?:を|の)?(?:状況|状態|様子|進捗)?(?:を)?(?:順番に|順に|ひとつずつ|一つずつ|1つずつ)?(?:詳しく)?(?:確認|チェック|見|教え|まとめ|要約|報告)(?:て|して)?(?:ください)?"#) { groups in
+            .checkAll(scope(groups[0]), detailed: false)
+        },
+        Rule(#"(入力待ち|待って(?:い)?る|作業中|動いて(?:い)?る)の?(?:セッション|ワークスペース|エージェント|もの|やつ)(?:を|の)?(?:全部|すべて|全て)?(?:状況を)?(?:順番に|順に|ひとつずつ|一つずつ)?(?:詳しく)?(?:確認|チェック|見|教え|まとめ|要約)(?:て|して)?(?:ください)?"#) { groups in
+            .checkAll(scope(groups[0]), detailed: false)
+        },
 
         // Choosing an option.
         Rule(#"(?:choose|pick|select|press)(?: option| number)? \#(number)(?: (?:for|in|on|at) (.+))?"#) { groups in

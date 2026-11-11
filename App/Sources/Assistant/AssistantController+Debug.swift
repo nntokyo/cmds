@@ -8,7 +8,7 @@ import CmdsCore
 /// answer the confirmation card as Return / Esc or its buttons would.
 @available(macOS 26.0, *)
 extension AssistantController {
-    /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
+    /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons). `snapshot`
     /// adds the HUD drawn off screen (`png_base64`; without the window's translucency).
     func debugPerform(_ params: JSONValue?) throws -> JSONValue {
@@ -18,6 +18,7 @@ extension AssistantController {
         case "on":
             if let mute = params?["mute"]?.boolValue { AppSettings.shared.assistantMuted = mute }
             if let web = params?["web"]?.boolValue { AppSettings.shared.assistantWeb = web }
+            if let interpreter = params?["interpreter"]?.boolValue { AppSettings.shared.assistantInterpreter = interpreter }
             if let style = params?["style"]?.stringValue.flatMap(AssistantStyle.init(rawValue:)) {
                 AppSettings.shared.assistantStyle = style
             }
@@ -58,6 +59,7 @@ extension AssistantController {
             "confirmationKeys": .bool(debugConfirmationKeys),
             "muted": .bool(AppSettings.shared.assistantMuted),
             "web": .bool(AppSettings.shared.assistantWeb),
+            "interpreter": .bool(AppSettings.shared.assistantInterpreter),
             "hudVisible": .bool(hud.isVisible),
             "hud": .object(hud.debugTexts.mapValues(JSONValue.string)),
             "window": .number(Double(hud.panel.windowNumber)),
@@ -69,7 +71,11 @@ extension AssistantController {
                 "pane": action.paneID.map(JSONValue.string) ?? .null,
                 "text": .string(action.text),
                 "confirmation": .string(action.confirmation.rawValue),
-                "reasons": .array(action.reasons.map { .string($0.rawValue) }),
+                "reasons": .array(action.allReasons.map { .string($0.rawValue) }),
+                "also": .array(action.also.map { other in
+                    .object(["kind": .string(String(describing: other.kind)), "workspace": other.workspaceID.map(JSONValue.string) ?? .null,
+                             "pane": other.paneID.map(JSONValue.string) ?? .null, "text": .string(other.text)])
+                }),
             ])
         } else {
             state["pending"] = .null

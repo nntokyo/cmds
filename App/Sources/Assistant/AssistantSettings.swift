@@ -54,8 +54,9 @@ extension AppSettings {
     static let assistantMutedKey = "AssistantMuted"
     static let assistantHotkeyKey = "AssistantHotkey"
     static let assistantWebKey = "AssistantWeb"
+    static let assistantInterpreterKey = "AssistantInterpreter"
     static let assistantKeys = [assistantEnabledKey, assistantNamesKey, assistantStyleKey, assistantVoiceKey, assistantRateKey,
-                                assistantMutedKey, assistantHotkeyKey, assistantWebKey]
+                                assistantMutedKey, assistantHotkeyKey, assistantWebKey, assistantInterpreterKey]
 
     /// The rates the voice may take (AVSpeechUtterance rates; 0.5 is the system default).
     static let assistantRateRange: ClosedRange<Double> = 0.35...0.65
@@ -102,6 +103,13 @@ extension AppSettings {
     var assistantWeb: Bool {
         get { defaults.object(forKey: Self.assistantWebKey) == nil ? true : defaults.bool(forKey: Self.assistantWebKey) }
         set { set(newValue ? nil : false, forKey: Self.assistantWebKey) }
+    }
+
+    /// Commands in free words ("api の Claude にテストを書くよう指示して") are interpreted by Claude Code without tools
+    /// (`AssistantInterpretation`). On unless the user turns it off.
+    var assistantInterpreter: Bool {
+        get { defaults.object(forKey: Self.assistantInterpreterKey) == nil ? true : defaults.bool(forKey: Self.assistantInterpreterKey) }
+        set { set(newValue ? nil : false, forKey: Self.assistantInterpreterKey) }
     }
 
     var assistantHotkey: AssistantHotkey {

@@ -610,6 +610,23 @@
         }
       }
     },
+    "%@: %@": {
+      "comment": "assistant: one session's line when going through them all",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：%2$@"
+          }
+        }
+      }
+    },
     "%@: its projects folder is renamed to %@ (kept, not deleted), then linked": {
       "localizations": {
         "en": {
@@ -991,6 +1008,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "このワークスペースのターミナルのプロセス%lld個"
+          }
+        }
+      }
+    },
+    "%lld sessions": {
+      "comment": "assistant HUD: a card for several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のセッション"
           }
         }
       }
@@ -1547,6 +1575,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "蓋を閉じてもエージェントは動き続けます。cmdsはシステム全体の電源設定（pmset -a disablesleep 1）を変更し、この設定をオフにするかcmdsを終了すると元に戻します。macOSはそのたびに管理者パスワードを求めます。cmdsがパスワードを見ることはありません。"
+          }
+        }
+      }
+    },
+    "All %lld ⏎": {
+      "comment": "assistant HUD: confirm button for a card with several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件すべて ⏎"
           }
         }
       }
@@ -2420,6 +2459,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分の版をアップロードするかどうかをcmdsで選んでください。"
+          }
+        }
+      }
+    },
+    "Choose option 1 in %@?": {
+      "comment": "assistant: confirmation question: say yes to several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@で1番を選びますか？"
           }
         }
       }
@@ -4771,6 +4821,17 @@
         }
       }
     },
+    "Instructions in your own words (“tell api's Claude to write the login tests”) are worked out by Claude Code without any tools, from your words and the workspaces' names only, and shown on a card before anything is sent. This uses your Claude Code usage.": {
+      "comment": "Settings › Assistant: under Use Claude to understand free commands",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由な言い方の指示（「apiのClaudeにログイン画面のテストを書くよう指示して」）は、ツールを一切使わないClaude Codeが、話した言葉とワークスペース名だけから読み取ります。送る前に必ずカードで表示します。Claude Codeの利用量を使います。"
+          }
+        }
+      }
+    },
     "Invalid": {
       "localizations": {
         "ja": {
@@ -5148,6 +5209,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "左が新しい"
+          }
+        }
+      }
+    },
+    "Left out: %@.": {
+      "comment": "assistant: sessions not on the card (unclear pane or nothing asked)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対象外：%@。"
           }
         }
       }
@@ -6054,6 +6126,17 @@
         }
       }
     },
+    "No agent is working.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中のエージェントはありません。"
+          }
+        }
+      }
+    },
     "No agent session is known": {
       "localizations": {
         "ja": {
@@ -6132,6 +6215,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションを持つペインがなく、フォルダも分かりません。"
+          }
+        }
+      }
+    },
+    "No session is waiting for you.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "入力待ちのセッションはありません。"
           }
         }
       }
@@ -7971,7 +8065,7 @@
       }
     },
     "Send “%@” to %@?": {
-      "comment": "assistant: confirmation question",
+      "comment": "assistant: confirmation question\nassistant: confirmation question for several sessions",
       "localizations": {
         "en": {
           "stringUnit": {
@@ -8021,6 +8115,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@に送信しました。"
+          }
+        }
+      }
+    },
+    "Sent to %lld sessions.": {
+      "comment": "assistant",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sent to %lld session."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Sent to %lld sessions."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のセッションに送りました。"
           }
         }
       }
@@ -9205,6 +9328,17 @@
         }
       }
     },
+    "That didn't work in %@: the pane is gone or busy.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ではできませんでした。ペインがないか、使用中です。"
+          }
+        }
+      }
+    },
     "That didn't work: the pane is gone or busy.": {
       "comment": "assistant",
       "localizations": {
@@ -9988,6 +10122,17 @@
         }
       }
     },
+    "There is nothing to send.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送る相手がありません。"
+          }
+        }
+      }
+    },
     "They are not in the folder being synced from. Items on this Mac go to its Trash, items on a server to your Trash there (~/.local/share/Trash). Nothing is deleted.": {
       "localizations": {
         "ja": {
@@ -10524,6 +10669,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ウェブが必要な質問はClaudeに聞く"
+          }
+        }
+      }
+    },
+    "Use Claude to understand free commands": {
+      "comment": "Settings › Assistant: commands in free words are interpreted by claude -p without tools",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由な言い方の指示をClaudeで読み取る"
           }
         }
       }

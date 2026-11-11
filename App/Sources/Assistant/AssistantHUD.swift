@@ -223,9 +223,16 @@ final class AssistantHUD: NSObject {
         rings.rings = content.rings
         if let action = content.pending {
             card.isHidden = false
-            targetLabel.stringValue = Self.target(action)
-            textBox.stringValue = action.label.map { "\(action.text)  — \($0)" } ?? action.text
-            let reasons = action.reasons.map(Self.reasonText)
+            let actions = action.all
+            if actions.count > 1 {
+                // One card for several sessions: each target pane with its exact text.
+                targetLabel.stringValue = String(localized: "\(actions.count) sessions", comment: "assistant HUD: a card for several sessions")
+                textBox.stringValue = actions.map { "\(Self.target($0)):  \(Self.shownText($0))" }.joined(separator: "\n")
+            } else {
+                targetLabel.stringValue = Self.target(action)
+                textBox.stringValue = Self.shownText(action)
+            }
+            let reasons = action.allReasons.map(Self.reasonText)
             if action.confirmation == .keyOrClick {
                 let lead = content.needsKey
                     ? String(localized: "A spoken yes is not enough here: press Return or click.", comment: "assistant HUD")
@@ -278,7 +285,15 @@ final class AssistantHUD: NSObject {
         }
     }
 
+    /// Exactly what is typed, with the option's label.
+    static func shownText(_ action: AssistantAction) -> String {
+        action.label.map { "\(action.text)  — \($0)" } ?? action.text
+    }
+
     static func confirmTitle(_ action: AssistantAction) -> String {
+        if !action.also.isEmpty {
+            return String(localized: "All \(action.all.count) ⏎", comment: "assistant HUD: confirm button for a card with several sessions")
+        }
         switch action.kind {
         case .reply: return String(localized: "Send ⏎", comment: "assistant HUD: confirm button")
         case .choose: return String(localized: "Choose ⏎", comment: "assistant HUD: confirm button")

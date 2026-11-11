@@ -482,3 +482,177 @@ final class AssistantWebTests: XCTestCase {
         XCTAssertEqual(AssistantWeb.speakable("晴れです。\n\n出典: tenki.jp"), "晴れです。")
     }
 }
+
+/// Commands for several sessions and free commands through the interpreter (#243).
+final class AssistantManySessionsTests: XCTestCase {
+    private let now = Date(timeIntervalSince1970: 1_800_000_000)
+    private let yesNo = AgentPromptOptions(question: "Run the tests?", options: [
+        .init(number: 1, label: "Yes", selected: true), .init(number: 2, label: "No", selected: false)])
+    private let deleteIt = AgentPromptOptions(question: "Run rm -rf build?", options: [
+        .init(number: 1, label: "Yes", selected: true), .init(number: 2, label: "No", selected: false)])
+
+    private func world() -> AssistantWorld {
+        AssistantWorld(workspaces: [
+            .init(id: "w1", title: "api", state: .needsUser, agent: "Claude", directory: "/tmp/api",
+                  panes: [.init(id: "p1", title: "zsh", agent: "Claude", waiting: true, prompt: yesNo)]),
+            .init(id: "w2", title: "web", state: .working, agent: "Codex", topic: "Login form", directory: "/tmp/web",
+                  panes: [.init(id: "p2", title: "zsh", agent: "Codex")]),
+            .init(id: "w3", title: "docs", directory: "/tmp/docs", panes: [.init(id: "p3", title: "zsh")]),
+            .init(id: "w4", title: "infra", state: .needsUser, agent: "Claude", directory: "/tmp/infra",
+                  panes: [.init(id: "p4", title: "zsh", agent: "Claude", waiting: true, prompt: deleteIt)]),
+            .init(id: "w5", title: "app", state: .working, agent: "Claude", directory: "/tmp/app",
+                  panes: [.init(id: "p5", title: "claude", agent: "Claude"), .init(id: "p6", title: "codex", agent: "Codex")]),
+        ], now: now)
+    }
+
+    private func plan(_ intent: AssistantIntent) -> AssistantPlan {
+        AssistantPlanner.plan(intent, world: world(), strings: .english)
+    }
+
+    func testRulesForEverySession() {
+        for text in ["全部のセッションを確認して", "各セッションの状況を順番に教えて", "それぞれのワークスペースをチェックして",
+                     "check all sessions", "go through every agent one by one", "check each workspace"] {
+            XCTAssertEqual(AssistantIntent.parse(text), .checkAll(.all, detailed: false), text)
+        }
+        XCTAssertEqual(AssistantIntent.parse("入力待ちのセッションを全部見て"), .checkAll(.waiting, detailed: false))
+        XCTAssertEqual(AssistantIntent.parse("作業中のエージェントを確認して"), .checkAll(.working, detailed: false))
+        XCTAssertEqual(AssistantIntent.parse("check the waiting sessions"), .checkAll(.waiting, detailed: false))
+        XCTAssertEqual(AssistantIntent.parse("各セッションの状況を詳しく教えて"), .checkAll(.all, detailed: true))
+        for text in ["入力待ちのものに全部はいと答えて", "全部にはいと答えて", "全部承認して", "approve all", "yes to all",
+                     "approve all the waiting ones"] {
+            XCTAssertEqual(AssistantIntent.parse(text), .approveMany(.waiting), text)
+        }
+        // The single-session commands and the overall status stay as they were.
+        XCTAssertEqual(AssistantIntent.parse("みんなの状況を教えて"), .status)
+        XCTAssertEqual(AssistantIntent.parse("apiを承認して"), .approve(target: "api"))
+        XCTAssertTrue(AssistantIntent.parse("approve all").acts)
+        XCTAssertFalse(AssistantIntent.parse("check all sessions").acts)
+    }
+
+    func testCheckAllGoesThroughEachSessionWithAnAgent() {
+        guard case .summarizeEach(let items, let detailed) = plan(.checkAll(.all, detailed: false)) else { return XCTFail() }
+        XCTAssertFalse(detailed)
+        XCTAssertEqual(items.map(\.title), ["api", "infra", "web", "app › claude", "app › codex"])
+        XCTAssertEqual(items.map(\.paneID), ["p1", "p4", "p2", "p5", "p6"])
+        guard case .summarizeEach(let waiting, _) = plan(.checkAll(.waiting, detailed: true)) else { return XCTFail() }
+        XCTAssertEqual(waiting.map(\.title), ["api", "infra"])
+        let quiet = AssistantWorld(workspaces: [.init(id: "w3", title: "docs", panes: [.init(id: "p3", title: "zsh")])], now: now)
+        XCTAssertEqual(AssistantPlanner.plan(.checkAll(.waiting, detailed: false), world: quiet, strings: .english),
+                       .answer("No session is waiting for you."))
+        XCTAssertEqual(AssistantPlanner.plan(.checkAll(.all, detailed: false), world: quiet, strings: .english),
+                       .answer("No agents are running."))
+    }
+
+    func testApproveAllIsOneCardAndADangerousOneNeedsAKey() {
+        guard case .propose(let batch, let prompt) = plan(.approveMany(.waiting)) else { return XCTFail() }
+        XCTAssertEqual(batch.all.map(\.workspaceTitle), ["api", "infra"])
+        XCTAssertEqual(batch.all.map(\.paneID), ["p1", "p4"])
+        XCTAssertEqual(batch.all.map(\.kind), [.choose(1), .choose(1)])
+        XCTAssertEqual(batch.reasons, [], "api's own question is harmless")
+        XCTAssertEqual(batch.allReasons, [.destructive])
+        XCTAssertEqual(batch.confirmation, .keyOrClick, "one dangerous approval makes the whole card need Return or a click")
+        XCTAssertEqual(prompt, "Choose option 1 in api, infra? This one needs Return or a click.")
+    }
+
+    func testReplyToSeveralNamedSessions() {
+        let intent = AssistantIntent.parse("api と web にテストを実行してと伝えて")
+        guard case .propose(let batch, let prompt) = AssistantPlanner.plan(intent, world: world(), strings: .english) else {
+            return XCTFail("\(intent)")
+        }
+        XCTAssertEqual(batch.all.map(\.paneID), ["p1", "p2"])
+        XCTAssertEqual(Set(batch.all.map(\.text)), ["テストを実行して"])
+        XCTAssertEqual(batch.confirmation, .voiceOrKey)
+        XCTAssertEqual(prompt, "Send “テストを実行して” to api, web? Say yes or press Return.")
+        if case .propose(let english, _) = AssistantPlanner.plan(AssistantIntent.parse("tell api and web to run the tests"),
+                                                                 world: world(), strings: .english) {
+            XCTAssertEqual(english.all.map(\.workspaceTitle), ["api", "web"])
+        } else {
+            XCTFail()
+        }
+    }
+
+    func testSeveralSessionsAskBackOrLeaveOut() {
+        // A named workspace that is not clear asks back, never a guess.
+        XCTAssertEqual(plan(.replyMany(.named(["api", "app"]), text: "hi")),
+                       .askBack("app has several panes (claude, codex). Please use the reply panel."))
+        XCTAssertEqual(plan(.replyMany(.named(["api", "nope"]), text: "hi")), .askBack("I can't find a workspace called nope."))
+        // "All": the unclear one is left out and said so.
+        guard case .propose(let batch, let prompt) = plan(.replyMany(.working, text: "status?")) else { return XCTFail() }
+        XCTAssertEqual(batch.all.map(\.workspaceTitle), ["web"])
+        XCTAssertEqual(prompt, "Send “status?” to web? Left out: app. Say yes or press Return.")
+        // A dangerous text needs a key for all of them.
+        guard case .propose(let push, _) = plan(.replyMany(.named(["api", "web"]), text: "git push")) else { return XCTFail() }
+        XCTAssertEqual(push.confirmation, .keyOrClick)
+    }
+
+    func testInterpreterOutputIsParsed() {
+        let output = """
+        ```json
+        {"kind": "instruct", "targets": ["api"], "filter": "named", "text": "ログイン画面のテストを書いてください", "detailed": false}
+        ```
+        """
+        let parsed = AssistantInterpretation.parse(output)
+        XCTAssertEqual(parsed, AssistantInterpretation(kind: .instruct, targets: ["api"], filter: .named,
+                                                       text: "ログイン画面のテストを書いてください"))
+        XCTAssertEqual(parsed?.intent(in: world()), .reply(target: "api", text: "ログイン画面のテストを書いてください"))
+        XCTAssertNil(AssistantInterpretation.parse("I can't help with that."))
+        XCTAssertNil(AssistantInterpretation.parse("{not json}"))
+        // Unknown or missing fields fall back to a question.
+        XCTAssertEqual(AssistantInterpretation.parse(#"{"kind": "launch"}"#)?.kind, .question)
+        XCTAssertNil(AssistantInterpretation.parse(#"{"kind": "question", "targets": [], "filter": "all", "text": ""}"#)?.intent(in: world()))
+    }
+
+    func testInterpretationsBecomeIntents() {
+        let w = world()
+        XCTAssertEqual(AssistantInterpretation(kind: .instruct, targets: ["api", "web"], filter: .named, text: "Please run the tests.")
+            .intent(in: w), .replyMany(.named(["api", "web"]), text: "Please run the tests."))
+        XCTAssertEqual(AssistantInterpretation(kind: .instruct, targets: [], filter: .waiting, text: "続けてください").intent(in: w),
+                       .replyMany(.waiting, text: "続けてください"))
+        XCTAssertEqual(AssistantInterpretation(kind: .approve, targets: ["api"], filter: .waiting).intent(in: w), .approveMany(.waiting))
+        XCTAssertEqual(AssistantInterpretation(kind: .approve, targets: ["infra"], filter: .named).intent(in: w), .approve(target: "infra"))
+        XCTAssertEqual(AssistantInterpretation(kind: .check, filter: .all).intent(in: w), .checkAll(.all, detailed: false))
+        XCTAssertEqual(AssistantInterpretation(kind: .check, targets: ["web"], filter: .named).intent(in: w), .workspaceStatus(target: "web"))
+        XCTAssertEqual(AssistantInterpretation(kind: .check, targets: ["web"], filter: .named, detailed: true).intent(in: w),
+                       .summary(target: "web", detailed: true))
+        // A made-up name is dropped; with nothing left it is no command.
+        XCTAssertNil(AssistantInterpretation(kind: .instruct, targets: ["billing"], filter: .named, text: "hi").intent(in: w))
+        XCTAssertEqual(AssistantInterpretation(kind: .instruct, targets: ["billing", "web"], filter: .named, text: "hi").intent(in: w),
+                       .reply(target: "web", text: "hi"))
+        // No message, or one far too long, is no command; lines become one.
+        XCTAssertNil(AssistantInterpretation(kind: .instruct, targets: ["api"], filter: .named, text: "  ").intent(in: w))
+        XCTAssertNil(AssistantInterpretation(kind: .reply, targets: ["api"], filter: .named,
+                                             text: String(repeating: "a", count: 401)).intent(in: w))
+        XCTAssertEqual(AssistantInterpretation(kind: .reply, targets: ["api"], filter: .named, text: "one\ntwo").intent(in: w),
+                       .reply(target: "api", text: "one two"))
+    }
+
+    func testAnInterpretedInstructionIsStillOnlyAProposal() {
+        // Whatever the interpreter says, the planner proposes and the safety rules apply.
+        let interpreted = AssistantInterpretation(kind: .instruct, targets: [], filter: .all, text: "rm -rf /").intent(in: world())
+        guard let interpreted, case .propose(let batch, _) = plan(interpreted) else { return XCTFail() }
+        XCTAssertEqual(batch.confirmation, .keyOrClick)
+        XCTAssertEqual(batch.all.map(\.text), ["rm -rf /", "rm -rf /", "rm -rf /"])
+    }
+
+    func testWhatGoesToTheInterpreter() {
+        let w = world()
+        for text in ["api の Claude にログイン画面のテストを書くよう指示して", "web にビルドが通るか確認させて",
+                     "tell the api agent to fix the failing test", "have every agent write tests", "全部のエージェントに続けてと言って"] {
+            XCTAssertTrue(AssistantInterpretation.mightBeCommand(text, world: w), text)
+        }
+        for text in ["what is a monad", "明日の天気は", "モナドって何", "explain closures"] {
+            XCTAssertFalse(AssistantInterpretation.mightBeCommand(text, world: w), text)
+        }
+    }
+
+    func testTheInterpreterGetsNoScreenText() {
+        var w = world()
+        w.workspaces[0].notification = "SECRET from the screen"
+        w.workspaces[0].panes[0].promptContext = ["SECRET line"]
+        let prompt = AssistantInterpretation.prompt(utterance: "approve api", world: w, language: "English")
+        XCTAssertFalse(prompt.contains("SECRET"))
+        XCTAssertTrue(prompt.contains("- api: Claude, needs the user (waits for input)"))
+        XCTAssertTrue(prompt.contains("- docs: no agent, no agent running"))
+        XCTAssertTrue(prompt.hasSuffix("Utterance: approve api"))
+    }
+}

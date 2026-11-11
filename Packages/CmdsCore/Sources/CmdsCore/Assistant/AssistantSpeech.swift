@@ -32,11 +32,22 @@ public enum AssistantLine: Equatable, Sendable {
     case confirmReply(text: String, workspace: String)
     case confirmChoice(number: Int, label: String, workspace: String)
     case confirmStart(agent: String, place: String)
+    case confirmReplyMany(text: String, workspaces: [String])
+    case confirmApproveMany(workspaces: [String])
+    /// Sessions left out of a card for several (unclear pane, nothing asked).
+    case leftOut([String])
     case sayYesOrPressReturn
     case pressReturnToConfirm
     case voiceNotEnough
     case sent(workspace: String)
     case started(agent: String, place: String)
+    case sentMany(count: Int)
+    case failedIn([String])
+    case noneWaiting
+    case noneWorking
+    case nothingToDo
+    /// One session's line when going through them all.
+    case session(workspace: String, summary: String)
     case failed
     case cancelled
     case expired
@@ -83,11 +94,20 @@ public enum AssistantLine: Equatable, Sendable {
         case .confirmReply(let text, let workspace): return "Send “\(text)” to \(workspace)?"
         case .confirmChoice(let number, let label, let workspace): return "Choose \(number), “\(label)”, in \(workspace)?"
         case .confirmStart(let agent, let place): return "Start \(agent) in \(place)?"
+        case .confirmReplyMany(let text, let workspaces): return "Send “\(text)” to \(workspaces.joined(separator: ", "))?"
+        case .confirmApproveMany(let workspaces): return "Choose option 1 in \(workspaces.joined(separator: ", "))?"
+        case .leftOut(let workspaces): return "Left out: \(workspaces.joined(separator: ", "))."
         case .sayYesOrPressReturn: return "Say yes or press Return."
         case .pressReturnToConfirm: return "This one needs Return or a click."
         case .voiceNotEnough: return "Please press Return or click the button for this one."
         case .sent(let workspace): return "Sent to \(workspace)."
         case .started(let agent, let place): return "Started \(agent) in \(place)."
+        case .sentMany(let count): return count == 1 ? "Sent to 1 session." : "Sent to \(count) sessions."
+        case .failedIn(let workspaces): return "That didn't work in \(workspaces.joined(separator: ", ")): the pane is gone or busy."
+        case .noneWaiting: return "No session is waiting for you."
+        case .noneWorking: return "No agent is working."
+        case .nothingToDo: return "There is nothing to send."
+        case .session(let workspace, let summary): return "\(workspace): \(summary)"
         case .failed: return "That didn't work: the pane is gone or busy."
         case .cancelled: return "Cancelled."
         case .expired: return "I cancelled it: no answer."
