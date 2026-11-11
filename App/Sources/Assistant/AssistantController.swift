@@ -67,8 +67,6 @@ final class AssistantController {
     private var vocabulary: [String] = []
     private(set) var lastStep: AssistantMachine.Step?
 
-    static var isSupported: Bool { true }
-
     /// Created at launch (AppDelegate); turns itself on when the user had it on.
     static func start(controller: AppController) {
         let assistant = AssistantController(controller: controller)
@@ -693,10 +691,6 @@ final class AssistantController {
         if machine.phase == .thinking { return claudeWorking ? .working : .none }
         return answerByClaude && machine.answer != nil && hudNote == nil ? .answered : .none
     }
-
-    /// Phase 2 hook (#243, proactive announcements, opt-in): called when the workspaces' states change, e.g. to say
-    /// "api needs you". Does nothing in the MVP.
-    func workspacesChanged(_ summary: MenuBarSummary) {}
 
     // MARK: Workspaces changing
 

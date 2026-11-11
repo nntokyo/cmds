@@ -444,7 +444,7 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   Settings' "Use my Personal Voice…" button calls (the permission is per app: cmds Dev in Debug).
 - **Keys and HUD**: the HUD is a `.nonactivatingPanel` that can never become key; Return / Enter / Esc are Carbon hot
   keys registered only while a card shows (ignored for 0.8 s after it appears), ⌥⌘J likewise; isolated instances
-  register none. Phase 2 hook: `AssistantController.workspacesChanged(_:)` (proactive announcements).
+  register none.
 
 ## Keeping the Mac awake
 
