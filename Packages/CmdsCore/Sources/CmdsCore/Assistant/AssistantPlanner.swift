@@ -289,7 +289,11 @@ public enum AssistantPlanner {
             }
         }
         guard let batch = AssistantAction.batch(actions) else {
-            return .answer(strings(scope == .waiting ? .noneWaiting : .nothingToDo))
+            if leftOut.count == 1, let only = found.first(where: { $0.title == leftOut[0] }),
+               case .found = AssistantWorld.targetPane(in: only) {
+                return .answer(strings(.noQuestion(workspace: only.title)))
+            }
+            return .answer(strings.join([.nothingToDo] + (leftOut.isEmpty ? [] : [.leftOut(leftOut)])))
         }
         var lines = [line(actions.map(\.workspaceTitle))]
         if !leftOut.isEmpty { lines.append(.leftOut(leftOut)) }

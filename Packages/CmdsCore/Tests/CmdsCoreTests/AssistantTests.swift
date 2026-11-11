@@ -580,6 +580,15 @@ final class AssistantManySessionsTests: XCTestCase {
         guard case .propose(let batch, let prompt) = plan(.replyMany(.working, text: "status?")) else { return XCTFail() }
         XCTAssertEqual(batch.all.map(\.workspaceTitle), ["web"])
         XCTAssertEqual(prompt, "Send “status?” to web? Left out: app. Say yes or press Return.")
+        // Waiting, but nobody shows a question to approve: said so, not "nobody waits".
+        var noPrompt = world()
+        noPrompt.workspaces[0].panes[0].prompt = nil
+        noPrompt.workspaces[3].panes[0].prompt = nil
+        XCTAssertEqual(AssistantPlanner.plan(.approveMany(.waiting), world: noPrompt, strings: .english),
+                       .answer("There is nothing to send. Left out: api, infra."))
+        noPrompt.workspaces[3].state = .working
+        XCTAssertEqual(AssistantPlanner.plan(.approveMany(.waiting), world: noPrompt, strings: .english),
+                       .answer("api isn't asking anything."))
         // A dangerous text needs a key for all of them.
         guard case .propose(let push, _) = plan(.replyMany(.named(["api", "web"]), text: "git push")) else { return XCTFail() }
         XCTAssertEqual(push.confirmation, .keyOrClick)
