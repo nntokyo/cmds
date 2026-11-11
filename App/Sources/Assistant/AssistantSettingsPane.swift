@@ -133,6 +133,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         if #available(macOS 26.0, *) { problem = AssistantController.shared?.problem }
         statusNote.stringValue = problem ?? ""
         statusNote.isHidden = problem == nil
+        // The whole grid row, so no empty gap (with its row spacing) stays where the note would be.
+        if let grid = statusNote.superview as? NSGridView { grid.cell(for: statusNote)?.row?.isHidden = problem == nil }
     }
 
     /// The voices for the app's language (the system's, then the user's Personal Voices that speak it), rebuilt when
@@ -189,7 +191,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         if chosenMissing {
             lines.append(String(localized: "The chosen voice is not available: the system voice speaks.", comment: "Settings › Assistant"))
         }
-        return lines.joined(separator: AssistantLanguage.current.isJapanese ? "" : " ")
+        return lines.joined(separator: AssistantLanguage.current.sentenceSeparator)
     }
 
     @objc private func personalVoiceClicked() {

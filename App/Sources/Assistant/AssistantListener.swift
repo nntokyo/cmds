@@ -6,8 +6,7 @@ private let listenerLog = Logger(subsystem: "tokyo.n-n.cmds", category: "assista
 
 /// The microphone, transcribed on the Mac (#243): `AVAudioEngine` feeds `SpeechAnalyzer` with a `SpeechTranscriber`
 /// for the app's language. Only finished utterances leave this class (`onUtterance`), as text; the caller drops those
-/// not addressed to the assistant right away. Audio is never written anywhere, and partial results are only used to
-/// say "someone is speaking".
+/// not addressed to the assistant right away. Audio is never written anywhere, and partial results are dropped.
 @available(macOS 26.0, *)
 @MainActor
 final class AssistantListener {
@@ -22,8 +21,6 @@ final class AssistantListener {
     var onUtterance: ((String) -> Void)?
     /// The input level, 0…1, about 20 times a second.
     var onLevel: ((Float) -> Void)?
-    /// Something is being said (a partial result came in).
-    var onHearing: (() -> Void)?
     /// Recognition stopped by itself (an error).
     var onStop: ((Error?) -> Void)?
 
@@ -115,11 +112,7 @@ final class AssistantListener {
                 for try await result in transcriber.results {
                     let text = String(result.text.characters)
                     guard let self else { return }
-                    if result.isFinal {
-                        if !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { self.onUtterance?(text) }
-                    } else if !text.isEmpty {
-                        self.onHearing?()
-                    }
+                    if result.isFinal, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { self.onUtterance?(text) }
                 }
                 self?.stopped(nil)
             } catch {
@@ -146,7 +139,7 @@ final class AssistantListener {
     /// The tap block runs on the audio thread: made outside the main actor, so it is not isolated to it (a block
     /// formed in a main-actor method would trap when called there).
     private nonisolated static func installTap(on input: AVAudioInputNode, format: AVAudioFormat, pump: AudioPump) {
-        input.installTap(onBus: 0, bufferSize: 2048, format: format) { buffer, _ in pump.push(buffer) }
+        input.installTap(onBus: 0, bufferSize: AssistantTuning.tapBufferSize, format: format) { buffer, _ in pump.push(buffer) }
     }
 
     func stop() {
@@ -218,11 +211,11 @@ private final class AudioPump: @unchecked Sendable {
     /// RMS of the first channel, scaled for display, at most 20 times a second.
     private func report(_ buffer: AVAudioPCMBuffer) {
         let now = Date()
-        guard now.timeIntervalSince(lastLevel) >= 0.05, let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
+        guard now.timeIntervalSince(lastLevel) >= AssistantTuning.levelInterval, let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
         lastLevel = now
         var sum: Float = 0
         for index in 0..<Int(buffer.frameLength) { sum += samples[index] * samples[index] }
         let rms = (sum / Float(buffer.frameLength)).squareRoot()
-        level(min(1, rms * 12))
+        level(min(1, rms * AssistantTuning.levelGain))
     }
 }

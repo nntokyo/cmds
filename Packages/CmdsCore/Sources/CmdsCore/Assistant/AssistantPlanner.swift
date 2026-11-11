@@ -125,10 +125,8 @@ public enum AssistantPlanner {
                 return plan(.replyMany(.named(names), text: text), world: world, strings: strings)
             }
             return pane(name, in: world, strings: strings) { workspace, pane in
-                let action = AssistantAction(kind: .reply, workspaceID: workspace.id, workspaceTitle: workspace.title,
-                                             paneID: pane.id, paneTitle: pane.title, text: text,
-                                             reasons: AssistantSafety.reasons(text: text, sshPane: pane.isSSH))
-                return propose(action, line: .confirmReply(text: text, workspace: workspace.title), strings: strings)
+                propose(replyAction(text, workspace: workspace, pane: pane), line: .confirmReply(text: text, workspace: workspace.title),
+                        strings: strings)
             }
         case .approve(let name):
             if let names = several(name, in: world) { return plan(.approveMany(.named(names)), world: world, strings: strings) }
@@ -152,7 +150,7 @@ public enum AssistantPlanner {
             let planned = plan(first, world: world, strings: strings, directoryExists: directoryExists, folders: folders,
                                executable: executable)
             guard case .propose(let action, let prompt) = planned, intents.count > 1 else { return planned }
-            return .propose(action, prompt: prompt + strings.separator + strings(next(intents[1], world: world)))
+            return .propose(action, prompt: strings.joined([prompt, strings(next(intents[1], world: world))]))
         case .pauseListening: return .pauseListening
         case .stop: return .stop
         case .confirm: return .confirm
@@ -162,17 +160,12 @@ public enum AssistantPlanner {
             return checkAll(scope, detailed: detailed, world: world, strings: strings)
         case .replyMany(let scope, let text):
             return many(scope, world: world, strings: strings) { workspace, pane in
-                .found(AssistantAction(kind: .reply, workspaceID: workspace.id, workspaceTitle: workspace.title,
-                                       paneID: pane.id, paneTitle: pane.title, text: text,
-                                       reasons: AssistantSafety.reasons(text: text, sshPane: pane.isSSH)))
+                .found(replyAction(text, workspace: workspace, pane: pane))
             } line: { titles in .confirmReplyMany(text: text, workspaces: titles) }
         case .approveMany(let scope):
             return many(scope, world: world, strings: strings) { workspace, pane in
                 guard let prompt = pane.prompt, let option = prompt.options.first(where: { $0.number == 1 }) else { return .skip }
-                let context = pane.promptContext + [prompt.question ?? "", option.label]
-                return .found(AssistantAction(kind: .choose(1), workspaceID: workspace.id, workspaceTitle: workspace.title,
-                                              paneID: pane.id, paneTitle: pane.title, text: "1", label: option.label,
-                                              reasons: AssistantSafety.reasons(text: "", context: context, sshPane: pane.isSSH)))
+                return .found(chooseAction(option, of: prompt, workspace: workspace, pane: pane))
             } line: { titles in .confirmApproveMany(workspaces: titles) }
         }
     }
@@ -300,9 +293,8 @@ public enum AssistantPlanner {
                                                       title: "\(workspace.title) › \(pane.title)", fallback: fallback))
                 }
             } else {
-                let pane: String?
-                if case .found(let target) = AssistantWorld.targetPane(in: workspace) { pane = target.id } else { pane = nil }
-                items.append(AssistantSummaryItem(workspaceID: workspace.id, paneID: pane, title: workspace.title, fallback: fallback))
+                items.append(AssistantSummaryItem(workspaceID: workspace.id, paneID: AssistantWorld.targetPane(in: workspace).found?.id,
+                                                  title: workspace.title, fallback: fallback))
             }
         }
         return .summarizeEach(Array(items.prefix(maxSessions)), detailed: detailed)
@@ -354,16 +346,14 @@ public enum AssistantPlanner {
         }
         var lines = [line(actions.map(\.workspaceTitle))]
         if !leftOut.isEmpty { lines.append(.leftOut(leftOut)) }
-        lines.append(batch.confirmation == .voiceOrKey ? .sayYesOrPressReturn : .pressReturnToConfirm)
+        lines.append(howToConfirm(batch))
         return .propose(batch, prompt: strings.join(lines))
     }
 
     private static func summarize(_ workspace: AssistantWorld.Workspace, detailed: Bool, world: AssistantWorld,
                                   strings: AssistantStrings) -> AssistantPlan {
-        let pane: String?
-        if case .found(let found) = AssistantWorld.targetPane(in: workspace) { pane = found.id } else { pane = nil }
-        return .summarize(workspaceID: workspace.id, paneID: pane, detailed: detailed,
-                          fallback: AssistantReport.workspace(workspace, now: world.now, strings: strings))
+        .summarize(workspaceID: workspace.id, paneID: AssistantWorld.targetPane(in: workspace).found?.id, detailed: detailed,
+                   fallback: AssistantReport.workspace(workspace, now: world.now, strings: strings))
     }
 
     private static func choose(_ number: Int, _ name: String?, world: AssistantWorld, strings: AssistantStrings) -> AssistantPlan {
@@ -372,18 +362,35 @@ public enum AssistantPlanner {
             guard let option = prompt.options.first(where: { $0.number == number }) else {
                 return .answer(strings(.noSuchOption(workspace: workspace.title, number: number)))
             }
-            let context = pane.promptContext + [prompt.question ?? "", option.label]
-            let action = AssistantAction(kind: .choose(number), workspaceID: workspace.id, workspaceTitle: workspace.title,
-                                         paneID: pane.id, paneTitle: pane.title, text: "\(number)", label: option.label,
-                                         reasons: AssistantSafety.reasons(text: "", context: context, sshPane: pane.isSSH))
-            return propose(action, line: .confirmChoice(number: number, label: option.label, workspace: workspace.title),
-                           strings: strings)
+            return propose(chooseAction(option, of: prompt, workspace: workspace, pane: pane),
+                           line: .confirmChoice(number: number, label: option.label, workspace: workspace.title), strings: strings)
         }
     }
 
     private static func propose(_ action: AssistantAction, line: AssistantLine, strings: AssistantStrings) -> AssistantPlan {
-        let ask: AssistantLine = action.confirmation == .voiceOrKey ? .sayYesOrPressReturn : .pressReturnToConfirm
-        return .propose(action, prompt: strings.join([line, ask]))
+        .propose(action, prompt: strings.join([line, howToConfirm(action)]))
+    }
+
+    /// The card's last sentence: how to confirm it.
+    private static func howToConfirm(_ action: AssistantAction) -> AssistantLine {
+        action.confirmation == .voiceOrKey ? .sayYesOrPressReturn : .pressReturnToConfirm
+    }
+
+    // MARK: Cards
+
+    /// Typing `text` (then Return) into the pane.
+    private static func replyAction(_ text: String, workspace: AssistantWorld.Workspace, pane: AssistantWorld.Pane) -> AssistantAction {
+        AssistantAction(kind: .reply, workspaceID: workspace.id, workspaceTitle: workspace.title, paneID: pane.id,
+                        paneTitle: pane.title, text: text, reasons: AssistantSafety.reasons(text: text, sshPane: pane.isSSH))
+    }
+
+    /// Typing the option's number, checked with what the agent asks and the screen above it.
+    private static func chooseAction(_ option: AgentPromptOptions.Option, of prompt: AgentPromptOptions,
+                                     workspace: AssistantWorld.Workspace, pane: AssistantWorld.Pane) -> AssistantAction {
+        let context = pane.promptContext + [prompt.question ?? "", option.label]
+        return AssistantAction(kind: .choose(option.number), workspaceID: workspace.id, workspaceTitle: workspace.title,
+                               paneID: pane.id, paneTitle: pane.title, text: "\(option.number)", label: option.label,
+                               reasons: AssistantSafety.reasons(text: "", context: context, sshPane: pane.isSSH))
     }
 
     /// The workspace `name` means, or a question back.

@@ -274,9 +274,9 @@ final class AssistantVocabularyTests: XCTestCase {
         for text in ["what is a monad", "明日の天気は", "モナドって何"] {
             XCTAssertFalse(AssistantInterpretation.mightBeCommand(text, world: w), text)
         }
-        let prompt = AssistantInterpretation.prompt(utterance: "EPAのテストどうなった", world: w, language: "Japanese")
+        let prompt = AssistantClaude.interpreterPrompt(utterance: "EPAのテストどうなった", world: w, language: "Japanese")
         XCTAssertTrue(prompt.contains("- \"EPA\" is probably \"api\""))
-        XCTAssertFalse(AssistantInterpretation.prompt(utterance: "api", world: w, language: "Japanese").contains("misheard"))
+        XCTAssertFalse(AssistantClaude.interpreterPrompt(utterance: "api", world: w, language: "Japanese").contains("misheard"))
     }
 
     func testInterpretedStart() {
@@ -297,6 +297,21 @@ final class AssistantVocabularyTests: XCTestCase {
         XCTAssertTrue(AssistantClaude.modelInstructions(language: "Japanese", web: true, actions: true).contains("Never apologise"))
         // Summaries never get it (a summary came back as "[START]").
         XCTAssertFalse(AssistantClaude.modelInstructions(language: "Japanese", web: false).contains(AssistantModelReply.actionMarker))
+    }
+
+    func testOnDeviceSummariesThatAreNoSummary() {
+        XCTAssertTrue(AssistantModelReply.isSummary("Running the tests."))
+        XCTAssertTrue(AssistantModelReply.isSummary("[WIP] running the tests."))
+        XCTAssertTrue(AssistantModelReply.isSummary("テストを実行中。"))
+        XCTAssertFalse(AssistantModelReply.isSummary(""))
+        XCTAssertFalse(AssistantModelReply.isSummary("[START]"))
+        XCTAssertFalse(AssistantModelReply.isSummary("[[ACTION]]"))
+        XCTAssertFalse(AssistantModelReply.isSummary("申し訳ありませんが、操作はできません。"))
+    }
+
+    func testOneLine() {
+        XCTAssertEqual(AssistantText.oneLine("  Run\nthe tests?\r\n "), "Run the tests?")
+        XCTAssertEqual(AssistantText.oneLine("api"), "api")
     }
 
     // MARK: Follow-through

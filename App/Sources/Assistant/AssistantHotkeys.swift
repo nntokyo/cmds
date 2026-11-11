@@ -52,10 +52,6 @@ final class AssistantHotkeys {
 
     var confirmationKeysOn: Bool { registered[.confirm] != nil }
 
-    func removeAll() {
-        Array(registered.keys).forEach(unregister)
-    }
-
     private func register(_ key: Key, keyCode: UInt32, modifiers: UInt32) {
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(keyCode, modifiers, EventHotKeyID(signature: Self.signature, id: key.rawValue),

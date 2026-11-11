@@ -32,6 +32,11 @@ public enum AssistantText {
     /// Separators that may follow the assistant's name or end an utterance.
     static let separators = CharacterSet.whitespacesAndNewlines.union(CharacterSet(charactersIn: ".,!?;:。、，．！？；：…"))
 
+    /// `text` on one line: line breaks as spaces, trimmed of spaces (titles, questions, messages to speak or send).
+    public static func oneLine(_ text: String) -> String {
+        text.split(whereSeparator: \.isNewline).joined(separator: " ").trimmingCharacters(in: .whitespaces)
+    }
+
     /// `text` without leading and trailing separators (spaces, `、`, `。`, `,`, `!`, `?`).
     public static func trimmed(_ text: String) -> String {
         text.trimmingCharacters(in: separators)

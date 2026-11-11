@@ -9,8 +9,6 @@ import CmdsCore
 final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     private var finished: (() -> Void)?
-    /// The output level while speaking (a pulse for the orb), driven by a timer since the synthesizer gives none.
-    private(set) var isSpeaking = false
 
     override init() {
         super.init()
@@ -52,7 +50,6 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
         utterance.voice = chosen.flatMap { AVSpeechSynthesisVoice(identifier: $0.identifier) } ?? AVSpeechSynthesisVoice(language: language)
         utterance.rate = Float(rate)
         self.finished = finished
-        isSpeaking = true
         synthesizer.speak(utterance)
     }
 
@@ -60,7 +57,6 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
         let pending = finished
         finished = nil
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
-        isSpeaking = false
         pending?()
     }
 
@@ -73,7 +69,6 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     }
 
     private func done() {
-        isSpeaking = false
         let pending = finished
         finished = nil
         pending?()

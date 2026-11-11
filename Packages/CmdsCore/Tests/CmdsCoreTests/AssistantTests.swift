@@ -288,6 +288,23 @@ final class AssistantPlannerTests: XCTestCase {
         let text = AssistantReport.workspace(world().workspaces[0], now: now, strings: strings)
         XCTAssertTrue(text.contains("apiが応答待ちです。It asks"), text)
     }
+
+    /// An agent's question as it asked it ends in a Latin mark: the next sentence still gets a space ("…now?api-v2が" was
+    /// run together).
+    func testJapaneseSeparatorAfterALatinQuestion() {
+        let strings = AssistantStrings(separator: "") { line in
+            switch line {
+            case .asks(let question): return "質問：\(question)"
+            case .optionsOffered(let count, let first): return "選択肢は\(count)個、1番は「\(first)」です。"
+            default: return "。"
+            }
+        }
+        XCTAssertEqual(strings.join([.asks("Run the tests now?"), .optionsOffered(count: 2, first: "Yes")]),
+                       "質問：Run the tests now? 選択肢は2個、1番は「Yes」です。")
+        XCTAssertEqual(strings.join([.asks("テストを実行しますか？"), .optionsOffered(count: 2, first: "Yes")]),
+                       "質問：テストを実行しますか？選択肢は2個、1番は「Yes」です。")
+        XCTAssertEqual(AssistantStrings.english.join([.asks("Run the tests now?"), .wake]), "It asks: Run the tests now? Yes?")
+    }
 }
 
 /// The HUD's states and when an action may run (#243).
@@ -926,7 +943,7 @@ final class AssistantManySessionsTests: XCTestCase {
         var w = world()
         w.workspaces[0].notification = "SECRET from the screen"
         w.workspaces[0].panes[0].promptContext = ["SECRET line"]
-        let prompt = AssistantInterpretation.prompt(utterance: "approve api", world: w, language: "English")
+        let prompt = AssistantClaude.interpreterPrompt(utterance: "approve api", world: w, language: "English")
         XCTAssertFalse(prompt.contains("SECRET"))
         XCTAssertTrue(prompt.contains("- api: Claude, needs the user (waits for input)"))
         XCTAssertTrue(prompt.contains("- docs: no agent, no agent running"))

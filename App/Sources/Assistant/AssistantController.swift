@@ -17,6 +17,11 @@ private let assistantLog = Logger(subsystem: "tokyo.n-n.cmds", category: "assist
 ///
 /// Isolated instances (`CMDS_SUPPORT_DIR`) register no global keys, so a test never takes Return or ⌥⌘J from the app
 /// in use; `debug.assistant` drives them with text instead of the microphone.
+///
+/// This file: on / off, the microphone, speaking, the HUD and the clock. The rest by responsibility:
+/// `+Listening` (utterances, keys, the machine's steps), `+Thinking` (planning and answers), `+Actions` (confirmed
+/// cards), `+FollowThrough` (sessions given a task) and `+Debug` (`debug.assistant`). The state they share is internal
+/// for them; nothing outside the assistant changes it.
 @available(macOS 26.0, *)
 @MainActor
 final class AssistantController {
@@ -25,49 +30,57 @@ final class AssistantController {
     static let didChange = Notification.Name("AssistantDidChange")
 
     let controller: AppController
-    private(set) var machine = AssistantMachine()
+    var machine = AssistantMachine()
     let hud = AssistantHUD()
-    private let voice = AssistantVoice()
-    private let listener = AssistantListener()
-    private var hotkeys: AssistantHotkeys?
+    let voice = AssistantVoice()
+    let listener = AssistantListener()
+    private(set) var hotkeys: AssistantHotkeys?
     private var timer: Timer?
     /// Each spoken answer's number: only the latest one's end moves the machine on.
-    private var speech = 0
-    /// The HUD stays this long after the assistant went back to standing by.
-    private static let hudLinger: TimeInterval = 6
+    var speech = 0
+    /// When the HUD hides, after the assistant went back to standing by (`AssistantTuning.hudLinger`).
     private var hideAt: Date?
     /// The user said yes to an action that needs Return or a click.
-    private var needsKey = false
-    /// Return / Esc are ignored this long after a card appears (a Return already on its way to the terminal).
-    private static let confirmArmDelay: TimeInterval = 0.8
-    private var pendingShownAt: Date?
+    var needsKey = false
+    /// When the card appeared: Return / Esc are ignored just after (`AssistantTuning.confirmArmDelay`).
+    var pendingShownAt: Date?
     /// Whether the microphone is used; `debug.assistant` turns the assistant on without it.
-    private var usesMicrophone = true
+    var usesMicrophone = true
     /// The microphone runs for one command after the hotkey while paused.
-    private var temporaryMicrophone = false
-    private var work: Task<Void, Never>?
+    var temporaryMicrophone = false
+    /// The answer being worked out (`think`); cancelled when the user moves on.
+    var work: Task<Void, Never>?
     /// The last thing said, and a problem to show (microphone denied…).
     private(set) var lastSpoken: String?
     private(set) var problem: String?
     /// The rest of an utterance with several requests, carried out one after the other after the first (and its card).
-    private var queued: [AssistantIntent] = []
+    var queued: [AssistantIntent] = []
     /// Workspaces started by an earlier step of the utterance: the later steps mean the workspaces as they were when
     /// it was said (a new one in api's folder is also called api).
-    private var createdForQueue: Set<String> = []
+    var createdForQueue: Set<String> = []
     /// The workspace the last request was about, and when: a start without a place goes there.
-    private var recent: (id: String, at: Date)?
-    private static let recentFor: TimeInterval = 300
+    var recent: (id: String, at: Date)?
     /// Sessions the assistant started with a task or sent an instruction to, followed until their agent is done
     /// (Settings › Assistant › Report on tasks I gave).
-    private var taskWatch = AssistantTaskWatch()
+    var taskWatch = AssistantTaskWatch()
     /// Follow-through lines waiting for the assistant to be free.
-    private var announcements: [String] = []
+    var announcements: [String] = []
     private var stateChanges: AnyCancellable?
     /// The words last handed to speech recognition as context.
-    private var vocabulary: [String] = []
-    private(set) var lastStep: AssistantMachine.Step?
-
-    static var isSupported: Bool { true }
+    private(set) var vocabulary: [String] = []
+    /// The machine's last step other than `.ignore` (`debug.assistant`).
+    var lastStep: AssistantMachine.Step?
+    /// The request the assistant asked back about ("Which one: api, api-v2?"), until the next command.
+    var askedBack: AssistantIntent?
+    /// Claude Code is working on the answer to this request (the HUD says so).
+    var claudeWorkingFor: Int?
+    var claudeWorking: Bool { claudeWorkingFor == machine.request }
+    /// The answer being worked out came from Claude Code.
+    var claudeAnswered = false
+    /// The answer shown came from Claude Code (a small label on the HUD).
+    private var answerByClaude = false
+    /// A note shown instead of the answer (paused, goodbye, "press Return").
+    private var hudNote: String?
 
     /// Created at launch (AppDelegate); turns itself on when the user had it on.
     static func start(controller: AppController) {
@@ -99,9 +112,9 @@ final class AssistantController {
     var isUnlocked: Bool { PaidFeatures.isUnlocked(.assistant) }
     var isOn: Bool { machine.isOn }
     var isPaused: Bool { machine.phase == .paused }
-    private var settings: AppSettings { AppSettings.shared }
-    private var language: AssistantLanguage { .current }
-    private var names: [String] { AssistantAddressing.names(configured: settings.assistantNames) }
+    var settings: AppSettings { AppSettings.shared }
+    var language: AssistantLanguage { .current }
+    var names: [String] { AssistantAddressing.names(configured: settings.assistantNames) }
 
     private func settingsChanged() {
         updateVocabulary()
@@ -166,7 +179,7 @@ final class AssistantController {
         refresh()
     }
 
-    private func startMicrophone() {
+    func startMicrophone() {
         guard usesMicrophone, !listener.isRunning else { return }
         updateVocabulary()
         let locale = language.locale
@@ -196,343 +209,12 @@ final class AssistantController {
         refresh()
     }
 
-    // MARK: Input
-
-    /// A finished utterance from the microphone (or `debug.assistant`). Not addressed: dropped here, unstored.
-    /// Said by name while the assistant speaks or works (barge-in), it stops that first; the HUD shows the new
-    /// transcript at once.
-    func hear(_ text: String) {
-        let request = machine.request
-        let step = machine.hear(text, names: names, now: Date())
-        if machine.request != request { interrupt() }
-        perform(step)
-    }
-
-    /// The listen shortcut.
-    func hotkey() {
-        guard isOn else { return }
-        let request = machine.request
-        machine.hotkey(now: Date())
-        if machine.request != request { interrupt() }
-        if machine.phase == .listening, !listener.isRunning, usesMicrophone {
-            temporaryMicrophone = true
-            startMicrophone()
-        }
-        refresh()
-    }
-
-    /// Return / Esc (while the card shows) and the card's buttons.
-    func key(_ key: AssistantMachine.Key) {
-        let request = machine.request
-        let step = machine.key(key, now: Date())
-        if machine.request != request { interrupt() }
-        perform(step)
-    }
-
-    /// Stops what the assistant was saying or working out (a new request, barge-in): the voice, and the task with its
-    /// `claude` process (cancelled: `AssistantBrain` terminates it). A late answer is dropped by its request number.
-    private func interrupt() {
-        speech += 1
-        voice.stop()
-        work?.cancel()
-        work = nil
-        claudeWorkingFor = nil
-    }
-
-    private func globalKey(_ key: AssistantHotkeys.Key) {
-        switch key {
-        case .listen: hotkey()
-        case .confirm, .enter, .cancel:
-            if let shown = pendingShownAt, Date().timeIntervalSince(shown) < Self.confirmArmDelay { return }
-            self.key(key == .cancel ? .cancel : .confirm)
-        }
-    }
-
-    private func perform(_ step: AssistantMachine.Step) {
-        if step != .ignore { lastStep = step }
-        switch step {
-        case .ignore:
-            return
-        case .wake:
-            refresh()
-        case .handle(var intent):
-            // The answer to "Which one?": the request asked back about, aimed at the workspace named. The rest of its
-            // utterance still follows; any other new request drops it.
-            if let previous = askedBack, case .question(let answer) = intent, let retargeted = previous.retargeted(answer) {
-                intent = retargeted
-            } else {
-                queued = []
-                createdForQueue = []
-            }
-            askedBack = nil
-            assistantLog.info("assistant command: \(String(describing: intent).prefix(24), privacy: .private)")
-            refresh()
-            handle(intent)
-        case .execute(let action):
-            run(action)
-        case .cancelled:
-            // No to a card is no to the rest of that utterance as well.
-            queued = []
-            say(AssistantStrings.localized(.cancelled))
-        case .needsKey:
-            needsKey = true
-            speakOnly(AssistantStrings.localized(.voiceNotEnough))
-        case .expired:
-            queued = []
-            say(AssistantStrings.localized(.expired))
-        }
-    }
-
-    // MARK: Answers
-
-    /// The request the assistant asked back about ("Which one: api, api-v2?"), until the next command.
-    private var askedBack: AssistantIntent?
-
-    /// Plans what was asked against the workspaces as they are now, and carries it out.
-    private func handle(_ intent: AssistantIntent) {
-        // Several requests in one utterance: the first now (its card says what comes next), the rest after it.
-        var asked = intent
-        if case .sequence(let intents) = intent, let first = intents.first {
-            queued = Array(intents.dropFirst())
-            createdForQueue = []
-            asked = first
-        }
-        let world = currentWorld()
-        let plan = AssistantPlanner.plan(intent, world: world, strings: .localized, directoryExists: Self.isFolder,
-                                         folders: { [settings] name in
-                                             AssistantPlaces(roots: AssistantPlaces.roots(setting: settings.assistantProjectFolders,
-                                                                                          home: NSHomeDirectory(), exists: Self.isFolder)).find(name)
-                                         }, executable: Self.agentExecutable)
-        remember(plan)
-        carryOut(plan, world: world, asked: asked)
-    }
-
-    private static func isFolder(_ path: String) -> Bool {
-        var isFolder: ObjCBool = false
-        return FileManager.default.fileExists(atPath: (path as NSString).expandingTildeInPath, isDirectory: &isFolder)
-            && isFolder.boolValue
-    }
-
-    /// Debug builds only: `CMDS_ASSISTANT_AGENT_EXECUTABLE` (an absolute path) runs instead of `claude` / `codex` when
-    /// the assistant starts an agent, so tests can confirm a start without running a real agent.
-    private static var agentExecutable: String? {
-        #if DEBUG
-        ProcessInfo.processInfo.environment["CMDS_ASSISTANT_AGENT_EXECUTABLE"].flatMap { $0.hasPrefix("/") ? $0 : nil }
-        #else
-        nil
-        #endif
-    }
-
-    /// The workspaces now, with the selected one and the one the last request was about.
-    private func currentWorld() -> AssistantWorld {
-        var world = AgentOverview.assistantWorld(controller)
-        world.workspaces.removeAll { createdForQueue.contains($0.id) }
-        world.focusedID = controller.selectedWorkspaceID
-        if let recent, Date().timeIntervalSince(recent.at) < Self.recentFor { world.recentID = recent.id }
-        return world
-    }
-
-    /// Notes the workspace a request was about.
-    private func remember(_ plan: AssistantPlan) {
-        switch plan {
-        case .summarize(let id, _, _, _): recent = (id, Date())
-        case .propose(let action, _): if let id = action.workspaceID { recent = (id, Date()) }
-        default: break
-        }
-    }
-
-    /// The next request of the utterance, once the one before has been answered (and its card confirmed).
-    private func continueQueue() {
-        guard !queued.isEmpty, askedBack == nil, machine.proceed() else { return }
-        let next = queued.removeFirst()
-        refresh()
-        handle(next)
-    }
-
-    private func carryOut(_ plan: AssistantPlan, world: AssistantWorld, asked: AssistantIntent) {
-        let strings = AssistantStrings.localized
-        switch plan {
-        case .answer(let text):
-            say(text)
-        case .askBack(let text):
-            say(text)
-            askedBack = asked
-        case .propose(let action, let prompt):
-            needsKey = false
-            pendingShownAt = Date()
-            say(prompt, proposing: action)
-        case .summarize(let workspaceID, let paneID, let detailed, let fallback):
-            let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? ""
-            think(capped: !detailed) { await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed) }
-        case .summarizeEach(let items, let detailed):
-            // One session after the other, a line each (spoken in turn, listed on the HUD).
-            let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? "" }
-            think {
-                var lines: [String] = []
-                for (item, screen) in zip(items, screens) {
-                    if Task.isCancelled { return nil }
-                    let summary = await self.summary(of: item.workspaceID, facts: item.fallback, screen: screen, detailed: detailed)
-                    lines.append(strings(.session(workspace: item.title, summary: summary)))
-                }
-                return lines.joined(separator: "\n")
-            }
-        case .ask(let question):
-            // A free command for the agents ("api の Claude にテストを書くよう指示して"): the interpreter (`claude -p`, no
-            // tools) turns it into a proposal, planned and confirmed like any other command. Else it is a question.
-            if settings.assistantInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
-                let request = machine.request
-                return think(capped: true) {
-                    if let intent = await self.interpret(question, world: world) {
-                        guard !Task.isCancelled, self.machine.request == request, self.machine.phase == .thinking else { return nil }
-                        self.handle(intent)
-                        return nil
-                    }
-                    return await self.answer(question, world: world, interpreted: true)
-                }
-            }
-            think(capped: true) { await self.answer(question, world: world, interpreted: false) }
-        case .pauseListening:
-            pause()
-            speakOnly(strings(.paused))
-        case .stop:
-            let text = strings(.goodbye)
-            turnOff()
-            speakOnly(text)
-        case .confirm, .cancel:
-            say(strings(.nothingToConfirm))
-        }
-    }
-
-    /// What a session's agent is doing: by the on-device model, or by `claude -p` when `detailed`; the facts when there
-    /// is no screen, no model or it fails.
-    private func summary(of workspaceID: String, facts: String, screen: String, detailed: Bool) async -> String {
-        guard !screen.isEmpty else { return facts }
-        do {
-            if detailed {
-                let request = claudeStarted()
-                defer { claudeStopped(request) }
-                let summary = try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language)
-                markAnsweredByClaude(request)
-                return AssistantBrevity.first(3, of: summary)
-            }
-            guard AssistantBrain.modelAvailable else { return facts }
-            // One sentence a session ("api: テストを実行中。").
-            let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language))
-            // A marker or a bracketed word ("[START]") is no summary.
-            let bare = summary.trimmingCharacters(in: CharacterSet(charactersIn: "[] .。"))
-            return summary.isEmpty || AssistantModelReply.isAction(summary) || (summary.hasPrefix("[") && !bare.contains(" "))
-                ? facts : summary
-        } catch {
-            assistantLog.error("assistant summary of \(workspaceID, privacy: .public) failed: \(String(describing: error), privacy: .public)")
-            return facts
-        }
-    }
-
-    /// A free question: Claude with web search for weather, news, "search…" (Settings › Assistant, on by default),
-    /// else the on-device model, and Claude after all when the model answers that it needs current information. When
-    /// the model takes it for an action (or apologises that it cannot act), it is never spoken: the interpreter gets it
-    /// (unless it already had it), else the assistant says how to ask. nil: it went on as a command.
-    private func answer(_ question: String, world: AssistantWorld, interpreted: Bool) async -> String? {
-        let strings = AssistantStrings.localized
-        let web = settings.assistantWeb
-        if web, AssistantWeb.needsWeb(question) { return await webAnswer(question) }
-        guard AssistantBrain.modelAvailable else { return strings(.modelUnavailable) }
-        let status = AssistantReport.status(world, strings: .english)
-        do {
-            let answer = try await AssistantBrain.answer(question, status: status, language: language, web: web)
-            if web, AssistantWeb.answerNeedsWeb(answer) { return await webAnswer(question) }
-            if AssistantModelReply.isAction(answer) {
-                let request = machine.request
-                if !interpreted, settings.assistantInterpreter, let intent = await interpret(question, world: world) {
-                    guard !Task.isCancelled, machine.request == request, machine.phase == .thinking else { return nil }
-                    handle(intent)
-                    return nil
-                }
-                return strings(.cannotTell)
-            }
-            let text = AssistantWeb.withoutMarker(answer)
-            return text.isEmpty ? strings(.modelUnavailable) : text
-        } catch {
-            return strings(.modelUnavailable)
-        }
-    }
-
-    /// A free command as an intent, by the interpreter; nil when it is a question, `claude` is missing or fails.
-    private func interpret(_ utterance: String, world: AssistantWorld) async -> AssistantIntent? {
-        let request = claudeStarted()
-        defer { claudeStopped(request) }
-        do {
-            let output = try await AssistantBrain.interpret(utterance: utterance, world: world, language: language)
-            let intent = AssistantInterpretation.parse(output)?.intent(in: world)
-            assistantLog.info("assistant interpreted a free command: \(intent.map { String(describing: $0).prefix(24) } ?? "question", privacy: .private)")
-            return intent
-        } catch {
-            assistantLog.error("assistant interpreter failed: \(String(describing: error), privacy: .public)")
-            return nil
-        }
-    }
-
-    /// A question for Claude Code with web search (`AssistantBrain.webAnswer`); a short note when it is missing, fails
-    /// or takes too long.
-    private func webAnswer(_ question: String) async -> String {
-        let strings = AssistantStrings.localized
-        let request = claudeStarted()
-        defer { claudeStopped(request) }
-        do {
-            let text = try await AssistantBrain.webAnswer(question: question, language: language)
-            markAnsweredByClaude(request)
-            return text
-        } catch AssistantBrain.ClaudeFailure.notFound {
-            return strings(.claudeNotFound)
-        } catch {
-            assistantLog.error("assistant web answer failed: \(String(describing: error), privacy: .public)")
-            return strings(.webFailed)
-        }
-    }
-
-    /// Claude Code is working on the answer to this request (the HUD says so).
-    private var claudeWorkingFor: Int?
-    private var claudeWorking: Bool { claudeWorkingFor == machine.request }
-    /// The answer being worked out came from Claude Code.
-    private var claudeAnswered = false
-
-    /// `claude` starts for the current request: its number.
-    private func claudeStarted() -> Int {
-        claudeWorkingFor = machine.request
-        refresh()
-        return machine.request
-    }
-
-    /// `claude` ended (or was stopped); a newer request's mark stays.
-    private func claudeStopped(_ request: Int) {
-        if claudeWorkingFor == request { claudeWorkingFor = nil }
-    }
-
-    /// The answer to `request` came from Claude (not when the user has moved on since).
-    private func markAnsweredByClaude(_ request: Int) {
-        if machine.request == request { claudeAnswered = true }
-    }
-    /// The answer shown came from Claude Code (a small label on the HUD).
-    private var answerByClaude = false
-
-    /// Works out an answer off the main actor's way, then says it (dropped when the user has moved on to another
-    /// request; nil: the body already went on another way). `capped`: a long answer is spoken only up to its first
-    /// sentence (`AssistantBrevity.spoken`); the HUD shows it all.
-    private func think(capped: Bool = false, _ body: @escaping @MainActor () async -> String?) {
-        work?.cancel()
-        claudeAnswered = false
-        let request = machine.request
-        work = Task { [weak self] in
-            let text = await body()
-            guard let self, let text, !Task.isCancelled, self.machine.request == request, self.machine.phase == .thinking else { return }
-            self.say(text, request: request, capped: capped, byClaude: self.claudeAnswered)
-        }
-    }
+    // MARK: Speaking
 
     /// Shows and speaks an answer (for `request`: not when the user has moved on since); the machine moves on when it
     /// has been said.
-    private func say(_ text: String, proposing action: AssistantAction? = nil, request: Int? = nil, capped: Bool = false,
-                     byClaude: Bool = false) {
+    func say(_ text: String, proposing action: AssistantAction? = nil, request: Int? = nil, capped: Bool = false,
+             byClaude: Bool = false) {
         guard machine.answer(text, proposing: action, request: request, now: Date()) else { return }
         answerByClaude = byClaude
         refresh()
@@ -547,9 +229,9 @@ final class AssistantController {
     }
 
     /// Speaks without changing the state (a note while a card waits, or after turning off).
-    private func speakOnly(_ text: String) {
+    func speakOnly(_ text: String) {
         lastSpoken = text
-        if isOn { hideAt = Date().addingTimeInterval(Self.hudLinger) }
+        if isOn { hideAt = Date().addingTimeInterval(AssistantTuning.hudLinger) }
         hudNote = text
         machine.voiceStarted(text)
         refresh()
@@ -562,9 +244,6 @@ final class AssistantController {
         }
     }
 
-    /// A note shown instead of the answer (paused, goodbye, "press Return").
-    private var hudNote: String?
-
     private func speak(_ text: String, finished: @escaping () -> Void) {
         lastSpoken = text
         hudNote = nil
@@ -572,77 +251,18 @@ final class AssistantController {
                     muted: settings.assistantMuted, finished: finished)
     }
 
-    // MARK: Actions
-
-    /// Carries out a confirmed action through the app's own paths (as the menu bar's reply panel does). The target
-    /// pane is checked again: it must still exist in the same workspace.
-    private func run(_ action: AssistantAction) {
-        let strings = AssistantStrings.localized
-        pendingShownAt = nil
-        // One card for several sessions: each goes to its own pane, checked again one by one.
-        let actions = action.all
-        if actions.count > 1 {
-            let failed = actions.filter { !send($0) }.map(\.workspaceTitle)
-            var lines: [AssistantLine] = []
-            if failed.count < actions.count { lines.append(.sentMany(count: actions.count - failed.count)) }
-            if !failed.isEmpty { lines.append(.failedIn(failed)) }
-            return say(strings.join(lines))
-        }
-        switch action.kind {
-        case .reply, .choose:
-            say(send(action) ? strings(.sent(workspace: action.workspaceTitle)) : strings(.failed))
-        case .startAgent(let kind, let directory, let task):
-            // A new workspace in the folder running the agent, its task as the first prompt (one quoted argument).
-            let path = (directory as NSString).expandingTildeInPath
-            let info = controller.createWorkspace(cwd: path, command: action.text, select: false)
-            recent = (info.id, Date())
-            if !queued.isEmpty { createdForQueue.insert(info.id) }
-            if task != nil, let pane = controller.workspace(id: info.id)?.orderedPanes.first {
-                taskWatch.watch(paneID: pane.id, workspaceID: info.id, agent: kind.displayName, current: .none, now: Date())
-            }
-            say(strings(.started(agent: kind.displayName, place: action.workspaceTitle)))
-        }
-    }
-
-    /// Types a reply (then Return) or an option's digit into the action's pane, if it is still in the same workspace.
-    private func send(_ action: AssistantAction) -> Bool {
-        assistantLog.info("assistant runs a confirmed action in \(action.workspaceID ?? "new", privacy: .public)/\(action.paneID ?? "-", privacy: .public)")
-        guard let paneID = action.paneID, let pane = controller.pane(id: paneID), pane.workspaceID == action.workspaceID,
-              pane.terminal != nil else { return false }
-        do {
-            switch action.kind {
-            case .choose:
-                try controller.typeText(paneID: paneID, text: action.text)
-            case .reply:
-                try controller.sendText(paneID: paneID, text: action.text)
-                DispatchQueue.main.asyncAfter(deadline: .now() + ScheduleRunTiming.enterDelay) { [controller] in
-                    try? controller.typeText(paneID: paneID, text: "\r")
-                }
-                // An instruction to an agent: say when it is done with it.
-                if let agent = pane.agentUsage?.agent.displayName {
-                    taskWatch.watch(paneID: paneID, workspaceID: pane.workspaceID, agent: agent, current: pane.agentActivity, now: Date())
-                }
-            case .startAgent:
-                return false
-            }
-            return true
-        } catch {
-            return false
-        }
-    }
-
     // MARK: HUD and clock
 
     private func startTimer() {
         guard timer == nil else { return }
-        let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: AssistantTuning.tickInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
     }
 
-    private func tick() {
+    func tick() {
         let before = machine.phase
         let step = machine.tick(now: Date())
         if step != .ignore { perform(step) }
@@ -660,7 +280,7 @@ final class AssistantController {
         if active {
             hideAt = nil
         } else if hideAt == nil, hud.isVisible {
-            hideAt = Date().addingTimeInterval(Self.hudLinger)
+            hideAt = Date().addingTimeInterval(AssistantTuning.hudLinger)
         }
         // The microphone taken by the hotkey while paused goes off again.
         if temporaryMicrophone, phase == .paused {
@@ -696,52 +316,10 @@ final class AssistantController {
         return answerByClaude && machine.answer != nil && hudNote == nil ? .answered : .none
     }
 
-    /// Phase 2 hook (#243, proactive announcements, opt-in): called when the workspaces' states change, e.g. to say
-    /// "api needs you". Does nothing in the MVP.
-    func workspacesChanged(_ summary: MenuBarSummary) {}
-
-    // MARK: Workspaces changing
-
-    /// A workspace or pane changed: the recognition vocabulary follows the titles, and the sessions given a task are
-    /// checked for their agent's state (the state the app already tracks; no screen is read).
-    private func stateChanged(_ change: StateChange) {
-        switch change {
-        case .workspaces, .workspace: updateVocabulary()
-        case .pane, .notification: break
-        }
-        guard !taskWatch.entries.isEmpty else { return }
-        for entry in taskWatch.entries {
-            guard let pane = controller.pane(id: entry.paneID), pane.workspaceID == entry.workspaceID,
-                  let workspace = controller.workspace(id: entry.workspaceID) else {
-                taskWatch.forget(paneID: entry.paneID)
-                continue
-            }
-            let question = workspace.notificationPaneID == pane.id ? workspace.notificationText : nil
-            if let event = taskWatch.update(paneID: pane.id, activity: pane.agentActivity, question: question, now: Date()) {
-                announce(event)
-            }
-        }
-    }
-
-    /// One sentence about a session given a task, when the setting is on: now if the assistant is free, else after.
-    private func announce(_ event: AssistantTaskWatch.Event) {
-        guard settings.assistantReportTasks, isOn else { return }
-        let strings = AssistantStrings.localized
-        let text: String
-        switch event {
-        case .finished(let agent, let id):
-            text = strings(.taskDone(agent: agent, workspace: controller.workspace(id: id)?.displayTitle ?? agent))
-        case .needsInput(let agent, let id, let question):
-            let title = controller.workspace(id: id)?.displayTitle ?? agent
-            text = strings(question.map { .taskAsks(agent: agent, workspace: title, question: $0) } ?? .taskNeedsYou(agent: agent, workspace: title))
-        }
-        assistantLog.info("assistant follow-through on a task it gave")
-        announcements.append(text)
-        tick()
-    }
+    // MARK: Recognition
 
     /// Hands speech recognition the words to expect: the names, Claude Code, Codex, cmds, the workspaces and agents.
-    private func updateVocabulary() {
+    func updateVocabulary() {
         let workspaces = controller.workspaces
         let words = AssistantVocabulary.contextualStrings(
             names: names, titles: workspaces.map(\.displayTitle),
@@ -752,13 +330,6 @@ final class AssistantController {
     }
 
     #if DEBUG
-    var debugUsesMicrophone: Bool { usesMicrophone }
-    var debugQueued: [String] { queued.map { String(describing: $0) } }
-    var debugWatching: [String] { taskWatch.entries.map(\.paneID) }
-    var debugVocabulary: [String] { vocabulary }
-    var debugConfirmationKeys: Bool { hotkeys?.confirmationKeysOn ?? false }
-    var debugClaudeWorking: Bool { claudeWorking }
-
     /// `debug.assistant` `speak`: the assistant "says" `text` without a voice and stays speaking until `spoken`, to
     /// test what it hears meanwhile (its own voice, barge-in).
     func debugSpeak(_ text: String) {
