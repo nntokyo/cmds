@@ -258,41 +258,51 @@ extension BrowserPageDelegate {
     /// `debug.browser`: the pop-ups and the sheet a page waits for; `answer` (`ok` / `cancel`) answers that sheet as
     /// its buttons do, with `text` typed into a prompt or, for the open panel, the path of the file chosen.
     func debugState(answer: String?, text: String?) -> [String: JSONValue] {
-        var result: [String: JSONValue] = [
-            "popups": .array(popups.map { popup in
-                .object([
-                    "title": .string(popup.title),
-                    "subtitle": .string(popup.subtitle),
-                    "url": popup.webView.url.map { .string($0.absoluteString) } ?? .null,
-                    "size": .array([popup.webView.frame.width, popup.webView.frame.height].map { .number(Double($0)) }),
-                    "key": .bool(popup.isKeyWindow),
-                ])
-            }),
-        ]
+        var result: [String: JSONValue] = ["popups": .array(popups.map(\.debugState))]
         guard let sheet = sheets.first else { return result }
-        if let alert = sheet.alert {
-            result["sheet"] = .object([
-                "title": .string(alert.messageText),
-                "message": .string(alert.informativeText),
-                "buttons": .array(alert.buttons.map { .string($0.title) }),
-                "field": (alert.accessoryView as? NSTextField).map { .string($0.stringValue) } ?? .null,
-            ])
-        } else {
-            result["sheet"] = .object(["openPanel": .bool(true)])
-        }
+        result["sheet"] = sheet.debugState
         guard let answer else { return result }
-        if let alert = sheet.alert {
-            if let text, let field = alert.accessoryView as? NSTextField { field.stringValue = text }
-            let cancel: NSApplication.ModalResponse = alert.buttons.count > 1 ? .alertSecondButtonReturn : .alertFirstButtonReturn
-            sheet.end(answer == "ok" ? .alertFirstButtonReturn : cancel)
-        } else if answer == "ok", let text {
-            sheet.answerWithFiles([URL(fileURLWithPath: text)])
-            sheet.end(.cancel)
-        } else {
-            sheet.end(.cancel)
-        }
+        sheet.debugAnswer(ok: answer == "ok", text: text)
         result["answered"] = .string(answer)
         return result
+    }
+}
+
+private extension BrowserPopupWindow {
+    var debugState: JSONValue {
+        .object([
+            "title": .string(title),
+            "subtitle": .string(subtitle),
+            "url": webView.url.map { .string($0.absoluteString) } ?? .null,
+            "size": .array([webView.frame.width, webView.frame.height].map { .number(Double($0)) }),
+            "key": .bool(isKeyWindow),
+        ])
+    }
+}
+
+private extension PendingSheet {
+    /// The alert's title, message, buttons and prompt field, or `openPanel`.
+    var debugState: JSONValue {
+        guard let alert else { return .object(["openPanel": .bool(true)]) }
+        return .object([
+            "title": .string(alert.messageText),
+            "message": .string(alert.informativeText),
+            "buttons": .array(alert.buttons.map { .string($0.title) }),
+            "field": (alert.accessoryView as? NSTextField).map { .string($0.stringValue) } ?? .null,
+        ])
+    }
+
+    /// Ends the sheet as its OK (first) or Cancel (second, else first) button would; `text` goes into a prompt's
+    /// field, or is the file the open panel chooses.
+    func debugAnswer(ok: Bool, text: String?) {
+        if let alert {
+            if let text, let field = alert.accessoryView as? NSTextField { field.stringValue = text }
+            let cancel: NSApplication.ModalResponse = alert.buttons.count > 1 ? .alertSecondButtonReturn : .alertFirstButtonReturn
+            end(ok ? .alertFirstButtonReturn : cancel)
+        } else {
+            if ok, let text { answerWithFiles([URL(fileURLWithPath: text)]) }
+            end(.cancel)
+        }
     }
 }
 #endif

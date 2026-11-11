@@ -114,11 +114,14 @@ final class APIServer {
                 }
             case "debug.browser":
                 // Tests only: a browser pane's toolbar indicator and web view frame, and the pane drawn without its
-                // page (WebKit content does not draw this way; `browser.snapshot` has it).
+                // page (WebKit content does not draw this way; `browser.snapshot` has it); its pop-ups and the sheet a
+                // page waits for, answered with `answer` / `text` (BrowserPageDelegate.swift).
                 guard let browser = controller.pane(id: try params.required("pane"))?.browser else {
                     throw RPCError.invalidParams("not a browser pane")
                 }
-                connection.reply(id: id, result: browser.debugState(answer: try params.string("answer"), text: try params.string("text")))
+                let answer = try params.string("answer")
+                let text = try params.string("text")
+                connection.reply(id: id, result: browser.debugState(answer: answer, text: text))
             case "debug.files":
                 // Tests only: drive a files pane (FilesPane+Debug.swift).
                 guard let files = controller.pane(id: try params.required("pane"))?.files else {
