@@ -142,7 +142,9 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
 - `debug.assistant {action?, …}` (DEBUG builds, macOS 26, #243) drives the voice assistant without a microphone or
   speech: `on {mute: true}` turns it on text-only (the microphone is never started from here and the choice is not
   remembered, so a relaunch starts nothing; keep it muted), `hear {text}` injects a recognised utterance (an
-  unaddressed one is dropped as from speech; after an answer wait 0.6 s, the echo guard), `key {key: confirm|cancel}`
+  unaddressed one is dropped as from speech; after an answer wait 1 s, the echo guard), `speak {text}` makes it
+  "say" a text without a voice and stay speaking until `spoken` (its own voice heard back, barge-in by name; `state`
+  has `request`, `voiceActive`, `followUpSeconds`, `claudeWorking`), `key {key: confirm|cancel}`
   / `click {button: …}` answer the card, `state` returns the phase, transcript, answer, pending action and the HUD's
   texts, `snapshot: true` the HUD drawn off screen (or `screencapture -l <window>`). Isolated instances register no
   global keys (⌥⌘J, Return / Esc while a card shows), so `confirmationKeys` stays false there. Fake agents for it:

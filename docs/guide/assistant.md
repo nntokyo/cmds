@@ -21,14 +21,24 @@ type a reply or pick an agent's option for you after you confirm. It is off unti
 ## Talking to it
 
 Start with its name: **ジャービス** or **Jarvis** (Settings › Assistant › Name: your own names, comma separated). For a
-few seconds after it has spoken you can go on without the name. The shortcut (default **⌥⌘J**, Settings › Assistant ›
-Shortcut) makes it listen for one command without the name, also while paused.
+few seconds after it has finished speaking you can go on without the name, with a short follow-up ("what about
+api?", 「大阪は？」); a yes or no answers a card. The shortcut (default **⌥⌘J**, Settings › Assistant › Shortcut) makes it
+listen for one command without the name, also while paused. Each request stands on its own: only the answer to its
+own question ("Which one?") or to a card goes with the one before.
+
+Its name interrupts it at any time: while it speaks or works out an answer (also while Claude is searching), "Jarvis,
+…" / 「ジャービス、…」 stops it and takes the new request at once; Claude's late answer to the old one is dropped. While it
+speaks, and for a second after, nothing else it hears counts, and something that is mostly what it just said (its own
+voice picked up by the microphone) is never taken as a command.
+
+Answers are short: only what was asked, in a sentence ("明日の船橋は晴れ、最高20度、最低9度です。"). When an answer is
+still long, only its first sentence is spoken; the HUD shows all of it.
 
 It understands the app's language (cmds › Language): Japanese or English.
 
 | Say | It does |
 |---|---|
-| "status" / 「状況は？」 | Which workspaces need you, what they ask, which are working |
+| "status" / 「状況は？」 | How many workspaces wait for you and which, and which are working (「入力待ち2件: api, api-v2。作業中1件: web。」); ask about one workspace for what it asks |
 | "what is api doing" / 「apiは何してる？」 | A short summary of that workspace's agent, from its state and screen |
 | "summarize api in detail" / 「apiを詳しく要約して」 | A longer summary by Claude Code (`claude -p`, see below) |
 | "reply to api: run the tests" / 「apiに『テストを実行して』と返信」 | Offers to type the text into the agent's pane and press Return |
@@ -58,7 +68,7 @@ live (天気 / weather, ニュース / news, 株価 / stock price, 為替 / exch
 最新 / latest, scores…). Other questions still go to the on-device model first; when it says the answer needs current
 or outside information, Claude is asked after all. The HUD shows "Asking Claude…" meanwhile, and a small "Claude"
 under the answer. Claude gets only what you said, today's date, your time zone and locale (never screen text), and
-answers in a few spoken sentences, naming the place or date it assumed. It takes a few seconds to a minute and uses
+answers in a sentence (asking back only when it cannot tell, such as which place). It takes a few seconds to a minute and uses
 your Claude Code usage; when `claude` is missing or fails, the assistant says so. Turned off, every question goes to
 the on-device model as before.
 
@@ -105,7 +115,9 @@ Speech stays on this Mac; cmds never records or copies a voice. The permission b
   audio and no transcript is stored.
 - Answers come from the workspaces' state and Apple's on-device model. Nothing is sent to a server, except a detailed
   summary you ask for, web questions and free instructions: they run `claude -p` (your Claude Code login) in an empty
-  temporary folder, without MCP servers or any permission-skipping flag, with a time limit. A detailed summary gets
+  temporary folder, without MCP servers or any permission-skipping flag, with a time limit, and without your own
+  Claude Code setup (CLAUDE.md, hooks, output style, plugins) or saved sessions; web answers and detailed summaries use
+  Sonnet. A detailed summary gets
   the screen's text as input and no tools at all; a web question gets only your words and only the WebSearch and
   WebFetch tools; a free instruction gets your words and the workspaces' names and states, no tools, and the small
   model (Haiku).

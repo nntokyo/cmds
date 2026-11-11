@@ -28,6 +28,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
 
+### Fixed
+
+- Voice assistant (Mac): it no longer hears itself. Its own long answer, picked up by the microphone and transcribed
+  after it finished, was sent to Claude again; now, while it speaks and a second after, only its name counts, and
+  what is mostly its own words is dropped. Its name interrupts it at any time (while speaking, thinking or searching
+  with Claude, also to answer a card) and takes the new request at once, stopping Claude's search; without the name
+  only short follow-ups count, from when it has finished speaking. Answers are short: only what was asked, in a
+  sentence (「明日の船橋は晴れ、最高20度、最低9度です。」), the status as 「入力待ち2件: api, api-v2。作業中1件: web。」, one sentence
+  per session; of a long answer only the first sentence is spoken and the HUD shows the rest. Claude Code runs for it
+  without your CLAUDE.md, hooks, output style or plugins, saves no sessions, uses Sonnet (Haiku for free commands),
+  and its runs no longer show up as agent activity in cmds (#243).
+
 ## [0.21.0] - 2026-11-11
 
 Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).

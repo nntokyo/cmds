@@ -328,12 +328,31 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   Only final results leave it, as text. Nothing is written; partial results only drive the level.
 - **Rules**: `AssistantAddressing` (name prefix after an optional greeting, folded for width, case and kana; or the
   follow-up window), `AssistantMachine` (off → idle → listening / thinking / speaking / confirming, paused; follow-up
-  8 s, echo guard 0.6 s after speaking, confirmation timeout 60 s; only yes/no count without the name while a card
-  waits), `AssistantIntent` (regular-expression grammar, Japanese and English; the rest is a question),
+  8 s from the end of speech, confirmation timeout 60 s; only yes/no count without the name while a card waits),
+  `AssistantIntent` (regular-expression grammar, Japanese and English; the rest is a question),
   `AssistantPlanner` with `AssistantWorld` (built by `AgentOverview.assistantWorld` from the menu bar's summary, each
   terminal pane's waiting flag and `AgentPromptOptions`): answers, summaries, questions back, or an `AssistantAction`
   to confirm. A pane is chosen only when unique (the one waiting, else the one agent, else the one terminal).
   `AssistantSafety` marks text (and an approved prompt's screen) that needs Return or a click.
+- **Its own voice and barge-in**: the microphone stays open while the assistant speaks, so it can be interrupted.
+  While it thinks or speaks (`voiceActive`, also a note spoken while a card waits) and `echoGuard` (1 s) after, only
+  an utterance starting with its name counts. Any transcript that is mostly what it said (`AssistantEcho.isEcho`:
+  `AssistantText.key` character pairs, ≥ 60 % found in the spoken text, utterances of 6+ characters so "はい" or a
+  workspace name answering "Which one?" pass) is dropped while speaking and `echoMemory` (30 s) after: speech
+  recognition can deliver a long answer's transcript seconds after it was said. The follow-up window opened by an
+  answer takes only short utterances (`AssistantAddressing.isShortFollowUp`: ≤ 8 words, ≤ 20 Japanese characters);
+  the hotkey's and the name alone's take any. Each new request (`.handle`, `.wake` while busy, the hotkey, a confirmed
+  or cancelled card) increments `AssistantMachine.request`; `AssistantController.interrupt()` then stops the voice and
+  cancels the `think` task, whose `claude -p` process `AssistantBrain.runClaude` terminates in its cancellation
+  handler, and `answer(_:request:)` refuses a late answer for an older request. "Asking Claude…" is tied to the
+  request it was for. A name-prefixed yes / no while a card is being read out confirms or cancels it; anything else
+  by name replaces the card.
+- **Short answers**: every prompt (`AssistantClaude`: web, on-device instructions, summaries) asks for one short
+  sentence (two at most), only what was asked; a session's summary is cut to its first sentence
+  (`AssistantBrevity.first`), a detailed one to three; for a free answer still longer than `maxSpokenLength`
+  (Japanese characters count double), only the first sentence is spoken (`AssistantBrevity.spoken`) and the HUD shows
+  it all. `AssistantReport.status` is compact: counts and names (`waitingList` / `workingList`); an agent's question
+  only for one workspace.
 - **Several sessions and free commands**: `AssistantScope` (named / all / waiting / working) in the intents
   `checkAll`, `replyMany`, `approveMany` (rules for 「全部のセッションを確認して」, "approve all"…; "api と web に…" is split
   by the planner when the whole is no title and each part finds one). `checkAll` plans `.summarizeEach` (one item per
@@ -344,7 +363,7 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   rules leave as a question and `AssistantInterpretation.mightBeCommand` thinks may be a command (it names a
   workspace or speaks of agents, sessions, all of them) goes to `AssistantBrain.interpret` (Settings › Assistant ›
   Use Claude to understand free commands, `AssistantInterpreter`, on unless false): `claude -p <prompt>
-  --output-format text --model haiku --tools "" --strict-mcp-config`, 30 s, with only the utterance and the
+  --output-format text --model haiku --tools ""` plus the isolation flags (below), 30 s, with only the utterance and the
   workspaces' names, agents and states (`AssistantInterpretation.prompt`). Its one JSON object
   (`kind` instruct / reply / approve / check / question, `targets`, `filter`, `text`, `detailed`) is parsed by
   `AssistantInterpretation.parse` and turned into an intent by `intent(in:)` (made-up names dropped, one line, at
@@ -356,14 +375,20 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   select: false)`; the pane must still be in the same workspace.
 - **Answers**: `AssistantReport` texts through `AssistantStrings.localized` (String Catalog); summaries and questions
   by `SystemLanguageModel.default` (never Private Cloud Compute, 20 s limit); a detailed summary by `claude -p
-  --output-format text --tools "" --strict-mcp-config` (no tools, no MCP servers: the screen text is untrusted) in an empty temporary folder, screen text on stdin, 90 s limit.
+  --output-format text --model sonnet --tools ""` (no tools: the screen text is untrusted) in an empty temporary
+  folder, screen text on stdin, 90 s limit. The assistant runs Claude Code isolated from the user's settings: every
+  call (`AssistantClaude`, argument lists unit-tested) adds `--setting-sources "" --no-session-persistence
+  --strict-mcp-config`, so the user's CLAUDE.md, hooks (including `cmds hook claude`), output style and plugins are
+  not loaded, no MCP server starts and no session is saved under `~/.claude/projects` (`--bare` is not used: it
+  ignores the OAuth sign-in); the process environment has no `CMDS_*` variables, so nothing can attribute it to a
+  pane. Models are named constants: `interpreterModel` haiku, `answerModel` sonnet (not the user's default).
   Web questions (`AssistantWeb`, CmdsCore; Settings › Assistant › Use Claude for web questions, `AssistantWeb`
   defaults key, on unless false): `AssistantWeb.needsWeb` sends a question straight to `AssistantBrain.webAnswer`
   when it asks to search / ask Claude or is about something live (folded keyword lists for Japanese, regular
   expressions for English); otherwise the on-device instructions tell the model to answer `[[NEEDS_WEB]]` alone, and
   `answerNeedsWeb` (the marker, also broken or full width, or a "can't access the internet" sentence) falls back to
   Claude; `withoutMarker` keeps the marker from being spoken. `webAnswer` runs `claude -p <prompt> --output-format
-  text --tools WebSearch,WebFetch --allowedTools WebSearch,WebFetch --strict-mcp-config` in the same way (empty
+  text --model sonnet --tools WebSearch,WebFetch --allowedTools WebSearch,WebFetch` plus the isolation flags (empty
   folder, 90 s, no permission-skipping flag); the prompt holds only the utterance, the date and time, the time zone
   and the locale, never screen text. `AssistantWeb.speakable` drops a "Sources:" list, links, URLs and Markdown. The
   HUD's `ClaudeMark` shows "Asking Claude…" while `claude -p` runs and "Claude" under its answer.

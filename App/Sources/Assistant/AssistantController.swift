@@ -177,15 +177,21 @@ final class AssistantController {
     // MARK: Input
 
     /// A finished utterance from the microphone (or `debug.assistant`). Not addressed: dropped here, unstored.
+    /// Said by name while the assistant speaks or works (barge-in), it stops that first; the HUD shows the new
+    /// transcript at once.
     func hear(_ text: String) {
+        let request = machine.request
         let step = machine.hear(text, names: names, now: Date())
+        if machine.request != request { interrupt() }
         perform(step)
     }
 
     /// The listen shortcut.
     func hotkey() {
         guard isOn else { return }
+        let request = machine.request
         machine.hotkey(now: Date())
+        if machine.request != request { interrupt() }
         if machine.phase == .listening, !listener.isRunning, usesMicrophone {
             temporaryMicrophone = true
             startMicrophone()
@@ -195,7 +201,20 @@ final class AssistantController {
 
     /// Return / Esc (while the card shows) and the card's buttons.
     func key(_ key: AssistantMachine.Key) {
-        perform(machine.key(key, now: Date()))
+        let request = machine.request
+        let step = machine.key(key, now: Date())
+        if machine.request != request { interrupt() }
+        perform(step)
+    }
+
+    /// Stops what the assistant was saying or working out (a new request, barge-in): the voice, and the task with its
+    /// `claude` process (cancelled: `AssistantBrain` terminates it). A late answer is dropped by its request number.
+    private func interrupt() {
+        speech += 1
+        voice.stop()
+        work?.cancel()
+        work = nil
+        claudeWorkingFor = nil
     }
 
     private func globalKey(_ key: AssistantHotkeys.Key) {
@@ -265,7 +284,7 @@ final class AssistantController {
             say(prompt, proposing: action)
         case .summarize(let workspaceID, let paneID, let detailed, let fallback):
             let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? ""
-            think { await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed) }
+            think(capped: !detailed) { await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed) }
         case .summarizeEach(let items, let detailed):
             // One session after the other, a line each (spoken in turn, listed on the HUD).
             let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: 120) } ?? "" }
@@ -282,16 +301,17 @@ final class AssistantController {
             // A free command for the agents ("api の Claude にテストを書くよう指示して"): the interpreter (`claude -p`, no
             // tools) turns it into a proposal, planned and confirmed like any other command. Else it is a question.
             if settings.assistantInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
-                return think {
+                let request = machine.request
+                return think(capped: true) {
                     if let intent = await self.interpret(question, world: world) {
-                        guard !Task.isCancelled, self.machine.phase == .thinking else { return nil }
+                        guard !Task.isCancelled, self.machine.request == request, self.machine.phase == .thinking else { return nil }
                         self.handle(intent)
                         return nil
                     }
                     return await self.answer(question, world: world)
                 }
             }
-            think { await self.answer(question, world: world) }
+            think(capped: true) { await self.answer(question, world: world) }
         case .pauseListening:
             pause()
             speakOnly(strings(.paused))
@@ -310,15 +330,15 @@ final class AssistantController {
         guard !screen.isEmpty else { return facts }
         do {
             if detailed {
-                claudeWorking = true
-                refresh()
-                defer { claudeWorking = false }
+                let request = claudeStarted()
+                defer { claudeStopped(request) }
                 let summary = try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language)
-                claudeAnswered = true
-                return summary
+                markAnsweredByClaude(request)
+                return AssistantBrevity.first(3, of: summary)
             }
             guard AssistantBrain.modelAvailable else { return facts }
-            let summary = try await AssistantBrain.summarize(facts: facts, screen: screen, language: language)
+            // One sentence a session ("api: テストを実行中。").
+            let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language))
             return summary.isEmpty ? facts : summary
         } catch {
             assistantLog.error("assistant summary of \(workspaceID, privacy: .public) failed: \(String(describing: error), privacy: .public)")
@@ -346,9 +366,8 @@ final class AssistantController {
 
     /// A free command as an intent, by the interpreter; nil when it is a question, `claude` is missing or fails.
     private func interpret(_ utterance: String, world: AssistantWorld) async -> AssistantIntent? {
-        claudeWorking = true
-        refresh()
-        defer { claudeWorking = false }
+        let request = claudeStarted()
+        defer { claudeStopped(request) }
         do {
             let output = try await AssistantBrain.interpret(utterance: utterance, world: world, language: language)
             let intent = AssistantInterpretation.parse(output)?.intent(in: world)
@@ -364,12 +383,11 @@ final class AssistantController {
     /// or takes too long.
     private func webAnswer(_ question: String) async -> String {
         let strings = AssistantStrings.localized
-        claudeWorking = true
-        refresh()
-        defer { claudeWorking = false }
+        let request = claudeStarted()
+        defer { claudeStopped(request) }
         do {
             let text = try await AssistantBrain.webAnswer(question: question, language: language)
-            claudeAnswered = true
+            markAnsweredByClaude(request)
             return text
         } catch AssistantBrain.ClaudeFailure.notFound {
             return strings(.claudeNotFound)
@@ -379,33 +397,55 @@ final class AssistantController {
         }
     }
 
-    /// Claude Code is working on the answer (the HUD says so).
-    private var claudeWorking = false
+    /// Claude Code is working on the answer to this request (the HUD says so).
+    private var claudeWorkingFor: Int?
+    private var claudeWorking: Bool { claudeWorkingFor == machine.request }
     /// The answer being worked out came from Claude Code.
     private var claudeAnswered = false
+
+    /// `claude` starts for the current request: its number.
+    private func claudeStarted() -> Int {
+        claudeWorkingFor = machine.request
+        refresh()
+        return machine.request
+    }
+
+    /// `claude` ended (or was stopped); a newer request's mark stays.
+    private func claudeStopped(_ request: Int) {
+        if claudeWorkingFor == request { claudeWorkingFor = nil }
+    }
+
+    /// The answer to `request` came from Claude (not when the user has moved on since).
+    private func markAnsweredByClaude(_ request: Int) {
+        if machine.request == request { claudeAnswered = true }
+    }
     /// The answer shown came from Claude Code (a small label on the HUD).
     private var answerByClaude = false
 
-    /// Works out an answer off the main actor's way, then says it (dropped when the assistant moved on; nil: the body
-    /// already went on another way).
-    private func think(_ body: @escaping @MainActor () async -> String?) {
+    /// Works out an answer off the main actor's way, then says it (dropped when the user has moved on to another
+    /// request; nil: the body already went on another way). `capped`: a long answer is spoken only up to its first
+    /// sentence (`AssistantBrevity.spoken`); the HUD shows it all.
+    private func think(capped: Bool = false, _ body: @escaping @MainActor () async -> String?) {
         work?.cancel()
         claudeAnswered = false
+        let request = machine.request
         work = Task { [weak self] in
             let text = await body()
-            guard let self, let text, !Task.isCancelled, self.machine.phase == .thinking else { return }
-            self.say(text, byClaude: self.claudeAnswered)
+            guard let self, let text, !Task.isCancelled, self.machine.request == request, self.machine.phase == .thinking else { return }
+            self.say(text, request: request, capped: capped, byClaude: self.claudeAnswered)
         }
     }
 
-    /// Shows and speaks an answer; the machine moves on when it has been said.
-    private func say(_ text: String, proposing action: AssistantAction? = nil, byClaude: Bool = false) {
+    /// Shows and speaks an answer (for `request`: not when the user has moved on since); the machine moves on when it
+    /// has been said.
+    private func say(_ text: String, proposing action: AssistantAction? = nil, request: Int? = nil, capped: Bool = false,
+                     byClaude: Bool = false) {
+        guard machine.answer(text, proposing: action, request: request, now: Date()) else { return }
         answerByClaude = byClaude
-        machine.answer(text, proposing: action, now: Date())
         refresh()
         speech += 1
         let number = speech
-        speak(text) { [weak self] in
+        speak(capped ? AssistantBrevity.spoken(text) : text) { [weak self] in
             guard let self, self.speech == number else { return }
             self.machine.speechFinished(now: Date())
             self.refresh()
@@ -417,10 +457,15 @@ final class AssistantController {
         lastSpoken = text
         if isOn { hideAt = Date().addingTimeInterval(Self.hudLinger) }
         hudNote = text
+        machine.voiceStarted(text)
         refresh()
         speech += 1
+        let number = speech
         voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: settings.assistantMuted) {}
+                    muted: settings.assistantMuted) { [weak self] in
+            guard let self, self.speech == number else { return }
+            self.machine.voiceFinished(now: Date())
+        }
     }
 
     /// A note shown instead of the answer (paused, goodbye, "press Return").
@@ -550,5 +595,22 @@ final class AssistantController {
     #if DEBUG
     var debugUsesMicrophone: Bool { usesMicrophone }
     var debugConfirmationKeys: Bool { hotkeys?.confirmationKeysOn ?? false }
+    var debugClaudeWorking: Bool { claudeWorking }
+
+    /// `debug.assistant` `speak`: the assistant "says" `text` without a voice and stays speaking until `spoken`, to
+    /// test what it hears meanwhile (its own voice, barge-in).
+    func debugSpeak(_ text: String) {
+        interrupt()
+        guard machine.answer(text, now: Date()) else { return }
+        answerByClaude = false
+        lastSpoken = text
+        hudNote = nil
+        refresh()
+    }
+
+    func debugSpeechEnded() {
+        machine.speechFinished(now: Date())
+        refresh()
+    }
     #endif
 }
