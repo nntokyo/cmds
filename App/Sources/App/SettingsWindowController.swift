@@ -39,6 +39,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private var tabController: NSTabViewController?
     /// Settings › Assistant (#243), shown on macOS 26 and later.
     private let assistantPane = AssistantSettingsPane()
+    /// The scrolled tabs' height limits, fitted to the screen when the window opens (#264).
+    private var scrollHeightLimits: [(limit: NSLayoutConstraint, page: NSViewController, rowsHeight: CGFloat)] = []
+    /// A scrolled tab is at most this tall (the content, without the title bar and toolbar), so Settings fits a 13"
+    /// display with room to spare (#264).
+    private static let scrollHeight: CGFloat = 540
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
 
@@ -69,6 +74,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc func showSettings(_ sender: Any?) {
         refresh()
+        fitScrollHeight()
         if window?.isVisible != true { window?.center() }
         showWindow(sender)
         window?.makeKeyAndOrderFront(sender)
@@ -205,8 +211,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         fontPopup.widthAnchor.constraint(greaterThanOrEqualToConstant: 240).isActive = true
         var assistantTab: [(SettingsTab, String, String, [[NSView]], [Int])] = []
         if #available(macOS 26.0, *) {
+            let assistant = assistantPane.rows(label: Self.label, note: Self.note, header: Self.header)
             assistantTab = [(.assistant, String(localized: "Assistant", comment: "Settings tab"), "waveform.circle",
-                             assistantPane.rows(label: Self.label, note: Self.note), [])]
+                             assistant.rows, assistant.headers)]
         }
 
         let tabs = NSTabViewController()
@@ -219,7 +226,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         ] + assistantTab + [
             (.updates, String(localized: "Updates"), "arrow.triangle.2.circlepath", updates, []),
         ] as [(SettingsTab, String, String, [[NSView]], [Int])] {
-            let item = NSTabViewItem(viewController: Self.page(rows, headers: headers))
+            // The Assistant tab is longer than a small screen (#264): it scrolls.
+            let item = NSTabViewItem(viewController: page(rows, headers: headers, scrolls: tab == .assistant))
             item.label = title
             item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
             item.identifier = tab.rawValue
@@ -231,7 +239,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
 
     /// One Settings tab: a grid of label / control rows; `headers` are rows with a bold title across both columns.
-    private static func page(_ rows: [[NSView]], headers: [Int]) -> NSViewController {
+    /// A tab that `scrolls` is at most `scrollHeight` tall (less on a small screen) and scrolls the rest; it is as tall
+    /// as its rows when they fit, so a row that comes or goes (the assistant's problem) still resizes the window.
+    private func page(_ rows: [[NSView]], headers: [Int], scrolls: Bool = false) -> NSViewController {
         let grid = NSGridView(views: rows)
         grid.rowSpacing = 8
         grid.columnSpacing = 8
@@ -243,7 +253,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
         }
         grid.translatesAutoresizingMaskIntoConstraints = false
-        let content = NSView()
+        let content = scrolls ? FlippedView() : NSView()
         content.addSubview(grid)
         NSLayoutConstraint.activate([
             grid.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
@@ -253,10 +263,74 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             content.widthAnchor.constraint(greaterThanOrEqualToConstant: 520),
         ])
         let controller = NSViewController()
-        controller.view = content
-        controller.preferredContentSize = content.fittingSize
+        guard scrolls else {
+            controller.view = content
+            controller.preferredContentSize = content.fittingSize
+            return controller
+        }
+        let fitting = content.fittingSize
+        let scroll = NSScrollView()
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.drawsBackground = false
+        scroll.borderType = .noBorder
+        scroll.documentView = content
+        content.translatesAutoresizingMaskIntoConstraints = false
+        let clip = scroll.contentView
+        // Wide enough for the rows next to a legacy (always shown) scroller too.
+        let width = NSScrollView.frameSize(forContentSize: fitting, horizontalScrollerClass: nil,
+                                           verticalScrollerClass: NSScroller.self, borderType: .noBorder,
+                                           controlSize: .regular, scrollerStyle: NSScroller.preferredScrollerStyle).width
+        let limit = scroll.heightAnchor.constraint(lessThanOrEqualToConstant: Self.scrollHeight)
+        // As tall as the rows up to the limit: above the window's wish to keep its size (500), below the labels'
+        // compression resistance (750), so the rows scroll instead of being squeezed.
+        let follow = scroll.heightAnchor.constraint(equalTo: content.heightAnchor)
+        follow.priority = NSLayoutConstraint.Priority(700)
+        NSLayoutConstraint.activate([
+            content.topAnchor.constraint(equalTo: clip.topAnchor),
+            content.leadingAnchor.constraint(equalTo: clip.leadingAnchor),
+            content.widthAnchor.constraint(equalTo: clip.widthAnchor),
+            scroll.widthAnchor.constraint(equalToConstant: width),
+            limit, follow,
+        ])
+        scrollHeightLimits.append((limit, controller, fitting.height))
+        controller.view = scroll
+        controller.preferredContentSize = NSSize(width: width, height: min(fitting.height, Self.scrollHeight))
         return controller
     }
+
+    /// Keeps a scrolled tab, and so the window, on the screen Settings opens on: its title bar, toolbar and a margin
+    /// fit above the limit (#264).
+    private func fitScrollHeight() {
+        guard let window, let screen = window.screen ?? NSScreen.main else { return }
+        let chrome = window.frame.height - window.contentLayoutRect.height
+        let height = max(min(Self.scrollHeight, screen.visibleFrame.height - max(chrome, 80) - 40), 200)
+        for (limit, page, rowsHeight) in scrollHeightLimits {
+            limit.constant = height
+            page.preferredContentSize.height = min(rowsHeight, height)
+        }
+    }
+
+    #if DEBUG
+    /// Tests only (`debug.show_settings {scroll}`): scrolls the shown tab, when it scrolls, to its top or bottom.
+    func debugScroll(toBottom: Bool) {
+        guard let scroll = tabController?.tabView.selectedTabViewItem?.view as? NSScrollView,
+              let document = scroll.documentView else { return }
+        scroll.layoutSubtreeIfNeeded()
+        let y = toBottom ? max(document.bounds.height - scroll.contentView.bounds.height, 0) : 0
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: y))
+        scroll.reflectScrolledClipView(scroll.contentView)
+    }
+
+    /// Tests only (`debug.show_settings {snapshot}`): the shown tab drawn off screen, as a base64 PNG (no toolbar).
+    func debugSnapshot() -> String? {
+        guard let view = window?.contentView else { return nil }
+        view.layoutSubtreeIfNeeded()
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return nil }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        return rep.representation(using: .png, properties: [:])?.base64EncodedString()
+    }
+    #endif
 
     /// Opens Settings on a tab (the menu bar item's "Menu Bar Settings…").
     func show(tab: SettingsTab) {
@@ -475,4 +549,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     @objc private func previewZoomChanged() {
         settings.previewZoom = previewZoomPopup.selectedItem?.representedObject as? Double ?? 1
     }
+}
+
+/// A scrolled Settings tab's rows, top first.
+private final class FlippedView: NSView {
+    override var isFlipped: Bool { true }
 }

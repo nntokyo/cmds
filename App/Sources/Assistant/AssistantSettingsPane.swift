@@ -32,8 +32,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
     /// The voice list is rebuilt when the language or the Personal Voices change.
     private var voiceListKey = ""
 
-    /// The grid rows; `header` rows are none.
-    func rows(label: (String) -> NSTextField, note: (String) -> NSTextField) -> [[NSView]] {
+    /// The grid rows and which of them are section headers (#264: Spoken Answers, Claude Code, Privacy and Safety, so the
+    /// long tab reads in parts; Settings scrolls it).
+    func rows(label: (String) -> NSTextField, note: (String) -> NSTextField,
+              header: (String) -> NSTextField) -> (rows: [[NSView]], headers: [Int]) {
         enabledCheckbox.target = self
         enabledCheckbox.action = #selector(enabledToggled)
         namesField.placeholderString = AssistantAddressing.defaultNames.joined(separator: ", ")
@@ -90,7 +92,13 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         statusNote.preferredMaxLayoutWidth = 300
 
         let names = AssistantAddressing.defaultNames
-        return [
+        var headers: [NSView] = []
+        func section(_ title: String) -> [NSView] {
+            let view = header(title)
+            headers.append(view)
+            return [view, NSGridCell.emptyContentView]
+        }
+        let rows: [[NSView]] = [
             [NSGridCell.emptyContentView, enabledCheckbox],
             [NSGridCell.emptyContentView, note(String(localized: "Beta: free for now. The assistant will later be part of a cmds subscription.", comment: "Settings › Assistant: the assistant is in a free beta (#244)"))],
             [NSGridCell.emptyContentView, statusNote],
@@ -98,11 +106,13 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
             [NSGridCell.emptyContentView, note(String(localized: "It answers only when you start with its name (\(names[0]) or \(names[1]) unless you set others, separated by commas), or right after it spoke. Everything else is dropped at once; nothing heard is stored.", comment: "Settings › Assistant"))],
             [label(String(localized: "Shortcut:", comment: "Settings › Assistant: listen for one command")), hotkeyPopup],
             [label(String(localized: "Style:", comment: "Settings › Assistant")), stylePopup],
+            section(String(localized: "Spoken Answers", comment: "Settings › Assistant: section header (the voice, its rate, muting)")),
             [label(String(localized: "Voice:", comment: "Settings › Assistant")), voicePopup],
             [NSGridCell.emptyContentView, personalButtons],
             [NSGridCell.emptyContentView, personalNote],
             [label(String(localized: "Rate:", comment: "Settings › Assistant: speaking rate")), rateSlider],
             [NSGridCell.emptyContentView, mutedCheckbox],
+            section(String(localized: "Claude Code", comment: "Settings › Assistant: section header (what the assistant asks Claude Code)")),
             [NSGridCell.emptyContentView, webCheckbox],
             [NSGridCell.emptyContentView, note(String(localized: "Weather, news, prices and “search…” go to Claude Code (claude -p) with web search only. This uses your Claude Code usage.", comment: "Settings › Assistant: under Use Claude for web questions"))],
             [NSGridCell.emptyContentView, interpreterCheckbox],
@@ -111,8 +121,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
             [NSGridCell.emptyContentView, note(String(localized: "“Start Claude in cmds and have it write the login tests”: a workspace of that name, else a folder of that name up to three levels inside these folders (comma separated; repositories first). The card shows the folder and the first prompt before anything starts.", comment: "Settings › Assistant: under Project folders"))],
             [NSGridCell.emptyContentView, reportTasksCheckbox],
             [NSGridCell.emptyContentView, note(String(localized: "Says in one sentence when a session it started with a task, or gave an instruction to, is done or asks you something. Other sessions are not announced.", comment: "Settings › Assistant: under Report on tasks I gave"))],
+            section(String(localized: "Privacy and Safety", comment: "Settings › Assistant: section header (what is heard, where answers come from, confirmations)")),
             [NSGridCell.emptyContentView, note(String(localized: "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary and web questions ask Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.", comment: "Settings › Assistant"))],
         ]
+        return (rows, rows.indices.filter { index in headers.contains { $0 === rows[index][0] } })
     }
 
     func refresh() {
@@ -133,7 +145,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
     }
 
     /// The assistant's problem (microphone denied…) above the settings; also when it comes or goes while Settings is
-    /// open (`AssistantController.didChange`). The window grows or shrinks with the row.
+    /// open (`AssistantController.didChange`). The scrolled page grows or shrinks with the row (#264).
     func refreshProblem() {
         var problem: String?
         if #available(macOS 26.0, *) { problem = AssistantController.shared?.problem }
