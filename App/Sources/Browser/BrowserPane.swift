@@ -37,6 +37,14 @@ final class BrowserPane: NSView {
     var consoleBuffer = ConsoleBuffer()
     /// The DOM event the page-world console hook hands messages over with (random, so pages cannot fake it).
     let consoleEventName = "cmds-console-" + UUID().uuidString
+    // Pop-ups, `_blank` links, dialogs, uploads and downloads (BrowserPageDelegate.swift, #235).
+    /// Opens a `target="_blank"` link in a new browser pane beside this one; false: none could be opened.
+    var onOpenInNewPane: ((URL) -> Bool)?
+    let pageDelegate = BrowserPageDelegate()
+    private var downloadBanner: BrowserDownloadBannerView?
+    private var downloadBannerHide: DispatchWorkItem?
+    /// How long a finished download's notice stays.
+    static let downloadNoticeTime: TimeInterval = 10
 
     var currentURL: URL? { webView.url }
     var pageTitle: String { webView.title ?? "" }
@@ -49,6 +57,8 @@ final class BrowserPane: NSView {
         super.init(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        pageDelegate.pane = self
+        pageDelegate.attach(webView)
         buildLayout()
         observe()
         observeZoomSetting()
@@ -211,9 +221,47 @@ final class BrowserPane: NSView {
     func tearDown() {
         responsiveView?.close()  // frees the extra frames' WebContent processes
         responsiveView = nil
+        pageDelegate.tearDown()  // answers open dialogs, closes pop-ups
+        downloadBannerHide?.cancel()
         observations.removeAll()
         webView.stopLoading()
-        webView.navigationDelegate = nil
+        BrowserPageDelegate.detach(webView)
+    }
+
+    /// The text of the download notice shown (`debug.browser`).
+    var downloadNoticeText: String? { downloadBanner?.toolTip }
+
+    /// A download's notice at the bottom of the page area (nil: removes it; the top would cover the address bar).
+    /// `onCancel` stops a running download.
+    func showDownload(_ state: BrowserDownloadBannerView.State?, onCancel: (() -> Void)? = nil) {
+        downloadBannerHide?.cancel()
+        downloadBannerHide = nil
+        downloadBanner?.removeFromSuperview()
+        downloadBanner = nil
+        guard let state else { return }
+        let banner = BrowserDownloadBannerView(state: state)
+        banner.onDismiss = { [weak self, weak banner] in
+            guard let self, let banner, self.downloadBanner === banner else { return }
+            self.showDownload(nil)
+        }
+        banner.onCancel = { [weak self, weak banner] in
+            onCancel?()
+            guard let self, let banner, self.downloadBanner === banner else { return }
+            self.showDownload(nil)
+        }
+        downloadBanner = banner
+        banner.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(banner)  // above the page and the responsive view
+        NSLayoutConstraint.activate([
+            banner.leadingAnchor.constraint(equalTo: viewportHost.leadingAnchor, constant: 8),
+            banner.trailingAnchor.constraint(lessThanOrEqualTo: viewportHost.trailingAnchor, constant: -8),
+            banner.bottomAnchor.constraint(equalTo: viewportHost.bottomAnchor, constant: -8),
+        ])
+        if case .finished = state {
+            let hide = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.showDownload(nil) } }
+            downloadBannerHide = hide
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.downloadNoticeTime, execute: hide)
+        }
     }
 
     /// A browser pane's web view settings (also the responsive view's extra frames, with the pane's data store).

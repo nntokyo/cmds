@@ -424,6 +424,16 @@
         }
       }
     },
+    "%@ says:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@からのメッセージ："
+          }
+        }
+      }
+    },
     "%@ session (%@)": {
       "localizations": {
         "en": {
@@ -1656,6 +1666,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "ブラウザの拡大率:"
+          }
+        }
+      }
+    },
+    "Choose": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択"
+          }
+        }
+      }
+    },
+    "Choose files to upload to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@にアップロードするファイルを選択してください"
           }
         }
       }
@@ -3300,6 +3330,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "アップデートを自動的にダウンロードしてインストール"
+          }
+        }
+      }
+    },
+    "Download failed: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ダウンロードできませんでした：%@"
+          }
+        }
+      }
+    },
+    "Download of “%@” failed: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”をダウンロードできませんでした：%2$@"
+          }
+        }
+      }
+    },
+    "Downloaded “%@” to Downloads": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”をダウンロードフォルダに保存しました"
           }
         }
       }
@@ -6202,6 +6262,16 @@
         }
       }
     },
+    "Pop-up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ポップアップ"
+          }
+        }
+      }
+    },
     "Port": {
       "localizations": {
         "ja": {
@@ -7074,6 +7144,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "SFTPのプロトコルエラー: %@"
+          }
+        }
+      }
+    },
+    "Show in Finder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finderに表示"
           }
         }
       }
@@ -9137,6 +9217,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "この項目はすでにゴミ箱にあります。"
+          }
+        }
+      }
+    },
+    "This page says:": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このページからのメッセージ："
           }
         }
       }

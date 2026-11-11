@@ -191,6 +191,19 @@ cmds browser eval 'document.title'                   # run JavaScript, print the
 cmds browser snapshot -o /tmp/page.png               # PNG of the visible page
 ```
 
+### Pop-ups, dialogs and downloads
+
+- **Pop-ups** (`window.open`, e.g. Sign in with Google or Apple, OAuth and payment pop-ups) open in a small window over
+  cmds, titled with the page's title and its host. The page that opened it can talk to it as in Safari, so the sign-in
+  finishes in the pane. ⌘W or the page itself closes it; closing the pane closes its pop-ups. Panes in a workspace that
+  is not shown open no pop-ups.
+- **Links that open a new window** (`target="_blank"`) open in a new browser split beside the pane.
+- **`alert`, `confirm` and `prompt`** appear as sheets on the window, headed with the page's host.
+- **File fields** (`<input type="file">`) open the usual file panel.
+- **Downloads** (a `download` link, or a file the browser cannot show) go to the Downloads folder, numbered when the
+  name is taken (`report 2.pdf`); a notice at the bottom of the pane shows progress (Cancel), the result (Show in
+  Finder) or the error. A download goes on when its pane is closed.
+
 ### Responsive view
 
 **Responsive View** in the device menu (the button at the right end of the browser toolbar) shows the page at

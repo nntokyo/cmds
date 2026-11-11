@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
+- Mac browser panes: pop-ups open in a small window that keeps its link to the page (Sign in with Google / Apple,
+  OAuth and payment pop-ups), `target="_blank"` links open in a new browser split, `alert` / `confirm` / `prompt`
+  appear as sheets naming the page's host, file fields open the file panel, and downloads are saved to the Downloads
+  folder with a notice in the pane (#235).
 
 ## [0.20.0] - 2026-11-11
 

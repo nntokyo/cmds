@@ -299,7 +299,7 @@ extension BrowserPane {
 #if DEBUG
 extension BrowserPane {
     /// `debug.browser`: the indicator, the web view's frame in the pane, the scale, and the pane drawn without its page.
-    func debugState() -> JSONValue {
+    func debugState(answer: String? = nil, text: String? = nil) -> JSONValue {
         let frame = convert(webView.frame, from: viewportHost)
         var result: [String: JSONValue] = [
             "indicator": .string(breakpointLabel.stringValue),
@@ -312,7 +312,9 @@ extension BrowserPane {
             "appearance": .string(webView.appearance?.name.rawValue ?? ""),
             "menu": .array(deviceMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),
             "responsive": responsiveView?.debugFrames ?? .null,
+            "download": downloadNoticeText.map { .string($0) } ?? .null,
         ]
+        result.merge(pageDelegate.debugState(answer: answer, text: text)) { _, new in new }  // pop-ups and dialogs (#235)
         if let bitmap = bitmapImageRepForCachingDisplay(in: bounds) {
             cacheDisplay(in: bounds, to: bitmap)
             if let png = bitmap.representation(using: .png, properties: [:]) {

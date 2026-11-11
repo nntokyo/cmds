@@ -57,7 +57,8 @@ final class ResponsiveView: NSView {
     var webViews: [WKWebView] { frames.map(\.webView) }
     var targets: [BrowserSnapshotRequest.Target] { frames.map(\.target) }
 
-    init(primary: WKWebView, settings: BrowserResponsive) throws {
+    /// `pageDelegate`: the pane's (pop-ups, dialogs, uploads and downloads also from the other frames, #235).
+    init(primary: WKWebView, settings: BrowserResponsive, pageDelegate: BrowserPageDelegate) throws {
         let targets = try settings.targets()
         self.settings = settings
         self.primary = primary
@@ -76,6 +77,7 @@ final class ResponsiveView: NSView {
                 webView = WKWebView(frame: .zero, configuration: configuration)
                 webView.customUserAgent = target.preset?.userAgent ?? primaryUserAgent
                 webView.appearance = primary.appearance
+                pageDelegate.attach(webView)
             }
             let frame = Frame(webView: webView, target: target)
             frame.label.stringValue = [target.preset?.name, target.size.description].compactMap { $0 }.joined(separator: "  ")
@@ -130,7 +132,7 @@ final class ResponsiveView: NSView {
             frame.webView.removeFromSuperview()
             if index > 0 {
                 frame.webView.stopLoading()
-                frame.webView.navigationDelegate = nil
+                BrowserPageDelegate.detach(frame.webView)
             }
         }
         primary.setUserAgent(primaryUserAgent)
@@ -248,6 +250,11 @@ final class ResponsiveView: NSView {
             frame.webView.callAsyncJavaScript("if (window.__cmdsScrollTo) window.__cmdsScrollTo(fraction);",
                                               arguments: ["fraction": fraction], in: nil, in: .defaultClient) { _ in }
         }
+    }
+
+    /// `webView` is a frame loading what another frame navigated to: its dialogs would repeat the source frame's.
+    func isFollowing(_ webView: WKWebView) -> Bool {
+        frames.first { $0.webView === webView }?.settling ?? false
     }
 
     // MARK: - Snapshots and tests

@@ -32,7 +32,7 @@ extension BrowserPane {
             webView.setUserAgent(emulation.userAgent)
             layoutWebView()
         }
-        if let settings, let view = try? ResponsiveView(primary: webView, settings: settings) {
+        if let settings, let view = try? ResponsiveView(primary: webView, settings: settings, pageDelegate: pageDelegate) {
             viewportHost.isHidden = true
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
