@@ -191,6 +191,15 @@ In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the C
     on that pane's tty (`tty > file`), because `cmds read` of a restored pane currently returns the focused pane's
     screen (also on master).
 
+- Codex limits (#227): cmds follows recent session files under `$CODEX_HOME/sessions` of its own environment, so
+  launch the instance with `CODEX_HOME` set to a temporary folder (without it, it reads the user's
+  `~/.codex/sessions`, read only). Never run the real `codex` for this; write a fabricated
+  `sessions/<yyyy>/<MM>/<dd>/rollout-<date>-<uuid>.jsonl` (today's local date) with a `token_count` line with
+  windows, one with `primary`/`secondary` null and a `task_complete` line with `codex_error_info`
+  `usage_limit_exceeded` and "try again at <Mon> <d>th, <yyyy> <h:mm> <AM/PM>." Within 15 s `cmds agents` shows Codex
+  with `limit 100%` and that reset; `codex-limits.json` appears in `CMDS_SUPPORT_DIR`; after a relaunch with the
+  file removed from the sessions folder the limits are still shown.
+
 Quit the instance (`cmds quit`) and delete the temporary folders afterwards.
 
 All switches: [reference/environment.md](../reference/environment.md#app-switches-isolated-and-test-instances).
