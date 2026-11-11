@@ -943,7 +943,7 @@ final class AssistantManySessionsTests: XCTestCase {
         var w = world()
         w.workspaces[0].notification = "SECRET from the screen"
         w.workspaces[0].panes[0].promptContext = ["SECRET line"]
-        let prompt = AssistantInterpretation.prompt(utterance: "approve api", world: w, language: "English")
+        let prompt = AssistantClaude.interpreterPrompt(utterance: "approve api", world: w, language: "English")
         XCTAssertFalse(prompt.contains("SECRET"))
         XCTAssertTrue(prompt.contains("- api: Claude, needs the user (waits for input)"))
         XCTAssertTrue(prompt.contains("- docs: no agent, no agent running"))

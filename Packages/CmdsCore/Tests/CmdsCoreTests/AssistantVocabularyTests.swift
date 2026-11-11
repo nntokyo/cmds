@@ -274,9 +274,9 @@ final class AssistantVocabularyTests: XCTestCase {
         for text in ["what is a monad", "明日の天気は", "モナドって何"] {
             XCTAssertFalse(AssistantInterpretation.mightBeCommand(text, world: w), text)
         }
-        let prompt = AssistantInterpretation.prompt(utterance: "EPAのテストどうなった", world: w, language: "Japanese")
+        let prompt = AssistantClaude.interpreterPrompt(utterance: "EPAのテストどうなった", world: w, language: "Japanese")
         XCTAssertTrue(prompt.contains("- \"EPA\" is probably \"api\""))
-        XCTAssertFalse(AssistantInterpretation.prompt(utterance: "api", world: w, language: "Japanese").contains("misheard"))
+        XCTAssertFalse(AssistantClaude.interpreterPrompt(utterance: "api", world: w, language: "Japanese").contains("misheard"))
     }
 
     func testInterpretedStart() {
