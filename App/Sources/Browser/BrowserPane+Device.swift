@@ -155,7 +155,7 @@ extension BrowserPane {
 
     @objc private func deviceButtonClicked(_ sender: NSButton) {
         onFocus?()
-        deviceMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 4), in: sender)
+        popUpToolbarMenu(deviceMenu(), below: sender)
     }
 
     func deviceMenu() -> NSMenu {

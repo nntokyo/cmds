@@ -5,6 +5,9 @@ import CmdsCore
 // Reload on file changes (#252; rules in CmdsCore/BrowserWatch.swift): FSEvents on the watched folder while the pane is
 // in a window, debounced, and only for pages `BrowserWatch.reloads` (local ones unless remote pages were turned on).
 extension BrowserPane {
+    /// The watch button's label and its menu's first item (View › Reload on File Changes is MainMenu's).
+    static var watchTitle: String { String(localized: "Reload on File Changes") }
+
     /// `browser.watch` and the toolbar menu: applies `change` (`defaultFolder` when turning on without a folder) and
     /// returns the state as the API reports it.
     @discardableResult
@@ -46,10 +49,15 @@ extension BrowserPane {
             watchEventID = window == nil ? FSEventsGetCurrentEventId() : nil
             watcher.stop()
             directoryWatcher = nil
-            watchReload?.cancel()
-            watchReload = nil
-            watchDebounce.reset()
+            cancelPendingReload()
         }
+    }
+
+    /// Drops a reload that is waiting for the debounce.
+    private func cancelPendingReload() {
+        watchReload?.cancel()
+        watchReload = nil
+        watchDebounce.reset()
     }
 
     private func filesChanged(_ changes: [DirectoryWatcher.Change]) {
@@ -83,8 +91,7 @@ extension BrowserPane {
     func stopWatching() {
         directoryWatcher?.stop()
         directoryWatcher = nil
-        watchReload?.cancel()
-        watchReload = nil
+        cancelPendingReload()
     }
 
     // MARK: - Toolbar
@@ -92,8 +99,8 @@ extension BrowserPane {
     func updateWatchButton() {
         watchButton.contentTintColor = watch == nil ? nil : .controlAccentColor
         watchButton.image = NSImage(systemSymbolName: watch == nil ? "eye" : "eye.fill",
-                                    accessibilityDescription: String(localized: "Reload on File Changes"))
-        var tip = String(localized: "Reload on File Changes")
+                                    accessibilityDescription: Self.watchTitle)
+        var tip = Self.watchTitle
         if let watch {
             tip += " — " + (watch.folder as NSString).abbreviatingWithTildeInPath
             if directoryWatcher == nil { tip += "\n" + String(localized: "Paused: the page is not local or the pane is not on screen.") }
@@ -103,7 +110,7 @@ extension BrowserPane {
 
     @objc func watchButtonClicked(_ sender: NSButton) {
         onFocus?()
-        watchMenu().popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.height + 4), in: sender)
+        popUpToolbarMenu(watchMenu(), below: sender)
     }
 
     func watchMenu() -> NSMenu {
@@ -116,7 +123,7 @@ extension BrowserPane {
             item.isEnabled = enabled
             return item
         }
-        menu.addItem(item(String(localized: "Reload on File Changes"), #selector(toggleWatch), on: watch != nil))
+        menu.addItem(item(Self.watchTitle, #selector(toggleWatch), on: watch != nil))
         let folder = watch?.folder ?? defaultWatchFolder?()
         let folderTitle = folder.map { String(localized: "Folder: \(($0 as NSString).abbreviatingWithTildeInPath)") }
             ?? String(localized: "Folder: none")
@@ -162,69 +169,5 @@ extension BrowserPane {
             try? self?.applyWatch(BrowserWatchChange(folder: url.standardizedFileURL.path), defaultFolder: nil)
         }
         if let window { panel.beginSheetModal(for: window, completionHandler: done) } else { done(panel.runModal()) }
-    }
-}
-
-/// FSEvents on one folder tree (file-level events), delivered on the main queue as the changed items. `since`: replay
-/// the history after that event first (changes made while nothing watched).
-@MainActor
-final class DirectoryWatcher {
-    let folder: String
-    private var stream: FSEventStreamRef?
-    private let handler: ([Change]) -> Void
-
-    /// A changed item; `isFolder`: the event is about a folder itself (its entries or metadata).
-    struct Change {
-        var path: String
-        var isFolder: Bool
-    }
-
-    init(folder: String, since: FSEventStreamEventId?, handler: @escaping ([Change]) -> Void) {
-        self.folder = folder
-        self.handler = handler
-        var context = FSEventStreamContext(version: 0, info: Unmanaged.passUnretained(self).toOpaque(),
-                                           retain: nil, release: nil, copyDescription: nil)
-        let callback: FSEventStreamCallback = { _, info, count, paths, flags, _ in
-            guard let info else { return }
-            let watcher = Unmanaged<DirectoryWatcher>.fromOpaque(info).takeUnretainedValue()
-            let list = unsafeBitCast(paths, to: NSArray.self) as? [String] ?? []
-            var changed: [Change] = []
-            for index in 0..<count {
-                // The end-of-replay marker has no path to report.
-                if flags[index] & FSEventStreamEventFlags(kFSEventStreamEventFlagHistoryDone) != 0 { continue }
-                let isFolder = flags[index] & FSEventStreamEventFlags(kFSEventStreamEventFlagItemIsDir) != 0
-                if index < list.count { changed.append(Change(path: list[index], isFolder: isFolder)) }
-            }
-            MainActor.assumeIsolated { watcher.deliver(changed) }
-        }
-        let flags = FSEventStreamCreateFlags(kFSEventStreamCreateFlagFileEvents | kFSEventStreamCreateFlagUseCFTypes
-                                             | kFSEventStreamCreateFlagWatchRoot)
-        guard let stream = FSEventStreamCreate(nil, callback, &context, [folder] as CFArray,
-                                               since ?? FSEventStreamEventId(kFSEventStreamEventIdSinceNow), 0.1, flags)
-        else { return }
-        self.stream = stream
-        FSEventStreamSetDispatchQueue(stream, .main)
-        FSEventStreamStart(stream)
-    }
-
-    private func deliver(_ changes: [Change]) {
-        guard stream != nil, !changes.isEmpty else { return }
-        handler(changes)
-    }
-
-    /// `path` with symlinks resolved as the file system reports it (`realpath`; Foundation's own resolving turns
-    /// /private/tmp back into /tmp); `path` itself when it does not exist.
-    static func realPath(_ path: String) -> String {
-        guard let resolved = realpath(path, nil) else { return path }
-        defer { free(resolved) }
-        return String(cString: resolved)
-    }
-
-    func stop() {
-        guard let stream else { return }
-        FSEventStreamStop(stream)
-        FSEventStreamInvalidate(stream)
-        FSEventStreamRelease(stream)
-        self.stream = nil
     }
 }

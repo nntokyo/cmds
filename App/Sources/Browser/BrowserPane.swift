@@ -53,7 +53,7 @@ final class BrowserPane: NSView {
     var watchEventID: FSEventStreamEventId?
     var watchDebounce = WatchDebounce()
     var watchReload: DispatchWorkItem?
-    let watchButton = BrowserPane.toolbarButton("eye", label: String(localized: "Reload on File Changes"))
+    let watchButton = BrowserPane.toolbarButton("eye", label: BrowserPane.watchTitle)
     /// The folder watching starts with: the workspace's folder (set by the pane's owner).
     var defaultWatchFolder: (() -> String?)?
     #if DEBUG
@@ -332,6 +332,11 @@ final class BrowserPane: NSView {
         button.toolTip = label
         button.setContentHuggingPriority(.required, for: .horizontal)
         return button
+    }
+
+    /// A toolbar button's menu (device, watch), opened just below the button.
+    func popUpToolbarMenu(_ menu: NSMenu, below button: NSButton) {
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
     }
 
     private func buildLayout() {
