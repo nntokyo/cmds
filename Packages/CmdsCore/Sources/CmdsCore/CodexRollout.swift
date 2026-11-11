@@ -184,7 +184,12 @@ public enum CodexRollout {
 
     private static let tokenCountMarker = Array(#""token_count""#.utf8)
     private static let turnContextMarker = Array(#""turn_context""#.utf8)
-    private static let usageLimitMarker = Array(#""usage_limit_exceeded""#.utf8)
+    private static let usageLimitMarker = Array("\"\(usageLimitExceededCode)\"".utf8)
+
+    /// `codex_error_info` of a turn refused at the account's usage limit (#227).
+    private static let usageLimitExceededCode = "usage_limit_exceeded"
+    /// Event types that can carry a turn's error: `task_complete` (`error: {message, codex_error_info}`) and `error`.
+    private static let errorEventTypes: Set<String> = ["task_complete", "error"]
 
     private struct Line: Decodable {
         var timestamp: String?
@@ -280,15 +285,8 @@ public enum CodexRollout {
         switch entry.type {
         case "event_msg":
             guard let payload = entry.payload else { return }
-            if payload.type?.value == "task_complete" || payload.type?.value == "error" {
-                // Only the error code is looked at, and only the reset time is taken from the message.
-                let error = payload.error?.value
-                let code = errorCode(error?.codex_error_info?.value ?? payload.codex_error_info?.value)
-                guard code == "usage_limit_exceeded" else { return }
-                let message = error?.message?.value ?? payload.message?.value
-                snapshot.limitReached = .init(date: date, resetsAt: message.flatMap {
-                    limitReset(fromMessage: $0, eventDate: date ?? Date())
-                })
+            if let type = payload.type?.value, errorEventTypes.contains(type) {
+                if let reached = limitReached(in: payload, date: date) { snapshot.limitReached = reached }
                 return
             }
             guard payload.type?.value == "token_count" else { return }
@@ -318,6 +316,17 @@ public enum CodexRollout {
         }
     }
 
+    /// A turn refused at the usage limit (#227); nil for any other error. Only the error code is looked at, and only
+    /// the reset time is taken from the message.
+    private static func limitReached(in payload: Payload, date: Date?) -> Snapshot.LimitReached? {
+        let error = payload.error?.value
+        guard errorCode(error?.codex_error_info?.value ?? payload.codex_error_info?.value) == usageLimitExceededCode else {
+            return nil
+        }
+        let message = error?.message?.value ?? payload.message?.value
+        return .init(date: date, resetsAt: message.flatMap { limitReset(fromMessage: $0, eventDate: date ?? Date()) })
+    }
+
     private static func limit(from window: Window, fallbackID: String, eventDate: Date?) -> UsageLimit? {
         guard let used = window.used_percent, used.isFinite else { return nil }
         let id: String
@@ -340,29 +349,49 @@ public enum CodexRollout {
     /// `… try again in 3 hours 20 minutes.` counted from `eventDate`. Nil when there is none or it is not understood.
     public static func limitReset(fromMessage message: String, eventDate: Date, timeZone: TimeZone = .current) -> Date? {
         let text = message.replacingOccurrences(of: "\u{202F}", with: " ").replacingOccurrences(of: "\u{00A0}", with: " ")
-        if let range = text.range(of: "try again in ", options: .caseInsensitive) {
+        if let range = text.range(of: relativeResetPrefix, options: .caseInsensitive) {
             return duration(in: String(text[range.upperBound...])).map { eventDate.addingTimeInterval($0) }
         }
-        guard let range = text.range(of: "try again at ", options: .caseInsensitive) else { return nil }
-        var value = String(text[range.upperBound...])
-        // The sentence ends at the first dot (the date has none).
+        guard let range = text.range(of: absoluteResetPrefix, options: .caseInsensitive) else { return nil }
+        return absoluteReset(resetText(String(text[range.upperBound...])), eventDate: eventDate, timeZone: timeZone)
+    }
+
+    /// `… try again in <duration>.`
+    private static let relativeResetPrefix = "try again in "
+    /// `… try again at <date>.`
+    private static let absoluteResetPrefix = "try again at "
+    /// `7th` → `7`.
+    private static let ordinalSuffixPattern = #"(\d)(st|nd|rd|th)\b"#
+    /// The forms of the date after `try again at`, tried in order, each with the part it leaves out (the year or the
+    /// day: a date before the event is moved on by one of it); nil for a full date.
+    private static let resetFormats: [(format: String, step: Calendar.Component?)] = [
+        ("MMM d, yyyy h:mm a", nil), ("MMMM d, yyyy h:mm a", nil), ("MMM d yyyy h:mm a", nil),
+        ("MMM d, h:mm a", .year), ("MMMM d, h:mm a", .year), ("MMM d h:mm a", .year), ("h:mm a", .day), ("HH:mm", .day),
+    ]
+    /// A date written without the year or the day is the next one at or after the event, with this much slack.
+    private static let resetSlack: TimeInterval = 60
+
+    /// The date after `try again at`: up to the end of the sentence (the first dot or line break; the date has none),
+    /// without ordinal suffixes.
+    private static func resetText(_ text: String) -> String {
+        var value = text
         if let end = value.firstIndex(where: { $0 == "." || $0 == "\n" }) { value = String(value[..<end]) }
-        value = value.replacingOccurrences(of: #"(\d)(st|nd|rd|th)\b"#, with: "$1", options: [.regularExpression, .caseInsensitive])
-        value = value.trimmingCharacters(in: .whitespaces)
+        value = value.replacingOccurrences(of: ordinalSuffixPattern, with: "$1", options: [.regularExpression, .caseInsensitive])
+        return value.trimmingCharacters(in: .whitespaces)
+    }
+
+    /// `value` read with the first of `resetFormats` that fits, in `timeZone`. The parts not written are the event's
+    /// day and 0 seconds; a date before the event (less `resetSlack`) is moved on by the part left out.
+    private static func absoluteReset(_ value: String, eventDate: Date, timeZone: TimeZone) -> Date? {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = calendar
         formatter.timeZone = timeZone
-        formatter.defaultDate = calendar.startOfDay(for: eventDate) // the parts not written: the event's day, 0 seconds
-        // A date written without the year or the day is the next one at or after the event (a minute of slack).
-        let earliest = eventDate.addingTimeInterval(-60)
-        let formats: [(String, Calendar.Component?)] = [
-            ("MMM d, yyyy h:mm a", nil), ("MMMM d, yyyy h:mm a", nil), ("MMM d yyyy h:mm a", nil),
-            ("MMM d, h:mm a", .year), ("MMMM d, h:mm a", .year), ("MMM d h:mm a", .year), ("h:mm a", .day), ("HH:mm", .day),
-        ]
-        for (format, step) in formats {
+        formatter.defaultDate = calendar.startOfDay(for: eventDate)
+        let earliest = eventDate.addingTimeInterval(-resetSlack)
+        for (format, step) in resetFormats {
             formatter.dateFormat = format
             guard var date = formatter.date(from: value) else { continue }
             if let step, date < earliest, let next = calendar.date(byAdding: step, value: 1, to: date) { date = next }
@@ -371,19 +400,23 @@ public enum CodexRollout {
         return nil
     }
 
+    /// `3 hours 20 minutes`, `2 days`, `45 min`: a count and its unit.
+    private static let durationPattern = #"(\d+)\s*(day|hour|hr|minute|min|second|sec)s?\b"#
+    /// Seconds per unit of `durationPattern`.
+    private static let durationUnitSeconds: [String: TimeInterval] = [
+        "day": 86400, "hour": 3600, "hr": 3600, "minute": 60, "min": 60, "second": 1, "sec": 1,
+    ]
+
     /// `3 hours 20 minutes`, `2 days`, `45 min` up to the end of the sentence → seconds; nil without any.
     private static func duration(in text: String) -> TimeInterval? {
         let sentence = text.split(separator: ".", maxSplits: 1).first.map(String.init) ?? text
-        guard let regex = try? NSRegularExpression(pattern: #"(\d+)\s*(day|hour|hr|minute|min|second|sec)s?\b"#,
-                                                   options: .caseInsensitive) else { return nil }
-        let seconds: [String: TimeInterval] = ["day": 86400, "hour": 3600, "hr": 3600, "minute": 60, "min": 60,
-                                               "second": 1, "sec": 1]
+        guard let regex = try? NSRegularExpression(pattern: durationPattern, options: .caseInsensitive) else { return nil }
         let ns = sentence as NSString
         var total: TimeInterval = 0
         var found = false
         for match in regex.matches(in: sentence, range: NSRange(location: 0, length: ns.length)) {
             guard let count = Double(ns.substring(with: match.range(at: 1))),
-                  let unit = seconds[ns.substring(with: match.range(at: 2)).lowercased()] else { continue }
+                  let unit = durationUnitSeconds[ns.substring(with: match.range(at: 2)).lowercased()] else { continue }
             total += count * unit
             found = true
         }

@@ -115,6 +115,13 @@ final class CodexLimitReachedTests: XCTestCase {
         // Relative.
         XCTAssertEqual(reset("try again in 3 days."), event.addingTimeInterval(3 * 86400))
         XCTAssertEqual(reset("Try again in 1 hour 5 minutes."), event.addingTimeInterval(3900))
+        // 24-hour time, a no-break space, the sentence ending at a line break (#229).
+        XCTAssertEqual(reset("try again at 23:05"), utc("2026-11-11T14:05:00Z"))
+        XCTAssertEqual(reset("try again at 01:00"), utc("2026-11-11T16:00:00Z"))
+        XCTAssertEqual(reset("try again at\u{00A0}Dec 7th, 2026 11:05 PM\nUpgrade."), utc("2026-12-07T14:05:00Z"))
+        // Short units, and only up to the end of the sentence (#229).
+        XCTAssertEqual(reset("try again in 2 hrs 45 min 30 secs."), event.addingTimeInterval(2 * 3600 + 45 * 60 + 30))
+        XCTAssertEqual(reset("Try again in 10 minutes. Or upgrade in 2 days."), event.addingTimeInterval(600))
         // Not understood.
         XCTAssertNil(reset("You've hit your usage limit."))
         XCTAssertNil(reset("try again at some point."))
