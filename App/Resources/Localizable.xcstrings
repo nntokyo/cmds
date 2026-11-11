@@ -357,6 +357,68 @@
         }
       }
     },
+    "%@ has no option %lld.": {
+      "comment": "assistant",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ has no option %2$lld."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@には%2$lld番の選択肢がありません。"
+          }
+        }
+      }
+    },
+    "%@ has several panes (%@). Please use the reply panel.": {
+      "comment": "assistant: it cannot tell which pane to send to",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ has several panes (%2$@). Please use the reply panel."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@にはペインが複数あります（%2$@）。返信パネルを使ってください。"
+          }
+        }
+      }
+    },
+    "%@ has stopped.": {
+      "comment": "assistant: spoken status of a workspace",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@は停止しました。"
+          }
+        }
+      }
+    },
+    "%@ in %@.": {
+      "comment": "assistant: which agent runs in a workspace",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ in %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@で%1$@が動いています。"
+          }
+        }
+      }
+    },
     "%@ is a bare repository, without a working tree to start from.": {
       "localizations": {
         "ja": {
@@ -373,6 +435,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@はフォルダです"
+          }
+        }
+      }
+    },
+    "%@ is done.": {
+      "comment": "assistant: spoken status of a workspace",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@は完了しました。"
+          }
+        }
+      }
+    },
+    "%@ is idle.": {
+      "comment": "assistant: spoken status of a workspace",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@は待機中です。"
           }
         }
       }
@@ -397,6 +481,45 @@
         }
       }
     },
+    "%@ is working on %@.": {
+      "comment": "assistant: spoken status of a workspace; topic = the agent's task",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ is working on %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@は「%2$@」の作業中です。"
+          }
+        }
+      }
+    },
+    "%@ is working.": {
+      "comment": "assistant: spoken status of a workspace",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@は作業中です。"
+          }
+        }
+      }
+    },
+    "%@ isn't asking anything.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@は何も尋ねていません。"
+          }
+        }
+      }
+    },
     "%@ limit": {
       "comment": "agent usage limit of a window (1h limit)",
       "localizations": {
@@ -404,6 +527,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@の上限"
+          }
+        }
+      }
+    },
+    "%@ needs you.": {
+      "comment": "assistant: spoken status of a workspace",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@が応答を待っています。"
           }
         }
       }
@@ -554,6 +688,35 @@
         }
       }
     },
+    "%lld agents, nothing needs you.": {
+      "comment": "assistant: spoken status",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェント%lld件、対応が必要なものはありません。"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld agent, nothing needs you."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld agents, nothing needs you."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld being edited": {
       "localizations": {
         "ja": {
@@ -657,12 +820,6 @@
     "%lld leftover processes · %@": {
       "comment": "sidebar footer: processes whose pane was closed, and their memory",
       "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "残存プロセス%1$lld個 · %2$@"
-          }
-        },
         "en": {
           "variations": {
             "plural": {
@@ -679,6 +836,12 @@
                 }
               }
             }
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残存プロセス%1$lld個 · %2$@"
           }
         }
       }
@@ -725,6 +888,52 @@
         }
       }
     },
+    "%lld need you, %lld working.": {
+      "comment": "assistant: spoken status",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld need you, %2$lld working."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応答待ち%1$lld件、作業中%2$lld件。"
+          }
+        }
+      }
+    },
+    "%lld need you.": {
+      "comment": "assistant: spoken status (count of workspaces waiting for the user)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応答待ち%lld件。"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld needs you."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld need you."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld of %lld selected": {
       "localizations": {
         "en": {
@@ -737,6 +946,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$lld項目中%1$lld項目を選択"
+          }
+        }
+      }
+    },
+    "%lld options, the first is %@.": {
+      "comment": "assistant: the agent's numbered choices",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld options, the first is %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択肢は%1$lld個、1番は「%2$@」です。"
           }
         }
       }
@@ -815,6 +1041,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ゴミ箱へ移動%lld件"
+          }
+        }
+      }
+    },
+    "%lld working.": {
+      "comment": "assistant: spoken status (count of working agents)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中%lld件。"
           }
         }
       }
@@ -1087,6 +1324,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロンプトには、Claude Codeを起動するコマンドが必要です。"
+          }
+        }
+      }
+    },
+    "A spoken yes is not enough here: press Return or click.": {
+      "comment": "assistant HUD",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これは声の「はい」では実行できません。Returnキーを押すかクリックしてください。"
           }
         }
       }
@@ -1469,6 +1717,50 @@
         }
       }
     },
+    "Assistant": {
+      "comment": "Settings tab\nassistant HUD (VoiceOver)\nmenu bar item: turns the voice assistant on or off",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタント"
+          }
+        }
+      }
+    },
+    "Assistant listening": {
+      "comment": "menu bar item tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントが聞き取り中"
+          }
+        }
+      }
+    },
+    "Assistant off.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントをオフにしました。"
+          }
+        }
+      }
+    },
+    "Assistant paused": {
+      "comment": "menu bar item tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントは一時停止中"
+          }
+        }
+      }
+    },
     "Auto (the first without a limit)": {
       "localizations": {
         "ja": {
@@ -1565,6 +1857,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ベル"
+          }
+        }
+      }
+    },
+    "Beta: free for now. The assistant will later be part of a cmds subscription.": {
+      "comment": "Settings › Assistant: the assistant is in a free beta (#244)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ベータ版：現在は無料です。今後、アシスタントはcmdsのサブスクリプションに含まれる予定です。"
           }
         }
       }
@@ -1666,26 +1969,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ブラウザの拡大率:"
-          }
-        }
-      }
-    },
-    "Choose": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選択"
-          }
-        }
-      }
-    },
-    "Choose files to upload to %@": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@にアップロードするファイルを選択してください"
           }
         }
       }
@@ -1811,6 +2094,17 @@
         }
       }
     },
+    "Cancel (esc)": {
+      "comment": "assistant HUD: cancel the action",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル（esc）"
+          }
+        }
+      }
+    },
     "Cancel Run": {
       "localizations": {
         "ja": {
@@ -1832,6 +2126,7 @@
       }
     },
     "Cancelled.": {
+      "comment": "assistant",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -2001,6 +2296,33 @@
         }
       }
     },
+    "Choose": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択"
+          }
+        }
+      }
+    },
+    "Choose %lld, “%@”, in %@?": {
+      "comment": "assistant: confirmation question",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Choose %1$lld, “%2$@”, in %3$@?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%3$@で%1$lld番「%2$@」を選びますか？"
+          }
+        }
+      }
+    },
     "Choose a file to preview": {
       "localizations": {
         "ja": {
@@ -2071,6 +2393,16 @@
         }
       }
     },
+    "Choose files to upload to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@にアップロードするファイルを選択してください"
+          }
+        }
+      }
+    },
     "Choose in cmds whether to upload your version.": {
       "localizations": {
         "ja": {
@@ -2087,6 +2419,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "選択すると新しいワークスペースで再開します。"
+          }
+        }
+      }
+    },
+    "Choose ⏎": {
+      "comment": "assistant HUD: confirm button",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択 ⏎"
           }
         }
       }
@@ -4177,6 +4520,50 @@
         }
       }
     },
+    "I can only answer about the workspaces: the on-device model isn't available.": {
+      "comment": "assistant: Apple Intelligence is off or unsupported",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイス上のモデルが使えないため、ワークスペースについてのみお答えできます。"
+          }
+        }
+      }
+    },
+    "I can't find a workspace called %@.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」というワークスペースが見つかりません。"
+          }
+        }
+      }
+    },
+    "I cancelled it: no answer.": {
+      "comment": "assistant: a confirmation timed out",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応答がなかったので取り消しました。"
+          }
+        }
+      }
+    },
+    "I don't know a workspace or folder called %@.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「%@」というワークスペースやフォルダが見つかりません。"
+          }
+        }
+      }
+    },
     "Icon:": {
       "comment": "Settings › Menu Bar",
       "localizations": {
@@ -4350,6 +4737,34 @@
         }
       }
     },
+    "It answers only when you start with its name (%@ or %@ unless you set others, separated by commas), or right after it spoke. Everything else is dropped at once; nothing heard is stored.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "It answers only when you start with its name (%1$@ or %2$@ unless you set others, separated by commas), or right after it spoke. Everything else is dropped at once; nothing heard is stored."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前（設定しない場合は%1$@または%2$@。複数はカンマ区切り）で呼びかけたときと、アシスタントが話した直後だけ応答します。それ以外はすぐに破棄され、聞き取った内容は保存しません。"
+          }
+        }
+      }
+    },
+    "It asks: %@": {
+      "comment": "assistant: what the agent asks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "質問：%@"
+          }
+        }
+      }
+    },
     "It is disconnected and must be paired again with a new code. Other devices stay paired.": {
       "localizations": {
         "ja": {
@@ -4416,6 +4831,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "履歴は残ります。"
+          }
+        }
+      }
+    },
+    "JARVIS (animated)": {
+      "comment": "Settings › Assistant › Style",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JARVIS（アニメーション）"
           }
         }
       }
@@ -4772,17 +5198,6 @@
         }
       }
     },
-    "limit": {
-      "comment": "short label of an agent's usage limit that was reached (limit 100%)",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上限"
-          }
-        }
-      }
-    },
     "Limit — %@": {
       "localizations": {
         "ja": {
@@ -4830,12 +5245,34 @@
         }
       }
     },
+    "Listening": {
+      "comment": "assistant state",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聞き取り中"
+          }
+        }
+      }
+    },
     "Listening on port %@": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ポート%@で待ち受け中"
+          }
+        }
+      }
+    },
+    "Listening paused.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聞き取りを一時停止しました。"
           }
         }
       }
@@ -5288,6 +5725,7 @@
       }
     },
     "Name": {
+      "comment": "Settings › Assistant",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -5298,6 +5736,7 @@
       }
     },
     "Name:": {
+      "comment": "Settings › Assistant: the name it answers to",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -5314,6 +5753,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "入力待ち"
+          }
+        }
+      }
+    },
+    "Needs Return or a click:": {
+      "comment": "assistant HUD: before the reasons",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Returnキーかクリックが必要です："
           }
         }
       }
@@ -5458,6 +5908,17 @@
         }
       }
     },
+    "New workspace in %@": {
+      "comment": "assistant HUD: where a new session starts",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に新しいワークスペース"
+          }
+        }
+      }
+    },
     "New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W\nWorkspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[\nSplit right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩\nFocus pane ⌥⌘←/→/↑/↓ · Swap pane ⌥⇧⌘←/→/↑/↓ · Latest attention ⇧⌘U\nBrowser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]\nOpen in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it\nNew Files Pane ⇧⌘E · in the list: Return open · Space preview · F5/F6 copy/move to the other pane · F2 rename · F7 new folder · ⌘⌫ Trash · ⌘↑ up · ⇧⌘. hidden files\nToggle sidebar ⌘B · Rename workspace ⇧⌘R\nTile workspaces: ⌘-click / ⇧-click in the sidebar · Tile all ⌃⌘T · Zoom tile ⇧⌘↩": {
       "localizations": {
         "ja": {
@@ -5538,6 +5999,17 @@
         }
       }
     },
+    "No agent is running in %@.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ではエージェントは動いていません。"
+          }
+        }
+      }
+    },
     "No agent session is known": {
       "localizations": {
         "ja": {
@@ -5554,6 +6026,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペインでエージェントが動いていませんでした。"
+          }
+        }
+      }
+    },
+    "No agents are running.": {
+      "comment": "assistant: spoken status",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "動いているエージェントはありません。"
           }
         }
       }
@@ -5649,12 +6132,34 @@
         }
       }
     },
+    "No workspace is waiting for you. Which one do you mean?": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "応答を待っているワークスペースはありません。どれのことですか？"
+          }
+        }
+      }
+    },
     "No workspaces": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペースがありません"
+          }
+        }
+      }
+    },
+    "None": {
+      "comment": "Settings › Assistant › Shortcut: no shortcut",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "なし"
           }
         }
       }
@@ -5831,7 +6336,7 @@
       }
     },
     "Off": {
-      "comment": "show subagents",
+      "comment": "assistant state\nshow subagents",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -6212,7 +6717,19 @@
         }
       }
     },
+    "Pause Listening": {
+      "comment": "menu bar item: assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聞き取りを一時停止"
+          }
+        }
+      }
+    },
     "Paused": {
+      "comment": "assistant state",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -6258,6 +6775,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "スマートフォン"
+          }
+        }
+      }
+    },
+    "Please press Return or click Send for this one.": {
+      "comment": "assistant: a spoken yes is not enough",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これはReturnキーを押すか「送信」をクリックしてください。"
           }
         }
       }
@@ -6383,6 +6911,17 @@
         }
       }
     },
+    "Quiet (text only)": {
+      "comment": "Settings › Assistant › Style",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シンプル（テキストのみ）"
+          }
+        }
+      }
+    },
     "Quit": {
       "localizations": {
         "ja": {
@@ -6409,6 +6948,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmds を終了しますか？"
+          }
+        }
+      }
+    },
+    "Rate:": {
+      "comment": "Settings › Assistant: speaking rate",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "速さ："
           }
         }
       }
@@ -6915,6 +7465,17 @@
         }
       }
     },
+    "Resume Listening": {
+      "comment": "menu bar item: assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聞き取りを再開"
+          }
+        }
+      }
+    },
     "Resuming %@ — waiting for the shell prompt…": {
       "localizations": {
         "ja": {
@@ -7148,16 +7709,6 @@
         }
       }
     },
-    "Show in Finder": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finderに表示"
-          }
-        }
-      }
-    },
     "SSH panes count only the local ssh client, not the server": {
       "localizations": {
         "ja": {
@@ -7204,6 +7755,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分の版をコピーとして保存"
+          }
+        }
+      }
+    },
+    "Say yes or press Return.": {
+      "comment": "assistant: how to confirm",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「はい」と言うかReturnキーを押してください。"
+          }
+        }
+      }
+    },
+    "Say “yes” or press Return. “No” or Esc cancels.": {
+      "comment": "assistant HUD",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「はい」と言うかReturnキーで実行、「いいえ」かescで取り消します。"
           }
         }
       }
@@ -7353,6 +7926,23 @@
         }
       }
     },
+    "Send “%@” to %@?": {
+      "comment": "assistant: confirmation question",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Send “%1$@” to %2$@?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@に「%1$@」を送信しますか？"
+          }
+        }
+      }
+    },
     "Send “%@” to the agent in %@": {
       "localizations": {
         "en": {
@@ -7365,6 +7955,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$@のエージェントに「%1$@」を送る"
+          }
+        }
+      }
+    },
+    "Send ⏎": {
+      "comment": "assistant HUD: confirm button",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信 ⏎"
+          }
+        }
+      }
+    },
+    "Sent to %@.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に送信しました。"
           }
         }
       }
@@ -7551,6 +8163,17 @@
         }
       }
     },
+    "Shortcut:": {
+      "comment": "Settings › Assistant: listen for one command",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ショートカット："
+          }
+        }
+      }
+    },
     "Show All": {
       "localizations": {
         "ja": {
@@ -7631,12 +8254,33 @@
         }
       }
     },
+    "Show answers without speaking": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み上げずに表示だけする"
+          }
+        }
+      }
+    },
     "Show identical items": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "同じ項目も表示"
+          }
+        }
+      }
+    },
+    "Show in Finder": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finderに表示"
           }
         }
       }
@@ -7900,12 +8544,56 @@
         }
       }
     },
+    "Speaking": {
+      "comment": "assistant state",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み上げ中"
+          }
+        }
+      }
+    },
+    "Speaking rate": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "読み上げの速さ"
+          }
+        }
+      }
+    },
     "Special file": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "特殊ファイル"
+          }
+        }
+      }
+    },
+    "Speech is recognised on this Mac in the app's language (cmds › Language). Answers come from the workspaces and Apple's on-device model; a detailed summary asks Claude Code (claude -p). Anything that types into a pane or starts a session is shown first and runs only after you say yes or press Return; deletes, pushes, deploys and SSH panes need Return or a click.": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音声はアプリの言語（cmds › 言語）でこのMac上で認識します。回答はワークスペースの情報とAppleのデバイス上のモデルから作り、詳しい要約だけClaude Code（claude -p）に頼みます。ペインへの入力やセッションの開始は、まず表示し、「はい」と言うかReturnキーを押してから実行します。削除・プッシュ・デプロイとSSHペインへの送信はReturnキーかクリックが必要です。"
+          }
+        }
+      }
+    },
+    "Speech recognition on this Mac does not support the app's language.": {
+      "comment": "assistant problem",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このMacの音声認識はアプリの言語に対応していません。"
           }
         }
       }
@@ -7937,6 +8625,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "右に分割"
+          }
+        }
+      }
+    },
+    "Standing by": {
+      "comment": "assistant state: listening for its name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中"
+          }
+        }
+      }
+    },
+    "Start %@ in %@?": {
+      "comment": "assistant: confirmation question",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Start %1$@ in %2$@?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@で%1$@を起動しますか？"
           }
         }
       }
@@ -7991,12 +8707,40 @@
         }
       }
     },
+    "Start ⏎": {
+      "comment": "assistant HUD: confirm button",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "起動 ⏎"
+          }
+        }
+      }
+    },
     "Started": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "開始"
+          }
+        }
+      }
+    },
+    "Started %@ in %@.": {
+      "comment": "assistant",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Started %1$@ in %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@で%1$@を起動しました。"
           }
         }
       }
@@ -8114,6 +8858,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止: %@"
+          }
+        }
+      }
+    },
+    "Style:": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スタイル："
           }
         }
       }
@@ -8344,6 +9099,17 @@
         }
       }
     },
+    "System Voice": {
+      "comment": "Settings › Assistant › Voice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムの声"
+          }
+        }
+      }
+    },
     "System usage": {
       "localizations": {
         "ja": {
@@ -8391,6 +9157,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "テキスト："
+          }
+        }
+      }
+    },
+    "That didn't work: the pane is gone or busy.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行できませんでした。ペインが閉じられたか使用中です。"
           }
         }
       }
@@ -8731,6 +9508,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "場所は絶対パスで指定してください：%@"
+          }
+        }
+      }
+    },
+    "The microphone stopped: %@": {
+      "comment": "assistant problem",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイクが停止しました：%@"
           }
         }
       }
@@ -9145,12 +9933,34 @@
         }
       }
     },
+    "There is nothing to confirm.": {
+      "comment": "assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認待ちのものはありません。"
+          }
+        }
+      }
+    },
     "They are not in the folder being synced from. Items on this Mac go to its Trash, items on a server to your Trash there (~/.local/share/Trash). Nothing is deleted.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "同期元のフォルダにない項目です。このMacの項目はゴミ箱に、サーバの項目はサーバ上のゴミ箱（~/.local/share/Trash）に移動します。何も削除しません。"
+          }
+        }
+      }
+    },
+    "Thinking": {
+      "comment": "assistant state",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "考え中"
           }
         }
       }
@@ -9217,6 +10027,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "この項目はすでにゴミ箱にあります。"
+          }
+        }
+      }
+    },
+    "This one needs Return or a click.": {
+      "comment": "assistant: how to confirm a dangerous action",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これはReturnキーかクリックが必要です。"
           }
         }
       }
@@ -9430,6 +10251,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "「蓋を閉じてもスリープしない」をオフにしますか？"
+          }
+        }
+      }
+    },
+    "Turn on the assistant": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントをオンにする"
           }
         }
       }
@@ -9691,12 +10523,52 @@
         }
       }
     },
+    "Voice:": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "声："
+          }
+        }
+      }
+    },
     "Waiting": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "待機中"
+          }
+        }
+      }
+    },
+    "Waiting for %lld minutes.": {
+      "comment": "assistant: how long a workspace has waited",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分待っています。"
+          }
+        },
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Waiting for %lld minute."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Waiting for %lld minutes."
+                }
+              }
+            }
           }
         }
       }
@@ -9737,6 +10609,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "シェルを待機中"
+          }
+        }
+      }
+    },
+    "Waiting for your OK": {
+      "comment": "assistant state: an action waits for confirmation",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "確認待ち"
           }
         }
       }
@@ -9891,6 +10774,17 @@
         }
       }
     },
+    "Which one: %@?": {
+      "comment": "assistant: asks back when several workspaces fit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どれですか：%@？"
+          }
+        }
+      }
+    },
     "While cmds runs, the Mac does not go to sleep when idle (the display may still turn off). Closing the lid still sleeps it.": {
       "localizations": {
         "ja": {
@@ -10023,6 +10917,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ワークスペース：%1$lld、エージェントのセッション：%2$lld。「追加」は開いているワークスペースを残し、「置き換える」はそれらを閉じます。"
+          }
+        }
+      }
+    },
+    "Yes?": {
+      "comment": "assistant: answer when called by name only",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "はい？"
           }
         }
       }
@@ -10189,6 +11094,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsは蓋を閉じてもスリープしないようにしています。スリープしないMacを閉じたままにすると、バッテリーを消耗し、バッグの中で過熱することがあります。"
+          }
+        }
+      }
+    },
+    "cmds may not use speech recognition. Allow it in System Settings › Privacy & Security › Speech Recognition.": {
+      "comment": "assistant problem",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsに音声認識の使用が許可されていません。システム設定 › プライバシーとセキュリティ › 音声認識で許可してください。"
+          }
+        }
+      }
+    },
+    "cmds may not use the microphone. Allow it in System Settings › Privacy & Security › Microphone.": {
+      "comment": "assistant problem",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsにマイクの使用が許可されていません。システム設定 › プライバシーとセキュリティ › マイクで許可してください。"
           }
         }
       }
@@ -10376,6 +11303,50 @@
         }
       }
     },
+    "it may delete things.": {
+      "comment": "assistant HUD: why a click is needed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "削除する可能性があります。"
+          }
+        }
+      }
+    },
+    "it may deploy.": {
+      "comment": "assistant HUD: why a click is needed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デプロイする可能性があります。"
+          }
+        }
+      }
+    },
+    "it may push or publish.": {
+      "comment": "assistant HUD: why a click is needed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プッシュや公開をする可能性があります。"
+          }
+        }
+      }
+    },
+    "it widens permissions.": {
+      "comment": "assistant HUD: why a click is needed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "権限を広げます。"
+          }
+        }
+      }
+    },
     "just now": {
       "comment": "age of agent figures",
       "localizations": {
@@ -10403,6 +11374,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "最終接続%@"
+          }
+        }
+      }
+    },
+    "limit": {
+      "comment": "short label of an agent's usage limit that was reached (limit 100%)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限"
           }
         }
       }
@@ -10586,6 +11568,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "sshはこのホストの~/.ssh/config、鍵、known_hostsを使い、入力を求めません（BatchMode）。iPhoneでは「SSH経由のリモートアクセス…」で、同じホスト、そのホストでのユーザー名、この中継ポートを指定します。"
+          }
+        }
+      }
+    },
+    "the pane is an SSH session.": {
+      "comment": "assistant HUD: why a click is needed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SSHペインです。"
           }
         }
       }

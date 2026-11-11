@@ -179,6 +179,12 @@ final class APIServer {
             case "debug.menubar_reply":
                 // Tests only: the menu bar's reply panel (MenuBarReplyPanel+Debug.swift, #213).
                 connection.reply(id: id, result: try MenuBarReplyPanel.debugPerform(params.value, controller: controller))
+            case "debug.assistant":
+                // Tests only: the voice assistant with text instead of the microphone (AssistantController+Debug.swift, #243).
+                guard #available(macOS 26.0, *), let assistant = AssistantController.shared else {
+                    throw RPCError.invalidParams("the assistant needs macOS 26")
+                }
+                connection.reply(id: id, result: try assistant.debugPerform(params.value))
             case "debug.sidebar_port":
                 // Tests only: a click on port `index` (default 0) of a workspace's sidebar row (#171).
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))

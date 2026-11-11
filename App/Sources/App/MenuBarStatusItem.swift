@@ -39,7 +39,12 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         var working: Int
         /// Why the red warning dot shows, nil when it does not.
         var warning: String?
+        /// The voice assistant (#243): nil off, else whether it is paused.
+        var assistantPaused: Bool?
     }
+    /// Pulses the assistant's dot while it listens.
+    private var assistantPulse: Timer?
+    private var assistantPhase = 0.0
 
     /// One spinner turn takes this long, in `steps` frames.
     private static let turn: TimeInterval = 1.2
@@ -62,6 +67,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
             if self.menuIsOpen { self.updateDashboard() }
         }
         NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: AppSettings.didChange, object: nil)
+        if #available(macOS 26.0, *) {
+            NotificationCenter.default.addObserver(self, selector: #selector(assistantChanged), name: AssistantController.didChange,
+                                                   object: nil)
+        }
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(motionPreferenceChanged),
                                                           name: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
                                                           object: nil)
@@ -85,6 +94,35 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         if item == nil { updateSpinner(working: false) }
     }
 
+    @objc private func assistantChanged() { update() }
+
+    /// The assistant's state for the icon: nil off (or below macOS 26), else whether it is paused.
+    private var assistantPaused: Bool? {
+        guard #available(macOS 26.0, *), let assistant = AssistantController.shared, assistant.isOn else { return nil }
+        return assistant.isPaused
+    }
+
+    /// A slow pulse of the assistant's dot while it listens (not with Reduce Motion or the animation off).
+    private func updateAssistantPulse(_ paused: Bool?) {
+        let animate = paused == false && item != nil && AppSettings.shared.menuBar(.animation)
+            && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        if animate, assistantPulse == nil {
+            let timer = Timer(timeInterval: 0.15, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    self.assistantPhase = (self.assistantPhase + 0.15 / 2.4).truncatingRemainder(dividingBy: 1)
+                    self.drawStatusImage()
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            assistantPulse = timer
+        } else if !animate, let timer = assistantPulse {
+            timer.invalidate()
+            assistantPulse = nil
+            assistantPhase = 0
+        }
+    }
+
     @objc private func motionPreferenceChanged() {
         appliedCounts = nil
         update()
@@ -98,8 +136,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
         let settings = AppSettings.shared
         let counts = Counts(needingUser: summary.needingUserCount,
                             working: settings.menuBar(.workingBadge) ? summary.workingCount : 0,
-                            warning: settings.menuBar(.warningDot) ? AgentOverview.warning(controller) : nil)
+                            warning: settings.menuBar(.warningDot) ? AgentOverview.warning(controller) : nil,
+                            assistantPaused: assistantPaused)
         updateSpinner(working: counts.working > 0)
+        updateAssistantPulse(counts.assistantPaused)
         guard counts != appliedCounts else { return }
         appliedCounts = counts
         drawStatusImage()
@@ -110,8 +150,11 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
 
     private func drawStatusImage() {
         guard let button = item?.button, let counts = appliedCounts else { return }
+        let assistant = counts.assistantPaused.map { paused in
+            (alpha: paused ? 0.8 : 0.65 + 0.35 * CGFloat(sin(assistantPhase * 2 * .pi) + 1) / 2, paused: paused)
+        }
         button.image = MenuBarIcon.statusImage(needingUser: counts.needingUser, working: counts.working, phase: phase,
-                                               warning: counts.warning != nil)
+                                               warning: counts.warning != nil, assistant: assistant)
     }
 
     /// Runs the spinner timer while agents work, unless the user turned the animation off (Settings › Menu Bar) or asked
@@ -147,6 +190,10 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
                                    comment: "menu bar item: workspaces waiting for the user, and with an agent working")
         }
         if let warning = counts.warning { text += "\n⚠︎ " + warning }
+        if let paused = counts.assistantPaused {
+            text += "\n" + (paused ? String(localized: "Assistant paused", comment: "menu bar item tooltip")
+                                    : String(localized: "Assistant listening", comment: "menu bar item tooltip"))
+        }
         return text
     }
 
@@ -229,6 +276,7 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
             menu.addItem(none)
         }
         menu.addItem(.separator())
+        addAssistantItems(to: menu)
         let open = NSMenuItem(title: String(localized: "Open cmds", comment: "menu bar item"), action: #selector(openApp), keyEquivalent: "")
         open.target = self
         menu.addItem(open)
@@ -277,6 +325,36 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
                                   takeKeyboard: takeKeyboard) { [weak self] workspace, pane in
             self?.showWorkspace(workspace, pane)
         }
+    }
+
+    /// The voice assistant (#243, macOS 26): on / off, pause / resume listening.
+    private func addAssistantItems(to menu: NSMenu) {
+        guard #available(macOS 26.0, *), let assistant = AssistantController.shared, assistant.isUnlocked else { return }
+        let toggle = NSMenuItem(title: String(localized: "Assistant", comment: "menu bar item: turns the voice assistant on or off"),
+                                action: #selector(toggleAssistant), keyEquivalent: "")
+        toggle.target = self
+        toggle.state = assistant.isOn ? .on : .off
+        menu.addItem(toggle)
+        if assistant.isOn {
+            let pause = NSMenuItem(title: assistant.isPaused
+                                   ? String(localized: "Resume Listening", comment: "menu bar item: assistant")
+                                   : String(localized: "Pause Listening", comment: "menu bar item: assistant"),
+                                   action: #selector(pauseAssistant), keyEquivalent: "")
+            pause.target = self
+            pause.indentationLevel = 1
+            menu.addItem(pause)
+        }
+        menu.addItem(.separator())
+    }
+
+    @objc private func toggleAssistant() {
+        guard #available(macOS 26.0, *), let assistant = AssistantController.shared else { return }
+        assistant.isOn ? assistant.turnOff() : assistant.turnOn()
+    }
+
+    @objc private func pauseAssistant() {
+        guard #available(macOS 26.0, *), let assistant = AssistantController.shared else { return }
+        assistant.isPaused ? assistant.resume() : assistant.pause()
     }
 
     @objc private func openApp() { showWorkspace(nil, nil) }

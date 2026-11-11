@@ -15,7 +15,10 @@ enum MenuBarIcon {
     /// The cmds glyph, an orange badge with how many workspaces need the user and an accent badge with how many work,
     /// circled by a turning arc. `warning` puts a red dot on the glyph's corner (an account limit at 95 % or more, or
     /// critical memory pressure, #105). Drawn when shown, so the glyph follows the menu bar's light or dark look.
-    static func statusImage(needingUser: Int, working: Int, phase: Double, warning: Bool = false) -> NSImage {
+    /// `assistant` (#243): a small cyan dot at the glyph's lower corner while the voice assistant is on, its opacity
+    /// pulsing gently while it listens (the caller varies `alpha`); hollow while paused.
+    static func statusImage(needingUser: Int, working: Int, phase: Double, warning: Bool = false,
+                            assistant: (alpha: CGFloat, paused: Bool)? = nil) -> NSImage {
         var width = glyphWidth
         if needingUser > 0 { width += spacing + badgeSize }
         if working > 0 { width += spacing + ringSize }
@@ -30,6 +33,19 @@ enum MenuBarIcon {
                 let dot = NSRect(x: glyphWidth - 7, y: height - 8, width: 7, height: 7)
                 NSColor.systemRed.setFill()
                 NSBezierPath(ovalIn: dot).fill()
+            }
+            if let assistant {
+                let dot = NSRect(x: glyphWidth - 6.5, y: 0.5, width: 6, height: 6)
+                let color = NSColor(srgbRed: 0.31, green: 0.85, blue: 1.0, alpha: assistant.alpha)
+                if assistant.paused {
+                    color.setStroke()
+                    let ring = NSBezierPath(ovalIn: dot.insetBy(dx: 0.7, dy: 0.7))
+                    ring.lineWidth = 1.2
+                    ring.stroke()
+                } else {
+                    color.setFill()
+                    NSBezierPath(ovalIn: dot).fill()
+                }
             }
             var x = glyphWidth + spacing
             if needingUser > 0 {

@@ -113,7 +113,7 @@ final class AppSettings: NSObject {
     static let memoryWarningKey = "MemoryWarning"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
                                showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey] + MenuBarOption.allCases.map(\.rawValue)
-        + SidebarItem.allCases.map(\.rawValue)
+        + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
     static let zoomRange: ClosedRange<Double> = 0.5...3
@@ -241,7 +241,8 @@ final class AppSettings: NSObject {
         return min(max(value, Self.zoomRange.lowerBound), Self.zoomRange.upperBound)
     }
 
-    private func set(_ value: Any?, forKey key: String) {
+    /// Stores `value`, or removes the key for nil (the default).
+    func set(_ value: Any?, forKey key: String) {
         if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
     }
 

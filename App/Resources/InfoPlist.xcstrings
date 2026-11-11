@@ -126,13 +126,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A program running in cmds would like to use the microphone."
+            "value" : "cmds' assistant listens for its name when you turn it on, or a program running in cmds would like to use the microphone."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "cmdsで実行中のプログラムがマイクを使おうとしています。"
+            "value" : "cmdsのアシスタントをオンにすると、呼びかけを聞き取るためにマイクを使います。cmdsで実行中のプログラムがマイクを使おうとしている場合もあります。"
           }
         }
       }
@@ -150,6 +150,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "cmdsで実行中のプログラムが写真ライブラリにアクセスしようとしています。"
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmds' assistant recognises what you say to it on this Mac. Nothing heard is stored."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmdsのアシスタントが、話しかけた内容をこのMac上で認識します。聞き取った内容は保存しません。"
           }
         }
       }
