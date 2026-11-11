@@ -143,10 +143,14 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
     private func present(_ alert: NSAlert, for webView: WKWebView,
                          answer: @escaping (NSApplication.ModalResponse?) -> Void) {
         guard let window = sheetWindow(for: webView) else { return answer(nil) }
-        let pending = PendingSheet(window: window, sheet: alert.window, answer: answer)
-        pending.alert = alert
+        let pending = PendingSheet(window: window, sheet: alert.window, alert: alert, answer: answer)
+        alert.beginSheetModal(for: window, completionHandler: track(pending))
+    }
+
+    /// Keeps `pending` until its sheet ends (`tearDown()` answers it before); the returned handler is the sheet's.
+    private func track(_ pending: PendingSheet) -> (NSApplication.ModalResponse) -> Void {
         sheets.append(pending)
-        alert.beginSheetModal(for: window) { [weak self] response in
+        return { [weak self] response in
             MainActor.assumeIsolated {
                 pending.finish(response)
                 self?.sheets.removeAll { $0 === pending }
@@ -173,17 +177,10 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
                                                 port: frame.securityOrigin.port) {
             panel.message = String(localized: "Choose files to upload to \(host)")
         }
-        let pending = PendingSheet(window: window, sheet: panel) { response in
+        let pending = PendingSheet(window: window, sheet: panel, chooseFiles: { completionHandler($0) }) { response in
             completionHandler(response == .OK ? panel.urls : nil)
         }
-        pending.chooseFiles = { completionHandler($0) }
-        sheets.append(pending)
-        panel.beginSheetModal(for: window) { [weak self] response in
-            MainActor.assumeIsolated {
-                pending.finish(response)
-                self?.sheets.removeAll { $0 === pending }
-            }
-        }
+        panel.beginSheetModal(for: window, completionHandler: track(pending))
     }
 
     // MARK: - Downloads
@@ -216,13 +213,16 @@ private final class PendingSheet {
     private weak var sheet: NSWindow?
     private var answer: ((NSApplication.ModalResponse?) -> Void)?
     /// The JavaScript dialog shown (nil: the open panel).
-    var alert: NSAlert?
+    let alert: NSAlert?
     /// The open panel's answer with given files (`debug.browser`).
-    var chooseFiles: (([URL]) -> Void)?
+    private let chooseFiles: (([URL]) -> Void)?
 
-    init(window: NSWindow, sheet: NSWindow, answer: @escaping (NSApplication.ModalResponse?) -> Void) {
+    init(window: NSWindow, sheet: NSWindow, alert: NSAlert? = nil, chooseFiles: (([URL]) -> Void)? = nil,
+         answer: @escaping (NSApplication.ModalResponse?) -> Void) {
         self.window = window
         self.sheet = sheet
+        self.alert = alert
+        self.chooseFiles = chooseFiles
         self.answer = answer
     }
 
