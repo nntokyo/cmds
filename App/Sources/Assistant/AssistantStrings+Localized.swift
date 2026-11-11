@@ -33,12 +33,10 @@ private extension AssistantLine {
     var localized: String {
         switch self {
         case .noAgents: return String(localized: "No agents are running.", comment: "assistant: spoken status")
-        case .overview(let needYou, let working):
-            switch (needYou, working) {
-            case (0, _): return String(localized: "\(working) working.", comment: "assistant: spoken status (count of working agents)")
-            case (_, 0): return String(localized: "\(needYou) need you.", comment: "assistant: spoken status (count of workspaces waiting for the user)")
-            default: return String(localized: "\(needYou) need you, \(working) working.", comment: "assistant: spoken status")
-            }
+        case .waitingList(let count, let names):
+            return String(localized: "\(count) waiting: \(names).", comment: "assistant: spoken status (count and names of workspaces waiting for the user)")
+        case .workingList(let count, let names):
+            return String(localized: "\(count) working: \(names).", comment: "assistant: spoken status (count and names of workspaces whose agent works)")
         case .allQuiet(let count): return String(localized: "\(count) agents, nothing needs you.", comment: "assistant: spoken status")
         case .needsYou(let workspace): return String(localized: "\(workspace) needs you.", comment: "assistant: spoken status of a workspace")
         case .asks(let question): return String(localized: "It asks: \(question)", comment: "assistant: what the agent asks")

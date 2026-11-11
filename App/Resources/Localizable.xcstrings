@@ -916,52 +916,6 @@
         }
       }
     },
-    "%lld need you, %lld working.": {
-      "comment": "assistant: spoken status",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "new",
-            "value": "%1$lld need you, %2$lld working."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "応答待ち%1$lld件、作業中%2$lld件。"
-          }
-        }
-      }
-    },
-    "%lld need you.": {
-      "comment": "assistant: spoken status (count of workspaces waiting for the user)",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld needs you."
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld need you."
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "応答待ち%lld件。"
-          }
-        }
-      }
-    },
     "%lld of %lld selected": {
       "localizations": {
         "en": {
@@ -1084,13 +1038,36 @@
         }
       }
     },
-    "%lld working.": {
-      "comment": "assistant: spoken status (count of working agents)",
+    "%lld waiting: %@.": {
+      "comment": "assistant: spoken status (count and names of workspaces waiting for the user)",
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld waiting: %2$@."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "作業中%lld件。"
+            "value": "入力待ち%1$lld件: %2$@。"
+          }
+        }
+      }
+    },
+    "%lld working: %@.": {
+      "comment": "assistant: spoken status (count and names of workspaces whose agent works)",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld working: %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中%1$lld件: %2$@。"
           }
         }
       }

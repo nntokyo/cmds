@@ -6,8 +6,10 @@ import Foundation
 public enum AssistantLine: Equatable, Sendable {
     // Status.
     case noAgents
-    /// "2 need you, 1 working." (counts of 0 are left out by the caller: `needYou` and `working` are both > 0 or one is).
-    case overview(needYou: Int, working: Int)
+    /// "2 waiting: api, api-v2." (the names as one list, cut after a few).
+    case waitingList(count: Int, names: String)
+    /// "1 working: web."
+    case workingList(count: Int, names: String)
     case allQuiet(count: Int)
     case needsYou(workspace: String)
     case asks(String)
@@ -65,12 +67,8 @@ public enum AssistantLine: Equatable, Sendable {
     public var english: String {
         switch self {
         case .noAgents: return "No agents are running."
-        case .overview(let needYou, let working):
-            switch (needYou, working) {
-            case (0, _): return "\(working) working."
-            case (_, 0): return needYou == 1 ? "1 needs you." : "\(needYou) need you."
-            default: return (needYou == 1 ? "1 needs you, " : "\(needYou) need you, ") + "\(working) working."
-            }
+        case .waitingList(let count, let names): return "\(count) waiting: \(names)."
+        case .workingList(let count, let names): return "\(count) working: \(names)."
         case .allQuiet(let count): return count == 1 ? "1 agent, nothing needs you." : "\(count) agents, nothing needs you."
         case .needsYou(let workspace): return "\(workspace) needs you."
         case .asks(let question): return "It asks: \(question)"
@@ -144,17 +142,21 @@ public enum AssistantReport {
     /// Workspaces shown by name at most; the rest only count.
     static let maxNamed = 4
 
-    /// "2 need you, 1 working. api needs you. It asks: Run the tests? web is working on Add login."
-    public static func status(_ world: AssistantWorld, strings: AssistantStrings) -> String {
+    /// Compact: "2 waiting: api, api-v2. 1 working: web." The agents' questions only when asked about one workspace.
+    /// `list`: how names are joined (`api, web` / `api、web`).
+    public static func status(_ world: AssistantWorld, strings: AssistantStrings,
+                              list: ([String]) -> String = { $0.joined(separator: ", ") }) -> String {
         let agents = world.withAgents
         guard !agents.isEmpty else { return strings(.noAgents) }
-        let needYou = agents.count { $0.state == .needsUser }
-        let working = agents.count { $0.state == .working }
-        var lines: [AssistantLine] = needYou + working == 0 ? [.allQuiet(count: agents.count)]
-            : [.overview(needYou: needYou, working: working)]
-        for workspace in agents.prefix(maxNamed) where workspace.state == .needsUser || workspace.state == .working {
-            lines += stateLines(workspace, withQuestion: workspace.state == .needsUser)
+        let waiting = agents.filter { $0.state == .needsUser }.map(\.title)
+        let working = agents.filter { $0.state == .working }.map(\.title)
+        guard !waiting.isEmpty || !working.isEmpty else { return strings(.allQuiet(count: agents.count)) }
+        func names(_ titles: [String]) -> String {
+            list(titles.prefix(maxNamed).map(clip)) + (titles.count > maxNamed ? " +\(titles.count - maxNamed)" : "")
         }
+        var lines: [AssistantLine] = []
+        if !waiting.isEmpty { lines.append(.waitingList(count: waiting.count, names: names(waiting))) }
+        if !working.isEmpty { lines.append(.workingList(count: working.count, names: names(working))) }
         return strings.join(lines)
     }
 

@@ -37,6 +37,19 @@ public enum AssistantAddressing {
         return followUpOpen ? .command(text, byName: false) : .ignored
     }
 
+    /// Longest follow-up taken without the name after an answer: words (Latin script) or characters (Japanese).
+    public static let maxFollowUpWords = 8
+    public static let maxFollowUpCharacters = 20
+
+    /// Whether `text` is short enough to be a follow-up without the name ("what about tomorrow?", "大阪は？",
+    /// "yes"): a long sentence just after the assistant spoke is more likely its own voice or other talk.
+    public static func isShortFollowUp(_ text: String) -> Bool {
+        let folded = AssistantText.folded(text)
+        let latin = folded.unicodeScalars.filter { $0.properties.isAlphabetic }.allSatisfy(\.isASCII)
+        if latin { return folded.split(whereSeparator: \.isWhitespace).count <= maxFollowUpWords }
+        return AssistantText.key(text).count <= maxFollowUpCharacters
+    }
+
     /// The text after a leading name (and greeting), trimmed; nil when it does not start with one of `names`.
     static func afterName(_ text: String, names: [String]) -> String? {
         let nameKeys = Set(names.map(AssistantText.key).filter { !$0.isEmpty })

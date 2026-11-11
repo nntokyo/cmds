@@ -9,6 +9,7 @@ import CmdsCore
 @available(macOS 26.0, *)
 extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
+    /// `speak` (`text`: speaking it without a voice until `spoken`), `spoken`,
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons). `snapshot`
     /// adds the HUD drawn off screen (`png_base64`; without the window's translucency).
     func debugPerform(_ params: JSONValue?) throws -> JSONValue {
@@ -27,6 +28,10 @@ extension AssistantController {
         case "pause": pause()
         case "resume": resume()
         case "hotkey": hotkey()
+        case "speak":
+            guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
+            debugSpeak(text)
+        case "spoken": debugSpeechEnded()
         case "hear":
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
             hear(text)
@@ -55,6 +60,10 @@ extension AssistantController {
             "spoken": lastSpoken.map(JSONValue.string) ?? .null,
             "problem": problem.map(JSONValue.string) ?? .null,
             "lastStep": lastStep.map { .string(String(describing: $0)) } ?? .null,
+            "request": .number(Double(machine.request)),
+            "voiceActive": .bool(machine.voiceActive),
+            "followUpSeconds": machine.followUpUntil.map { .number(max(0, $0.timeIntervalSinceNow)) } ?? .null,
+            "claudeWorking": .bool(debugClaudeWorking),
             "microphone": .bool(debugUsesMicrophone),
             "confirmationKeys": .bool(debugConfirmationKeys),
             "muted": .bool(AppSettings.shared.assistantMuted),

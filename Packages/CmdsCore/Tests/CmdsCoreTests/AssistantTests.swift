@@ -174,10 +174,30 @@ final class AssistantPlannerTests: XCTestCase {
     }
 
     func testStatusReport() {
-        XCTAssertEqual(plan("status"), .answer("1 needs you, 1 working. api needs you. It asks: Run the tests? web is working on Login form."))
+        // Compact: counts and names, no agent's question (that is for "what is api doing").
+        XCTAssertEqual(plan("status"), .answer("1 waiting: api. 1 working: web."))
         XCTAssertEqual(plan("status", AssistantWorld(workspaces: [])), .answer("No agents are running."))
         let quiet = AssistantWorld(workspaces: [.init(id: "w1", title: "api", state: .done)])
         XCTAssertEqual(plan("status", quiet), .answer("1 agent, nothing needs you."))
+    }
+
+    func testStatusReportListsNamesCompactly() {
+        let many = AssistantWorld(workspaces: ["a", "b", "c", "d", "e"].map {
+            .init(id: $0, title: $0, state: .needsUser, agent: "Claude", panes: [.init(id: "p" + $0, title: "zsh", agent: "Claude", waiting: true, prompt: yesNo)])
+        } + [.init(id: "w", title: "web", state: .working, agent: "Codex", topic: "Login form")], now: now)
+        XCTAssertEqual(AssistantReport.status(many, strings: .english), "5 waiting: a, b, c, d +1. 1 working: web.")
+        let japanese = AssistantStrings(separator: "") { line in
+            switch line {
+            case .waitingList(let count, let names): return "入力待ち\(count)件: \(names)。"
+            case .workingList(let count, let names): return "作業中\(count)件: \(names)。"
+            default: return line.english
+            }
+        }
+        let two = AssistantWorld(workspaces: [
+            .init(id: "1", title: "api", state: .needsUser), .init(id: "2", title: "api-v2", state: .needsUser),
+            .init(id: "3", title: "web", state: .working),
+        ], now: now)
+        XCTAssertEqual(AssistantReport.status(two, strings: japanese), "入力待ち2件: api, api-v2。作業中1件: web。")
     }
 
     func testWhatIsItDoing() {
@@ -385,6 +405,254 @@ final class AssistantMachineTests: XCTestCase {
         XCTAssertEqual(machine.hear("Jarvis", names: names, now: t0), .wake)
         XCTAssertEqual(machine.phase, .listening)
         XCTAssertEqual(machine.hear("approve api", names: names, now: t0.addingTimeInterval(2)), .handle(.approve(target: "api")))
+    }
+
+    // MARK: Its own voice, barge-in, the follow-up window
+
+    private let weather = "15日曜日は曇りです。降水確率は60%前後、最高気温は19度、最低気温は12度の見込みです。"
+
+    /// The real case: a long Claude answer heard back after it was said is not sent to Claude again.
+    func testItsOwnLongAnswerHeardLateIsDropped() {
+        var machine = on()
+        _ = machine.hear("ジャービス、明日の天気は", names: names, now: t0)
+        let request = machine.request
+        XCTAssertTrue(machine.answer(weather, request: request, now: t0.addingTimeInterval(5)))
+        // While speaking: unaddressed speech (its own voice) never counts.
+        XCTAssertEqual(machine.hear("15日曜日は曇りです", names: names, now: t0.addingTimeInterval(6)), .ignore)
+        machine.speechFinished(now: t0.addingTimeInterval(15))
+        XCTAssertEqual(machine.phase, .listening)
+        // The transcript arrives 3 s after speech ended: the 1 s guard is over, but it is its own text.
+        XCTAssertEqual(machine.hear("15日曜日は曇りです。降水確率は 60%前後最高気温は19度", names: names, now: t0.addingTimeInterval(18)), .ignore)
+        XCTAssertEqual(machine.phase, .listening)
+        XCTAssertEqual(machine.request, request)
+        XCTAssertEqual(machine.transcript, "明日の天気は")
+    }
+
+    func testEchoRejection() {
+        // Exact, partial, recognised a little differently.
+        XCTAssertTrue(AssistantEcho.isEcho(weather, of: weather))
+        XCTAssertTrue(AssistantEcho.isEcho("降水確率は60%前後", of: weather))
+        XCTAssertTrue(AssistantEcho.isEcho("１５日 日曜日は曇りです 降水確率は６０％前後", of: weather))
+        XCTAssertTrue(AssistantEcho.isEcho("api is waiting for you", of: "1 waiting: api. api is waiting for you to answer."))
+        // Unrelated text, and short answers to its own question, are not echoes.
+        XCTAssertFalse(AssistantEcho.isEcho("大阪の明日の天気を教えて", of: weather))
+        XCTAssertFalse(AssistantEcho.isEcho("what is api doing", of: weather))
+        XCTAssertFalse(AssistantEcho.isEcho("api-v2", of: "Which one: api, api-v2?"))
+        XCTAssertFalse(AssistantEcho.isEcho("はい", of: "apiに送りますか？はいと言うかReturnを押してください。"))
+        XCTAssertFalse(AssistantEcho.isEcho("", of: weather))
+    }
+
+    func testEchoIsOnlyCheckedAgainstWhatWasJustSaid() {
+        var machine = on()
+        machine.answer("All quiet, nothing needs you.", now: t0)
+        machine.speechFinished(now: t0)
+        XCTAssertTrue(machine.isEcho("all quiet nothing needs you", now: t0.addingTimeInterval(5)))
+        XCTAssertFalse(machine.isEcho("what is api doing", now: t0.addingTimeInterval(5)))
+        XCTAssertFalse(machine.isEcho("all quiet nothing needs you", now: t0.addingTimeInterval(AssistantMachine.echoMemory + 1)))
+    }
+
+    func testFollowUpWindowStartsWhenSpeechEnds() {
+        var machine = on()
+        _ = machine.hear("Jarvis status", names: names, now: t0)
+        machine.answer("1 waiting: api.", now: t0)
+        // A long answer: still speaking well past the window's length from its start.
+        let end = t0.addingTimeInterval(AssistantMachine.followUpWindow + 5)
+        XCTAssertEqual(machine.tick(now: end.addingTimeInterval(-1)), .ignore)
+        XCTAssertEqual(machine.phase, .speaking)
+        machine.speechFinished(now: end)
+        XCTAssertEqual(machine.followUpUntil, end.addingTimeInterval(AssistantMachine.followUpWindow))
+        // Within the echo guard: needs the name.
+        XCTAssertEqual(machine.hear("what is api doing", names: names, now: end.addingTimeInterval(0.5)), .ignore)
+        // After it, and within the window measured from the end: a short follow-up counts.
+        XCTAssertEqual(machine.hear("what is api doing", names: names, now: end.addingTimeInterval(AssistantMachine.followUpWindow - 1)),
+                       .handle(.workspaceStatus(target: "api")))
+    }
+
+    func testOnlyShortFollowUpsCountWithoutTheName() {
+        var machine = on()
+        _ = machine.hear("Jarvis status", names: names, now: t0)
+        machine.answer("1 waiting: api.", now: t0)
+        machine.speechFinished(now: t0)
+        let later = t0.addingTimeInterval(2)
+        XCTAssertEqual(machine.hear("so then I told him that we should really move the meeting to Thursday afternoon", names: names, now: later), .ignore)
+        XCTAssertEqual(machine.hear("今日の会議の資料はもう全部できているから心配しなくて大丈夫だよ", names: names, now: later), .ignore)
+        XCTAssertEqual(machine.phase, .listening)
+        XCTAssertEqual(machine.hear("大阪は？", names: names, now: later), .handle(.question("大阪は")))
+        XCTAssertTrue(AssistantAddressing.isShortFollowUp("what about tomorrow"))
+        XCTAssertFalse(AssistantAddressing.isShortFollowUp(weather))
+        // The hotkey and the name alone take any length.
+        var keyed = on()
+        keyed.hotkey(now: t0)
+        XCTAssertEqual(keyed.hear("please explain to me in simple words what a monad is and why people like it so much", names: names, now: later),
+                       .handle(.question("please explain to me in simple words what a monad is and why people like it so much")))
+    }
+
+    func testBargeInWhileSpeaking() {
+        var machine = on()
+        _ = machine.hear("ジャービス、明日の天気は", names: names, now: t0)
+        let first = machine.request
+        machine.answer(weather, request: first, now: t0.addingTimeInterval(5))
+        XCTAssertEqual(machine.phase, .speaking)
+        // Its name stops the voice and takes the new request at once.
+        XCTAssertEqual(machine.hear("ジャービス、apiは何してる", names: names, now: t0.addingTimeInterval(7)),
+                       .handle(.workspaceStatus(target: "api")))
+        XCTAssertEqual(machine.phase, .thinking)
+        XCTAssertEqual(machine.transcript, "apiは何してる")
+        XCTAssertGreaterThan(machine.request, first)
+        XCTAssertFalse(machine.voiceActive)
+        // The rest of the weather answer, heard late, is still its own voice.
+        XCTAssertEqual(machine.hear("降水確率は60%前後、最高気温は19度", names: names, now: t0.addingTimeInterval(8)), .ignore)
+        // The name alone also stops it, and listens.
+        machine.answer("api is running the tests.", request: machine.request, now: t0.addingTimeInterval(9))
+        XCTAssertEqual(machine.hear("Jarvis", names: names, now: t0.addingTimeInterval(10)), .wake)
+        XCTAssertEqual(machine.phase, .listening)
+        XCTAssertEqual(machine.hear("approve api", names: names, now: t0.addingTimeInterval(11)), .handle(.approve(target: "api")))
+    }
+
+    func testBargeInWhileThinkingDropsTheStaleAnswer() {
+        var machine = on()
+        _ = machine.hear("Jarvis, search the weather in Tokyo", names: names, now: t0)
+        let slow = machine.request
+        XCTAssertEqual(machine.phase, .thinking)
+        // Unaddressed talk while it thinks changes nothing.
+        XCTAssertEqual(machine.hear("status", names: names, now: t0.addingTimeInterval(1)), .ignore)
+        XCTAssertEqual(machine.request, slow)
+        // A new topic by name: a new request, shown at once.
+        XCTAssertEqual(machine.hear("Jarvis status", names: names, now: t0.addingTimeInterval(2)), .handle(.status))
+        let fresh = machine.request
+        XCTAssertNotEqual(fresh, slow)
+        XCTAssertEqual(machine.transcript, "status")
+        // Claude's answer to the old question comes late: dropped.
+        XCTAssertFalse(machine.answer("Tokyo: sunny, high 20.", request: slow, now: t0.addingTimeInterval(30)))
+        XCTAssertEqual(machine.phase, .thinking)
+        XCTAssertNil(machine.answer)
+        XCTAssertTrue(machine.answer("1 waiting: api.", request: fresh, now: t0.addingTimeInterval(31)))
+        XCTAssertEqual(machine.phase, .speaking)
+        XCTAssertEqual(machine.answer, "1 waiting: api.")
+    }
+
+    func testYesNoWhileConfirmingStillWorks() {
+        var machine = on()
+        _ = machine.hear("Jarvis reply to api: run the tests", names: names, now: t0)
+        machine.answer("Send “run the tests” to api? Say yes or press Return.", proposing: action, now: t0)
+        // While the card is read out, yes by name confirms (and stops the voice).
+        XCTAssertEqual(machine.hear("はい", names: names, now: t0.addingTimeInterval(1)), .ignore)
+        XCTAssertEqual(machine.hear("ジャービス、はい", names: names, now: t0.addingTimeInterval(2)), .execute(action))
+        XCTAssertFalse(machine.voiceActive)
+        // After it was read out: yes / no without the name, other talk ignored, the card kept.
+        machine.answer("Send?", proposing: action, now: t0.addingTimeInterval(3))
+        machine.speechFinished(now: t0.addingTimeInterval(4))
+        XCTAssertEqual(machine.hear("lunch?", names: names, now: t0.addingTimeInterval(6)), .ignore)
+        XCTAssertEqual(machine.pending, action)
+        XCTAssertEqual(machine.hear("いいえ", names: names, now: t0.addingTimeInterval(7)), .cancelled)
+        // The name alone while a card waits keeps it; a new command by name replaces it.
+        machine.answer("Send?", proposing: action, now: t0.addingTimeInterval(8))
+        XCTAssertEqual(machine.hear("Jarvis", names: names, now: t0.addingTimeInterval(9)), .wake)
+        XCTAssertEqual(machine.phase, .confirming)
+        XCTAssertEqual(machine.pending, action)
+        XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(10)), .execute(action))
+    }
+
+    func testANoteWhileACardWaitsIsAlsoItsOwnVoice() {
+        var machine = on()
+        machine.answer("Send?", proposing: action, now: t0)
+        machine.speechFinished(now: t0)
+        machine.voiceStarted("Please press Return or click the button for this one.")
+        XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(1)), .ignore)
+        machine.voiceFinished(now: t0.addingTimeInterval(3))
+        XCTAssertEqual(machine.hear("please press return or click the button", names: names, now: t0.addingTimeInterval(5)), .ignore)
+        XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(5)), .execute(action))
+    }
+}
+
+/// Short answers (#243): only what was asked, the first sentence of a long one spoken.
+final class AssistantBrevityTests: XCTestCase {
+    func testSentences() {
+        XCTAssertEqual(AssistantBrevity.sentences("明日の船橋は晴れ、最高20度、最低9度です。降水確率は10%です。"),
+                       ["明日の船橋は晴れ、最高20度、最低9度です。", "降水確率は10%です。"])
+        XCTAssertEqual(AssistantBrevity.sentences("It is 19.5 degrees. Rain later! OK?"), ["It is 19.5 degrees.", "Rain later!", "OK?"])
+        XCTAssertEqual(AssistantBrevity.sentences("api: waiting\nweb: working"), ["api: waiting", "web: working"])
+        XCTAssertEqual(AssistantBrevity.sentences("「本当？」と聞いています。"), ["「本当？」と聞いています。"])
+    }
+
+    func testFirstSentences() {
+        XCTAssertEqual(AssistantBrevity.first(1, of: "Running the tests. Then it will push."), "Running the tests.")
+        XCTAssertEqual(AssistantBrevity.first(3, of: "A. B. C. D."), "A. B. C.")
+        XCTAssertEqual(AssistantBrevity.first(1, of: "テストを実行中。次にpushします。"), "テストを実行中。")
+        XCTAssertEqual(AssistantBrevity.first(2, of: "Only one."), "Only one.")
+    }
+
+    func testOnlyTheFirstSentenceOfALongAnswerIsSpoken() {
+        let short = "明日の船橋は晴れ、最高20度、最低9度です。"
+        XCTAssertEqual(AssistantBrevity.spoken(short), short)
+        let long = short + "午前中は降水確率10%、午後は20%です。北寄りの風がやや強く、朝晩は冷え込むので上着をお持ちください。"
+        XCTAssertGreaterThan(AssistantBrevity.spokenLength(long), AssistantBrevity.maxSpokenLength)
+        XCTAssertEqual(AssistantBrevity.spoken(long), short)
+        XCTAssertEqual(AssistantBrevity.spoken("Two short ones. Fine."), "Two short ones. Fine.")
+    }
+}
+
+/// How the assistant runs Claude Code (#243): isolated from the user's setup, a fixed model, short answers.
+final class AssistantClaudeTests: XCTestCase {
+    private let world = AssistantWorld(workspaces: [.init(id: "w1", title: "api", state: .working, agent: "Claude")])
+
+    private func assertIsolated(_ arguments: [String], file: StaticString = #filePath, line: UInt = #line) {
+        let joined = arguments.joined(separator: "\u{1}")
+        XCTAssertTrue(joined.contains(["--setting-sources", ""].joined(separator: "\u{1}")), file: file, line: line)
+        XCTAssertTrue(arguments.contains("--no-session-persistence"), file: file, line: line)
+        XCTAssertTrue(arguments.contains("--strict-mcp-config"), file: file, line: line)
+        XCTAssertFalse(arguments.contains("--bare"), file: file, line: line)
+        XCTAssertFalse(arguments.contains { $0.contains("dangerously") || $0 == "--permission-mode" }, file: file, line: line)
+        XCTAssertEqual(arguments.first, "-p", file: file, line: line)
+    }
+
+    private func value(_ flag: String, in arguments: [String]) -> String? {
+        arguments.firstIndex(of: flag).flatMap { $0 + 1 < arguments.count ? arguments[$0 + 1] : nil }
+    }
+
+    func testWebAnswer() {
+        let arguments = AssistantClaude.webArguments(question: "明日の船橋の天気は？", language: "Japanese",
+                                                     now: Date(timeIntervalSince1970: 1_800_000_000),
+                                                     timeZone: TimeZone(identifier: "Asia/Tokyo")!, locale: Locale(identifier: "ja_JP"))
+        assertIsolated(arguments)
+        XCTAssertEqual(value("--model", in: arguments), AssistantClaude.answerModel)
+        XCTAssertEqual(AssistantClaude.answerModel, "sonnet")
+        XCTAssertEqual(value("--tools", in: arguments), "WebSearch,WebFetch")
+        XCTAssertEqual(value("--allowedTools", in: arguments), "WebSearch,WebFetch")
+        let prompt = arguments[1]
+        XCTAssertTrue(prompt.contains("The user's question: 明日の船橋の天気は？"))
+        XCTAssertTrue(prompt.contains("one short sentence (two at most), only what was asked"))
+        XCTAssertTrue(prompt.contains("「明日の<場所>は<天気>、最高<N>度、最低<N>度です。」"))
+        XCTAssertTrue(prompt.contains("go only after a last line \"Sources:\""))
+        XCTAssertTrue(prompt.contains("Asia/Tokyo"))
+        XCTAssertFalse(prompt.contains("If you assumed a place"))
+    }
+
+    func testDetailedSummaryAndInterpreter() {
+        let summary = AssistantClaude.detailedSummaryArguments(facts: "Claude in api", language: "English")
+        assertIsolated(summary)
+        XCTAssertEqual(value("--model", in: summary), "sonnet")
+        XCTAssertEqual(value("--tools", in: summary), "")
+        XCTAssertFalse(summary.contains("--allowedTools"))
+        XCTAssertTrue(summary[1].contains("at most three short sentences"))
+        let interpreter = AssistantClaude.interpreterArguments(utterance: "tell api to add tests", world: world, language: "English")
+        assertIsolated(interpreter)
+        XCTAssertEqual(value("--model", in: interpreter), AssistantClaude.interpreterModel)
+        XCTAssertEqual(AssistantClaude.interpreterModel, "haiku")
+        XCTAssertEqual(value("--tools", in: interpreter), "")
+    }
+
+    func testOnDeviceInstructionsAskForShortAnswers() {
+        XCTAssertTrue(AssistantClaude.modelInstructions(language: "Japanese", web: false).contains("one short sentence (two at most)"))
+        XCTAssertTrue(AssistantClaude.modelInstructions(language: "Japanese", web: true).contains(AssistantWeb.marker))
+        XCTAssertTrue(AssistantClaude.summaryPrompt(facts: "f", screen: "s").contains("In one short sentence"))
+    }
+
+    func testEnvironmentHasNoCmdsVariables() {
+        let environment = AssistantClaude.environment([
+            "PATH": "/usr/bin", "HOME": "/Users/x", "CMDS_PANE_ID": "p1", "CMDS_WORKSPACE_ID": "w1", "CMDS_SOCKET_PATH": "/tmp/s",
+        ])
+        XCTAssertEqual(environment, ["PATH": "/usr/bin", "HOME": "/Users/x"])
     }
 }
 
