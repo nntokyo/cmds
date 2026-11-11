@@ -244,8 +244,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         guard let pane = focusedTerminalPane else { return NSSound.beep() }
         windowController?.showWindow(nil)
         let panel = NSSavePanel()
-        let name = pane.title.isEmpty ? "Terminal" : pane.title
-        panel.nameFieldStringValue = ScrollbackExport.fileName(title: name)
+        panel.nameFieldStringValue = ScrollbackExport.fileName(title: pane.title)  // "Terminal …" for an untitled pane
         panel.allowedContentTypes = [.plainText]
         panel.allowsOtherFileTypes = true
         panel.message = String(localized: "The pane's whole scrollback. It may contain passwords or tokens; the file is readable only by you.")
