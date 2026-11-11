@@ -147,9 +147,13 @@ public struct AssistantStrings: Sendable {
     public var text: @Sendable (AssistantLine) -> String
     /// Between sentences: a space in English, nothing in Japanese.
     public var separator: String
+    /// Between names in a list: `, ` in English, `、` in Japanese.
+    public var listSeparator: String
 
-    public init(separator: String, text: @escaping @Sendable (AssistantLine) -> String) {
+    public init(separator: String, listSeparator: String = ", ",
+                text: @escaping @Sendable (AssistantLine) -> String) {
         self.separator = separator
+        self.listSeparator = listSeparator
         self.text = text
     }
 
@@ -158,6 +162,9 @@ public struct AssistantStrings: Sendable {
     public func callAsFunction(_ line: AssistantLine) -> String { text(line) }
 
     public func join(_ lines: [AssistantLine]) -> String { joined(lines.map(text)) }
+
+    /// Names in a sentence: `api, web` / `api、web`.
+    public func list(_ items: [String]) -> String { items.joined(separator: listSeparator) }
 
     /// Sentences one after the other. Without a separator (Japanese), one that ends in a Latin letter, digit or mark
     /// (an agent's question as it asked it: "…now?") still gets a space before the next.
@@ -180,16 +187,15 @@ public enum AssistantReport {
     static let maxNamed = 4
 
     /// Compact: "2 waiting: api, api-v2. 1 working: web." The agents' questions only when asked about one workspace.
-    /// `list`: how names are joined (`api, web` / `api、web`).
-    public static func status(_ world: AssistantWorld, strings: AssistantStrings,
-                              list: ([String]) -> String = { $0.joined(separator: ", ") }) -> String {
+    /// Names are joined by `strings.list` (`api, web` / `api、web`).
+    public static func status(_ world: AssistantWorld, strings: AssistantStrings) -> String {
         let agents = world.withAgents
         guard !agents.isEmpty else { return strings(.noAgents) }
         let waiting = agents.filter { $0.state == .needsUser }.map(\.title)
         let working = agents.filter { $0.state == .working }.map(\.title)
         guard !waiting.isEmpty || !working.isEmpty else { return strings(.allQuiet(count: agents.count)) }
         func names(_ titles: [String]) -> String {
-            list(titles.prefix(maxNamed).map(clip)) + (titles.count > maxNamed ? " +\(titles.count - maxNamed)" : "")
+            strings.list(titles.prefix(maxNamed).map(clip)) + (titles.count > maxNamed ? " +\(titles.count - maxNamed)" : "")
         }
         var lines: [AssistantLine] = []
         if !waiting.isEmpty { lines.append(.waitingList(count: waiting.count, names: names(waiting))) }

@@ -8,7 +8,7 @@ import CmdsCore
 @MainActor
 final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
-    private var finished: (() -> Void)?
+    private var utterances = AssistantUtterances<() -> Void>()
 
     override init() {
         super.init()
@@ -44,33 +44,38 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
                finished: @escaping () -> Void) {
         stop()
         guard !muted, !text.isEmpty else { return finished() }
-        let utterance = AVSpeechUtterance(string: text)
+        let utterance = NumberedUtterance(string: text)
         // The chosen voice when it speaks the language (a Personal Voice may speak English only), else the system's.
         let chosen = AssistantVoices.resolve(chosen: identifier, among: Self.all, language: language).voice
         utterance.voice = chosen.flatMap { AVSpeechSynthesisVoice(identifier: $0.identifier) } ?? AVSpeechSynthesisVoice(language: language)
         utterance.rate = Float(rate)
-        self.finished = finished
+        utterance.number = utterances.start(finished)
         synthesizer.speak(utterance)
     }
 
     func stop() {
-        let pending = finished
-        finished = nil
+        let pending = utterances.stop()
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         pending?()
     }
 
+    // A stopped utterance's didCancel (and sometimes didFinish) arrives after the next one has been queued: only the
+    // current utterance's callbacks end it (#261).
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
-        DispatchQueue.main.async { MainActor.assumeIsolated { self.done() } }
+        ended(utterance)
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
-        DispatchQueue.main.async { MainActor.assumeIsolated { self.done() } }
+        ended(utterance)
     }
 
-    private func done() {
-        let pending = finished
-        finished = nil
-        pending?()
+    private nonisolated func ended(_ utterance: AVSpeechUtterance) {
+        guard let number = (utterance as? NumberedUtterance)?.number else { return }
+        DispatchQueue.main.async { MainActor.assumeIsolated { self.utterances.ended(number)?() } }
     }
+}
+
+/// An utterance with the number `AssistantUtterances` gave it (the synthesizer hands the same object to its delegate).
+private final class NumberedUtterance: AVSpeechUtterance, @unchecked Sendable {
+    var number = 0
 }

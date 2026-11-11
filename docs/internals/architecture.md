@@ -372,7 +372,8 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   sentence (two at most), only what was asked; a session's summary is cut to its first sentence
   (`AssistantBrevity.first`), a detailed one to three; for a free answer still longer than `maxSpokenLength`
   (Japanese characters count double), only the first sentence is spoken (`AssistantBrevity.spoken`) and the HUD shows
-  it all. `AssistantReport.status` is compact: counts and names (`waitingList` / `workingList`); an agent's question
+  it all. `AssistantReport.status` is compact: counts and names (`waitingList` / `workingList`, joined by `AssistantStrings.list`: 「api、web」 in
+  Japanese); an agent's question
   only for one workspace.
 - **Several sessions and free commands**: `AssistantScope` (named / all / waiting / working) in the intents
   `checkAll`, `replyMany`, `approveMany` (rules for 「全部のセッションを確認して」, "approve all"…; "api と web に…" is split
@@ -436,7 +437,10 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   folder, 90 s, no permission-skipping flag); the prompt holds only the utterance, the date and time, the time zone
   and the locale, never screen text. `AssistantWeb.speakable` drops a "Sources:" list, links, URLs and Markdown. The
   HUD's `ClaudeMark` shows "Asking Claude…" while `claude -p` runs and "Claude" under its answer.
-- **Voice**: `AssistantVoice` (`AVSpeechSynthesizer`, on the Mac only). The list and the fallback are plain values in
+- **Voice**: `AssistantVoice` (`AVSpeechSynthesizer`, on the Mac only). Each utterance gets a number from
+  `AssistantUtterances` (CmdsCore): stopping ends the current one at once, and the synthesizer's didCancel / didFinish
+  (which for a stopped utterance arrive after the next one was queued) end an utterance only while it is the current
+  one, so they cannot open the follow-up window or start the echo guard in the middle of the next answer. The list and the fallback are plain values in
   `AssistantVoices` (CmdsCore): `system` / `personal` voices for the app's language, `resolve` (the chosen voice if
   it still exists and speaks the language, else the system voice), `personalVoiceState` (Settings' note: not asked,
   denied, unsupported, none created, available, other languages only). Personal Voices (`voiceTraits` contains
