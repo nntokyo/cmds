@@ -94,6 +94,8 @@ targets:
         # "cmds" / "cmds Dev" (CMDS_APP_NAME below).
         CFBundleName: $(CMDS_APP_NAME)
         CFBundleDisplayName: $(CMDS_APP_NAME)
+        # Support folder in ~/Library/Application Support: "cmds" / "cmds-dev" (CMDS_SUPPORT_FOLDER below, #247).
+        CMDSSupportFolderName: $(CMDS_SUPPORT_FOLDER)
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, ja]
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -140,6 +142,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds
         CMDS_APP_NAME: cmds
         CMDS_URL_SCHEME: cmds
+        CMDS_SUPPORT_FOLDER: cmds
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_ENTITLEMENTS: App/cmds.entitlements
         ENABLE_HARDENED_RUNTIME: NO
@@ -152,10 +155,13 @@ targets:
         # Debug builds are a separate app to macOS (#236): privacy (TCC) grants, LaunchServices (URL scheme, default
         # browser, widget) and UserDefaults are keyed by bundle identifier, so a development-signed build with the
         # release's identifier took over the release's grants. Release keeps tokyo.n-n.cmds (Developer ID, passkeys).
+        # They also keep their data in their own support folder (#247): macOS reopened a Debug build after a restart
+        # without its CMDS_SUPPORT_DIR, and it restored the release's workspaces and agent sessions.
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.dev
           CMDS_APP_NAME: cmds Dev
           CMDS_URL_SCHEME: cmds-dev
+          CMDS_SUPPORT_FOLDER: cmds-dev
         # Release builds run under the hardened runtime (required for notarization). They are still signed with
         # "Apple Development" here so local Release builds need no keychain prompt; scripts/release/build-dmg.sh
         # re-signs the app with the Developer ID certificate for distribution (docs/internals/release.md).
@@ -189,6 +195,8 @@ targets:
       path: Widget/Info.plist
       properties:
         CFBundleDisplayName: $(CMDS_APP_NAME)
+        # The app's support folder, where widget.json is (#247).
+        CMDSSupportFolderName: $(CMDS_SUPPORT_FOLDER)
         CFBundleDevelopmentRegion: en
         CFBundleLocalizations: [en, ja]
         CFBundleShortVersionString: $(MARKETING_VERSION)
@@ -200,14 +208,16 @@ targets:
       path: Widget/CmdsWidget.entitlements
       properties:
         com.apple.security.app-sandbox: true
-        # Read-only, the one file the app writes for it (paths relative to the real home folder).
+        # Read-only, the one file the app writes for it (paths relative to the real home folder). Expanded when
+        # signing: cmds in Release, cmds-dev in Debug (#247).
         com.apple.security.temporary-exception.files.home-relative-path.read-only:
-          - /Library/Application Support/cmds/widget.json
+          - /Library/Application Support/$(CMDS_SUPPORT_FOLDER)/widget.json
     settings:
       base:
         PRODUCT_NAME: CmdsWidget
         PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.widget
         CMDS_APP_NAME: cmds
+        CMDS_SUPPORT_FOLDER: cmds
         DEVELOPMENT_TEAM: LY354RVYHA
         CODE_SIGN_IDENTITY: "Apple Development"
         ENABLE_HARDENED_RUNTIME: NO
@@ -218,6 +228,7 @@ targets:
         Debug:
           PRODUCT_BUNDLE_IDENTIFIER: tokyo.n-n.cmds.dev.widget
           CMDS_APP_NAME: cmds Dev
+          CMDS_SUPPORT_FOLDER: cmds-dev
         Release:
           ENABLE_HARDENED_RUNTIME: YES
   cmds-cli:
@@ -229,6 +240,15 @@ targets:
       - Packages/CmdsCore/Sources/cmds-cli
     dependencies:
       - package: CmdsCore
+    # Merged into the generated Info.plist: the CLI bundled in a Debug build talks to that build's socket in
+    # ~/Library/Application Support/cmds-dev by default (#247).
+    info:
+      path: App/CLI-Info.plist
+      properties:
+        CMDSSupportFolderName: $(CMDS_SUPPORT_FOLDER)
+        # XcodeGen would otherwise write 1.0 / 1, which win over the generated values.
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
     settings:
       base:
         PRODUCT_NAME: cmds
@@ -236,11 +256,14 @@ targets:
         # `cmds --version` (#16): an Info.plist with MARKETING_VERSION in the binary, read through Bundle.main.
         GENERATE_INFOPLIST_FILE: YES
         CREATE_INFOPLIST_SECTION_IN_BINARY: YES
+        CMDS_SUPPORT_FOLDER: cmds
         ARCHS: arm64
         CODE_SIGN_IDENTITY: "-"
         ENABLE_HARDENED_RUNTIME: NO
         SKIP_INSTALL: YES
       configs:
+        Debug:
+          CMDS_SUPPORT_FOLDER: cmds-dev
         Release:
           ENABLE_HARDENED_RUNTIME: YES
   CmdsCompanion:

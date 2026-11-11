@@ -413,6 +413,46 @@ final class CmdsEnvTests: XCTestCase {
                        ((cwd as NSString).appendingPathComponent("rel/dir") as NSString).standardizingPath)
     }
 
+    /// Debug builds keep their own support folder (#247): the Info.plist key names it, anything odd falls back to cmds.
+    func testSupportFolderNameFromInfoPlist() {
+        XCTAssertEqual(CmdsEnv.folderName(infoDictionary: nil), "cmds")
+        XCTAssertEqual(CmdsEnv.folderName(infoDictionary: [:]), "cmds")
+        XCTAssertEqual(CmdsEnv.folderName(infoDictionary: ["CMDSSupportFolderName": "cmds-dev"]), "cmds-dev")
+        XCTAssertEqual(CmdsEnv.folderName(infoDictionary: ["CMDSSupportFolderName": "cmds"]), "cmds")
+        for bad: Any in ["", "  ", ".", "..", "a/b", "../cmds", "x:y", 1] {
+            XCTAssertEqual(CmdsEnv.folderName(infoDictionary: ["CMDSSupportFolderName": bad]), "cmds", "\(bad)")
+        }
+        // The test runner has no key: tests and SwiftPM builds are the release's folder.
+        XCTAssertEqual(CmdsEnv.supportFolderName, "cmds")
+        XCTAssertFalse(CmdsEnv.isDevelopmentBuild)
+    }
+
+    func testDevelopmentBuildPaths() {
+        let home = NSHomeDirectory()
+        XCTAssertEqual(CmdsEnv.supportDirectoryURL(environment: [:], folderName: "cmds-dev").path,
+                       home + "/Library/Application Support/cmds-dev")
+        XCTAssertEqual(CmdsEnv.supportDirectoryURL(environment: [:]).path, home + "/Library/Application Support/cmds")
+        // CMDS_SUPPORT_DIR still wins in a Debug build (isolated instances unchanged).
+        XCTAssertEqual(CmdsEnv.supportDirectoryURL(environment: ["CMDS_SUPPORT_DIR": "/tmp/t"], folderName: "cmds-dev").path,
+                       "/tmp/t")
+        // The Debug CLI: its own socket by default, the pane's app inside a terminal, the isolated one with CMDS_SUPPORT_DIR.
+        XCTAssertEqual(CmdsEnv.defaultSocketPath(environment: [:], folderName: "cmds-dev"),
+                       home + "/Library/Application Support/cmds-dev/cmds.sock")
+        XCTAssertEqual(CmdsEnv.defaultSocketPath(environment: ["CMDS_SOCKET_PATH": "/live/cmds.sock"], folderName: "cmds-dev"),
+                       "/live/cmds.sock")
+        XCTAssertEqual(CmdsEnv.defaultSocketPath(environment: ["CMDS_SUPPORT_DIR": "/tmp/t", "CMDS_SOCKET_PATH": "/live/cmds.sock"],
+                                                 folderName: "cmds-dev"), "/tmp/t/cmds.sock")
+        // The Debug app never listens on an inherited socket (started from a release terminal).
+        XCTAssertEqual(CmdsEnv.appSocketPath(environment: ["CMDS_SOCKET_PATH": "/live/cmds.sock"], folderName: "cmds-dev"),
+                       home + "/Library/Application Support/cmds-dev/cmds.sock")
+        XCTAssertEqual(CmdsEnv.appSocketPath(environment: ["CMDS_SUPPORT_DIR": "/tmp/t", "CMDS_SOCKET_PATH": "/live/cmds.sock"],
+                                             folderName: "cmds-dev"), "/tmp/t/cmds.sock")
+        // Release: unchanged (defaultSocketPath).
+        for environment in [[:], ["CMDS_SOCKET_PATH": "/live/cmds.sock"], ["CMDS_SUPPORT_DIR": "/tmp/t"]] {
+            XCTAssertEqual(CmdsEnv.appSocketPath(environment: environment), CmdsEnv.defaultSocketPath(environment: environment))
+        }
+    }
+
     func testSyncDisabledFlag() {
         XCTAssertTrue(CmdsEnv.isSyncDisabled(environment: ["CMDS_SYNC_DISABLED": "1"]))
         XCTAssertTrue(CmdsEnv.isSyncDisabled(environment: ["CMDS_SYNC_DISABLED": "TRUE"]))

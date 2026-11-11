@@ -92,12 +92,14 @@ public struct WidgetSnapshot: Codable, Equatable, Sendable {
         return copy == self
     }
 
-    /// `widget.json` in the support folder of the user's own cmds (`~/Library/Application Support/cmds`), from the
-    /// real home: a sandboxed extension's `NSHomeDirectory()` is its container. Isolated instances
-    /// (`CMDS_SUPPORT_DIR`) write theirs elsewhere, so they never change the user's widget.
-    public static func defaultURL(home: String = realHomeDirectory()) -> URL {
+    /// `widget.json` in the support folder of the user's own cmds (`~/Library/Application Support/cmds`; the Debug
+    /// widget reads `…/cmds-dev`, its app's folder, #247), from the real home: a sandboxed extension's
+    /// `NSHomeDirectory()` is its container. Isolated instances (`CMDS_SUPPORT_DIR`) write theirs elsewhere, so they
+    /// never change the user's widget.
+    public static func defaultURL(home: String = realHomeDirectory(), folderName: String = CmdsEnv.supportFolderName) -> URL {
         URL(fileURLWithPath: home, isDirectory: true)
-            .appendingPathComponent("Library/Application Support/cmds", isDirectory: true)
+            .appendingPathComponent("Library/Application Support", isDirectory: true)
+            .appendingPathComponent(folderName, isDirectory: true)
             .appendingPathComponent(fileName)
     }
 

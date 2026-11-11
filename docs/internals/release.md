@@ -39,8 +39,14 @@ Mac app have their own bundle identifier, `tokyo.n-n.cmds.dev` (widget `tokyo.n-
 Dev" and URL scheme `cmds-dev` (#236): macOS keys privacy grants (TCC), URL handlers, the default browser and
 widgets by bundle identifier and keeps one code requirement per grant, so a development-signed build sharing
 `tokyo.n-n.cmds` took the release's grants (Screen Recording …) away from it. Debug builds therefore get their own
-privacy grants. Release builds, and so every DMG, keep `tokyo.n-n.cmds` / `tokyo.n-n.cmds.widget` (the App ID of
-the passkeys entitlement request, #162). To build with your own
+privacy grants. They also keep their data in `~/Library/Application Support/cmds-dev` (#247): the build setting
+`CMDS_SUPPORT_FOLDER` (`cmds` / `cmds-dev`) becomes the Info.plist key `CMDSSupportFolderName` of the app, the widget
+and the bundled CLI, and the widget's read-only sandbox exception (`/Library/Application Support/$(CMDS_SUPPORT_FOLDER)/widget.json`,
+expanded when signing). Debug builds and isolated instances also opt out of being reopened at login
+(`disableRelaunchOnLogin`): after a restart macOS had reopened a Debug build without its `CMDS_SUPPORT_DIR`, and it
+restored the release's workspaces and resumed its Claude sessions a second time. Release builds, and so every DMG,
+keep `tokyo.n-n.cmds` / `tokyo.n-n.cmds.widget` (the App ID of the passkeys entitlement request, #162) and
+`~/Library/Application Support/cmds`. To build with your own
 Apple account, change `DEVELOPMENT_TEAM` for the three targets in `project.yml` (or pass `DEVELOPMENT_TEAM=<your
 team>` to `xcodebuild`) and regenerate the project. The iOS bundle identifiers (`tokyo.n-n.cmds.companion`,
 `tokyo.n-n.cmds.devicedriver`) belong to that team; with another team you may also need your own identifiers.

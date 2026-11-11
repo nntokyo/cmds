@@ -13,6 +13,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var widgetPublisher: WidgetPublisher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Debug builds and isolated instances are never reopened by macOS at login ("Reopen windows when logging
+        // back in", #247): it would start them without the environment they were started with.
+        if CmdsEnv.isDevelopmentBuild || CmdsEnv.supportDirectoryOverride() != nil { NSApp.disableRelaunchOnLogin() }
         windowController = MainWindowController(controller: controller)
         router = CommandRouter(controller: controller, windowController: windowController)
         NSApp.mainMenu = MainMenu.build(router: router)

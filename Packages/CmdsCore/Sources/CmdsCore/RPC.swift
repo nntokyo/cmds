@@ -58,7 +58,7 @@ public enum CmdsEnv {
     public static let socketPath = "CMDS_SOCKET_PATH"
     public static let workspaceID = "CMDS_WORKSPACE_ID"
     public static let paneID = "CMDS_PANE_ID"
-    /// Isolated (test) instance: replaces `~/Library/Application Support/cmds` (session.json,
+    /// Isolated (test) instance: replaces `~/Library/Application Support/cmds` (`cmds-dev` for Debug; session.json,
     /// sync-devices.json, cmds.sock). Terminals of such an instance inherit it, so their CLI follows.
     public static let supportDirectory = "CMDS_SUPPORT_DIR"
     /// `1` = do not start the iOS sync server (no Bonjour advert, no port).
@@ -84,13 +84,39 @@ public enum CmdsEnv {
         case invalid(String)
     }
 
-    /// `$CMDS_SUPPORT_DIR` if set, else `~/Library/Application Support/cmds`.
-    public static func supportDirectoryURL(environment: [String: String] = ProcessInfo.processInfo.environment) -> URL {
+    /// Info.plist key naming the support folder in `~/Library/Application Support` (#247): `cmds-dev` in the Debug
+    /// configuration of the app, its widget and its bundled CLI (`CMDS_SUPPORT_FOLDER` in project.yml), `cmds` in
+    /// Release. A Debug build that macOS reopens after a restart, without the environment it was started with, then
+    /// still never touches the release's sessions, socket or widget file.
+    public static let supportFolderNameKey = "CMDSSupportFolderName"
+    /// The release's folder; also used by builds without the key (SwiftPM, tests).
+    public static let defaultSupportFolderName = "cmds"
+
+    /// This build's support folder name, from the main bundle's Info.plist (the CLI's is embedded in its binary).
+    public static let supportFolderName = folderName(infoDictionary: Bundle.main.infoDictionary)
+
+    /// The key's value when it is a plain folder name, else `defaultSupportFolderName`.
+    public static func folderName(infoDictionary: [String: Any]?) -> String {
+        guard let raw = infoDictionary?[supportFolderNameKey] as? String else { return defaultSupportFolderName }
+        let name = raw.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, name != ".", name != "..", !name.contains("/"), !name.contains(":") else {
+            return defaultSupportFolderName
+        }
+        return name
+    }
+
+    /// A build with its own support folder (Debug), not the release's.
+    public static var isDevelopmentBuild: Bool { supportFolderName != defaultSupportFolderName }
+
+    /// `$CMDS_SUPPORT_DIR` if set, else `~/Library/Application Support/<folderName>` (`cmds`; `cmds-dev` for Debug).
+    public static func supportDirectoryURL(environment: [String: String] = ProcessInfo.processInfo.environment,
+                                           folderName: String = supportFolderName) -> URL {
         if let override = supportDirectoryOverride(environment: environment) {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
         return URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-            .appendingPathComponent("Library/Application Support/cmds", isDirectory: true)
+            .appendingPathComponent("Library/Application Support", isDirectory: true)
+            .appendingPathComponent(folderName, isDirectory: true)
     }
 
     /// Absolute `$CMDS_SUPPORT_DIR` (tilde expanded), or nil when not running isolated.
@@ -141,13 +167,26 @@ public enum CmdsEnv {
         return ["1", "true", "yes"].contains(value)
     }
 
-    /// `$CMDS_SUPPORT_DIR/cmds.sock`, else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`.
+    /// `$CMDS_SUPPORT_DIR/cmds.sock`, else `$CMDS_SOCKET_PATH`, else `cmds.sock` in this build's support folder
+    /// (`~/Library/Application Support/cmds`; `…/cmds-dev` for the CLI bundled in a Debug build).
     /// `CMDS_SUPPORT_DIR` wins because `CMDS_SOCKET_PATH` is inherited inside every cmds terminal: a test
     /// instance (or its CLI) started from a terminal of the live app must never use the live socket.
-    public static func defaultSocketPath(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
+    public static func defaultSocketPath(environment: [String: String] = ProcessInfo.processInfo.environment,
+                                         folderName: String = supportFolderName) -> String {
         if supportDirectoryOverride(environment: environment) == nil, let path = environment[socketPath], !path.isEmpty {
             return path
         }
-        return supportDirectoryURL(environment: environment).appendingPathComponent("cmds.sock").path
+        return supportDirectoryURL(environment: environment, folderName: folderName).appendingPathComponent("cmds.sock").path
+    }
+
+    /// The socket the app listens on: as `defaultSocketPath`, except that a build with its own support folder (Debug)
+    /// ignores an inherited `CMDS_SOCKET_PATH`, so started from a terminal of the release it never takes the
+    /// release's socket (#247).
+    public static func appSocketPath(environment: [String: String] = ProcessInfo.processInfo.environment,
+                                     folderName: String = supportFolderName) -> String {
+        guard folderName == defaultSupportFolderName else {
+            return supportDirectoryURL(environment: environment, folderName: folderName).appendingPathComponent("cmds.sock").path
+        }
+        return defaultSocketPath(environment: environment, folderName: folderName)
     }
 }

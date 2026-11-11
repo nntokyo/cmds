@@ -23,7 +23,8 @@ the focused pane of the selected workspace is used. Browser commands without `--
 the current workspace, else its first browser pane.
 
 The socket is `$CMDS_SUPPORT_DIR/cmds.sock` (isolated test instances, see [internals/testing.md](../internals/testing.md#isolated-instances)),
-else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock`; `--socket PATH` overrides all of them.
+else `$CMDS_SOCKET_PATH`, else `~/Library/Application Support/cmds/cmds.sock` (`…/cmds-dev/cmds.sock` for the CLI
+bundled in a Debug build, #247); `--socket PATH` overrides all of them.
 
 ## Commands
 
