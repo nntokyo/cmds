@@ -128,9 +128,8 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
 
     /// The page's host as the title (pages cannot pass their text off as the app's), its text below.
     private func dialog(message: String, frame: WKFrameInfo) -> NSAlert {
-        let origin = frame.securityOrigin
         let alert = NSAlert()
-        if let host = BrowserDialogOrigin.label(scheme: origin.protocol, host: origin.host, port: origin.port) {
+        if let host = frame.securityOrigin.label {
             alert.messageText = String(localized: "\(host) says:")
         } else {
             alert.messageText = String(localized: "This page says:")
@@ -173,8 +172,7 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
         panel.canChooseDirectories = parameters.allowsDirectories
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection
         panel.prompt = String(localized: "Choose")
-        if let host = BrowserDialogOrigin.label(scheme: frame.securityOrigin.protocol, host: frame.securityOrigin.host,
-                                                port: frame.securityOrigin.port) {
+        if let host = frame.securityOrigin.label {
             panel.message = String(localized: "Choose files to upload to \(host)")
         }
         let pending = PendingSheet(window: window, sheet: panel, chooseFiles: { completionHandler($0) }) { response in
@@ -204,6 +202,11 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
     func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
         BrowserDownloads.shared.start(download, for: pane)
     }
+}
+
+private extension WKSecurityOrigin {
+    /// How a dialog or the open panel names the page (`BrowserDialogOrigin`).
+    var label: String? { BrowserDialogOrigin.label(scheme: self.protocol, host: host, port: port) }
 }
 
 /// A sheet a page waits for. `finish` answers once; `cancel` (the pane closed) also takes the sheet down.
