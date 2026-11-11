@@ -521,6 +521,20 @@ final class AppController {
         return .object(result)
     }
 
+    /// `browser.watch` (#252): reload on file changes on, off or changed (none: just reports).
+    func browserWatch(paneID: String, change: BrowserWatchChange) throws -> JSONValue {
+        let pane = try resolvePane(paneID)
+        guard let browser = pane.browser else { throw RPCError.invalidParams("pane \(pane.id) is not a browser") }
+        return try browser.applyWatch(change, defaultFolder: defaultWatchFolder(for: pane))
+    }
+
+    /// The folder a browser pane watches when none is given: its workspace's folder on this Mac, else the folder of the
+    /// `file://` page it shows.
+    func defaultWatchFolder(for pane: Pane) -> String? {
+        if let folder = workspace(id: pane.workspaceID)?.localWorkingDirectory, !folder.isEmpty { return folder }
+        return BrowserWatch.pageFolder(pane.browser?.currentURL)
+    }
+
     // MARK: - Preview
 
     /// `pane.open_file`: shows a local file in a preview pane split off `paneID` (default: focused pane). When

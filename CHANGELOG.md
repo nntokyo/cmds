@@ -24,6 +24,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   (Settings › Assistant › Use my Personal Voice…), and uses the system voice for a language your Personal Voice does
   not speak.
 
+- Browser panes: Reload on File Changes (the eye button in the toolbar, View menu, `cmds browser watch`, API
+  `browser.watch`, MCP `browser_watch`) reloads a local page (`file://`, `localhost`) when files in the workspace's
+  folder (or one you choose) change, debounced, ignoring `.git`, `node_modules`, build folders and dot files, and only
+  while the pane is on screen; remote pages reload only when you turn that on (#252).
+
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.

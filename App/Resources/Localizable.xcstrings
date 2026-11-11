@@ -1618,6 +1618,16 @@
         }
       }
     },
+    "Also Reload Remote Pages": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リモートのページも再読み込み"
+          }
+        }
+      }
+    },
     "Always": {
       "localizations": {
         "ja": {
@@ -2011,6 +2021,16 @@
         }
       }
     },
+    "By default only local pages (file:// and localhost) reload.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通常はローカルのページ（file://とlocalhost）だけを再読み込みします。"
+          }
+        }
+      }
+    },
     "CLI": {
       "comment": "a schedule made with the command line or socket API",
       "localizations": {
@@ -2357,6 +2377,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%3$@で%1$lld番「%2$@」を選びますか？"
+          }
+        }
+      }
+    },
+    "Choose Folder…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを選択…"
           }
         }
       }
@@ -4249,6 +4279,26 @@
         }
       }
     },
+    "Folder: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ：%@"
+          }
+        }
+      }
+    },
+    "Folder: none": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ：なし"
+          }
+        }
+      }
+    },
     "Follow Terminal": {
       "localizations": {
         "ja": {
@@ -4674,6 +4724,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "遅れたとき："
+          }
+        }
+      }
+    },
+    "Ignored: .git, node_modules, build folders, dot files": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "対象外：.git、node_modules、ビルドフォルダ、ドットファイル"
           }
         }
       }
@@ -6875,6 +6935,16 @@
         }
       }
     },
+    "Paused: the page is not local or the pane is not on screen.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止中：ページがローカルではないか、ペインが表示されていません。"
+          }
+        }
+      }
+    },
     "Permission denied on the server.": {
       "localizations": {
         "ja": {
@@ -7258,6 +7328,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "プレビューを再読み込み"
+          }
+        }
+      }
+    },
+    "Reload on File Changes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルの変更で再読み込み"
+          }
+        }
+      }
+    },
+    "Reload this page when files in the folder change.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダ内のファイルが変更されたら、このページを再読み込みします。"
           }
         }
       }
@@ -10893,6 +10983,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "メモリが不足したら通知"
+          }
+        }
+      }
+    },
+    "Watch": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "監視"
           }
         }
       }

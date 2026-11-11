@@ -82,6 +82,16 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   `requestAnimationFrame`, which WebKit pauses in covered windows); the others scroll to the same fraction via
   `__cmdsScrollTo`, whose own scroll event is ignored for 150 ms. A `FileWatcher` reloads every frame when a
   `file://` page changes. Saved as `browser.responsive` in session.json and `responsive` in bundles (optional keys).
+- **Reload on file changes** (`Browser/BrowserPane+Watch.swift`; settings, ignore rules, local-page test, request and
+  debounce in `CmdsCore/BrowserWatch.swift`; [guide](../guide/workspaces-and-panes.md#reload-on-file-changes), #252):
+  a `DirectoryWatcher` is an FSEvents stream on the folder (file-level events, 0.1 s latency, main queue), not the
+  vnode `FileWatcher` of preview panes (one file only). It runs only while the `BrowserPane` is in a window
+  (`viewDidMoveToWindow`: a hidden workspace's panes have none) and its page passes `BrowserWatch.reloads` (re-checked
+  on every URL change); when it stops because the pane left the window it keeps `FSEventsGetCurrentEventId()`, and the
+  next stream starts `since` that id, so what changed meanwhile is replayed (one reload); stopping for a page that does
+  not reload keeps nothing. Paths are filtered by `BrowserWatch.isIgnored` (the `file://` page's own folder
+  is exempt from the folder rules) and a `WatchDebounce` (0.3 s trailing, 2 s ceiling) schedules `reload()` (all
+  frames in the responsive view). Not saved in session.json or bundles; no sync protocol change.
 - **Browser screenshots** (`Browser/BrowserPane+Snapshot.swift`, params and answer in `CmdsCore/BrowserSnapshot.swift`;
   #169): the visible page is `takeSnapshot`. `takeSnapshot` paints only what is on screen (a rect below the fold comes
   out blank), so a full page or an element is WebKit's PDF of the view (`pdf(configuration:)`; no rect = the whole

@@ -141,6 +141,47 @@ extension CLI {
         print(BrowserResponsive.summary(result))
     }
 
+    static let browserWatchCommand = Command(
+        name: "browser watch",
+        usage: "browser watch [--pane P] [--dir DIR | --off | --status] [--remote | --no-remote]",
+        summary: "Reload a browser pane's page when files in a folder change.",
+        details: """
+            Turns it on for the pane: the folder is --dir (relative paths are resolved against the current directory),
+            else the one watched before, else the workspace's folder (or the folder of a file:// page). Changes inside
+            .git, node_modules, build folders (build, DerivedData, Pods, target, __pycache__), dot folders and dot
+            files are ignored, as are editor backups (name~); a page served from such a folder still reloads for its
+            own files. Changes within \(Int(BrowserWatch.debounce * 1000)) ms of each other reload once. Only local
+            pages (file://, localhost, 127.0.0.1, ::1) reload unless --remote is given. The folder is watched only while
+            the pane is on screen; what changed meanwhile reloads the page when it is shown again. --off turns it off,
+            --status prints the state without changing it. Not kept across relaunches.
+            \(browserPaneNote)
+            """,
+        options: ["pane", "dir"], flags: ["off", "status", "remote", "no-remote"]
+    ) { ctx in
+        try ctx.args.expectPositionals(0...0, usage: "cmds browser watch [--pane P] [--dir DIR | --off | --status] [--remote | --no-remote]")
+        let change = try browserWatchChange(ctx.args)
+        let result = try callNewMethod(ctx, "browser.watch", browserTarget(ctx).merging(change.params) { $1 },
+                                       unsupported: "this cmds app cannot reload browser panes on file changes; update cmds")
+        if ctx.json { return ctx.printJSON(result) }
+        print(BrowserWatch.summary(result))
+    }
+
+    /// The change a command line asks for: on (the default), --off or --status; bad combinations are usage errors.
+    static func browserWatchChange(_ args: Arguments) throws -> BrowserWatchChange {
+        let modes = [args.has("off"), args.has("status"), args[option: "dir"] != nil].filter { $0 }.count
+        guard modes <= 1 else { throw CLIError.usage("give one of --dir, --off or --status") }
+        guard !(args.has("remote") && args.has("no-remote")) else { throw CLIError.usage("give --remote or --no-remote, not both") }
+        if args.has("off") || args.has("status"), args.has("remote") || args.has("no-remote") {
+            throw CLIError.usage("--remote and --no-remote turn watching on; not with --off or --status")
+        }
+        if args.has("status") { return BrowserWatchChange() }
+        if args.has("off") { return BrowserWatchChange(off: true) }
+        var change = BrowserWatchChange(folder: args[option: "dir"].map(absolutePath),
+                                        remote: args.has("remote") ? true : args.has("no-remote") ? false : nil)
+        change.turnsOn = true
+        return change
+    }
+
     /// The change a command line asks for (on unless --off); bad values are usage errors.
     static func browserResponsiveChange(_ args: Arguments) throws -> BrowserResponsiveChange {
         guard !(args.has("sync-scroll") && args.has("no-sync-scroll")) else {

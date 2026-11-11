@@ -502,6 +502,7 @@ extension CLI {
         browserSnapshotCommand,
         browserDeviceCommand,
         browserResponsiveCommand,
+        browserWatchCommand,
         consoleCommand, treeCommand, clickCommand, fillCommand, waitForCommand,
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",

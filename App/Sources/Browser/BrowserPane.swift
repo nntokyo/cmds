@@ -1,5 +1,6 @@
 import AppKit
 import WebKit
+import CoreServices
 import CmdsCore
 
 /// In-app browser pane: compact toolbar + WKWebView. Also the scripting surface for `browser.*` socket methods.
@@ -43,6 +44,24 @@ final class BrowserPane: NSView {
     let pageDelegate = BrowserPageDelegate()
     private var downloadBanner: BrowserDownloadBannerView?
     private var downloadBannerHide: DispatchWorkItem?
+    // Reload on file changes (BrowserPane+Watch.swift, #252).
+    /// The folder watched and whether remote pages reload too; nil: off.
+    var watch: BrowserWatch?
+    /// Running while the pane is in a window and its page may reload.
+    var directoryWatcher: DirectoryWatcher?
+    /// When the watcher stopped for the pane going off screen: what changed since is replayed when it is back.
+    var watchEventID: FSEventStreamEventId?
+    var watchDebounce = WatchDebounce()
+    var watchReload: DispatchWorkItem?
+    let watchButton = BrowserPane.toolbarButton("eye", label: String(localized: "Reload on File Changes"))
+    /// The folder watching starts with: the workspace's folder (set by the pane's owner).
+    var defaultWatchFolder: (() -> String?)?
+    #if DEBUG
+    /// Reloads the watcher made (`debug.browser`).
+    var watchReloadCount = 0
+    /// The paths of the last changes that were not ignored (`debug.browser`).
+    var watchCountedPaths: [String] = []
+    #endif
     /// How long a finished download's notice stays.
     static let downloadNoticeTime: TimeInterval = 10
     /// Space between the download notice and the page area's edges.
@@ -224,6 +243,7 @@ final class BrowserPane: NSView {
         responsiveView?.close()  // frees the extra frames' WebContent processes
         responsiveView = nil
         pageDelegate.tearDown()  // answers open dialogs, closes pop-ups
+        stopWatching()
         downloadBannerHide?.cancel()
         observations.removeAll()
         webView.stopLoading()
@@ -304,7 +324,7 @@ final class BrowserPane: NSView {
 
     // MARK: - Layout
 
-    private static func toolbarButton(_ symbol: String, label: String) -> NSButton {
+    static func toolbarButton(_ symbol: String, label: String) -> NSButton {
         let image = NSImage(systemSymbolName: symbol, accessibilityDescription: label) ?? NSImage()
         let button = NSButton(image: image, target: nil, action: nil)
         button.bezelStyle = .accessoryBarAction
@@ -321,6 +341,9 @@ final class BrowserPane: NSView {
         forwardButton.action = #selector(forwardClicked)
         reloadButton.target = self
         reloadButton.action = #selector(reloadClicked)
+        watchButton.target = self
+        watchButton.action = #selector(watchButtonClicked(_:))
+        updateWatchButton()
 
         addressField.placeholderString = String(localized: "Search or enter address")
         addressField.font = .systemFont(ofSize: 12)
@@ -332,7 +355,7 @@ final class BrowserPane: NSView {
         addressField.action = #selector(addressSubmitted)
         addressField.onFocus = { [weak self] in self?.onFocus?() }
 
-        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, addressField, breakpointLabel, deviceButton])
+        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, addressField, breakpointLabel, deviceButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 6
         toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
@@ -386,7 +409,18 @@ final class BrowserPane: NSView {
             addressField.stringValue = url?.scheme == "about" ? "" : (url?.absoluteString ?? "")
         }
         updateButtons()
+        if watch != nil {
+            updateWatcher()  // a page that does not reload (remote) pauses the watcher
+            updateWatchButton()
+        }
         onStateChange?()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard watch != nil else { return }
+        updateWatcher()  // only while on screen; a hidden workspace's panes have no window
+        updateWatchButton()
     }
 
     private func updateButtons() {

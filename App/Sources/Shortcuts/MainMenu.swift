@@ -149,6 +149,7 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Focus Address Bar", #selector(CommandRouter.browserFocusAddress(_:)), "l", target: router))
         menu.addItem(item("Reload Page", #selector(CommandRouter.browserReload(_:)), "r", target: router))
+        menu.addItem(item("Reload on File Changes", #selector(CommandRouter.browserToggleWatch(_:)), "", target: router))
         menu.addItem(item("Back", #selector(CommandRouter.browserBack(_:)), "[", target: router))
         menu.addItem(item("Forward", #selector(CommandRouter.browserForward(_:)), "]", target: router))
         menu.addItem(.separator())

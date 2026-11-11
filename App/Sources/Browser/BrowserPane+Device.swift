@@ -314,6 +314,10 @@ extension BrowserPane {
             "menu": .array(deviceMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),
             "responsive": responsiveView?.debugFrames ?? .null,
             "download": downloadNoticeText.map { .string($0) } ?? .null,
+            "watch": watchJSON, "watchReloads": .number(Double(watchReloadCount)),
+            "watchPaths": .array(watchCountedPaths.map { .string($0) }),
+            "watchMenu": .array(watchMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),
+            "watchToolTip": .string(watchButton.toolTip ?? ""),
         ]
         result.merge(pageDelegate.debugState(answer: answer, text: text)) { _, new in new }  // pop-ups and dialogs (#235)
         if let bitmap = bitmapImageRepForCachingDisplay(in: bounds) {
