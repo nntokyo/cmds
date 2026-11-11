@@ -191,6 +191,13 @@ final class Pane {
             self.controller?.paneDidBecomeFocused(self)
         }
         browser.onEmulationChange = { [weak self] in self?.controller?.scheduleSave() }
+        // A `_blank` link: a browser split beside this pane, focused only when this pane has the focus (an agent's
+        // click in a background pane does not take the keyboard, #235).
+        browser.onOpenInNewPane = { [weak self] url in
+            guard let self, let controller = self.controller else { return false }
+            let focus = controller.focusedPane === self
+            return (try? controller.openBrowser(paneID: self.id, url: url.absoluteString, focus: focus)) != nil
+        }
     }
 
     init(id: String, workspaceID: String, preview: PreviewPane) {

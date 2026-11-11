@@ -118,7 +118,7 @@ final class APIServer {
                 guard let browser = controller.pane(id: try params.required("pane"))?.browser else {
                     throw RPCError.invalidParams("not a browser pane")
                 }
-                connection.reply(id: id, result: browser.debugState())
+                connection.reply(id: id, result: browser.debugState(answer: try params.string("answer"), text: try params.string("text")))
             case "debug.files":
                 // Tests only: drive a files pane (FilesPane+Debug.swift).
                 guard let files = controller.pane(id: try params.required("pane"))?.files else {
