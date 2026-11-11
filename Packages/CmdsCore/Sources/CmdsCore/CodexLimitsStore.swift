@@ -33,8 +33,10 @@ public enum CodexLimitsStore {
         try encode(limits).write(to: url(supportDirectory: supportDirectory), options: .atomic)
     }
 
-    /// The figures differ (`updatedAt` aside): worth writing.
+    /// The figures differ: worth writing. `updatedAt` counts only while a reached limit has no reset time, since it
+    /// is what that limit expires from (`AgentLimits.unknownResetLifetime`, #231).
     public static func changed(_ old: AgentLimits?, _ new: AgentLimits) -> Bool {
         old?.limits != new.limits || old?.plan != new.plan
+            || (new.hasUnknownReset && old?.updatedAt != new.updatedAt)
     }
 }

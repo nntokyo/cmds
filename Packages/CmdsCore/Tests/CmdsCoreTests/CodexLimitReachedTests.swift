@@ -155,4 +155,18 @@ final class CodexLimitReachedTests: XCTestCase {
         XCTAssertTrue(CodexLimitsStore.changed(nil, limits))
         XCTAssertTrue(CodexLimitsStore.changed(limits, AgentLimits(agent: .codex, limits: [limits.limits[0]], plan: "plus")))
     }
+
+    /// #231: a limit reached again without a reset time is stored with the newer time it expires from.
+    func testStoreRewritesUnknownResetWhenSeenAgain() {
+        let reached = [UsageLimit(id: UsageLimit.usageLimit, usedPercent: 100, resetsAt: nil)]
+        let first = AgentLimits(agent: .codex, limits: reached, plan: nil, updatedAt: event)
+        let again = AgentLimits(agent: .codex, limits: reached, plan: nil, updatedAt: event.addingTimeInterval(3600))
+        XCTAssertTrue(first.hasUnknownReset)
+        XCTAssertTrue(CodexLimitsStore.changed(first, again))
+        XCTAssertFalse(CodexLimitsStore.changed(again, again))
+        // Stored from the second sighting, it outlives the first one's 24 h.
+        let later = event.addingTimeInterval(AgentLimits.unknownResetLifetime + 1800)
+        XCTAssertNil(first.active(at: later))
+        XCTAssertNotNil(again.active(at: later))
+    }
 }
