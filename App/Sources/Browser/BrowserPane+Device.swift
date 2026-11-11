@@ -298,8 +298,9 @@ extension BrowserPane {
 
 #if DEBUG
 extension BrowserPane {
-    /// `debug.browser`: the indicator, the web view's frame in the pane, the scale, and the pane drawn without its page.
-    func debugState(answer: String? = nil, text: String? = nil) -> JSONValue {
+    /// `debug.browser`: the indicator, the web view's frame in the pane, the scale, and the pane drawn without its page;
+    /// the download notice, pop-ups and dialogs, `answer` / `text` answering the dialog (`BrowserPageDelegate`).
+    func debugState(answer: String?, text: String?) -> JSONValue {
         let frame = convert(webView.frame, from: viewportHost)
         var result: [String: JSONValue] = [
             "indicator": .string(breakpointLabel.stringValue),

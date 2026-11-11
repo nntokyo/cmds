@@ -20,6 +20,8 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
     weak var pane: BrowserPane?
     private var popups: [BrowserPopupWindow] = []
     private var sheets: [PendingSheet] = []
+    /// The text field of a `prompt()` dialog.
+    static let promptFieldSize = NSSize(width: 300, height: 22)
 
     func attach(_ webView: WKWebView) {
         webView.uiDelegate = self
@@ -118,7 +120,7 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
         alert.addButton(withTitle: String(localized: "OK"))
         alert.addButton(withTitle: String(localized: "Cancel"))
         let field = NSTextField(string: defaultText ?? "")
-        field.frame = NSRect(x: 0, y: 0, width: 300, height: 22)
+        field.frame = NSRect(origin: .zero, size: Self.promptFieldSize)
         alert.accessoryView = field
         alert.window.initialFirstResponder = field
         present(alert, for: webView) { response in
@@ -128,9 +130,8 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
 
     /// The page's host as the title (pages cannot pass their text off as the app's), its text below.
     private func dialog(message: String, frame: WKFrameInfo) -> NSAlert {
-        let origin = frame.securityOrigin
         let alert = NSAlert()
-        if let host = BrowserDialogOrigin.label(scheme: origin.protocol, host: origin.host, port: origin.port) {
+        if let host = frame.securityOrigin.label {
             alert.messageText = String(localized: "\(host) says:")
         } else {
             alert.messageText = String(localized: "This page says:")
@@ -143,10 +144,14 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
     private func present(_ alert: NSAlert, for webView: WKWebView,
                          answer: @escaping (NSApplication.ModalResponse?) -> Void) {
         guard let window = sheetWindow(for: webView) else { return answer(nil) }
-        let pending = PendingSheet(window: window, sheet: alert.window, answer: answer)
-        pending.alert = alert
+        let pending = PendingSheet(window: window, sheet: alert.window, alert: alert, answer: answer)
+        alert.beginSheetModal(for: window, completionHandler: track(pending))
+    }
+
+    /// Keeps `pending` until its sheet ends (`tearDown()` answers it before); the returned handler is the sheet's.
+    private func track(_ pending: PendingSheet) -> (NSApplication.ModalResponse) -> Void {
         sheets.append(pending)
-        alert.beginSheetModal(for: window) { [weak self] response in
+        return { [weak self] response in
             MainActor.assumeIsolated {
                 pending.finish(response)
                 self?.sheets.removeAll { $0 === pending }
@@ -169,21 +174,13 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
         panel.canChooseDirectories = parameters.allowsDirectories
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection
         panel.prompt = String(localized: "Choose")
-        if let host = BrowserDialogOrigin.label(scheme: frame.securityOrigin.protocol, host: frame.securityOrigin.host,
-                                                port: frame.securityOrigin.port) {
+        if let host = frame.securityOrigin.label {
             panel.message = String(localized: "Choose files to upload to \(host)")
         }
-        let pending = PendingSheet(window: window, sheet: panel) { response in
+        let pending = PendingSheet(window: window, sheet: panel, chooseFiles: { completionHandler($0) }) { response in
             completionHandler(response == .OK ? panel.urls : nil)
         }
-        pending.chooseFiles = { completionHandler($0) }
-        sheets.append(pending)
-        panel.beginSheetModal(for: window) { [weak self] response in
-            MainActor.assumeIsolated {
-                pending.finish(response)
-                self?.sheets.removeAll { $0 === pending }
-            }
-        }
+        panel.beginSheetModal(for: window, completionHandler: track(pending))
     }
 
     // MARK: - Downloads
@@ -209,6 +206,11 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
     }
 }
 
+private extension WKSecurityOrigin {
+    /// How a dialog or the open panel names the page (`BrowserDialogOrigin`).
+    var label: String? { BrowserDialogOrigin.label(scheme: self.protocol, host: host, port: port) }
+}
+
 /// A sheet a page waits for. `finish` answers once; `cancel` (the pane closed) also takes the sheet down.
 @MainActor
 private final class PendingSheet {
@@ -216,13 +218,16 @@ private final class PendingSheet {
     private weak var sheet: NSWindow?
     private var answer: ((NSApplication.ModalResponse?) -> Void)?
     /// The JavaScript dialog shown (nil: the open panel).
-    var alert: NSAlert?
+    let alert: NSAlert?
     /// The open panel's answer with given files (`debug.browser`).
-    var chooseFiles: (([URL]) -> Void)?
+    private let chooseFiles: (([URL]) -> Void)?
 
-    init(window: NSWindow, sheet: NSWindow, answer: @escaping (NSApplication.ModalResponse?) -> Void) {
+    init(window: NSWindow, sheet: NSWindow, alert: NSAlert? = nil, chooseFiles: (([URL]) -> Void)? = nil,
+         answer: @escaping (NSApplication.ModalResponse?) -> Void) {
         self.window = window
         self.sheet = sheet
+        self.alert = alert
+        self.chooseFiles = chooseFiles
         self.answer = answer
     }
 
@@ -255,41 +260,51 @@ extension BrowserPageDelegate {
     /// `debug.browser`: the pop-ups and the sheet a page waits for; `answer` (`ok` / `cancel`) answers that sheet as
     /// its buttons do, with `text` typed into a prompt or, for the open panel, the path of the file chosen.
     func debugState(answer: String?, text: String?) -> [String: JSONValue] {
-        var result: [String: JSONValue] = [
-            "popups": .array(popups.map { popup in
-                .object([
-                    "title": .string(popup.title),
-                    "subtitle": .string(popup.subtitle),
-                    "url": popup.webView.url.map { .string($0.absoluteString) } ?? .null,
-                    "size": .array([popup.webView.frame.width, popup.webView.frame.height].map { .number(Double($0)) }),
-                    "key": .bool(popup.isKeyWindow),
-                ])
-            }),
-        ]
+        var result: [String: JSONValue] = ["popups": .array(popups.map(\.debugState))]
         guard let sheet = sheets.first else { return result }
-        if let alert = sheet.alert {
-            result["sheet"] = .object([
-                "title": .string(alert.messageText),
-                "message": .string(alert.informativeText),
-                "buttons": .array(alert.buttons.map { .string($0.title) }),
-                "field": (alert.accessoryView as? NSTextField).map { .string($0.stringValue) } ?? .null,
-            ])
-        } else {
-            result["sheet"] = .object(["openPanel": .bool(true)])
-        }
+        result["sheet"] = sheet.debugState
         guard let answer else { return result }
-        if let alert = sheet.alert {
-            if let text, let field = alert.accessoryView as? NSTextField { field.stringValue = text }
-            let cancel: NSApplication.ModalResponse = alert.buttons.count > 1 ? .alertSecondButtonReturn : .alertFirstButtonReturn
-            sheet.end(answer == "ok" ? .alertFirstButtonReturn : cancel)
-        } else if answer == "ok", let text {
-            sheet.answerWithFiles([URL(fileURLWithPath: text)])
-            sheet.end(.cancel)
-        } else {
-            sheet.end(.cancel)
-        }
+        sheet.debugAnswer(ok: answer == "ok", text: text)
         result["answered"] = .string(answer)
         return result
+    }
+}
+
+private extension BrowserPopupWindow {
+    var debugState: JSONValue {
+        .object([
+            "title": .string(title),
+            "subtitle": .string(subtitle),
+            "url": webView.url.map { .string($0.absoluteString) } ?? .null,
+            "size": .array([webView.frame.width, webView.frame.height].map { .number(Double($0)) }),
+            "key": .bool(isKeyWindow),
+        ])
+    }
+}
+
+private extension PendingSheet {
+    /// The alert's title, message, buttons and prompt field, or `openPanel`.
+    var debugState: JSONValue {
+        guard let alert else { return .object(["openPanel": .bool(true)]) }
+        return .object([
+            "title": .string(alert.messageText),
+            "message": .string(alert.informativeText),
+            "buttons": .array(alert.buttons.map { .string($0.title) }),
+            "field": (alert.accessoryView as? NSTextField).map { .string($0.stringValue) } ?? .null,
+        ])
+    }
+
+    /// Ends the sheet as its OK (first) or Cancel (second, else first) button would; `text` goes into a prompt's
+    /// field, or is the file the open panel chooses.
+    func debugAnswer(ok: Bool, text: String?) {
+        if let alert {
+            if let text, let field = alert.accessoryView as? NSTextField { field.stringValue = text }
+            let cancel: NSApplication.ModalResponse = alert.buttons.count > 1 ? .alertSecondButtonReturn : .alertFirstButtonReturn
+            end(ok ? .alertFirstButtonReturn : cancel)
+        } else {
+            if ok, let text { answerWithFiles([URL(fileURLWithPath: text)]) }
+            end(.cancel)
+        }
     }
 }
 #endif

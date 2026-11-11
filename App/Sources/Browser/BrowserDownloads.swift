@@ -63,7 +63,10 @@ final class BrowserDownloads: NSObject, WKDownloadDelegate {
 
     func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
         guard let item = items.removeValue(forKey: ObjectIdentifier(download)) else { return }
-        if (error as NSError).code == NSURLErrorCancelled { return item.pane?.showDownload(nil) ?? () }
+        if (error as NSError).code == NSURLErrorCancelled {
+            item.pane?.showDownload(nil)
+            return
+        }
         let name = item.name.isEmpty ? (download.originalRequest?.url?.lastPathComponent ?? "") : item.name
         item.pane?.showDownload(.failed(name: name, reason: error.localizedDescription))
     }

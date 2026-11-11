@@ -69,6 +69,8 @@ public enum BrowserDownloadName {
     static let compoundExtensions = ["tar.gz", "tar.bz2", "tar.xz", "tar.zst", "tar.lz", "tar.Z"]
     /// Longest name, in UTF-8 bytes (APFS allows 255).
     static let maxBytes = 200
+    /// The highest number `unique` tries before a random tag.
+    static let maxCopyNumber = 9_999
 
     /// A plain file name from the server's suggestion: no folders, no hidden or control characters, not too long.
     public static func sanitized(_ suggested: String?) -> String {
@@ -93,12 +95,14 @@ public enum BrowserDownloadName {
         let first = directory.appendingPathComponent(name)
         guard exists(first) else { return first }
         let (stem, ext) = split(name)
-        for number in 2...9_999 {
-            let candidate = directory.appendingPathComponent(ext.isEmpty ? "\(stem) \(number)" : "\(stem) \(number).\(ext)")
+        func tagged(_ tag: String) -> URL {
+            directory.appendingPathComponent(ext.isEmpty ? "\(stem) \(tag)" : "\(stem) \(tag).\(ext)")
+        }
+        for number in 2...maxCopyNumber {
+            let candidate = tagged(String(number))
             if !exists(candidate) { return candidate }
         }
-        let tag = UUID().uuidString.prefix(8)
-        return directory.appendingPathComponent(ext.isEmpty ? "\(stem) \(tag)" : "\(stem) \(tag).\(ext)")
+        return tagged(String(UUID().uuidString.prefix(8)))
     }
 
     /// Stem and extension (a compound one kept whole; none for a name that is only an extension).
