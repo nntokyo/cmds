@@ -65,9 +65,26 @@ struct CodexWatchResult: Sendable {
 /// changed, and only what was appended since the last read (at most the last 256 KB); the first line
 /// (`session_meta`) is read once for its cwd. PRIVACY: only usage figures are parsed (`CodexRollout`); no content is
 /// logged or kept. Not thread-safe: use from the metadata queue.
+///
+/// Account limits also come from recent session files no pane holds (`codex exec` / `codex review` runs, sessions
+/// that ended before cmds saw them, #227): every `recentScanInterval` the day folders of today and yesterday under
+/// `$CODEX_HOME/sessions` (else `~/.codex/sessions`) are listed, and the `recentMaxFiles` newest files modified in the
+/// last `recentWindow` are followed like the panes' files (appended part only, at most `recentTailBytes`), for their
+/// limits only.
 final class CodexSessionWatcher: @unchecked Sendable {
     static let tailBytes: UInt64 = 256 * 1024
     static let metaBytes = 256 * 1024
+    static let recentScanInterval: TimeInterval = 15
+    static let recentWindow: TimeInterval = 6 * 3600
+    static let recentMaxFiles = 4
+    static let recentTailBytes: UInt64 = 64 * 1024
+
+    /// `$CODEX_HOME/sessions` of cmds' own environment (as Codex resolves it), else `~/.codex/sessions`.
+    static func sessionsDirectory(environment: [String: String] = ProcessInfo.processInfo.environment) -> String {
+        let home = environment["CODEX_HOME"].flatMap { $0.isEmpty ? nil : ($0 as NSString).expandingTildeInPath }
+            ?? (NSHomeDirectory() as NSString).appendingPathComponent(".codex")
+        return (home as NSString).appendingPathComponent("sessions")
+    }
 
     private struct FileState {
         var inode: UInt64 = 0
@@ -84,8 +101,26 @@ final class CodexSessionWatcher: @unchecked Sendable {
     }
 
     private var files: [String: FileState] = [:]
+    /// Recent files followed for their limits only.
+    private var recent: [String: FileState] = [:]
+    private var lastRecentScan: Date?
+    private let sessionsDirectory: String
 
-    func update(_ processes: [CodexProcess]) -> CodexWatchResult {
+    init(sessionsDirectory: String = CodexSessionWatcher.sessionsDirectory()) {
+        self.sessionsDirectory = sessionsDirectory
+    }
+
+    func update(_ processes: [CodexProcess], now: Date = Date()) -> CodexWatchResult {
+        var (result, read) = updatePanes(processes)
+        if let limits = recentLimits(now: now, skipping: read),
+           limits.updatedAt > (result.limits?.updatedAt ?? .distantPast) {
+            result.limits = limits
+        }
+        return result
+    }
+
+    /// The pane part of `update`; also returns the files it read.
+    private func updatePanes(_ processes: [CodexProcess]) -> (CodexWatchResult, Set<String>) {
         var panes: [String: CodexSessionMatcher.Pane] = [:]
         for process in processes {
             guard let paneID = process.paneID else { continue }
@@ -97,7 +132,7 @@ final class CodexSessionWatcher: @unchecked Sendable {
         }
         guard !panes.isEmpty else {
             files.removeAll()
-            return CodexWatchResult()
+            return (CodexWatchResult(), [])
         }
         let held = Set(panes.values.flatMap(\.openFiles))
         var shared = Set<String>()
@@ -109,7 +144,7 @@ final class CodexSessionWatcher: @unchecked Sendable {
 
         var candidates: [CodexSessionMatcher.File] = []
         for path in held.union(shared) {
-            guard var state = fileState(path: path) else { continue }
+            guard var state = fileState(path: path, previous: files[path]) else { continue }
             if shared.contains(path) {
                 if !state.metaRead { readMeta(path, into: &state) }
                 // A daemon session whose directory is unknown or has no Codex pane: never read its contents.
@@ -119,7 +154,7 @@ final class CodexSessionWatcher: @unchecked Sendable {
                     continue
                 }
             }
-            readAppended(path, into: &state)
+            readAppended(path, into: &state, tailBytes: Self.tailBytes)
             files[path] = state
             candidates.append(.init(path: path, cwd: state.meta?.cwd, created: state.meta?.timestamp ?? state.birth,
                                     modified: state.modified, hasUsage: state.snapshot.hasUsage))
@@ -138,14 +173,55 @@ final class CodexSessionWatcher: @unchecked Sendable {
                   let limits = state.snapshot.accountLimits(fallbackDate: state.modified) else { continue }
             if limits.updatedAt > (result.limits?.updatedAt ?? .distantPast) { result.limits = limits }
         }
-        return result
+        return (result, Set(candidates.map(\.path)))
+    }
+
+    /// Newest limits in the recent session files that `skipping` (the panes' files) does not cover; the folders are
+    /// listed at most every `recentScanInterval`, in between the known files are only re-read when they grew.
+    private func recentLimits(now: Date, skipping: Set<String>) -> AgentLimits? {
+        if lastRecentScan.map({ now.timeIntervalSince($0) >= Self.recentScanInterval }) ?? true {
+            lastRecentScan = now
+            var found: [(path: String, modified: Date)] = []
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            for day in [now, now.addingTimeInterval(-86400)] {
+                let parts = calendar.dateComponents([.year, .month, .day], from: day)
+                guard let year = parts.year, let month = parts.month, let dayOfMonth = parts.day else { continue }
+                let folder = String(format: "%@/%04d/%02d/%02d", sessionsDirectory, year, month, dayOfMonth)
+                guard let names = try? FileManager.default.contentsOfDirectory(atPath: folder) else { continue }
+                for name in names where CodexRollout.isRolloutPath(name) {
+                    let path = (folder as NSString).appendingPathComponent(name)
+                    var info = stat()
+                    guard lstat(path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG else { continue }
+                    let modified = Date(timeIntervalSince1970: Double(info.st_mtimespec.tv_sec))
+                    if now.timeIntervalSince(modified) <= Self.recentWindow { found.append((path, modified)) }
+                }
+            }
+            let newest = found.sorted { $0.modified > $1.modified }.prefix(Self.recentMaxFiles).map(\.path)
+            recent = recent.filter { newest.contains($0.key) }
+            for path in newest where recent[path] == nil { recent[path] = FileState() }
+        }
+        var best: AgentLimits?
+        for path in Array(recent.keys) where !skipping.contains(path) {
+            guard var state = fileState(path: path, previous: recent[path]) else {
+                recent[path] = nil
+                continue
+            }
+            readAppended(path, into: &state, tailBytes: Self.recentTailBytes)
+            recent[path] = state
+            if let limits = state.snapshot.accountLimits(fallbackDate: state.modified),
+               limits.updatedAt > (best?.updatedAt ?? .distantPast) {
+                best = limits
+            }
+        }
+        return best
     }
 
     /// Refreshes size/mtime/inode; a replaced or truncated file starts over.
-    private func fileState(path: String) -> FileState? {
+    private func fileState(path: String, previous: FileState?) -> FileState? {
         var info = stat()
         guard lstat(path, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG else { return nil }
-        var state = files[path] ?? FileState()
+        var state = previous ?? FileState()
         let inode = UInt64(info.st_ino)
         let size = UInt64(max(0, info.st_size))
         if state.inode != inode || size < state.offset {
@@ -173,14 +249,14 @@ final class CodexSessionWatcher: @unchecked Sendable {
     }
 
     /// Parses what was appended since the last read (at most the last `tailBytes`).
-    private func readAppended(_ path: String, into state: inout FileState) {
+    private func readAppended(_ path: String, into state: inout FileState, tailBytes: UInt64) {
         // Unchanged since the last read (e.g. an unterminated line being written): nothing new to parse.
         guard state.size > state.offset, state.size != state.readSize else { return }
         state.readSize = state.size
         var start = state.offset
         var cut = false
-        if state.size - start > Self.tailBytes {
-            start = state.size - Self.tailBytes
+        if state.size - start > tailBytes {
+            start = state.size - tailBytes
             cut = true
         }
         guard let handle = FileHandle(forReadingAtPath: path) else { return }

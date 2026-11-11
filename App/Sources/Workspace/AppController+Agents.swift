@@ -1,5 +1,8 @@
 import Foundation
 import CmdsCore
+import os
+
+private let agentLog = Logger(subsystem: "tokyo.n-n.cmds", category: "agents")
 
 /// Coding agents in terminal panes: usage reports (`agent.report`, `agent.claude_status`), Claude Code hooks,
 /// metadata scans and the agent state derived from them.
@@ -191,12 +194,28 @@ extension AppController {
     /// Codex's used-up windows changed (`AgentLimits.exhaustedReset`).
     static let codexLimitsDidChange = Notification.Name("cmdsCodexLimitsDidChange")
 
+    /// At launch: the Codex limits of the last run that have not reset yet (`CodexLimitsStore`, #227).
+    func restoreCodexLimits(now: Date = Date()) {
+        guard agentLimitsByKind[.codex] == nil,
+              let limits = CodexLimitsStore.load(supportDirectory: CmdsEnv.supportDirectoryURL(), now: now) else { return }
+        agentLimitsByKind[.codex] = limits
+    }
+
+    private func saveCodexLimits(_ limits: AgentLimits) {
+        do {
+            try CodexLimitsStore.save(limits, supportDirectory: CmdsEnv.supportDirectoryURL())
+        } catch {
+            agentLog.error("saving Codex limits failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     /// Applies a metadata scan: drops usage of agents that exited, marks idle ones stale, takes Codex usage from its
     /// session files (a pane reporting through `agent.report` keeps that) and the newest Codex limits.
     /// The caller sends the usage update (`applyResourceUsage`) right after.
     func applyAgentScan(_ codex: CodexWatchResult, now: Date = Date()) {
         if let limits = codex.limits, limits.updatedAt > (agentLimitsByKind[.codex]?.updatedAt ?? .distantPast) {
             let resetChanged = limits.exhaustedReset != agentLimitsByKind[.codex]?.exhaustedReset
+            if CodexLimitsStore.changed(agentLimitsByKind[.codex], limits) { saveCodexLimits(limits) }
             agentLimitsByKind[.codex] = limits
             // Schedules that follow Codex's limit (ScheduleRunner).
             if resetChanged { NotificationCenter.default.post(name: Self.codexLimitsDidChange, object: nil) }
