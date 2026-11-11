@@ -7,21 +7,21 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.19.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.19.0</link>
-      <sparkle:version>28</sparkle:version>
-      <sparkle:shortVersionString>0.19.0</sparkle:shortVersionString>
+      <title>cmds 0.20.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.20.0</link>
+      <sparkle:version>29</sparkle:version>
+      <sparkle:shortVersionString>0.20.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Tue, 10 Nov 2026 19:40:40 GMT</pubDate>
+      <pubDate>Wed, 11 Nov 2026 04:18:14 GMT</pubDate>
       <description><![CDATA[
 <p>Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).</p>
 <h3>Added</h3>
-<ul><li>Move panes within a workspace, to another workspace or into a new one, with what runs in them (#218): drag the grip that appears at a pane's top edge onto another pane's edge (split there) or centre (swap), onto a workspace in the sidebar, or out of the window (new workspace); Pane › Swap with Pane Left / Right / Up / Down (⌥⇧⌘ + arrow keys), Move to Workspace…, Move to New Workspace; <code>cmds pane move</code> / <code>cmds pane swap</code> and <code>pane.move</code> / <code>pane.swap</code>.</li></ul>
+<ul><li>A Codex account over its usage limit shows as Codex at 100 % with the reset time from Codex's message (rings, sidebar footer, red dot, <code>cmds agents</code>, schedules waiting for Codex's limit), until the reset passes or newer figures arrive. The last known Codex limits are kept across relaunches, and limits are also picked up from recent Codex sessions not running in a pane (<code>codex exec</code>, <code>codex review</code>) (#227).</li></ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.19.0/cmds-0.19.0.dmg" length="15763751" type="application/octet-stream" sparkle:edSignature="QpS/B+o3/DHE5b9/OQ7tcJcHohnpgjKFUpGPT22JRvXs8cNuSn2nXv4KH2ykfIj/hCQkNGArx7CJQHb/AP0WCw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.20.0/cmds-0.20.0.dmg" length="16175143" type="application/octet-stream" sparkle:edSignature="ikTUHPuFH3kTwytJDUOHON6xiaPzT0aLyff7mGyn5Yrfrbdn/GdL/2X9Bd3SiEa/WKihldKA30uYcliPCoBaDA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: qV1kKvObNPP6Z9YQmHEzh3UU/PRXoAdz7ez2feqHPs8+yK+B+9XaSK5ilIj36faOrabTOyaZC7oXrvmQJVTtAw==
-length: 1903
+edSignature: cI4N13SFbf5Zb932WsAAFLFCit++fd6Es3wnekRm+ZxGP3A1fQINbbTFnd1sa38XxqW25BNE+iiNT0z2WN3bDA==
+length: 1837
 -->
