@@ -74,6 +74,10 @@ open build/dd/Build/Products/Debug/cmds.app
 ```
 
 - iOSコンパニオンは`CmdsCompanion`スキームです。Xcodeから実機で実行してください。
+- Debugビルドは「cmds Dev」（`tokyo.n-n.cmds.dev`）で、macOSからは別のアプリです。プライバシーの許可（画面収録など）は
+  別に求められ、設定も別に保存されます。`~/Library/Application Support/cmds`はインストール済みのcmdsと共有するため、
+  同時には動かさないでください。インストール済みのcmdsと並べて試すときは、隔離して起動します
+  （[docs/internals/testing.md](docs/internals/testing.md#isolated-instances)）。
 - **libghosttyのパッチ**：アプリには`vendor/ghostty-patches`のパッチ（ビューポートを動かさずにスクロールバックを読む等）が
   必要で、パッチなしのGhosttyKitではビルドできません。`scripts/build-ghostty.sh`はビルドの間だけサブモジュールにパッチを
   当てて最後に戻すので、サブモジュールは固定した上流のリビジョンのままです。サブモジュールかパッチが変わったら、もう一度
