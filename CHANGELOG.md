@@ -9,14 +9,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Mac: a Codex account over its usage limit shows as Codex at 100 % with the reset time from Codex's message (rings,
-  sidebar footer, red dot, `cmds agents`, schedules waiting for Codex's limit), until the reset passes or newer
-  figures arrive. The last known Codex limits are kept across relaunches, and limits are also picked up from recent
-  Codex sessions not running in a pane (`codex exec`, `codex review`) (#227).
-
 - iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
+
+## [0.20.0] - 2026-11-11
+
+Mac only; no iPhone/iPad release (the Unreleased entry above ships with the next companion release).
+
+### Added
+
+- A Codex account over its usage limit shows as Codex at 100 % with the reset time from Codex's message (rings,
+  sidebar footer, red dot, `cmds agents`, schedules waiting for Codex's limit), until the reset passes or newer
+  figures arrive. The last known Codex limits are kept across relaunches, and limits are also picked up from recent
+  Codex sessions not running in a pane (`codex exec`, `codex review`) (#227).
 
 ## [0.19.0] - 2026-11-11
 
@@ -617,7 +623,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.19.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.20.0...master
+[0.20.0]: https://github.com/nntokyo/cmds/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/nntokyo/cmds/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/nntokyo/cmds/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/nntokyo/cmds/compare/v0.16.0...v0.17.0
