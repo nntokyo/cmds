@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-11-13
+
 ### Added
 
 - Mac (macOS 26 and later): a voice assistant, "JARVIS" (beta, free for now). Turned on in Settings › Assistant or
@@ -32,6 +34,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   there, else starts one. For a session it started with a task or gave an instruction to, it says when the agent is
   done or asks you something (Settings › Assistant › Report on tasks I gave, on by default) (#243).
 
+- Voice assistant (Mac): faster answers. An utterance ends about 0.8 s after you stop speaking (relative to the room's
+  noise, so also in a café or on a platform), the on-device model warms up while you speak, web questions get a short
+  「調べます。」 at once and the answer is spoken sentence by sentence as Claude writes it; web answers are reused for
+  10 minutes (#248).
+- Voice assistant (Mac): a small orb while it waits for its name (Settings › Assistant › Show while waiting): dim
+  while paused, orange when a workspace needs you, grows into the HUD when you speak; click it for the last answer,
+  drag it anywhere.
+- Voice assistant (Mac): loud places. Settings › Assistant › Listening: Automatic, Automatic with noise reduction
+  (macOS voice processing) or Push to talk (hold ⌥⌘J, no name needed, letting go ends the request at once);
+  Microphone: Automatic (a headset such as AirPods when connected), System Default or one device; in a loud room a
+  name speech recognition is unsure of is ignored (#270).
+- Voice assistant (Mac): it pauses by itself while another app uses the microphone (a call in Zoom, FaceTime, Meet…)
+  and listens again when the call ends; the menu bar says which app (Settings › Assistant › Pause while another app
+  uses the microphone, on) (#278).
+- Voice assistant (Mac): Siri and Shortcuts. Agent Status (「cmdsの状況」) says and returns the short status; Ask the
+  Assistant (「cmdsに頼む」) hands it a request and returns its answer, actions still waiting for your yes on the Mac. A
+  morning summary is a Shortcuts automation (#282).
+- Sidebar: each Claude Code session shows its account as a coloured icon and name; click it (or right-click the row ›
+  Claude Account) to continue the session with another account, as `cmds accounts switch` does (#284).
 - Browser panes: Reload on File Changes (the eye button in the toolbar, View menu, `cmds browser watch`, API
   `browser.watch`, MCP `browser_watch`) reloads a local page (`file://`, `localhost`) when files in the workspace's
   folder (or one you choose) change, debounced, ignoring `.git`, `node_modules`, build folders and dot files, and only
@@ -702,7 +723,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.21.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.22.0...master
+[0.22.0]: https://github.com/nntokyo/cmds/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/nntokyo/cmds/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/nntokyo/cmds/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/nntokyo/cmds/compare/v0.18.0...v0.19.0
