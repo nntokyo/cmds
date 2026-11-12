@@ -26,14 +26,17 @@ extension AssistantController {
             say(send(action) ? strings(.sent(workspace: action.workspaceTitle)) : strings(.failed))
         case .startAgent(let kind, let directory, let task):
             // A new workspace in the folder running the agent, its task as the first prompt (one quoted argument).
+            // In a folder that is already a workspace's title, it is numbered (`api-2`): "api" still means the original.
             let path = (directory as NSString).expandingTildeInPath
-            let info = controller.createWorkspace(cwd: path, command: action.text, select: false)
+            let base = path == NSHomeDirectory() ? "~" : (path as NSString).lastPathComponent
+            let title = AssistantWorld.uniqueTitle(base, taken: controller.workspaces.map(\.displayTitle))
+            let info = controller.createWorkspace(title: title, cwd: path, command: action.text, select: false)
             recent = (info.id, Date())
             if !queued.isEmpty { createdForQueue.insert(info.id) }
             if task != nil, let pane = controller.workspace(id: info.id)?.orderedPanes.first {
                 taskWatch.watch(paneID: pane.id, workspaceID: info.id, agent: kind.displayName, current: .none, now: Date())
             }
-            say(strings(.started(agent: kind.displayName, place: action.workspaceTitle)))
+            say(strings(.started(agent: kind.displayName, place: title ?? action.workspaceTitle)))
         }
     }
 

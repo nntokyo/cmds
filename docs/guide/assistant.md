@@ -80,7 +80,8 @@ the on-device model as before.
 inside your project folders (Settings › Assistant › Project folders; by default ~/Source, ~/Developer, ~/Projects and
 ~/src, those that exist; git repositories first, not searched inside). When several folders fit it names up to three
 and asks which; when none does, 「どのフォルダで起動しますか？」. Without a place, it starts where the last request was
-about, else in the selected workspace. The agent runs in a new workspace as `claude '<task>'` (`codex '<task>'`): the
+about, else in the selected workspace. The agent runs in a new workspace (called `api-2`, `api-3`… when a workspace is already called like its folder, so
+"api" still means the first one and "api 2" the new one) as `claude '<task>'` (`codex '<task>'`): the
 task is one quoted argument, so nothing in it reaches the shell, and no permission-skipping flag is ever added. A
 spoken yes starts it, unless the task mentions deleting, pushing or deploying (then Return or a click).
 

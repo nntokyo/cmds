@@ -144,6 +144,17 @@ public struct AssistantWorld: Equatable, Sendable {
         return heard.isEmpty ? .notFound : heard.count == 1 ? .found(heard[0]) : .ambiguous(heard)
     }
 
+    /// The title for a workspace the assistant creates whose title would be `base` (its folder's name): nil when no
+    /// workspace is called that (it keeps the title from its folder), else `base-2`, `base-3`… (the first free one,
+    /// compared as `AssistantText.key`), so "api" still means the original and "api 2" the new one.
+    public static func uniqueTitle(_ base: String, taken: [String]) -> String? {
+        let keys = Set(taken.map(AssistantText.key))
+        guard keys.contains(AssistantText.key(base)) else { return nil }
+        var number = 2
+        while keys.contains(AssistantText.key("\(base)-\(number)")) { number += 1 }
+        return "\(base)-\(number)"
+    }
+
     /// The workspaces whose title sounds closest to `name` as heard (none when none is close enough).
     public func soundsLike(_ name: String) -> [Workspace] {
         let scored = workspaces.compactMap { workspace in
