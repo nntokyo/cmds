@@ -15,9 +15,8 @@ final class AssistantIdleOrb: NSObject {
     /// The user dragged it here (its centre).
     var onMoved: ((CGPoint) -> Void)?
 
-    let panel = HUDWindow(contentRect: NSRect(x: 0, y: 0, width: AssistantPresence.Size.small.side,
-                                              height: AssistantPresence.Size.small.side),
-                          styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    let panel = HUDWindow(floating: NSSize(width: AssistantPresence.Size.small.side, height: AssistantPresence.Size.small.side),
+                          shadow: false, stationary: true)
     private let orb = AssistantIdleOrbView()
     private(set) var isShown = false
     private(set) var look: AssistantPresence.Look?
@@ -27,15 +26,6 @@ final class AssistantIdleOrb: NSObject {
 
     override init() {
         super.init()
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.isReleasedWhenClosed = false
-        panel.appearance = NSAppearance(named: .darkAqua)
         panel.contentView = orb
         orb.onClick = { [weak self] in self?.onClick?() }
         orb.onDragged = { [weak self] delta in
