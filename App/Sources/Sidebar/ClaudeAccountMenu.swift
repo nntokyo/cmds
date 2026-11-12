@@ -50,9 +50,11 @@ enum ClaudeAccountMenu {
                 choose(account.name, pane: pane, controller: controller, window: window)
             }
             item.image = swatch(color(of: account.name, controller: controller))
-            let isCurrent = current.map(account.hasName) ?? false
-            item.state = isCurrent ? .on : .off
-            if isCurrent { item.action = nil }
+            // The current one is checked and cannot be chosen.
+            if current.map(account.hasName) == true {
+                item.state = .on
+                item.action = nil
+            }
             menu.addItem(item)
         }
         menu.addItem(.separator())
