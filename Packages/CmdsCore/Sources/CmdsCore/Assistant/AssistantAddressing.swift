@@ -4,26 +4,6 @@ import Foundation
 /// is what keeps it from acting on conversation: only an utterance that starts with its name (after an optional
 /// "hey" / "ねえ"), or one said within a short window after the assistant spoke or the hotkey was pressed, counts.
 /// Everything else is discarded by the caller right away and never stored.
-/// How an utterance was heard (#270), for the checks that depend on it.
-public struct AssistantHeard: Equatable, Sendable {
-    /// The room was loud (`AssistantEndpoint.isNoisy`): the name is checked more strictly and a follow-up without it
-    /// must be short.
-    public var noisy: Bool
-    /// The recogniser's confidence for each character of `text` (0…1); empty when it gave none.
-    public var confidences: [Double]
-    /// The utterance as recognised (untrimmed), which `confidences` belong to; nil: the one checked.
-    public var text: String?
-    /// Said while the listen shortcut was held (push to talk): meant for the assistant, without its name.
-    public var pushed: Bool
-
-    public init(noisy: Bool = false, confidences: [Double] = [], text: String? = nil, pushed: Bool = false) {
-        self.noisy = noisy
-        self.confidences = confidences
-        self.text = text
-        self.pushed = pushed
-    }
-}
-
 public enum AssistantAddressing {
     public enum Result: Equatable, Sendable {
         /// Not for the assistant: drop it.
