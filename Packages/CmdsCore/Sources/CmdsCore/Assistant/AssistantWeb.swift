@@ -10,11 +10,11 @@ public enum AssistantWeb {
     public static let marker = "[[NEEDS_WEB]]"
 
     /// Whether the question should go to Claude with web search at once: the user asks to search or to ask Claude, or
-    /// it is about something live (weather, news, prices, rates, traffic, scores, "today's", "latest").
+    /// it is about something live (weather, news, prices, rates, traffic, scores, "today's", "the latest version of…").
     public static func needsWeb(_ question: String) -> Bool {
         let text = AssistantText.folded(question)
         guard !text.isEmpty else { return false }
-        if japaneseWords.contains(where: { text.contains($0) }) { return true }
+        if japaneseWords.contains(where: { text.contains($0) }) || japaneseLatest.occurs(in: text) { return true }
         return englishPatterns.contains { $0.occurs(in: text) }
     }
 
@@ -62,15 +62,25 @@ public enum AssistantWeb {
         "クロードに聞", "クロードにきい", "クロードに質問", "claudeに聞", "claudeにきい", "claudeに質問", "クラウドに聞",
         // Live information.
         "天気", "気温", "予報", "降水", "雨降", "雨が降", "台風", "地震", "ニュース", "株価", "日経平均", "ダウ平均", "為替",
-        "円安", "円高", "ドル円", "円相場", "レート", "仮想通貨", "ビットコイン", "今日の", "きょうの", "最新", "運行", "遅延",
+        "円安", "円高", "ドル円", "円相場", "レート", "仮想通貨", "ビットコイン", "今日の", "きょうの", "運行", "遅延",
         "電車", "運休", "渋滞", "交通情報", "試合", "スコア", "選挙", "営業時間", "開店", "閉店",
     ].map(AssistantText.folded)
 
+    /// 「最新」 about the world (「最新のXcodeのバージョン」「最新ニュース」), not 「apiの最新のコミット」 (a workspace).
+    static let japaneseLatest = Pattern(AssistantText.folded(#"最新.{0,20}(ニュース|情報|バージョン|版|リリース|価格|速報|動向|結果|モデル|機種)"#))
+
+    /// English: "online", "internet" and "latest" only in a live-information context ("search online", "is GitHub
+    /// online", "the latest version of Xcode", "latest news"), never alone: "what is an online algorithm" or "the latest
+    /// commit in api" (a workspace) are no web questions.
     static let englishPatterns: [Pattern] = [
         // Asked to search or to ask Claude.
-        Pattern(#"^(please )?search\b|\bsearch (the )?(web|internet|online)\b|\bweb search\b|\blook (it |that |this )?up\b|\bgoogl(e|ing)\b|\bon(line| the (web|internet))\b|\binternet\b|\b(ask|use|with) claude\b"#),
+        Pattern(#"^(please )?search\b|\bsearch (the )?(web|internet|online)\b|\bweb search\b|\blook (it |that |this )?up\b|\bgoogl(e|ing)\b|\b(search|check|look|find)( it| that| this)? (online|on the (web|internet))\b|\bon the (web|internet)\b|\b(ask|use|with) claude\b"#),
+        // Whether a service is up: "is GitHub online", "is Slack down right now".
+        Pattern(#"^(is|are) .{1,40} (online|offline|down)( (right )?now| at the moment| today)?$"#),
         // Live information.
-        Pattern(#"\b(weather|forecast|temperature|raining|rain (today|tomorrow)|snow(ing)?|typhoon|earthquake|news|headlines?|stocks?|share price|stock price|nasdaq|nikkei|dow jones|s&p|exchange rate|dollar to|to yen|bitcoin|crypto|today[’']s|tonight[’']s|tomorrow[’']s|this week[’']s|latest|traffic|train (status|delays?)|scores|score of|who won|election|opening hours|open now)\b"#),
+        Pattern(#"\b(weather|forecast|temperature|raining|rain (today|tomorrow)|snow(ing)?|typhoon|earthquake|news|headlines?|stocks?|share price|stock price|nasdaq|nikkei|dow jones|s&p|exchange rate|dollar to|to yen|bitcoin|crypto|today[’']s|tonight[’']s|tomorrow[’']s|this week[’']s|traffic|train (status|delays?)|scores|score of|who won|election|opening hours|open now)\b"#),
+        // "latest" about the world: a release, a version, the news; not "the latest commit in api".
+        Pattern(#"\blatest (news|headlines?|version|release|update|updates|price|prices|score|scores|results?|weather|forecast)\b|\b(latest|newest|current) (stable )?(version|release) of\b"#),
     ]
 
     /// "I can't search the internet", "リアルタイムの情報にはアクセスできません" (the Japanese one folded like the answer).

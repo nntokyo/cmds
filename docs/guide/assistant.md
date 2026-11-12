@@ -66,9 +66,10 @@ If it is not a command, it is answered as a question.
 
 **Web questions.** The on-device model has no internet. With **Use Claude for web questions** on (Settings ›
 Assistant, on by default), a question goes to Claude Code instead when you ask to search (検索 / 調べて / ググって /
-ネットで / インターネット / Claudeに聞いて, search / look up / google / online / ask Claude) or when it is about something
-live (天気 / weather, ニュース / news, 株価 / stock price, 為替 / exchange rate, 運行 / train status, 今日の / today's,
-最新 / latest, scores…). Other questions still go to the on-device model first; when it says the answer needs current
+ネットで / インターネット / Claudeに聞いて, search / look up / google / search online / ask Claude) or when it is about
+something live (天気 / weather, ニュース / news, 株価 / stock price, 為替 / exchange rate, 運行 / train status, 今日の /
+today's, 最新のバージョン / the latest version of…, latest news, "is GitHub down", scores…). "Online" or "latest" alone
+are not enough: "what is an online algorithm" or "the latest commit in api" are no web questions. Other questions still go to the on-device model first; when it says the answer needs current
 or outside information, Claude is asked after all. The HUD shows "Asking Claude…" meanwhile, and a small "Claude"
 under the answer. Claude gets only what you said, today's date, your time zone and locale (never screen text), and
 answers in a sentence (asking back only when it cannot tell, such as which place). It takes a few seconds to a minute and uses

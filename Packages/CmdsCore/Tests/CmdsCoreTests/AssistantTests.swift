@@ -726,6 +726,19 @@ final class AssistantWebTests: XCTestCase {
         }
     }
 
+    func testOnlineAndLatestNeedALiveContext() {
+        for question in ["is GitHub online", "is Slack down right now", "search online for the Swift 6.2 release notes",
+                         "find it on the web", "what's the latest version of Xcode", "latest news about Apple",
+                         "the latest release of Node", "current version of Swift", "最新ニュースを教えて", "最新のmacOSのバージョンは"] {
+            XCTAssertTrue(AssistantWeb.needsWeb(question), question)
+        }
+        for question in ["what is an online algorithm", "latest commit in api", "what's the latest commit in api",
+                         "explain online learning", "what is the internet", "show me the latest error in web",
+                         "apiの最新のコミットは", "is this function pure"] {
+            XCTAssertFalse(AssistantWeb.needsWeb(question), question)
+        }
+    }
+
     func testOrdinaryQuestionsStayOnDevice() {
         for question in ["what is a monad", "explain binary search", "tell me a joke", "1たす1は", "モナドって何",
                          "おすすめの変数名は", "what does git rebase do", "how do I write a for loop in Swift",
