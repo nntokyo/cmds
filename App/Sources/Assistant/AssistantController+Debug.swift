@@ -48,6 +48,8 @@ extension AssistantController {
             listener.finalizesEarly = params?["endpoint"]?.boolValue ?? true
             let locale = language.locale
             Task { [weak self] in
+                // `endpoint: false` is for this call only (#272).
+                defer { self?.listener.finalizesEarly = true }
                 do {
                     try await self?.listener.debugFeed(URL(fileURLWithPath: path), locale: locale, tail: tail)
                 } catch {
