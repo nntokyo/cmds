@@ -26,6 +26,9 @@ api?", 「大阪は？」); a yes or no answers a card. The shortcut (default **
 listen for one command without the name, also while paused. Each request stands on its own: only the answer to its
 own question ("Which one?") or to a card goes with the one before.
 
+It takes what you said as finished about a second after you stop speaking, so pause no longer than that in the middle
+of a request (in a noisy room it waits for speech recognition to decide, which takes longer).
+
 Its name interrupts it at any time: while it speaks or works out an answer (also while Claude is searching), "Jarvis,
 …" / 「ジャービス、…」 stops it and takes the new request at once; Claude's late answer to the old one is dropped. While it
 speaks, and for a second after, nothing else it hears counts, and something that is mostly what it just said (its own
@@ -73,7 +76,10 @@ are not enough: "what is an online algorithm" or "the latest commit in api" are 
 or outside information, Claude is asked after all. The HUD shows "Asking Claude…" meanwhile, and a small "Claude"
 under the answer. Claude gets only what you said, today's date, your time zone and locale (never screen text), and
 answers in a sentence (asking back only when it cannot tell, such as which place). It takes a few seconds to a minute and uses
-your Claude Code usage; when `claude` is missing or fails, the assistant says so. Turned off, every question goes to
+your Claude Code usage; when `claude` is missing or fails, the assistant says so. When Claude takes longer than a
+moment (a web question, a summary in detail), the assistant first says 「調べます。」 / "Checking.", and a detailed summary
+is spoken sentence by sentence as Claude writes it. The same web question again within ten minutes (the same day) is
+answered at once from the last answer. Turned off, every question goes to
 the on-device model as before.
 
 **Starting agents with work to do.** The place is a workspace (its folder) or a folder of that name up to three levels
