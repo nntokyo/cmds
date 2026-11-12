@@ -33,8 +33,7 @@ final class AssistantHUD: NSObject {
     var onConfirm: (() -> Void)?
     var onCancel: (() -> Void)?
 
-    let panel = HUDWindow(contentRect: NSRect(x: 0, y: 0, width: AssistantHUD.width, height: 200),
-                          styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    let panel = HUDWindow(floating: NSSize(width: AssistantHUD.width, height: 200), shadow: true)
     private let background = NSVisualEffectView()
     private let orb = AssistantOrbView()
     private let wave = AssistantWaveView()
@@ -64,17 +63,9 @@ final class AssistantHUD: NSObject {
     private(set) var isVisible = false
     /// Bumped by every show / hide, so a finished fade-out does not hide a HUD shown again meanwhile.
     private var generation = 0
+    private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
     private func build() {
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = true
-        panel.isReleasedWhenClosed = false
-        panel.appearance = NSAppearance(named: .darkAqua)
         panel.setAccessibilityLabel(String(localized: "Assistant", comment: "assistant HUD (VoiceOver)"))
 
         background.material = .hudWindow
@@ -89,7 +80,7 @@ final class AssistantHUD: NSObject {
         // A dark glass over the blur, so the HUD reads the same over any desktop.
         let tint = NSView()
         tint.wantsLayer = true
-        tint.layer?.backgroundColor = NSColor(srgbRed: 0.02, green: 0.06, blue: 0.1, alpha: 0.72).cgColor
+        tint.layer?.backgroundColor = AssistantPalette.glass(alpha: 0.72).cgColor
         tint.autoresizingMask = [.width, .height]
         tint.frame = background.bounds
         background.addSubview(tint)
@@ -187,7 +178,7 @@ final class AssistantHUD: NSObject {
         isVisible = true
         generation += 1
         place()
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+        if reduceMotion {
             panel.alphaValue = 1
             panel.orderFrontRegardless()
             return
@@ -195,7 +186,7 @@ final class AssistantHUD: NSObject {
         if !panel.isVisible { panel.alphaValue = 0 }
         panel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = AssistantIdleOrb.transition
+            context.duration = AssistantTuning.orbTransition
             panel.animator().alphaValue = 1
         }
     }
@@ -205,13 +196,13 @@ final class AssistantHUD: NSObject {
         isVisible = false
         generation += 1
         wave.clear()
-        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+        if reduceMotion {
             panel.orderOut(nil)
             return
         }
         let number = generation
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = AssistantIdleOrb.transition
+            context.duration = AssistantTuning.orbTransition
             panel.animator().alphaValue = 0
         } completionHandler: { [weak self] in
             MainActor.assumeIsolated {
@@ -352,6 +343,13 @@ final class AssistantHUD: NSObject {
 
     func debugClickConfirm() { confirmButton.performClick(nil) }
     func debugClickCancel() { cancelButton.performClick(nil) }
+
+    /// The HUD drawn off screen (PNG, without the window's translucency), as `debug.assistant` `snapshot` returns it.
+    func debugSnapshot() -> Data? {
+        guard let view = panel.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return nil }
+        view.cacheDisplay(in: view.bounds, to: rep)
+        return rep.representation(using: .png, properties: [:])
+    }
     #endif
 }
 
@@ -359,4 +357,22 @@ final class AssistantHUD: NSObject {
 final class HUDWindow: NSPanel {
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+
+    /// The assistant's floating panel (the HUD, the waiting orb): borderless, non-activating and clear, above the
+    /// windows on every Space and in full screen, never in the window cycle, staying when cmds is not active.
+    /// `stationary`: Exposé leaves it in place.
+    convenience init(floating size: NSSize, shadow: Bool, stationary: Bool = false) {
+        self.init(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless, .nonactivatingPanel],
+                  backing: .buffered, defer: false)
+        isFloatingPanel = true
+        level = .floating
+        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
+        if stationary { collectionBehavior.insert(.stationary) }
+        hidesOnDeactivate = false
+        isOpaque = false
+        backgroundColor = .clear
+        hasShadow = shadow
+        isReleasedWhenClosed = false
+        appearance = NSAppearance(named: .darkAqua)
+    }
 }

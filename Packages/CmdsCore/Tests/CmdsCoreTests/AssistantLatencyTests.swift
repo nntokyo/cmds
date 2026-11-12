@@ -12,7 +12,7 @@ final class AssistantTimelineTests: XCTestCase {
         timeline.mark(.claudeSpawn, at: start.addingTimeInterval(0.01))
         timeline.mark(.ack, at: start.addingTimeInterval(0.8))
         timeline.mark(.speechStart, at: start.addingTimeInterval(7.25))
-        timeline.route = "web"
+        timeline.route = .web
         XCTAssertEqual(timeline.milliseconds, ["heard": 0, "speechEnd": -600, "routed": 4, "claudeSpawn": 10, "ack": 800,
                                                "speechStart": 7250])
         XCTAssertEqual(timeline.firstSound, 800)
@@ -109,6 +109,22 @@ final class AssistantClaudeStreamTests: XCTestCase {
         XCTAssertEqual(AssistantClaudeStream.events(inLine: delta("x").replacingOccurrences(of: #""parent_tool_use_id":null"#, with: #""parent_tool_use_id":"toolu_1""#)), [])
         XCTAssertEqual(AssistantClaudeStream.events(inLine: #"{"type":"system","subtype":"init"}"#), [])
         XCTAssertEqual(AssistantClaudeStream.events(inLine: "not json"), [])
+    }
+
+    func testLinesAcrossChunks() {
+        var lines = AssistantClaudeStream.Lines()
+        XCTAssertEqual(lines.append(Data(#"{"type":"res"#.utf8)), [])
+        XCTAssertEqual(lines.append(Data("ult\"}\n{\"a\":1}\n{\"b\"".utf8)), [#"{"type":"result"}"#, #"{"a":1}"#])
+        // A character split between chunks is whole in its line.
+        let japanese = Array("晴れ\n".utf8)
+        XCTAssertEqual(lines.append(Data(":2}\n".utf8) + Data(japanese.prefix(2))), [#"{"b":2}"#])
+        XCTAssertEqual(lines.append(Data(japanese.dropFirst(2))), ["晴れ"])
+        XCTAssertEqual(lines.append(Data("\n".utf8)), [""])
+    }
+
+    func testOnlyACallWithoutToolsStreamsSentences() {
+        XCTAssertTrue(AssistantClaude.streamsSentences(AssistantClaude.detailedSummaryArguments(facts: "api", language: "English")))
+        XCTAssertFalse(AssistantClaude.streamsSentences(AssistantClaude.webArguments(question: "weather", language: "English")))
     }
 
     func testSentencesAsTheyAreWritten() {

@@ -44,6 +44,11 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// A scrolled tab is at most this tall (the content, without the title bar and toolbar), so Settings fits a 13"
     /// display with room to spare (#264).
     private static let scrollHeight: CGFloat = 540
+    /// On a small screen: the title bar and toolbar taken as at least this tall, this much room left below the
+    /// window, and never less than `minimumScrollHeight` of rows (#264).
+    private static let minimumChrome: CGFloat = 80
+    private static let screenMargin: CGFloat = 40
+    private static let minimumScrollHeight: CGFloat = 200
 
     private static let zoomLevels: [Double] = PageZoomSteps.steps
 
@@ -268,6 +273,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             controller.preferredContentSize = content.fittingSize
             return controller
         }
+        scrolled(content, in: controller)
+        return controller
+    }
+
+    /// `controller`'s view: `content` (its rows, top first) in a scroll view at most `scrollHeight` tall, as tall as the
+    /// rows when they fit (#264).
+    private func scrolled(_ content: NSView, in controller: NSViewController) {
         let fitting = content.fittingSize
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true
@@ -296,7 +308,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         scrollHeightLimits.append((limit, controller, fitting.height))
         controller.view = scroll
         controller.preferredContentSize = NSSize(width: width, height: min(fitting.height, Self.scrollHeight))
-        return controller
     }
 
     /// Keeps a scrolled tab, and so the window, on the screen Settings opens on: its title bar, toolbar and a margin
@@ -304,7 +315,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private func fitScrollHeight() {
         guard let window, let screen = window.screen ?? NSScreen.main else { return }
         let chrome = window.frame.height - window.contentLayoutRect.height
-        let height = max(min(Self.scrollHeight, screen.visibleFrame.height - max(chrome, 80) - 40), 200)
+        let height = max(min(Self.scrollHeight, screen.visibleFrame.height - max(chrome, Self.minimumChrome) - Self.screenMargin),
+                         Self.minimumScrollHeight)
         for (limit, page, rowsHeight) in scrollHeightLimits {
             limit.constant = height
             page.preferredContentSize.height = min(rowsHeight, height)

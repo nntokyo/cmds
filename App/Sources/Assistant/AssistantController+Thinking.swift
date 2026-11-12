@@ -77,27 +77,27 @@ extension AssistantController {
         let strings = AssistantStrings.localized
         switch plan {
         case .answer(let text):
-            route("rules")
+            route(.rules)
             say(text)
         case .askBack(let text):
-            route("askBack")
+            route(.askBack)
             say(text)
             askedBack = asked
         case .propose(let action, let prompt):
-            route("card")
+            route(.card)
             needsKey = false
             pendingShownAt = Date()
             say(prompt, proposing: action)
         case .summarize(let workspaceID, let paneID, let detailed, let fallback):
-            let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? ""
-            route(detailed ? "claudeSummary" : "summary")
+            let screen = summaryScreen(paneID)
+            route(detailed ? .claudeSummary : .summary)
             think(capped: !detailed) {
                 await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed, streams: true)
             }
         case .summarizeEach(let items, let detailed):
             // One session after the other, a line each (spoken in turn, listed on the HUD).
-            route("summaries")
-            let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? "" }
+            route(.summaries)
+            let screens = items.map { summaryScreen($0.paneID) }
             think {
                 var lines: [String] = []
                 for (item, screen) in zip(items, screens) {
@@ -109,30 +109,7 @@ extension AssistantController {
                 return lines.joined(separator: "\n")
             }
         case .ask(let question):
-            // A free command for the agents ("api の Claude にテストを書くよう指示して"): the interpreter (`claude -p`, no
-            // tools) turns it into a proposal, planned and confirmed like any other command. Else it is a question.
-            // How sure the rules are (#248, `AssistantRoute`): a request goes to the interpreter first, a live question
-            // naming no workspace to the web at once, and what may be either to the interpreter and the on-device model
-            // at the same time (the interpreter decides; the model's answer is ready when it is a question).
-            let request = machine.request
-            switch AssistantRoute.decide(question, world: world, web: usesWeb, interpreter: usesInterpreter) {
-            case .interpreter:
-                route("interpreter")
-                think(capped: true) {
-                    if await self.handleAsCommand(question, world: world, request: request) { return nil }
-                    return await self.answer(question, world: world, interpreted: true)
-                }
-            case .interpreterAndModel:
-                route("interpreter|model")
-                think(capped: true) {
-                    let early = self.earlyModelAnswer(question, world: world)
-                    defer { early?.cancel() }
-                    if await self.handleAsCommand(question, world: world, request: request) { return nil }
-                    return await self.answer(question, world: world, interpreted: true, early: early)
-                }
-            case .web, .model:
-                think(capped: true) { await self.answer(question, world: world, interpreted: false) }
-            }
+            ask(question, world: world)
         case .pauseListening:
             pause()
             speakOnly(strings(.paused))
@@ -143,6 +120,38 @@ extension AssistantController {
             speakOnly(text, muted: wasMuted)
         case .confirm, .cancel:
             say(strings(.nothingToConfirm))
+        }
+    }
+
+    /// The end of a pane's screen for its summary ("" without a pane or when it cannot be read).
+    private func summaryScreen(_ paneID: String?) -> String {
+        paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? ""
+    }
+
+    /// A free command for the agents ("api の Claude にテストを書くよう指示して"): the interpreter (`claude -p`, no tools)
+    /// turns it into a proposal, planned and confirmed like any other command. Else it is a question.
+    /// How sure the rules are (#248, `AssistantRoute`): a request goes to the interpreter first, a live question naming
+    /// no workspace to the web at once, and what may be either to the interpreter and the on-device model at the same
+    /// time (the interpreter decides; the model's answer is ready when it is a question).
+    private func ask(_ question: String, world: AssistantWorld) {
+        let request = machine.request
+        switch AssistantRoute.decide(question, world: world, web: usesWeb, interpreter: usesInterpreter) {
+        case .interpreter:
+            route(.interpreter)
+            think(capped: true) {
+                if await self.handleAsCommand(question, world: world, request: request) { return nil }
+                return await self.answer(question, world: world, interpreted: true)
+            }
+        case .interpreterAndModel:
+            route(.interpreterOrModel)
+            think(capped: true) {
+                let early = self.earlyModelAnswer(question, world: world)
+                defer { early?.cancel() }
+                if await self.handleAsCommand(question, world: world, request: request) { return nil }
+                return await self.answer(question, world: world, interpreted: true, early: early)
+            }
+        case .web, .model:
+            think(capped: true) { await self.answer(question, world: world, interpreted: false) }
         }
     }
 
@@ -159,7 +168,7 @@ extension AssistantController {
                     try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language, progress: progress,
                                                              sentence: sentence)
                 }
-                return AssistantBrevity.first(Self.detailedSentences, of: summary)
+                return AssistantBrevity.first(AssistantTuning.detailedSentences, of: summary)
             }
             guard AssistantBrain.modelAvailable else { return facts }
             // One sentence a session ("api: テストを実行中。").
@@ -185,13 +194,13 @@ extension AssistantController {
         let strings = AssistantStrings.localized
         let web = usesWeb
         if web, AssistantWeb.needsWeb(question) {
-            route("web")
+            route(.web)
             return await webAnswer(question)
         }
         guard AssistantBrain.modelAvailable else { return strings(.modelUnavailable) }
         let status = AssistantReport.status(world, strings: .english)
         do {
-            route(interpreted ? "interpreter+model" : "model")
+            route(interpreted ? .interpreterThenModel : .model)
             let answer: String
             if let early {
                 answer = try await early.value
@@ -200,7 +209,7 @@ extension AssistantController {
                                                          progress: progress(for: machine.request))
             }
             if web, AssistantWeb.answerNeedsWeb(answer) {
-                route("model+web")
+                route(.modelThenWeb)
                 return await webAnswer(question)
             }
             if AssistantModelReply.isAction(answer) {
@@ -236,7 +245,7 @@ extension AssistantController {
     private func webAnswer(_ question: String) async -> String {
         let strings = AssistantStrings.localized
         if let cached = webCache.answer(question, language: language.name, now: Date()) {
-            route("web-cache")
+            route(.webCache)
             claudeAnswered = true
             return cached
         }
@@ -253,7 +262,6 @@ extension AssistantController {
             return strings(.webFailed)
         }
     }
-
 
     /// A `claude -p` call for the current request, with "Asking Claude…" on the HUD while it runs (when it ends or is
     /// stopped, a newer request's mark stays). `answers`: what it returns is the answer, labelled as Claude's (not when
@@ -297,9 +305,6 @@ extension AssistantController {
         }
     }
 
-    /// Sentences a detailed summary says at most.
-    static let detailedSentences = 3
-
     /// The on-device model's answer to `question`, started now (beside the interpreter); nil when it would not be
     /// asked (no model, or a question for the web).
     private func earlyModelAnswer(_ question: String, world: AssistantWorld) -> Task<String, Error>? {
@@ -328,7 +333,7 @@ extension AssistantController {
     private func sentences(for request: Int) -> @Sendable (String) -> Void {
         { [weak self] text in
             DispatchQueue.main.async {
-                MainActor.assumeIsolated { self?.streamed(text, request: request, limit: Self.detailedSentences) }
+                MainActor.assumeIsolated { self?.streamed(text, request: request, limit: AssistantTuning.detailedSentences) }
             }
         }
     }

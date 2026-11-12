@@ -8,9 +8,6 @@ private let timingLog = Logger(subsystem: "tokyo.n-n.cmds", category: "assistant
 /// and the last few requests) and logged once the answer goes to the voice, with stage names and milliseconds only.
 @available(macOS 26.0, *)
 extension AssistantController {
-    /// How many requests' timelines `debug.assistant` keeps.
-    static let keptTimelines = 10
-
     /// A new request was heard at `start` (`speechEnd`: the last loud audio before its transcript, from the
     /// microphone).
     func beginTimeline(at start: Date, speechEnd: Date?) {
@@ -33,8 +30,8 @@ extension AssistantController {
         }
     }
 
-    /// The way the current request went ("web", "status"…); the last one said counts ("model" then "web").
-    func route(_ route: String) {
+    /// The way the current request went; the last one said counts ("model" then "model+web").
+    func route(_ route: AssistantTimeline.Route) {
         guard var timeline, timeline.request == machine.request else { return }
         timeline.route = route
         self.timeline = timeline
@@ -53,7 +50,8 @@ extension AssistantController {
             timelines[index] = timeline
         } else {
             timelines.append(timeline)
-            if timelines.count > Self.keptTimelines { timelines.removeFirst(timelines.count - Self.keptTimelines) }
+            let kept = AssistantTuning.keptTimelines
+            if timelines.count > kept { timelines.removeFirst(timelines.count - kept) }
         }
     }
 }

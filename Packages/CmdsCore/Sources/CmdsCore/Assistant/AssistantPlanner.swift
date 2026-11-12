@@ -366,9 +366,10 @@ public enum AssistantPlanner {
     private static func summarize(_ workspace: AssistantWorld.Workspace, detailed: Bool, world: AssistantWorld,
                                   strings: AssistantStrings) -> AssistantPlan {
         // No agent: what its shell runs, from the pane's process; a model reading a shell's screen would make it up.
-        if workspace.hasNoAgent { return .answer(AssistantReport.workspace(workspace, now: world.now, strings: strings)) }
+        let report = AssistantReport.workspace(workspace, now: world.now, strings: strings)
+        if workspace.hasNoAgent { return .answer(report) }
         return .summarize(workspaceID: workspace.id, paneID: AssistantWorld.targetPane(in: workspace).found?.id, detailed: detailed,
-                   fallback: AssistantReport.workspace(workspace, now: world.now, strings: strings))
+                          fallback: report)
     }
 
     private static func choose(_ number: Int, _ name: String?, world: AssistantWorld, strings: AssistantStrings) -> AssistantPlan {

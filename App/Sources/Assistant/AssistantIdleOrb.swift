@@ -15,8 +15,8 @@ final class AssistantIdleOrb: NSObject {
     /// The user dragged it here (its centre).
     var onMoved: ((CGPoint) -> Void)?
 
-    let panel = HUDWindow(contentRect: NSRect(x: 0, y: 0, width: 56, height: 56),
-                          styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+    let panel = HUDWindow(floating: NSSize(width: AssistantPresence.Size.small.side, height: AssistantPresence.Size.small.side),
+                          shadow: false, stationary: true)
     private let orb = AssistantIdleOrbView()
     private(set) var isShown = false
     private(set) var look: AssistantPresence.Look?
@@ -24,20 +24,8 @@ final class AssistantIdleOrb: NSObject {
     private var generation = 0
     private var reduceMotion: Bool { NSWorkspace.shared.accessibilityDisplayShouldReduceMotion }
 
-    /// How long it takes to grow into the HUD or come back.
-    static let transition: TimeInterval = 0.22
-
     override init() {
         super.init()
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
-        panel.hidesOnDeactivate = false
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
-        panel.hasShadow = false
-        panel.isReleasedWhenClosed = false
-        panel.appearance = NSAppearance(named: .darkAqua)
         panel.contentView = orb
         orb.onClick = { [weak self] in self?.onClick?() }
         orb.onDragged = { [weak self] delta in
@@ -68,7 +56,7 @@ final class AssistantIdleOrb: NSObject {
         }
         // Shrinks back from the HUD's size: starts larger and transparent, once the HUD has faded.
         orb.setAppearance(scale: 1.6, opacity: 0)
-        orb.animate(scale: 1, opacity: 1, duration: Self.transition, delay: fromHUD ? Self.transition * 0.6 : 0)
+        orb.animate(scale: 1, opacity: 1, duration: AssistantTuning.orbTransition, delay: fromHUD ? AssistantTuning.orbTransition * 0.6 : 0)
     }
 
     /// `intoHUD`: it grows and fades as the HUD appears.
@@ -82,8 +70,8 @@ final class AssistantIdleOrb: NSObject {
             return
         }
         let number = generation
-        orb.animate(scale: 1.8, opacity: 0, duration: Self.transition, delay: 0)
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.transition) { [weak self] in
+        orb.animate(scale: 1.8, opacity: 0, duration: AssistantTuning.orbTransition, delay: 0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + AssistantTuning.orbTransition) { [weak self] in
             guard let self, self.generation == number else { return }
             self.panel.orderOut(nil)
         }
@@ -203,7 +191,7 @@ final class AssistantIdleOrbView: NSView {
         let paused = look == .paused
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        disc.fillColor = NSColor(srgbRed: 0.02, green: 0.06, blue: 0.1, alpha: jarvis ? 0.78 : 0.5).cgColor
+        disc.fillColor = AssistantPalette.glass(alpha: jarvis ? 0.78 : 0.5).cgColor
         disc.strokeColor = color.withAlphaComponent(jarvis ? (paused ? 0.45 : 0.55) : 0.3).cgColor
         disc.lineWidth = 1
         // Paused: hollow, only the dim ring.
