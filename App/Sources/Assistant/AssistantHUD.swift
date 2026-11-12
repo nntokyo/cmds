@@ -89,7 +89,7 @@ final class AssistantHUD: NSObject {
         // A dark glass over the blur, so the HUD reads the same over any desktop.
         let tint = NSView()
         tint.wantsLayer = true
-        tint.layer?.backgroundColor = NSColor(srgbRed: 0.02, green: 0.06, blue: 0.1, alpha: 0.72).cgColor
+        tint.layer?.backgroundColor = AssistantPalette.glass(alpha: 0.72).cgColor
         tint.autoresizingMask = [.width, .height]
         tint.frame = background.bounds
         background.addSubview(tint)
@@ -195,7 +195,7 @@ final class AssistantHUD: NSObject {
         if !panel.isVisible { panel.alphaValue = 0 }
         panel.orderFrontRegardless()
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = AssistantIdleOrb.transition
+            context.duration = AssistantTuning.orbTransition
             panel.animator().alphaValue = 1
         }
     }
@@ -211,7 +211,7 @@ final class AssistantHUD: NSObject {
         }
         let number = generation
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = AssistantIdleOrb.transition
+            context.duration = AssistantTuning.orbTransition
             panel.animator().alphaValue = 0
         } completionHandler: { [weak self] in
             MainActor.assumeIsolated {

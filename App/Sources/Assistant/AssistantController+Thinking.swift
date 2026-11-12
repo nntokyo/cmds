@@ -159,7 +159,7 @@ extension AssistantController {
                     try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language, progress: progress,
                                                              sentence: sentence)
                 }
-                return AssistantBrevity.first(Self.detailedSentences, of: summary)
+                return AssistantBrevity.first(AssistantTuning.detailedSentences, of: summary)
             }
             guard AssistantBrain.modelAvailable else { return facts }
             // One sentence a session ("api: テストを実行中。").
@@ -254,7 +254,6 @@ extension AssistantController {
         }
     }
 
-
     /// A `claude -p` call for the current request, with "Asking Claude…" on the HUD while it runs (when it ends or is
     /// stopped, a newer request's mark stays). `answers`: what it returns is the answer, labelled as Claude's (not when
     /// the user has moved on since).
@@ -297,9 +296,6 @@ extension AssistantController {
         }
     }
 
-    /// Sentences a detailed summary says at most.
-    static let detailedSentences = 3
-
     /// The on-device model's answer to `question`, started now (beside the interpreter); nil when it would not be
     /// asked (no model, or a question for the web).
     private func earlyModelAnswer(_ question: String, world: AssistantWorld) -> Task<String, Error>? {
@@ -328,7 +324,7 @@ extension AssistantController {
     private func sentences(for request: Int) -> @Sendable (String) -> Void {
         { [weak self] text in
             DispatchQueue.main.async {
-                MainActor.assumeIsolated { self?.streamed(text, request: request, limit: Self.detailedSentences) }
+                MainActor.assumeIsolated { self?.streamed(text, request: request, limit: AssistantTuning.detailedSentences) }
             }
         }
     }

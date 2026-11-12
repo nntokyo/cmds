@@ -10,6 +10,8 @@ enum AssistantPalette {
     static let amber = NSColor(srgbRed: 1.0, green: 0.72, blue: 0.25, alpha: 1)
     static let orange = NSColor.systemOrange
     static let dim = NSColor(srgbRed: 0.45, green: 0.55, blue: 0.62, alpha: 1)
+    /// The dark glass under the HUD's text and the waiting orb, so both read the same over any desktop.
+    static func glass(alpha: CGFloat) -> NSColor { NSColor(srgbRed: 0.02, green: 0.06, blue: 0.1, alpha: alpha) }
 
     static func color(_ phase: AssistantMachine.Phase, attention: Bool) -> NSColor {
         switch phase {

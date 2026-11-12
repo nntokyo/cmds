@@ -22,6 +22,8 @@ enum AssistantTuning {
     static let maxDetailedScreenCharacters = 2 * maxScreenCharacters
     /// Lines above an agent's numbered choice checked for dangerous text (what a permission prompt asks about).
     static let promptContextLines = 16
+    /// Sentences a detailed summary says at most (also while it is spoken as Claude writes it, #248).
+    static let detailedSentences = 3
 
     // MARK: Conversation
 
@@ -36,6 +38,13 @@ enum AssistantTuning {
     static let confirmArmDelay: TimeInterval = 0.8
     /// The clock that expires cards, closes the follow-up window and says follow-through lines.
     static let tickInterval: TimeInterval = 0.5
+    /// How long the waiting orb takes to grow into the HUD or come back, and the HUD to fade in or out.
+    static let orbTransition: TimeInterval = 0.22
+
+    // MARK: Tests
+
+    /// How many requests' stage times `debug.assistant` keeps (#248: `timings`).
+    static let keptTimelines = 10
 
     // MARK: Microphone
 
