@@ -93,9 +93,7 @@ final class AssistantListener {
         guard wanted, let started = try await startAnalyzer(locale: locale) else { return }
         let input = engine.inputNode
         let inputFormat = input.outputFormat(forBus: 0)
-        let pump = Self.pump(from: inputFormat, to: started.format, continuation: started.continuation)
-        self.pump = pump
-        Self.current = self
+        let pump = attachPump(from: inputFormat, to: started)
         Self.installTap(on: input, format: inputFormat, pump: pump)
         usesEngine = true
         engine.prepare()
@@ -114,13 +112,13 @@ final class AssistantListener {
         let file = try AVAudioFile(forReading: url)
         guard let started = try await startAnalyzer(locale: locale) else { return }
         let format = file.processingFormat
-        let pump = Self.pump(from: format, to: started.format, continuation: started.continuation)
-        self.pump = pump
-        Self.current = self
+        let pump = attachPump(from: format, to: started)
         isRunning = true
         let length = Double(file.length) / format.sampleRate
         let start = Date()
         var fed = 0.0
+        // Far below speech level (`AssistantPresence.Hearing.onLevel` after `AssistantTuning.levelGain`).
+        let noise: Float = 0.003
         while wanted, fed < length + tail,
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AssistantTuning.tapBufferSize) {
             if file.framePosition < file.length {
@@ -129,7 +127,7 @@ final class AssistantListener {
                 buffer.frameLength = AssistantTuning.tapBufferSize
                 for channel in 0..<Int(format.channelCount) {
                     guard let samples = buffer.floatChannelData?[channel] else { continue }
-                    for index in 0..<Int(buffer.frameLength) { samples[index] = Float.random(in: -0.003...0.003) }
+                    for index in 0..<Int(buffer.frameLength) { samples[index] = Float.random(in: -noise...noise) }
                 }
             }
             pump.push(buffer)
@@ -189,6 +187,16 @@ final class AssistantListener {
         }
 
         return (format, continuation)
+    }
+
+    /// The pump from audio in `input`'s format to the analyzer just `started`, kept, its levels reported to this
+    /// listener (the microphone's and `debugFeed`'s alike).
+    private func attachPump(from input: AVAudioFormat,
+                            to started: (format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation)) -> AudioPump {
+        let pump = Self.pump(from: input, to: started.format, continuation: started.continuation)
+        self.pump = pump
+        Self.current = self
+        return pump
     }
 
     /// A pump to the analyzer whose levels reach the current listener on the main actor (made outside the main actor:
