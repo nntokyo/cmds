@@ -25,10 +25,38 @@ public struct AssistantTimeline: Equatable, Sendable {
         var isDone: Bool { self == .interpreterDone || self == .modelDone || self == .claudeDone }
     }
 
+    /// Which way a request went, as `debug.assistant` and the log name it; the last one set counts ("model", then
+    /// "model+web").
+    public enum Route: String, Sendable {
+        /// Answered by the rules (the status, a workspace's report, a note).
+        case rules
+        /// Asked back ("Which one: api, api-v2?").
+        case askBack
+        /// A card to confirm.
+        case card
+        /// A session's summary by the on-device model, or by Claude when detailed.
+        case summary
+        case claudeSummary
+        /// A summary of each of several sessions.
+        case summaries
+        /// The interpreter first (`AssistantRoute.interpreter`).
+        case interpreter
+        /// The interpreter and the on-device model at once (`AssistantRoute.interpreterAndModel`).
+        case interpreterOrModel = "interpreter|model"
+        /// The on-device model's answer after the interpreter found no command.
+        case interpreterThenModel = "interpreter+model"
+        case model
+        /// The on-device model said it needs the web.
+        case modelThenWeb = "model+web"
+        case web
+        /// A web answer from `AssistantWebCache`.
+        case webCache = "web-cache"
+    }
+
     public let request: Int
     public let start: Date
-    /// Which way the request went (`status`, `summary`, `web`, `model`, `interpreter`, …), set as it goes.
-    public var route: String?
+    /// Which way the request went, set as it goes.
+    public var route: Route?
     public private(set) var marks: [Stage: TimeInterval] = [:]
 
     public init(request: Int, start: Date) {
@@ -55,6 +83,6 @@ public struct AssistantTimeline: Equatable, Sendable {
     /// One line for the log: the route and the stages in order ("web: routed 2 claudeSpawn 3 … speechStart 7012 ms").
     public var summary: String {
         let stages = Stage.allCases.compactMap { stage in marks[stage].map { "\(stage.rawValue) \(Int(($0 * 1000).rounded()))" } }
-        return "\(route ?? "-"): " + stages.joined(separator: " ") + " ms"
+        return "\(route?.rawValue ?? "-"): " + stages.joined(separator: " ") + " ms"
     }
 }

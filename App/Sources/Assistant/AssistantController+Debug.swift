@@ -82,7 +82,7 @@ extension AssistantController {
     private static func json(_ timeline: AssistantTimeline) -> JSONValue {
         .object([
             "request": .number(Double(timeline.request)),
-            "route": timeline.route.map(JSONValue.string) ?? .null,
+            "route": timeline.route.map { .string($0.rawValue) } ?? .null,
             "ms": .object(timeline.milliseconds.mapValues { .number(Double($0)) }),
             "firstSound": timeline.firstSound.map { .number(Double($0)) } ?? .null,
         ])

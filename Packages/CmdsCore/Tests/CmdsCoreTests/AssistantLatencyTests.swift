@@ -12,7 +12,7 @@ final class AssistantTimelineTests: XCTestCase {
         timeline.mark(.claudeSpawn, at: start.addingTimeInterval(0.01))
         timeline.mark(.ack, at: start.addingTimeInterval(0.8))
         timeline.mark(.speechStart, at: start.addingTimeInterval(7.25))
-        timeline.route = "web"
+        timeline.route = .web
         XCTAssertEqual(timeline.milliseconds, ["heard": 0, "speechEnd": -600, "routed": 4, "claudeSpawn": 10, "ack": 800,
                                                "speechStart": 7250])
         XCTAssertEqual(timeline.firstSound, 800)

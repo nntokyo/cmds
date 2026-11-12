@@ -30,8 +30,8 @@ extension AssistantController {
         }
     }
 
-    /// The way the current request went ("web", "status"…); the last one said counts ("model" then "web").
-    func route(_ route: String) {
+    /// The way the current request went; the last one said counts ("model" then "model+web").
+    func route(_ route: AssistantTimeline.Route) {
         guard var timeline, timeline.request == machine.request else { return }
         timeline.route = route
         self.timeline = timeline

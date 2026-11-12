@@ -77,26 +77,26 @@ extension AssistantController {
         let strings = AssistantStrings.localized
         switch plan {
         case .answer(let text):
-            route("rules")
+            route(.rules)
             say(text)
         case .askBack(let text):
-            route("askBack")
+            route(.askBack)
             say(text)
             askedBack = asked
         case .propose(let action, let prompt):
-            route("card")
+            route(.card)
             needsKey = false
             pendingShownAt = Date()
             say(prompt, proposing: action)
         case .summarize(let workspaceID, let paneID, let detailed, let fallback):
             let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? ""
-            route(detailed ? "claudeSummary" : "summary")
+            route(detailed ? .claudeSummary : .summary)
             think(capped: !detailed) {
                 await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed, streams: true)
             }
         case .summarizeEach(let items, let detailed):
             // One session after the other, a line each (spoken in turn, listed on the HUD).
-            route("summaries")
+            route(.summaries)
             let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? "" }
             think {
                 var lines: [String] = []
@@ -117,13 +117,13 @@ extension AssistantController {
             let request = machine.request
             switch AssistantRoute.decide(question, world: world, web: usesWeb, interpreter: usesInterpreter) {
             case .interpreter:
-                route("interpreter")
+                route(.interpreter)
                 think(capped: true) {
                     if await self.handleAsCommand(question, world: world, request: request) { return nil }
                     return await self.answer(question, world: world, interpreted: true)
                 }
             case .interpreterAndModel:
-                route("interpreter|model")
+                route(.interpreterOrModel)
                 think(capped: true) {
                     let early = self.earlyModelAnswer(question, world: world)
                     defer { early?.cancel() }
@@ -185,13 +185,13 @@ extension AssistantController {
         let strings = AssistantStrings.localized
         let web = usesWeb
         if web, AssistantWeb.needsWeb(question) {
-            route("web")
+            route(.web)
             return await webAnswer(question)
         }
         guard AssistantBrain.modelAvailable else { return strings(.modelUnavailable) }
         let status = AssistantReport.status(world, strings: .english)
         do {
-            route(interpreted ? "interpreter+model" : "model")
+            route(interpreted ? .interpreterThenModel : .model)
             let answer: String
             if let early {
                 answer = try await early.value
@@ -200,7 +200,7 @@ extension AssistantController {
                                                          progress: progress(for: machine.request))
             }
             if web, AssistantWeb.answerNeedsWeb(answer) {
-                route("model+web")
+                route(.modelThenWeb)
                 return await webAnswer(question)
             }
             if AssistantModelReply.isAction(answer) {
@@ -236,7 +236,7 @@ extension AssistantController {
     private func webAnswer(_ question: String) async -> String {
         let strings = AssistantStrings.localized
         if let cached = webCache.answer(question, language: language.name, now: Date()) {
-            route("web-cache")
+            route(.webCache)
             claudeAnswered = true
             return cached
         }
