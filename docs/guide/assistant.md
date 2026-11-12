@@ -27,7 +27,23 @@ listen for one command without the name, also while paused. Each request stands 
 own question ("Which one?") or to a card goes with the one before.
 
 It takes what you said as finished about a second after you stop speaking, so pause no longer than that in the middle
-of a request (in a noisy room it waits for speech recognition to decide, which takes longer).
+of a request. It goes by how much louder you are than the room, so this works in a café or on a platform too; when the
+noise is about as loud as your voice (or is people talking right next to you) it waits for speech recognition to
+decide, which takes longer.
+
+## Loud places
+
+- **Settings › Assistant › Listening**: **Automatic** (the default), **Automatic with noise reduction** (macOS's voice
+  processing on the microphone: it suppresses the noise around you and the assistant's own voice; other apps' sound is
+  not turned down), or **Push to talk**: it hears only while you hold the shortcut (⌥⌘J by default), without its name,
+  and letting go ends what you said at once. Push to talk is the most reliable in very loud places; it also uses noise
+  reduction.
+- **Settings › Assistant › Microphone**: **Automatic** uses a headset such as AirPods when one is connected (close to
+  your mouth, it hears much less of the room), else the system's input; or **System Default**, or one microphone. When
+  you connect or remove one while the assistant listens, it switches without being turned off.
+- In a loud room it is stricter about its name: a name speech recognition is unsure of is ignored, so a passer-by's
+  word that merely sounds like it does not wake it (say the name clearly, or use the shortcut). It still has to come
+  first. Cards still wait for your yes, as always.
 
 Its name interrupts it at any time: while it speaks or works out an answer (also while Claude is searching), "Jarvis,
 …" / 「ジャービス、…」 stops it and takes the new request at once; Claude's late answer to the old one is dropped. While it

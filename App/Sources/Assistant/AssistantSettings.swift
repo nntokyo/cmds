@@ -28,6 +28,17 @@ struct AssistantOverrides: Equatable {
     var projectFolders: String?
     var showWhileWaiting: Bool?
     var orbSize: AssistantPresence.Size?
+    var listening: AssistantListening?
+}
+
+extension AssistantListening {
+    var title: String {
+        switch self {
+        case .automatic: return String(localized: "Automatic", comment: "Settings › Assistant › Listening: always listening for its name")
+        case .noiseReduction: return String(localized: "Automatic with noise reduction", comment: "Settings › Assistant › Listening: always listening, with the system's voice processing")
+        case .pushToTalk: return String(localized: "Push to talk (hold the shortcut)", comment: "Settings › Assistant › Listening: only while the shortcut is held")
+        }
+    }
 }
 
 extension AssistantPresence.Size {
@@ -81,13 +92,15 @@ extension AppSettings {
     static let assistantProjectFoldersKey = "AssistantProjectFolders"
     static let assistantShowWhileWaitingKey = "AssistantShowWhileWaiting"
     static let assistantOrbSizeKey = "AssistantOrbSize"
+    static let assistantListeningKey = "AssistantListening"
+    static let assistantMicrophoneKey = "AssistantMicrophone"
     /// Where the user dragged the waiting orb ("x,y", its centre in screen points). Not observed: dragging it is no
     /// settings change.
     static let assistantOrbCenterKey = "AssistantOrbCenter"
     static let assistantKeys = [assistantEnabledKey, assistantNamesKey, assistantStyleKey, assistantVoiceKey, assistantRateKey,
                                 assistantMutedKey, assistantHotkeyKey, assistantWebKey, assistantInterpreterKey,
                                 assistantReportTasksKey, assistantProjectFoldersKey, assistantShowWhileWaitingKey,
-                                assistantOrbSizeKey]
+                                assistantOrbSizeKey, assistantListeningKey, assistantMicrophoneKey]
 
     /// The rates the voice may take (AVSpeechUtterance rates; 0.5 is the system default).
     static let assistantRateRange: ClosedRange<Double> = 0.35...0.65
@@ -173,6 +186,19 @@ extension AppSettings {
     var assistantOrbCenter: CGPoint? {
         get { AssistantPresence.parse(defaults.string(forKey: Self.assistantOrbCenterKey)) }
         set { set(newValue.map(AssistantPresence.format), forKey: Self.assistantOrbCenterKey) }
+    }
+
+    /// How it listens (#270): automatic (the default), with noise reduction, or push to talk.
+    var assistantListening: AssistantListening {
+        get { defaults.string(forKey: Self.assistantListeningKey).flatMap(AssistantListening.init(rawValue:)) ?? .standard }
+        set { set(newValue == .standard ? nil : newValue.rawValue, forKey: Self.assistantListeningKey) }
+    }
+
+    /// The microphone (#270): `AssistantInputDevice.automatic` (a headset when connected; the default),
+    /// `.systemDefault`, or a device's Core Audio UID.
+    var assistantMicrophone: String {
+        get { defaults.string(forKey: Self.assistantMicrophoneKey) ?? AssistantInputDevice.automatic }
+        set { set(newValue == AssistantInputDevice.automatic ? nil : newValue, forKey: Self.assistantMicrophoneKey) }
     }
 
     var assistantHotkey: AssistantHotkey {

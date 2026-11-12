@@ -5,7 +5,7 @@ import CmdsCore
 /// Settings › Assistant (#243, macOS 26 and later): on / off, the name it answers to, the HUD's style, the voice and
 /// its rate, muting, the listen shortcut; the beta note (free for now, #244) and privacy notes.
 @MainActor
-final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
+final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate {
     private let settings = AppSettings.shared
     private let enabledCheckbox = NSButton(checkboxWithTitle: String(localized: "Turn on the assistant", comment: "Settings › Assistant"),
                                            target: nil, action: nil)
@@ -26,6 +26,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
                                                target: nil, action: nil)
     private let foldersField = NSTextField()
     private let hotkeyPopup = NSPopUpButton()
+    private let listeningPopup = NSPopUpButton()
+    private let microphonePopup = NSPopUpButton()
+    /// The microphone list is rebuilt when the connected devices change.
+    private var microphoneListKey = ""
     private let statusNote = NSTextField(wrappingLabelWithString: "")
     private let personalButton = NSButton(title: String(localized: "Use my Personal Voice…", comment: "Settings › Assistant: asks macOS whether cmds may use the user's Personal Voice"),
                                           target: nil, action: nil)
@@ -99,6 +103,15 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         }
         hotkeyPopup.target = self
         hotkeyPopup.action = #selector(hotkeyChanged)
+        for mode in AssistantListening.allCases {
+            listeningPopup.addItem(withTitle: mode.title)
+            listeningPopup.lastItem?.representedObject = mode.rawValue
+        }
+        listeningPopup.target = self
+        listeningPopup.action = #selector(listeningChanged)
+        microphonePopup.target = self
+        microphonePopup.action = #selector(microphoneChanged)
+        microphonePopup.menu?.delegate = self
         statusNote.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         statusNote.textColor = .systemOrange
         statusNote.preferredMaxLayoutWidth = 300
@@ -117,6 +130,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
             [label(String(localized: "Name:", comment: "Settings › Assistant: the name it answers to")), namesField],
             [NSGridCell.emptyContentView, note(String(localized: "It answers only when you start with its name (\(names[0]) or \(names[1]) unless you set others, separated by commas), or right after it spoke. Everything else is dropped at once; nothing heard is stored.", comment: "Settings › Assistant"))],
             [label(String(localized: "Shortcut:", comment: "Settings › Assistant: listen for one command")), hotkeyPopup],
+            [label(String(localized: "Listening:", comment: "Settings › Assistant: automatic / with noise reduction / push to talk")), listeningPopup],
+            [NSGridCell.emptyContentView, note(String(localized: "Noise reduction suppresses the noise around you (a café, a station) and its own voice. Push to talk hears only while you hold the shortcut, without its name; letting go ends what you said at once. Best in very loud places.", comment: "Settings › Assistant: under Listening"))],
+            [label(String(localized: "Microphone:", comment: "Settings › Assistant: which input it listens to")), microphonePopup],
+            [NSGridCell.emptyContentView, note(String(localized: "Automatic uses a headset such as AirPods when one is connected: it is close to your mouth and hears much less of a loud room.", comment: "Settings › Assistant: under Microphone"))],
             [label(String(localized: "Style:", comment: "Settings › Assistant")), stylePopup],
             [NSGridCell.emptyContentView, waitingCheckbox],
             [label(String(localized: "Orb size:", comment: "Settings › Assistant: the size of the orb shown while waiting")), orbSizePopup],
@@ -159,7 +176,36 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         reportTasksCheckbox.state = settings.assistantReportTasks ? .on : .off
         if foldersField.currentEditor() == nil { foldersField.stringValue = settings.assistantProjectFolders }
         hotkeyPopup.selectItem(at: hotkeyPopup.indexOfItem(withRepresentedObject: settings.assistantHotkey.rawValue))
+        listeningPopup.selectItem(at: listeningPopup.indexOfItem(withRepresentedObject: settings.assistantListening.rawValue))
+        fillMicrophones()
         refreshProblem()
+    }
+
+    /// Automatic, System Default and the connected inputs (#270); a chosen one that is not connected stays listed.
+    private func fillMicrophones() {
+        let devices = AssistantAudioDevices.inputs()
+        let chosen = settings.assistantMicrophone
+        let missing = ![AssistantInputDevice.automatic, AssistantInputDevice.systemDefault].contains(chosen)
+            && !devices.contains { $0.uid == chosen }
+        let key = (devices.map { $0.uid + $0.name } + [missing ? chosen : ""]).joined(separator: "|")
+        if key != microphoneListKey {
+            microphoneListKey = key
+            microphonePopup.removeAllItems()
+            microphonePopup.addItem(withTitle: String(localized: "Automatic (headset when connected)", comment: "Settings › Assistant › Microphone"))
+            microphonePopup.lastItem?.representedObject = AssistantInputDevice.automatic
+            microphonePopup.addItem(withTitle: String(localized: "System Default", comment: "Settings › Assistant › Microphone: the input chosen in System Settings › Sound"))
+            microphonePopup.lastItem?.representedObject = AssistantInputDevice.systemDefault
+            microphonePopup.menu?.addItem(.separator())
+            for device in devices {
+                microphonePopup.addItem(withTitle: device.name)
+                microphonePopup.lastItem?.representedObject = device.uid
+            }
+            if missing {
+                microphonePopup.addItem(withTitle: String(localized: "Not connected", comment: "Settings › Assistant › Microphone: the chosen microphone is not connected now"))
+                microphonePopup.lastItem?.representedObject = chosen
+            }
+        }
+        microphonePopup.selectItem(at: max(0, microphonePopup.indexOfItem(withRepresentedObject: chosen)))
     }
 
     /// The assistant's problem (microphone denied…) above the settings; also when it comes or goes while Settings is
@@ -292,6 +338,19 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
 
     @objc private func reportTasksToggled() {
         settings.assistantReportTasks = reportTasksCheckbox.state == .on
+    }
+
+    @objc private func listeningChanged() {
+        settings.assistantListening = (listeningPopup.selectedItem?.representedObject as? String).flatMap(AssistantListening.init(rawValue:)) ?? .standard
+    }
+
+    @objc private func microphoneChanged() {
+        settings.assistantMicrophone = microphonePopup.selectedItem?.representedObject as? String ?? AssistantInputDevice.automatic
+    }
+
+    /// The list is current when it opens (a headset connected while Settings was open).
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        fillMicrophones()
     }
 
     @objc private func hotkeyChanged() {

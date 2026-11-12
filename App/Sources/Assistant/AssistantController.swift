@@ -52,8 +52,11 @@ final class AssistantController {
     var projectFolders: String { overrides.projectFolders ?? settings.assistantProjectFolders }
     var showsWhileWaiting: Bool { overrides.showWhileWaiting ?? settings.assistantShowWhileWaiting }
     var orbSize: AssistantPresence.Size { overrides.orbSize ?? settings.assistantOrbSize }
+    var listening: AssistantListening { overrides.listening ?? settings.assistantListening }
     let voice = AssistantVoice()
     let listener = AssistantListener()
+    /// The Mac's microphones, watched while the assistant is on (#270: a headset connected, the system's input changed).
+    let audioDevices = AssistantAudioDevices()
     private(set) var hotkeys: AssistantHotkeys?
     private var timer: Timer?
     /// Each spoken answer's number: only the latest one's end moves the machine on.
@@ -128,11 +131,15 @@ final class AssistantController {
         if CmdsEnv.supportDirectoryOverride() == nil {
             let hotkeys = AssistantHotkeys()
             hotkeys.onKey = { [weak self] key in self?.globalKey(key) }
+            hotkeys.onRelease = { [weak self] key in self?.globalKeyReleased(key) }
             self.hotkeys = hotkeys
         }
         hud.onConfirm = { [weak self] in self?.key(.confirm) }
         hud.onCancel = { [weak self] in self?.key(.cancel) }
-        listener.onUtterance = { [weak self] text, speechEnd in self?.hear(text, speechEnd: speechEnd) }
+        listener.onUtterance = { [weak self] utterance in
+            self?.hear(utterance.text, speechEnd: utterance.speechEnd, heard: utterance.heard)
+        }
+        audioDevices.onChange = { [weak self] in self?.microphoneChoiceChanged() }
         listener.onLevel = { [weak self] level in self?.heard(level: level) }
         orb.onClick = { [weak self] in self?.showLast() }
         orb.onMoved = { [weak self] center in self?.orbMoved(to: center) }
@@ -162,7 +169,30 @@ final class AssistantController {
         } else if !settings.assistantEnabled, isOn, usesMicrophone {
             turnOff()
         }
+        // Another way of listening starts the microphone again; another microphone only its input (#270).
+        if listener.isRunning, usesMicrophone, listener.mode != listening {
+            listener.stop()
+            startMicrophone()
+        } else {
+            microphoneChoiceChanged()
+        }
         refresh()
+    }
+
+    /// The microphone to listen to (#270): Settings › Assistant › Microphone among the connected ones (nil: the
+    /// system's input).
+    private var chosenMicrophone: String? {
+        AssistantInputDevice.choose(settings.assistantMicrophone, devices: AssistantAudioDevices.inputs())
+    }
+
+    /// Devices or the setting changed: the listener moves to the microphone that is chosen now, if another.
+    private func microphoneChoiceChanged() {
+        guard usesMicrophone, listener.isRunning else { return }
+        let chosen = chosenMicrophone
+        // The system's input changing is the engine's configuration change (`AssistantListener` follows it).
+        guard chosen != listener.device else { return }
+        listener.device = chosen
+        listener.restartInput()
     }
 
     // MARK: On, off, pause
@@ -188,6 +218,7 @@ final class AssistantController {
         work?.cancel()
         machine.turnOff()
         listener.stop()
+        audioDevices.unwatch()
         speech += 1
         streaming = nil
         voice.stop()
@@ -225,6 +256,9 @@ final class AssistantController {
     func startMicrophone() {
         guard usesMicrophone, !listener.isRunning else { return }
         updateVocabulary()
+        listener.mode = listening
+        listener.device = chosenMicrophone
+        audioDevices.watch()
         let locale = language.locale
         Task { [weak self] in
             do {

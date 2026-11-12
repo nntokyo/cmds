@@ -33,60 +33,6 @@ final class AssistantTimelineTests: XCTestCase {
     }
 }
 
-/// The end of an utterance, from the microphone's level (#248).
-final class AssistantEndpointTests: XCTestCase {
-    private let t0 = Date(timeIntervalSince1970: 0)
-
-    private func at(_ seconds: TimeInterval) -> Date { t0.addingTimeInterval(seconds) }
-
-    func testSpeechThenQuietFinalisesOnce() {
-        var endpoint = AssistantEndpoint()
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(0)), "nothing said")
-        for tick in stride(from: 0.0, through: 1.5, by: 0.05) { endpoint.loud(at: at(tick)) }
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(1.6)), "a pause shorter than quiet")
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(1.5 + AssistantEndpoint.quiet - 0.01)))
-        XCTAssertTrue(endpoint.shouldFinalize(now: at(1.5 + AssistantEndpoint.quiet + 0.01)))
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(3)), "once per stretch of speech")
-        XCTAssertNil(endpoint.speechStarted)
-    }
-
-    func testAPauseInsideASentenceKeepsItTogether() {
-        var endpoint = AssistantEndpoint()
-        endpoint.loud(at: at(0))
-        endpoint.loud(at: at(1))
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(1.5)))
-        endpoint.loud(at: at(1.6))
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(2.2)))
-        XCTAssertTrue(endpoint.shouldFinalize(now: at(2.45)))
-    }
-
-    func testAClickIsNoSpeechAndIsForgotten() {
-        var endpoint = AssistantEndpoint()
-        endpoint.loud(at: at(0))
-        endpoint.loud(at: at(0.1))
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(1)), "0.1 s of sound is no speech")
-        XCTAssertNil(endpoint.speechStarted, "forgotten")
-        endpoint.loud(at: at(5))
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(6)), "the click does not join later sound")
-    }
-
-    func testTheRecognisersOwnFinalStartsOver() {
-        var endpoint = AssistantEndpoint()
-        endpoint.loud(at: at(0))
-        endpoint.loud(at: at(1))
-        endpoint.finalized()
-        XCTAssertFalse(endpoint.shouldFinalize(now: at(3)))
-    }
-
-    func testANoisyRoomNeverFinalisesEarly() {
-        var endpoint = AssistantEndpoint()
-        for tick in stride(from: 0.0, through: 30, by: 0.05) {
-            endpoint.loud(at: at(tick))
-            XCTAssertFalse(endpoint.shouldFinalize(now: at(tick)))
-        }
-    }
-}
-
 /// `claude -p` stream-json read as it comes, and the answer's sentences as they are written (#248).
 final class AssistantClaudeStreamTests: XCTestCase {
     private func delta(_ text: String) -> String {

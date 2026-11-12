@@ -165,7 +165,7 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
 - `debug.assistant {action?, …}` (DEBUG builds, macOS 26, #243) drives the voice assistant without a microphone or
   speech: `on {mute: true}` turns it on text-only (the microphone is never started from here and the choice is not
   remembered, so a relaunch starts nothing; keep it muted). Its parameters (`mute`, `style`, `web`, `interpreter`,
-  `reportTasks`, `projectFolders`, `showWhileWaiting`, `orbSize`) are runtime overrides until `off` or a relaunch and
+  `reportTasks`, `projectFolders`, `showWhileWaiting`, `orbSize`, `listening`) are runtime overrides until `off` or a relaunch and
   never written to the settings: `state` has the values in effect (`muted`, `web`, …, `orb.size`) and the settings
   (`mutedSetting`, `settings`); `defaults read <suite>` is the same before and after, `hear {text}` injects a recognised utterance (an
   unaddressed one is dropped as from speech; after an answer wait 1 s, the echo guard), `speak {text}` makes it
@@ -190,6 +190,16 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   back and the answer retargeting it, a dangerous text where "yes" is refused and a click sends it, Japanese with
   `-AppleLanguages '(ja)'`, the quiet style, `debug.show_settings {tab: assistant}`, a web question ("what's the weather in Tokyo tomorrow": `hud.source` "Asking Claude…" while it runs, then the answer with "Claude"; `on {web: false}` sends it to the on-device model instead; it runs the real `claude -p` and uses Claude Code usage). Several sessions: "check all sessions" (`answer` has one line per session), "approve all" with two fake agents waiting (`pending.also` holds the second, `hud.target` "2 sessions", one with `rm -rf` above its question makes `confirmation` keyOrClick), a free instruction ("tell the api agent to fix the failing test": the card shows the phrased text; `on {interpreter: false}` answers it as a question instead). Latency (#248): `state.timing` (the current request) and `timings` (the last 10) have `route` and `ms` per stage from the transcript (`speechEnd` negative, `routed`, `interpreterStart`/`Done`, `modelStart`/`Done`, `claudeSpawn`, `claudeFirstByte`, `claudeFirstText`, `claudeDone`, `ack`, `speechStart`, `voiceStart` when not muted) and `firstSound`; a web question has `ack` near 800 and the same question again `route` `web-cache`. `hear_audio {path, tail?, endpoint?}` feeds an audio file (e.g. `say -v Kyoko -o x.aiff 'ジャービス、状況は？'`) through the same speech recognition instead of the microphone (never started; no permission prompt), in real time with `tail` seconds (default 10) of faint noise after it: `timing.ms.speechEnd` is about -900 with the end of utterance, several seconds with `endpoint: false` (the recogniser alone). The microphone, speech
   permission prompts, the hotkey, Return / Esc and real speech need a person on a Debug build outside isolation.
+  Loud places (#270): `scripts/assistant-noise-fixtures.py <dir> --lang ja|en` makes noisy test audio on this Mac (`say`
+  speech over pink noise, babble of other `say` voices, clatter; 20/10/5/0 dB and `quiet`; no recordings of people, no
+  downloads) and `manifest.json` with each file's expected text and `speechEnd`. Feed each with `hear_audio {path,
+  tail: 0.5}` (the noise goes on after the speech) after `on {mute: true, web: false, interpreter: false}`, then read
+  `heardAudio` in the state when `done`: `finals` (`text`, `at` seconds from the file's start, `noisy`, `confidences`),
+  `finalizes` (early ends) and `floor`; the end of utterance is the first final's `at` minus `speechEnd`. Push to talk:
+  `hear_audio {release: speechEnd + 0.1}`; `hear {text, noisy?, pushed?}` for the rules alone; `state.inputs` /
+  `chosenInput` list the microphones Settings offers (nothing is opened). Voice processing (Automatic with noise
+  reduction) works only on the real microphone's engine, so it, the Microphone menu with a headset, device switching
+  while listening, and holding the real shortcut need a person on a Debug build outside isolation.
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
 - `debug.memory {workspace?}` (DEBUG builds, #193) returns the "memory is short" notification's title and body as

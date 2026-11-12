@@ -15,6 +15,8 @@ final class AssistantHotkeys {
     }
 
     var onKey: ((Key) -> Void)?
+    /// A key came up (push to talk, #270).
+    var onRelease: ((Key) -> Void)?
     private var handler: EventHandlerRef?
     private var registered: [Key: EventHotKeyRef] = [:]
     private static let signature: OSType = 0x434D_4441  // "CMDA"
@@ -22,15 +24,26 @@ final class AssistantHotkeys {
 
     init() {
         Self.current = self
-        var type = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+        // Released too: push to talk ends when the listen shortcut comes up (#270).
+        var types = [EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed)),
+                     EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyReleased))]
         InstallEventHandler(GetApplicationEventTarget(), { _, event, _ -> OSStatus in
             var id = EventHotKeyID()
             GetEventParameter(event, EventParamName(kEventParamDirectObject), EventParamType(typeEventHotKeyID), nil,
                               MemoryLayout<EventHotKeyID>.size, nil, &id)
             guard id.signature == AssistantHotkeys.signature, let key = Key(rawValue: id.id) else { return OSStatus(eventNotHandledErr) }
-            DispatchQueue.main.async { MainActor.assumeIsolated { AssistantHotkeys.current?.onKey?(key) } }
+            let released = GetEventKind(event) == UInt32(kEventHotKeyReleased)
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    if released {
+                        AssistantHotkeys.current?.onRelease?(key)
+                    } else {
+                        AssistantHotkeys.current?.onKey?(key)
+                    }
+                }
+            }
             return noErr
-        }, 1, &type, nil, &handler)
+        }, types.count, &types, nil, &handler)
     }
 
     /// The listen shortcut from Settings (nil: none).
