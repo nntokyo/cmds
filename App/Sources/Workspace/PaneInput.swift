@@ -44,6 +44,18 @@ enum PaneProcessProbe {
         return shells.contains(base) ? .shell : .other
     }
 
+    /// The process's short name as Activity Monitor shows it ("vim", "node"); nil when it cannot be read. Never its
+    /// arguments (they may hold secrets; the assistant says this name aloud).
+    static func name(of pid: pid_t) -> String? {
+        guard let info = bsdInfo(pid) else { return nil }
+        func string<T>(_ value: T) -> String {
+            withUnsafeBytes(of: value) { raw in String(cString: raw.bindMemory(to: CChar.self).baseAddress!) }
+        }
+        let name = string(info.pbi_name).isEmpty ? string(info.pbi_comm) : string(info.pbi_name)
+        let base = name.hasPrefix("-") ? String(name.dropFirst()) : name
+        return base.isEmpty ? nil : base
+    }
+
     /// `classify` for the typing rules: `.unknown` when the process cannot be read.
     static func foreground(of pid: pid_t) -> PaneForeground {
         switch classify(pid: pid) {

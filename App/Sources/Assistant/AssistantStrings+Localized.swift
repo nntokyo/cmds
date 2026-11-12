@@ -52,6 +52,9 @@ private extension AssistantLine {
         case .idle(let workspace): return String(localized: "\(workspace) is idle.", comment: "assistant: spoken status of a workspace")
         case .stopped(let workspace): return String(localized: "\(workspace) has stopped.", comment: "assistant: spoken status of a workspace")
         case .noAgentIn(let workspace): return String(localized: "No agent is running in \(workspace).", comment: "assistant")
+        case .shellIdle: return String(localized: "Its shell is idle.", comment: "assistant: a workspace without an agent; its shell waits for a command")
+        case .shellRunning(let command):
+            return String(localized: "It is running \(command).", comment: "assistant: a workspace without an agent; command = the program its shell runs (vim, node)")
         case .agentIn(let agent, let workspace): return String(localized: "\(agent) in \(workspace).", comment: "assistant: which agent runs in a workspace")
         case .waitedMinutes(let minutes): return String(localized: "Waiting for \(minutes) minutes.", comment: "assistant: how long a workspace has waited")
         case .optionsOffered(let count, let first): return String(localized: "\(count) options, the first is \(first).", comment: "assistant: the agent's numbered choices")

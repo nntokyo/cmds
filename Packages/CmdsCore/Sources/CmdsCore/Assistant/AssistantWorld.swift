@@ -17,9 +17,11 @@ public struct AssistantWorld: Equatable, Sendable {
         public var prompt: AgentPromptOptions?
         /// The last lines of its screen above the choice (what a permission prompt asks about), for the safety check.
         public var promptContext: [String]
+        /// What its shell runs, from the pane's foreground process (nil: not known, an SSH pane, or an agent runs).
+        public var shell: Shell?
 
         public init(id: String, title: String, isSSH: Bool = false, agent: String? = nil, waiting: Bool = false,
-                    prompt: AgentPromptOptions? = nil, promptContext: [String] = []) {
+                    prompt: AgentPromptOptions? = nil, promptContext: [String] = [], shell: Shell? = nil) {
             self.id = id
             self.title = title
             self.isSSH = isSSH
@@ -27,7 +29,16 @@ public struct AssistantWorld: Equatable, Sendable {
             self.waiting = waiting
             self.prompt = prompt
             self.promptContext = promptContext
+            self.shell = shell
         }
+    }
+
+    /// A pane's shell, as the app reads its foreground process (never guessed from the screen).
+    public enum Shell: Equatable, Sendable {
+        /// The shell itself is in the foreground: it waits for a command.
+        case idle
+        /// Another program is in the foreground (its process name: "vim", "node").
+        case running(String)
     }
 
     public struct Workspace: Equatable, Sendable {
@@ -59,6 +70,11 @@ public struct AssistantWorld: Equatable, Sendable {
             self.waitingSince = waitingSince
             self.directory = directory
             self.panes = panes
+        }
+
+        /// No agent runs here: none of its panes has one, and it neither works nor waits for the user.
+        public var hasNoAgent: Bool {
+            agent == nil && panes.allSatisfy { $0.agent == nil } && state != .working && state != .needsUser
         }
     }
 

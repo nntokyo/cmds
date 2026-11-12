@@ -293,7 +293,9 @@ public enum AssistantPlanner {
                                                       title: "\(workspace.title) › \(pane.title)", fallback: fallback))
                 }
             } else {
-                items.append(AssistantSummaryItem(workspaceID: workspace.id, paneID: AssistantWorld.targetPane(in: workspace).found?.id,
+                // No agent there: only the facts (its shell), no screen to summarise.
+                let pane = workspace.hasNoAgent ? nil : AssistantWorld.targetPane(in: workspace).found?.id
+                items.append(AssistantSummaryItem(workspaceID: workspace.id, paneID: pane,
                                                   title: workspace.title, fallback: fallback))
             }
         }
@@ -352,7 +354,9 @@ public enum AssistantPlanner {
 
     private static func summarize(_ workspace: AssistantWorld.Workspace, detailed: Bool, world: AssistantWorld,
                                   strings: AssistantStrings) -> AssistantPlan {
-        .summarize(workspaceID: workspace.id, paneID: AssistantWorld.targetPane(in: workspace).found?.id, detailed: detailed,
+        // No agent: what its shell runs, from the pane's process; a model reading a shell's screen would make it up.
+        if workspace.hasNoAgent { return .answer(AssistantReport.workspace(workspace, now: world.now, strings: strings)) }
+        return .summarize(workspaceID: workspace.id, paneID: AssistantWorld.targetPane(in: workspace).found?.id, detailed: detailed,
                    fallback: AssistantReport.workspace(workspace, now: world.now, strings: strings))
     }
 

@@ -137,8 +137,10 @@ extension AssistantController {
             guard AssistantBrain.modelAvailable else { return facts }
             // One sentence a session ("api: テストを実行中。").
             let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language))
-            // A marker or a bracketed word ("[START]") is no summary.
-            return AssistantModelReply.isSummary(summary) ? summary : facts
+            // A marker or a bracketed word ("[START]") is no summary, nor "waiting for input" for a session that does
+            // not wait (made up from a quiet screen).
+            let waiting = controller.workspace(id: workspaceID).map(AgentActivityStyle.needsUser) ?? true
+            return AssistantModelReply.isSummary(summary, waiting: waiting) ? summary : facts
         } catch {
             assistantLog.error("assistant summary of \(workspaceID, privacy: .public) failed: \(String(describing: error), privacy: .public)")
             return facts

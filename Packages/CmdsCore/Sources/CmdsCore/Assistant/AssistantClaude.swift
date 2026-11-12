@@ -106,10 +106,14 @@ public enum AssistantClaude {
         ---
         \(screen)
         ---
-        In one short sentence, without the workspace's name: what is the agent doing or asking now? Like "Running the \
-        tests." or "Waiting for input: asks whether to continue."
+        In one short sentence, without the workspace's name: what is the agent doing or asking now? Only what the \
+        facts and the screen show: the state in the facts is right, and when the screen shows nothing more, say that \
+        state. The form is like "\(summaryExample)" (never these words unless the screen shows them).
         """
     }
+
+    /// The form a session's summary takes, given in its prompt; an answer that is just this was copied, not read.
+    static let summaryExample = "Running the tests."
 
     // MARK: claude -p summaries and the interpreter
 

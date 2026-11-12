@@ -300,13 +300,27 @@ final class AssistantVocabularyTests: XCTestCase {
     }
 
     func testOnDeviceSummariesThatAreNoSummary() {
-        XCTAssertTrue(AssistantModelReply.isSummary("Running the tests."))
+        XCTAssertTrue(AssistantModelReply.isSummary("Running the unit tests in api."))
         XCTAssertTrue(AssistantModelReply.isSummary("[WIP] running the tests."))
         XCTAssertTrue(AssistantModelReply.isSummary("テストを実行中。"))
         XCTAssertFalse(AssistantModelReply.isSummary(""))
         XCTAssertFalse(AssistantModelReply.isSummary("[START]"))
         XCTAssertFalse(AssistantModelReply.isSummary("[[ACTION]]"))
         XCTAssertFalse(AssistantModelReply.isSummary("申し訳ありませんが、操作はできません。"))
+        // The prompt's example copied back is no summary.
+        XCTAssertFalse(AssistantModelReply.isSummary("Running the tests."))
+    }
+
+    func testAWaitingSummaryForASessionThatDoesNotWaitIsMadeUp() {
+        // The real case: a working agent with a quiet screen came back as the old prompt's "Waiting for input…".
+        for made in ["Waiting for input: asks whether to continue.", "入力待ちです。", "続けるか確認を求めています。",
+                     "It is asking you to approve the edit."] {
+            XCTAssertFalse(AssistantModelReply.isSummary(made, waiting: false), made)
+            XCTAssertTrue(AssistantModelReply.isSummary(made, waiting: true), made)
+        }
+        XCTAssertTrue(AssistantModelReply.isSummary("テストを書いています。", waiting: false))
+        XCTAssertTrue(AssistantModelReply.isSummary("Fixing the login form.", waiting: false))
+        XCTAssertFalse(AssistantClaude.summaryPrompt(facts: "f", screen: "s").contains("Waiting for input"))
     }
 
     func testOneLine() {

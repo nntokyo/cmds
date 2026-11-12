@@ -5074,6 +5074,17 @@
         }
       }
     },
+    "It is running %@.": {
+      "comment": "assistant: a workspace without an agent; command = the program its shell runs (vim, node)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を実行中です。"
+          }
+        }
+      }
+    },
     "Items only in the folder being synced to go to its Trash (on a server: its Trash there). Nothing is deleted.": {
       "localizations": {
         "ja": {
@@ -5110,6 +5121,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "履歴は残ります。"
+          }
+        }
+      }
+    },
+    "Its shell is idle.": {
+      "comment": "assistant: a workspace without an agent; its shell waits for a command",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェルは何も実行していません。"
           }
         }
       }
