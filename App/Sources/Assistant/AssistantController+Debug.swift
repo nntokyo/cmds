@@ -9,7 +9,8 @@ import CmdsCore
 @available(macOS 26.0, *)
 extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
-    /// `showWhileWaiting?`, `orbSize?`, `listening?`), `off`, `pause`, `resume`, `hotkey`, `hotkey_up` (push to talk),
+    /// `showWhileWaiting?`, `orbSize?`, `listening?`), `off`, `pause`, `resume`, `recorders` (`apps`: bundle IDs to take
+    /// as recording, #278; none: Core Audio again), `hotkey`, `hotkey_up` (push to talk),
     /// `hear` (`text`; `noisy?`, `pushed?`: as heard in a loud room / with the shortcut held),
     /// `speak` (`text`: speaking it without a voice until `spoken`; `card: true`: reading out the card that waits),
     /// `spoken`, `hear_audio` (`path`: an audio file through speech recognition instead of the microphone; `tail?`
@@ -33,6 +34,10 @@ extension AssistantController {
         case "off": turnOff()
         case "pause": pause()
         case "resume": resume()
+        case "recorders":
+            // Apps to take as recording instead of Core Audio's (#278); none: Core Audio again.
+            overrides.recorders = params?["apps"]?.arrayValue?.compactMap(\.stringValue)
+            shareMicrophone()
         case "hotkey": hotkey()
         case "hotkey_up": hotkeyReleased()
         case "speak":
@@ -121,6 +126,9 @@ extension AssistantController {
             "microphone": .bool(usesMicrophone),
             "listening": .string(listening.rawValue),
             "held": .bool(listener.isHeld),
+            // Paused for another app's recording (#278), and the user resumed during it.
+            "pausedFor": pausedForApp.map(JSONValue.string) ?? .null,
+            "shareOverridden": .bool(microphoneShare.overridden),
             // Inputs as Settings lists them, and the one `Microphone` chooses now (#270; nothing is opened).
             "inputs": .array(inputs.map { device in
                 .object(["name": .string(device.name), "headset": .bool(device.isHeadset)])
@@ -142,6 +150,7 @@ extension AssistantController {
                 "style": .string(settings.assistantStyle.rawValue), "projectFolders": .string(settings.assistantProjectFolders),
                 "showWhileWaiting": .bool(settings.assistantShowWhileWaiting), "orbSize": .string(settings.assistantOrbSize.rawValue),
                 "listening": .string(settings.assistantListening.rawValue), "microphone": .string(settings.assistantMicrophone),
+                "shareMicrophone": .bool(settings.assistantShareMicrophone),
             ]),
             "hudVisible": .bool(hud.isVisible),
             "queued": .array(queued.map { .string(String(describing: $0)) }),

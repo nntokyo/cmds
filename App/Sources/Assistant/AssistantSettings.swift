@@ -29,6 +29,8 @@ struct AssistantOverrides: Equatable {
     var showWhileWaiting: Bool?
     var orbSize: AssistantPresence.Size?
     var listening: AssistantListening?
+    /// Bundle IDs of apps to take as recording instead of Core Audio's (#278: `on {recorders}`).
+    var recorders: [String]?
 }
 
 extension AssistantListening {
@@ -94,13 +96,15 @@ extension AppSettings {
     static let assistantOrbSizeKey = "AssistantOrbSize"
     static let assistantListeningKey = "AssistantListening"
     static let assistantMicrophoneKey = "AssistantMicrophone"
+    static let assistantShareMicrophoneKey = "AssistantShareMicrophone"
     /// Where the user dragged the waiting orb ("x,y", its centre in screen points). Not observed: dragging it is no
     /// settings change.
     static let assistantOrbCenterKey = "AssistantOrbCenter"
     static let assistantKeys = [assistantEnabledKey, assistantNamesKey, assistantStyleKey, assistantVoiceKey, assistantRateKey,
                                 assistantMutedKey, assistantHotkeyKey, assistantWebKey, assistantInterpreterKey,
                                 assistantReportTasksKey, assistantProjectFoldersKey, assistantShowWhileWaitingKey,
-                                assistantOrbSizeKey, assistantListeningKey, assistantMicrophoneKey]
+                                assistantOrbSizeKey, assistantListeningKey, assistantMicrophoneKey,
+                                assistantShareMicrophoneKey]
 
     /// The rates the voice may take (AVSpeechUtterance rates; 0.5 is the system default).
     static let assistantRateRange: ClosedRange<Double> = 0.35...0.65
@@ -168,6 +172,13 @@ extension AppSettings {
     var assistantProjectFolders: String {
         get { defaults.string(forKey: Self.assistantProjectFoldersKey) ?? "" }
         set { set(newValue.trimmingCharacters(in: .whitespaces).isEmpty ? nil : newValue, forKey: Self.assistantProjectFoldersKey) }
+    }
+
+    /// Stop listening while another app records, a call for one (#278: `AssistantMicrophoneShare`). On unless the
+    /// user turns it off.
+    var assistantShareMicrophone: Bool {
+        get { defaults.object(forKey: Self.assistantShareMicrophoneKey) == nil ? true : defaults.bool(forKey: Self.assistantShareMicrophoneKey) }
+        set { set(newValue ? nil : false, forKey: Self.assistantShareMicrophoneKey) }
     }
 
     /// The small orb shows while the assistant waits for its name (`AssistantPresence`). On unless the user turns it

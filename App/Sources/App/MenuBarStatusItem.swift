@@ -343,6 +343,14 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
             pause.target = self
             pause.indentationLevel = 1
             menu.addItem(pause)
+            if let app = assistant.pausedForApp {
+                // Paused by itself while another app records (#278).
+                let reason = NSMenuItem(title: String(localized: "Paused while \(app) uses the microphone", comment: "menu bar item: assistant, disabled"),
+                                        action: nil, keyEquivalent: "")
+                reason.isEnabled = false
+                reason.indentationLevel = 1
+                menu.addItem(reason)
+            }
         }
         menu.addItem(.separator())
     }

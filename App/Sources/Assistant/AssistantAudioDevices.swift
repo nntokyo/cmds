@@ -70,6 +70,25 @@ final class AssistantAudioDevices {
         if status != noErr { devicesLog.error("assistant microphone not chosen: \(status, privacy: .public)") }
     }
 
+    /// The processes Core Audio knows and whether each records from an input now (#278: another app on a call).
+    /// Reads no audio and needs no permission.
+    static func processes() -> [AssistantMicrophoneShare.Process] {
+        var address = address(kAudioHardwarePropertyProcessObjectList)
+        var size: UInt32 = 0
+        let system = AudioObjectID(kAudioObjectSystemObject)
+        guard AudioObjectGetPropertyDataSize(system, &address, 0, nil, &size) == noErr, size > 0 else { return [] }
+        var ids = [AudioObjectID](repeating: 0, count: Int(size) / MemoryLayout<AudioObjectID>.size)
+        guard AudioObjectGetPropertyData(system, &address, 0, nil, &size, &ids) == noErr else { return [] }
+        return ids.map { id in
+            var pid: pid_t = 0
+            var pidAddress = Self.address(kAudioProcessPropertyPID)
+            var pidSize = UInt32(MemoryLayout<pid_t>.size)
+            AudioObjectGetPropertyData(id, &pidAddress, 0, nil, &pidSize, &pid)
+            return AssistantMicrophoneShare.Process(pid: pid, bundleID: string(id, kAudioProcessPropertyBundleID) ?? "",
+                                                    recording: uint32(id, kAudioProcessPropertyIsRunningInput) != 0)
+        }
+    }
+
     private static func address(_ selector: AudioObjectPropertySelector,
                                 scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeGlobal) -> AudioObjectPropertyAddress {
         AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)

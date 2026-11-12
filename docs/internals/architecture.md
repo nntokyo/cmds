@@ -375,6 +375,13 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   (`kAudioOutputUnitProperty_CurrentDevice`) before the engine starts. Device list and default input changes
   (`AudioObjectAddPropertyListenerBlock`) and `AVAudioEngineConfigurationChange` restart only the engine
   (`restartInput`): a new pump into the same analyzer, its fed seconds carried on.
+- **Calls** (#278): on each tick (0.5 s) `AssistantAudioDevices.processes()` reads Core Audio's process objects
+  (`kAudioHardwarePropertyProcessObjectList`: PID, bundle ID, `kAudioProcessPropertyIsRunningInput`; no permission, no
+  audio), `AssistantMicrophoneShare.recorders` drops cmds itself and other cmds instances and the system's always-on
+  listeners (CoreSpeech, assistantd, Sound Recognition), and `update` pauses (`stopListening`, silently; the
+  menu bar names the app) or resumes after 2 s with nobody recording, only a pause of its own. The user's pause / resume
+  (`pause()` / `resume()`) tell it: resumed during a call it stays on until that call ends. Announcements wait while
+  paused for a call. Settings › Assistant › Pause while another app uses the microphone (on by default).
 - **Rules**: `AssistantAddressing` (name prefix after an optional greeting, folded for width, case and kana; or the
   follow-up window), `AssistantMachine` (off → idle → listening / thinking / speaking / confirming, paused; follow-up
   8 s from the end of speech, confirmation timeout 60 s; only yes/no count without the name while a card waits),
