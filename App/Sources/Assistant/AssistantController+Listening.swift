@@ -11,10 +11,13 @@ extension AssistantController {
     /// A finished utterance from the microphone (or `debug.assistant`). Not addressed: dropped here, unstored.
     /// Said by name while the assistant speaks or works (barge-in), it stops that first; the HUD shows the new
     /// transcript at once.
-    func hear(_ text: String) {
+    /// `speechEnd`: the last loud audio before this transcript (from the microphone; #248).
+    func hear(_ text: String, speechEnd: Date? = nil) {
+        let heard = Date()
         let request = machine.request
-        let step = machine.hear(text, names: names, now: Date())
+        let step = machine.hear(text, names: names, now: heard)
         if machine.request != request { interrupt() }
+        if case .handle = step { beginTimeline(at: heard, speechEnd: speechEnd) }
         perform(step)
     }
 

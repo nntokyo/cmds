@@ -101,6 +101,9 @@ final class AssistantController {
     private var answerByClaude = false
     /// A note shown instead of the answer (paused, goodbye, "press Return").
     private var hudNote: String?
+    /// The current request's stage times, and the last few requests' (`+Timing`, #248).
+    var timeline: AssistantTimeline?
+    var timelines: [AssistantTimeline] = []
 
     /// Created at launch (AppDelegate); turns itself on when the user had it on.
     static func start(controller: AppController) {
@@ -121,7 +124,7 @@ final class AssistantController {
         }
         hud.onConfirm = { [weak self] in self?.key(.confirm) }
         hud.onCancel = { [weak self] in self?.key(.cancel) }
-        listener.onUtterance = { [weak self] text in self?.hear(text) }
+        listener.onUtterance = { [weak self] text, speechEnd in self?.hear(text, speechEnd: speechEnd) }
         listener.onLevel = { [weak self] level in self?.heard(level: level) }
         orb.onClick = { [weak self] in self?.showLast() }
         orb.onMoved = { [weak self] center in self?.orbMoved(to: center) }
@@ -278,8 +281,10 @@ final class AssistantController {
     private func speak(_ text: String, finished: @escaping () -> Void) {
         lastSpoken = text
         hudNote = nil
+        mark(.speechStart)
+        let request = machine.request
         voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: muted, finished: finished)
+                    muted: muted, started: { [weak self] in self?.mark(.voiceStart, request: request) }, finished: finished)
     }
 
     // MARK: HUD and clock

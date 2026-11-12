@@ -5,6 +5,9 @@ import Foundation
 /// Code setup, tools limited per call), in an empty temporary folder, without cmds' pane variables, stopped after a
 /// timeout or when the task asking for it is cancelled. Only its standard output is read.
 enum AssistantClaudeProcess {
+    /// Hears the stages of a call as they happen (#248: `AssistantTimeline`), from any thread.
+    typealias Progress = @Sendable (AssistantTimeline.Stage, Date) -> Void
+
     enum Failure: Error {
         case notFound
         case failed(Int32)
@@ -22,7 +25,9 @@ enum AssistantClaudeProcess {
     /// Runs `claude` in an empty temporary folder, stopped after `timeout`: its standard output, trimmed. `input` goes
     /// in on standard input. The folder is always the same one (no tool can write to it): Claude Code still makes an
     /// (empty) project folder under `~/.claude/projects` for its working directory, and so makes only one.
-    static func run(arguments: [String], input: String? = nil, timeout: TimeInterval) async throws -> String {
+    /// `progress` hears when the process started and when its first output came (#248), from any thread.
+    static func run(arguments: [String], input: String? = nil, timeout: TimeInterval,
+                    progress: Progress? = nil) async throws -> String {
         guard let executable = executable() else { throw Failure.notFound }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-assistant")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -38,12 +43,13 @@ enum AssistantClaudeProcess {
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
         try process.run()
+        progress?(.claudeSpawn, Date())
         if let input { stdin.fileHandleForWriting.write(Data(input.utf8)) }
         try? stdin.fileHandleForWriting.close()
         // The user moved on (a new request, barge-in, off): the process is stopped, its answer never used.
         let running = RunningProcess(process)
         return try await withTaskCancellationHandler {
-            try await wait(for: process, output: output, timeout: timeout)
+            try await wait(for: process, output: output, timeout: timeout, progress: progress)
         } onCancel: {
             running.terminate()
         }
@@ -58,7 +64,8 @@ enum AssistantClaudeProcess {
         }
     }
 
-    private static func wait(for process: Process, output: Pipe, timeout: TimeInterval) async throws -> String {
+    private static func wait(for process: Process, output: Pipe, timeout: TimeInterval,
+                             progress: Progress?) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             let lock = NSLock()
             var done = false
@@ -76,8 +83,15 @@ enum AssistantClaudeProcess {
                 }
             }
             DispatchQueue.global().async {
-                let data = output.fileHandleForReading.readDataToEndOfFile()
+                var data = Data()
+                while true {
+                    let chunk = output.fileHandleForReading.availableData
+                    if chunk.isEmpty { break }
+                    if data.isEmpty { progress?(.claudeFirstByte, Date()) }
+                    data.append(chunk)
+                }
                 process.waitUntilExit()
+                progress?(.claudeDone, Date())
                 let text = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
                 if process.terminationStatus == 0, !text.isEmpty {
                     finish(.success(text))

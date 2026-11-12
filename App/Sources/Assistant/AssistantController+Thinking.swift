@@ -21,6 +21,7 @@ extension AssistantController {
         let plan = AssistantPlanner.plan(intent, world: world, strings: .localized, directoryExists: Self.isFolder,
                                          folders: projectFolders(named:), executable: Self.agentExecutable)
         remember(plan)
+        mark(.routed)
         carryOut(plan, world: world, asked: asked)
     }
 
@@ -76,19 +77,24 @@ extension AssistantController {
         let strings = AssistantStrings.localized
         switch plan {
         case .answer(let text):
+            route("rules")
             say(text)
         case .askBack(let text):
+            route("askBack")
             say(text)
             askedBack = asked
         case .propose(let action, let prompt):
+            route("card")
             needsKey = false
             pendingShownAt = Date()
             say(prompt, proposing: action)
         case .summarize(let workspaceID, let paneID, let detailed, let fallback):
             let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? ""
+            route(detailed ? "claudeSummary" : "summary")
             think(capped: !detailed) { await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed) }
         case .summarizeEach(let items, let detailed):
             // One session after the other, a line each (spoken in turn, listed on the HUD).
+            route("summaries")
             let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? "" }
             think {
                 var lines: [String] = []
@@ -104,6 +110,7 @@ extension AssistantController {
             // tools) turns it into a proposal, planned and confirmed like any other command. Else it is a question.
             if usesInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
                 let request = machine.request
+                route("interpreter")
                 return think(capped: true) {
                     if await self.handleAsCommand(question, world: world, request: request) { return nil }
                     return await self.answer(question, world: world, interpreted: true)
@@ -129,14 +136,15 @@ extension AssistantController {
         guard !screen.isEmpty else { return facts }
         do {
             if detailed {
-                let summary = try await askingClaude(answers: true) {
-                    try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language)
+                let summary = try await askingClaude(answers: true) { progress in
+                    try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language, progress: progress)
                 }
                 return AssistantBrevity.first(3, of: summary)
             }
             guard AssistantBrain.modelAvailable else { return facts }
             // One sentence a session ("api: テストを実行中。").
-            let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language))
+            let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language,
+                                                                                         progress: progress(for: machine.request)))
             // A marker or a bracketed word ("[START]") is no summary, nor "waiting for input" for a session that does
             // not wait (made up from a quiet screen).
             let waiting = controller.workspace(id: workspaceID).map(AgentActivityStyle.needsUser) ?? true
@@ -154,12 +162,20 @@ extension AssistantController {
     private func answer(_ question: String, world: AssistantWorld, interpreted: Bool) async -> String? {
         let strings = AssistantStrings.localized
         let web = usesWeb
-        if web, AssistantWeb.needsWeb(question) { return await webAnswer(question) }
+        if web, AssistantWeb.needsWeb(question) {
+            route("web")
+            return await webAnswer(question)
+        }
         guard AssistantBrain.modelAvailable else { return strings(.modelUnavailable) }
         let status = AssistantReport.status(world, strings: .english)
         do {
-            let answer = try await AssistantBrain.answer(question, status: status, language: language, web: web)
-            if web, AssistantWeb.answerNeedsWeb(answer) { return await webAnswer(question) }
+            route(interpreted ? "interpreter+model" : "model")
+            let answer = try await AssistantBrain.answer(question, status: status, language: language, web: web,
+                                                         progress: progress(for: machine.request))
+            if web, AssistantWeb.answerNeedsWeb(answer) {
+                route("model+web")
+                return await webAnswer(question)
+            }
             if AssistantModelReply.isAction(answer) {
                 if !interpreted, usesInterpreter,
                    await handleAsCommand(question, world: world, request: machine.request) { return nil }
@@ -175,8 +191,8 @@ extension AssistantController {
     /// A free command as an intent, by the interpreter; nil when it is a question, `claude` is missing or fails.
     private func interpret(_ utterance: String, world: AssistantWorld) async -> AssistantIntent? {
         do {
-            let output = try await askingClaude {
-                try await AssistantBrain.interpret(utterance: utterance, world: world, language: language)
+            let output = try await askingClaude { progress in
+                try await AssistantBrain.interpret(utterance: utterance, world: world, language: language, progress: progress)
             }
             let intent = AssistantInterpretation.parse(output)?.intent(in: world)
             assistantLog.info("assistant interpreted a free command: \(intent.map { String(describing: $0).prefix(24) } ?? "question", privacy: .private)")
@@ -192,7 +208,9 @@ extension AssistantController {
     private func webAnswer(_ question: String) async -> String {
         let strings = AssistantStrings.localized
         do {
-            return try await askingClaude(answers: true) { try await AssistantBrain.webAnswer(question: question, language: language) }
+            return try await askingClaude(answers: true) { progress in
+                try await AssistantBrain.webAnswer(question: question, language: language, progress: progress)
+            }
         } catch AssistantClaudeProcess.Failure.notFound {
             return strings(.claudeNotFound)
         } catch {
@@ -205,12 +223,12 @@ extension AssistantController {
     /// A `claude -p` call for the current request, with "Asking Claude…" on the HUD while it runs (when it ends or is
     /// stopped, a newer request's mark stays). `answers`: what it returns is the answer, labelled as Claude's (not when
     /// the user has moved on since).
-    private func askingClaude<T>(answers: Bool = false, _ call: () async throws -> T) async rethrows -> T {
+    private func askingClaude<T>(answers: Bool = false, _ call: (@escaping AssistantBrain.Progress) async throws -> T) async rethrows -> T {
         let request = machine.request
         claudeWorkingFor = request
         refresh()
         defer { if claudeWorkingFor == request { claudeWorkingFor = nil } }
-        let result = try await call()
+        let result = try await call(progress(for: request))
         if answers, machine.request == request { claudeAnswered = true }
         return result
     }

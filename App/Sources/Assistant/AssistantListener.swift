@@ -1,4 +1,6 @@
 import AVFoundation
+import CmdsCore
+import CoreMedia
 import Speech
 import os
 
@@ -17,8 +19,9 @@ final class AssistantListener {
         case noAudioFormat
     }
 
-    /// A finished utterance.
-    var onUtterance: ((String) -> Void)?
+    /// A finished utterance, and when its speech ended (#248: the end of the audio it was recognised from, by the
+    /// audio fed since; nil when unknown).
+    var onUtterance: ((String, Date?) -> Void)?
     /// The input level, 0…1, about 20 times a second.
     var onLevel: ((Float) -> Void)?
     /// Recognition stopped by itself (an error).
@@ -112,7 +115,9 @@ final class AssistantListener {
                 for try await result in transcriber.results {
                     let text = String(result.text.characters)
                     guard let self else { return }
-                    if result.isFinal, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { self.onUtterance?(text) }
+                    if result.isFinal, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        self.onUtterance?(text, self.speechEnd(of: result.range))
+                    }
                 }
                 self?.stopped(nil)
             } catch {
@@ -131,6 +136,17 @@ final class AssistantListener {
         engine.prepare()
         try engine.start()
         isRunning = true
+    }
+
+    /// When the audio `range` (in the analyzer's time, from its start) ended, by the audio fed so far: the final
+    /// transcript's delay after the speech is logged (#248).
+    private func speechEnd(of range: CMTimeRange) -> Date? {
+        guard let pump, range.end.isNumeric else { return nil }
+        let now = Date()
+        let behind = max(0, pump.fedSeconds - range.end.seconds)
+        let loud = pump.lastLoud.map { now.timeIntervalSince($0) }
+        listenerLog.notice("assistant final transcript \(Int(behind * 1000), privacy: .public) ms after its audio ended, \(loud.map { Int($0 * 1000) } ?? -1, privacy: .public) ms after the last loud audio")
+        return now.addingTimeInterval(-behind)
     }
 
     /// The listener the audio thread reports levels to.
@@ -174,6 +190,14 @@ private final class AudioPump: @unchecked Sendable {
     private let continuation: AsyncStream<AnalyzerInput>.Continuation
     private let level: @Sendable (Float) -> Void
     private var lastLevel = Date.distantPast
+    private let lock = NSLock()
+    private var fed: Double = 0
+    private var loudAt: Date?
+
+    /// Seconds of audio handed to the analyzer so far (#248).
+    var fedSeconds: Double { lock.withLock { fed } }
+    /// The last buffer at least as loud as speech (`AssistantPresence.Hearing`'s threshold).
+    var lastLoud: Date? { lock.withLock { loudAt } }
 
     init(from input: AVAudioFormat, to format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation,
          level: @escaping @Sendable (Float) -> Void) {
@@ -186,6 +210,7 @@ private final class AudioPump: @unchecked Sendable {
     func push(_ buffer: AVAudioPCMBuffer) {
         report(buffer)
         guard let converter else {
+            fed(buffer)
             continuation.yield(AnalyzerInput(buffer: buffer))
             return
         }
@@ -203,7 +228,15 @@ private final class AudioPump: @unchecked Sendable {
             status.pointee = .haveData
             return buffer
         }
-        if error == nil, output.frameLength > 0 { continuation.yield(AnalyzerInput(buffer: output)) }
+        if error == nil, output.frameLength > 0 {
+            fed(output)
+            continuation.yield(AnalyzerInput(buffer: output))
+        }
+    }
+
+    private func fed(_ buffer: AVAudioPCMBuffer) {
+        let seconds = Double(buffer.frameLength) / buffer.format.sampleRate
+        lock.withLock { fed += seconds }
     }
 
     func finish() { continuation.finish() }
@@ -211,11 +244,13 @@ private final class AudioPump: @unchecked Sendable {
     /// RMS of the first channel, scaled for display, at most 20 times a second.
     private func report(_ buffer: AVAudioPCMBuffer) {
         let now = Date()
-        guard now.timeIntervalSince(lastLevel) >= AssistantTuning.levelInterval, let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
-        lastLevel = now
+        guard let samples = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return }
         var sum: Float = 0
         for index in 0..<Int(buffer.frameLength) { sum += samples[index] * samples[index] }
-        let rms = (sum / Float(buffer.frameLength)).squareRoot()
-        level(min(1, rms * AssistantTuning.levelGain))
+        let value = min(1, (sum / Float(buffer.frameLength)).squareRoot() * AssistantTuning.levelGain)
+        if value >= AssistantPresence.Hearing.onLevel { lock.withLock { loudAt = now } }
+        guard now.timeIntervalSince(lastLevel) >= AssistantTuning.levelInterval else { return }
+        lastLevel = now
+        level(value)
     }
 }

@@ -72,6 +72,15 @@ extension AssistantController {
         return debugState(snapshot: params?["snapshot"]?.boolValue == true)
     }
 
+    private static func json(_ timeline: AssistantTimeline) -> JSONValue {
+        .object([
+            "request": .number(Double(timeline.request)),
+            "route": timeline.route.map(JSONValue.string) ?? .null,
+            "ms": .object(timeline.milliseconds.mapValues { .number(Double($0)) }),
+            "firstSound": timeline.firstSound.map { .number(Double($0)) } ?? .null,
+        ])
+    }
+
     private static func number(_ value: JSONValue?) -> Double? {
         if case .number(let number)? = value { return number }
         return nil
@@ -113,6 +122,9 @@ extension AssistantController {
             "vocabulary": .array(vocabulary.map(JSONValue.string)),
             "hud": .object(hud.debugTexts.mapValues(JSONValue.string)),
             "window": .number(Double(hud.panel.windowNumber)),
+            // Stage times of the current request and the last few (#248), milliseconds from the transcript.
+            "timing": timeline.map(Self.json) ?? .null,
+            "timings": .array(timelines.map(Self.json)),
         ]
         if let action = machine.pending {
             state["pending"] = .object([

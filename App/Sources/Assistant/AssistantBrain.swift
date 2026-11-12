@@ -13,6 +13,8 @@ private let brainLog = Logger(subsystem: "tokyo.n-n.cmds", category: "assistant"
 /// when the request is cancelled. Prompts and arguments: `AssistantClaude`; the process: `AssistantClaudeProcess`.
 @available(macOS 26.0, *)
 enum AssistantBrain {
+    typealias Progress = AssistantClaudeProcess.Progress
+
     static var modelAvailable: Bool {
         if case .available = SystemLanguageModel.default.availability { return true }
         return false
@@ -22,18 +24,23 @@ enum AssistantBrain {
 
     /// A free question, with the workspaces' status as context. `web`: the model answers `AssistantWeb.marker` when it
     /// needs the web (the caller then asks Claude).
-    static func answer(_ question: String, status: String, language: AssistantLanguage, web: Bool = false) async throws -> String {
+    static func answer(_ question: String, status: String, language: AssistantLanguage, web: Bool = false,
+                       progress: Progress? = nil) async throws -> String {
         try await respond(prompt: AssistantClaude.answerPrompt(question: question, status: status),
-                          instructions: AssistantClaude.modelInstructions(language: language.name, web: web, actions: true))
+                          instructions: AssistantClaude.modelInstructions(language: language.name, web: web, actions: true),
+                          progress: progress)
     }
 
     /// What a workspace's agent is doing, from the facts and the end of its screen: one short sentence.
-    static func summarize(facts: String, screen: String, language: AssistantLanguage) async throws -> String {
+    static func summarize(facts: String, screen: String, language: AssistantLanguage, progress: Progress? = nil) async throws -> String {
         let prompt = AssistantClaude.summaryPrompt(facts: facts, screen: String(screen.suffix(AssistantTuning.maxScreenCharacters)))
-        return try await respond(prompt: prompt, instructions: AssistantClaude.modelInstructions(language: language.name, web: false))
+        return try await respond(prompt: prompt, instructions: AssistantClaude.modelInstructions(language: language.name, web: false),
+                                 progress: progress)
     }
 
-    private static func respond(prompt: String, instructions: String) async throws -> String {
+    private static func respond(prompt: String, instructions: String, progress: Progress?) async throws -> String {
+        progress?(.modelStart, Date())
+        defer { progress?(.modelDone, Date()) }
         let session = LanguageModelSession(model: SystemLanguageModel.default, instructions: instructions)
         return try await withThrowingTaskGroup(of: String.self) { group in
             group.addTask { try await session.respond(to: prompt).content }
@@ -51,18 +58,20 @@ enum AssistantBrain {
 
     /// A short summary by Claude Code, run headless (`AssistantClaude`: isolated, no tools). The screen text goes in on
     /// standard input.
-    static func detailedSummary(facts: String, screen: String, language: AssistantLanguage) async throws -> String {
+    static func detailedSummary(facts: String, screen: String, language: AssistantLanguage,
+                                progress: Progress? = nil) async throws -> String {
         brainLog.info("claude -p summary started")
         return try await AssistantClaudeProcess.run(
             arguments: AssistantClaude.detailedSummaryArguments(facts: facts, language: language.name),
-            input: String(screen.suffix(AssistantTuning.maxDetailedScreenCharacters)), timeout: AssistantTuning.claudeTimeout)
+            input: String(screen.suffix(AssistantTuning.maxDetailedScreenCharacters)), timeout: AssistantTuning.claudeTimeout,
+            progress: progress)
     }
 
     /// A free question answered by Claude Code with web search only, run headless like `detailedSummary`.
-    static func webAnswer(question: String, language: AssistantLanguage) async throws -> String {
+    static func webAnswer(question: String, language: AssistantLanguage, progress: Progress? = nil) async throws -> String {
         brainLog.info("claude -p web answer started")
         let text = try await AssistantClaudeProcess.run(arguments: AssistantClaude.webArguments(question: question, language: language.name),
-                                                        timeout: AssistantTuning.claudeTimeout)
+                                                        timeout: AssistantTuning.claudeTimeout, progress: progress)
         let spoken = AssistantWeb.speakable(text)
         guard !spoken.isEmpty else { throw AssistantClaudeProcess.Failure.failed(0) }
         return spoken
@@ -70,10 +79,13 @@ enum AssistantBrain {
 
     /// A free command turned into one JSON object (`AssistantInterpretation`) by `claude -p` without any tools. It gets
     /// only the utterance and the workspaces' names, agents and states, never screen text.
-    static func interpret(utterance: String, world: AssistantWorld, language: AssistantLanguage) async throws -> String {
+    static func interpret(utterance: String, world: AssistantWorld, language: AssistantLanguage,
+                          progress: Progress? = nil) async throws -> String {
         brainLog.info("claude -p interpreter started")
+        progress?(.interpreterStart, Date())
+        defer { progress?(.interpreterDone, Date()) }
         return try await AssistantClaudeProcess.run(
             arguments: AssistantClaude.interpreterArguments(utterance: utterance, world: world, language: language.name),
-            timeout: AssistantTuning.interpreterTimeout)
+            timeout: AssistantTuning.interpreterTimeout, progress: progress)
     }
 }

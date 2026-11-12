@@ -9,6 +9,8 @@ import CmdsCore
 final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     private var utterances = AssistantUtterances<() -> Void>()
+    /// Whom to tell when utterance number … starts.
+    private var started: (number: Int, call: (() -> Void)?)?
 
     override init() {
         super.init()
@@ -40,8 +42,9 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
+    /// `started`: the synthesizer began to speak it (#248: never when muted).
     func speak(_ text: String, language: String, voice identifier: String?, rate: Double, muted: Bool,
-               finished: @escaping () -> Void) {
+               started: (() -> Void)? = nil, finished: @escaping () -> Void) {
         stop()
         guard !muted, !text.isEmpty else { return finished() }
         let utterance = NumberedUtterance(string: text)
@@ -50,6 +53,7 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
         utterance.voice = chosen.flatMap { AVSpeechSynthesisVoice(identifier: $0.identifier) } ?? AVSpeechSynthesisVoice(language: language)
         utterance.rate = Float(rate)
         utterance.number = utterances.start(finished)
+        self.started = (utterance.number, started)
         synthesizer.speak(utterance)
     }
 
@@ -57,6 +61,17 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
         let pending = utterances.stop()
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         pending?()
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        guard let number = (utterance as? NumberedUtterance)?.number else { return }
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                guard let started = self.started, started.number == number else { return }
+                self.started = nil
+                started.call?()
+            }
+        }
     }
 
     // A stopped utterance's didCancel (and sometimes didFinish) arrives after the next one has been queued: only the
