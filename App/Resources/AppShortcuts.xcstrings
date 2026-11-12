@@ -1,0 +1,68 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "${applicationName} status": {
+      "localizations": {
+        "ja": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName}の状況",
+              "${applicationName}で状況を教えて"
+            ]
+          }
+        }
+      }
+    },
+    "Agent status in ${applicationName}": {
+      "localizations": {
+        "ja": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName}のエージェントの状況"
+            ]
+          }
+        }
+      }
+    },
+    "What are my agents doing in ${applicationName}": {
+      "localizations": {
+        "ja": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName}でエージェントは何をしてる"
+            ]
+          }
+        }
+      }
+    },
+    "Ask ${applicationName}": {
+      "localizations": {
+        "ja": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName}に頼む",
+              "${applicationName}に聞く"
+            ]
+          }
+        }
+      }
+    },
+    "Ask the ${applicationName} assistant": {
+      "localizations": {
+        "ja": {
+          "stringSet": {
+            "state": "translated",
+            "values": [
+              "${applicationName}のアシスタントに頼む"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

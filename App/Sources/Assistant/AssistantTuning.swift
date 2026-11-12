@@ -27,6 +27,9 @@ enum AssistantTuning {
 
     // MARK: Conversation
 
+    /// How long a request from Shortcuts or Siri waits for the assistant's answer to return it (#282).
+    static let typedRequestTimeout: TimeInterval = 60
+
     /// A start without a place goes to the workspace the last request was about, for this long.
     static let recentFor: TimeInterval = 300
 

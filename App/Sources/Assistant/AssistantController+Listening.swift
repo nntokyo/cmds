@@ -118,3 +118,31 @@ extension AssistantController {
         }
     }
 }
+
+// MARK: Typed requests
+
+@available(macOS 26.0, *)
+extension AssistantController {
+    /// Why a typed request (Shortcuts, Siri: #282) could not be handed over.
+    enum TypedRequestRefusal: Error {
+        case off, paused
+    }
+
+    /// A request typed in Shortcuts or said to Siri (#282): taken as if said with its name (as with the shortcut
+    /// held), so it is answered, spoken and shown as always and anything that acts still waits on the card. Returns
+    /// what the assistant answered (or asks on its card) within `timeout`, nil when it had nothing to say by then.
+    func handleTyped(_ text: String, timeout: TimeInterval = AssistantTuning.typedRequestTimeout) async throws -> String? {
+        guard isOn else { throw TypedRequestRefusal.off }
+        guard !isPaused else { throw TypedRequestRefusal.paused }
+        let before = machine.request
+        hear(text, heard: AssistantHeard(pushed: true))
+        let request = machine.request
+        guard request != before else { return nil }
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline, machine.request == request {
+            if machine.phase != .thinking, let answer = machine.answer { return answer }
+            try await Task.sleep(for: .milliseconds(200))
+        }
+        return nil
+    }
+}
