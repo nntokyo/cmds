@@ -1892,6 +1892,28 @@
         }
       }
     },
+    "Automatic": {
+      "comment": "Settings › Assistant › Listening: always listening for its name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動"
+          }
+        }
+      }
+    },
+    "Automatic (headset when connected)": {
+      "comment": "Settings › Assistant › Microphone",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動（接続中のヘッドセット）"
+          }
+        }
+      }
+    },
     "Automatic updates are not available: %@": {
       "localizations": {
         "ja": {
@@ -1908,6 +1930,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "自動アップデートは cmds.n-n.tokyo からダウンロードしたリリース版で使えます。このビルド（またはテスト用の起動）では使えません。"
+          }
+        }
+      }
+    },
+    "Automatic uses a headset such as AirPods when one is connected: it is close to your mouth and hears much less of a loud room.": {
+      "comment": "Settings › Assistant: under Microphone",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「自動」では、AirPodsなどのヘッドセットが接続されているとそのマイクを使います。口元に近いので、騒がしい場所でも周りの音を拾いにくくなります。"
+          }
+        }
+      }
+    },
+    "Automatic with noise reduction": {
+      "comment": "Settings › Assistant › Listening: always listening, with the system's voice processing",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動（ノイズ低減あり）"
           }
         }
       }
@@ -5676,6 +5720,17 @@
         }
       }
     },
+    "Listening:": {
+      "comment": "Settings › Assistant: automatic / with noise reduction / push to talk",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "聞き取り："
+          }
+        }
+      }
+    },
     "Lists a folder on an SSH host over SFTP with your ssh (~/.ssh/config, keys, agent). cmds never asks for or stores passwords, and only connects to hosts whose key is already in known_hosts.": {
       "localizations": {
         "ja": {
@@ -5875,6 +5930,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "メニュー:"
+          }
+        }
+      }
+    },
+    "Microphone:": {
+      "comment": "Settings › Assistant: which input it listens to",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マイク："
           }
         }
       }
@@ -6574,6 +6640,17 @@
         }
       }
     },
+    "Noise reduction suppresses the noise around you (a café, a station) and its own voice. Push to talk hears only while you hold the shortcut, without its name; letting go ends what you said at once. Best in very loud places.": {
+      "comment": "Settings › Assistant: under Listening",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ノイズ低減は、周りの騒音（カフェや駅など）とアシスタント自身の声を抑えます。プッシュトゥトークは、ショートカットを押している間だけ名前なしで聞き取り、離すとすぐに話した内容を確定します。とても騒がしい場所に向いています。"
+          }
+        }
+      }
+    },
     "None": {
       "comment": "Settings › Assistant › Shortcut: no shortcut",
       "localizations": {
@@ -6611,6 +6688,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "分離インスタンス（CMDS_SUPPORT_DIR）では使用できません。"
+          }
+        }
+      }
+    },
+    "Not connected": {
+      "comment": "Settings › Assistant › Microphone: the chosen microphone is not connected now",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接続されていません"
           }
         }
       }
@@ -7435,6 +7523,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロンプト："
+          }
+        }
+      }
+    },
+    "Push to talk (hold the shortcut)": {
+      "comment": "Settings › Assistant › Listening: only while the shortcut is held",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プッシュトゥトーク（ショートカットを押している間）"
           }
         }
       }
@@ -9733,6 +9832,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "システム"
+          }
+        }
+      }
+    },
+    "System Default": {
+      "comment": "Settings › Assistant › Microphone: the input chosen in System Settings › Sound",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システムのデフォルト"
           }
         }
       }
