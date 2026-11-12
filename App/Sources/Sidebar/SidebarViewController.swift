@@ -634,6 +634,28 @@ final class SidebarViewController: NSViewController {
               let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: true) as? WorkspaceCellView else { return nil }
         return cell.debugPortsLabel?.debugClick(index: index)
     }
+
+    /// For `debug.sidebar_account` (#284): the row's account button title (nil while hidden), the menu's items, and
+    /// with `choose` the account picked as a click on its item would, without the alert (its text is returned).
+    func debugAccount(workspaceID: String, choose: String?) -> (button: String?, items: [String], problem: String?)? {
+        guard let workspace = controller.workspace(id: workspaceID),
+              let row = rows.firstIndex(where: { $0.workspaceID == workspaceID }),
+              let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: true) as? WorkspaceCellView else { return nil }
+        cell.updateUsage(with: workspace)
+        guard let pane = ClaudeAccountMenu.pane(of: workspace, controller: controller) else { return (cell.debugAccountTitle, [], nil) }
+        let items = ClaudeAccountMenu.menu(for: pane, controller: controller, in: nil).items.map { item in
+            item.isSeparatorItem ? "-" : (item.state == .on ? "✓ " : "") + item.title
+        }
+        var problem: String?
+        if let choose {
+            if let found = controller.accountSwitchProblem(pane, to: choose) {
+                problem = found.localized
+            } else {
+                do { try controller.requestAccountSwitch(paneID: pane.id, to: choose) } catch { problem = error.localizedDescription }
+            }
+        }
+        return (cell.debugAccountTitle, items, problem)
+    }
     #endif
 
     func confirmClose(workspaceID id: String) {
@@ -854,6 +876,13 @@ extension SidebarViewController: NSMenuDelegate {
         if !workspace.isRemote, workspace.gitBranch != nil {
             items += [.separator(), item(String(localized: "Show Changes"), #selector(showChangesClicked(_:)), id),
                       item(String(localized: "New Worktree Workspace…"), #selector(newWorktreeClicked(_:)), id)]
+        }
+        // The Claude account of its agent's session, to continue it with another (#284).
+        if let pane = ClaudeAccountMenu.pane(of: workspace, controller: controller) {
+            let account = NSMenuItem(title: String(localized: "Claude Account", comment: "sidebar context menu: submenu"),
+                                     action: nil, keyEquivalent: "")
+            account.submenu = ClaudeAccountMenu.menu(for: pane, controller: controller, in: view.window)
+            items += [.separator(), account]
         }
         items += [.separator(), filter, group, .separator(),
                   item(String(localized: "Close Workspace"), #selector(closeClicked(_:)), id)]

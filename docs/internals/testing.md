@@ -206,6 +206,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   "call" keeps it `idle` until `apps: []`, a `pause` stays after it. A real call (Core Audio) needs a person.
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
+- `debug.sidebar_account {workspace, choose?}` (DEBUG builds, #284) returns the row's account button title (null while
+  hidden: no accounts, not Claude Code, an SSH pane) and its menu's items (`✓` the current one), and with `choose` asks
+  for that switch as a click would, returning the alert's text as `problem` instead of showing it. Give the pane an
+  account with `workspace.create {account}` and a session with `agent.claude_status`; for a switch that goes through,
+  put the `<session id>.jsonl` under the other account's temporary `projects/<dir>/` and use a stub `claude` on `PATH`
+  (as in Schedules end to end): the switch runs `claude --resume` in the pane.
 - `debug.memory {workspace?}` (DEBUG builds, #193) returns the "memory is short" notification's title and body as
   they would be posted now (without waiting for the pressure), the sidebar footer's leftover row (null when there is
   none) and, with `workspace`, the top-process lines of its usage tooltip. Leftover processes in an isolated instance:

@@ -2726,6 +2726,17 @@
         }
       }
     },
+    "Claude Account": {
+      "comment": "sidebar context menu: submenu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude アカウント"
+          }
+        }
+      }
+    },
     "Claude Accounts": {
       "localizations": {
         "ja": {
@@ -2777,6 +2788,17 @@
         }
       }
     },
+    "Claude account %@": {
+      "comment": "sidebar: account button",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude アカウント %@"
+          }
+        }
+      }
+    },
     "Claude account limit": {
       "localizations": {
         "ja": {
@@ -2793,6 +2815,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claudeアカウントを切り替えました"
+          }
+        }
+      }
+    },
+    "Claude account: %@. Click to continue this session with another account.": {
+      "comment": "sidebar: account button tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude アカウント: %@。クリックすると、このセッションを別のアカウントで続けられます。"
           }
         }
       }
@@ -3245,6 +3278,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "各エージェントのコンテキスト（ctx）"
+          }
+        }
+      }
+    },
+    "Continue This Session With": {
+      "comment": "sidebar account menu: header",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このセッションを続けるアカウント"
           }
         }
       }
@@ -5833,6 +5877,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Macがバッテリー駆動です"
+          }
+        }
+      }
+    },
+    "Manage Accounts…": {
+      "comment": "sidebar account menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントを管理…"
           }
         }
       }
@@ -10071,6 +10126,17 @@
         }
       }
     },
+    "The account cannot be switched": {
+      "comment": "sidebar account menu: alert title",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントを切り替えられません"
+          }
+        }
+      }
+    },
     "The account was removed.": {
       "localizations": {
         "ja": {
@@ -11334,6 +11400,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "取り消す"
+          }
+        }
+      }
+    },
+    "Unknown account": {
+      "comment": "sidebar: the session's Claude account is not known",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不明なアカウント"
           }
         }
       }
@@ -12670,6 +12747,17 @@
         }
       }
     },
+    "switching…": {
+      "comment": "sidebar account menu: the switch is under way",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切り替え中…"
+          }
+        }
+      }
+    },
     "the pane is an SSH session.": {
       "comment": "assistant HUD: why a click is needed",
       "localizations": {
@@ -12930,6 +13018,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "「cmds のリポジトリで Claude Code を起動して、ログイン画面のテストを書かせて」: その名前のワークスペース、なければこれらのフォルダ（カンマ区切り）の 3 階層下までにある同じ名前のフォルダ（リポジトリ優先）で起動します。起動の前に、フォルダと最初の指示をカードで確認します。"
+          }
+        }
+      }
+    },
+    "→ %@": {
+      "comment": "sidebar: the account a switch goes to",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "→ %@"
           }
         }
       }

@@ -76,6 +76,11 @@ extension AppController {
         return nil
     }
 
+    /// Why the pane's session cannot move to `name` now (the sidebar's account menu, before it asks): nil when it can.
+    func accountSwitchProblem(_ pane: Pane, to name: String) -> AccountSwitchProblem? {
+        switchProblem(pane, session: switchableSession(pane), target: claudeAccounts.account(named: name))
+    }
+
     // MARK: Switching
 
     /// `account.switch` / the banner / the notification: continue the pane's session with `to` (default: the next

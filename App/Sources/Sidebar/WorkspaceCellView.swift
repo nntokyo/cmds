@@ -53,6 +53,11 @@ final class WorkspaceCellView: NSTableCellView {
     /// The workspace's agent pane: `Claude Opus 4.5` over `ctx 53% · $117.99` (account limits are in the footer).
     private let agentNameLabel = NSTextField(labelWithString: "")
     private let agentLabel = NSTextField(labelWithString: "")
+    /// The Claude account of the agent's session (`ClaudeAccountMenu`): its colour and name; a click opens the menu
+    /// to continue the session with another account.
+    private let accountButton = NSButton()
+    private var accountKey: String?
+    private var agentRow = NSStackView()
     private var agentKey: String?
     private var agentTooltip: String?
     private let notificationLabel = NSTextField(wrappingLabelWithString: "")
@@ -134,6 +139,20 @@ final class WorkspaceCellView: NSTableCellView {
         notificationLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         notificationLabel.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
 
+        accountButton.isBordered = false
+        accountButton.imagePosition = .imageLeading
+        accountButton.imageHugsTitle = true
+        accountButton.target = self
+        accountButton.action = #selector(accountClicked)
+        accountButton.setContentHuggingPriority(.required, for: .horizontal)
+        accountButton.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
+        accountButton.isHidden = true
+        agentRow = NSStackView(views: [agentNameLabel, accountButton])
+        agentRow.orientation = .horizontal
+        agentRow.spacing = 6
+        agentRow.alignment = .centerY
+        agentRow.detachesHiddenViews = true
+
         let titleRow = NSStackView(views: [indicator, titleLabel, shortcutLabel])
         titleRow.orientation = .horizontal
         titleRow.spacing = 6
@@ -166,7 +185,7 @@ final class WorkspaceCellView: NSTableCellView {
             shortcutLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 16),
         ])
 
-        stack.setViews([titleRow, statusRow, hostLabel, branchLabel, portsLabel, agentNameLabel, agentLabel, usageLabel, notificationLabel], in: .top)
+        stack.setViews([titleRow, statusRow, hostLabel, branchLabel, portsLabel, agentRow, agentLabel, usageLabel, notificationLabel], in: .top)
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = Self.spacing
@@ -183,7 +202,7 @@ final class WorkspaceCellView: NSTableCellView {
             statusRow.widthAnchor.constraint(equalTo: stack.widthAnchor),
             notificationLabel.widthAnchor.constraint(equalTo: stack.widthAnchor),
             agentLabel.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
-            agentNameLabel.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
+            agentRow.widthAnchor.constraint(lessThanOrEqualTo: stack.widthAnchor),
             closeButton.centerYAnchor.constraint(equalTo: shortcutLabel.centerYAnchor),
             closeButton.trailingAnchor.constraint(equalTo: shortcutLabel.trailingAnchor, constant: 2),
             closeButton.widthAnchor.constraint(equalToConstant: 16),
@@ -296,6 +315,7 @@ final class WorkspaceCellView: NSTableCellView {
         usageLabel.isHidden = !Self.showsUsage(workspace)
         agentLabel.isHidden = !Self.showsAgent(workspace)
         agentNameLabel.isHidden = agentLabel.isHidden
+        agentRow.isHidden = agentLabel.isHidden
         agentKey = nil // reloads (selection changes) redraw the coloured runs for the row's new background
         updateUsage(with: workspace)
         notificationLabel.isHidden = Self.notificationText(workspace) == nil
@@ -414,14 +434,19 @@ final class WorkspaceCellView: NSTableCellView {
     private func updateAgent(with workspace: Workspace) {
         guard let primary = workspace.primaryAgent else {
             agentKey = nil
+            updateAccountButton(nil, controller: AppController.shared)
             return
         }
         let usage = primary.usage
         // Session figures only: the account limits (5h/7d) are the same for every row and shown in the footer.
         let parts = AgentFormat.summaryParts(usage, limits: [], strings: .localized)
         let others = workspace.agentPanes.count - 1
-        // The Claude account the pane runs under (AppController+Accounts), after the model: `Opus @work`.
-        let account = primary.pane.claudeAccount
+        // The Claude account the pane runs under (AppController+Accounts), after the model: `Opus @work`; with
+        // accounts set up the account button shows it instead (and switches it).
+        let controller = AppController.shared
+        let accountPane = ClaudeAccountMenu.pane(of: workspace, controller: controller)
+        updateAccountButton(accountPane, controller: controller)
+        let account = accountPane == nil ? primary.pane.claudeAccount : nil
         let key = parts.map { "\($0.text)\($0.level.rawValue)" }.joined() + "|\(usage.isStale)|\(others)|\(account ?? "")"
         if key != agentKey {
             agentKey = key
@@ -450,6 +475,44 @@ final class WorkspaceCellView: NSTableCellView {
             agentNameLabel.toolTip = tooltip
         }
     }
+
+    /// The account button: the account's colour and name ("switching to …" while a switch waits); hidden without
+    /// accounts, for another agent or an SSH pane.
+    @MainActor
+    private func updateAccountButton(_ pane: Pane?, controller: AppController) {
+        guard let pane else {
+            accountKey = nil
+            accountButton.isHidden = true
+            return
+        }
+        let (name, switchingTo) = ClaudeAccountMenu.shown(pane, controller: controller)
+        let color = ClaudeAccountMenu.color(of: switchingTo ?? name, controller: controller)
+        let key = "\(name ?? "")|\(switchingTo ?? "")|\(color)|\(appliedScale)"
+        accountButton.isHidden = false
+        guard key != accountKey else { return }
+        accountKey = key
+        let title = switchingTo.map { String(localized: "→ \($0)", comment: "sidebar: the account a switch goes to") }
+            ?? name ?? String(localized: "Unknown account", comment: "sidebar: the session's Claude account is not known")
+        let font = Self.usageFont
+        accountButton.attributedTitle = NSAttributedString(string: title, attributes: [.font: font, .foregroundColor: color])
+        accountButton.image = NSImage(systemSymbolName: "person.crop.circle.fill", accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: font.pointSize, weight: .regular).applying(.init(paletteColors: [.white, color])))
+        accountButton.toolTip = String(localized: "Claude account: \(name ?? "?"). Click to continue this session with another account.",
+                                       comment: "sidebar: account button tooltip")
+        accountButton.setAccessibilityLabel(String(localized: "Claude account \(name ?? "?")", comment: "sidebar: account button"))
+    }
+
+    @objc private func accountClicked() {
+        guard let id = workspaceID, let workspace = AppController.shared.workspace(id: id),
+              let pane = ClaudeAccountMenu.pane(of: workspace, controller: AppController.shared) else { return }
+        let menu = ClaudeAccountMenu.menu(for: pane, controller: AppController.shared, in: window)
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: accountButton.bounds.maxY + 2), in: accountButton)
+    }
+
+    #if DEBUG
+    /// For `debug.sidebar_account`: the account button's title, nil while hidden.
+    var debugAccountTitle: String? { accountButton.isHidden ? nil : accountButton.attributedTitle.string }
+    #endif
 
     private static func agentText(_ parts: [AgentFormat.Part], stale: Bool, others: Int) -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
