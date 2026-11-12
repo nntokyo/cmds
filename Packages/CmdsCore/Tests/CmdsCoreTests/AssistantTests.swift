@@ -765,8 +765,10 @@ final class AssistantClaudeTests: XCTestCase {
                                                      now: Date(timeIntervalSince1970: 1_800_000_000),
                                                      timeZone: TimeZone(identifier: "Asia/Tokyo")!, locale: Locale(identifier: "ja_JP"))
         assertIsolated(arguments)
-        XCTAssertEqual(value("--model", in: arguments), AssistantClaude.answerModel)
-        XCTAssertEqual(AssistantClaude.answerModel, "sonnet")
+        XCTAssertEqual(value("--model", in: arguments), AssistantClaude.webModel)
+        XCTAssertEqual(AssistantClaude.webModel, "sonnet")
+        XCTAssertEqual(value("--output-format", in: arguments), "stream-json")
+        XCTAssertTrue(arguments.contains("--include-partial-messages"))
         XCTAssertEqual(value("--tools", in: arguments), "WebSearch,WebFetch")
         XCTAssertEqual(value("--allowedTools", in: arguments), "WebSearch,WebFetch")
         let prompt = arguments[1]

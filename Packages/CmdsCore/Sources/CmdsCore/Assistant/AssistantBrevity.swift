@@ -55,7 +55,8 @@ public enum AssistantBrevity {
         return sentences(trimmed).first ?? trimmed
     }
 
-    private static func join(_ sentences: [String]) -> String {
+    /// Sentences joined as written: "Done. Next." with a space, 「完了。次。」 without.
+    public static func join(_ sentences: [String]) -> String {
         var text = ""
         for sentence in sentences {
             // "Done. Next." with a space, "完了。次。" without.

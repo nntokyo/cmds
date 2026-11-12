@@ -80,6 +80,8 @@ public enum AssistantLine: Equatable, Sendable {
     case claudeNotFound
     /// A web question, but `claude -p` failed or took too long.
     case webFailed
+    /// Said while Claude works on a slow answer (#248: `AssistantAck`).
+    case checking
     /// An action the assistant could not work out (instead of the on-device model's apology).
     case cannotTell
     // Follow-through on a task it gave.
@@ -150,6 +152,7 @@ public enum AssistantLine: Equatable, Sendable {
         case .modelUnavailable: return "I can only answer about the workspaces: the on-device model isn't available."
         case .claudeNotFound: return "I can't search the web: Claude Code (claude) isn't installed."
         case .webFailed: return "I couldn't get an answer from Claude: it failed or took too long."
+        case .checking: return "Checking."
         case .cannotTell: return "I couldn't tell what to do. Try “start Claude in api” or “tell api to run the tests”."
         case .taskDone(let agent, let workspace): return "\(agent) in \(workspace) is done."
         case .taskAsks(let agent, let workspace, let question): return "\(agent) in \(workspace) needs you: \(question)"

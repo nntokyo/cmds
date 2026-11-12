@@ -11,7 +11,8 @@ extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
     /// `showWhileWaiting?`, `orbSize?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
     /// `speak` (`text`: speaking it without a voice until `spoken`; `card: true`: reading out the card that waits),
-    /// `spoken`, `problem` (`text`, none clears it: as
+    /// `spoken`, `hear_audio` (`path`, `tail?` seconds of quiet after it, default 10, `endpoint?`
+    /// false: only the recogniser ends the utterance: an audio file through speech recognition instead of the microphone), `problem` (`text`, none clears it: as
     /// if the microphone had failed, for Settings' problem row),
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons; `orb`: the
     /// waiting orb), `level` (`value` 0…1: as the microphone's level), `move_orb` (`x`, `y`: as if the orb were
@@ -47,6 +48,20 @@ extension AssistantController {
         case "hear":
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
             hear(text)
+        case "hear_audio":
+            // An audio file instead of the microphone, through the same recognition (#248: the end of an utterance).
+            guard let path = params?["path"]?.stringValue, path.hasPrefix("/") else { throw RPCError.invalidParams("an absolute path is required") }
+            guard !usesMicrophone, !listener.isRunning else { throw RPCError.invalidParams("the microphone is in use") }
+            let tail = Self.number(params?["tail"]) ?? 10
+            listener.finalizesEarly = params?["endpoint"]?.boolValue ?? true
+            let locale = language.locale
+            Task { [weak self] in
+                do {
+                    try await self?.listener.debugFeed(URL(fileURLWithPath: path), locale: locale, tail: tail)
+                } catch {
+                    self?.debugSetProblem("hear_audio: \(error.localizedDescription)")
+                }
+            }
         case "click" where params?["button"]?.stringValue == "orb":
             orb.debugClick()
         case "level":
@@ -70,6 +85,15 @@ extension AssistantController {
         }
         refresh()
         return debugState(snapshot: params?["snapshot"]?.boolValue == true)
+    }
+
+    private static func json(_ timeline: AssistantTimeline) -> JSONValue {
+        .object([
+            "request": .number(Double(timeline.request)),
+            "route": timeline.route.map(JSONValue.string) ?? .null,
+            "ms": .object(timeline.milliseconds.mapValues { .number(Double($0)) }),
+            "firstSound": timeline.firstSound.map { .number(Double($0)) } ?? .null,
+        ])
     }
 
     private static func number(_ value: JSONValue?) -> Double? {
@@ -113,6 +137,9 @@ extension AssistantController {
             "vocabulary": .array(vocabulary.map(JSONValue.string)),
             "hud": .object(hud.debugTexts.mapValues(JSONValue.string)),
             "window": .number(Double(hud.panel.windowNumber)),
+            // Stage times of the current request and the last few (#248), milliseconds from the transcript.
+            "timing": timeline.map(Self.json) ?? .null,
+            "timings": .array(timelines.map(Self.json)),
         ]
         if let action = machine.pending {
             state["pending"] = .object([

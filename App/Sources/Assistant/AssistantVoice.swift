@@ -9,6 +9,8 @@ import CmdsCore
 final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     private var utterances = AssistantUtterances<() -> Void>()
+    /// Whom to tell when utterance number … starts.
+    private var started: (number: Int, call: (() -> Void)?)?
 
     override init() {
         super.init()
@@ -40,23 +42,62 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    func speak(_ text: String, language: String, voice identifier: String?, rate: Double, muted: Bool,
-               finished: @escaping () -> Void) {
-        stop()
-        guard !muted, !text.isEmpty else { return finished() }
+    /// `started`: the synthesizer began to speak it (#248: never when muted). `open`: more parts follow (`append`),
+    /// `finished` runs after `close` and the last part. `queued`: what is being said (an acknowledgement) is not cut
+    /// off: this follows it, and its completion is dropped.
+    func speak(_ text: String, language: String, voice identifier: String?, rate: Double, muted: Bool, open: Bool = false,
+               queued: Bool = false, started: (() -> Void)? = nil, finished: @escaping () -> Void) {
+        if !queued { stop() }
+        guard !text.isEmpty || open else { return finished() }
+        let number = utterances.start(finished, open: open)
+        guard !muted, !text.isEmpty else {
+            utterances.ended(number)?()
+            return
+        }
+        self.started = (number, started)
+        synthesizer.speak(utterance(text, number: number, language: language, voice: identifier, rate: rate))
+    }
+
+    /// Another part of the open utterance (the next sentence of an answer still being written).
+    func append(_ text: String, language: String, voice identifier: String?, rate: Double, muted: Bool) {
+        guard let number = utterances.add() else { return }
+        guard !muted, !text.isEmpty else {
+            utterances.ended(number)?()
+            return
+        }
+        synthesizer.speak(utterance(text, number: number, language: language, voice: identifier, rate: rate))
+    }
+
+    /// No more parts: the utterance ends after the last one (at once when it has been said).
+    func close() {
+        utterances.close()?()
+    }
+
+    private func utterance(_ text: String, number: Int, language: String, voice identifier: String?, rate: Double) -> AVSpeechUtterance {
         let utterance = NumberedUtterance(string: text)
         // The chosen voice when it speaks the language (a Personal Voice may speak English only), else the system's.
         let chosen = AssistantVoices.resolve(chosen: identifier, among: Self.all, language: language).voice
         utterance.voice = chosen.flatMap { AVSpeechSynthesisVoice(identifier: $0.identifier) } ?? AVSpeechSynthesisVoice(language: language)
         utterance.rate = Float(rate)
-        utterance.number = utterances.start(finished)
-        synthesizer.speak(utterance)
+        utterance.number = number
+        return utterance
     }
 
     func stop() {
         let pending = utterances.stop()
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
         pending?()
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
+        guard let number = (utterance as? NumberedUtterance)?.number else { return }
+        DispatchQueue.main.async {
+            MainActor.assumeIsolated {
+                guard let started = self.started, started.number == number else { return }
+                self.started = nil
+                started.call?()
+            }
+        }
     }
 
     // A stopped utterance's didCancel (and sometimes didFinish) arrives after the next one has been queued: only the

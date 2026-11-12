@@ -2417,6 +2417,17 @@
         }
       }
     },
+    "Checking.": {
+      "comment": "assistant: said at once while Claude works on a slow answer (web search, detailed summary)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "調べます。"
+          }
+        }
+      }
+    },
     "Checks cmds.n-n.tokyo once a day and asks before downloading an update.": {
       "localizations": {
         "ja": {

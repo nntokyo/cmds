@@ -346,7 +346,14 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
 - **Listening**: `AssistantListener` taps `AVAudioEngine`'s input, converts to
   `SpeechAnalyzer.bestAvailableAudioFormat` on the audio thread (`AudioPump`, created outside the main actor) and
   feeds a `SpeechTranscriber` for the app's language (`AssistantLanguage`: ja_JP / en_US), downloading its asset once.
-  Only final results leave it, as text. Nothing is written; partial results only drive the level.
+  Only final results leave it, as text. Nothing is written; partial results only drive the level. The end of an
+  utterance (#248): `SpeechTranscriber` finalises Japanese only 7–10 s after the speech (English about 2 s), so
+  `AssistantEndpoint` (CmdsCore) watches the level (`AssistantPresence.Hearing.onLevel`, per tap buffer): at least
+  0.3 s of sound, then 0.8 s quiet, and `SpeechAnalyzer.finalize(through: nil)` makes the final result come about 1 s
+  after the speech; a room loud enough to keep the level up leaves it to the recogniser. A final of punctuation only
+  (finalised noise) is dropped. Its `fastResults` option was tried and rejected: it gives early volatile results but a
+  worse final transcript (「APIの」 → 「AP来の」), so partial transcripts are not used to route early. Speech beginning
+  (`onSpeech`) warms the on-device model up (`AssistantBrain.prewarm`, at most every 30 s).
 - **Rules**: `AssistantAddressing` (name prefix after an optional greeting, folded for width, case and kana; or the
   follow-up window), `AssistantMachine` (off → idle → listening / thinking / speaking / confirming, paused; follow-up
   8 s from the end of speech, confirmation timeout 60 s; only yes/no count without the name while a card waits),
@@ -393,7 +400,13 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   `AssistantInterpretation.parse` and turned into an intent by `intent(in:)` (made-up names dropped, one line, at
   most 400 characters), which then goes through the planner and the card like any command; a question, no `claude` or
   a failure falls back to answering it as a question. On-device guided generation was tried and rejected: it named
-  workspaces "agent", classed questions as instructions and tripped its guardrails on 「確認させて」.
+  workspaces "agent", classed questions as instructions and tripped its guardrails on 「確認させて」. Which way a free
+  question goes is `AssistantRoute.decide` (#248): no possible command (or the interpreter off) → the web for live
+  information, else the on-device model, as before; a request (`isRequest`: 指示 / させて / もらって / 起動 / tell / have /
+  start…) → the interpreter first; a live-information question that names no workspace ("Claude Codeの最新バージョンは？")
+  → the web without the interpreter; anything else → the interpreter and the on-device model at once
+  (`earlyModelAnswer`): the interpreter's verdict decides, the model's answer is used when it says "question" (never
+  before: a command the model answered as text would be lost).
 - **Vocabulary and misheard names**: `AssistantListener` sets `AnalysisContext.contextualStrings[.general]` (Speech,
   macOS 26 SDK) from `AssistantVocabulary.contextualStrings` (names, Claude Code, Codex, cmds, workspace titles and
   agents), refreshed on `StateChange.workspaces` / `.workspace`. `AssistantVocabulary.normalizingAgents` rewrites
@@ -447,6 +460,25 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   folder, 90 s, no permission-skipping flag); the prompt holds only the utterance, the date and time, the time zone
   and the locale, never screen text. `AssistantWeb.speakable` drops a "Sources:" list, links, URLs and Markdown. The
   HUD's `ClaudeMark` shows "Asking Claude…" while `claude -p` runs and "Claude" under its answer.
+- **Latency** (#248): every `claude -p` runs with `--output-format stream-json --verbose --include-partial-messages`
+  (`AssistantClaude.outputArguments`); `AssistantClaudeProcess` reads it line by line (`AssistantClaudeStream`) and
+  returns the `result` line at once (Claude Code takes about a second more to exit, which is not waited for). A
+  detailed summary is spoken sentence by sentence as it is written (`AssistantSpokenStream`: complete sentences of
+  `AssistantWeb.speakable` text, the first at once with `say(open: true)`, the next with `AssistantVoice.append`, the
+  end with `close`; `AssistantUtterances` counts the parts, so the follow-up window opens after the last one); calls with
+  tools release nothing before the model's last turn ends and drop a turn that ends in a tool use, so a preamble ("I'll
+  search…") is never spoken. A web answer or detailed summary not there after `AssistantAck.delay` (0.8 s) gets
+  「調べます。」 / "Checking." (`acknowledge`: the voice only, no state or HUD change, once per request; the answer is
+  queued after it, not cut into it). `AssistantWebCache` keeps web answers 10 minutes (key: the question folded by
+  `AssistantText.key`, the language and the local day; at most 20). `AssistantClaude.webModel` stays sonnet: the
+  web search takes most of the time (about 4–6 s a search) and haiku, in five questions, was not faster (median 10.7 s
+  against 12.3 s, one 29.7 s), searched more often and gave up twice. A warm Claude Code process
+  (`--input-format stream-json`) was measured and not used: a process keeps its conversation, so it could serve one
+  request only and would have to be started before the request is known (no early partial transcript, see Listening),
+  i.e. on any speech near the Mac, for about 230 MB and 0.7 s saved; reading the `result` line early saves about 1 s on
+  every call for nothing. Stage times per request: `AssistantTimeline` (`+Timing`: `debug.assistant` `timing` /
+  `timings`, and one log line `assistant timing r<request> <route>: <stage> <ms> …`, stage names and milliseconds only;
+  the listener logs how long after the speech each final transcript came).
 - **Voice**: `AssistantVoice` (`AVSpeechSynthesizer`, on the Mac only). Each utterance gets a number from
   `AssistantUtterances` (CmdsCore): stopping ends the current one at once, and the synthesizer's didCancel / didFinish
   (which for a stopped utterance arrive after the next one was queued) end an utterance only while it is the current

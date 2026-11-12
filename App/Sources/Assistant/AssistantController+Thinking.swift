@@ -21,6 +21,7 @@ extension AssistantController {
         let plan = AssistantPlanner.plan(intent, world: world, strings: .localized, directoryExists: Self.isFolder,
                                          folders: projectFolders(named:), executable: Self.agentExecutable)
         remember(plan)
+        mark(.routed)
         carryOut(plan, world: world, asked: asked)
     }
 
@@ -76,25 +77,33 @@ extension AssistantController {
         let strings = AssistantStrings.localized
         switch plan {
         case .answer(let text):
+            route("rules")
             say(text)
         case .askBack(let text):
+            route("askBack")
             say(text)
             askedBack = asked
         case .propose(let action, let prompt):
+            route("card")
             needsKey = false
             pendingShownAt = Date()
             say(prompt, proposing: action)
         case .summarize(let workspaceID, let paneID, let detailed, let fallback):
             let screen = paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? ""
-            think(capped: !detailed) { await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed) }
+            route(detailed ? "claudeSummary" : "summary")
+            think(capped: !detailed) {
+                await self.summary(of: workspaceID, facts: fallback, screen: screen, detailed: detailed, streams: true)
+            }
         case .summarizeEach(let items, let detailed):
             // One session after the other, a line each (spoken in turn, listed on the HUD).
+            route("summaries")
             let screens = items.map { item in item.paneID.flatMap { try? controller.readText(paneID: $0, scrollback: AssistantTuning.summaryScrollback) } ?? "" }
             think {
                 var lines: [String] = []
                 for (item, screen) in zip(items, screens) {
                     if Task.isCancelled { return nil }
-                    let summary = await self.summary(of: item.workspaceID, facts: item.fallback, screen: screen, detailed: detailed)
+                    let summary = await self.summary(of: item.workspaceID, facts: item.fallback, screen: screen, detailed: detailed,
+                                                     streams: false)
                     lines.append(strings(.session(workspace: item.title, summary: summary)))
                 }
                 return lines.joined(separator: "\n")
@@ -102,14 +111,28 @@ extension AssistantController {
         case .ask(let question):
             // A free command for the agents ("api の Claude にテストを書くよう指示して"): the interpreter (`claude -p`, no
             // tools) turns it into a proposal, planned and confirmed like any other command. Else it is a question.
-            if usesInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
-                let request = machine.request
-                return think(capped: true) {
+            // How sure the rules are (#248, `AssistantRoute`): a request goes to the interpreter first, a live question
+            // naming no workspace to the web at once, and what may be either to the interpreter and the on-device model
+            // at the same time (the interpreter decides; the model's answer is ready when it is a question).
+            let request = machine.request
+            switch AssistantRoute.decide(question, world: world, web: usesWeb, interpreter: usesInterpreter) {
+            case .interpreter:
+                route("interpreter")
+                think(capped: true) {
                     if await self.handleAsCommand(question, world: world, request: request) { return nil }
                     return await self.answer(question, world: world, interpreted: true)
                 }
+            case .interpreterAndModel:
+                route("interpreter|model")
+                think(capped: true) {
+                    let early = self.earlyModelAnswer(question, world: world)
+                    defer { early?.cancel() }
+                    if await self.handleAsCommand(question, world: world, request: request) { return nil }
+                    return await self.answer(question, world: world, interpreted: true, early: early)
+                }
+            case .web, .model:
+                think(capped: true) { await self.answer(question, world: world, interpreted: false) }
             }
-            think(capped: true) { await self.answer(question, world: world, interpreted: false) }
         case .pauseListening:
             pause()
             speakOnly(strings(.paused))
@@ -125,18 +148,23 @@ extension AssistantController {
 
     /// What a session's agent is doing: by the on-device model, or by `claude -p` when `detailed`; the facts when there
     /// is no screen, no model or it fails.
-    private func summary(of workspaceID: String, facts: String, screen: String, detailed: Bool) async -> String {
+    /// `streams`: a detailed summary is spoken sentence by sentence as Claude writes it (#248).
+    private func summary(of workspaceID: String, facts: String, screen: String, detailed: Bool, streams: Bool) async -> String {
         guard !screen.isEmpty else { return facts }
         do {
             if detailed {
-                let summary = try await askingClaude(answers: true) {
-                    try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language)
+                let request = machine.request
+                let sentence = streams ? sentences(for: request) : nil
+                let summary = try await askingClaude(answers: true, slow: true) { progress in
+                    try await AssistantBrain.detailedSummary(facts: facts, screen: screen, language: language, progress: progress,
+                                                             sentence: sentence)
                 }
-                return AssistantBrevity.first(3, of: summary)
+                return AssistantBrevity.first(Self.detailedSentences, of: summary)
             }
             guard AssistantBrain.modelAvailable else { return facts }
             // One sentence a session ("api: テストを実行中。").
-            let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language))
+            let summary = AssistantBrevity.first(1, of: try await AssistantBrain.summarize(facts: facts, screen: screen, language: language,
+                                                                                         progress: progress(for: machine.request)))
             // A marker or a bracketed word ("[START]") is no summary, nor "waiting for input" for a session that does
             // not wait (made up from a quiet screen).
             let waiting = controller.workspace(id: workspaceID).map(AgentActivityStyle.needsUser) ?? true
@@ -151,15 +179,30 @@ extension AssistantController {
     /// else the on-device model, and Claude after all when the model answers that it needs current information. When
     /// the model takes it for an action (or apologises that it cannot act), it is never spoken: the interpreter gets it
     /// (unless it already had it), else the assistant says how to ask. nil: it went on as a command.
-    private func answer(_ question: String, world: AssistantWorld, interpreted: Bool) async -> String? {
+    /// `early`: the on-device model's answer, already being worked out (`AssistantRoute.interpreterAndModel`).
+    private func answer(_ question: String, world: AssistantWorld, interpreted: Bool,
+                        early: Task<String, Error>? = nil) async -> String? {
         let strings = AssistantStrings.localized
         let web = usesWeb
-        if web, AssistantWeb.needsWeb(question) { return await webAnswer(question) }
+        if web, AssistantWeb.needsWeb(question) {
+            route("web")
+            return await webAnswer(question)
+        }
         guard AssistantBrain.modelAvailable else { return strings(.modelUnavailable) }
         let status = AssistantReport.status(world, strings: .english)
         do {
-            let answer = try await AssistantBrain.answer(question, status: status, language: language, web: web)
-            if web, AssistantWeb.answerNeedsWeb(answer) { return await webAnswer(question) }
+            route(interpreted ? "interpreter+model" : "model")
+            let answer: String
+            if let early {
+                answer = try await early.value
+            } else {
+                answer = try await AssistantBrain.answer(question, status: status, language: language, web: web,
+                                                         progress: progress(for: machine.request))
+            }
+            if web, AssistantWeb.answerNeedsWeb(answer) {
+                route("model+web")
+                return await webAnswer(question)
+            }
             if AssistantModelReply.isAction(answer) {
                 if !interpreted, usesInterpreter,
                    await handleAsCommand(question, world: world, request: machine.request) { return nil }
@@ -175,8 +218,8 @@ extension AssistantController {
     /// A free command as an intent, by the interpreter; nil when it is a question, `claude` is missing or fails.
     private func interpret(_ utterance: String, world: AssistantWorld) async -> AssistantIntent? {
         do {
-            let output = try await askingClaude {
-                try await AssistantBrain.interpret(utterance: utterance, world: world, language: language)
+            let output = try await askingClaude { progress in
+                try await AssistantBrain.interpret(utterance: utterance, world: world, language: language, progress: progress)
             }
             let intent = AssistantInterpretation.parse(output)?.intent(in: world)
             assistantLog.info("assistant interpreted a free command: \(intent.map { String(describing: $0).prefix(24) } ?? "question", privacy: .private)")
@@ -189,10 +232,20 @@ extension AssistantController {
 
     /// A question for Claude Code with web search (`AssistantBrain.webAnswer`); a short note when it is missing, fails
     /// or takes too long.
+    /// The same question within a few minutes is answered from `webCache` (#248).
     private func webAnswer(_ question: String) async -> String {
         let strings = AssistantStrings.localized
+        if let cached = webCache.answer(question, language: language.name, now: Date()) {
+            route("web-cache")
+            claudeAnswered = true
+            return cached
+        }
         do {
-            return try await askingClaude(answers: true) { try await AssistantBrain.webAnswer(question: question, language: language) }
+            let answer = try await askingClaude(answers: true, slow: true) { progress in
+                try await AssistantBrain.webAnswer(question: question, language: language, progress: progress)
+            }
+            webCache.store(answer, for: question, language: language.name, now: Date())
+            return answer
         } catch AssistantClaudeProcess.Failure.notFound {
             return strings(.claudeNotFound)
         } catch {
@@ -205,12 +258,15 @@ extension AssistantController {
     /// A `claude -p` call for the current request, with "Asking Claude…" on the HUD while it runs (when it ends or is
     /// stopped, a newer request's mark stays). `answers`: what it returns is the answer, labelled as Claude's (not when
     /// the user has moved on since).
-    private func askingClaude<T>(answers: Bool = false, _ call: () async throws -> T) async rethrows -> T {
+    /// `slow` (a web answer, a detailed summary): the short acknowledgement after `AssistantAck.delay` without an answer.
+    private func askingClaude<T>(answers: Bool = false, slow: Bool = false,
+                                 _ call: (@escaping AssistantBrain.Progress) async throws -> T) async rethrows -> T {
         let request = machine.request
         claudeWorkingFor = request
         refresh()
+        if slow { acknowledgeLater(request) }
         defer { if claudeWorkingFor == request { claudeWorkingFor = nil } }
-        let result = try await call()
+        let result = try await call(progress(for: request))
         if answers, machine.request == request { claudeAnswered = true }
         return result
     }
@@ -233,8 +289,79 @@ extension AssistantController {
         let request = machine.request
         work = Task { [weak self] in
             let text = await body()
-            guard let self, let text, !Task.isCancelled, self.machine.request == request, self.machine.phase == .thinking else { return }
+            guard let self, let text, !Task.isCancelled, self.machine.request == request else { return }
+            // Its first sentences are being said already: the rest follows them.
+            if let streaming = self.streaming, streaming.request == request { return self.finishStream(text) }
+            guard self.machine.phase == .thinking else { return }
             self.say(text, request: request, capped: capped, byClaude: self.claudeAnswered)
         }
+    }
+
+    /// Sentences a detailed summary says at most.
+    static let detailedSentences = 3
+
+    /// The on-device model's answer to `question`, started now (beside the interpreter); nil when it would not be
+    /// asked (no model, or a question for the web).
+    private func earlyModelAnswer(_ question: String, world: AssistantWorld) -> Task<String, Error>? {
+        guard AssistantBrain.modelAvailable, !(usesWeb && AssistantWeb.needsWeb(question)) else { return nil }
+        let status = AssistantReport.status(world, strings: .english)
+        let language = language
+        let web = usesWeb
+        let progress = progress(for: machine.request)
+        return Task { try await AssistantBrain.answer(question, status: status, language: language, web: web, progress: progress) }
+    }
+
+    /// The acknowledgement (`AssistantAck`) for `request` once Claude has taken `AssistantAck.delay` without answering.
+    private func acknowledgeLater(_ request: Int) {
+        let started = Date()
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(AssistantAck.delay))
+            guard let self else { return }
+            let thinking = self.machine.request == request && self.machine.phase == .thinking && self.claudeWorkingFor == request
+            guard AssistantAck.due(slow: true, elapsed: Date().timeIntervalSince(started), thinking: thinking,
+                                   said: self.acknowledged == request, voiceActive: self.machine.voiceActive) else { return }
+            self.acknowledge(request)
+        }
+    }
+
+    /// Sentences reported from `AssistantBrain` on any thread, spoken for `request` on the main actor.
+    private func sentences(for request: Int) -> @Sendable (String) -> Void {
+        { [weak self] text in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated { self?.streamed(text, request: request, limit: Self.detailedSentences) }
+            }
+        }
+    }
+
+    /// A sentence of a detailed summary as Claude writes it (#248): the first is said at once, the next ones (up to
+    /// `limit`) after it; nothing when the user has moved on.
+    private func streamed(_ sentence: String, request: Int, limit: Int) {
+        guard machine.request == request else { return }
+        if var current = streaming, current.request == request {
+            guard current.sentences.count < limit else { return }
+            current.sentences.append(sentence)
+            streaming = current
+            speakMore(sentence, answer: AssistantBrevity.join(current.sentences))
+        } else {
+            guard machine.phase == .thinking else { return }
+            streaming = (request, [sentence])
+            say(sentence, request: request, byClaude: true, open: true)
+        }
+    }
+
+    /// The whole answer, once Claude is done: the sentences not said yet follow (when it goes on as streamed), the HUD
+    /// shows it all, and the voice ends after the last one.
+    private func finishStream(_ text: String) {
+        guard let current = streaming else { return }
+        streaming = nil
+        let all = AssistantBrevity.sentences(text)
+        let said = current.sentences
+        if all.count > said.count, Array(all.prefix(said.count)) == said {
+            for index in said.count..<all.count {
+                speakMore(all[index], answer: AssistantBrevity.join(Array(all.prefix(index + 1))))
+            }
+        }
+        if machine.extendAnswer(text, request: current.request) { refresh() }
+        voice.close()
     }
 }
