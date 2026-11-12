@@ -9,10 +9,12 @@ import CmdsCore
 @available(macOS 26.0, *)
 extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
-    /// `showWhileWaiting?`, `orbSize?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
+    /// `showWhileWaiting?`, `orbSize?`, `listening?`), `off`, `pause`, `resume`, `hotkey`, `hotkey_up` (push to talk),
+    /// `hear` (`text`; `noisy?`, `pushed?`: as heard in a loud room / with the shortcut held),
     /// `speak` (`text`: speaking it without a voice until `spoken`; `card: true`: reading out the card that waits),
     /// `spoken`, `hear_audio` (`path`: an audio file through speech recognition instead of the microphone; `tail?`
-    /// seconds of quiet after it, default 10; `endpoint?` false: only the recogniser ends the utterance), `problem`
+    /// seconds of quiet after it, default 10; `endpoint?` false: only the recogniser ends the utterance; `release?`
+    /// seconds: push to talk, the shortcut held from the start and let go then; `heardAudio` in the state), `problem`
     /// (`text`, none clears it: as if the microphone had failed, for Settings' problem row),
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons; `orb`: the
     /// waiting orb), `level` (`value` 0…1: as the microphone's level), `move_orb` (`x`, `y`: as if the orb were
@@ -32,6 +34,7 @@ extension AssistantController {
         case "pause": pause()
         case "resume": resume()
         case "hotkey": hotkey()
+        case "hotkey_up": hotkeyReleased()
         case "speak":
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
             debugSpeak(text, card: params?["card"]?.boolValue == true)
@@ -39,19 +42,20 @@ extension AssistantController {
         case "problem": debugSetProblem(params?["text"]?.stringValue)
         case "hear":
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
-            hear(text)
+            hear(text, heard: AssistantHeard(noisy: params?["noisy"]?.boolValue == true, pushed: params?["pushed"]?.boolValue == true))
         case "hear_audio":
             // An audio file instead of the microphone, through the same recognition (#248: the end of an utterance).
             guard let path = params?["path"]?.stringValue, path.hasPrefix("/") else { throw RPCError.invalidParams("an absolute path is required") }
             guard !usesMicrophone, !listener.isRunning else { throw RPCError.invalidParams("the microphone is in use") }
             let tail = Self.number(params?["tail"]) ?? 10
+            let release = Self.number(params?["release"])
             listener.finalizesEarly = params?["endpoint"]?.boolValue ?? true
             let locale = language.locale
             Task { [weak self] in
                 // `endpoint: false` is for this call only (#272).
                 defer { self?.listener.finalizesEarly = true }
                 do {
-                    try await self?.listener.debugFeed(URL(fileURLWithPath: path), locale: locale, tail: tail)
+                    try await self?.listener.debugFeed(URL(fileURLWithPath: path), locale: locale, tail: tail, release: release)
                 } catch {
                     self?.debugSetProblem("hear_audio: \(error.localizedDescription)")
                 }
@@ -114,6 +118,14 @@ extension AssistantController {
             "followUpSeconds": machine.followUpUntil.map { .number(max(0, $0.timeIntervalSinceNow)) } ?? .null,
             "claudeWorking": .bool(claudeWorking),
             "microphone": .bool(usesMicrophone),
+            "listening": .string(listening.rawValue),
+            "held": .bool(listener.isHeld),
+            // Inputs as Settings lists them, and the one `Microphone` chooses now (#270; nothing is opened).
+            "inputs": .array(AssistantAudioDevices.inputs().map { device in
+                .object(["name": .string(device.name), "headset": .bool(device.isHeadset)])
+            }),
+            "chosenInput": AssistantInputDevice.choose(settings.assistantMicrophone, devices: AssistantAudioDevices.inputs())
+                .flatMap { uid in AssistantAudioDevices.inputs().first { $0.uid == uid }?.name }.map(JSONValue.string) ?? .null,
             "confirmationKeys": .bool(hotkeys?.confirmationKeysOn ?? false),
             "muted": .bool(muted),
             "mutedSetting": .bool(AppSettings.shared.assistantMuted),
@@ -128,6 +140,7 @@ extension AssistantController {
                 "interpreter": .bool(settings.assistantInterpreter), "reportTasks": .bool(settings.assistantReportTasks),
                 "style": .string(settings.assistantStyle.rawValue), "projectFolders": .string(settings.assistantProjectFolders),
                 "showWhileWaiting": .bool(settings.assistantShowWhileWaiting), "orbSize": .string(settings.assistantOrbSize.rawValue),
+                "listening": .string(settings.assistantListening.rawValue), "microphone": .string(settings.assistantMicrophone),
             ]),
             "hudVisible": .bool(hud.isVisible),
             "queued": .array(queued.map { .string(String(describing: $0)) }),
@@ -138,6 +151,18 @@ extension AssistantController {
             // Stage times of the current request and the last few (#248), milliseconds from the transcript.
             "timing": timeline.map(Self.json) ?? .null,
             "timings": .array(timelines.map(Self.json)),
+            // The last `hear_audio` (#270): final transcripts and early finalisations, seconds from the file's start.
+            "heardAudio": listener.debugRecord.map { record in
+                .object([
+                    "done": .bool(record.done),
+                    "finals": .array(record.finals.map { final in
+                        .object(["text": .string(final.text), "at": .number(final.at), "noisy": .bool(final.noisy),
+                                 "confidences": .array(final.confidences.map(JSONValue.number))])
+                    }),
+                    "finalizes": .array(record.finalizes.map(JSONValue.number)),
+                    "floor": .number(Double(record.floor)),
+                ])
+            } ?? .null,
         ]
         if let action = machine.pending {
             state["pending"] = .object([
@@ -189,6 +214,7 @@ extension AssistantOverrides {
         if let style = params?["style"]?.stringValue.flatMap(AssistantStyle.init(rawValue:)) { self.style = style }
         if let shows = params?["showWhileWaiting"]?.boolValue { showWhileWaiting = shows }
         if let size = params?["orbSize"]?.stringValue.flatMap(AssistantPresence.Size.init(rawValue:)) { orbSize = size }
+        if let mode = params?["listening"]?.stringValue.flatMap(AssistantListening.init(rawValue:)) { listening = mode }
     }
 }
 #endif

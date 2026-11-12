@@ -4,6 +4,26 @@ import Foundation
 /// is what keeps it from acting on conversation: only an utterance that starts with its name (after an optional
 /// "hey" / "ねえ"), or one said within a short window after the assistant spoke or the hotkey was pressed, counts.
 /// Everything else is discarded by the caller right away and never stored.
+/// How an utterance was heard (#270), for the checks that depend on it.
+public struct AssistantHeard: Equatable, Sendable {
+    /// The room was loud (`AssistantEndpoint.isNoisy`): the name is checked more strictly and a follow-up without it
+    /// must be short.
+    public var noisy: Bool
+    /// The recogniser's confidence for each character of `text` (0…1); empty when it gave none.
+    public var confidences: [Double]
+    /// The utterance as recognised (untrimmed), which `confidences` belong to; nil: the one checked.
+    public var text: String?
+    /// Said while the listen shortcut was held (push to talk): meant for the assistant, without its name.
+    public var pushed: Bool
+
+    public init(noisy: Bool = false, confidences: [Double] = [], text: String? = nil, pushed: Bool = false) {
+        self.noisy = noisy
+        self.confidences = confidences
+        self.text = text
+        self.pushed = pushed
+    }
+}
+
 public enum AssistantAddressing {
     public enum Result: Equatable, Sendable {
         /// Not for the assistant: drop it.
@@ -28,13 +48,33 @@ public enum AssistantAddressing {
     }
 
     /// `followUpOpen`: the assistant just spoke or the hotkey was pressed, so a command without the name counts.
-    public static func check(_ utterance: String, names: [String], followUpOpen: Bool) -> Result {
+    /// `heard`: how it was heard (#270): in a loud room the name must also have been heard with
+    /// `noisyNameConfidence`, so a passer-by's words that merely look like it do not wake the assistant.
+    public static func check(_ utterance: String, names: [String], followUpOpen: Bool,
+                             heard: AssistantHeard = AssistantHeard()) -> Result {
         let text = AssistantText.trimmed(utterance)
         guard !text.isEmpty else { return .ignored }
         if let rest = afterName(text, names: names) {
+            guard !heard.noisy || nameIsClear(text, rest: rest, heard: heard) else { return .ignored }
             return rest.isEmpty ? .wake : .command(rest, byName: true)
         }
         return followUpOpen ? .command(text, byName: false) : .ignored
+    }
+
+    /// The recogniser's lowest confidence (0…1) for the name in a loud room: below it the name is not taken.
+    public static let noisyNameConfidence = 0.5
+
+    /// Whether the name at the start of `text` (what comes before `rest`) was heard with `noisyNameConfidence`. True
+    /// when the recogniser gave no confidences.
+    static func nameIsClear(_ text: String, rest: String, heard: AssistantHeard) -> Bool {
+        guard !heard.confidences.isEmpty else { return true }
+        // The name's characters: the utterance's (untrimmed, as the confidences are) up to where `rest` starts.
+        let utterance = heard.text ?? text
+        let leading = utterance.prefix { AssistantText.trimmed(String($0)).isEmpty }.count
+        let nameLength = max(1, text.count - rest.count)
+        let range = leading..<min(heard.confidences.count, leading + nameLength)
+        guard !range.isEmpty else { return true }
+        return heard.confidences[range].min() ?? 1 >= noisyNameConfidence
     }
 
     /// Longest follow-up taken without the name after an answer: words (Latin script) or characters (Japanese).

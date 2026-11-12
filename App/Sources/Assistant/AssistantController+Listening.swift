@@ -12,18 +12,24 @@ extension AssistantController {
     /// Said by name while the assistant speaks or works (barge-in), it stops that first; the HUD shows the new
     /// transcript at once.
     /// `speechEnd`: the last loud audio before this transcript (from the microphone; #248).
-    func hear(_ text: String, speechEnd: Date? = nil) {
+    /// `heard`: a loud room, the recogniser's confidence, push to talk (#270).
+    func hear(_ text: String, speechEnd: Date? = nil, heard how: AssistantHeard = AssistantHeard()) {
         let heard = Date()
         let request = machine.request
-        let step = machine.hear(text, names: names, now: heard)
+        let step = machine.hear(text, names: names, now: heard, heard: how)
         if machine.request != request { interrupt() }
         if case .handle = step { beginTimeline(at: heard, speechEnd: speechEnd) }
         perform(step)
     }
 
-    /// The listen shortcut.
+    /// The listen shortcut. In push to talk (#270) it is held while the user speaks: the microphone is heard from now
+    /// until it comes up (`hotkeyReleased`).
     func hotkey() {
         guard isOn else { return }
+        if listening == .pushToTalk {
+            guard !listener.isHeld else { return }
+            listener.push(true)
+        }
         let request = machine.request
         machine.hotkey(now: Date())
         if machine.request != request { interrupt() }
@@ -51,6 +57,16 @@ extension AssistantController {
         work?.cancel()
         work = nil
         claudeWorkingFor = nil
+    }
+
+    /// The listen shortcut came up: in push to talk the utterance ends now (#270).
+    func hotkeyReleased() {
+        guard listener.isHeld else { return }
+        listener.push(false)
+    }
+
+    func globalKeyReleased(_ key: AssistantHotkeys.Key) {
+        if key == .listen { hotkeyReleased() }
     }
 
     func globalKey(_ key: AssistantHotkeys.Key) {
