@@ -52,7 +52,7 @@ enum AssistantClaudeProcess {
         try? stdin.fileHandleForWriting.close()
         // The user moved on (a new request, barge-in, off): the process is stopped, its answer never used.
         let running = RunningProcess(process)
-        let spoken = AssistantSpokenStream(streaming: !arguments.contains("--allowedTools"))
+        let spoken = AssistantSpokenStream(streaming: AssistantClaude.streamsSentences(arguments))
         return try await withTaskCancellationHandler {
             try await wait(for: process, output: output, timeout: timeout, spoken: spoken, progress: progress, sentence: sentence)
         } onCancel: {
@@ -89,7 +89,7 @@ enum AssistantClaudeProcess {
             }
             DispatchQueue.global().async {
                 var spoken = spoken
-                var pending = Data()
+                var lines = AssistantClaudeStream.Lines()
                 var firstByte = true
                 var firstText = true
                 // Lines as they come; the answer is taken from its `result` line, then the rest is only drained.
@@ -100,10 +100,7 @@ enum AssistantClaudeProcess {
                         firstByte = false
                         progress?(.claudeFirstByte, Date())
                     }
-                    pending.append(chunk)
-                    while let newline = pending.firstIndex(of: UInt8(ascii: "\n")) {
-                        let line = String(decoding: pending[pending.startIndex..<newline], as: UTF8.self)
-                        pending.removeSubrange(pending.startIndex...newline)
+                    for line in lines.append(chunk) {
                         for event in AssistantClaudeStream.events(inLine: line) {
                             if case .text = event, firstText {
                                 firstText = false

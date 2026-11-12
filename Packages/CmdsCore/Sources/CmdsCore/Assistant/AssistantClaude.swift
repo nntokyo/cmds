@@ -31,6 +31,12 @@ public enum AssistantClaude {
     /// there, the text sentence by sentence (`--verbose` is required for stream-json with `-p`).
     public static let outputArguments = ["--output-format", "stream-json", "--verbose", "--include-partial-messages"]
 
+    /// Whether a call's answer may be spoken sentence by sentence as it is written (`AssistantSpokenStream`): not for a
+    /// call with tools (a web question), whose turns before the last one are no answer.
+    public static func streamsSentences(_ arguments: [String]) -> Bool {
+        !arguments.contains("--allowedTools")
+    }
+
     /// Environment variables the assistant's `claude` never gets (cmds marks its panes' processes with them).
     public static func environment(_ base: [String: String]) -> [String: String] {
         base.filter { !$0.key.hasPrefix("CMDS_") }

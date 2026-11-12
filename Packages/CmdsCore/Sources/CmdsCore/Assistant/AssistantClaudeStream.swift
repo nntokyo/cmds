@@ -44,6 +44,24 @@ public enum AssistantClaudeStream {
             return []
         }
     }
+
+    /// The output as it comes in chunks, cut into whole lines (a line split across two chunks waits for its end).
+    public struct Lines: Equatable, Sendable {
+        private var pending = Data()
+
+        public init() {}
+
+        /// The lines `chunk` completed, without their line breaks.
+        public mutating func append(_ chunk: Data) -> [String] {
+            pending.append(chunk)
+            var lines: [String] = []
+            while let newline = pending.firstIndex(of: UInt8(ascii: "\n")) {
+                lines.append(String(decoding: pending[pending.startIndex..<newline], as: UTF8.self))
+                pending.removeSubrange(pending.startIndex...newline)
+            }
+            return lines
+        }
+    }
 }
 
 /// The sentences of an answer as it is written (#248), made fit to speak (`AssistantWeb.speakable`: no "Sources:"

@@ -111,6 +111,22 @@ final class AssistantClaudeStreamTests: XCTestCase {
         XCTAssertEqual(AssistantClaudeStream.events(inLine: "not json"), [])
     }
 
+    func testLinesAcrossChunks() {
+        var lines = AssistantClaudeStream.Lines()
+        XCTAssertEqual(lines.append(Data(#"{"type":"res"#.utf8)), [])
+        XCTAssertEqual(lines.append(Data("ult\"}\n{\"a\":1}\n{\"b\"".utf8)), [#"{"type":"result"}"#, #"{"a":1}"#])
+        // A character split between chunks is whole in its line.
+        let japanese = Array("晴れ\n".utf8)
+        XCTAssertEqual(lines.append(Data(":2}\n".utf8) + Data(japanese.prefix(2))), [#"{"b":2}"#])
+        XCTAssertEqual(lines.append(Data(japanese.dropFirst(2))), ["晴れ"])
+        XCTAssertEqual(lines.append(Data("\n".utf8)), [""])
+    }
+
+    func testOnlyACallWithoutToolsStreamsSentences() {
+        XCTAssertTrue(AssistantClaude.streamsSentences(AssistantClaude.detailedSummaryArguments(facts: "api", language: "English")))
+        XCTAssertFalse(AssistantClaude.streamsSentences(AssistantClaude.webArguments(question: "weather", language: "English")))
+    }
+
     func testSentencesAsTheyAreWritten() {
         var stream = AssistantSpokenStream(streaming: true)
         XCTAssertEqual(stream.take(.text("エージェントはテストを")), [])
