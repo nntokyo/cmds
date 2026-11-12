@@ -27,8 +27,10 @@ import tempfile
 import wave
 
 RATE = 16000
-LEAD = 1.5
+LEAD = 1.5  # seconds of noise before the speech
 SPEECH_RMS = 0.05  # a voice at arm's length from a laptop microphone
+QUIET_LEVEL = 0.001  # `quiet`: the hiss 60 dB below the speech
+ACTIVE_FLOOR = 0.03  # `active_rms`: frames within 30 dB of the loudest
 
 PHRASES = {
     "ja": ["ジャービス、状況は？", "ジャービス、APIのエージェントにテストを書くように指示して"],
@@ -63,12 +65,12 @@ def rms(samples):
     return math.sqrt(sum(x * x for x in samples) / max(1, len(samples)))
 
 
-def active_rms(samples, frame=320):
-    """RMS of the frames with speech in them (within 30 dB of the loudest), so pauses do not lower it."""
+def active_rms(samples, frame=RATE // 50):
+    """RMS of the 20 ms frames with speech in them (within 30 dB of the loudest), so pauses do not lower it."""
     frames = [samples[i:i + frame] for i in range(0, len(samples) - frame, frame)]
     levels = [rms(f) for f in frames]
     top = max(levels)
-    loud = [f for f, level in zip(frames, levels) if level > top * 0.03]
+    loud = [f for f, level in zip(frames, levels) if level > top * ACTIVE_FLOOR]
     return rms([x for f in loud for x in f])
 
 
@@ -97,12 +99,15 @@ def brown(n, rng):
     return out
 
 
-def babble(n, rng, cache={}):
-    """Several voices at once, each looped from a random offset."""
-    if "voices" not in cache:
-        cache["voices"] = [scaled(say(text, voice, rate), 1) for voice, rate, text in BABBLE]
+_babble_voices = []
+
+
+def babble(n, rng):
+    """Several voices at once, each looped from a random offset (the voices are synthesised once)."""
+    if not _babble_voices:
+        _babble_voices.extend(scaled(say(text, voice, rate), 1) for voice, rate, text in BABBLE)
     out = [0.0] * n
-    for voice in cache["voices"]:
+    for voice in _babble_voices:
         offset = rng.randrange(len(voice))
         for i in range(n):
             out[i] += voice[(offset + i) % len(voice)]
@@ -166,7 +171,7 @@ def main():
         cases = [("quiet", None)] + [(noise, int(snr)) for noise in args.noise.split(",") for snr in args.snr.split(",")]
         for noise, snr in cases:
             kind = "pink" if noise == "quiet" else noise
-            level = SPEECH_RMS * (0.001 if snr is None else 10 ** (-snr / 20))
+            level = SPEECH_RMS * (QUIET_LEVEL if snr is None else 10 ** (-snr / 20))
             background = scaled(NOISES[kind](total, rng), level)
             mixed = background[:]
             for i, x in enumerate(speech):
@@ -176,10 +181,18 @@ def main():
             manifest.append({"file": name, "text": phrase, "noise": noise, "snr": snr,
                              "speechStart": LEAD, "speechEnd": LEAD + len(speech) / RATE})
             print(name)
-    path = os.path.join(args.out, "manifest.json")
-    old = json.load(open(path)) if os.path.exists(path) else []
+    write_manifest(os.path.join(args.out, "manifest.json"), manifest)
+
+
+def write_manifest(path, manifest):
+    """`manifest` into `path`, replacing the entries of the same files and keeping the others (another language)."""
+    old = []
+    if os.path.exists(path):
+        with open(path) as f:
+            old = json.load(f)
     names = {entry["file"] for entry in manifest}
-    json.dump([e for e in old if e["file"] not in names] + manifest, open(path, "w"), ensure_ascii=False, indent=1)
+    with open(path, "w") as f:
+        json.dump([e for e in old if e["file"] not in names] + manifest, f, ensure_ascii=False, indent=1)
 
 
 if __name__ == "__main__":
