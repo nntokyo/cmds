@@ -140,6 +140,8 @@ extension AssistantController {
             route(.interpreter)
             think(capped: true) {
                 if await self.handleAsCommand(question, world: world, request: request) { return nil }
+                // Cancelled meanwhile (a new request): no `claude -p` for a web answer that would be dropped (#272).
+                guard self.stillWanted(request) else { return nil }
                 return await self.answer(question, world: world, interpreted: true)
             }
         case .interpreterAndModel:
@@ -148,6 +150,7 @@ extension AssistantController {
                 let early = self.earlyModelAnswer(question, world: world)
                 defer { early?.cancel() }
                 if await self.handleAsCommand(question, world: world, request: request) { return nil }
+                guard self.stillWanted(request) else { return nil }
                 return await self.answer(question, world: world, interpreted: true, early: early)
             }
         case .web, .model:
@@ -220,8 +223,15 @@ extension AssistantController {
             let text = AssistantWeb.withoutMarker(answer)
             return text.isEmpty ? strings(.modelUnavailable) : text
         } catch {
+            // The error only (never the question; #272).
+            assistantLog.error("assistant on-device answer failed: \(String(describing: error), privacy: .public)")
             return strings(.modelUnavailable)
         }
+    }
+
+    /// Whether the work for `request` is still wanted: not cancelled, and the user has not moved on (#272).
+    private func stillWanted(_ request: Int) -> Bool {
+        !Task.isCancelled && machine.request == request
     }
 
     /// A free command as an intent, by the interpreter; nil when it is a question, `claude` is missing or fails.
