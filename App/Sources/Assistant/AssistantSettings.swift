@@ -17,6 +17,15 @@ enum AssistantStyle: String, CaseIterable {
     }
 }
 
+extension AssistantPresence.Size {
+    var title: String {
+        switch self {
+        case .small: return String(localized: "Small (56 pt)", comment: "Settings › Assistant › Orb size")
+        case .medium: return String(localized: "Medium (72 pt)", comment: "Settings › Assistant › Orb size")
+        }
+    }
+}
+
 /// The global shortcut that makes the assistant listen for one command (Settings › Assistant). A few fixed choices:
 /// each is a Carbon hot key, which needs no Accessibility permission.
 enum AssistantHotkey: String, CaseIterable {
@@ -57,9 +66,15 @@ extension AppSettings {
     static let assistantInterpreterKey = "AssistantInterpreter"
     static let assistantReportTasksKey = "AssistantReportTasks"
     static let assistantProjectFoldersKey = "AssistantProjectFolders"
+    static let assistantShowWhileWaitingKey = "AssistantShowWhileWaiting"
+    static let assistantOrbSizeKey = "AssistantOrbSize"
+    /// Where the user dragged the waiting orb ("x,y", its centre in screen points). Not observed: dragging it is no
+    /// settings change.
+    static let assistantOrbCenterKey = "AssistantOrbCenter"
     static let assistantKeys = [assistantEnabledKey, assistantNamesKey, assistantStyleKey, assistantVoiceKey, assistantRateKey,
                                 assistantMutedKey, assistantHotkeyKey, assistantWebKey, assistantInterpreterKey,
-                                assistantReportTasksKey, assistantProjectFoldersKey]
+                                assistantReportTasksKey, assistantProjectFoldersKey, assistantShowWhileWaitingKey,
+                                assistantOrbSizeKey]
 
     /// The rates the voice may take (AVSpeechUtterance rates; 0.5 is the system default).
     static let assistantRateRange: ClosedRange<Double> = 0.35...0.65
@@ -127,6 +142,24 @@ extension AppSettings {
     var assistantProjectFolders: String {
         get { defaults.string(forKey: Self.assistantProjectFoldersKey) ?? "" }
         set { set(newValue.trimmingCharacters(in: .whitespaces).isEmpty ? nil : newValue, forKey: Self.assistantProjectFoldersKey) }
+    }
+
+    /// The small orb shows while the assistant waits for its name (`AssistantPresence`). On unless the user turns it
+    /// off.
+    var assistantShowWhileWaiting: Bool {
+        get { defaults.object(forKey: Self.assistantShowWhileWaitingKey) == nil ? true : defaults.bool(forKey: Self.assistantShowWhileWaitingKey) }
+        set { set(newValue ? nil : false, forKey: Self.assistantShowWhileWaitingKey) }
+    }
+
+    var assistantOrbSize: AssistantPresence.Size {
+        get { defaults.string(forKey: Self.assistantOrbSizeKey).flatMap(AssistantPresence.Size.init(rawValue:)) ?? .small }
+        set { set(newValue == .small ? nil : newValue.rawValue, forKey: Self.assistantOrbSizeKey) }
+    }
+
+    /// nil: the default place, bottom right above the Dock.
+    var assistantOrbCenter: CGPoint? {
+        get { AssistantPresence.parse(defaults.string(forKey: Self.assistantOrbCenterKey)) }
+        set { set(newValue.map(AssistantPresence.format), forKey: Self.assistantOrbCenterKey) }
     }
 
     var assistantHotkey: AssistantHotkey {

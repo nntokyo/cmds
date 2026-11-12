@@ -11,14 +11,19 @@ extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
     /// `speak` (`text`: speaking it without a voice until `spoken`), `spoken`, `problem` (`text`, none clears it: as
     /// if the microphone had failed, for Settings' problem row),
-    /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons). `snapshot`
-    /// adds the HUD drawn off screen (`png_base64`; without the window's translucency).
+    /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons; `orb`: the
+    /// waiting orb), `level` (`value` 0…1: as the microphone's level), `move_orb` (`x`, `y`: as if the orb were
+    /// dropped with its centre there). `snapshot` adds the HUD drawn off screen (`png_base64`; without the window's
+    /// translucency) and the waiting orb (`orb.png_base64`) when it shows.
+    ///
+    /// `mute` is a runtime override until `off` or a relaunch, never written to the settings: a test must not leave
+    /// the user's assistant muted.
     func debugPerform(_ params: JSONValue?) throws -> JSONValue {
         let action = params?["action"]?.stringValue ?? "state"
         switch action {
         case "state": break
         case "on":
-            if let mute = params?["mute"]?.boolValue { AppSettings.shared.assistantMuted = mute }
+            if let mute = params?["mute"]?.boolValue { mutedOverride = mute }
             if let web = params?["web"]?.boolValue { AppSettings.shared.assistantWeb = web }
             if let interpreter = params?["interpreter"]?.boolValue { AppSettings.shared.assistantInterpreter = interpreter }
             if let report = params?["reportTasks"]?.boolValue { AppSettings.shared.assistantReportTasks = report }
@@ -39,6 +44,16 @@ extension AssistantController {
         case "hear":
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
             hear(text)
+        case "click" where params?["button"]?.stringValue == "orb":
+            orb.debugClick()
+        case "level":
+            guard let value = Self.number(params?["value"]) else { throw RPCError.invalidParams("value is required") }
+            heard(level: Float(value))
+        case "move_orb":
+            guard let x = Self.number(params?["x"]), let y = Self.number(params?["y"]) else {
+                throw RPCError.invalidParams("x and y are required")
+            }
+            orbMoved(to: CGPoint(x: x, y: y))
         case "key", "click":
             guard let which = params?["key"]?.stringValue ?? params?["button"]?.stringValue,
                   which == "confirm" || which == "cancel" else { throw RPCError.invalidParams("key must be confirm or cancel") }
@@ -52,6 +67,11 @@ extension AssistantController {
         }
         refresh()
         return debugState(snapshot: params?["snapshot"]?.boolValue == true)
+    }
+
+    private static func number(_ value: JSONValue?) -> Double? {
+        if case .number(let number)? = value { return number }
+        return nil
     }
 
     private func debugState(snapshot: Bool) -> JSONValue {
@@ -70,7 +90,8 @@ extension AssistantController {
             "claudeWorking": .bool(claudeWorking),
             "microphone": .bool(usesMicrophone),
             "confirmationKeys": .bool(hotkeys?.confirmationKeysOn ?? false),
-            "muted": .bool(AppSettings.shared.assistantMuted),
+            "muted": .bool(muted),
+            "mutedSetting": .bool(AppSettings.shared.assistantMuted),
             "web": .bool(AppSettings.shared.assistantWeb),
             "interpreter": .bool(AppSettings.shared.assistantInterpreter),
             "hudVisible": .bool(hud.isVisible),
@@ -98,6 +119,21 @@ extension AssistantController {
         }
         let frame = hud.panel.frame
         state["frame"] = .array([frame.minX, frame.minY, frame.width, frame.height].map { .number(Double($0)) })
+        let orbFrame = orb.panel.frame
+        var orbState: [String: JSONValue] = [
+            "visible": .bool(orb.isShown),
+            "look": orb.look.map { .string($0.rawValue) } ?? .null,
+            "showWhileWaiting": .bool(settings.assistantShowWhileWaiting),
+            "size": .string(settings.assistantOrbSize.rawValue),
+            "saved": settings.assistantOrbCenter.map { .string(AssistantPresence.format($0)) } ?? .null,
+            "hearing": .bool(hearing.isHearing),
+            "frame": .array([orbFrame.minX, orbFrame.minY, orbFrame.width, orbFrame.height].map { .number(Double($0)) }),
+            "window": .number(Double(orb.panel.windowNumber)),
+        ]
+        if snapshot, orb.isShown {
+            orbState["png_base64"] = orb.debugSnapshot().map { .string($0.base64EncodedString()) } ?? .null
+        }
+        state["orb"] = .object(orbState)
         if snapshot, let view = hud.panel.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
             view.cacheDisplay(in: view.bounds, to: rep)
             state["png_base64"] = rep.representation(using: .png, properties: [:]).map { .string($0.base64EncodedString()) } ?? .null

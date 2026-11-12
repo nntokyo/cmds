@@ -11,6 +11,8 @@ extension AssistantController {
     /// A workspace or pane changed: the recognition vocabulary follows the titles, and the sessions given a task are
     /// checked for their agent's state (the state the app already tracks; no screen is read).
     func stateChanged(_ change: StateChange) {
+        // The waiting orb turns orange when a workspace needs the user.
+        schedulePresenceUpdate()
         switch change {
         case .workspaces, .workspace: updateVocabulary()
         case .pane, .notification: break

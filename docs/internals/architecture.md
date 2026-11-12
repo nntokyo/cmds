@@ -21,7 +21,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `+Remote` folders on SSH hosts; `GitStatusReader`), `RemoteConnections` (one SFTP connection per host), `TransferCenter` (the transfer queue, `transfer.*`) and the Transfers window. Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git; `FileLocation`, `SFTPPacket`/`SFTPClient`, `SSHFileConnection`, `FileTree`, `RemoteTrash`, `TransferJob`/`TransferQueue`; [files-sftp.md](files-sftp.md)). |
 | `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs, the 1-minute notice), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), pane tags, the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`, `ScheduleTarget`). |
 | `Widget/Sources` | The cmds widget (#96, WidgetKit extension `CmdsWidget`, embedded at `cmds.app/Contents/PlugIns/CmdsWidget.appex`). It reads `widget.json` (CmdsCore `WidgetSnapshot`), which `WidgetPublisher` in the app writes to the support folder; the extension is sandboxed with a read-only exception for that one file (`Widget/CmdsWidget.entitlements`, resolved from the real home, not the sandbox container). The menu bar item and the widget share `AgentOverview`. Clicks open `cmds://workspace/<id>`. |
-| `App/Sources/Assistant` | The voice assistant (#243, macOS 26+): `AssistantController` (ties it together), `AssistantListener` (microphone → SpeechAnalyzer), `AssistantVoice` (AVSpeechSynthesizer), `AssistantBrain` (Foundation Models, `claude -p`; the process: `AssistantClaudeProcess`), `AssistantTuning` (timings and caps), `AssistantHUD` / `AssistantOrbView` (the panel), `AssistantHotkeys` (Carbon hot keys), Settings › Assistant, `debug.assistant`. Rules in `CmdsCore/Assistant`. |
+| `App/Sources/Assistant` | The voice assistant (#243, macOS 26+): `AssistantController` (ties it together), `AssistantListener` (microphone → SpeechAnalyzer), `AssistantVoice` (AVSpeechSynthesizer), `AssistantBrain` (Foundation Models, `claude -p`; the process: `AssistantClaudeProcess`), `AssistantTuning` (timings and caps), `AssistantHUD` / `AssistantOrbView` (the panel), `AssistantIdleOrb` (the orb while waiting), `AssistantHotkeys` (Carbon hot keys), Settings › Assistant, `debug.assistant`. Rules in `CmdsCore/Assistant`. |
 | `App/Sources/Shortcuts` | Main menu + key equivalents (`MainMenu`), menu actions (`CommandRouter`). |
 | `App/Sources/API` | Unix-socket JSON-lines server dispatching to `AppController`; the bundled CLI and its installer. |
 | `App/Sources/Sync` | Companion server (Bonjour `_cmds._tcp`, WebSocket over TLS, keychain sync identity, pairing window, Bluetooth L2CAP relay, remote access via SSH) for the iOS app. |
@@ -449,6 +449,18 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
 - **Keys and HUD**: the HUD is a `.nonactivatingPanel` that can never become key; Return / Enter / Esc are Carbon hot
   keys registered only while a card shows (ignored for 0.8 s after it appears), ⌥⌘J likewise; isolated instances
   register none.
+- **Waiting orb**: `AssistantIdleOrb`, another never-key `.nonactivatingPanel` (all Spaces, `.stationary`), shows while
+  the assistant is on and the HUD is not (`AssistantPresence.shown`, CmdsCore: off → nothing, HUD → none of it,
+  paused → dim and hollow, `Hearing` (level ≥ 0.15 on, < 0.08 for 0.6 s off) → follows the level, a workspace needing
+  the user → orange; Settings › Assistant › Show while waiting `AssistantShowWhileWaiting`, on unless false, and
+  `AssistantOrbSize` small 56 pt / medium 72 pt). `AssistantController+Presence` updates it from `refresh()`, state
+  changes (coalesced) and screen changes. It grows and fades as the HUD fades in, and comes back after the HUD fades
+  out (0.22 s; none with Reduce Motion). Only the disc takes the mouse (`hitTest`): a click calls `showLast()` (the HUD
+  with the last thing said for `hudLinger`), a drag past 4 pt moves it and stores its centre in `AssistantOrbCenter`
+  (not observed, so no settings change), kept on the nearest screen within 160 pt (`AssistantPresence.center`), else
+  bottom right above the Dock (20 pt margins of `visibleFrame`).
+- **Muting in tests**: `debug.assistant` `on {mute}` sets `mutedOverride` (cleared by `turnOff`, gone after a
+  relaunch), never `AssistantMuted`; the goodbye after "stop" keeps it (`speakOnly(_:muted:)`).
 
 ## Keeping the Mac awake
 

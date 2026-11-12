@@ -11,6 +11,9 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
                                            target: nil, action: nil)
     private let namesField = NSTextField()
     private let stylePopup = NSPopUpButton()
+    private let waitingCheckbox = NSButton(checkboxWithTitle: String(localized: "Show while waiting", comment: "Settings › Assistant: a small orb shows while the assistant waits for its name"),
+                                           target: nil, action: nil)
+    private let orbSizePopup = NSPopUpButton()
     private let voicePopup = NSPopUpButton()
     private let rateSlider = NSSlider()
     private let mutedCheckbox = NSButton(checkboxWithTitle: String(localized: "Show answers without speaking", comment: "Settings › Assistant"),
@@ -48,6 +51,15 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         }
         stylePopup.target = self
         stylePopup.action = #selector(styleChanged)
+        waitingCheckbox.target = self
+        waitingCheckbox.action = #selector(waitingToggled)
+        for size in AssistantPresence.Size.allCases {
+            orbSizePopup.addItem(withTitle: size.title)
+            orbSizePopup.lastItem?.representedObject = size.rawValue
+        }
+        orbSizePopup.target = self
+        orbSizePopup.action = #selector(orbSizeChanged)
+        orbSizePopup.setAccessibilityLabel(String(localized: "Orb size", comment: "Settings › Assistant: the size of the orb shown while waiting (VoiceOver)"))
         voicePopup.target = self
         voicePopup.action = #selector(voiceChanged)
         for button in [personalButton, personalSettingsButton] {
@@ -106,6 +118,9 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
             [NSGridCell.emptyContentView, note(String(localized: "It answers only when you start with its name (\(names[0]) or \(names[1]) unless you set others, separated by commas), or right after it spoke. Everything else is dropped at once; nothing heard is stored.", comment: "Settings › Assistant"))],
             [label(String(localized: "Shortcut:", comment: "Settings › Assistant: listen for one command")), hotkeyPopup],
             [label(String(localized: "Style:", comment: "Settings › Assistant")), stylePopup],
+            [NSGridCell.emptyContentView, waitingCheckbox],
+            [label(String(localized: "Orb size:", comment: "Settings › Assistant: the size of the orb shown while waiting")), orbSizePopup],
+            [NSGridCell.emptyContentView, note(String(localized: "A small orb at the bottom right while it waits for its name: dim while paused, orange when a workspace needs you. It grows into the HUD when you speak to it. Click it for the last answer; drag it anywhere.", comment: "Settings › Assistant: under Show while waiting"))],
             section(String(localized: "Spoken Answers", comment: "Settings › Assistant: section header (the voice, its rate, muting)")),
             [label(String(localized: "Voice:", comment: "Settings › Assistant")), voicePopup],
             [NSGridCell.emptyContentView, personalButtons],
@@ -133,6 +148,9 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
         enabledCheckbox.isEnabled = unlocked
         if namesField.currentEditor() == nil { namesField.stringValue = settings.assistantNames }
         stylePopup.selectItem(at: stylePopup.indexOfItem(withRepresentedObject: settings.assistantStyle.rawValue))
+        waitingCheckbox.state = settings.assistantShowWhileWaiting ? .on : .off
+        orbSizePopup.selectItem(at: orbSizePopup.indexOfItem(withRepresentedObject: settings.assistantOrbSize.rawValue))
+        orbSizePopup.isEnabled = settings.assistantShowWhileWaiting
         fillVoices()
         rateSlider.doubleValue = settings.assistantRate
         mutedCheckbox.state = settings.assistantMuted ? .on : .off
@@ -242,6 +260,14 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate {
 
     @objc private func styleChanged() {
         settings.assistantStyle = (stylePopup.selectedItem?.representedObject as? String).flatMap(AssistantStyle.init(rawValue:)) ?? .jarvis
+    }
+
+    @objc private func waitingToggled() {
+        settings.assistantShowWhileWaiting = waitingCheckbox.state == .on
+    }
+
+    @objc private func orbSizeChanged() {
+        settings.assistantOrbSize = (orbSizePopup.selectedItem?.representedObject as? String).flatMap(AssistantPresence.Size.init(rawValue:)) ?? .small
     }
 
     @objc private func voiceChanged() {

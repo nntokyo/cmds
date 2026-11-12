@@ -164,14 +164,21 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   mouse drag (Esc cancels) need a person.
 - `debug.assistant {action?, …}` (DEBUG builds, macOS 26, #243) drives the voice assistant without a microphone or
   speech: `on {mute: true}` turns it on text-only (the microphone is never started from here and the choice is not
-  remembered, so a relaunch starts nothing; keep it muted), `hear {text}` injects a recognised utterance (an
+  remembered, so a relaunch starts nothing; keep it muted: `mute` is a runtime override until `off` or a relaunch and
+  is never written to the settings, `state` has `muted` (in effect) and `mutedSetting`), `hear {text}` injects a recognised utterance (an
   unaddressed one is dropped as from speech; after an answer wait 1 s, the echo guard), `speak {text}` makes it
   "say" a text without a voice and stay speaking until `spoken` (its own voice heard back, barge-in by name; `state`
   has `request`, `voiceActive`, `followUpSeconds`, `claudeWorking`), `problem {text?}` shows a problem as if the
   microphone had failed (none clears it; Settings › Assistant's orange row comes and goes while Settings is open, the
   window growing and shrinking with it; `debug.show_settings` returns the window's `frame`), `key {key: confirm|cancel}`
   / `click {button: …}` answer the card, `state` returns the phase, transcript, answer, pending action and the HUD's
-  texts, `snapshot: true` the HUD drawn off screen (or `screencapture -l <window>`). Isolated instances register no
+  texts, `snapshot: true` the HUD drawn off screen (or `screencapture -l <window>`). The waiting orb: `state.orb`
+  (`visible`, `look` standingBy / hearing / attention / paused, `frame`, `window`, `size`, `saved`, `hearing`;
+  `orb.png_base64` with `snapshot` while it shows; wait 0.5 s after it comes back from the HUD, it fades in),
+  `level {value}` as the microphone's level (≥ 0.15: hearing), `click {button: orb}` (the HUD with the last answer),
+  `move_orb {x, y}` (dropped with its centre there; stored as `AssistantOrbCenter` in the instance's defaults suite).
+  Check: visible after `on`, hidden while the HUD shows after `hear`, back after the HUD hides, `paused` after `pause`,
+  hidden after `defaults write <suite> AssistantShowWhileWaiting -bool false`, `AssistantOrbSize medium` 72 pt. Isolated instances register no
   global keys (⌥⌘J, Return / Esc while a card shows), so `confirmationKeys` stays false there. Fake agents for it:
   `agent.claude_status` for a pane, `agent.claude_hook` `UserPromptSubmit` (working) / `Notification` (needs you), and
   a script in a pane the test created that prints `❯ 1. Yes` / `  2. No` and reads a line (one that mentions

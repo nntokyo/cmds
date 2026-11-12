@@ -121,6 +121,14 @@ workspace needs you), the microphone level, what it heard, the answer, and a rin
 **Quiet** style: the text and the card only. With Reduce Motion the orb does not move. The HUD hides a few seconds
 after the assistant is done.
 
+**While it waits.** While the assistant is on and waits for its name, a small orb stays at the bottom right of the
+screen, above the Dock: it breathes slowly while standing by, follows your voice while it hears speech, turns orange
+when a workspace needs you, and is dim and hollow while listening is paused. When you speak to it, it grows into the
+HUD, and comes back when the HUD goes. It never takes the keyboard, and clicks around it go to the window below. Click
+it to see the last answer again; drag it anywhere (cmds remembers where). In the Quiet style it is a plain dot. Turn it
+off with Settings › Assistant › **Show while waiting**, or make it larger with **Orb size** (small 56 pt, medium
+72 pt).
+
 Settings › Assistant also chooses the voice and its rate, or **Show answers without speaking**.
 
 **Personal Voice.** Your own Personal Voice (made in System Settings › Accessibility › Personal Voice) can speak the

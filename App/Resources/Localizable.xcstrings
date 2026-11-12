@@ -1395,6 +1395,17 @@
         }
       }
     },
+    "A small orb at the bottom right while it waits for its name: dim while paused, orange when a workspace needs you. It grows into the HUD when you speak to it. Click it for the last answer; drag it anywhere.": {
+      "comment": "Settings › Assistant: under Show while waiting",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を呼ばれるのを待つあいだ、右下に小さなオーブを表示します。一時停止中は暗く、対応が必要なワークスペースがあるとオレンジになります。話しかけると HUD に広がります。クリックすると最後の答えを表示し、ドラッグで好きな場所に動かせます。"
+          }
+        }
+      }
+    },
     "A spoken yes is not enough here: press Return or click.": {
       "comment": "assistant HUD",
       "localizations": {
@@ -1856,6 +1867,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "アシスタントは一時停止中"
+          }
+        }
+      }
+    },
+    "Assistant: %@": {
+      "comment": "the assistant's waiting orb (VoiceOver); the state, e.g. Standing by",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタント：%@"
           }
         }
       }
@@ -2762,6 +2784,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ポートをクリックすると、ブラウザを分割して開きます"
+          }
+        }
+      }
+    },
+    "Click to show the last answer. Drag to move.": {
+      "comment": "the assistant's waiting orb (VoiceOver, tooltip)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックで最後の答えを表示。ドラッグで移動。"
           }
         }
       }
@@ -5636,6 +5669,17 @@
         }
       }
     },
+    "Medium (72 pt)": {
+      "comment": "Settings › Assistant › Orb size",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中（72 pt）"
+          }
+        }
+      }
+    },
     "Mem": {
       "comment": "sidebar meter title (memory)",
       "localizations": {
@@ -6900,6 +6944,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "選択肢%1$lld：%2$@"
+          }
+        }
+      }
+    },
+    "Orb size": {
+      "comment": "Settings › Assistant: the size of the orb shown while waiting (VoiceOver)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーブの大きさ"
+          }
+        }
+      }
+    },
+    "Orb size:": {
+      "comment": "Settings › Assistant: the size of the orb shown while waiting",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーブの大きさ："
           }
         }
       }
@@ -8771,6 +8837,17 @@
         }
       }
     },
+    "Show while waiting": {
+      "comment": "Settings › Assistant: a small orb shows while the assistant waits for its name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "待機中も表示する"
+          }
+        }
+      }
+    },
     "Showing %lld of %lld workspaces": {
       "comment": "tiled view: more workspaces were selected than fit",
       "localizations": {
@@ -8935,6 +9012,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "小"
+          }
+        }
+      }
+    },
+    "Small (56 pt)": {
+      "comment": "Settings › Assistant › Orb size",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小（56 pt）"
           }
         }
       }
