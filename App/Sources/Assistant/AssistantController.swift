@@ -88,8 +88,10 @@ final class AssistantController {
     var taskWatch = AssistantTaskWatch()
     /// Whether another app records, and what the user did about it (#278, `+Sharing`).
     var microphoneShare = AssistantMicrophoneShare()
-    /// The app the assistant paused for (the menu bar says so).
-    var pausedForApp: String?
+    /// The name of the app that recorded when the assistant paused for it (`pausedForApp`).
+    var recorderName: String?
+    /// The app the assistant paused for, while it is paused for it (the menu bar says so).
+    var pausedForApp: String? { microphoneShare.pausedFor == nil ? nil : recorderName }
     /// Follow-through lines waiting for the assistant to be free.
     var announcements: [String] = []
     private var stateChanges: AnyCancellable?
@@ -229,7 +231,6 @@ final class AssistantController {
         hotkeys?.setListen(.off)
         hotkeys?.setConfirmationKeys(false)
         microphoneShare.userPaused()
-        pausedForApp = nil
         timer?.invalidate()
         timer = nil
         hud.hide()
@@ -244,7 +245,6 @@ final class AssistantController {
     func pause() {
         guard isOn else { return }
         microphoneShare.userPaused()
-        pausedForApp = nil
         stopListening()
     }
 
@@ -252,7 +252,6 @@ final class AssistantController {
     func resume() {
         guard machine.phase == .paused else { return }
         microphoneShare.userResumed()
-        pausedForApp = nil
         listenAgain()
     }
 

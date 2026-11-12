@@ -52,10 +52,8 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
     /// The app a helper process belongs to by its bundle ID (`com.google.Chrome.helper` → `com.google.Chrome`); the
     /// ID itself when it is no helper's.
     public static func appBundleID(ofHelper bundleID: String) -> String {
-        for suffix in [".helper", ".Helper"] {
-            if let range = bundleID.range(of: suffix) { return String(bundleID[..<range.lowerBound]) }
-        }
-        return bundleID
+        guard let range = bundleID.range(of: ".helper", options: .caseInsensitive) else { return bundleID }
+        return String(bundleID[..<range.lowerBound])
     }
 
     /// The assistant's clock: `recorders` now (`recorders(_:own:)`), `listening` whether it listens (on, not paused).

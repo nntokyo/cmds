@@ -25,18 +25,14 @@ extension AssistantController {
         case .pause(let pid)?:
             let app = Self.appName(pid: pid, recorders: recorders)
             sharingLog.info("assistant paused: \(app, privacy: .public) records")
-            pausedForApp = app
+            recorderName = app
             stopListening()
             refresh()
         case .resume?:
             sharingLog.info("assistant listens again: no other app records")
-            pausedForApp = nil
             listenAgain()
         case nil:
-            if microphoneShare.pausedFor == nil, pausedForApp != nil {
-                pausedForApp = nil
-                refresh()
-            }
+            break
         }
     }
 
