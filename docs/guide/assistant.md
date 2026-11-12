@@ -45,6 +45,14 @@ decide, which takes longer.
   word that merely sounds like it does not wake it (say the name clearly, or use the shortcut). It still has to come
   first. Cards still wait for your yes, as always.
 
+## Siri and Shortcuts
+
+Two actions in the Shortcuts app (macOS 26): **Agent Status** returns and says the same short status the assistant
+gives; **Ask the Assistant** hands it a request as if you said it with its name (it must be on and listening) and
+returns its answer. Anything it would do still waits for your yes on the Mac. Siri knows them as "cmds status" /
+「cmdsの状況」 and "Ask cmds" / 「cmdsに頼む」. For a morning or evening summary, make a personal automation in Shortcuts
+(time of day → Agent Status → Speak Text or Show Notification).
+
 ## Calls
 
 While another app uses the microphone (a call in Zoom, FaceTime, Teams or Meet in a browser, a recording, dictation in

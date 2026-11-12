@@ -1588,6 +1588,17 @@
         }
       }
     },
+    "Agent Status": {
+      "comment": "Shortcuts action: the agents' status",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントの状況"
+          }
+        }
+      }
+    },
     "Agent model, context and cost": {
       "comment": "Settings › Sidebar › Show in each workspace",
       "localizations": {
@@ -1823,6 +1834,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "確認する"
+          }
+        }
+      }
+    },
+    "Ask the Assistant": {
+      "comment": "Shortcuts action: a request for the voice assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントに頼む"
+          }
+        }
+      }
+    },
+    "Ask the assistant ${request}": {
+      "comment": "Shortcuts action summary",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントに ${request} を頼む"
           }
         }
       }
@@ -4737,6 +4770,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "プロジェクトでまとめる"
+          }
+        }
+      }
+    },
+    "Hands a request to the assistant as if you said it with its name. It answers on the Mac; anything it would do still waits for your yes there. Returns its answer.": {
+      "comment": "Shortcuts action description",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を呼んで話しかけたのと同じように、アシスタントに依頼を渡します。答えは Mac で返し、操作を伴うものは Mac での確認を待ちます。アシスタントの答えを返します。"
           }
         }
       }
@@ -8037,6 +8081,17 @@
         }
       }
     },
+    "Request": {
+      "comment": "Shortcuts action parameter: what to ask the assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "依頼"
+          }
+        }
+      }
+    },
     "Reset Identity": {
       "localizations": {
         "ja": {
@@ -8457,6 +8512,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分の版をコピーとして保存"
+          }
+        }
+      }
+    },
+    "Say what to ask the assistant.": {
+      "comment": "Shortcuts error",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントに頼むことを入力してください。"
           }
         }
       }
@@ -10075,6 +10141,39 @@
         }
       }
     },
+    "The assistant is not available on this Mac.": {
+      "comment": "Shortcuts error",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この Mac ではアシスタントを使えません。"
+          }
+        }
+      }
+    },
+    "The assistant is off. Turn it on in the cmds menu bar.": {
+      "comment": "Shortcuts error",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントがオフです。cmds のメニューバーからオンにしてください。"
+          }
+        }
+      }
+    },
+    "The assistant is paused. Resume listening in the cmds menu bar.": {
+      "comment": "Shortcuts error",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アシスタントは一時停止中です。cmds のメニューバーから聞き取りを再開してください。"
+          }
+        }
+      }
+    },
     "The chosen voice is not available: the system voice speaks.": {
       "comment": "Settings › Assistant",
       "localizations": {
@@ -11681,6 +11780,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイミング："
+          }
+        }
+      }
+    },
+    "Which agents are working and which wait for you, as the assistant says it.": {
+      "comment": "Shortcuts action description",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "作業中のエージェントと、あなたを待っているエージェントを、アシスタントと同じ言い方で伝えます。"
           }
         }
       }
