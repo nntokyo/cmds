@@ -60,7 +60,10 @@ final class AssistantHUD: NSObject {
         build()
     }
 
-    var isVisible: Bool { panel.isVisible }
+    /// Shown (also while it fades in); false as soon as it starts fading out.
+    private(set) var isVisible = false
+    /// Bumped by every show / hide, so a finished fade-out does not hide a HUD shown again meanwhile.
+    private var generation = 0
 
     private func build() {
         panel.isFloatingPanel = true
@@ -177,17 +180,45 @@ final class AssistantHUD: NSObject {
 
     // MARK: Content
 
+    /// Fades in as the waiting orb grows into it (`AssistantIdleOrb`); at once with Reduce Motion.
     func show(_ content: AssistantHUDContent) {
         if content != self.content { apply(content) }
-        if !panel.isVisible {
-            place()
+        guard !isVisible else { return }
+        isVisible = true
+        generation += 1
+        place()
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            panel.alphaValue = 1
             panel.orderFrontRegardless()
+            return
+        }
+        if !panel.isVisible { panel.alphaValue = 0 }
+        panel.orderFrontRegardless()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = AssistantIdleOrb.transition
+            panel.animator().alphaValue = 1
         }
     }
 
     func hide() {
-        panel.orderOut(nil)
+        guard isVisible else { return }
+        isVisible = false
+        generation += 1
         wave.clear()
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            panel.orderOut(nil)
+            return
+        }
+        let number = generation
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = AssistantIdleOrb.transition
+            panel.animator().alphaValue = 0
+        } completionHandler: { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, self.generation == number else { return }
+                self.panel.orderOut(nil)
+            }
+        }
     }
 
     func level(_ value: Float) {

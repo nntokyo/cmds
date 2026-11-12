@@ -115,8 +115,9 @@ extension AssistantController {
             speakOnly(strings(.paused))
         case .stop:
             let text = strings(.goodbye)
+            let wasMuted = muted
             turnOff()
-            speakOnly(text)
+            speakOnly(text, muted: wasMuted)
         case .confirm, .cancel:
             say(strings(.nothingToConfirm))
         }

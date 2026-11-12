@@ -32,6 +32,19 @@ final class AssistantController {
     let controller: AppController
     var machine = AssistantMachine()
     let hud = AssistantHUD()
+    /// The small orb while it waits for its name (`+Presence`).
+    let orb = AssistantIdleOrb()
+    /// What of it is on screen: the orb, the HUD or nothing (`+Presence`).
+    var presence: AssistantPresence.Shown = .none
+    /// Whether the microphone picks up speech (the orb follows the level then).
+    var hearing = AssistantPresence.Hearing()
+    /// A presence update is due (state changes come in bursts).
+    var presenceUpdatePending = false
+    private var screenChanges: NSObjectProtocol?
+    /// `debug.assistant` `on {mute}`: answers shown without speaking until off or a relaunch, never written to the
+    /// settings (a test must not leave the user's assistant muted).
+    var mutedOverride: Bool?
+    var muted: Bool { mutedOverride ?? settings.assistantMuted }
     let voice = AssistantVoice()
     let listener = AssistantListener()
     private(set) var hotkeys: AssistantHotkeys?
@@ -102,7 +115,13 @@ final class AssistantController {
         hud.onConfirm = { [weak self] in self?.key(.confirm) }
         hud.onCancel = { [weak self] in self?.key(.cancel) }
         listener.onUtterance = { [weak self] text in self?.hear(text) }
-        listener.onLevel = { [weak self] level in self?.hud.level(level) }
+        listener.onLevel = { [weak self] level in self?.heard(level: level) }
+        orb.onClick = { [weak self] in self?.showLast() }
+        orb.onMoved = { [weak self] center in self?.orbMoved(to: center) }
+        screenChanges = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
+                                                               object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { AssistantController.shared?.updatePresence() }
+        }
         listener.onStop = { [weak self] error in self?.microphoneStopped(error) }
         stateChanges = controller.changes.sink { [weak self] change in
             MainActor.assumeIsolated { self?.stateChanged(change) }
@@ -157,6 +176,8 @@ final class AssistantController {
         timer?.invalidate()
         timer = nil
         hud.hide()
+        hearing.reset()
+        mutedOverride = nil
         if settings.assistantEnabled { settings.assistantEnabled = false }
         assistantLog.info("assistant off")
         refresh()
@@ -169,6 +190,7 @@ final class AssistantController {
         voice.stop()
         machine.pause()
         listener.stop()
+        hearing.reset()
         refresh()
     }
 
@@ -206,6 +228,7 @@ final class AssistantController {
             problem = String(localized: "The microphone stopped: \(error.localizedDescription)", comment: "assistant problem")
         }
         if isOn, machine.phase != .paused { machine.pause() }
+        hearing.reset()
         refresh()
     }
 
@@ -229,7 +252,8 @@ final class AssistantController {
     }
 
     /// Speaks without changing the state (a note while a card waits, or after turning off).
-    func speakOnly(_ text: String) {
+    /// `muted`: as muted was before turning off (the goodbye of a test muted by `debug.assistant` stays silent).
+    func speakOnly(_ text: String, muted: Bool? = nil) {
         lastSpoken = text
         if isOn { hideAt = Date().addingTimeInterval(AssistantTuning.hudLinger) }
         hudNote = text
@@ -238,7 +262,7 @@ final class AssistantController {
         speech += 1
         let number = speech
         voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: settings.assistantMuted) { [weak self] in
+                    muted: muted ?? self.muted) { [weak self] in
             guard let self, self.speech == number else { return }
             self.machine.voiceFinished(now: Date())
         }
@@ -248,7 +272,7 @@ final class AssistantController {
         lastSpoken = text
         hudNote = nil
         voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: settings.assistantMuted, finished: finished)
+                    muted: muted, finished: finished)
     }
 
     // MARK: HUD and clock
@@ -273,7 +297,8 @@ final class AssistantController {
         if machine.phase != before || hideAt.map({ Date() > $0 }) == true { refresh() }
     }
 
-    /// The HUD shows while the assistant is addressed, thinks, speaks or waits, and a few seconds after.
+    /// The HUD shows while the assistant is addressed, thinks, speaks or waits, and a few seconds after (or after a
+    /// click on the waiting orb); else the orb, when wanted.
     func refresh() {
         let phase = machine.phase
         let active = [.listening, .thinking, .speaking, .confirming].contains(phase)
@@ -296,7 +321,16 @@ final class AssistantController {
             hudNote = nil
             hideAt = nil
         }
+        updatePresence()
         NotificationCenter.default.post(name: Self.didChange, object: self)
+    }
+
+    /// A click on the waiting orb: the HUD with the last thing said, for a few seconds.
+    func showLast() {
+        guard isOn else { return }
+        hudNote = lastSpoken
+        hideAt = Date().addingTimeInterval(AssistantTuning.hudLinger)
+        refresh()
     }
 
     var hudContent: AssistantHUDContent {
