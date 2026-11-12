@@ -7,34 +7,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.21.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.21.0</link>
-      <sparkle:version>30</sparkle:version>
-      <sparkle:shortVersionString>0.21.0</sparkle:shortVersionString>
+      <title>cmds 0.22.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.22.0</link>
+      <sparkle:version>31</sparkle:version>
+      <sparkle:shortVersionString>0.22.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Wed, 11 Nov 2026 14:36:00 GMT</pubDate>
+      <pubDate>Thu, 12 Nov 2026 21:46:44 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
 <ul>
-<li>ブラウザペインでポップアップが開くようになりました。Google や Apple でのサインイン、OAuth や決済のポップアップは小さいウィンドウで開き、元のページとつながったままです。<code>target="_blank"</code> のリンクは隣の新しいブラウザペインで開きます。</li>
-<li>ページの alert / confirm / prompt は、ページのホスト名を示したシートで表示します。ファイル選択の欄からファイルを選べ、ダウンロードは「ダウンロード」フォルダに保存されてペインに通知が出ます。</li>
+<li>音声アシスタント「ジャービス」（macOS 26 以降、ベータ版の間は無料）。設定 › アシスタント またはメニューバーからオンにすると、名前を呼んで話しかけるだけで、入力待ちのワークスペースや各エージェントの作業内容を短く答えます。エージェントへの返信・承認や、Claude Code / Codex に作業を頼んで起動することもでき、実行の前に必ず確認カードを出します。Web が必要な質問は Claude Code に調べてもらいます。</li>
+<li>話し終えてから約 0.8 秒で聞き取りを区切り、すばやく答えます。待機中は画面の隅に小さなオーブを表示します。</li>
+<li>騒がしい場所向けに「雑音を抑える」「押して話す（⌥⌘J）」と、AirPods などヘッドセットのマイクへの自動切り替えを追加しました。ほかのアプリで通話している間は自動で聞き取りを止めます。</li>
+<li>Siri とショートカット：「cmdsの状況」「cmdsに頼む」。</li>
+<li>サイドバーに各 Claude Code セッションのアカウントを色付きのアイコンで表示し、クリックで別のアカウントに切り替えられます。</li>
+<li>ブラウザペインでファイル変更時に自動で再読み込み、ターミナルのスクロールバックの書き出し（ペイン › スクロールバックを書き出す…）。</li>
 </ul>
-<h3>修正</h3>
-<ul><li>リセット時刻のわからない Codex の利用上限が、最初ではなく最後に確認したときから 1 日で消えるようになりました。</li></ul>
-<p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Added</h3>
 <ul>
-<li>Browser panes open pop-ups: Sign in with Google / Apple, OAuth and payment pop-ups open in a small window that stays linked to the page. <code>target="_blank"</code> links open in a new browser split.</li>
-<li>A page's alert / confirm / prompt appear as sheets naming the page's host, file fields open the file panel, and downloads are saved to the Downloads folder with a notice in the pane.</li>
+<li>Voice assistant "JARVIS" (macOS 26 and later, free during its beta). Turn it on in Settings › Assistant or the menu bar; say its name and ask which workspaces need you or what an agent is doing. It can reply to or approve agents and start Claude Code or Codex with a task, always on a confirmation card first; web questions go to Claude Code.</li>
+<li>Answers about 0.8 s after you stop speaking; a small orb shows while it waits.</li>
+<li>Loud places: noise reduction, push to talk (⌥⌘J), automatic headset microphone (AirPods); it pauses while another app is on a call.</li>
+<li>Siri and Shortcuts: "cmds status", "Ask cmds".</li>
+<li>Sidebar: each Claude Code session's account as a coloured icon; click it to continue the session with another account.</li>
+<li>Browser panes reload on file changes; Pane › Export Scrollback….</li>
 </ul>
-<h3>Fixed</h3>
-<ul><li>A Codex usage limit reached without a reset time now expires a day after it was last seen, not first seen.</li></ul>
-<p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.21.0/cmds-0.21.0.dmg" length="16218761" type="application/octet-stream" sparkle:edSignature="yh7oa5lrDCj1wg5QdwgL05mruNgyVFZQYZ7/uU9BJgZXgbGVkEVB6NS0H7mRh2HFNR5q1ce0W4yBkq5pbNtjDA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.22.0/cmds-0.22.0.dmg" length="17070593" type="application/octet-stream" sparkle:edSignature="+3YukginxRU+flDUuT3O3R7O8dCLUfUpy252BVKhmWB/E+Pwbt3ZdMIE/W4dwuGIRNJpNDwkLoyIg44UKkwTCA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: KrT9wMQeCaP7oFxreWAgfy69oDyiIPXu223MrRUW3SXfV9ur6wk/FUyw9qe1O+1eD8rZARQa2rYvuB6Mr98ODA==
-length: 2811
+edSignature: 2a7f9uXmZZiHm+Rtd0dN7DrrcK4G8OCv+bc8r3KYqs2M5xKLYFYO6nFl4OyEL17unORuyumXrTNFa5kf1ewhDw==
+length: 3647
 -->
