@@ -11,16 +11,16 @@ extension AssistantController {
         presenceUpdatePending = false
         let attention = isOn && AgentOverview.summary(controller).needingUserCount > 0
         let shown = AssistantPresence.shown(phase: machine.phase, hudShown: hud.isVisible,
-                                            showWhileWaiting: settings.assistantShowWhileWaiting,
+                                            showWhileWaiting: showsWhileWaiting,
                                             attention: attention, hearing: hearing.isHearing)
         let before = presence
         presence = shown
         switch shown {
         case .orb(let look):
-            let size = settings.assistantOrbSize
+            let size = orbSize
             let center = AssistantPresence.center(saved: settings.assistantOrbCenter, side: size.side,
                                                   visibles: NSScreen.screens.map(\.visibleFrame))
-            orb.show(look: look, phase: machine.phase, style: settings.assistantStyle, size: size, center: center,
+            orb.show(look: look, phase: machine.phase, style: style, size: size, center: center,
                      fromHUD: before == .hud)
         case .hud:
             orb.hide(intoHUD: true)
@@ -47,7 +47,7 @@ extension AssistantController {
 
     /// The user dropped the orb here: remembered (moved fully onto its screen).
     func orbMoved(to center: CGPoint) {
-        settings.assistantOrbCenter = AssistantPresence.center(saved: center, side: settings.assistantOrbSize.side,
+        settings.assistantOrbCenter = AssistantPresence.center(saved: center, side: orbSize.side,
                                                                visibles: NSScreen.screens.map(\.visibleFrame))
         updatePresence()
     }

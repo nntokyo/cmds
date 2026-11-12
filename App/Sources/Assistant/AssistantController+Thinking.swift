@@ -26,7 +26,7 @@ extension AssistantController {
 
     /// The folders of that name in the project folders (Settings › Assistant › Project folders).
     private func projectFolders(named name: String) -> [String] {
-        let roots = AssistantPlaces.roots(setting: settings.assistantProjectFolders, home: NSHomeDirectory(), exists: Self.isFolder)
+        let roots = AssistantPlaces.roots(setting: projectFolders, home: NSHomeDirectory(), exists: Self.isFolder)
         return AssistantPlaces(roots: roots).find(name)
     }
 
@@ -102,7 +102,7 @@ extension AssistantController {
         case .ask(let question):
             // A free command for the agents ("api の Claude にテストを書くよう指示して"): the interpreter (`claude -p`, no
             // tools) turns it into a proposal, planned and confirmed like any other command. Else it is a question.
-            if settings.assistantInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
+            if usesInterpreter, AssistantInterpretation.mightBeCommand(question, world: world) {
                 let request = machine.request
                 return think(capped: true) {
                     if await self.handleAsCommand(question, world: world, request: request) { return nil }
@@ -151,7 +151,7 @@ extension AssistantController {
     /// (unless it already had it), else the assistant says how to ask. nil: it went on as a command.
     private func answer(_ question: String, world: AssistantWorld, interpreted: Bool) async -> String? {
         let strings = AssistantStrings.localized
-        let web = settings.assistantWeb
+        let web = usesWeb
         if web, AssistantWeb.needsWeb(question) { return await webAnswer(question) }
         guard AssistantBrain.modelAvailable else { return strings(.modelUnavailable) }
         let status = AssistantReport.status(world, strings: .english)
@@ -159,7 +159,7 @@ extension AssistantController {
             let answer = try await AssistantBrain.answer(question, status: status, language: language, web: web)
             if web, AssistantWeb.answerNeedsWeb(answer) { return await webAnswer(question) }
             if AssistantModelReply.isAction(answer) {
-                if !interpreted, settings.assistantInterpreter,
+                if !interpreted, usesInterpreter,
                    await handleAsCommand(question, world: world, request: machine.request) { return nil }
                 return strings(.cannotTell)
             }

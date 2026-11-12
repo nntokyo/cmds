@@ -8,7 +8,8 @@ import CmdsCore
 /// answer the confirmation card as Return / Esc or its buttons would.
 @available(macOS 26.0, *)
 extension AssistantController {
-    /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
+    /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
+    /// `showWhileWaiting?`, `orbSize?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
     /// `speak` (`text`: speaking it without a voice until `spoken`), `spoken`, `problem` (`text`, none clears it: as
     /// if the microphone had failed, for Settings' problem row),
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons; `orb`: the
@@ -16,21 +17,22 @@ extension AssistantController {
     /// dropped with its centre there). `snapshot` adds the HUD drawn off screen (`png_base64`; without the window's
     /// translucency) and the waiting orb (`orb.png_base64`) when it shows.
     ///
-    /// `mute` is a runtime override until `off` or a relaunch, never written to the settings: a test must not leave
-    /// the user's assistant muted.
+    /// The parameters of `on` are runtime overrides until `off` or a relaunch, never written to the settings: a test
+    /// must not leave the user's assistant muted or changed. `state` has the values in effect and the settings.
     func debugPerform(_ params: JSONValue?) throws -> JSONValue {
         let action = params?["action"]?.stringValue ?? "state"
         switch action {
         case "state": break
         case "on":
-            if let mute = params?["mute"]?.boolValue { mutedOverride = mute }
-            if let web = params?["web"]?.boolValue { AppSettings.shared.assistantWeb = web }
-            if let interpreter = params?["interpreter"]?.boolValue { AppSettings.shared.assistantInterpreter = interpreter }
-            if let report = params?["reportTasks"]?.boolValue { AppSettings.shared.assistantReportTasks = report }
-            if let folders = params?["projectFolders"]?.stringValue { AppSettings.shared.assistantProjectFolders = folders }
-            if let style = params?["style"]?.stringValue.flatMap(AssistantStyle.init(rawValue:)) {
-                AppSettings.shared.assistantStyle = style
-            }
+            // Runtime overrides only (cleared by `off` or a relaunch): nothing here is written to the settings.
+            if let mute = params?["mute"]?.boolValue { overrides.muted = mute }
+            if let web = params?["web"]?.boolValue { overrides.web = web }
+            if let interpreter = params?["interpreter"]?.boolValue { overrides.interpreter = interpreter }
+            if let report = params?["reportTasks"]?.boolValue { overrides.reportTasks = report }
+            if let folders = params?["projectFolders"]?.stringValue { overrides.projectFolders = folders }
+            if let style = params?["style"]?.stringValue.flatMap(AssistantStyle.init(rawValue:)) { overrides.style = style }
+            if let shows = params?["showWhileWaiting"]?.boolValue { overrides.showWhileWaiting = shows }
+            if let size = params?["orbSize"]?.stringValue.flatMap(AssistantPresence.Size.init(rawValue:)) { overrides.orbSize = size }
             turnOn(microphone: false)
         case "off": turnOff()
         case "pause": pause()
@@ -92,8 +94,18 @@ extension AssistantController {
             "confirmationKeys": .bool(hotkeys?.confirmationKeysOn ?? false),
             "muted": .bool(muted),
             "mutedSetting": .bool(AppSettings.shared.assistantMuted),
-            "web": .bool(AppSettings.shared.assistantWeb),
-            "interpreter": .bool(AppSettings.shared.assistantInterpreter),
+            "web": .bool(usesWeb),
+            "interpreter": .bool(usesInterpreter),
+            "reportTasks": .bool(reportsTasks),
+            "style": .string(style.rawValue),
+            "projectFolders": .string(projectFolders),
+            // What the settings say (the parameters of `on` never change them).
+            "settings": .object([
+                "muted": .bool(settings.assistantMuted), "web": .bool(settings.assistantWeb),
+                "interpreter": .bool(settings.assistantInterpreter), "reportTasks": .bool(settings.assistantReportTasks),
+                "style": .string(settings.assistantStyle.rawValue), "projectFolders": .string(settings.assistantProjectFolders),
+                "showWhileWaiting": .bool(settings.assistantShowWhileWaiting), "orbSize": .string(settings.assistantOrbSize.rawValue),
+            ]),
             "hudVisible": .bool(hud.isVisible),
             "queued": .array(queued.map { .string(String(describing: $0)) }),
             "watching": .array(taskWatch.entries.map { .string($0.paneID) }),
@@ -123,8 +135,8 @@ extension AssistantController {
         var orbState: [String: JSONValue] = [
             "visible": .bool(orb.isShown),
             "look": orb.look.map { .string($0.rawValue) } ?? .null,
-            "showWhileWaiting": .bool(settings.assistantShowWhileWaiting),
-            "size": .string(settings.assistantOrbSize.rawValue),
+            "showWhileWaiting": .bool(showsWhileWaiting),
+            "size": .string(orbSize.rawValue),
             "saved": settings.assistantOrbCenter.map { .string(AssistantPresence.format($0)) } ?? .null,
             "hearing": .bool(hearing.isHearing),
             "frame": .array([orbFrame.minX, orbFrame.minY, orbFrame.width, orbFrame.height].map { .number(Double($0)) }),
