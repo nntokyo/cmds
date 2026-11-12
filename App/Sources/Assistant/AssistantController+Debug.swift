@@ -104,6 +104,7 @@ extension AssistantController {
     }
 
     private func debugState(snapshot: Bool) -> JSONValue {
+        let inputs = AssistantAudioDevices.inputs()
         var state: [String: JSONValue] = [
             "on": .bool(isOn),
             "unlock": PaidFeatures.unlock(.assistant).map { .string($0.rawValue) } ?? .null,
@@ -121,11 +122,11 @@ extension AssistantController {
             "listening": .string(listening.rawValue),
             "held": .bool(listener.isHeld),
             // Inputs as Settings lists them, and the one `Microphone` chooses now (#270; nothing is opened).
-            "inputs": .array(AssistantAudioDevices.inputs().map { device in
+            "inputs": .array(inputs.map { device in
                 .object(["name": .string(device.name), "headset": .bool(device.isHeadset)])
             }),
-            "chosenInput": AssistantInputDevice.choose(settings.assistantMicrophone, devices: AssistantAudioDevices.inputs())
-                .flatMap { uid in AssistantAudioDevices.inputs().first { $0.uid == uid }?.name }.map(JSONValue.string) ?? .null,
+            "chosenInput": AssistantInputDevice.chosen(settings.assistantMicrophone, devices: inputs)
+                .map { .string($0.name) } ?? .null,
             "confirmationKeys": .bool(hotkeys?.confirmationKeysOn ?? false),
             "muted": .bool(muted),
             "mutedSetting": .bool(AppSettings.shared.assistantMuted),

@@ -1,10 +1,14 @@
+import AVFoundation
 import CmdsCore
 import CoreAudio
 import Foundation
+import os
+
+private let devicesLog = Logger(subsystem: "tokyo.n-n.cmds", category: "assistant")
 
 /// The Mac's audio inputs from Core Audio (#270, Settings › Assistant › Microphone): their UIDs, names and whether
 /// they are headsets, and a callback when they or the system's input change. Reading them needs no permission and
-/// never opens a microphone.
+/// never opens a microphone. Also sets the input device of the listener's engine (`select`).
 @MainActor
 final class AssistantAudioDevices {
     /// Devices were connected or removed, or the system's input changed.
@@ -52,8 +56,18 @@ final class AssistantAudioDevices {
     }
 
     /// The Core Audio ID of the device with `uid` (nil when it is not connected).
-    static func deviceID(uid: String) -> AudioDeviceID? {
+    private static func deviceID(uid: String) -> AudioDeviceID? {
         allDevices().first { string($0, kAudioDevicePropertyDeviceUID) == uid }
+    }
+
+    /// Makes the device with `uid` the input of the engine's input node (before it starts); nothing when it is not
+    /// connected.
+    static func select(uid: String, on node: AVAudioInputNode) {
+        guard let id = deviceID(uid: uid), let unit = node.audioUnit else { return }
+        var device = id
+        let status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &device,
+                                          UInt32(MemoryLayout<AudioDeviceID>.size))
+        if status != noErr { devicesLog.error("assistant microphone not chosen: \(status, privacy: .public)") }
     }
 
     private static func address(_ selector: AudioObjectPropertySelector,

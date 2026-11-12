@@ -23,42 +23,25 @@ public enum AssistantListening: String, CaseIterable, Sendable {
     public static let preRoll: TimeInterval = 0.3
     /// Audio after the key came up that is still heard (the last syllable often ends after the release).
     public static let releaseTail: TimeInterval = 0.2
-}
+    /// After the release has been finalised, how long a final result may still take before what was recognised so far
+    /// is delivered as it is.
+    public static let releaseFinalWait: TimeInterval = 1
 
-/// Which microphone the assistant listens to (#270, Settings › Assistant › Microphone): a headset when one is
-/// connected (closer to the mouth than the Mac's: much less of a loud room), else the system's input.
-public enum AssistantInputDevice {
-    public struct Device: Equatable, Sendable {
-        /// The Core Audio device UID (stable across launches and reconnections).
-        public var uid: String
-        public var name: String
-        /// Bluetooth (AirPods and other headsets) or a device named like a headset.
-        public var isHeadset: Bool
+    /// At most `restartLimit` restarts of the microphone's engine within `restartWindow` seconds: a device that keeps
+    /// changing (or voice processing changing it back) must not restart it in a loop.
+    public static let restartLimit = 5
+    public static let restartWindow: TimeInterval = 10
 
-        public init(uid: String, name: String, isHeadset: Bool) {
-            self.uid = uid
-            self.name = name
-            self.isHeadset = isHeadset
+    /// The restarts of the microphone's engine (`restartLimit` within `restartWindow`).
+    public struct Restarts: Sendable {
+        private var times: [Date] = []
+
+        public init() {}
+
+        /// A restart at `now`: whether it may happen. Counted either way.
+        public mutating func allow(at now: Date) -> Bool {
+            times = times.filter { now.timeIntervalSince($0) < AssistantListening.restartWindow } + [now]
+            return times.count <= AssistantListening.restartLimit
         }
-    }
-
-    /// The setting: a headset when connected, else the system's input.
-    public static let automatic = ""
-    /// The setting: the input chosen in System Settings › Sound, always.
-    public static let systemDefault = "system"
-
-    /// Whether a device is a headset by its transport (`bluetooth`: Bluetooth or Bluetooth LE) or its name.
-    public static func isHeadset(name: String, bluetooth: Bool) -> Bool {
-        if bluetooth { return true }
-        let name = name.lowercased()
-        return ["headset", "headphone", "airpods", "earpods", "ヘッドセット", "ヘッドフォン", "ヘッドホン"].contains { name.contains($0) }
-    }
-
-    /// The device to listen to (its UID), nil for the system's input. A device chosen in Settings that is not
-    /// connected (unplugged, out of range) counts as automatic until it comes back.
-    public static func choose(_ setting: String, devices: [Device]) -> String? {
-        if setting == systemDefault { return nil }
-        if setting != automatic, devices.contains(where: { $0.uid == setting }) { return setting }
-        return devices.first(where: \.isHeadset)?.uid
     }
 }

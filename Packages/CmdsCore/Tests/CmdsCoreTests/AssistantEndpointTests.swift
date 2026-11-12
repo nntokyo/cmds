@@ -115,7 +115,7 @@ final class AssistantEndpointTests: XCTestCase {
     }
 }
 
-/// The name in a loud room, push to talk, and the microphone choice (#270).
+/// The name in a loud room, and push to talk (#270).
 final class AssistantNoisyAddressingTests: XCTestCase {
     private let names = AssistantAddressing.defaultNames
 
@@ -189,29 +189,5 @@ final class AssistantNoisyAddressingTests: XCTestCase {
         let step = machine.hear("状況は？", names: names, now: now.addingTimeInterval(1), heard: AssistantHeard(pushed: true))
         guard case .handle = step else { return XCTFail("\(step)") }
         XCTAssertNil(machine.pending)
-    }
-
-    func testListeningModes() {
-        XCTAssertEqual(AssistantListening.standard, .automatic)
-        XCTAssertFalse(AssistantListening.automatic.reducesNoise)
-        XCTAssertTrue(AssistantListening.noiseReduction.reducesNoise)
-        XCTAssertTrue(AssistantListening.pushToTalk.reducesNoise)
-        XCTAssertTrue(AssistantListening.noiseReduction.listensAlways)
-        XCTAssertFalse(AssistantListening.pushToTalk.listensAlways)
-    }
-
-    func testMicrophoneChoice() {
-        let builtIn = AssistantInputDevice.Device(uid: "BuiltIn", name: "MacBook Pro Microphone", isHeadset: false)
-        let airPods = AssistantInputDevice.Device(uid: "AirPods", name: "R's AirPods Pro", isHeadset: true)
-        let usb = AssistantInputDevice.Device(uid: "USB", name: "USB Audio", isHeadset: false)
-        XCTAssertNil(AssistantInputDevice.choose(AssistantInputDevice.automatic, devices: [builtIn, usb]), "no headset: the system's")
-        XCTAssertEqual(AssistantInputDevice.choose(AssistantInputDevice.automatic, devices: [builtIn, airPods]), "AirPods")
-        XCTAssertNil(AssistantInputDevice.choose(AssistantInputDevice.systemDefault, devices: [builtIn, airPods]))
-        XCTAssertEqual(AssistantInputDevice.choose("USB", devices: [builtIn, airPods, usb]), "USB")
-        XCTAssertEqual(AssistantInputDevice.choose("USB", devices: [builtIn, airPods]), "AirPods", "unplugged: automatic")
-        XCTAssertNil(AssistantInputDevice.choose("USB", devices: [builtIn]))
-        XCTAssertTrue(AssistantInputDevice.isHeadset(name: "Jabra", bluetooth: true))
-        XCTAssertTrue(AssistantInputDevice.isHeadset(name: "Logitech USB Headset", bluetooth: false))
-        XCTAssertFalse(AssistantInputDevice.isHeadset(name: "MacBook Pro Microphone", bluetooth: false))
     }
 }
