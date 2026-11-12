@@ -10,7 +10,8 @@ import CmdsCore
 extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
     /// `showWhileWaiting?`, `orbSize?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
-    /// `speak` (`text`: speaking it without a voice until `spoken`), `spoken`, `problem` (`text`, none clears it: as
+    /// `speak` (`text`: speaking it without a voice until `spoken`; `card: true`: reading out the card that waits),
+    /// `spoken`, `problem` (`text`, none clears it: as
     /// if the microphone had failed, for Settings' problem row),
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons; `orb`: the
     /// waiting orb), `level` (`value` 0…1: as the microphone's level), `move_orb` (`x`, `y`: as if the orb were
@@ -40,7 +41,7 @@ extension AssistantController {
         case "hotkey": hotkey()
         case "speak":
             guard let text = params?["text"]?.stringValue else { throw RPCError.invalidParams("text is required") }
-            debugSpeak(text)
+            debugSpeak(text, card: params?["card"]?.boolValue == true)
         case "spoken": debugSpeechEnded()
         case "problem": debugSetProblem(params?["text"]?.stringValue)
         case "hear":

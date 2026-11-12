@@ -170,7 +170,8 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   (`mutedSetting`, `settings`); `defaults read <suite>` is the same before and after, `hear {text}` injects a recognised utterance (an
   unaddressed one is dropped as from speech; after an answer wait 1 s, the echo guard), `speak {text}` makes it
   "say" a text without a voice and stay speaking until `spoken` (its own voice heard back, barge-in by name; `state`
-  has `request`, `voiceActive`, `followUpSeconds`, `claudeWorking`), `problem {text?}` shows a problem as if the
+  has `request`, `voiceActive`, `followUpSeconds`, `claudeWorking`; `card: true` reads out the card that waits, so a
+  plain "はい" / "no" answers it while it speaks and a card that says "yes" ignores a "yes"), `problem {text?}` shows a problem as if the
   microphone had failed (none clears it; Settings › Assistant's orange row comes and goes while Settings is open, the
   window growing and shrinking with it; `debug.show_settings` returns the window's `frame`), `key {key: confirm|cancel}`
   / `click {button: …}` answer the card, `state` returns the phase, transcript, answer, pending action and the HUD's

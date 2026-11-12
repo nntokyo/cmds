@@ -47,7 +47,7 @@ It understands the app's language (cmds › Language): Japanese or English.
 | "start Claude in web" / 「webでクロードを起動して」 | Offers a new workspace in that workspace's folder, a project folder of that name, or a folder path, running `claude` / `codex` |
 | 「cmds のリポジトリで Claude Code を起動して、ログイン画面のテストを書かせて」, "start Claude in api and have it fix the failing tests" | The same, with that task as the new agent's first prompt (shown on the card) |
 | 「api で Claude にこのバグを直させて」 | Gives the task to the Claude running in api; if none runs there, offers to start one with it |
-| 「Claude Code を立ち上げて、API の進捗を教えて」 | Several requests in one: done one after the other, the next after the card |
+| 「Claude Code を立ち上げて、API の進捗を教えて」 | Several requests in one: done one after the other, the next after the card; no to one card skips only that one (「Claudeの起動は取り消しました。」) and the rest goes on |
 | "tell api and web to run the tests" / 「apiとwebに『テストを実行して』と伝えて」 | Offers to send the same text to each of them, on one card |
 | "approve all" / 「入力待ちのものに全部はいと答えて」 | Offers to pick option 1 in every workspace that asks, on one card |
 | "check all sessions" / 「全部のセッションを確認して」, 「入力待ちのセッションを全部見て」 | Goes through every session (or the waiting / working ones) and says what each agent is doing, one line each; 「詳しく」 / "in detail" uses Claude Code |
@@ -106,7 +106,9 @@ Voice alone only ever answers. Anything that types into a pane or starts a sessi
 workspace, the pane and the exact text, and runs only when you confirm:
 
 - Say **yes / はい**, press **Return**, or click the button. **No / いいえ**, **Esc** or Cancel drops it; so does
-  saying nothing for a minute.
+  saying nothing for a minute. A short yes or no (はい, いいえ, OK, キャンセル…) counts without the name also while the
+  card is still being read out, unless the card itself says that word (a reply "yes" to api): then wait until it has
+  been read out.
 - Text that may delete, push, publish or deploy (`rm`, `git push`, `deploy`, 本番…), widen permissions
   (`--dangerously-skip-permissions`, "don't ask again"), or goes to an SSH pane needs **Return or a click**: a spoken
   yes is not enough. Approving an agent's question about such a command counts too.

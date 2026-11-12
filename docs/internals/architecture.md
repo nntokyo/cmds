@@ -366,8 +366,10 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   or cancelled card) increments `AssistantMachine.request`; `AssistantController.interrupt()` then stops the voice and
   cancels the `think` task, whose `claude -p` process `AssistantClaudeProcess.run` terminates in its cancellation
   handler, and `answer(_:request:)` refuses a late answer for an older request. "Asking Claude…" is tied to the
-  request it was for. A name-prefixed yes / no while a card is being read out confirms or cancels it; anything else
-  by name replaces the card.
+  request it was for. A yes / no while a card is being read out (or a note is said over it, or in the echo guard after)
+  confirms or cancels it also without the name (`AssistantMachine.isCardAnswer`), unless the word is in what it is
+  saying or just said (`AssistantEcho.isEchoedWord`: whole words in Latin script, a part of the text in Japanese; the
+  card's last sentence names no yes word for that reason); anything else by name replaces the card.
 - **Short answers**: every prompt (`AssistantClaude`: web, on-device instructions, summaries) asks for one short
   sentence (two at most), only what was asked; a session's summary is cut to its first sentence
   (`AssistantBrevity.first`), a detailed one to three; for a free answer still longer than `maxSpokenLength`
@@ -403,13 +405,21 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   dictated text) when every clause parses; a task clause after a start (`AssistantLaunch.request`: 「書かせて」 →
   「書いてください」, "have it fix…") becomes its `task`; a start without a place takes the place another clause names.
   `.sequence` plans the first (its card adds `AssistantPlanner.next`), the controller queues the rest and goes on
-  (`AssistantMachine.proceed`) after the answer is spoken or the card's action ran; no / expiry / a new request drops
-  the queue. `.startAgent(kind, place?, task?)`: workspace folder, path, `AssistantPlaces.find` under the project
+  (`AssistantMachine.proceed`) after the answer is spoken or the card's action ran; no to a card skips only that one
+  (`AssistantMachine.cancelledAction`, `AssistantPlanner.skipped`: 「Claudeの起動は取り消しました。」, then the rest);
+  expiry or a new request drops the queue. A start's new workspace whose folder name is already a workspace's title
+  gets `AssistantWorld.uniqueTitle` (`api-2`) as its title, so the exact-title tier of `find` keeps "api" for the
+  original. `.startAgent(kind, place?, task?)`: workspace folder, path, `AssistantPlaces.find` under the project
   folders (depth 3, repositories first), else `recentID` (5 min) / `focusedID`, else ask. The command is
   `AssistantLaunch.command` (single-quoted task, control characters and leading dashes removed, 400 characters);
   Debug builds take `CMDS_ASSISTANT_AGENT_EXECUTABLE` instead of `claude` / `codex` for tests. `.delegate` replies to
   the running agent of that kind, else starts one. The on-device model answers `AssistantModelReply.actionMarker` for
   actions; that or an apology (`isAction`) goes to the interpreter (kind `start` too), else `.cannotTell`.
+- **Workspaces without an agent**: "what is X doing" and its summary (`AssistantWorld.Workspace.hasNoAgent`) answer at
+  once from `AssistantReport.workspace`: no agent, and `AssistantWorld.Pane.shell` (the foreground process the typing
+  rules read, `PaneProcessProbe`: idle at the shell, or the program's name, never its arguments); no screen goes to a
+  model, which made up 「入力待ち」 for a shell. For an agent, a summary that is the prompt's example copied, or says
+  it waits while the session does not (`AssistantModelReply.isSummary(_:waiting:)`), is replaced by the facts.
 - **Follow-through**: `AssistantTaskWatch` follows panes started with a task or replied to (agent panes), fed from
   `AppController.changes` with `pane.agentActivity` and the workspace's notification text: needs input → one line,
   busy then idle → done (and forgotten), exit / 4 h / never started → forgotten. Spoken with `speakOnly` when the

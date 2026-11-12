@@ -58,6 +58,8 @@ public struct AssistantMachine: Equatable, Sendable {
     /// The action waiting for confirmation.
     public private(set) var pending: AssistantAction?
     public private(set) var pendingUntil: Date?
+    /// The action last cancelled (no, Esc, the timeout).
+    public private(set) var cancelledAction: AssistantAction?
     /// Until when a command needs no name.
     public private(set) var followUpUntil: Date?
     /// The window was opened by an answer (only short follow-ups count), not by the hotkey or the name alone.
@@ -153,7 +155,10 @@ public struct AssistantMachine: Equatable, Sendable {
         // While it thinks or speaks, and just after, only its name gets through (barge-in).
         let busy = phase == .thinking || phase == .speaking || voiceActive || (deafUntil.map { now < $0 } ?? false)
         let windowOpen = followUpUntil.map { now <= $0 } ?? false
-        let followUpOpen = !busy && (phase == .confirming
+        // A card waits (also while it is being read out): a short yes / no needs no name, unless the card's own words
+        // could have been heard back ("Send “yes” to api?").
+        let answersCard = pending != nil && (phase == .confirming || phase == .speaking) && isCardAnswer(utterance, now: now)
+        let followUpOpen = answersCard || !busy && (phase == .confirming
             || (windowOpen && (!followUpAfterAnswer || AssistantAddressing.isShortFollowUp(utterance))))
         switch AssistantAddressing.check(utterance, names: names, followUpOpen: followUpOpen) {
         case .ignored:
@@ -201,6 +206,19 @@ public struct AssistantMachine: Equatable, Sendable {
             request += 1
             return .handle(intent)
         }
+    }
+
+    /// Whether `utterance` (said without the name) answers the card that waits: a yes or no alone, which is not a word
+    /// of what the assistant is saying or said a moment ago (its own voice, `AssistantEcho.isEchoedWord`).
+    func isCardAnswer(_ utterance: String, now: Date) -> Bool {
+        let text = AssistantText.trimmed(utterance)
+        switch AssistantIntent.parse(text) {
+        case .confirm, .cancel: break
+        default: return false
+        }
+        guard let spoken else { return true }
+        let recent = voiceActive || (spokeUntil.map { now <= $0.addingTimeInterval(Self.echoMemory) } ?? false)
+        return !(recent && AssistantEcho.isEchoedWord(text, of: spoken))
     }
 
     /// Whether `utterance` is the assistant's own voice: mostly what it is saying or said a moment ago.
@@ -292,6 +310,7 @@ public struct AssistantMachine: Equatable, Sendable {
     }
 
     private mutating func cancel() -> Step {
+        cancelledAction = pending
         pending = nil
         pendingUntil = nil
         phase = .thinking

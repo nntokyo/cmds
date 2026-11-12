@@ -30,8 +30,8 @@ public enum AssistantModelReply {
 
     /// A summary that says the agent waits for the user (「入力待ち」, "waiting for input", "asks whether…").
     static let claimsWaiting: [Pattern] = [
-        Pattern(AssistantText.folded(#"入力待ち|入力を待|返答を待|回答を待|確認を待|確認を求め|承認を待|許可を求め|尋ねて|聞いて(い|き)|待機中"#)),
-        Pattern(#"\b(waiting for (input|you|your|an answer|a reply|confirmation|approval)|waits for (input|you|your)|asks (you |whether|if|for)|is asking|needs your)\b"#),
+        Pattern(AssistantText.folded(#"入力待ち|入力を待|返答を待|回答を待|確認を待|確認を求め|承認を待|許可を求め|尋ねて|聞いて(い|き)|待機中|指示を待|フィードバックを待"#)),
+        Pattern(#"\b(wait(s|ing)? for (the )?(user|input|you|your|feedback|response|reply|answer|confirmation|approval|instructions?|permission|decision|direction)|asks (you |whether|if|for)|is asking|needs your|idle,? (and )?waiting)\b"#),
     ]
 
     /// 「申し訳ありませんが…できません」, "I'm sorry, I can't…", "I am unable to…" (the Japanese folded like the answer).

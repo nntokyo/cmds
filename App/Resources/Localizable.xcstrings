@@ -3036,6 +3036,17 @@
         }
       }
     },
+    "Confirm by voice or press Return.": {
+      "comment": "assistant: how to confirm",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "声かReturnキーで確定してください。"
+          }
+        }
+      }
+    },
     "Confirming": {
       "localizations": {
         "ja": {
@@ -4818,6 +4829,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」というワークスペースやフォルダが見つかりません。"
+          }
+        }
+      }
+    },
+    "I won't act on the %lld sessions.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のセッションへの操作は取り消しました。"
+          }
+        }
+      }
+    },
+    "I won't answer %@.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): the choice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@への回答は取り消しました。"
+          }
+        }
+      }
+    },
+    "I won't send it to %@.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): the reply",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@への送信は取り消しました。"
+          }
+        }
+      }
+    },
+    "I won't start %@.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): the start",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@の起動は取り消しました。"
           }
         }
       }
@@ -8248,17 +8303,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分の版をコピーとして保存"
-          }
-        }
-      }
-    },
-    "Say yes or press Return.": {
-      "comment": "assistant: how to confirm",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「はい」と言うかReturnキーを押してください。"
           }
         }
       }

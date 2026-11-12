@@ -64,6 +64,11 @@ public enum AssistantLine: Equatable, Sendable {
     case session(workspace: String, summary: String)
     case failed
     case cancelled
+    /// A card cancelled in an utterance with several requests (the rest goes on): what was not done.
+    case skippedStart(agent: String)
+    case skippedSend(workspace: String)
+    case skippedChoice(workspace: String)
+    case skippedMany(count: Int)
     case expired
     case nothingToConfirm
     // The assistant itself.
@@ -120,7 +125,7 @@ public enum AssistantLine: Equatable, Sendable {
         case .confirmReplyMany(let text, let workspaces): return "Send “\(text)” to \(workspaces.joined(separator: ", "))?"
         case .confirmApproveMany(let workspaces): return "Choose option 1 in \(workspaces.joined(separator: ", "))?"
         case .leftOut(let workspaces): return "Left out: \(workspaces.joined(separator: ", "))."
-        case .sayYesOrPressReturn: return "Say yes or press Return."
+        case .sayYesOrPressReturn: return "Confirm by voice or press Return."
         case .pressReturnToConfirm: return "This one needs Return or a click."
         case .voiceNotEnough: return "Please press Return or click the button for this one."
         case .sent(let workspace): return "Sent to \(workspace)."
@@ -133,6 +138,10 @@ public enum AssistantLine: Equatable, Sendable {
         case .session(let workspace, let summary): return "\(workspace): \(summary)"
         case .failed: return "That didn't work: the pane is gone or busy."
         case .cancelled: return "Cancelled."
+        case .skippedStart(let agent): return "I won't start \(agent)."
+        case .skippedSend(let workspace): return "I won't send it to \(workspace)."
+        case .skippedChoice(let workspace): return "I won't answer \(workspace)."
+        case .skippedMany(let count): return "I won't act on the \(count) sessions."
         case .expired: return "I cancelled it: no answer."
         case .nothingToConfirm: return "There is nothing to confirm."
         case .wake: return "Yes?"

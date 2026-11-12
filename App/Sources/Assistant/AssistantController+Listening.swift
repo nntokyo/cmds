@@ -81,9 +81,14 @@ extension AssistantController {
         case .execute(let action):
             run(action)
         case .cancelled:
-            // No to a card is no to the rest of that utterance as well.
-            queued = []
-            say(AssistantStrings.localized(.cancelled))
+            // No to one card of an utterance with several requests skips only that one: it says what it left out, then
+            // goes on with the rest (`say` continues the queue once that has been said).
+            let strings = AssistantStrings.localized
+            if !queued.isEmpty, let action = machine.cancelledAction {
+                say(strings(AssistantPlanner.skipped(action)))
+            } else {
+                say(strings(.cancelled))
+            }
         case .needsKey:
             needsKey = true
             speakOnly(AssistantStrings.localized(.voiceNotEnough))

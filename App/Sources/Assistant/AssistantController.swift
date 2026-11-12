@@ -372,10 +372,12 @@ final class AssistantController {
 
     #if DEBUG
     /// `debug.assistant` `speak`: the assistant "says" `text` without a voice and stays speaking until `spoken`, to
-    /// test what it hears meanwhile (its own voice, barge-in).
-    func debugSpeak(_ text: String) {
+    /// test what it hears meanwhile (its own voice, barge-in). `card`: the card that waits is being read out (a yes or
+    /// no without the name answers it).
+    func debugSpeak(_ text: String, card: Bool = false) {
+        let pending = card ? machine.pending : nil
         interrupt()
-        guard machine.answer(text, now: Date()) else { return }
+        guard machine.answer(text, proposing: pending, now: Date()) else { return }
         answerByClaude = false
         lastSpoken = text
         hudNote = nil

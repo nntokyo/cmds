@@ -226,6 +226,17 @@ public enum AssistantPlanner {
         }
     }
 
+    /// What a card cancelled in an utterance with several requests leaves out, said before the rest goes on
+    /// (「起動は取り消しました。」).
+    public static func skipped(_ action: AssistantAction) -> AssistantLine {
+        if action.all.count > 1 { return .skippedMany(count: action.all.count) }
+        switch action.kind {
+        case .reply: return .skippedSend(workspace: action.workspaceTitle)
+        case .choose: return .skippedChoice(workspace: action.workspaceTitle)
+        case .startAgent(let kind, _, _): return .skippedStart(agent: kind.displayName)
+        }
+    }
+
     /// "api と web", "api, web and docs": several workspaces, when the whole is no workspace's title and every part
     /// finds one.
     static func several(_ name: String?, in world: AssistantWorld) -> [String]? {
