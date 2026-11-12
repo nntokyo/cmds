@@ -348,12 +348,33 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   feeds a `SpeechTranscriber` for the app's language (`AssistantLanguage`: ja_JP / en_US), downloading its asset once.
   Only final results leave it, as text. Nothing is written; partial results only drive the level. The end of an
   utterance (#248): `SpeechTranscriber` finalises Japanese only 7–10 s after the speech (English about 2 s), so
-  `AssistantEndpoint` (CmdsCore) watches the level (`AssistantPresence.Hearing.onLevel`, per tap buffer): at least
-  0.3 s of sound, then 0.8 s quiet, and `SpeechAnalyzer.finalize(through: nil)` makes the final result come about 1 s
-  after the speech; a room loud enough to keep the level up leaves it to the recogniser. A final of punctuation only
+  `AssistantEndpoint` (CmdsCore) watches the level of every tap buffer (about 43 ms): at least 0.3 s of speech, then
+  0.8 s quiet, and `SpeechAnalyzer.finalize(through: nil)` makes the final result come about 1 s after the speech.
+  Speech is relative to the room (#270): the noise floor follows the level in decibels (down within 0.25 s, up within
+  3 s), speech begins at 2× the floor (and at least `AssistantPresence.Hearing.onLevel`) for two buffers in a row (a
+  clink or a knock is shorter) and goes on above 1.5×; when the noise is as loud as the voice, or is speech itself
+  close by, the level never drops and the recogniser's own end counts, as before. A final of punctuation only
   (finalised noise) is dropped. Its `fastResults` option was tried and rejected: it gives early volatile results but a
   worse final transcript (「APIの」 → 「AP来の」), so partial transcripts are not used to route early. Speech beginning
   (`onSpeech`) warms the on-device model up (`AssistantBrain.prewarm`, at most every 30 s).
+- **Loud places** (#270): `AssistantListening` (Settings › Assistant › Listening). `noiseReduction` and `pushToTalk`
+  turn on `AVAudioInputNode.setVoiceProcessingEnabled` (noise suppression, echo cancellation, AGC) before the engine
+  starts, with other apps' audio not ducked (`voiceProcessingOtherAudioDuckingConfiguration` `.min`); its input may
+  have several channels, so `AudioPump`'s converter mixes them down. Push to talk: Carbon's hot key released event
+  (`AssistantHotkeys.onRelease`); the engine runs but `AudioPump` holds audio back while the key is up (keeping the last
+  0.3 s, `AssistantListening.preRoll`, for the first syllable), 0.2 s after the release it finalises (audio still going in
+  until the result: cut at once, short requests in noise came back empty), and the
+  finals since the press go out as one utterance with `AssistantHeard.pushed` (for the assistant without the name, also
+  after the follow-up window, and replacing a card like a request by name). `AssistantHeard.noisy` (the endpoint's
+  floor ≥ 0.08) makes `AssistantAddressing` drop a name the recogniser is unsure of (`transcriptionConfidence` of its
+  characters < 0.5); follow-ups without the name are as in a quiet room (the hotkey's window must take a long command).
+  Engine restarts are limited to 5 in 10 s. The microphone:
+  `AssistantInputDevice.choose` (Settings › Assistant › Microphone: automatic = a Bluetooth or headset-named input when
+  connected, else the system's; system default; a device UID, automatic while it is unplugged) over
+  `AssistantAudioDevices.inputs()` (Core Audio, no permission), set on the input node's unit
+  (`kAudioOutputUnitProperty_CurrentDevice`) before the engine starts. Device list and default input changes
+  (`AudioObjectAddPropertyListenerBlock`) and `AVAudioEngineConfigurationChange` restart only the engine
+  (`restartInput`): a new pump into the same analyzer, its fed seconds carried on.
 - **Rules**: `AssistantAddressing` (name prefix after an optional greeting, folded for width, case and kana; or the
   follow-up window), `AssistantMachine` (off → idle → listening / thinking / speaking / confirming, paused; follow-up
   8 s from the end of speech, confirmation timeout 60 s; only yes/no count without the name while a card waits),
