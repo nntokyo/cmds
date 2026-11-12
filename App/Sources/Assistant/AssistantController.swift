@@ -293,13 +293,7 @@ final class AssistantController {
         hudNote = text
         machine.voiceStarted(text)
         refresh()
-        speech += 1
-        let number = speech
-        voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: muted ?? self.muted) { [weak self] in
-            guard let self, self.speech == number else { return }
-            self.machine.voiceFinished(now: Date())
-        }
+        speakAside(text, muted: muted ?? self.muted)
     }
 
     private func speak(_ text: String, open: Bool, finished: @escaping () -> Void) {
@@ -308,17 +302,32 @@ final class AssistantController {
         mark(.speechStart)
         let request = machine.request
         // After the acknowledgement of this request, not over it.
-        voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: muted, open: open, queued: acknowledged == request,
+        voice.speak(text, manner(), open: open, queued: acknowledged == request,
                     started: { [weak self] in self?.mark(.voiceStart, request: request) }, finished: finished)
+    }
+
+    /// Speaks beside the answer (a note, the acknowledgement; the machine was told the voice started): its end only
+    /// frees the voice.
+    private func speakAside(_ text: String, muted: Bool) {
+        speech += 1
+        let number = speech
+        voice.speak(text, manner(muted: muted)) { [weak self] in
+            guard let self, self.speech == number else { return }
+            self.machine.voiceFinished(now: Date())
+        }
+    }
+
+    /// The voice, rate and language from the settings; muted as in effect unless given.
+    private func manner(muted: Bool? = nil) -> AssistantVoice.Manner {
+        AssistantVoice.Manner(language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
+                              muted: muted ?? self.muted)
     }
 
     /// Another sentence of the answer being spoken while it is written; `text` is all of it so far (HUD, echo).
     func speakMore(_ sentence: String, answer text: String) {
         guard machine.extendAnswer(text, request: machine.request) else { return }
         lastSpoken = text
-        voice.append(sentence, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                     muted: muted)
+        voice.append(sentence, manner())
         refresh()
     }
 
@@ -330,13 +339,7 @@ final class AssistantController {
         let text = AssistantStrings.localized(.checking)
         mark(.ack, request: request)
         machine.voiceStarted(text)
-        speech += 1
-        let number = speech
-        voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: muted) { [weak self] in
-            guard let self, self.speech == number else { return }
-            self.machine.voiceFinished(now: Date())
-        }
+        speakAside(text, muted: muted)
     }
 
     // MARK: HUD and clock
