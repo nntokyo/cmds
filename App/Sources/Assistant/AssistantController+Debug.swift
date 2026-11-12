@@ -11,9 +11,9 @@ extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
     /// `showWhileWaiting?`, `orbSize?`), `off`, `pause`, `resume`, `hotkey`, `hear` (`text`),
     /// `speak` (`text`: speaking it without a voice until `spoken`; `card: true`: reading out the card that waits),
-    /// `spoken`, `hear_audio` (`path`, `tail?` seconds of quiet after it, default 10, `endpoint?`
-    /// false: only the recogniser ends the utterance: an audio file through speech recognition instead of the microphone), `problem` (`text`, none clears it: as
-    /// if the microphone had failed, for Settings' problem row),
+    /// `spoken`, `hear_audio` (`path`: an audio file through speech recognition instead of the microphone; `tail?`
+    /// seconds of quiet after it, default 10; `endpoint?` false: only the recogniser ends the utterance), `problem`
+    /// (`text`, none clears it: as if the microphone had failed, for Settings' problem row),
     /// `key` (`confirm` / `cancel`: Return / Esc), `click` (`confirm` / `cancel`: the card's buttons; `orb`: the
     /// waiting orb), `level` (`value` 0…1: as the microphone's level), `move_orb` (`x`, `y`: as if the orb were
     /// dropped with its centre there). `snapshot` adds the HUD drawn off screen (`png_base64`; without the window's
@@ -26,15 +26,7 @@ extension AssistantController {
         switch action {
         case "state": break
         case "on":
-            // Runtime overrides only (cleared by `off` or a relaunch): nothing here is written to the settings.
-            if let mute = params?["mute"]?.boolValue { overrides.muted = mute }
-            if let web = params?["web"]?.boolValue { overrides.web = web }
-            if let interpreter = params?["interpreter"]?.boolValue { overrides.interpreter = interpreter }
-            if let report = params?["reportTasks"]?.boolValue { overrides.reportTasks = report }
-            if let folders = params?["projectFolders"]?.stringValue { overrides.projectFolders = folders }
-            if let style = params?["style"]?.stringValue.flatMap(AssistantStyle.init(rawValue:)) { overrides.style = style }
-            if let shows = params?["showWhileWaiting"]?.boolValue { overrides.showWhileWaiting = shows }
-            if let size = params?["orbSize"]?.stringValue.flatMap(AssistantPresence.Size.init(rawValue:)) { overrides.orbSize = size }
+            overrides.set(from: params)
             turnOn(microphone: false)
         case "off": turnOff()
         case "pause": pause()
@@ -94,6 +86,10 @@ extension AssistantController {
             "ms": .object(timeline.milliseconds.mapValues { .number(Double($0)) }),
             "firstSound": timeline.firstSound.map { .number(Double($0)) } ?? .null,
         ])
+    }
+
+    private static func json(_ frame: NSRect) -> JSONValue {
+        .array([frame.minX, frame.minY, frame.width, frame.height].map { .number(Double($0)) })
     }
 
     private static func number(_ value: JSONValue?) -> Double? {
@@ -157,9 +153,7 @@ extension AssistantController {
         } else {
             state["pending"] = .null
         }
-        let frame = hud.panel.frame
-        state["frame"] = .array([frame.minX, frame.minY, frame.width, frame.height].map { .number(Double($0)) })
-        let orbFrame = orb.panel.frame
+        state["frame"] = Self.json(hud.panel.frame)
         var orbState: [String: JSONValue] = [
             "visible": .bool(orb.isShown),
             "look": orb.look.map { .string($0.rawValue) } ?? .null,
@@ -167,18 +161,32 @@ extension AssistantController {
             "size": .string(orbSize.rawValue),
             "saved": settings.assistantOrbCenter.map { .string(AssistantPresence.format($0)) } ?? .null,
             "hearing": .bool(hearing.isHearing),
-            "frame": .array([orbFrame.minX, orbFrame.minY, orbFrame.width, orbFrame.height].map { .number(Double($0)) }),
+            "frame": Self.json(orb.panel.frame),
             "window": .number(Double(orb.panel.windowNumber)),
         ]
         if snapshot, orb.isShown {
             orbState["png_base64"] = orb.debugSnapshot().map { .string($0.base64EncodedString()) } ?? .null
         }
         state["orb"] = .object(orbState)
-        if snapshot, let view = hud.panel.contentView, let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
-            view.cacheDisplay(in: view.bounds, to: rep)
-            state["png_base64"] = rep.representation(using: .png, properties: [:]).map { .string($0.base64EncodedString()) } ?? .null
+        if snapshot {
+            state["png_base64"] = hud.debugSnapshot().map { .string($0.base64EncodedString()) } ?? .null
         }
         return .object(state)
+    }
+}
+
+extension AssistantOverrides {
+    /// The parameters of `debug.assistant` `on` that are given (`mute`, `style`, `web`, `interpreter`, `reportTasks`,
+    /// `projectFolders`, `showWhileWaiting`, `orbSize`); the others stay as they were.
+    mutating func set(from params: JSONValue?) {
+        if let mute = params?["mute"]?.boolValue { muted = mute }
+        if let web = params?["web"]?.boolValue { self.web = web }
+        if let interpreter = params?["interpreter"]?.boolValue { self.interpreter = interpreter }
+        if let report = params?["reportTasks"]?.boolValue { reportTasks = report }
+        if let folders = params?["projectFolders"]?.stringValue { projectFolders = folders }
+        if let style = params?["style"]?.stringValue.flatMap(AssistantStyle.init(rawValue:)) { self.style = style }
+        if let shows = params?["showWhileWaiting"]?.boolValue { showWhileWaiting = shows }
+        if let size = params?["orbSize"]?.stringValue.flatMap(AssistantPresence.Size.init(rawValue:)) { orbSize = size }
     }
 }
 #endif
