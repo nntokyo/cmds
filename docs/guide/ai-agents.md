@@ -420,8 +420,15 @@ signs in for you.
 `--account auto` takes the first account in order that has not hit its limit. The pane keeps its account after a
 restart. A split without `--account` (also **Split Right** / **Split Down** in the menu) does not take the account of
 the pane it splits: its shell has no `CLAUDE_CONFIG_DIR`, so `claude` there uses `~/.claude`. Removing an account takes
-it off the panes that had it (their shells keep the folder they were started with). The sidebar shows it after the agent and model (`Claude Opus @work`), its tooltip says `Account: work`, `cmds ls` and
-`cmds sessions` print `account work`. A pane where you start `claude` yourself gets the account whose folder matches
+it off the panes that had it (their shells keep the folder they were started with). With accounts set up, the sidebar
+shows the account of each workspace's Claude Code session after the model as a coloured icon and its name (one colour
+per account, `→ home` while a switch waits); without them, after the model (`Claude Opus @work`). Its tooltip says
+`Account: work`, `cmds ls` and `cmds sessions` print `account work`.
+
+**Switching from the sidebar**: click the account (or right-click the row › **Claude Account**) and choose another:
+the same as `cmds accounts switch --to NAME` ([below](#when-an-account-hits-its-limit)) — Claude Code quits once it
+is idle and the session continues under that account. Accounts at their limit show when they reset; if the session
+cannot move (no session id from the status line, sessions not shared, an SSH pane) cmds says why. A pane where you start `claude` yourself gets the account whose folder matches
 the `CLAUDE_CONFIG_DIR` Claude Code reports through the status line (none set: the account using `~/.claude`, if
 any).
 

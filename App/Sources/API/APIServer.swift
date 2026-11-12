@@ -205,6 +205,18 @@ final class APIServer {
                     throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
                 }
                 connection.reply(id: id, result: ["port": .number(Double(port))])
+            case "debug.sidebar_account":
+                // Tests only (#284): the sidebar row's Claude account button and menu; `choose` picks an account.
+                let workspace = try controller.resolveWorkspace(try params.string("workspace"))
+                let sidebar = (controller.window?.windowController as? MainWindowController)?.sidebar
+                guard let shown = sidebar?.debugAccount(workspaceID: workspace.id, choose: try params.string("choose")) else {
+                    throw RPCError.notFound("no sidebar row for \(workspace.id)")
+                }
+                connection.reply(id: id, result: .object([
+                    "button": shown.button.map(JSONValue.string) ?? .null,
+                    "items": .array(shown.items.map(JSONValue.string)),
+                    "problem": shown.problem.map(JSONValue.string) ?? .null,
+                ]))
             case "debug.memory":
                 // Tests only (#193): the "memory is short" notification text as it would be posted now, the sidebar's
                 // leftover row and a workspace's top processes (its usage tooltip), without waiting for pressure.
