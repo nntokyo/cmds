@@ -157,15 +157,13 @@ final class AssistantNoisyAddressingTests: XCTestCase {
                                                  heard: AssistantHeard(noisy: true)), .ignored)
     }
 
-    func testInNoiseAFollowUpWithoutTheNameMustBeShort() {
+    func testInNoiseALongCommandAfterTheHotkeyStillCounts() {
         var machine = AssistantMachine()
         machine.turnOn()
         let now = Date(timeIntervalSince1970: 100)
         machine.hotkey(now: now)
-        let long = "and then we went to the station and the train was late again so we took a taxi"
-        XCTAssertEqual(machine.hear(long, names: names, now: now.addingTimeInterval(1), heard: AssistantHeard(noisy: true)), .ignore,
-                       "talk around the user in a loud room")
-        XCTAssertNotEqual(machine.hear(long, names: names, now: now.addingTimeInterval(1)), .ignore, "a quiet room: as before")
+        let long = "tell the api agent to fix the failing login test and then run the whole suite again please"
+        XCTAssertNotEqual(machine.hear(long, names: names, now: now.addingTimeInterval(1), heard: AssistantHeard(noisy: true)), .ignore)
     }
 
     func testPushToTalkNeedsNoName() {

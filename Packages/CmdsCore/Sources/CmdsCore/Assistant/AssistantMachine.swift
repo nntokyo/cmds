@@ -150,8 +150,8 @@ public struct AssistantMachine: Equatable, Sendable {
 
     /// A finished utterance. Addressed ones are kept as `transcript`; others change nothing.
     /// `heard` (#270): said while the listen shortcut was held (push to talk: for the assistant, like by name), or in
-    /// a loud room (the name checked more strictly; a follow-up without it only short, as after an answer: other
-    /// people's talk is heard too).
+    /// a loud room (the name checked more strictly, `AssistantAddressing.check`). A follow-up without the name is as
+    /// in a quiet room: after an answer only a short one, after the hotkey or the name alone any.
     public mutating func hear(_ utterance: String, names: [String], now: Date, heard: AssistantHeard = AssistantHeard()) -> Step {
         guard phase != .off, phase != .paused else { return .ignore }
         if isEcho(utterance, now: now) { return .ignore }
@@ -161,9 +161,8 @@ public struct AssistantMachine: Equatable, Sendable {
         // A card waits (also while it is being read out): a short yes / no needs no name, unless the card's own words
         // could have been heard back ("Send “yes” to api?").
         let answersCard = pending != nil && (phase == .confirming || phase == .speaking) && isCardAnswer(utterance, now: now)
-        let shortOnly = followUpAfterAnswer || heard.noisy
         let followUpOpen = heard.pushed || answersCard || !busy && (phase == .confirming
-            || (windowOpen && (!shortOnly || AssistantAddressing.isShortFollowUp(utterance))))
+            || (windowOpen && (!followUpAfterAnswer || AssistantAddressing.isShortFollowUp(utterance))))
         switch AssistantAddressing.check(utterance, names: names, followUpOpen: followUpOpen, heard: heard) {
         case .ignored:
             return .ignore

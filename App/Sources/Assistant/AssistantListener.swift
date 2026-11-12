@@ -47,6 +47,8 @@ final class AssistantListener {
 
     private var engine: AVAudioEngine?
     private var configurationChanges: NSObjectProtocol?
+    /// When the engine was last restarted (`restartInput`).
+    private var restarts: [Date] = []
     private var analyzer: SpeechAnalyzer?
     /// The analyzer's input and its format, kept while it runs (a new microphone gets a new pump into the same input).
     private var input: (format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation)?
@@ -148,6 +150,13 @@ final class AssistantListener {
     /// configuration changed): its engine starts again with `device`, into the same recognition.
     func restartInput() {
         guard isRunning, engine != nil else { return }
+        // A device that keeps changing (or voice processing changing it back) must not restart it in a loop.
+        let now = Date()
+        restarts = restarts.filter { now.timeIntervalSince($0) < 10 } + [now]
+        guard restarts.count <= 5 else {
+            listenerLog.error("assistant microphone keeps changing: not restarted")
+            return
+        }
         stopEngine()
         do {
             try startEngine()
@@ -249,7 +258,8 @@ final class AssistantListener {
     /// After the release tail: no more audio, and recognition finalises what it has.
     private func released() {
         guard !isHeld, let number = held?.number, let analyzer else { return }
-        if !mode.listensAlways { pump?.hold(false) }
+        // Audio still goes in until the utterance is delivered: the recogniser needs a moment after the last word to
+        // commit it (cut at once, a short request in noise came back empty).
         held?.releasedAt = Date()
         #if DEBUG
         if let start = debugRecord?.start { debugRecord?.finalizes.append(Date().timeIntervalSince(start)) }
@@ -273,6 +283,7 @@ final class AssistantListener {
     private func deliverHeld(force: Bool = false) {
         guard let held, held.releasedAt != nil, !isHeld, held.finalized, held.finalAfterRelease || force else { return }
         self.held = nil
+        if !mode.listensAlways { pump?.hold(false) }
         guard !AssistantText.key(held.text).isEmpty else { return }
         let heard = AssistantHeard(noisy: endpoint.isNoisy, confidences: held.confidences, text: held.text, pushed: true)
         onUtterance?(Utterance(text: held.text, speechEnd: endpoint.lastLoud, heard: heard))
