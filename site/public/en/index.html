@@ -51,7 +51,7 @@
       <h1>The terminal for running<br><span class="accent">many AI agents at once.</span></h1>
       <p class="lead">cmds is a native macOS terminal workspace for running Claude Code, Codex and friends side by side. The sidebar shows which agent is working and which one is waiting for you, and the pane that needs you lights up with an orange ring.</p>
       <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.21.0/cmds-0.21.0.dmg">Download for Mac <small>macOS 14+, Apple silicon</small></a>
+        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.22.0/cmds-0.22.0.dmg">Download for Mac <small>macOS 14+, Apple silicon</small></a>
         <a class="btn" href="/en/guide/">How to use</a>
       </div>
       <p class="note">Free and open source (GPL-3.0). No account, no telemetry.</p>
@@ -118,6 +118,8 @@
             <li><strong>Codex</strong>: nothing to set up. cmds reads only the session id, directory, usage and model from its session files, never the conversation.</li>
             <li><strong>Subagents</strong>: Claude Code subagents (Task / Agent tool) appear as cards under the tiles, with type, current action, elapsed time and tokens.</li>
             <li><strong>Session resume</strong>: after cmds restarts, the session that ran in each pane can be resumed with <code>claude --resume</code> / <code>codex resume</code> (Ask, Always or Never).</li>
+            <li><strong>Account switching</strong>: each session's Claude account as a coloured icon; click it to continue the same session with another account.</li>
+            <li><strong>Voice assistant (macOS 26 and later, free in beta)</strong>: ask "Jarvis, status?" and hear which agents wait and what they are doing. It can reply, approve, or start Claude Code with a task, always after you confirm. Works with Siri and Shortcuts.</li>
             <li><strong>Claude Code skill</strong>: teaches Claude to open helper panes without stealing focus and to use dev servers, the browser and previews.</li>
           </ul>
           <p><a href="/en/guide/#claude">How to set it up →</a></p>
@@ -210,14 +212,14 @@
       <p class="eyebrow">Download</p>
       <h2>Download</h2>
       <div class="download-box">
-        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.21.0/cmds-0.21.0.dmg">Download cmds 0.21.0 (DMG, 15.5 MB)</a></p>
-        <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple. See the <a href="https://github.com/nntokyo/cmds/releases/tag/v0.21.0">GitHub release</a> for the changes. From 0.2.0 on, the app updates itself (from 0.1.x, replace it by hand once).</p>
+        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.22.0/cmds-0.22.0.dmg">Download cmds 0.22.0 (DMG, 16.3 MB)</a></p>
+        <p class="note">Signed with Developer ID (N.N. LLC.) and notarized by Apple. See the <a href="https://github.com/nntokyo/cmds/releases/tag/v0.22.0">GitHub release</a> for the changes. From 0.2.0 on, the app updates itself (from 0.1.x, replace it by hand once).</p>
         <dl>
-          <dt>File</dt><dd><code>cmds-0.21.0.dmg</code> (16,218,761 bytes, 2026-11-11)</dd>
-          <dt>SHA-256</dt><dd><code>ac8731aef0e913b389b3ce815c3054719c4e79bd5fd97188ec761a641099eda4</code></dd>
+          <dt>File</dt><dd><code>cmds-0.22.0.dmg</code> (17,070,593 bytes, 2026-11-13)</dd>
+          <dt>SHA-256</dt><dd><code>986584ce14990b05819493ac70a5eac43837b5c835f1faf098032e2d4bf1a215</code></dd>
           <dt>Runs on</dt><dd>Apple silicon, macOS 14 or later</dd>
         </dl>
-        <p class="note">Check the download with <code>shasum -a 256 cmds-0.21.0.dmg</code>.</p>
+        <p class="note">Check the download with <code>shasum -a 256 cmds-0.22.0.dmg</code>.</p>
       </div>
     </div>
   </section>
@@ -239,6 +241,7 @@
         <li>The apps have no telemetry, analytics or ads, and no account.</li>
         <li>Your data stays on your Mac. Sync with your iPhone/iPad runs only over encrypted connections through your local network, Bluetooth, or your own SSH server.</li>
         <li>Nothing is sent to us (N.N. LLC).</li>
+        <li>The voice assistant listens on your Mac and stores no audio.</li>
       </ul>
       <p><a href="/en/privacy/">Privacy policy →</a></p>
     </div>

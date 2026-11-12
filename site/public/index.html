@@ -52,7 +52,7 @@
       <h1>AIエージェントを、<br><span class="accent">並べて走らせる</span>ターミナル。</h1>
       <p class="lead">cmds は Claude Code や Codex を何本も同時に動かすための、macOS ネイティブのターミナルワークスペースです。どのエージェントが作業中で、どれがあなたの入力を待っているかがサイドバーで分かり、待っているペインはオレンジのリングで光ります。</p>
       <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.21.0/cmds-0.21.0.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
+        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.22.0/cmds-0.22.0.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
         <a class="btn" href="/guide/">使い方を見る</a>
       </div>
       <p class="note">無料・オープンソース（GPL-3.0）。アカウント登録もテレメトリもありません。</p>
@@ -119,6 +119,8 @@
             <li><strong>Codex</strong>：設定不要。セッションファイルから ID・ディレクトリ・使用量・モデルだけを読み、会話内容は読みません。</li>
             <li><strong>サブエージェント</strong>：Claude Code のサブエージェント（Task / Agent ツール）をタイルの下にカードで表示。種類、実行中の操作、経過時間、トークン数が分かります。</li>
             <li><strong>セッション再開</strong>：cmds を再起動すると、各ペインで動いていたセッションを <code>claude --resume</code> / <code>codex resume</code> で再開できます（確認・常に・しない を選択）。</li>
+            <li><strong>アカウントの切り替え</strong>：各セッションの Claude アカウントを色付きのアイコンで表示。クリックで、同じセッションを別のアカウントで続けられます。</li>
+            <li><strong>音声アシスタント（macOS 26 以降・ベータ版は無料）</strong>：「ジャービス、状況は？」と話しかけると、入力待ちや作業の内容を声で答えます。返信・承認や、作業を頼んで Claude Code を起動することも、確認してから実行。Siri とショートカットにも対応。</li>
             <li><strong>Claude Code のスキル</strong>：フォーカスを奪わずに補助ペインを開き、開発サーバーやブラウザ、プレビューを使う方法を Claude に教えます。</li>
           </ul>
           <p><a href="/guide/#claude">設定方法を見る →</a></p>
@@ -211,14 +213,14 @@
       <p class="eyebrow">Download</p>
       <h2>ダウンロード</h2>
       <div class="download-box">
-        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.21.0/cmds-0.21.0.dmg">cmds 0.21.0 をダウンロード（DMG、15.5 MB）</a></p>
-        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.21.0">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
+        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.22.0/cmds-0.22.0.dmg">cmds 0.22.0 をダウンロード（DMG、16.3 MB）</a></p>
+        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.22.0">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
         <dl>
-          <dt>ファイル</dt><dd><code>cmds-0.21.0.dmg</code>（16,218,761 バイト、2026-11-11）</dd>
-          <dt>SHA-256</dt><dd><code>ac8731aef0e913b389b3ce815c3054719c4e79bd5fd97188ec761a641099eda4</code></dd>
+          <dt>ファイル</dt><dd><code>cmds-0.22.0.dmg</code>（17,070,593 バイト、2026-11-13）</dd>
+          <dt>SHA-256</dt><dd><code>986584ce14990b05819493ac70a5eac43837b5c835f1faf098032e2d4bf1a215</code></dd>
           <dt>対応</dt><dd>Apple シリコン、macOS 14 以降</dd>
         </dl>
-        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.21.0.dmg</code> で SHA-256 を照合できます。</p>
+        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.22.0.dmg</code> で SHA-256 を照合できます。</p>
       </div>
     </div>
   </section>
@@ -240,6 +242,7 @@
         <li>アプリにはテレメトリ、解析、広告はありません。アカウントも不要です。</li>
         <li>データはあなたの Mac に保存されます。iPhone/iPad との同期は、ローカルネットワーク、Bluetooth、またはあなた自身の SSH サーバーを通る暗号化された接続だけで行われます。</li>
         <li>当社（合同会社N.N.）のサーバーには何も送られません。</li>
+        <li>音声アシスタントの聞き取りは Mac の中で行い、音声は保存しません。</li>
       </ul>
       <p><a href="/privacy/">プライバシーポリシー →</a></p>
     </div>
