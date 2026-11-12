@@ -127,6 +127,8 @@ private extension AssistantLine {
             return String(localized: "\(agent) in \(workspace) needs you.", comment: "assistant: a session it gave a task to waits for the user")
         case .webFailed:
             return String(localized: "I couldn't get an answer from Claude: it failed or took too long.", comment: "assistant: claude -p for a web question failed or timed out")
+        case .checking:
+            return String(localized: "Checking.", comment: "assistant: said at once while Claude works on a slow answer (web search, detailed summary)")
         }
     }
 }

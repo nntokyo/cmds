@@ -12,6 +12,8 @@ enum AssistantTuning {
     static let claudeTimeout: TimeInterval = 90
     /// How long the interpreter may take (it is asked before anything is said).
     static let interpreterTimeout: TimeInterval = 30
+    /// The on-device model is warmed up when speech begins at most this often (#248).
+    static let prewarmInterval: TimeInterval = 30
     /// Rows of scrollback read from a pane for a summary.
     static let summaryScrollback = 120
     /// Screen text handed to the on-device model, from the end.

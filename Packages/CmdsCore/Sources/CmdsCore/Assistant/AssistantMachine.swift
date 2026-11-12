@@ -244,6 +244,16 @@ public struct AssistantMachine: Equatable, Sendable {
         return true
     }
 
+    /// More of the answer being spoken (#248: the next sentence of an answer said while it is written): shown, and
+    /// remembered as said (its echo). False when the user has moved on from `request` or it is no longer being said.
+    @discardableResult
+    public mutating func extendAnswer(_ text: String, request: Int) -> Bool {
+        guard request == self.request, phase == .speaking else { return false }
+        answer = text
+        spoken = text
+        return true
+    }
+
     /// The answer has been spoken (or speech is muted): wait for a follow-up or the confirmation. The follow-up window
     /// starts now, when the voice stops.
     public mutating func speechFinished(now: Date) {

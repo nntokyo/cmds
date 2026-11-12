@@ -26,6 +26,8 @@ final class AssistantListener {
     var onLevel: ((Float) -> Void)?
     /// Recognition stopped by itself (an error).
     var onStop: ((Error?) -> Void)?
+    /// Speech began (the level rose after quiet; #248: the on-device model is warmed up meanwhile).
+    var onSpeech: (() -> Void)?
 
     private let engine = AVAudioEngine()
     private var analyzer: SpeechAnalyzer?
@@ -202,7 +204,11 @@ final class AssistantListener {
     /// speech, then quiet, and the recogniser is asked to finalise what it has at once (#248).
     private func heard(level: Float) {
         let now = Date()
-        if level >= AssistantPresence.Hearing.onLevel { endpoint.loud(at: now) }
+        if level >= AssistantPresence.Hearing.onLevel {
+            let began = endpoint.speechStarted == nil
+            endpoint.loud(at: now)
+            if began { onSpeech?() }
+        }
         if endpoint.shouldFinalize(now: now), finalizesEarly, let analyzer {
             Task {
                 do {

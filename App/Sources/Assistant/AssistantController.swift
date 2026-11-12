@@ -104,6 +104,14 @@ final class AssistantController {
     /// The current request's stage times, and the last few requests' (`+Timing`, #248).
     var timeline: AssistantTimeline?
     var timelines: [AssistantTimeline] = []
+    /// When the on-device model was last warmed up (#248).
+    private var prewarmedAt: Date?
+    /// Web answers of the last minutes (#248).
+    var webCache = AssistantWebCache()
+    /// The request the short acknowledgement was said for (#248: once, and the answer follows it).
+    var acknowledged: Int?
+    /// The answer being spoken sentence by sentence while Claude still writes it (#248), and what was said of it.
+    var streaming: (request: Int, sentences: [String])?
 
     /// Created at launch (AppDelegate); turns itself on when the user had it on.
     static func start(controller: AppController) {
@@ -133,6 +141,7 @@ final class AssistantController {
             MainActor.assumeIsolated { AssistantController.shared?.updatePresence() }
         }
         listener.onStop = { [weak self] error in self?.microphoneStopped(error) }
+        listener.onSpeech = { [weak self] in self?.speechBegan() }
         stateChanges = controller.changes.sink { [weak self] change in
             MainActor.assumeIsolated { self?.stateChanged(change) }
         }
@@ -180,6 +189,7 @@ final class AssistantController {
         machine.turnOff()
         listener.stop()
         speech += 1
+        streaming = nil
         voice.stop()
         hotkeys?.setListen(.off)
         hotkeys?.setConfirmationKeys(false)
@@ -197,6 +207,7 @@ final class AssistantController {
         guard isOn else { return }
         work?.cancel()
         speech += 1
+        streaming = nil
         voice.stop()
         machine.pause()
         listener.stop()
@@ -224,6 +235,16 @@ final class AssistantController {
         }
     }
 
+    /// Someone started speaking: the on-device model is loaded meanwhile (#248), at most every
+    /// `AssistantTuning.prewarmInterval`, so an answer by it does not wait for that after the utterance.
+    private func speechBegan() {
+        guard isOn, machine.phase != .paused, AssistantBrain.modelAvailable else { return }
+        let now = Date()
+        if let prewarmedAt, now.timeIntervalSince(prewarmedAt) < AssistantTuning.prewarmInterval { return }
+        prewarmedAt = now
+        AssistantBrain.prewarm(language: language)
+    }
+
     private func microphoneStopped(_ error: Error?) {
         guard let error else { return }
         assistantLog.error("assistant microphone stopped: \(String(describing: error), privacy: .public)")
@@ -246,14 +267,17 @@ final class AssistantController {
 
     /// Shows and speaks an answer (for `request`: not when the user has moved on since); the machine moves on when it
     /// has been said.
+    /// `open`: the first part of an answer still being written (`+Thinking`: `streamed`), the rest follows with
+    /// `voice.append` and the machine moves on after `voice.close()` and the last part.
     func say(_ text: String, proposing action: AssistantAction? = nil, request: Int? = nil, capped: Bool = false,
-             byClaude: Bool = false) {
+             byClaude: Bool = false, open: Bool = false) {
         guard machine.answer(text, proposing: action, request: request, now: Date()) else { return }
+        if streaming?.request != machine.request { streaming = nil }
         answerByClaude = byClaude
         refresh()
         speech += 1
         let number = speech
-        speak(capped ? AssistantBrevity.spoken(text) : text) { [weak self] in
+        speak(capped ? AssistantBrevity.spoken(text) : text, open: open) { [weak self] in
             guard let self, self.speech == number else { return }
             self.machine.speechFinished(now: Date())
             self.refresh()
@@ -278,13 +302,41 @@ final class AssistantController {
         }
     }
 
-    private func speak(_ text: String, finished: @escaping () -> Void) {
+    private func speak(_ text: String, open: Bool, finished: @escaping () -> Void) {
         lastSpoken = text
         hudNote = nil
         mark(.speechStart)
         let request = machine.request
+        // After the acknowledgement of this request, not over it.
         voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
-                    muted: muted, started: { [weak self] in self?.mark(.voiceStart, request: request) }, finished: finished)
+                    muted: muted, open: open, queued: acknowledged == request,
+                    started: { [weak self] in self?.mark(.voiceStart, request: request) }, finished: finished)
+    }
+
+    /// Another sentence of the answer being spoken while it is written; `text` is all of it so far (HUD, echo).
+    func speakMore(_ sentence: String, answer text: String) {
+        guard machine.extendAnswer(text, request: machine.request) else { return }
+        lastSpoken = text
+        voice.append(sentence, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
+                     muted: muted)
+        refresh()
+    }
+
+    /// The short acknowledgement of a slow answer (#248: 「調べます。」), for `request`: said without changing the
+    /// state or the HUD; the answer follows it rather than cutting it off.
+    func acknowledge(_ request: Int) {
+        guard machine.request == request, machine.phase == .thinking, !machine.voiceActive, acknowledged != request else { return }
+        acknowledged = request
+        let text = AssistantStrings.localized(.checking)
+        mark(.ack, request: request)
+        machine.voiceStarted(text)
+        speech += 1
+        let number = speech
+        voice.speak(text, language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
+                    muted: muted) { [weak self] in
+            guard let self, self.speech == number else { return }
+            self.machine.voiceFinished(now: Date())
+        }
     }
 
     // MARK: HUD and clock

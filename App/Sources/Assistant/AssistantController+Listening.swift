@@ -46,6 +46,7 @@ extension AssistantController {
     /// `claude` process (cancelled: `AssistantBrain` terminates it). A late answer is dropped by its request number.
     func interrupt() {
         speech += 1
+        streaming = nil
         voice.stop()
         work?.cancel()
         work = nil

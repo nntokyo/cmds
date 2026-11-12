@@ -38,6 +38,17 @@ enum AssistantBrain {
                                  progress: progress)
     }
 
+    /// A session warmed up while the user speaks (#248): the model's resources are loaded before it is asked.
+    @MainActor private static var warm: LanguageModelSession?
+
+    /// Loads the on-device model ahead of a question (with the instructions of a free answer).
+    @MainActor static func prewarm(language: AssistantLanguage) {
+        let session = LanguageModelSession(model: SystemLanguageModel.default,
+                                           instructions: AssistantClaude.modelInstructions(language: language.name, web: true, actions: true))
+        session.prewarm()
+        warm = session
+    }
+
     private static func respond(prompt: String, instructions: String, progress: Progress?) async throws -> String {
         progress?(.modelStart, Date())
         defer { progress?(.modelDone, Date()) }
@@ -57,14 +68,14 @@ enum AssistantBrain {
     // MARK: claude -p
 
     /// A short summary by Claude Code, run headless (`AssistantClaude`: isolated, no tools). The screen text goes in on
-    /// standard input.
-    static func detailedSummary(facts: String, screen: String, language: AssistantLanguage,
-                                progress: Progress? = nil) async throws -> String {
+    /// standard input. `sentence`: each sentence as it is written (#248: spoken while the rest comes).
+    static func detailedSummary(facts: String, screen: String, language: AssistantLanguage, progress: Progress? = nil,
+                                sentence: (@Sendable (String) -> Void)? = nil) async throws -> String {
         brainLog.info("claude -p summary started")
         return try await AssistantClaudeProcess.run(
             arguments: AssistantClaude.detailedSummaryArguments(facts: facts, language: language.name),
             input: String(screen.suffix(AssistantTuning.maxDetailedScreenCharacters)), timeout: AssistantTuning.claudeTimeout,
-            progress: progress)
+            progress: progress, sentence: sentence)
     }
 
     /// A free question answered by Claude Code with web search only, run headless like `detailedSummary`.

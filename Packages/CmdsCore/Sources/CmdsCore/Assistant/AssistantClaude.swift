@@ -11,9 +11,13 @@ import Foundation
 public enum AssistantClaude {
     /// The model for the interpreter: it only fills in one JSON object.
     public static let interpreterModel = "haiku"
-    /// The model for web answers and detailed summaries: fast enough to wait for, not the user's default (which may be
-    /// a large one).
+    /// The model for detailed summaries: fast enough to wait for, not the user's default (which may be a large one).
     public static let answerModel = "sonnet"
+    /// The model for web answers (#248). The web search takes most of the time (about 4–6 s a search), not the model:
+    /// in five Japanese questions (weather, exchange rate, Xcode version, Nikkei, temperature) haiku took 8.5–29.7 s
+    /// (median 10.7) and sonnet 4.1–17.3 s (median 12.3), and haiku searched more often, gave up twice ("確認できません
+    /// でした") and answered longer; so sonnet stays.
+    public static let webModel = "sonnet"
 
     /// Isolation from the user's Claude Code setup, on every call.
     public static let isolationArguments = ["--setting-sources", "", "--no-session-persistence", "--strict-mcp-config"]
@@ -23,13 +27,17 @@ public enum AssistantClaude {
     /// answer one).
     public static let webToolArguments = ["--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch,WebFetch"]
 
+    /// The output is read as it comes (`AssistantClaudeStream`, #248): the answer as soon as its `result` line is
+    /// there, the text sentence by sentence (`--verbose` is required for stream-json with `-p`).
+    public static let outputArguments = ["--output-format", "stream-json", "--verbose", "--include-partial-messages"]
+
     /// Environment variables the assistant's `claude` never gets (cmds marks its panes' processes with them).
     public static func environment(_ base: [String: String]) -> [String: String] {
         base.filter { !$0.key.hasPrefix("CMDS_") }
     }
 
     private static func arguments(prompt: String, model: String, tools: [String]) -> [String] {
-        ["-p", prompt, "--output-format", "text", "--model", model] + tools + isolationArguments
+        ["-p", prompt] + outputArguments + ["--model", model] + tools + isolationArguments
     }
 
     // MARK: Web questions
@@ -39,7 +47,7 @@ public enum AssistantClaude {
     public static func webArguments(question: String, language: String, now: Date = Date(), timeZone: TimeZone = .current,
                                     locale: Locale = .current) -> [String] {
         arguments(prompt: webPrompt(question: question, language: language, now: now, timeZone: timeZone, locale: locale),
-                  model: answerModel, tools: webToolArguments)
+                  model: webModel, tools: webToolArguments)
     }
 
     static func webPrompt(question: String, language: String, now: Date, timeZone: TimeZone, locale: Locale) -> String {

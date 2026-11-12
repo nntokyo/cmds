@@ -22,12 +22,16 @@ enum AssistantClaudeProcess {
         return candidates.first { FileManager.default.isExecutableFile(atPath: $0) }
     }
 
-    /// Runs `claude` in an empty temporary folder, stopped after `timeout`: its standard output, trimmed. `input` goes
-    /// in on standard input. The folder is always the same one (no tool can write to it): Claude Code still makes an
-    /// (empty) project folder under `~/.claude/projects` for its working directory, and so makes only one.
-    /// `progress` hears when the process started and when its first output came (#248), from any thread.
-    static func run(arguments: [String], input: String? = nil, timeout: TimeInterval,
-                    progress: Progress? = nil) async throws -> String {
+    /// Runs `claude` in an empty temporary folder, stopped after `timeout`: its answer (the `result` line of its
+    /// stream-json output, `AssistantClaudeStream`), returned as soon as it is there (#248: Claude Code takes about a
+    /// second more to exit, which is not waited for). `input` goes in on standard input. The folder is always the same
+    /// one (no tool can write to it): Claude Code still makes an (empty) project folder under `~/.claude/projects` for
+    /// its working directory, and so makes only one. `progress` hears when the process started, its first output and
+    /// first text came and the answer was there; `sentence` each sentence of the answer, made fit to speak, as it is
+    /// written (`AssistantSpokenStream`: only for calls without tools, else none before the last turn ended). Both
+    /// from any thread.
+    static func run(arguments: [String], input: String? = nil, timeout: TimeInterval, progress: Progress? = nil,
+                    sentence: (@Sendable (String) -> Void)? = nil) async throws -> String {
         guard let executable = executable() else { throw Failure.notFound }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-assistant")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -48,8 +52,9 @@ enum AssistantClaudeProcess {
         try? stdin.fileHandleForWriting.close()
         // The user moved on (a new request, barge-in, off): the process is stopped, its answer never used.
         let running = RunningProcess(process)
+        let spoken = AssistantSpokenStream(streaming: !arguments.contains("--allowedTools"))
         return try await withTaskCancellationHandler {
-            try await wait(for: process, output: output, timeout: timeout, progress: progress)
+            try await wait(for: process, output: output, timeout: timeout, spoken: spoken, progress: progress, sentence: sentence)
         } onCancel: {
             running.terminate()
         }
@@ -64,8 +69,8 @@ enum AssistantClaudeProcess {
         }
     }
 
-    private static func wait(for process: Process, output: Pipe, timeout: TimeInterval,
-                             progress: Progress?) async throws -> String {
+    private static func wait(for process: Process, output: Pipe, timeout: TimeInterval, spoken: AssistantSpokenStream,
+                             progress: Progress?, sentence: (@Sendable (String) -> Void)?) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             let lock = NSLock()
             var done = false
@@ -83,21 +88,39 @@ enum AssistantClaudeProcess {
                 }
             }
             DispatchQueue.global().async {
-                var data = Data()
+                var spoken = spoken
+                var pending = Data()
+                var firstByte = true
+                var firstText = true
+                // Lines as they come; the answer is taken from its `result` line, then the rest is only drained.
                 while true {
                     let chunk = output.fileHandleForReading.availableData
                     if chunk.isEmpty { break }
-                    if data.isEmpty { progress?(.claudeFirstByte, Date()) }
-                    data.append(chunk)
+                    if firstByte {
+                        firstByte = false
+                        progress?(.claudeFirstByte, Date())
+                    }
+                    pending.append(chunk)
+                    while let newline = pending.firstIndex(of: UInt8(ascii: "\n")) {
+                        let line = String(decoding: pending[pending.startIndex..<newline], as: UTF8.self)
+                        pending.removeSubrange(pending.startIndex...newline)
+                        for event in AssistantClaudeStream.events(inLine: line) {
+                            if case .text = event, firstText {
+                                firstText = false
+                                progress?(.claudeFirstText, Date())
+                            }
+                            for text in spoken.take(event) { sentence?(text) }
+                            if case .result(let text, let isError) = event {
+                                progress?(.claudeDone, Date())
+                                let answer = (text ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                                finish(isError || answer.isEmpty ? .failure(Failure.failed(0)) : .success(answer))
+                            }
+                        }
+                    }
                 }
                 process.waitUntilExit()
-                progress?(.claudeDone, Date())
-                let text = String(decoding: data, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-                if process.terminationStatus == 0, !text.isEmpty {
-                    finish(.success(text))
-                } else {
-                    finish(.failure(Failure.failed(process.terminationStatus)))
-                }
+                // No result line: it failed (or was stopped).
+                finish(.failure(Failure.failed(process.terminationStatus)))
             }
         }
     }
