@@ -273,6 +273,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             controller.preferredContentSize = content.fittingSize
             return controller
         }
+        scrolled(content, in: controller)
+        return controller
+    }
+
+    /// `controller`'s view: `content` (its rows, top first) in a scroll view at most `scrollHeight` tall, as tall as the
+    /// rows when they fit (#264).
+    private func scrolled(_ content: NSView, in controller: NSViewController) {
         let fitting = content.fittingSize
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true
@@ -301,7 +308,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         scrollHeightLimits.append((limit, controller, fitting.height))
         controller.view = scroll
         controller.preferredContentSize = NSSize(width: width, height: min(fitting.height, Self.scrollHeight))
-        return controller
     }
 
     /// Keeps a scrolled tab, and so the window, on the screen Settings opens on: its title bar, toolbar and a margin
