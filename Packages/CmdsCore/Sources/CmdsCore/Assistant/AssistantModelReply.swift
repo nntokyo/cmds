@@ -18,11 +18,21 @@ public enum AssistantModelReply {
     static let markerCharacters = CharacterSet(charactersIn: "[] .。")
 
     /// Whether the on-device model's one-sentence summary of a session can be said: not empty, no action marker or
-    /// refusal, and not a bracketed word alone ("[START]"). Otherwise the facts are said instead.
-    public static func isSummary(_ text: String) -> Bool {
+    /// refusal, not a bracketed word alone ("[START]"), not the prompt's example copied, and not "waiting for input"
+    /// when the session does not wait (`waiting` false: the model made it up from a quiet screen). Otherwise the facts
+    /// are said instead.
+    public static func isSummary(_ text: String, waiting: Bool = true) -> Bool {
         let bare = text.trimmingCharacters(in: markerCharacters)
-        return !(text.isEmpty || isAction(text) || (text.hasPrefix("[") && !bare.contains(" ")))
+        if text.isEmpty || isAction(text) || (text.hasPrefix("[") && !bare.contains(" ")) { return false }
+        if AssistantText.key(text) == AssistantText.key(AssistantClaude.summaryExample) { return false }
+        return waiting || !claimsWaiting.contains { $0.occurs(in: AssistantText.folded(text)) }
     }
+
+    /// A summary that says the agent waits for the user (「入力待ち」, "waiting for input", "asks whether…").
+    static let claimsWaiting: [Pattern] = [
+        Pattern(AssistantText.folded(#"入力待ち|入力を待|返答を待|回答を待|確認を待|確認を求め|承認を待|許可を求め|尋ねて|聞いて(い|き)|待機中|指示を待|フィードバックを待"#)),
+        Pattern(#"\b(wait(s|ing)? for (the )?(user|input|you|your|feedback|response|reply|answer|confirmation|approval|instructions?|permission|decision|direction)|asks (you |whether|if|for)|is asking|needs your|idle,? (and )?waiting)\b"#),
+    ]
 
     /// 「申し訳ありませんが…できません」, "I'm sorry, I can't…", "I am unable to…" (the Japanese folded like the answer).
     static let refusals: [Pattern] = [

@@ -205,9 +205,65 @@ final class AssistantPlannerTests: XCTestCase {
         XCTAssertEqual(plan("what is api doing"), .summarize(
             workspaceID: "w1", paneID: "p1", detailed: false,
             fallback: "Claude in api. api needs you. It asks: Run the tests? 2 options, the first is Yes. Waiting for 5 minutes."))
-        XCTAssertEqual(plan("docsは何してる"), .summarize(workspaceID: "w3", paneID: "p3", detailed: false,
-                                                     fallback: "No agent is running in docs."))
+        // No agent: said at once, never a summary of the screen (a model would make up "waiting for input").
+        XCTAssertEqual(plan("docsは何してる"), .answer("No agent is running in docs."))
         XCTAssertEqual(plan("what is nothing doing"), .askBack("I can't find a workspace called nothing."))
+    }
+
+    func testAWorkspaceWithoutAnAgentSaysWhatItsShellRuns() {
+        func docs(_ shells: [AssistantWorld.Shell?], state: MenuBarSummary.State? = nil) -> AssistantWorld {
+            world([]).replacing("w3", with: .init(id: "w3", title: "docs", state: state, directory: "/tmp/docs",
+                                                  panes: shells.enumerated().map { .init(id: "p3\($0.offset)", title: "zsh", shell: $0.element) }))
+        }
+        XCTAssertEqual(plan("what is docs doing", docs([.idle])), .answer("No agent is running in docs. Its shell is idle."))
+        XCTAssertEqual(plan("docsは何してる", docs([.running("vim")])), .answer("No agent is running in docs. It is running vim."))
+        XCTAssertEqual(plan("summarize docs", docs([.idle, .running("node"), .running("node")])),
+                       .answer("No agent is running in docs. It is running node."))
+        XCTAssertEqual(plan("summarize docs in detail", docs([.idle, .idle])), .answer("No agent is running in docs. Its shell is idle."))
+        // Not known (an SSH pane, a process not read): only that no agent runs.
+        XCTAssertEqual(plan("what is docs doing", docs([nil])), .answer("No agent is running in docs."))
+        XCTAssertEqual(plan("what is docs doing", docs([.idle, nil])), .answer("No agent is running in docs."))
+        // An agent that has finished (its badge stays, the agent is gone): the same.
+        XCTAssertEqual(plan("what is docs doing", docs([.idle], state: .done)), .answer("No agent is running in docs. Its shell is idle."))
+        // A plain shell asking for the user (a bell): its state as before.
+        guard case .summarize = plan("what is docs doing", docs([.idle], state: .needsUser)) else { return XCTFail() }
+        // An agent running: summarised from its screen as before.
+        guard case .summarize = plan("what is web doing") else { return XCTFail() }
+    }
+
+    func testAWorkspaceCreatedInAFolderThatIsAlreadyAWorkspaceIsNumbered() {
+        XCTAssertNil(AssistantWorld.uniqueTitle("app", taken: ["api", "web"]))
+        XCTAssertEqual(AssistantWorld.uniqueTitle("api", taken: ["api", "web"]), "api-2")
+        XCTAssertEqual(AssistantWorld.uniqueTitle("api", taken: ["API", "api-2", "api 3"]), "api-4")
+        XCTAssertEqual(AssistantWorld.uniqueTitle("~", taken: ["~"]), "~-2")
+        // The base name means the original; the number the new one.
+        let two = world([.init(id: "w4", title: "api-2", state: .working, agent: "Claude", directory: "/tmp/api",
+                               panes: [.init(id: "p4", title: "zsh", agent: "Claude")])])
+        XCTAssertEqual(two.find("api").found?.id, "w1")
+        XCTAssertEqual(two.find("API").found?.id, "w1")
+        XCTAssertEqual(two.find("api 2").found?.id, "w4")
+        XCTAssertEqual(two.find("api-2").found?.id, "w4")
+        XCTAssertEqual(two.find("api２").found?.id, "w4")
+        guard case .summarize(let id, _, _, _) = plan("what is api doing", two) else { return XCTFail() }
+        XCTAssertEqual(id, "w1")
+        guard case .summarize(let numbered, _, _, _) = plan("what is api 2 doing", two) else { return XCTFail() }
+        XCTAssertEqual(numbered, "w4")
+        guard case .propose(let action, _) = plan("apiに「続けて」と返信", two) else { return XCTFail() }
+        XCTAssertEqual(action.workspaceID, "w1")
+    }
+
+    func testWhatACancelledCardLeavesOut() {
+        let reply = AssistantAction(kind: .reply, workspaceID: "w1", workspaceTitle: "api", paneID: "p1", paneTitle: "zsh",
+                                    text: "go", reasons: [])
+        var choose = reply
+        choose.kind = .choose(1)
+        let start = AssistantAction(kind: .startAgent(.claude, directory: "/tmp/api", task: nil), workspaceID: nil,
+                                    workspaceTitle: "/tmp/api", paneID: nil, paneTitle: nil, text: "claude", reasons: [])
+        XCTAssertEqual(AssistantPlanner.skipped(reply), .skippedSend(workspace: "api"))
+        XCTAssertEqual(AssistantPlanner.skipped(choose), .skippedChoice(workspace: "api"))
+        XCTAssertEqual(AssistantPlanner.skipped(start), .skippedStart(agent: "Claude"))
+        XCTAssertEqual(AssistantPlanner.skipped(AssistantAction.batch([reply, reply])!), .skippedMany(count: 2))
+        XCTAssertEqual(AssistantStrings.english.join([.skippedStart(agent: "Claude")]), "I won't start Claude.")
     }
 
     func testReplyIsProposedNeverSent() {
@@ -216,7 +272,7 @@ final class AssistantPlannerTests: XCTestCase {
         XCTAssertEqual(action.paneID, "p1")
         XCTAssertEqual(action.text, "run the tests")
         XCTAssertEqual(action.confirmation, .voiceOrKey)
-        XCTAssertEqual(prompt, "Send “run the tests” to api? Say yes or press Return.")
+        XCTAssertEqual(prompt, "Send “run the tests” to api? Confirm by voice or press Return.")
     }
 
     func testDangerousReplyNeedsAKey() {
@@ -271,7 +327,7 @@ final class AssistantPlannerTests: XCTestCase {
         guard case .propose(let action, let prompt) = plan("start claude in web") else { return XCTFail() }
         XCTAssertEqual(action.kind, .startAgent(.claude, directory: "/tmp/web", task: nil))
         XCTAssertEqual(action.text, "claude")
-        XCTAssertEqual(prompt, "Start Claude in /tmp/web? Say yes or press Return.")
+        XCTAssertEqual(prompt, "Start Claude in /tmp/web? Confirm by voice or press Return.")
         XCTAssertEqual(plan("start codex in nowhere"), .askBack("I don't know a workspace or folder called nowhere. Which folder should I start it in?"))
         let path = AssistantPlanner.plan(.startAgent(.codex, place: "/tmp/x", task: nil), world: world(), strings: .english) { $0 == "/tmp/x" }
         if case .propose(let action, _) = path { XCTAssertEqual(action.kind, .startAgent(.codex, directory: "/tmp/x", task: nil)) } else { XCTFail() }
@@ -552,9 +608,9 @@ final class AssistantMachineTests: XCTestCase {
     func testYesNoWhileConfirmingStillWorks() {
         var machine = on()
         _ = machine.hear("Jarvis reply to api: run the tests", names: names, now: t0)
-        machine.answer("Send “run the tests” to api? Say yes or press Return.", proposing: action, now: t0)
-        // While the card is read out, yes by name confirms (and stops the voice).
-        XCTAssertEqual(machine.hear("はい", names: names, now: t0.addingTimeInterval(1)), .ignore)
+        machine.answer("Send “run the tests” to api? Confirm by voice or press Return.", proposing: action, now: t0)
+        // While the card is read out, other talk without the name is ignored; yes by name confirms (and stops the voice).
+        XCTAssertEqual(machine.hear("lunch?", names: names, now: t0.addingTimeInterval(1)), .ignore)
         XCTAssertEqual(machine.hear("ジャービス、はい", names: names, now: t0.addingTimeInterval(2)), .execute(action))
         XCTAssertFalse(machine.voiceActive)
         // After it was read out: yes / no without the name, other talk ignored, the card kept.
@@ -576,10 +632,86 @@ final class AssistantMachineTests: XCTestCase {
         machine.answer("Send?", proposing: action, now: t0)
         machine.speechFinished(now: t0)
         machine.voiceStarted("Please press Return or click the button for this one.")
-        XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(1)), .ignore)
+        XCTAssertEqual(machine.hear("what is api doing", names: names, now: t0.addingTimeInterval(1)), .ignore)
         machine.voiceFinished(now: t0.addingTimeInterval(3))
         XCTAssertEqual(machine.hear("please press return or click the button", names: names, now: t0.addingTimeInterval(5)), .ignore)
         XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(5)), .execute(action))
+    }
+
+    // MARK: Answering a card while it is read out
+
+    func testAShortYesOrNoAnswersTheCardWhileItIsReadOut() {
+        let card = "Send “run the tests” to api? Confirm by voice or press Return."
+        for (word, step) in [("はい", AssistantMachine.Step.execute(action)), ("yes", .execute(action)), ("OK", .execute(action)),
+                             ("いいえ", .cancelled), ("no", .cancelled), ("キャンセル", .cancelled)] {
+            var machine = on()
+            _ = machine.hear("Jarvis reply to api: run the tests", names: names, now: t0)
+            machine.answer(card, proposing: action, now: t0)
+            XCTAssertEqual(machine.phase, .speaking)
+            XCTAssertEqual(machine.hear(word, names: names, now: t0.addingTimeInterval(1)), step, word)
+            XCTAssertFalse(machine.voiceActive, word)
+            XCTAssertNil(machine.pending, word)
+        }
+        // Japanese card.
+        var machine = on()
+        machine.answer("apiに「テストを実行して」を送りますか？声かReturnキーで確定してください。", proposing: action, now: t0)
+        XCTAssertEqual(machine.hear("はい", names: names, now: t0.addingTimeInterval(1)), .execute(action))
+        // Also in the second after it was read out (the echo guard), and while a note is said over the card.
+        machine.answer("Send?", proposing: action, now: t0)
+        machine.speechFinished(now: t0.addingTimeInterval(2))
+        XCTAssertEqual(machine.hear("はい", names: names, now: t0.addingTimeInterval(2.3)), .execute(action))
+    }
+
+    func testTheCardsOwnWordsHeardBackDoNotAnswerIt() {
+        // A reply whose text is "yes": the card says it, so "yes" heard while it speaks may be its own voice.
+        var machine = on()
+        machine.answer("Send “yes” to api? Confirm by voice or press Return.", proposing: action, now: t0)
+        XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(1)), .ignore)
+        XCTAssertEqual(machine.pending, action)
+        // Other words still answer it; after the guard, yes too.
+        XCTAssertEqual(machine.hear("いいえ", names: names, now: t0.addingTimeInterval(2)), .cancelled)
+        machine.answer("Send “yes” to api? Confirm by voice or press Return.", proposing: action, now: t0)
+        machine.speechFinished(now: t0.addingTimeInterval(3))
+        XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(3.5)), .ignore)
+        XCTAssertEqual(machine.hear("yes", names: names, now: t0.addingTimeInterval(5)), .execute(action))
+        // A long echo of the card is never taken.
+        machine.answer("Send “run the tests” to api? Confirm by voice or press Return.", proposing: action, now: t0)
+        XCTAssertEqual(machine.hear("send run the tests to api", names: names, now: t0.addingTimeInterval(1)), .ignore)
+        XCTAssertEqual(machine.pending, action)
+    }
+
+    func testAnEchoedWordIsAWholeWordInEnglish() {
+        XCTAssertTrue(AssistantEcho.isEchoedWord("yes", of: "Send “yes” to api?"))
+        XCTAssertTrue(AssistantEcho.isEchoedWord("Yes.", of: "Say YES or press Return."))
+        XCTAssertFalse(AssistantEcho.isEchoedWord("no", of: "Nothing is running now, I know."))
+        XCTAssertFalse(AssistantEcho.isEchoedWord("yes", of: "Confirm by voice or press Return."))
+        XCTAssertTrue(AssistantEcho.isEchoedWord("はい", of: "「はい」と送りますか？"))
+        XCTAssertFalse(AssistantEcho.isEchoedWord("はい", of: "声かReturnキーで確定してください。"))
+    }
+
+    func testADangerousCardStillNeedsAKeyWhileItIsReadOut() {
+        var machine = on()
+        var dangerous = action
+        dangerous.reasons = [.destructive]
+        machine.answer("Send “rm -rf build” to api? This one needs Return or a click.", proposing: dangerous, now: t0)
+        XCTAssertEqual(machine.hear("はい", names: names, now: t0.addingTimeInterval(1)), .needsKey)
+        XCTAssertEqual(machine.phase, .confirming)
+        XCTAssertEqual(machine.pending, dangerous)
+        XCTAssertEqual(machine.key(.confirm, now: t0.addingTimeInterval(2)), .execute(dangerous))
+    }
+
+    func testCancellingACardRemembersWhatWasCancelled() {
+        var machine = on()
+        machine.answer("Send?", proposing: action, now: t0)
+        machine.speechFinished(now: t0)
+        XCTAssertEqual(machine.hear("いいえ", names: names, now: t0.addingTimeInterval(2)), .cancelled)
+        XCTAssertEqual(machine.cancelledAction, action)
+        // The rest of the utterance goes on once the "cancelled" line has been said.
+        machine.answer("I won't send it to api.", now: t0.addingTimeInterval(2))
+        XCTAssertFalse(machine.proceed())
+        machine.speechFinished(now: t0.addingTimeInterval(3))
+        XCTAssertTrue(machine.proceed())
+        XCTAssertEqual(machine.phase, .thinking)
     }
 }
 
@@ -726,6 +858,19 @@ final class AssistantWebTests: XCTestCase {
         }
     }
 
+    func testOnlineAndLatestNeedALiveContext() {
+        for question in ["is GitHub online", "is Slack down right now", "search online for the Swift 6.2 release notes",
+                         "find it on the web", "what's the latest version of Xcode", "latest news about Apple",
+                         "the latest release of Node", "current version of Swift", "最新ニュースを教えて", "最新のmacOSのバージョンは"] {
+            XCTAssertTrue(AssistantWeb.needsWeb(question), question)
+        }
+        for question in ["what is an online algorithm", "latest commit in api", "what's the latest commit in api",
+                         "explain online learning", "what is the internet", "show me the latest error in web",
+                         "apiの最新のコミットは", "is this function pure"] {
+            XCTAssertFalse(AssistantWeb.needsWeb(question), question)
+        }
+    }
+
     func testOrdinaryQuestionsStayOnDevice() {
         for question in ["what is a monad", "explain binary search", "tell me a joke", "1たす1は", "モナドって何",
                          "おすすめの変数名は", "what does git rebase do", "how do I write a for loop in Swift",
@@ -848,7 +993,7 @@ final class AssistantManySessionsTests: XCTestCase {
         XCTAssertEqual(batch.all.map(\.paneID), ["p1", "p2"])
         XCTAssertEqual(Set(batch.all.map(\.text)), ["テストを実行して"])
         XCTAssertEqual(batch.confirmation, .voiceOrKey)
-        XCTAssertEqual(prompt, "Send “テストを実行して” to api, web? Say yes or press Return.")
+        XCTAssertEqual(prompt, "Send “テストを実行して” to api, web? Confirm by voice or press Return.")
         if case .propose(let english, _) = AssistantPlanner.plan(AssistantIntent.parse("tell api and web to run the tests"),
                                                                  world: world(), strings: .english) {
             XCTAssertEqual(english.all.map(\.workspaceTitle), ["api", "web"])
@@ -865,7 +1010,7 @@ final class AssistantManySessionsTests: XCTestCase {
         // "All": the unclear one is left out and said so.
         guard case .propose(let batch, let prompt) = plan(.replyMany(.working, text: "status?")) else { return XCTFail() }
         XCTAssertEqual(batch.all.map(\.workspaceTitle), ["web"])
-        XCTAssertEqual(prompt, "Send “status?” to web? Left out: app. Say yes or press Return.")
+        XCTAssertEqual(prompt, "Send “status?” to web? Left out: app. Confirm by voice or press Return.")
         // Waiting, but nobody shows a question to approve: said so, not "nobody waits".
         var noPrompt = world()
         noPrompt.workspaces[0].panes[0].prompt = nil
@@ -1031,5 +1176,21 @@ final class AssistantUtterancesTests: XCTestCase {
         var utterances = AssistantUtterances<String>()
         XCTAssertNil(utterances.stop())
         XCTAssertNil(utterances.ended(1))
+    }
+}
+
+private extension AssistantWorld {
+    /// The same world with workspace `id` replaced.
+    func replacing(_ id: String, with workspace: Workspace) -> AssistantWorld {
+        var world = self
+        world.workspaces = workspaces.map { $0.id == id ? workspace : $0 }
+        return world
+    }
+}
+
+private extension AssistantWorld.Match {
+    var found: AssistantWorld.Workspace? {
+        if case .found(let workspace) = self { return workspace }
+        return nil
     }
 }

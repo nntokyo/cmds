@@ -52,6 +52,9 @@ private extension AssistantLine {
         case .idle(let workspace): return String(localized: "\(workspace) is idle.", comment: "assistant: spoken status of a workspace")
         case .stopped(let workspace): return String(localized: "\(workspace) has stopped.", comment: "assistant: spoken status of a workspace")
         case .noAgentIn(let workspace): return String(localized: "No agent is running in \(workspace).", comment: "assistant")
+        case .shellIdle: return String(localized: "Its shell is idle.", comment: "assistant: a workspace without an agent; its shell waits for a command")
+        case .shellRunning(let command):
+            return String(localized: "It is running \(command).", comment: "assistant: a workspace without an agent; command = the program its shell runs (vim, node)")
         case .agentIn(let agent, let workspace): return String(localized: "\(agent) in \(workspace).", comment: "assistant: which agent runs in a workspace")
         case .waitedMinutes(let minutes): return String(localized: "Waiting for \(minutes) minutes.", comment: "assistant: how long a workspace has waited")
         case .optionsOffered(let count, let first): return String(localized: "\(count) options, the first is \(first).", comment: "assistant: the agent's numbered choices")
@@ -90,13 +93,21 @@ private extension AssistantLine {
         case .nothingToDo: return String(localized: "There is nothing to send.", comment: "assistant")
         case .session(let workspace, let summary):
             return String(localized: "\(workspace): \(summary)", comment: "assistant: one session's line when going through them all")
-        case .sayYesOrPressReturn: return String(localized: "Say yes or press Return.", comment: "assistant: how to confirm")
+        case .sayYesOrPressReturn: return String(localized: "Confirm by voice or press Return.", comment: "assistant: how to confirm")
         case .pressReturnToConfirm: return String(localized: "This one needs Return or a click.", comment: "assistant: how to confirm a dangerous action")
         case .voiceNotEnough: return String(localized: "Please press Return or click the button for this one.", comment: "assistant: a spoken yes is not enough")
         case .sent(let workspace): return String(localized: "Sent to \(workspace).", comment: "assistant")
         case .started(let agent, let place): return String(localized: "Started \(agent) in \(place).", comment: "assistant")
         case .failed: return String(localized: "That didn't work: the pane is gone or busy.", comment: "assistant")
         case .cancelled: return String(localized: "Cancelled.", comment: "assistant")
+        case .skippedStart(let agent):
+            return String(localized: "I won't start \(agent).", comment: "assistant: one card of several requests cancelled (the rest goes on): the start")
+        case .skippedSend(let workspace):
+            return String(localized: "I won't send it to \(workspace).", comment: "assistant: one card of several requests cancelled (the rest goes on): the reply")
+        case .skippedChoice(let workspace):
+            return String(localized: "I won't answer \(workspace).", comment: "assistant: one card of several requests cancelled (the rest goes on): the choice")
+        case .skippedMany(let count):
+            return String(localized: "I won't act on the \(count) sessions.", comment: "assistant: one card of several requests cancelled (the rest goes on): several sessions")
         case .expired: return String(localized: "I cancelled it: no answer.", comment: "assistant: a confirmation timed out")
         case .nothingToConfirm: return String(localized: "There is nothing to confirm.", comment: "assistant")
         case .wake: return String(localized: "Yes?", comment: "assistant: answer when called by name only")

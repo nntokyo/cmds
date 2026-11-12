@@ -17,6 +17,19 @@ enum AssistantStyle: String, CaseIterable {
     }
 }
 
+/// Settings › Assistant values a test sets with `debug.assistant` `on {…}` (#243): in effect until the assistant is
+/// turned off or the app quits, never written to the settings. nil: the setting.
+struct AssistantOverrides: Equatable {
+    var muted: Bool?
+    var style: AssistantStyle?
+    var web: Bool?
+    var interpreter: Bool?
+    var reportTasks: Bool?
+    var projectFolders: String?
+    var showWhileWaiting: Bool?
+    var orbSize: AssistantPresence.Size?
+}
+
 extension AssistantPresence.Size {
     var title: String {
         switch self {

@@ -106,7 +106,7 @@ final class AssistantVocabularyTests: XCTestCase {
         }
         XCTAssertEqual(action.kind, .startAgent(.claude, directory: "/tmp/api", task: nil))
         XCTAssertEqual(action.text, "claude")
-        XCTAssertEqual(prompt, "Start Claude in /tmp/api? Say yes or press Return. Then I'll tell you how api is doing.")
+        XCTAssertEqual(prompt, "Start Claude in /tmp/api? Confirm by voice or press Return. Then I'll tell you how api is doing.")
         guard case .summarize(let id, _, false, _) = AssistantPlanner.plan(.workspaceStatus(target: "EPA"), world: world(), strings: .english) else {
             return XCTFail()
         }
@@ -147,7 +147,7 @@ final class AssistantVocabularyTests: XCTestCase {
         XCTAssertEqual(action.kind, .startAgent(.claude, directory: "/tmp/web", task: "Fix the failing tests."))
         XCTAssertEqual(action.text, "claude 'Fix the failing tests.'")
         XCTAssertEqual(action.confirmation, .voiceOrKey)
-        XCTAssertEqual(prompt, "Start Claude in /tmp/web with “Fix the failing tests.”? Say yes or press Return.")
+        XCTAssertEqual(prompt, "Start Claude in /tmp/web with “Fix the failing tests.”? Confirm by voice or press Return.")
         // A dangerous task needs Return or a click.
         guard case .propose(let danger, _) = plan("start claude in web and have it run git push --force") else { return XCTFail() }
         XCTAssertEqual(danger.confirmation, .keyOrClick)
@@ -300,13 +300,28 @@ final class AssistantVocabularyTests: XCTestCase {
     }
 
     func testOnDeviceSummariesThatAreNoSummary() {
-        XCTAssertTrue(AssistantModelReply.isSummary("Running the tests."))
+        XCTAssertTrue(AssistantModelReply.isSummary("Running the unit tests in api."))
         XCTAssertTrue(AssistantModelReply.isSummary("[WIP] running the tests."))
         XCTAssertTrue(AssistantModelReply.isSummary("テストを実行中。"))
         XCTAssertFalse(AssistantModelReply.isSummary(""))
         XCTAssertFalse(AssistantModelReply.isSummary("[START]"))
         XCTAssertFalse(AssistantModelReply.isSummary("[[ACTION]]"))
         XCTAssertFalse(AssistantModelReply.isSummary("申し訳ありませんが、操作はできません。"))
+        // The prompt's example copied back is no summary.
+        XCTAssertFalse(AssistantModelReply.isSummary("Running the tests."))
+    }
+
+    func testAWaitingSummaryForASessionThatDoesNotWaitIsMadeUp() {
+        // The real case: a working agent with a quiet screen came back as the old prompt's "Waiting for input…".
+        for made in ["Waiting for input: asks whether to continue.", "入力待ちです。", "続けるか確認を求めています。",
+                     "It is asking you to approve the edit.", "The agent is waiting for feedback.", "指示を待っています。"] {
+            XCTAssertFalse(AssistantModelReply.isSummary(made, waiting: false), made)
+            XCTAssertTrue(AssistantModelReply.isSummary(made, waiting: true), made)
+        }
+        XCTAssertTrue(AssistantModelReply.isSummary("テストを書いています。", waiting: false))
+        XCTAssertTrue(AssistantModelReply.isSummary("Fixing the login form.", waiting: false))
+        XCTAssertTrue(AssistantModelReply.isSummary("Waiting for the build to finish.", waiting: false))
+        XCTAssertFalse(AssistantClaude.summaryPrompt(facts: "f", screen: "s").contains("Waiting for input"))
     }
 
     func testOneLine() {

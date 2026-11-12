@@ -3036,6 +3036,17 @@
         }
       }
     },
+    "Confirm by voice or press Return.": {
+      "comment": "assistant: how to confirm",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "声かReturnキーで確定してください。"
+          }
+        }
+      }
+    },
     "Confirming": {
       "localizations": {
         "ja": {
@@ -4822,6 +4833,50 @@
         }
       }
     },
+    "I won't act on the %lld sessions.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): several sessions",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のセッションへの操作は取り消しました。"
+          }
+        }
+      }
+    },
+    "I won't answer %@.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): the choice",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@への回答は取り消しました。"
+          }
+        }
+      }
+    },
+    "I won't send it to %@.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): the reply",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@への送信は取り消しました。"
+          }
+        }
+      }
+    },
+    "I won't start %@.": {
+      "comment": "assistant: one card of several requests cancelled (the rest goes on): the start",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@の起動は取り消しました。"
+          }
+        }
+      }
+    },
     "Icon:": {
       "comment": "Settings › Menu Bar",
       "localizations": {
@@ -5074,6 +5129,17 @@
         }
       }
     },
+    "It is running %@.": {
+      "comment": "assistant: a workspace without an agent; command = the program its shell runs (vim, node)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を実行中です。"
+          }
+        }
+      }
+    },
     "Items only in the folder being synced to go to its Trash (on a server: its Trash there). Nothing is deleted.": {
       "localizations": {
         "ja": {
@@ -5110,6 +5176,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "履歴は残ります。"
+          }
+        }
+      }
+    },
+    "Its shell is idle.": {
+      "comment": "assistant: a workspace without an agent; its shell waits for a command",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "シェルは何も実行していません。"
           }
         }
       }
@@ -8226,17 +8303,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分の版をコピーとして保存"
-          }
-        }
-      }
-    },
-    "Say yes or press Return.": {
-      "comment": "assistant: how to confirm",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "「はい」と言うかReturnキーを押してください。"
           }
         }
       }

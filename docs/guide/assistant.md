@@ -39,7 +39,7 @@ It understands the app's language (cmds › Language): Japanese or English.
 | Say | It does |
 |---|---|
 | "status" / 「状況は？」 | How many workspaces wait for you and which, and which are working (「入力待ち2件: api, api-v2。作業中1件: web。」); ask about one workspace for what it asks |
-| "what is api doing" / 「apiは何してる？」 | A short summary of that workspace's agent, from its state and screen |
+| "what is api doing" / 「apiは何してる？」 | A short summary of that workspace's agent, from its state and screen; without an agent, that none runs and what its shell runs (a program's name, or idle), never a guess from the screen |
 | "summarize api in detail" / 「apiを詳しく要約して」 | A longer summary by Claude Code (`claude -p`, see below) |
 | "reply to api: run the tests" / 「apiに『テストを実行して』と返信」 | Offers to type the text into the agent's pane and press Return |
 | "approve api" / 「apiを承認して」 | Offers to pick option 1 of the agent's question |
@@ -47,7 +47,7 @@ It understands the app's language (cmds › Language): Japanese or English.
 | "start Claude in web" / 「webでクロードを起動して」 | Offers a new workspace in that workspace's folder, a project folder of that name, or a folder path, running `claude` / `codex` |
 | 「cmds のリポジトリで Claude Code を起動して、ログイン画面のテストを書かせて」, "start Claude in api and have it fix the failing tests" | The same, with that task as the new agent's first prompt (shown on the card) |
 | 「api で Claude にこのバグを直させて」 | Gives the task to the Claude running in api; if none runs there, offers to start one with it |
-| 「Claude Code を立ち上げて、API の進捗を教えて」 | Several requests in one: done one after the other, the next after the card |
+| 「Claude Code を立ち上げて、API の進捗を教えて」 | Several requests in one: done one after the other, the next after the card; no to one card skips only that one (「Claudeの起動は取り消しました。」) and the rest goes on |
 | "tell api and web to run the tests" / 「apiとwebに『テストを実行して』と伝えて」 | Offers to send the same text to each of them, on one card |
 | "approve all" / 「入力待ちのものに全部はいと答えて」 | Offers to pick option 1 in every workspace that asks, on one card |
 | "check all sessions" / 「全部のセッションを確認して」, 「入力待ちのセッションを全部見て」 | Goes through every session (or the waiting / working ones) and says what each agent is doing, one line each; 「詳しく」 / "in detail" uses Claude Code |
@@ -66,9 +66,10 @@ If it is not a command, it is answered as a question.
 
 **Web questions.** The on-device model has no internet. With **Use Claude for web questions** on (Settings ›
 Assistant, on by default), a question goes to Claude Code instead when you ask to search (検索 / 調べて / ググって /
-ネットで / インターネット / Claudeに聞いて, search / look up / google / online / ask Claude) or when it is about something
-live (天気 / weather, ニュース / news, 株価 / stock price, 為替 / exchange rate, 運行 / train status, 今日の / today's,
-最新 / latest, scores…). Other questions still go to the on-device model first; when it says the answer needs current
+ネットで / インターネット / Claudeに聞いて, search / look up / google / search online / ask Claude) or when it is about
+something live (天気 / weather, ニュース / news, 株価 / stock price, 為替 / exchange rate, 運行 / train status, 今日の /
+today's, 最新のバージョン / the latest version of…, latest news, "is GitHub down", scores…). "Online" or "latest" alone
+are not enough: "what is an online algorithm" or "the latest commit in api" are no web questions. Other questions still go to the on-device model first; when it says the answer needs current
 or outside information, Claude is asked after all. The HUD shows "Asking Claude…" meanwhile, and a small "Claude"
 under the answer. Claude gets only what you said, today's date, your time zone and locale (never screen text), and
 answers in a sentence (asking back only when it cannot tell, such as which place). It takes a few seconds to a minute and uses
@@ -79,7 +80,8 @@ the on-device model as before.
 inside your project folders (Settings › Assistant › Project folders; by default ~/Source, ~/Developer, ~/Projects and
 ~/src, those that exist; git repositories first, not searched inside). When several folders fit it names up to three
 and asks which; when none does, 「どのフォルダで起動しますか？」. Without a place, it starts where the last request was
-about, else in the selected workspace. The agent runs in a new workspace as `claude '<task>'` (`codex '<task>'`): the
+about, else in the selected workspace. The agent runs in a new workspace (called `api-2`, `api-3`… when a workspace is already called like its folder, so
+"api" still means the first one and "api 2" the new one) as `claude '<task>'` (`codex '<task>'`): the
 task is one quoted argument, so nothing in it reaches the shell, and no permission-skipping flag is ever added. A
 spoken yes starts it, unless the task mentions deleting, pushing or deploying (then Return or a click).
 
@@ -104,7 +106,9 @@ Voice alone only ever answers. Anything that types into a pane or starts a sessi
 workspace, the pane and the exact text, and runs only when you confirm:
 
 - Say **yes / はい**, press **Return**, or click the button. **No / いいえ**, **Esc** or Cancel drops it; so does
-  saying nothing for a minute.
+  saying nothing for a minute. A short yes or no (はい, いいえ, OK, キャンセル…) counts without the name also while the
+  card is still being read out, unless the card itself says that word (a reply "yes" to api): then wait until it has
+  been read out.
 - Text that may delete, push, publish or deploy (`rm`, `git push`, `deploy`, 本番…), widen permissions
   (`--dangerously-skip-permissions`, "don't ask again"), or goes to an SSH pane needs **Return or a click**: a spoken
   yes is not enough. Approving an agent's question about such a command counts too.

@@ -41,10 +41,17 @@ final class AssistantController {
     /// A presence update is due (state changes come in bursts).
     var presenceUpdatePending = false
     private var screenChanges: NSObjectProtocol?
-    /// `debug.assistant` `on {mute}`: answers shown without speaking until off or a relaunch, never written to the
-    /// settings (a test must not leave the user's assistant muted).
-    var mutedOverride: Bool?
-    var muted: Bool { mutedOverride ?? settings.assistantMuted }
+    /// `debug.assistant` `on {mute, style, web, …}`: test parameters in effect until off or a relaunch, never written
+    /// to the settings (a test must not leave the user's assistant muted or changed).
+    var overrides = AssistantOverrides()
+    var muted: Bool { overrides.muted ?? settings.assistantMuted }
+    var style: AssistantStyle { overrides.style ?? settings.assistantStyle }
+    var usesWeb: Bool { overrides.web ?? settings.assistantWeb }
+    var usesInterpreter: Bool { overrides.interpreter ?? settings.assistantInterpreter }
+    var reportsTasks: Bool { overrides.reportTasks ?? settings.assistantReportTasks }
+    var projectFolders: String { overrides.projectFolders ?? settings.assistantProjectFolders }
+    var showsWhileWaiting: Bool { overrides.showWhileWaiting ?? settings.assistantShowWhileWaiting }
+    var orbSize: AssistantPresence.Size { overrides.orbSize ?? settings.assistantOrbSize }
     let voice = AssistantVoice()
     let listener = AssistantListener()
     private(set) var hotkeys: AssistantHotkeys?
@@ -177,7 +184,7 @@ final class AssistantController {
         timer = nil
         hud.hide()
         hearing.reset()
-        mutedOverride = nil
+        overrides = AssistantOverrides()
         if settings.assistantEnabled { settings.assistantEnabled = false }
         assistantLog.info("assistant off")
         refresh()
@@ -340,7 +347,7 @@ final class AssistantController {
         }
         return AssistantHUDContent(phase: machine.phase, attention: world.needingUserCount > 0,
                                    transcript: machine.transcript, answer: hudNote ?? machine.answer ?? problem,
-                                   pending: machine.pending, needsKey: needsKey, rings: rings, style: settings.assistantStyle,
+                                   pending: machine.pending, needsKey: needsKey, rings: rings, style: style,
                                    claude: claudeMark)
     }
 
@@ -365,10 +372,12 @@ final class AssistantController {
 
     #if DEBUG
     /// `debug.assistant` `speak`: the assistant "says" `text` without a voice and stays speaking until `spoken`, to
-    /// test what it hears meanwhile (its own voice, barge-in).
-    func debugSpeak(_ text: String) {
+    /// test what it hears meanwhile (its own voice, barge-in). `card`: the card that waits is being read out (a yes or
+    /// no without the name answers it).
+    func debugSpeak(_ text: String, card: Bool = false) {
+        let pending = card ? machine.pending : nil
         interrupt()
-        guard machine.answer(text, now: Date()) else { return }
+        guard machine.answer(text, proposing: pending, now: Date()) else { return }
         answerByClaude = false
         lastSpoken = text
         hudNote = nil

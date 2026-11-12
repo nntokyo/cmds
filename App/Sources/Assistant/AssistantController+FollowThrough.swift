@@ -33,7 +33,7 @@ extension AssistantController {
 
     /// One sentence about a session given a task, when the setting is on: now if the assistant is free, else after.
     private func announce(_ event: AssistantTaskWatch.Event) {
-        guard settings.assistantReportTasks, isOn else { return }
+        guard reportsTasks, isOn else { return }
         let strings = AssistantStrings.localized
         let text: String
         switch event {

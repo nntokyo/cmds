@@ -19,6 +19,10 @@ public enum AssistantLine: Equatable, Sendable {
     case idle(workspace: String)
     case stopped(workspace: String)
     case noAgentIn(workspace: String)
+    /// No agent runs there, and its shell waits for a command.
+    case shellIdle
+    /// No agent runs there; its shell runs this program (its process name).
+    case shellRunning(String)
     case agentIn(agent: String, workspace: String)
     case waitedMinutes(Int)
     case optionsOffered(count: Int, first: String)
@@ -60,6 +64,11 @@ public enum AssistantLine: Equatable, Sendable {
     case session(workspace: String, summary: String)
     case failed
     case cancelled
+    /// A card cancelled in an utterance with several requests (the rest goes on): what was not done.
+    case skippedStart(agent: String)
+    case skippedSend(workspace: String)
+    case skippedChoice(workspace: String)
+    case skippedMany(count: Int)
     case expired
     case nothingToConfirm
     // The assistant itself.
@@ -92,6 +101,8 @@ public enum AssistantLine: Equatable, Sendable {
         case .idle(let workspace): return "\(workspace) is idle."
         case .stopped(let workspace): return "\(workspace) has stopped."
         case .noAgentIn(let workspace): return "No agent is running in \(workspace)."
+        case .shellIdle: return "Its shell is idle."
+        case .shellRunning(let command): return "It is running \(command)."
         case .agentIn(let agent, let workspace): return "\(agent) in \(workspace)."
         case .waitedMinutes(let minutes): return minutes == 1 ? "Waiting for 1 minute." : "Waiting for \(minutes) minutes."
         case .optionsOffered(let count, let first): return "\(count) options, the first is \(first)."
@@ -114,7 +125,7 @@ public enum AssistantLine: Equatable, Sendable {
         case .confirmReplyMany(let text, let workspaces): return "Send “\(text)” to \(workspaces.joined(separator: ", "))?"
         case .confirmApproveMany(let workspaces): return "Choose option 1 in \(workspaces.joined(separator: ", "))?"
         case .leftOut(let workspaces): return "Left out: \(workspaces.joined(separator: ", "))."
-        case .sayYesOrPressReturn: return "Say yes or press Return."
+        case .sayYesOrPressReturn: return "Confirm by voice or press Return."
         case .pressReturnToConfirm: return "This one needs Return or a click."
         case .voiceNotEnough: return "Please press Return or click the button for this one."
         case .sent(let workspace): return "Sent to \(workspace)."
@@ -127,6 +138,10 @@ public enum AssistantLine: Equatable, Sendable {
         case .session(let workspace, let summary): return "\(workspace): \(summary)"
         case .failed: return "That didn't work: the pane is gone or busy."
         case .cancelled: return "Cancelled."
+        case .skippedStart(let agent): return "I won't start \(agent)."
+        case .skippedSend(let workspace): return "I won't send it to \(workspace)."
+        case .skippedChoice(let workspace): return "I won't answer \(workspace)."
+        case .skippedMany(let count): return "I won't act on the \(count) sessions."
         case .expired: return "I cancelled it: no answer."
         case .nothingToConfirm: return "There is nothing to confirm."
         case .wake: return "Yes?"
@@ -205,7 +220,8 @@ public enum AssistantReport {
 
     /// "api: Claude. api needs you. It asks: Run the tests? 3 options, the first is Yes. Waiting for 4 minutes."
     public static func workspace(_ workspace: AssistantWorld.Workspace, now: Date, strings: AssistantStrings) -> String {
-        guard workspace.state != nil else { return strings(.noAgentIn(workspace: workspace.title)) }
+        // No agent: what its shell runs, as the pane's process says (never a summary of the screen).
+        guard !workspace.hasNoAgent else { return strings.join([.noAgentIn(workspace: workspace.title)] + shellLines(workspace)) }
         var lines: [AssistantLine] = []
         if let agent = workspace.agent { lines.append(.agentIn(agent: agent, workspace: workspace.title)) }
         lines += stateLines(workspace, withQuestion: true)
@@ -219,6 +235,17 @@ public enum AssistantReport {
             }
         }
         return strings.join(lines)
+    }
+
+    /// What the shells of a workspace without an agent run: the one pane's, else the programs running in any of them,
+    /// else idle when every one is idle; nothing when it is not known (an SSH pane, a process not read).
+    static func shellLines(_ workspace: AssistantWorld.Workspace) -> [AssistantLine] {
+        let shells = workspace.panes.map(\.shell)
+        var running: [String] = []
+        for case .running(let command)? in shells where !running.contains(command) { running.append(command) }
+        if !running.isEmpty { return [.shellRunning(running.prefix(3).joined(separator: ", "))] }
+        if !shells.isEmpty, shells.allSatisfy({ $0 == .idle }) { return [.shellIdle] }
+        return []
     }
 
     private static func stateLines(_ workspace: AssistantWorld.Workspace, withQuestion: Bool) -> [AssistantLine] {

@@ -22,4 +22,21 @@ public enum AssistantEcho {
         let found = pairs.count { saidPairs.contains($0) }
         return Double(found) / Double(pairs.count) >= threshold
     }
+
+    /// Whether a short answer (`heard`: "yes", 「はい」, "OK") is in `spoken`, so it may be the assistant's own voice
+    /// reading a card ("Send “yes” to api?"): its words as whole words in Latin script ("no" is not in "now"), else
+    /// (Japanese) as a part of the text, compared as `AssistantText.key`.
+    public static func isEchoedWord(_ heard: String, of spoken: String) -> Bool {
+        let key = AssistantText.key(heard)
+        guard !key.isEmpty else { return false }
+        func words(_ text: String) -> [String] {
+            AssistantText.folded(text).split { !$0.isLetter && !$0.isNumber }.map { AssistantText.key(String($0)) }
+        }
+        if key.unicodeScalars.allSatisfy(\.isASCII) {
+            let said = Set(words(spoken))
+            let answer = words(heard)
+            return !answer.isEmpty && answer.allSatisfy(said.contains)
+        }
+        return AssistantText.key(spoken).contains(key)
+    }
 }
