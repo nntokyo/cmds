@@ -1,6 +1,5 @@
 import AVFoundation
 import CmdsCore
-import CoreAudio
 import CoreMedia
 import Speech
 import os
@@ -47,11 +46,13 @@ final class AssistantListener {
 
     private var engine: AVAudioEngine?
     private var configurationChanges: NSObjectProtocol?
-    /// When the engine was last restarted (`restartInput`).
-    private var restarts: [Date] = []
+    /// The engine's restarts (`restartInput`), limited.
+    private var restarts = AssistantListening.Restarts()
     private var analyzer: SpeechAnalyzer?
-    /// The analyzer's input and its format, kept while it runs (a new microphone gets a new pump into the same input).
-    private var input: (format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation)?
+    /// The analyzer's input and its format.
+    private typealias AnalyzerFeed = (format: AVAudioFormat, continuation: AsyncStream<AnalyzerInput>.Continuation)
+    /// Kept while it runs (a new microphone gets a new pump into the same input).
+    private var input: AnalyzerFeed?
     private var pump: AudioPump?
     private var results: Task<Void, Never>?
     private(set) var isRunning = false
@@ -69,7 +70,7 @@ final class AssistantListener {
     /// Push to talk (#270): the key is held, and what was recognised since it went down until it is delivered.
     private(set) var isHeld = false
     private var held: Held?
-
+    /// The number of the last `Held` (a release's late work is for its own only).
     private var heldNumber = 0
 
     private struct Held {
@@ -82,6 +83,13 @@ final class AssistantListener {
         var finalized = false
         /// A final result came after the release.
         var finalAfterRelease = false
+
+        /// Pressed again before it was delivered: it goes on, held.
+        mutating func pressedAgain() {
+            releasedAt = nil
+            finalized = false
+            finalAfterRelease = false
+        }
     }
 
     #if DEBUG
@@ -150,10 +158,7 @@ final class AssistantListener {
     /// configuration changed): its engine starts again with `device`, into the same recognition.
     func restartInput() {
         guard isRunning, engine != nil else { return }
-        // A device that keeps changing (or voice processing changing it back) must not restart it in a loop.
-        let now = Date()
-        restarts = restarts.filter { now.timeIntervalSince($0) < 10 } + [now]
-        guard restarts.count <= 5 else {
+        guard restarts.allow(at: Date()) else {
             listenerLog.error("assistant microphone keeps changing: not restarted")
             return
         }
@@ -171,36 +176,14 @@ final class AssistantListener {
         guard let input else { return }
         let engine = AVAudioEngine()
         let node = engine.inputNode
-        if let device, let id = AssistantAudioDevices.deviceID(uid: device) {
-            Self.setDevice(id, of: node)
-        }
-        if mode.reducesNoise {
-            do {
-                try node.setVoiceProcessingEnabled(true)
-                // Other apps' sound (music, a call) stays as loud as it was.
-                node.voiceProcessingOtherAudioDuckingConfiguration =
-                    AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking: false, duckingLevel: .min)
-            } catch {
-                listenerLog.error("assistant voice processing not on: \(String(describing: error), privacy: .public)")
-            }
-        }
+        if let device { AssistantAudioDevices.select(uid: device, on: node) }
+        if mode.reducesNoise { Self.reduceNoise(on: node) }
         let format = node.outputFormat(forBus: 0)
-        let pump = Self.pump(from: format, to: input.format, continuation: input.continuation, fed: pump?.fedSeconds ?? 0)
-        pump.hold(isHeld || mode.listensAlways)
-        self.pump = pump
-        Self.current = self
+        let pump = startPump(from: format, into: input, fed: pump?.fedSeconds ?? 0, open: isHeld || mode.listensAlways)
         Self.installTap(on: node, format: format, pump: pump)
         engine.prepare()
         self.engine = engine
-        // The engine stops when its devices change (the system's input, a headset connected or gone): it starts again.
-        configurationChanges = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine,
-                                                                      queue: .main) { _ in
-            MainActor.assumeIsolated {
-                // Only when it did stop (a change it made itself while starting is no reason).
-                guard let listener = AssistantListener.current, listener.engine?.isRunning == false else { return }
-                listener.restartInput()
-            }
-        }
+        observeConfigurationChanges(of: engine)
         do {
             try engine.start()
         } catch {
@@ -210,6 +193,30 @@ final class AssistantListener {
         listenerLog.notice("assistant microphone: \(self.mode.rawValue, privacy: .public), \(self.device == nil ? "system input" : "chosen device", privacy: .public), \(format.channelCount, privacy: .public) ch at \(Int(format.sampleRate), privacy: .public) Hz")
     }
 
+    /// The system's voice processing on the input (noise suppression, echo cancellation), before the engine starts.
+    private static func reduceNoise(on node: AVAudioInputNode) {
+        do {
+            try node.setVoiceProcessingEnabled(true)
+            // Other apps' sound (music, a call) stays as loud as it was.
+            node.voiceProcessingOtherAudioDuckingConfiguration =
+                AVAudioVoiceProcessingOtherAudioDuckingConfiguration(enableAdvancedDucking: false, duckingLevel: .min)
+        } catch {
+            listenerLog.error("assistant voice processing not on: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    /// The engine stops when its devices change (the system's input, a headset connected or gone): it starts again.
+    private func observeConfigurationChanges(of engine: AVAudioEngine) {
+        configurationChanges = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine,
+                                                                      queue: .main) { _ in
+            MainActor.assumeIsolated {
+                // Only when it did stop (a change it made itself while starting is no reason).
+                guard let listener = AssistantListener.current, listener.engine?.isRunning == false else { return }
+                listener.restartInput()
+            }
+        }
+    }
+
     private func stopEngine() {
         if let configurationChanges { NotificationCenter.default.removeObserver(configurationChanges) }
         configurationChanges = nil
@@ -217,15 +224,6 @@ final class AssistantListener {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         self.engine = nil
-    }
-
-    /// The input device of the engine's input node (before it starts).
-    private static func setDevice(_ id: AudioDeviceID, of node: AVAudioInputNode) {
-        guard let unit = node.audioUnit else { return }
-        var id = id
-        let status = AudioUnitSetProperty(unit, kAudioOutputUnitProperty_CurrentDevice, kAudioUnitScope_Global, 0, &id,
-                                          UInt32(MemoryLayout<AudioDeviceID>.size))
-        if status != noErr { listenerLog.error("assistant microphone not chosen: \(status, privacy: .public)") }
     }
 
     // MARK: Push to talk
@@ -241,9 +239,7 @@ final class AssistantListener {
                 heldNumber += 1
                 held = Held(number: heldNumber)
             } else {
-                held?.releasedAt = nil
-                held?.finalized = false
-                held?.finalAfterRelease = false
+                held?.pressedAgain()
             }
             endpoint.finalized()
             pump?.hold(true)
@@ -255,26 +251,21 @@ final class AssistantListener {
         }
     }
 
-    /// After the release tail: no more audio, and recognition finalises what it has.
+    /// After the release tail: recognition finalises what it has. Audio still goes in until the utterance is
+    /// delivered: the recogniser needs a moment after the last word to commit it (cut at once, a short request in
+    /// noise came back empty).
     private func released() {
         guard !isHeld, let number = held?.number, let analyzer else { return }
-        // Audio still goes in until the utterance is delivered: the recogniser needs a moment after the last word to
-        // commit it (cut at once, a short request in noise came back empty).
-        held?.releasedAt = Date()
-        #if DEBUG
-        if let start = debugRecord?.start { debugRecord?.finalizes.append(Date().timeIntervalSince(start)) }
-        #endif
+        let now = Date()
+        held?.releasedAt = now
+        recordFinalize(at: now)
         Task { [weak self] in
-            do {
-                try await analyzer.finalize(through: nil)
-            } catch {
-                listenerLog.error("assistant finalize failed: \(String(describing: error), privacy: .public)")
-            }
+            await Self.finalize(analyzer)
             guard let self, self.held?.number == number, !self.isHeld else { return }
             self.held?.finalized = true
             self.deliverHeld()
             // No final yet: it may still come; whatever there is goes after a moment.
-            try? await Task.sleep(for: .seconds(1))
+            try? await Task.sleep(for: .seconds(AssistantListening.releaseFinalWait))
             if self.held?.number == number { self.deliverHeld(force: true) }
         }
     }
@@ -284,9 +275,30 @@ final class AssistantListener {
         guard let held, held.releasedAt != nil, !isHeld, held.finalized, held.finalAfterRelease || force else { return }
         self.held = nil
         if !mode.listensAlways { pump?.hold(false) }
-        guard !AssistantText.key(held.text).isEmpty else { return }
-        let heard = AssistantHeard(noisy: endpoint.isNoisy, confidences: held.confidences, text: held.text, pushed: true)
-        onUtterance?(Utterance(text: held.text, speechEnd: endpoint.lastLoud, heard: heard))
+        deliver(held.text, confidences: held.confidences, speechEnd: endpoint.lastLoud, pushed: true)
+    }
+
+    /// An utterance to `onUtterance` (punctuation alone, a moment of noise finalised, is nothing).
+    private func deliver(_ text: String, confidences: [Double], speechEnd: Date?, pushed: Bool) {
+        guard !AssistantText.key(text).isEmpty else { return }
+        let heard = AssistantHeard(noisy: endpoint.isNoisy, confidences: confidences, text: text, pushed: pushed)
+        onUtterance?(Utterance(text: text, speechEnd: speechEnd, heard: heard))
+    }
+
+    /// Asks the recogniser to finalise what it has (`AssistantEndpoint`, or the push-to-talk key let go).
+    private static func finalize(_ analyzer: SpeechAnalyzer) async {
+        do {
+            try await analyzer.finalize(through: nil)
+        } catch {
+            listenerLog.error("assistant finalize failed: \(String(describing: error), privacy: .public)")
+        }
+    }
+
+    /// An early finalisation, for `debugRecord` (DEBUG builds; nothing otherwise).
+    private func recordFinalize(at date: Date) {
+        #if DEBUG
+        if let start = debugRecord?.start { debugRecord?.finalizes.append(date.timeIntervalSince(start)) }
+        #endif
     }
 
     #if DEBUG
@@ -307,10 +319,7 @@ final class AssistantListener {
         let file = try AVAudioFile(forReading: url)
         guard try await startAnalyzer(locale: locale), let input else { return }
         let format = file.processingFormat
-        let pump = Self.pump(from: format, to: input.format, continuation: input.continuation, fed: 0)
-        pump.hold(self.mode.listensAlways)
-        self.pump = pump
-        Self.current = self
+        let pump = startPump(from: format, into: input, fed: 0, open: self.mode.listensAlways)
         isRunning = true
         if release != nil { push(true) }
         let length = Double(file.length) / format.sampleRate
@@ -408,9 +417,8 @@ final class AssistantListener {
             return
         }
         // Push to talk: nothing is heard without the key (a final of the last audio after it was delivered).
-        guard mode.listensAlways, !AssistantText.key(text).isEmpty else { return }
-        let heard = AssistantHeard(noisy: endpoint.isNoisy, confidences: confidences, text: text)
-        onUtterance?(Utterance(text: text, speechEnd: speechEnd, heard: heard))
+        guard mode.listensAlways else { return }
+        deliver(text, confidences: confidences, speechEnd: speechEnd, pushed: false)
     }
 
     /// The recogniser's confidence for each character of `text` (empty when it gave none).
@@ -422,6 +430,16 @@ final class AssistantListener {
             values += Array(repeating: confidence, count: count)
         }
         return values
+    }
+
+    /// A new pump from `format` into the analyzer's `input` (`open`: audio goes through now), reporting levels to
+    /// this listener.
+    private func startPump(from format: AVAudioFormat, into input: AnalyzerFeed, fed: Double, open: Bool) -> AudioPump {
+        let pump = Self.pump(from: format, to: input.format, continuation: input.continuation, fed: fed)
+        pump.hold(open)
+        self.pump = pump
+        Self.current = self
+        return pump
     }
 
     /// A pump to the analyzer whose levels reach the current listener on the main actor (made outside the main actor:
@@ -447,16 +465,8 @@ final class AssistantListener {
         guard mode.listensAlways || isHeld else { return }
         if began { onSpeech?() }
         if finalizes, finalizesEarly, held == nil, let analyzer {
-            #if DEBUG
-            if let start = debugRecord?.start { debugRecord?.finalizes.append(now.timeIntervalSince(start)) }
-            #endif
-            Task {
-                do {
-                    try await analyzer.finalize(through: nil)
-                } catch {
-                    listenerLog.error("assistant finalize failed: \(String(describing: error), privacy: .public)")
-                }
-            }
+            recordFinalize(at: now)
+            Task { await Self.finalize(analyzer) }
         }
         guard now.timeIntervalSince(levelShown) >= AssistantTuning.levelInterval else { return }
         levelShown = now
