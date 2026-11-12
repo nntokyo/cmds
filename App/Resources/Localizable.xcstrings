@@ -1750,6 +1750,17 @@
         }
       }
     },
+    "Another app": {
+      "comment": "assistant: an app records",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアプリ"
+          }
+        }
+      }
+    },
     "Another run was using the pane.": {
       "localizations": {
         "ja": {
@@ -3995,6 +4006,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ドラッグしてペインを移動"
+          }
+        }
+      }
+    },
+    "During a call or a recording in another app it stops listening, and listens again when that ends. Resume Listening in the menu bar during the call keeps it on until the call ends.": {
+      "comment": "Settings › Assistant: under Pause while another app uses the microphone",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアプリで通話や録音をしている間は聞き取りを止め、終わると再開します。通話中にメニューバーの「聞き取りを再開」を選ぶと、その通話が終わるまで聞き取りを続けます。"
           }
         }
       }
@@ -7279,6 +7301,17 @@
         }
       }
     },
+    "Pause while another app uses the microphone": {
+      "comment": "Settings › Assistant: stop listening during a call in another app",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ほかのアプリがマイクを使っている間は一時停止"
+          }
+        }
+      }
+    },
     "Paused": {
       "comment": "assistant state",
       "localizations": {
@@ -7286,6 +7319,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "一時停止中"
+          }
+        }
+      }
+    },
+    "Paused while %@ uses the microphone": {
+      "comment": "menu bar item: assistant, disabled",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ がマイクを使用中のため一時停止中"
           }
         }
       }

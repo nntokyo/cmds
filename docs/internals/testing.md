@@ -200,6 +200,10 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `chosenInput` list the microphones Settings offers (nothing is opened). Voice processing (Automatic with noise
   reduction) works only on the real microphone's engine, so it, the Microphone menu with a headset, device switching
   while listening, and holding the real shortcut need a person on a Debug build outside isolation.
+  Calls (#278): `recorders {apps}` takes the bundle IDs given as apps recording instead of Core Audio's (no `apps`:
+  Core Audio again; text-only mode reads Core Audio only through it): `state` has `pausedFor` (the app it paused for)
+  and `shareOverridden`; the phase is `paused` at once and `idle` again 2 s after `apps: []`, a `resume` during the
+  "call" keeps it `idle` until `apps: []`, a `pause` stays after it. A real call (Core Audio) needs a person.
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
 - `debug.memory {workspace?}` (DEBUG builds, #193) returns the "memory is short" notification's title and body as

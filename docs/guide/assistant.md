@@ -45,6 +45,14 @@ decide, which takes longer.
   word that merely sounds like it does not wake it (say the name clearly, or use the shortcut). It still has to come
   first. Cards still wait for your yes, as always.
 
+## Calls
+
+While another app uses the microphone (a call in Zoom, FaceTime, Teams or Meet in a browser, a recording, dictation in
+another app) the assistant stops listening by itself, without a word, and listens again about 2 seconds after that
+ends. The menu bar says which app it paused for. Its reports on tasks you gave wait until then. **Resume Listening**
+during the call keeps it on until the call ends; a pause of your own stays until you resume, also after a call. Turn
+it off in **Settings › Assistant › Pause while another app uses the microphone**.
+
 Its name interrupts it at any time: while it speaks or works out an answer (also while Claude is searching), "Jarvis,
 …" / 「ジャービス、…」 stops it and takes the new request at once; Claude's late answer to the old one is dropped. While it
 speaks, and for a second after, nothing else it hears counts, and something that is mostly what it just said (its own

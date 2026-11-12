@@ -24,6 +24,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
                                                target: nil, action: nil)
     private let reportTasksCheckbox = NSButton(checkboxWithTitle: String(localized: "Report on tasks I gave", comment: "Settings › Assistant: say when a session the assistant started or instructed is done or needs you"),
                                                target: nil, action: nil)
+    private let shareCheckbox = NSButton(checkboxWithTitle: String(localized: "Pause while another app uses the microphone", comment: "Settings › Assistant: stop listening during a call in another app"),
+                                         target: nil, action: nil)
     private let foldersField = NSTextField()
     private let hotkeyPopup = NSPopUpButton()
     private let listeningPopup = NSPopUpButton()
@@ -93,6 +95,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         interpreterCheckbox.action = #selector(interpreterToggled)
         reportTasksCheckbox.target = self
         reportTasksCheckbox.action = #selector(reportTasksToggled)
+        shareCheckbox.target = self
+        shareCheckbox.action = #selector(shareToggled)
         foldersField.placeholderString = AssistantPlaces.defaultRoots.joined(separator: ", ")
         foldersField.delegate = self
         foldersField.widthAnchor.constraint(equalToConstant: 300).isActive = true
@@ -134,6 +138,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
             [NSGridCell.emptyContentView, note(String(localized: "Noise reduction suppresses the noise around you (a café, a station) and its own voice. Push to talk hears only while you hold the shortcut, without its name; letting go ends what you said at once. Best in very loud places.", comment: "Settings › Assistant: under Listening"))],
             [label(String(localized: "Microphone:", comment: "Settings › Assistant: which input it listens to")), microphonePopup],
             [NSGridCell.emptyContentView, note(String(localized: "Automatic uses a headset such as AirPods when one is connected: it is close to your mouth and hears much less of a loud room.", comment: "Settings › Assistant: under Microphone"))],
+            [NSGridCell.emptyContentView, shareCheckbox],
+            [NSGridCell.emptyContentView, note(String(localized: "During a call or a recording in another app it stops listening, and listens again when that ends. Resume Listening in the menu bar during the call keeps it on until the call ends.", comment: "Settings › Assistant: under Pause while another app uses the microphone"))],
             [label(String(localized: "Style:", comment: "Settings › Assistant")), stylePopup],
             [NSGridCell.emptyContentView, waitingCheckbox],
             [label(String(localized: "Orb size:", comment: "Settings › Assistant: the size of the orb shown while waiting")), orbSizePopup],
@@ -174,6 +180,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         webCheckbox.state = settings.assistantWeb ? .on : .off
         interpreterCheckbox.state = settings.assistantInterpreter ? .on : .off
         reportTasksCheckbox.state = settings.assistantReportTasks ? .on : .off
+        shareCheckbox.state = settings.assistantShareMicrophone ? .on : .off
         if foldersField.currentEditor() == nil { foldersField.stringValue = settings.assistantProjectFolders }
         hotkeyPopup.selectItem(at: hotkeyPopup.indexOfItem(withRepresentedObject: settings.assistantHotkey.rawValue))
         listeningPopup.selectItem(at: listeningPopup.indexOfItem(withRepresentedObject: settings.assistantListening.rawValue))
@@ -342,6 +349,10 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
 
     @objc private func reportTasksToggled() {
         settings.assistantReportTasks = reportTasksCheckbox.state == .on
+    }
+
+    @objc private func shareToggled() {
+        settings.assistantShareMicrophone = shareCheckbox.state == .on
     }
 
     @objc private func listeningChanged() {

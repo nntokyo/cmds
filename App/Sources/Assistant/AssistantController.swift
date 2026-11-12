@@ -86,6 +86,10 @@ final class AssistantController {
     /// Sessions the assistant started with a task or sent an instruction to, followed until their agent is done
     /// (Settings › Assistant › Report on tasks I gave).
     var taskWatch = AssistantTaskWatch()
+    /// Whether another app records, and what the user did about it (#278, `+Sharing`).
+    var microphoneShare = AssistantMicrophoneShare()
+    /// The app the assistant paused for (the menu bar says so).
+    var pausedForApp: String?
     /// Follow-through lines waiting for the assistant to be free.
     var announcements: [String] = []
     private var stateChanges: AnyCancellable?
@@ -224,6 +228,8 @@ final class AssistantController {
         voice.stop()
         hotkeys?.setListen(.off)
         hotkeys?.setConfirmationKeys(false)
+        microphoneShare.userPaused()
+        pausedForApp = nil
         timer?.invalidate()
         timer = nil
         hud.hide()
@@ -234,7 +240,24 @@ final class AssistantController {
         refresh()
     }
 
+    /// The user pauses (menu bar, by voice): it stays paused until the user resumes, also after a call (#278).
     func pause() {
+        guard isOn else { return }
+        microphoneShare.userPaused()
+        pausedForApp = nil
+        stopListening()
+    }
+
+    /// The user resumes; during another app's call it then stays on until that ends (#278).
+    func resume() {
+        guard machine.phase == .paused else { return }
+        microphoneShare.userResumed()
+        pausedForApp = nil
+        listenAgain()
+    }
+
+    /// Paused: what was being said or worked out stops, the microphone goes off.
+    func stopListening() {
         guard isOn else { return }
         work?.cancel()
         speech += 1
@@ -246,7 +269,7 @@ final class AssistantController {
         refresh()
     }
 
-    func resume() {
+    func listenAgain() {
         guard machine.phase == .paused else { return }
         machine.resume()
         startMicrophone()
@@ -392,7 +415,9 @@ final class AssistantController {
         let step = machine.tick(now: Date())
         if step != .ignore { perform(step) }
         taskWatch.expire(now: Date())
-        if !announcements.isEmpty, [.idle, .listening, .paused].contains(machine.phase), !machine.voiceActive {
+        shareMicrophone()
+        // Never into another app's call: reports wait until it has ended.
+        if !announcements.isEmpty, pausedForApp == nil, [.idle, .listening, .paused].contains(machine.phase), !machine.voiceActive {
             speakOnly(announcements.removeFirst())
         }
         if machine.phase != before || hideAt.map({ Date() > $0 }) == true { refresh() }
