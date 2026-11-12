@@ -185,27 +185,31 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
     private func fillMicrophones() {
         let devices = AssistantAudioDevices.inputs()
         let chosen = settings.assistantMicrophone
-        let missing = ![AssistantInputDevice.automatic, AssistantInputDevice.systemDefault].contains(chosen)
-            && !devices.contains { $0.uid == chosen }
+        let missing = AssistantInputDevice.isDevice(chosen) && !devices.contains { $0.uid == chosen }
         let key = (devices.map { $0.uid + $0.name } + [missing ? chosen : ""]).joined(separator: "|")
         if key != microphoneListKey {
             microphoneListKey = key
             microphonePopup.removeAllItems()
-            microphonePopup.addItem(withTitle: String(localized: "Automatic (headset when connected)", comment: "Settings › Assistant › Microphone"))
-            microphonePopup.lastItem?.representedObject = AssistantInputDevice.automatic
-            microphonePopup.addItem(withTitle: String(localized: "System Default", comment: "Settings › Assistant › Microphone: the input chosen in System Settings › Sound"))
-            microphonePopup.lastItem?.representedObject = AssistantInputDevice.systemDefault
+            addMicrophone(String(localized: "Automatic (headset when connected)", comment: "Settings › Assistant › Microphone"),
+                          setting: AssistantInputDevice.automatic)
+            addMicrophone(String(localized: "System Default", comment: "Settings › Assistant › Microphone: the input chosen in System Settings › Sound"),
+                          setting: AssistantInputDevice.systemDefault)
             microphonePopup.menu?.addItem(.separator())
             for device in devices {
-                microphonePopup.addItem(withTitle: device.name)
-                microphonePopup.lastItem?.representedObject = device.uid
+                addMicrophone(device.name, setting: device.uid)
             }
             if missing {
-                microphonePopup.addItem(withTitle: String(localized: "Not connected", comment: "Settings › Assistant › Microphone: the chosen microphone is not connected now"))
-                microphonePopup.lastItem?.representedObject = chosen
+                addMicrophone(String(localized: "Not connected", comment: "Settings › Assistant › Microphone: the chosen microphone is not connected now"),
+                              setting: chosen)
             }
         }
         microphonePopup.selectItem(at: max(0, microphonePopup.indexOfItem(withRepresentedObject: chosen)))
+    }
+
+    /// An item of the Microphone menu for a value of `AppSettings.assistantMicrophone`.
+    private func addMicrophone(_ title: String, setting: String) {
+        microphonePopup.addItem(withTitle: title)
+        microphonePopup.lastItem?.representedObject = setting
     }
 
     /// The assistant's problem (microphone denied…) above the settings; also when it comes or goes while Settings is
