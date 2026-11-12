@@ -59,7 +59,6 @@ public enum AssistantBrevity {
     public static func join(_ sentences: [String]) -> String {
         var text = ""
         for sentence in sentences {
-            // "Done. Next." with a space, "完了。次。" without.
             if let last = text.last, last.isASCII { text += " " }
             text += sentence
         }
