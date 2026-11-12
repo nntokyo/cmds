@@ -13,7 +13,7 @@ struct AgentStatusIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> & ProvidesDialog {
-        guard let assistant = AssistantController.shared, assistant.isUnlocked else { throw AssistantIntentError.unavailable }
+        let assistant = try AssistantController.forIntent()
         let text = AssistantReport.status(AgentOverview.assistantWorld(assistant.controller), strings: .localized)
         return .result(value: text, dialog: IntentDialog(stringLiteral: text))
     }
@@ -35,7 +35,7 @@ struct AskAssistantIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let assistant = AssistantController.shared, assistant.isUnlocked else { throw AssistantIntentError.unavailable }
+        let assistant = try AssistantController.forIntent()
         let text = request.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { throw AssistantIntentError.empty }
         do {
@@ -45,6 +45,16 @@ struct AskAssistantIntent: AppIntent {
         } catch AssistantController.TypedRequestRefusal.paused {
             throw AssistantIntentError.paused
         }
+    }
+}
+
+@available(macOS 26.0, *)
+extension AssistantController {
+    /// The assistant for an action, when this Mac may use it.
+    @MainActor
+    static func forIntent() throws -> AssistantController {
+        guard let assistant = shared, assistant.isUnlocked else { throw AssistantIntentError.unavailable }
+        return assistant
     }
 }
 
@@ -62,7 +72,8 @@ enum AssistantIntentError: Error, CustomLocalizedStringResourceConvertible {
     }
 }
 
-/// Siri phrases (en here, ja in AppShortcuts.xcstrings); each has to name the app.
+/// Siri phrases (en here, ja in AppShortcuts.xcstrings); each has to name the app. The short titles repeat the
+/// actions' titles as literals: the App Intents metadata extractor accepts nothing else.
 @available(macOS 26.0, *)
 struct CmdsAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
