@@ -67,7 +67,7 @@ enum AntigravitySetup {
     }
 
     /// The row's note: whether it is set up, and what it shows.
-    static var note: String {
+    static func note(for state: AntigravitySettings.State) -> String {
         switch state {
         case .setUp:
             return String(localized: "Set up. The quota windows (Gemini 5h / 7d…) show in the sidebar footer and the menu bar while agy runs in a terminal (not with agy -p), and are kept until they reset.",

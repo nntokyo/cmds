@@ -55,6 +55,8 @@ final class AssistantMicrophoneShareTests: XCTestCase {
     func testACommandLineToolIsIgnoredByItsPath() {
         let tool = AssistantMicrophoneShare.Process(pid: 40, bundleID: "/opt/homebrew/bin/sox", recording: true)
         XCTAssertEqual(AssistantMicrophoneShare.ignoreID(for: tool.bundleID), "/opt/homebrew/bin/sox")
+        XCTAssertEqual(AssistantMicrophoneShare.toolName(tool.bundleID), "sox")
+        XCTAssertNil(AssistantMicrophoneShare.toolName("us.zoom.xos"))
         XCTAssertEqual(AssistantMicrophoneShare.ignoreID(for: "/Applications/X.app/Contents/MacOS/x.helper"),
                        "/Applications/X.app/Contents/MacOS/x.helper")
         XCTAssertEqual(AssistantMicrophoneShare.recorders([tool, zoom], own: 1, ownBundleID: "tokyo.n-n.cmds",
