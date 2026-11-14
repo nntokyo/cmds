@@ -10,15 +10,20 @@ enum ClaudeAccountMenu {
     /// accounts are set up (Settings › Claude Accounts); else nil (no button).
     static func pane(of workspace: Workspace, controller: AppController) -> Pane? {
         guard !controller.claudeAccounts.accounts.isEmpty, let primary = workspace.primaryAgent,
-              primary.usage.agent == .claude, primary.pane.ssh == nil else { return nil }
+              isSwitchable(primary.pane) else { return nil }
         return primary.pane
+    }
+
+    /// Claude Code in a local pane: what an account switch can move.
+    private static func isSwitchable(_ pane: Pane) -> Bool {
+        pane.agentUsage?.agent == .claude && pane.ssh == nil
     }
 
     /// Every pane the menu can switch (#296): the workspace's local Claude Code panes, the row's one first; empty
     /// without accounts (no menu).
     static func panes(of workspace: Workspace, controller: AppController) -> [Pane] {
         guard !controller.claudeAccounts.accounts.isEmpty else { return [] }
-        let local = workspace.agentPanes.filter { $0.agentUsage?.agent == .claude && $0.ssh == nil }
+        let local = workspace.agentPanes.filter(isSwitchable)
         guard let shown = pane(of: workspace, controller: controller) else { return local }
         return [shown] + local.filter { $0 !== shown }
     }
@@ -153,13 +158,18 @@ enum ClaudeAccountMenu {
         } catch {
             return error.localizedDescription
         }
-        (controller.window?.windowController as? MainWindowController)?.sidebar.updateUsage()
+        refreshRows(controller)
         return nil
     }
 
     /// Cancel Switch: drops the switch that waits, as the pane banner's Cancel does, and shows it in the rows.
     static func cancel(_ pane: Pane, controller: AppController) {
         controller.dismissAccountSwitch(pane)
+        refreshRows(controller)
+    }
+
+    /// The rows show a switch asked for or cancelled at once, not at the next usage sample.
+    private static func refreshRows(_ controller: AppController) {
         (controller.window?.windowController as? MainWindowController)?.sidebar.updateUsage()
     }
 
