@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>使い方 — cmds</title>
-<meta name="description" content="cmds の使い方：インストールと初回起動、ワークスペースと分割、タイル表示、ブラウザとプレビュー、cmds コマンド、Claude Code の設定、iPhone のペアリング、SSH ワークスペース、キーボードショートカット。">
+<meta name="description" content="cmds の使い方：インストールと初回起動、ワークスペースと分割、タイル表示、ブラウザとプレビュー、cmds コマンド、Claude Code の設定、iPhone のペアリング、SSH ワークスペース、音声アシスタント、キーボードショートカット。">
 <link rel="canonical" href="https://cmds.n-n.tokyo/guide/">
 <link rel="alternate" hreflang="ja" href="https://cmds.n-n.tokyo/guide/">
 <link rel="alternate" hreflang="en" href="https://cmds.n-n.tokyo/en/guide/">
@@ -61,6 +61,7 @@
         <li><a href="#ssh">SSH ワークスペース</a></li>
         <li><a href="#files">ファイル一覧ペイン</a></li>
         <li><a href="#schedules">スケジュール</a></li>
+        <li><a href="#assistant">音声アシスタント（Mac）</a></li>
         <li><a href="#shortcuts">キーボードショートカット</a></li>
       </ol>
     </nav>
@@ -207,8 +208,10 @@ cmds stats                                # ワークスペースごとと Mac �
         <li>MCP サーバー：<code>claude mcp add --scope user cmds -- cmds mcp</code>（Codex は <code>~/.codex/config.toml</code> に <code>[mcp_servers.cmds]</code> <code>command = "cmds"</code> <code>args = ["mcp"]</code> <code>env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]</code>）で登録すると、cmds のターミナルで動くエージェントが Chrome ではなく cmds のブラウザペインで Web ページを開き、スクリーンショットや JavaScript で確認します。ファイルのプレビューやサイドバーの状態表示も使えます。</li>
         <li>スキル：<code>integrations/claude/skills/cmds/SKILL.md</code> を <code>~/.claude/skills/cmds/</code>（Claude Code）や <code>~/.codex/skills/cmds/</code>（Codex）にコピーすると、エージェントがフォーカスを奪わずに補助ペインやプレビューを使い、Web ページを Chrome ではなく cmds のブラウザペインで開くようになります。</li>
         <li>Codex：使用量は設定不要です。状態と通知は Codex のフックで送ります。<code>~/.codex/hooks.json</code> の <code>PermissionRequest</code>・<code>Stop</code>・<code>UserPromptSubmit</code>・<code>PreToolUse</code>・<code>PostToolUse</code>・<code>Interrupt</code> に <code>command -v cmds &gt;/dev/null &amp;&amp; cmds hook codex || true</code>（<code>Stop</code> は末尾を <code>|| echo '{}'</code>）を登録し、Codex の <code>/hooks</code> で信頼します。承認待ち（オレンジ、実行したいコマンドつき）、作業中、ターンの終了が分かり、共有の app-server で動くセッションも正しいペインに表示されます。フックを使わない場合は、<code>[tui]</code> に <code>notifications = true</code>、<code>notification_method = "osc9"</code>、<code>notification_condition = "always"</code> を設定すると通知だけが届きます（両方使うと通知が 2 回届きます）。</li>
-        <li>Antigravity（<code>agy</code>）：<code>~/.gemini/antigravity-cli/settings.json</code> に <code>"statusLine": {"type": "command", "command": "cmds hook agy-status", "stack_with_default": true}</code> を追加すると、モデル、コンテキスト、利用上限（Gemini 5h / 7d、他社モデル）が Claude Code と同じように表示されます。</li>
+        <li>Antigravity（<code>agy</code>）：<code>~/.gemini/antigravity-cli/settings.json</code> に <code>"statusLine": {"type": "command", "command": "cmds hook agy-status", "stack_with_default": true}</code> を追加すると、モデル、コンテキスト、利用上限（Gemini 5h / 7d、他社モデル）が Claude Code と同じように表示されます。設定 › <strong>エージェント</strong> › Antigravity の上限 の<strong>設定する…</strong>で、この設定を追加できます（元のファイルの控えを残し、別のステータスラインがあるときは置き換える前に確認します）。上限は対話中のセッションからだけ届きます。<code>agy -p</code> ではステータスラインが動かないため、更新されません。</li>
       </ul>
+      <h3 id="claude-accounts">Claude アカウントの切り替え</h3>
+      <p>Claude のアカウントを複数設定しているときは、サイドバーの行のアカウントをクリック（または行を右クリック › <strong>Claude アカウント</strong>）して、別のアカウントを選べます。Claude Code が待機中になったら一度終了し、同じセッションをそのアカウントで続けます（<code>cmds accounts switch --to 名前</code> と同じです）。上限に達したアカウントには、リセットの時刻が出ます。SSH のペインなど、セッションを移せないときは理由を表示します。</p>
       <div class="split">
         <div>
           <h3>サイドバーの見方</h3>
@@ -325,9 +328,50 @@ cmds schedule history   # 実行履歴</code></pre>
     </div>
   </section>
 
+  <section class="step" id="assistant">
+    <div class="wrap narrow">
+      <h2><span class="step-num">11</span>音声アシスタント（Mac）</h2>
+      <p>エージェントの状況を声で聞いて、声で返答できます。「ジャービス、状況は？」「ジャービス、apiは何してる？」「ジャービス、apiを承認して」のように話しかけます。macOS 26 以降で使えます。いまはベータ版で、無料です。</p>
+      <h3 id="assistant-setup">オンにする</h3>
+      <ul>
+        <li>設定 › <strong>アシスタント</strong> › <strong>アシスタントをオンにする</strong>、またはメニューバーの cmds のメニューの<strong>アシスタント</strong>でオンにします。初回は、マイクと音声認識の許可を macOS が求めます。</li>
+        <li>メニューの<strong>聞き取りを一時停止</strong>で、<strong>聞き取りを再開</strong>を選ぶまでマイクを止めます。オンの間は、メニューバーのアイコンに小さな水色の点が付きます。</li>
+        <li>名前（「ジャービス」または「Jarvis」）から話しかけます。名前は 設定 › アシスタント › <strong>名前</strong> で変えられます。<kbd>⌥⌘J</kbd> を押すと、名前なしで 1 回だけ聞き取ります。</li>
+      </ul>
+      <h3 id="assistant-commands">話しかけ方</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">言い方</th><th scope="col">すること</th></tr></thead>
+          <tbody>
+            <tr><td>「状況は？」</td><td>入力待ちと作業中のワークスペースを答えます</td></tr>
+            <tr><td>「apiは何してる？」</td><td>そのワークスペースのエージェントを短く要約します。「apiを詳しく要約して」なら Claude Code が要約します</td></tr>
+            <tr><td>「apiに『テストを実行して』と返信」「apiを承認して」「apiで2番を選んで」</td><td>エージェントに返答します（確認カードのあとで）</td></tr>
+            <tr><td>「webでクロードを起動して」</td><td>新しいワークスペースで Claude Code（または Codex）を起動します。最初の作業も一緒に頼めます</td></tr>
+            <tr><td>「明日の船橋の天気を教えて」「…を検索して」</td><td>ウェブが必要な質問は、お使いの Claude Code に聞きます</td></tr>
+            <tr><td>「一時停止」「おやすみ」</td><td>聞き取りを一時停止します / アシスタントをオフにします</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>ほかの質問は、Mac の中の Apple のモデルが答えます（Apple Intelligence が必要です）。アプリの言語（日本語か英語）で話しかけます。</p>
+      <h3 id="assistant-confirm">確認カード</h3>
+      <p>声だけで実行されるのは、答えることだけです。ペインに入力したり、セッションを起動したりするときは、ワークスペース・ペイン・送る文字をカードに表示します。「はい」と言うか、<kbd>Return</kbd> を押すか、ボタンをクリックすると実行します。「いいえ」か <kbd>Esc</kbd> で取り消します。削除・push・デプロイなどを含む内容や、SSH のペインへの入力は、声の「はい」では実行しません。<kbd>Return</kbd> かクリックが必要です。</p>
+      <h3 id="assistant-noisy">うるさい場所で</h3>
+      <ul>
+        <li>設定 › アシスタント › <strong>聞き取り</strong>：<strong>自動</strong>（標準）、<strong>自動（ノイズ低減あり）</strong>、<strong>プッシュトゥトーク（ショートカットを押している間）</strong>から選べます。プッシュトゥトークでは、<kbd>⌥⌘J</kbd> を押している間だけ、名前なしで聞き取ります。とてもうるさい場所では、これがいちばん確実です。</li>
+        <li>設定 › アシスタント › <strong>マイク</strong>：<strong>自動</strong>なら、AirPods などのヘッドセットがつながっているときはそれを使います。口元に近いので、周りの音を拾いにくくなります。</li>
+      </ul>
+      <h3 id="assistant-calls">通話中</h3>
+      <p>Zoom や FaceTime の通話など、ほかのアプリがマイクを使っている間は、自動で聞き取りを止めます。終わって約 2 秒後に再開します。止めたくないときは、設定 › アシスタント › <strong>ほかのアプリがマイクを使っている間は一時停止</strong>をオフにします。</p>
+      <h3 id="assistant-siri">Siri とショートカット</h3>
+      <p>ショートカット App に<strong>エージェントの状況</strong>と<strong>アシスタントに頼む</strong>のアクションがあります（macOS 26）。Siri には「cmdsの状況」「cmdsに頼む」と話しかけます。頼んだ操作は、これまでどおり Mac のカードで確認してから実行します。</p>
+      <h3 id="assistant-privacy">プライバシー</h3>
+      <p>音声はこの Mac の中で認識します。アシスタントあての言葉以外はすぐに捨て、音声も文字起こしも保存しません。外に送るのは、ウェブが必要な質問、詳しい要約、自由な言い方の指示だけです。これらはお使いの Claude Code（<code>claude -p</code>）が処理し、Claude Code の利用量を使います。設定 › アシスタント の<strong>ウェブが必要な質問はClaudeに聞く</strong>と<strong>自由な言い方の指示をClaudeで読み取る</strong>でオフにできます。詳しくは<a href="/privacy/#assistant">プライバシーポリシーの 6</a> をご覧ください。</p>
+    </div>
+  </section>
+
   <section class="step" id="shortcuts">
     <div class="wrap narrow">
-      <h2><span class="step-num">11</span>キーボードショートカット</h2>
+      <h2><span class="step-num">12</span>キーボードショートカット</h2>
       <div class="table-wrap">
         <table>
           <thead><tr><th scope="col">操作</th><th scope="col">キー</th></tr></thead>
@@ -351,6 +395,7 @@ cmds schedule history   # 実行履歴</code></pre>
             <tr><td>サイドバーの表示 / コンパクト表示</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>
             <tr><td>ワークスペースを絞り込む</td><td><kbd>⌥⌘F</kbd></td></tr>
             <tr><td>文字を大きく / 小さく / 標準サイズ</td><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td></tr>
+            <tr><td>音声アシスタントに話しかける</td><td><kbd>⌥⌘J</kbd></td></tr>
             <tr><td>設定</td><td><kbd>⌘,</kbd></td></tr>
           </tbody>
         </table>
