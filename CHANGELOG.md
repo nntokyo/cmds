@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.24.1] - 2026-11-15
+
+Mac only; the iPhone/iPad app is unchanged.
+
 ### Added
 
 - Voice assistant (Mac): Settings › Assistant › Remove takes one app off the list of apps it never pauses for, or all
