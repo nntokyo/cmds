@@ -312,9 +312,18 @@ reports, for the pane, the model, the context window (ctx) and the quota windows
 }
 ```
 
+**Settings › Agents › Antigravity limits › Set Up…** does this for you (it keeps a copy of the file, and asks before
+replacing another status line).
+
 `stack_with_default` keeps agy's own status line (the hook prints nothing). The hook finds the `agy` process among its
 ancestors, so the usage goes when agy exits. Only those figures are sent to the app; the JSON's account e-mail and
-paths are not read. Checked with agy 1.5.2. Antigravity has no notification or state hooks in cmds yet: its state
+paths are not read. Checked with agy 1.5.2.
+
+The quota windows show in the sidebar footer (as `agy 5h`, `7d`; other model groups by name, `3P 5h`), the menu bar,
+the widget and the phone. agy reports them only while an interactive session runs: `agy -p` never runs the status line
+(checked with agy 1.5.9). agy in a terminal outside cmds sends only the quota (the command runs with no cmds pane).
+The last figures are kept across restarts (`antigravity-limits.json` in the support directory) until their windows
+reset, dimmed after an hour without a report. Antigravity has no notification or state hooks in cmds yet: its state
 comes from the status-line reports and the terminal title like other agents.
 
 ## Usage and limits

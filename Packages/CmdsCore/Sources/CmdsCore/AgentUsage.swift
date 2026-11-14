@@ -26,6 +26,9 @@ public enum AgentKind: String, Codable, Sendable, CaseIterable, Comparable {
         }
     }
 
+    /// For narrow places (the sidebar footer's title column, #290): Antigravity by its CLI's name, `agy`.
+    public var shortName: String { self == .antigravity ? "agy" : displayName }
+
     private var order: Int { AgentKind.allCases.firstIndex(of: self) ?? 0 }
     public static func < (lhs: AgentKind, rhs: AgentKind) -> Bool { lhs.order < rhs.order }
 }

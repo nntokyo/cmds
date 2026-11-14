@@ -33,6 +33,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let installUpdatesCheckbox = NSButton(checkboxWithTitle: String(localized: "Download and install updates automatically"), target: nil, action: nil)
     private let updatesNote = SettingsWindowController.note("")
     private let accountsButton = NSButton(title: String(localized: "Manage…"), target: nil, action: nil)
+    /// Settings › Agents › Antigravity limits (#290).
+    private let agySetupButton = NSButton(title: String(localized: "Set Up…", comment: "Settings › Agents › Antigravity limits"), target: nil, action: nil)
+    private let agyNote = SettingsWindowController.note("")
     private let schedulesButton = NSButton(title: String(localized: "Open…"), target: nil, action: nil)
     private var observer: NSObjectProtocol?
     private var assistantObserver: NSObjectProtocol?
@@ -142,6 +145,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         accountsButton.bezelStyle = .rounded
         accountsButton.target = self
         accountsButton.action = #selector(manageAccounts)
+        agySetupButton.bezelStyle = .rounded
+        agySetupButton.target = self
+        agySetupButton.action = #selector(setUpAntigravity)
         schedulesButton.bezelStyle = .rounded
         schedulesButton.target = self
         schedulesButton.action = #selector(openSchedules)
@@ -192,6 +198,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
+            [Self.label(String(localized: "Antigravity limits:", comment: "Settings › Agents")), agySetupButton],
+            [NSGridCell.emptyContentView, agyNote],
             [Self.label(String(localized: "Schedules:")), schedulesButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Start a workspace or continue a Claude Code session at a set time, on weekdays, or when an account’s limit resets (also Window › Schedules…)."))],
         ]
@@ -407,6 +415,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     /// Shows the stored values (also after changes made elsewhere, e.g. `defaults write`).
     private func refresh() {
+        refreshAntigravity()
         if let family = settings.terminalFontFamily {
             if fontPopup.indexOfItem(withRepresentedObject: family) < 0 { fillFontPopup() }
             fontPopup.selectItem(at: fontPopup.indexOfItem(withRepresentedObject: family))
@@ -538,6 +547,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             checkbox.identifier = NSUserInterfaceItemIdentifier(option.rawValue)
             return (option, checkbox)
         })
+    }
+
+    @objc private func setUpAntigravity() {
+        AntigravitySetup.setUp(in: window) { [weak self] in self?.refreshAntigravity() }
+    }
+
+    /// The Antigravity row: its note and whether Set Up is still needed (the file can change outside cmds).
+    private func refreshAntigravity() {
+        agyNote.stringValue = AntigravitySetup.note
+        let done = AntigravitySetup.state == .setUp
+        agySetupButton.title = done ? String(localized: "Set Up", comment: "Settings › Agents › Antigravity limits: done") : String(localized: "Set Up…", comment: "Settings › Agents › Antigravity limits")
+        agySetupButton.isEnabled = !done
     }
 
     @objc private func manageAccounts() {

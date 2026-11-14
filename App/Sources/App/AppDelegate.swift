@@ -48,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             controller.createWorkspace()
         }
         // Before the schedules start: those waiting for Codex's limit read it.
-        controller.restoreCodexLimits()
+        controller.restoreAgentLimits()
         // After the restore: a catch-up run may need the session's pane.
         controller.scheduleRunner.start()
         metadataMonitor = MetadataMonitor(controller: controller)
