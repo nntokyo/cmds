@@ -133,27 +133,27 @@ final class CodexLimitReachedTests: XCTestCase {
             UsageLimit(id: UsageLimit.sevenDay, usedPercent: 80, resetsAt: Date(timeIntervalSince1970: 1_794_407_593)),
             UsageLimit(id: UsageLimit.usageLimit, usedPercent: 100, resetsAt: utc("2026-12-07T14:05:00Z")),
         ], plan: "plus", updatedAt: event)
-        let data = try CodexLimitsStore.encode(limits)
-        XCTAssertEqual(CodexLimitsStore.decode(data, now: event), limits)
+        let data = try AgentLimitsStore.encode(limits)
+        XCTAssertEqual(AgentLimitsStore.decode(data, now: event), limits)
         // The 7-day window has reset: only the reached limit is left.
-        XCTAssertEqual(CodexLimitsStore.decode(data, now: utc("2026-11-20T00:00:00Z"))?.limits.map(\.id), [UsageLimit.usageLimit])
+        XCTAssertEqual(AgentLimitsStore.decode(data, now: utc("2026-11-20T00:00:00Z"))?.limits.map(\.id), [UsageLimit.usageLimit])
         // Everything has reset: ignored.
-        XCTAssertNil(CodexLimitsStore.decode(data, now: utc("2026-12-08T00:00:00Z")))
+        XCTAssertNil(AgentLimitsStore.decode(data, now: utc("2026-12-08T00:00:00Z")))
         // Damaged or another agent's.
-        XCTAssertNil(CodexLimitsStore.decode(Data("{".utf8), now: event))
+        XCTAssertNil(AgentLimitsStore.decode(Data("{".utf8), now: event))
         var claude = limits
         claude.agent = .claude
-        XCTAssertNil(CodexLimitsStore.decode(try CodexLimitsStore.encode(claude), now: event))
+        XCTAssertNil(AgentLimitsStore.decode(try AgentLimitsStore.encode(claude), now: event))
 
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("codex-limits-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        XCTAssertNil(CodexLimitsStore.load(supportDirectory: directory, now: event))
-        try CodexLimitsStore.save(limits, supportDirectory: directory)
-        XCTAssertEqual(CodexLimitsStore.load(supportDirectory: directory, now: event), limits)
+        XCTAssertNil(AgentLimitsStore.load(supportDirectory: directory, now: event))
+        try AgentLimitsStore.save(limits, supportDirectory: directory)
+        XCTAssertEqual(AgentLimitsStore.load(supportDirectory: directory, now: event), limits)
 
-        XCTAssertFalse(CodexLimitsStore.changed(limits, AgentLimits(agent: .codex, limits: limits.limits, plan: "plus")))
-        XCTAssertTrue(CodexLimitsStore.changed(nil, limits))
-        XCTAssertTrue(CodexLimitsStore.changed(limits, AgentLimits(agent: .codex, limits: [limits.limits[0]], plan: "plus")))
+        XCTAssertFalse(AgentLimitsStore.changed(limits, AgentLimits(agent: .codex, limits: limits.limits, plan: "plus")))
+        XCTAssertTrue(AgentLimitsStore.changed(nil, limits))
+        XCTAssertTrue(AgentLimitsStore.changed(limits, AgentLimits(agent: .codex, limits: [limits.limits[0]], plan: "plus")))
     }
 
     /// #231: a limit reached again without a reset time is stored with the newer time it expires from.
@@ -162,8 +162,8 @@ final class CodexLimitReachedTests: XCTestCase {
         let first = AgentLimits(agent: .codex, limits: reached, plan: nil, updatedAt: event)
         let again = AgentLimits(agent: .codex, limits: reached, plan: nil, updatedAt: event.addingTimeInterval(3600))
         XCTAssertTrue(first.hasUnknownReset)
-        XCTAssertTrue(CodexLimitsStore.changed(first, again))
-        XCTAssertFalse(CodexLimitsStore.changed(again, again))
+        XCTAssertTrue(AgentLimitsStore.changed(first, again))
+        XCTAssertFalse(AgentLimitsStore.changed(again, again))
         // Stored from the second sighting, it outlives the first one's 24 h.
         let later = event.addingTimeInterval(AgentLimits.unknownResetLifetime + 1800)
         XCTAssertNil(first.active(at: later))

@@ -1,12 +1,12 @@
 import Foundation
 
-/// The newest Codex account limits, kept across launches (`codex-limits.json` in the support directory, #227): Codex
-/// reports them only in the session files of running sessions, so without this they would be unknown after a
-/// relaunch until a Codex runs again. Written when the figures change; at launch only the windows that have not
-/// reset are taken (`AgentLimits.active(at:)`), and a file with none left is ignored.
-/// Antigravity's are kept the same way (`antigravity-limits.json`, #290): agy reports them only while an interactive
-/// session runs. `agent` picks the file; Codex is the default.
-public enum CodexLimitsStore {
+/// The newest account limits of agents that report them only while they run, kept across launches in the support
+/// directory: Codex (`codex-limits.json`, #227: only in the session files of running sessions) and Antigravity
+/// (`antigravity-limits.json`, #290: only while an interactive agy runs). Without this they would be unknown after a
+/// relaunch until the agent runs again. Written when the figures change; at launch only the windows that have not
+/// reset are taken (`AgentLimits.active(at:)`), and a file with none left is ignored. `agent` picks the file; Codex is
+/// the default.
+public enum AgentLimitsStore {
     public static let fileName = "codex-limits.json"
 
     /// The agents whose limits are kept.

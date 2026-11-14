@@ -237,7 +237,7 @@ Code: `CmdsCore/AgentUsage.swift`, `AgentFormat.swift`, `ClaudeStatusLine.swift`
   15 min) or an extra `UsageLimit.usageLimit` at 100 % (no reset: dropped by `active(at:)` 24 h after `updatedAt`).
   Besides the panes' files the watcher follows, for limits only, the 4 newest rollout files of today's and
   yesterday's folders under `$CODEX_HOME/sessions` (else `~/.codex/sessions`) modified within 6 h (folders listed
-  every 15 s, ≤ 64 KB tail). Antigravity's quota is kept the same way in `antigravity-limits.json` (#290; `agent.limits`, local socket only, takes it from `cmds hook agy-status` outside a pane). The newest limits are saved in `codex-limits.json` (`CodexLimitsStore`, support
+  every 15 s, ≤ 64 KB tail). Antigravity's quota is kept the same way in `antigravity-limits.json` (#290; `agent.limits`, local socket only, takes it from `cmds hook agy-status` outside a pane). The newest limits are saved in `codex-limits.json` (`AgentLimitsStore`, support
   folder) when the figures change and restored at launch.
 - Usage without updates for 3 min is marked `stale` (idle agent, dimmed). Limits whose `resetsAt` passed are left
   out. Report-driven updates go through `usageChanges` (coalesced to 4/s); only appearing/disappearing agents emit

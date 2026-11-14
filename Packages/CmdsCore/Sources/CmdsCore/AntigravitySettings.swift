@@ -27,7 +27,7 @@ public enum AntigravitySettings {
 
     public static func state(of data: Data?) -> State {
         guard let data else { return .noFile }
-        if data.allSatisfy({ $0 == 0x20 || $0 == 0x0A || $0 == 0x0D || $0 == 0x09 }) { return .notSetUp }
+        if isBlank(data) { return .notSetUp }
         guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return .unreadable }
         guard let line = object["statusLine"] as? [String: Any], let command = line["command"] as? String,
               !command.trimmingCharacters(in: .whitespaces).isEmpty else { return .notSetUp }
@@ -38,12 +38,17 @@ public enum AntigravitySettings {
     /// (`stack_with_default`). Nil when the file is not a JSON object.
     public static func settingUp(_ data: Data?, cli: String) -> Data? {
         var object: [String: Any] = [:]
-        if let data, !data.allSatisfy({ $0 == 0x20 || $0 == 0x0A || $0 == 0x0D || $0 == 0x09 }) {
+        if let data, !isBlank(data) {
             guard let existing = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return nil }
             object = existing
         }
         object["statusLine"] = ["type": "command", "command": "\(shellQuoted(cli)) \(hookArguments)", "stack_with_default": true]
         return try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])
+    }
+
+    /// An empty file, or only spaces and newlines: no settings yet.
+    private static func isBlank(_ data: Data) -> Bool {
+        data.allSatisfy { $0 == 0x20 || $0 == 0x0A || $0 == 0x0D || $0 == 0x09 }
     }
 
     /// `cli` as one shell word (single quotes only when needed: `cmds` and plain paths stay as they are).
