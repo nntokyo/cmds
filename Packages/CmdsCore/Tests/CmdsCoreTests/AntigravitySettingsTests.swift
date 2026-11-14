@@ -42,11 +42,11 @@ final class AntigravitySettingsTests: XCTestCase {
         let now = Date(timeIntervalSince1970: 2_000_000_000)
         let limits = AgentLimits(agent: .antigravity, limits: [UsageLimit(id: "gemini-5h", usedPercent: 40, resetsAt: now + 3600, windowMinutes: 300)],
                                  plan: nil, updatedAt: now)
-        try CodexLimitsStore.save(limits, supportDirectory: directory)
+        try AgentLimitsStore.save(limits, supportDirectory: directory)
         XCTAssertTrue(FileManager.default.fileExists(atPath: directory.appendingPathComponent("antigravity-limits.json").path))
-        XCTAssertEqual(CodexLimitsStore.load(supportDirectory: directory, agent: .antigravity, now: now), limits)
-        XCTAssertNil(CodexLimitsStore.load(supportDirectory: directory, now: now))
-        XCTAssertNil(CodexLimitsStore.load(supportDirectory: directory, agent: .antigravity, now: now + 7200))
+        XCTAssertEqual(AgentLimitsStore.load(supportDirectory: directory, agent: .antigravity, now: now), limits)
+        XCTAssertNil(AgentLimitsStore.load(supportDirectory: directory, now: now))
+        XCTAssertNil(AgentLimitsStore.load(supportDirectory: directory, agent: .antigravity, now: now + 7200))
     }
 
     func testShortLabelsForTheFooter() {

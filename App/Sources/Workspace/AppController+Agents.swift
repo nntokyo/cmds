@@ -195,10 +195,10 @@ extension AppController {
     static let codexLimitsDidChange = Notification.Name("cmdsCodexLimitsDidChange")
 
     /// At launch: the Codex (#227) and Antigravity (#290) limits of the last run that have not reset yet
-    /// (`CodexLimitsStore`).
+    /// (`AgentLimitsStore`).
     func restoreAgentLimits(now: Date = Date()) {
-        for agent in CodexLimitsStore.agents where agentLimitsByKind[agent] == nil {
-            if let limits = CodexLimitsStore.load(supportDirectory: CmdsEnv.supportDirectoryURL(), agent: agent, now: now) {
+        for agent in AgentLimitsStore.agents where agentLimitsByKind[agent] == nil {
+            if let limits = AgentLimitsStore.load(supportDirectory: CmdsEnv.supportDirectoryURL(), agent: agent, now: now) {
                 agentLimitsByKind[agent] = limits
             }
         }
@@ -206,16 +206,16 @@ extension AppController {
 
     private func saveAgentLimits(_ limits: AgentLimits) {
         do {
-            try CodexLimitsStore.save(limits, supportDirectory: CmdsEnv.supportDirectoryURL())
+            try AgentLimitsStore.save(limits, supportDirectory: CmdsEnv.supportDirectoryURL())
         } catch {
             agentLog.error("saving \(limits.agent.rawValue, privacy: .public) limits failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
     /// An agent's account limits as reported (status line); kept across launches for the agents in
-    /// `CodexLimitsStore.agents` when they changed.
+    /// `AgentLimitsStore.agents` when they changed.
     func noteAgentLimits(_ limits: AgentLimits) {
-        if CodexLimitsStore.agents.contains(limits.agent), CodexLimitsStore.changed(agentLimitsByKind[limits.agent], limits) {
+        if AgentLimitsStore.agents.contains(limits.agent), AgentLimitsStore.changed(agentLimitsByKind[limits.agent], limits) {
             saveAgentLimits(limits)
         }
         agentLimitsByKind[limits.agent] = limits
