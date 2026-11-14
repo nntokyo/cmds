@@ -62,6 +62,10 @@ ends. The menu bar says which app it paused for. Its reports on tasks you gave w
 during the call keeps it on until the call ends; a pause of your own stays until you resume, also after a call. Turn
 it off in **Settings › Assistant › Pause while another app uses the microphone**.
 
+An app that keeps the microphone open all the time (voice control, a noise filter, OBS) would keep it paused: choose
+**Don’t Pause for …** under the reason in the menu bar, and it listens again at once and never pauses for that app
+again. Settings › Assistant lists those apps under the setting; **Clear** empties the list.
+
 Its name interrupts it at any time: while it speaks or works out an answer (also while Claude is searching), "Jarvis,
 …" / 「ジャービス、…」 stops it and takes the new request at once; Claude's late answer to the old one is dropped. While it
 speaks, and for a second after, nothing else it hears counts, and something that is mostly what it just said (its own

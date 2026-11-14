@@ -30,9 +30,18 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
     public static let resumeDelay: TimeInterval = 2
 
     /// Processes that record all the time or are cmds: never a reason to stop. Other cmds instances (a test build
-    /// listening too) and the system's own listeners (Siri, Sound Recognition) by bundle ID prefix.
-    static let ignoredPrefixes = ["tokyo.n-n.cmds", "com.apple.CoreSpeech", "com.apple.corespeechd",
+    /// listening too) and the system's own listeners (Siri, Sound Recognition) by bundle ID prefix; but a Debug build
+    /// stops for the released app (`countsAsRecorder`, #295).
+    static let ignoredPrefixes = [cmdsBundleID, "com.apple.CoreSpeech", "com.apple.corespeechd",
                                   "com.apple.assistantd", "com.apple.accessibility.heard"]
+
+    /// The released app's bundle ID (#295). Its process records only for its assistant: recording means it listens.
+    public static let cmdsBundleID = "tokyo.n-n.cmds"
+
+    /// A Debug build ("cmds Dev", `tokyo.n-n.cmds.dev`) by its own bundle ID (#295).
+    public static func isDebugBuild(_ ownBundleID: String) -> Bool {
+        ownBundleID.hasPrefix(cmdsBundleID) && ownBundleID.hasSuffix(".dev")
+    }
 
     /// The PID of the app the assistant stopped listening for; nil when it did not stop by itself.
     public private(set) var pausedFor: Int32?
@@ -42,11 +51,28 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
 
     public init() {}
 
-    /// The processes other than this one (`own` PID) that record and count.
-    public static func recorders(_ processes: [Process], own: Int32) -> [Process] {
+    /// The processes other than this one (`own` PID) that record and count. `ownBundleID`: this app's (#295: a Debug
+    /// build stops while the released app's assistant listens, so only one of them answers; the released app never
+    /// stops for a Debug build). `ignored`: the bundle IDs the user chose never to stop for ("Don't Pause for …"),
+    /// matched as given and as a helper's app (`ignoreID(for:)`).
+    public static func recorders(_ processes: [Process], own: Int32, ownBundleID: String,
+                                 ignored: Set<String> = []) -> [Process] {
         processes.filter { process in
-            process.recording && process.pid != own && !ignoredPrefixes.contains { process.bundleID.hasPrefix($0) }
+            process.recording && process.pid != own && countsAsRecorder(process.bundleID, ownBundleID: ownBundleID)
+                && !ignored.contains(process.bundleID) && !ignored.contains(ignoreID(for: process.bundleID))
         }
+    }
+
+    /// Whether a process with this bundle ID recording is a reason to stop, before the user's ignore list (#295).
+    static func countsAsRecorder(_ bundleID: String, ownBundleID: String) -> Bool {
+        if bundleID == cmdsBundleID, isDebugBuild(ownBundleID) { return true }
+        return !ignoredPrefixes.contains { bundleID.hasPrefix($0) }
+    }
+
+    /// The ID "Don't Pause for …" keeps for a recorder (#295): its app's for a helper (Chrome's `….helper` records for
+    /// Meet), so all of the app's helpers are ignored.
+    public static func ignoreID(for bundleID: String) -> String {
+        appBundleID(ofHelper: bundleID)
     }
 
     /// The app a helper process belongs to by its bundle ID (`com.google.Chrome.helper` → `com.google.Chrome`); the
@@ -86,6 +112,14 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
         pausedFor = nil
         quietSince = nil
         overridden = true
+    }
+
+    /// The user chose never to stop for the app it stopped for (#295): it listens again now (the caller resumes), and
+    /// the app no longer counts (`recorders(_:own:ownBundleID:ignored:)`). Another app recording stops it again.
+    public mutating func recorderIgnored() {
+        pausedFor = nil
+        quietSince = nil
+        overridden = false
     }
 
     /// The user paused, or the assistant was turned off: it is the user's pause now, not resumed by itself.

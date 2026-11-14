@@ -204,6 +204,11 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   Core Audio again; text-only mode reads Core Audio only through it): `state` has `pausedFor` (the app it paused for)
   and `shareOverridden`; the phase is `paused` at once and `idle` again 2 s after `apps: []`, a `resume` during the
   "call" keeps it `idle` until `apps: []`, a `pause` stays after it. A real call (Core Audio) needs a person.
+  The pretended apps go through the same rules (#295): on a Debug build `apps: ["tokyo.n-n.cmds"]` pauses it with
+  `pausedFor` "cmds" and `ignoreOffer` null; for another app `pausedForBundleID` and `ignoreOffer` (the menu's "Don't
+  Pause for …" name) are set, `ignore_recorder` adds it to `ignoredRecorders` and the phase is `idle` at once (it
+  stays so while the app "records"), `clear_ignored` empties the list. Run it in an isolated instance (the list is a
+  setting).
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
 - `debug.sidebar_account {workspace, choose?}` (DEBUG builds, #284) returns the row's account button title (null while

@@ -2916,6 +2916,17 @@
         }
       }
     },
+    "Clear": {
+      "comment": "Settings › Assistant: empties the list of apps that never pause the assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリア"
+          }
+        }
+      }
+    },
     "Clear Finished": {
       "localizations": {
         "ja": {
@@ -4078,6 +4089,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "完了 — %@"
+          }
+        }
+      }
+    },
+    "Don’t Pause for %@": {
+      "comment": "menu bar item: assistant; the app recording never pauses it again (Settings › Assistant clears the list)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の使用中は一時停止しない"
           }
         }
       }
@@ -6441,6 +6463,17 @@
         }
       }
     },
+    "Never pauses for %@.": {
+      "comment": "Settings › Assistant: apps chosen with Don't Pause for … in the menu bar",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ の使用中は一時停止しません。"
+          }
+        }
+      }
+    },
     "New Code": {
       "localizations": {
         "ja": {
@@ -7506,6 +7539,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ がマイクを使用中のため一時停止中"
+          }
+        }
+      }
+    },
+    "Paused while the assistant in %@ is listening": {
+      "comment": "menu bar item: assistant, disabled; a Debug build pauses while the released cmds' assistant listens",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ のアシスタントが聞き取り中のため一時停止中"
           }
         }
       }

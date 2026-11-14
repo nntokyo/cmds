@@ -344,12 +344,23 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
             pause.indentationLevel = 1
             menu.addItem(pause)
             if let app = assistant.pausedForApp {
-                // Paused by itself while another app records (#278).
-                let reason = NSMenuItem(title: String(localized: "Paused while \(app) uses the microphone", comment: "menu bar item: assistant, disabled"),
-                                        action: nil, keyEquivalent: "")
+                // Paused by itself while another app records (#278), or, a Debug build, while the released app's
+                // assistant listens (#295).
+                let title = assistant.pausedForCmds
+                    ? String(localized: "Paused while the assistant in \(app) is listening", comment: "menu bar item: assistant, disabled; a Debug build pauses while the released cmds' assistant listens")
+                    : String(localized: "Paused while \(app) uses the microphone", comment: "menu bar item: assistant, disabled")
+                let reason = NSMenuItem(title: title, action: nil, keyEquivalent: "")
                 reason.isEnabled = false
                 reason.indentationLevel = 1
                 menu.addItem(reason)
+                if let name = assistant.ignorableRecorderName {
+                    // An app that keeps the microphone open never pauses it again (#295).
+                    let ignore = NSMenuItem(title: String(localized: "Don’t Pause for \(name)", comment: "menu bar item: assistant; the app recording never pauses it again (Settings › Assistant clears the list)"),
+                                            action: #selector(ignoreRecorder), keyEquivalent: "")
+                    ignore.target = self
+                    ignore.indentationLevel = 1
+                    menu.addItem(ignore)
+                }
             }
         }
         menu.addItem(.separator())
@@ -363,6 +374,12 @@ final class MenuBarStatusItem: NSObject, NSMenuDelegate {
     @objc private func pauseAssistant() {
         guard #available(macOS 26.0, *), let assistant = AssistantController.shared else { return }
         assistant.isPaused ? assistant.resume() : assistant.pause()
+    }
+
+    /// "Don't Pause for …" (#295).
+    @objc private func ignoreRecorder() {
+        guard #available(macOS 26.0, *), let assistant = AssistantController.shared else { return }
+        assistant.ignoreRecorder()
     }
 
     @objc private func openApp() { showWorkspace(nil, nil) }

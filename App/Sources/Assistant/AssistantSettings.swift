@@ -97,6 +97,7 @@ extension AppSettings {
     static let assistantListeningKey = "AssistantListening"
     static let assistantMicrophoneKey = "AssistantMicrophone"
     static let assistantShareMicrophoneKey = "AssistantShareMicrophone"
+    static let assistantIgnoredRecordersKey = "AssistantIgnoredRecorders"
     /// Where the user dragged the waiting orb ("x,y", its centre in screen points). Not observed: dragging it is no
     /// settings change.
     static let assistantOrbCenterKey = "AssistantOrbCenter"
@@ -104,7 +105,7 @@ extension AppSettings {
                                 assistantMutedKey, assistantHotkeyKey, assistantWebKey, assistantInterpreterKey,
                                 assistantReportTasksKey, assistantProjectFoldersKey, assistantShowWhileWaitingKey,
                                 assistantOrbSizeKey, assistantListeningKey, assistantMicrophoneKey,
-                                assistantShareMicrophoneKey]
+                                assistantShareMicrophoneKey, assistantIgnoredRecordersKey]
 
     /// The rates the voice may take (AVSpeechUtterance rates; 0.5 is the system default).
     static let assistantRateRange: ClosedRange<Double> = 0.35...0.65
@@ -179,6 +180,14 @@ extension AppSettings {
     var assistantShareMicrophone: Bool {
         get { defaults.object(forKey: Self.assistantShareMicrophoneKey) == nil ? true : defaults.bool(forKey: Self.assistantShareMicrophoneKey) }
         set { set(newValue ? nil : false, forKey: Self.assistantShareMicrophoneKey) }
+    }
+
+    /// Bundle IDs of apps that never pause it although they record (#295: voice control, a noise filter, OBS keep the
+    /// microphone open all the time), added by the menu bar's "Don't Pause for …"; a helper's app ID
+    /// (`AssistantMicrophoneShare.ignoreID(for:)`). Empty: none.
+    var assistantIgnoredRecorders: [String] {
+        get { defaults.stringArray(forKey: Self.assistantIgnoredRecordersKey) ?? [] }
+        set { set(newValue.isEmpty ? nil : newValue, forKey: Self.assistantIgnoredRecordersKey) }
     }
 
     /// The small orb shows while the assistant waits for its name (`AssistantPresence`). On unless the user turns it
