@@ -55,6 +55,11 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
         id.hasPrefix("/")
     }
 
+    /// A command-line tool's name for the menu bar and Settings (its file name); nil for a bundle ID (#305).
+    public static func toolName(_ id: String) -> String? {
+        isExecutablePath(id) ? (id as NSString).lastPathComponent : nil
+    }
+
     /// The PID of the app the assistant stopped listening for; nil when it did not stop by itself.
     public private(set) var pausedFor: Int32?
     /// The user had it listen again during another app's recording: not stopped again until that has ended.

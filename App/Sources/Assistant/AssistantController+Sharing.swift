@@ -75,7 +75,7 @@ extension AssistantController {
     /// (Chrome's `….helper` records for Meet in Chrome), else "Another app" (WebKit's media process, a daemon).
     private static func recorderName(bundleID: String) -> String {
         if bundleID == AssistantMicrophoneShare.cmdsBundleID { return "cmds" }
-        if AssistantMicrophoneShare.isExecutablePath(bundleID) { return (bundleID as NSString).lastPathComponent }
+        if let tool = AssistantMicrophoneShare.toolName(bundleID) { return tool }
         return runningAppName(bundleID: bundleID) ?? String(localized: "Another app", comment: "assistant: an app records")
     }
 
@@ -95,7 +95,7 @@ extension AssistantController {
     /// else its bundle ID.
     static func ignoredAppName(bundleID: String) -> String {
         // #305: a command-line tool by its file name.
-        if AssistantMicrophoneShare.isExecutablePath(bundleID) { return (bundleID as NSString).lastPathComponent }
+        if let tool = AssistantMicrophoneShare.toolName(bundleID) { return tool }
         if let name = runningAppName(bundleID: bundleID) { return name }
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             let name = FileManager.default.displayName(atPath: url.path)
