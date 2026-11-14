@@ -7,36 +7,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.22.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.22.0</link>
-      <sparkle:version>31</sparkle:version>
-      <sparkle:shortVersionString>0.22.0</sparkle:shortVersionString>
+      <title>cmds 0.23.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.23.0</link>
+      <sparkle:version>32</sparkle:version>
+      <sparkle:shortVersionString>0.23.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Thu, 12 Nov 2026 21:46:44 GMT</pubDate>
+      <pubDate>Sat, 14 Nov 2026 07:34:31 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
 <ul>
-<li>音声アシスタント「ジャービス」（macOS 26 以降、ベータ版の間は無料）。設定 › アシスタント またはメニューバーからオンにすると、名前を呼んで話しかけるだけで、入力待ちのワークスペースや各エージェントの作業内容を短く答えます。エージェントへの返信・承認や、Claude Code / Codex に作業を頼んで起動することもでき、実行の前に必ず確認カードを出します。Web が必要な質問は Claude Code に調べてもらいます。</li>
-<li>話し終えてから約 0.8 秒で聞き取りを区切り、すばやく答えます。待機中は画面の隅に小さなオーブを表示します。</li>
-<li>騒がしい場所向けに「雑音を抑える」「押して話す（⌥⌘J）」と、AirPods などヘッドセットのマイクへの自動切り替えを追加しました。ほかのアプリで通話している間は自動で聞き取りを止めます。</li>
-<li>Siri とショートカット：「cmdsの状況」「cmdsに頼む」。</li>
-<li>サイドバーに各 Claude Code セッションのアカウントを色付きのアイコンで表示し、クリックで別のアカウントに切り替えられます。</li>
-<li>ブラウザペインでファイル変更時に自動で再読み込み、ターミナルのスクロールバックの書き出し（ペイン › スクロールバックを書き出す…）。</li>
+<li>Antigravity（agy）の利用上限：設定 › エージェント › Antigravity の上限 ›「設定する…」で、agy のステータスラインに cmds を追加します（元のファイルの控えを残し、別の設定がある場合は確認します）。cmds の外のターミナルで動く agy からも上限を受け取り、最後の値はリセットまで再起動後も表示します。上限が届くのは対話モードの agy を動かしている間です（agy -p では届きません）。</li>
 </ul>
+<h3>修正</h3>
+<ul><li>サイドバー下部で Antigravity の上限が「Antigra」「Gen」と切れていたのを、「agy　5h / 7d」で表示するようにし、各エージェントのバーの位置をそろえました。</li></ul>
+<p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Added</h3>
 <ul>
-<li>Voice assistant "JARVIS" (macOS 26 and later, free during its beta). Turn it on in Settings › Assistant or the menu bar; say its name and ask which workspaces need you or what an agent is doing. It can reply to or approve agents and start Claude Code or Codex with a task, always on a confirmation card first; web questions go to Claude Code.</li>
-<li>Answers about 0.8 s after you stop speaking; a small orb shows while it waits.</li>
-<li>Loud places: noise reduction, push to talk (⌥⌘J), automatic headset microphone (AirPods); it pauses while another app is on a call.</li>
-<li>Siri and Shortcuts: "cmds status", "Ask cmds".</li>
-<li>Sidebar: each Claude Code session's account as a coloured icon; click it to continue the session with another account.</li>
-<li>Browser panes reload on file changes; Pane › Export Scrollback….</li>
+<li>Antigravity (agy) limits: Settings › Agents › Antigravity limits › Set Up… adds cmds to agy's status line (keeping a copy of the file, asking before replacing another). agy in a terminal outside cmds sends its quota too, and the last quota is kept across restarts until it resets. agy reports it only while an interactive session runs, not with agy -p.</li>
 </ul>
+<h3>Fixed</h3>
+<ul><li>The sidebar footer showed Antigravity's limits cut off ("Antigra", "Gen"); it now shows agy 5h / 7d, with every agent's meters aligned.</li></ul>
+<p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.22.0/cmds-0.22.0.dmg" length="17070593" type="application/octet-stream" sparkle:edSignature="+3YukginxRU+flDUuT3O3R7O8dCLUfUpy252BVKhmWB/E+Pwbt3ZdMIE/W4dwuGIRNJpNDwkLoyIg44UKkwTCA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.23.0/cmds-0.23.0.dmg" length="17084039" type="application/octet-stream" sparkle:edSignature="p2c8n22hs2a7oyEw68ukKNdZtYyNSihSmf+Y+2JxAobqvh3Nlb7wYJ/yTEMr23jYVFG9ZoO6HaHkN2+pV11JDA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 2a7f9uXmZZiHm+Rtd0dN7DrrcK4G8OCv+bc8r3KYqs2M5xKLYFYO6nFl4OyEL17unORuyumXrTNFa5kf1ewhDw==
-length: 3647
+edSignature: eXhXY6FF6ePmOH9UUcoN0GnzUq73tRukeGxbULbqjZjPexv9vQVWfM2fqeobA70c1tv+2Mg4XOPx5vn54e/PCw==
+length: 2764
 -->
