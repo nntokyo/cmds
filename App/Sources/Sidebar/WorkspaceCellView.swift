@@ -485,27 +485,21 @@ final class WorkspaceCellView: NSTableCellView {
             accountButton.isHidden = true
             return
         }
-        let (name, switchingTo) = ClaudeAccountMenu.shown(pane, controller: controller)
-        let color = ClaudeAccountMenu.color(of: switchingTo ?? name, controller: controller)
-        let key = "\(name ?? "")|\(switchingTo ?? "")|\(color)|\(appliedScale)"
+        let badge = ClaudeAccountMenu.badge(for: pane, controller: controller)
+        let key = "\(badge.title)|\(badge.toolTip)|\(badge.color)|\(appliedScale)"
         accountButton.isHidden = false
         guard key != accountKey else { return }
         accountKey = key
-        let title = switchingTo.map { String(localized: "→ \($0)", comment: "sidebar: the account a switch goes to") }
-            ?? name ?? String(localized: "Unknown account", comment: "sidebar: the session's Claude account is not known")
         let font = Self.usageFont
-        accountButton.attributedTitle = NSAttributedString(string: title, attributes: [.font: font, .foregroundColor: color])
-        accountButton.image = NSImage(systemSymbolName: "person.crop.circle.fill", accessibilityDescription: nil)?
-            .withSymbolConfiguration(.init(pointSize: font.pointSize, weight: .regular).applying(.init(paletteColors: [.white, color])))
-        accountButton.toolTip = String(localized: "Claude account: \(name ?? "?"). Click to continue this session with another account.",
-                                       comment: "sidebar: account button tooltip")
-        accountButton.setAccessibilityLabel(String(localized: "Claude account \(name ?? "?")", comment: "sidebar: account button"))
+        accountButton.attributedTitle = NSAttributedString(string: badge.title, attributes: [.font: font, .foregroundColor: badge.color])
+        accountButton.image = ClaudeAccountMenu.image(badge.color, pointSize: font.pointSize)
+        accountButton.toolTip = badge.toolTip
+        accountButton.setAccessibilityLabel(badge.accessibilityLabel)
     }
 
     @objc private func accountClicked() {
         guard let id = workspaceID, let workspace = AppController.shared.workspace(id: id),
-              let pane = ClaudeAccountMenu.pane(of: workspace, controller: AppController.shared) else { return }
-        let menu = ClaudeAccountMenu.menu(for: pane, controller: AppController.shared, in: window)
+              let menu = ClaudeAccountMenu.menu(for: workspace, controller: AppController.shared, in: window) else { return }
         menu.popUp(positioning: nil, at: NSPoint(x: 0, y: accountButton.bounds.maxY + 2), in: accountButton)
     }
 

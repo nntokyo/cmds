@@ -206,14 +206,18 @@ final class APIServer {
                 }
                 connection.reply(id: id, result: ["port": .number(Double(port))])
             case "debug.sidebar_account":
-                // Tests only (#284): the sidebar row's Claude account button and menu; `choose` picks an account.
+                // Tests only (#284): the sidebar row's Claude account button and menu; `choose` picks an account,
+                // `cancel` cancels a switch that waits, for `pane` (default: the row's; #296).
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))
                 let sidebar = (controller.window?.windowController as? MainWindowController)?.sidebar
-                guard let shown = sidebar?.debugAccount(workspaceID: workspace.id, choose: try params.string("choose")) else {
+                guard let shown = sidebar?.debugAccount(workspaceID: workspace.id, paneID: try params.string("pane"),
+                                                        choose: try params.string("choose"),
+                                                        cancel: try params.bool("cancel") ?? false) else {
                     throw RPCError.notFound("no sidebar row for \(workspace.id)")
                 }
                 connection.reply(id: id, result: .object([
                     "button": shown.button.map(JSONValue.string) ?? .null,
+                    "compact": .bool(shown.compact),
                     "items": .array(shown.items.map(JSONValue.string)),
                     "problem": shown.problem.map(JSONValue.string) ?? .null,
                 ]))

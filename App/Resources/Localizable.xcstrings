@@ -672,6 +672,17 @@
         }
       }
     },
+    "%@ — %@": {
+      "comment": "sidebar account menu: a Claude pane and its account",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
     "%@: %@": {
       "comment": "assistant: one session's line when going through them all",
       "localizations": {
@@ -2396,6 +2407,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "実行を中止"
+          }
+        }
+      }
+    },
+    "Cancel Switch": {
+      "comment": "sidebar account menu: stop a switch that waits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切り替えをキャンセル"
           }
         }
       }

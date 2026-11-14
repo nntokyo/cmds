@@ -206,9 +206,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   "call" keeps it `idle` until `apps: []`, a `pause` stays after it. A real call (Core Audio) needs a person.
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
-- `debug.sidebar_account {workspace, choose?}` (DEBUG builds, #284) returns the row's account button title (null while
-  hidden: no accounts, not Claude Code, an SSH pane) and its menu's items (`✓` the current one), and with `choose` asks
-  for that switch as a click would, returning the alert's text as `problem` instead of showing it. Give the pane an
+- `debug.sidebar_account {workspace, pane?, choose?, cancel?}` (DEBUG builds, #284, #296) returns the row's account
+  button title (null while hidden: no accounts, not Claude Code, an SSH pane; in the compact sidebar — `compact: true`,
+  launch with `CMDS_SIDEBAR_COMPACT=1` — the account the compact row's icon stands for) and its menu's items (`✓` the
+  current one; with several Claude panes a header per pane and its items indented by two spaces; `Cancel Switch` while
+  one waits). With `choose` it asks for that switch for `pane` (default: the row's) as a click would, returning the
+  alert's text as `problem` instead of showing it; `cancel: true` is Cancel Switch. Title and items are read after. Give the pane an
   account with `workspace.create {account}` and a session with `agent.claude_status`; for a switch that goes through,
   put the `<session id>.jsonl` under the other account's temporary `projects/<dir>/` and use a stub `claude` on `PATH`
   (as in Schedules end to end): the switch runs `claude --resume` in the pane.

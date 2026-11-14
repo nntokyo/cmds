@@ -185,6 +185,9 @@ final class SidebarViewController: NSViewController {
                                                name: AppSettings.didChange, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(keepAwakeChanged),
                                                name: KeepAwakeManager.didChange, object: nil)
+        // Accounts added, removed, reordered or limited: the account buttons at once, not at the next sample (#296).
+        NotificationCenter.default.addObserver(self, selector: #selector(accountsChanged),
+                                               name: AppController.accountsDidChange, object: nil)
         let column = NSTableColumn(identifier: .init("workspace"))
         tableView.addTableColumn(column)
         tableView.headerView = nil
@@ -368,6 +371,11 @@ final class SidebarViewController: NSViewController {
     private var appliedSidebarItems = Set(SidebarItem.allCases.filter { AppSettings.shared.sidebar($0) })
 
     @objc private func keepAwakeChanged() {
+        guard isViewLoaded else { return }
+        updateUsage()
+    }
+
+    @objc private func accountsChanged() {
         guard isViewLoaded else { return }
         updateUsage()
     }
@@ -635,26 +643,38 @@ final class SidebarViewController: NSViewController {
         return cell.debugPortsLabel?.debugClick(index: index)
     }
 
-    /// For `debug.sidebar_account` (#284): the row's account button title (nil while hidden), the menu's items, and
-    /// with `choose` the account picked as a click on its item would, without the alert (its text is returned).
-    func debugAccount(workspaceID: String, choose: String?) -> (button: String?, items: [String], problem: String?)? {
+    /// For `debug.sidebar_account` (#284): the row's account button title (nil while hidden; the compact row's account
+    /// in the compact sidebar, #296), the menu's items (indented ones prefixed with two spaces), and with `choose` the
+    /// account picked for `pane` (default: the row's) as a click on its item would, without the alert (its text is
+    /// returned); with `cancel` Cancel Switch for that pane. The title and items are read after either.
+    func debugAccount(workspaceID: String, paneID: String?, choose: String?, cancel: Bool)
+        -> (button: String?, compact: Bool, items: [String], problem: String?)? {
         guard let workspace = controller.workspace(id: workspaceID),
-              let row = rows.firstIndex(where: { $0.workspaceID == workspaceID }),
-              let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: true) as? WorkspaceCellView else { return nil }
-        cell.updateUsage(with: workspace)
-        guard let pane = ClaudeAccountMenu.pane(of: workspace, controller: controller) else { return (cell.debugAccountTitle, [], nil) }
-        let items = ClaudeAccountMenu.menu(for: pane, controller: controller, in: nil).items.map { item in
-            item.isSeparatorItem ? "-" : (item.state == .on ? "✓ " : "") + item.title
-        }
+              let row = rows.firstIndex(where: { $0.workspaceID == workspaceID }) else { return nil }
+        let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: true)
+        let panes = ClaudeAccountMenu.panes(of: workspace, controller: controller)
         var problem: String?
-        if let choose {
-            if let found = controller.accountSwitchProblem(pane, to: choose) {
-                problem = found.localized
-            } else {
-                do { try controller.requestAccountSwitch(paneID: pane.id, to: choose) } catch { problem = error.localizedDescription }
+        if choose != nil || cancel {
+            guard let pane = paneID.map({ id in panes.first { $0.id == id } }) ?? panes.first else {
+                return (nil, isCompact, [], "no Claude pane to switch")
             }
+            if cancel { ClaudeAccountMenu.cancel(pane, controller: controller) }
+            if let choose { problem = ClaudeAccountMenu.request(choose, pane: pane, controller: controller) }
         }
-        return (cell.debugAccountTitle, items, problem)
+        let title: String?
+        if let cell = cell as? WorkspaceCellView {
+            cell.updateUsage(with: workspace)
+            title = cell.debugAccountTitle
+        } else if let cell = cell as? CompactWorkspaceCellView {
+            cell.updateUsage(with: workspace)
+            title = cell.debugAccountTitle
+        } else {
+            return nil
+        }
+        let items = ClaudeAccountMenu.menu(for: workspace, controller: controller, in: nil)?.items.map { item in
+            item.isSeparatorItem ? "-" : String(repeating: "  ", count: item.indentationLevel) + (item.state == .on ? "✓ " : "") + item.title
+        } ?? []
+        return (title, isCompact, items, problem)
     }
     #endif
 
@@ -877,11 +897,11 @@ extension SidebarViewController: NSMenuDelegate {
             items += [.separator(), item(String(localized: "Show Changes"), #selector(showChangesClicked(_:)), id),
                       item(String(localized: "New Worktree Workspace…"), #selector(newWorktreeClicked(_:)), id)]
         }
-        // The Claude account of its agent's session, to continue it with another (#284).
-        if let pane = ClaudeAccountMenu.pane(of: workspace, controller: controller) {
+        // The Claude account of its agents' sessions, to continue them with another (#284, every pane: #296).
+        if let submenu = ClaudeAccountMenu.menu(for: workspace, controller: controller, in: view.window) {
             let account = NSMenuItem(title: String(localized: "Claude Account", comment: "sidebar context menu: submenu"),
                                      action: nil, keyEquivalent: "")
-            account.submenu = ClaudeAccountMenu.menu(for: pane, controller: controller, in: view.window)
+            account.submenu = submenu
             items += [.separator(), account]
         }
         items += [.separator(), filter, group, .separator(),

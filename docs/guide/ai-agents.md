@@ -437,7 +437,12 @@ per account, `→ home` while a switch waits); without them, after the model (`C
 **Switching from the sidebar**: click the account (or right-click the row › **Claude Account**) and choose another:
 the same as `cmds accounts switch --to NAME` ([below](#when-an-account-hits-its-limit)) — Claude Code quits once it
 is idle and the session continues under that account. Accounts at their limit show when they reset; if the session
-cannot move (no session id from the status line, sessions not shared, an SSH pane) cmds says why. A pane where you start `claude` yourself gets the account whose folder matches
+cannot move (no session id from the status line, sessions not shared, an SSH pane) cmds says why. The compact
+sidebar shows the account as a person icon in its colour left of the workspace number (the name in its tooltip); click
+it for the same menu. With several Claude Code panes in a workspace, the menu has a section per pane (its task or pane
+id and its account), so each can be switched; the row shows the focused (else latest) one. While a switch waits for
+Claude Code to be idle the button shows `→ name` and the menu has **Cancel Switch** (as Cancel on the pane's banner).
+A pane where you start `claude` yourself gets the account whose folder matches
 the `CLAUDE_CONFIG_DIR` Claude Code reports through the status line (none set: the account using `~/.claude`, if
 any).
 
