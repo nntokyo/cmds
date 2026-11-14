@@ -44,8 +44,12 @@ extension AssistantController {
             guard canIgnoreRecorder else { throw RPCError.invalidParams("not paused for an app that can be ignored") }
             ignoreRecorder()
         case "clear_ignored":
-            // Settings › Assistant's Clear (#295).
+            // Settings › Assistant's Remove › Remove All (#295).
             settings.assistantIgnoredRecorders = []
+        case "unignore":
+            // Settings › Assistant's Remove › one app (#305).
+            guard let id = params?["app"]?.stringValue else { throw RPCError.invalidParams("app is required") }
+            settings.assistantIgnoredRecorders.removeAll { $0 == id }
         case "hotkey": hotkey()
         case "hotkey_up": hotkeyReleased()
         case "speak":

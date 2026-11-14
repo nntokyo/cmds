@@ -26,12 +26,12 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
                                                target: nil, action: nil)
     private let shareCheckbox = NSButton(checkboxWithTitle: String(localized: "Pause while another app uses the microphone", comment: "Settings › Assistant: stop listening during a call in another app"),
                                          target: nil, action: nil)
-    /// The apps that never pause it (#295: "Don't Pause for …" in the menu bar), with Clear; hidden while none.
+    /// The apps that never pause it (#295: "Don't Pause for …" in the menu bar), with a Remove menu (one app or all,
+    /// #305); hidden while none.
     private let ignoredNote = NSTextField(wrappingLabelWithString: "")
-    private let clearIgnoredButton = NSButton(title: String(localized: "Clear", comment: "Settings › Assistant: empties the list of apps that never pause the assistant"),
-                                              target: nil, action: nil)
+    private let removeIgnoredPopup = NSPopUpButton(frame: .zero, pullsDown: true)
     private lazy var ignoredRow: NSStackView = {
-        let row = NSStackView(views: [ignoredNote, clearIgnoredButton])
+        let row = NSStackView(views: [ignoredNote, removeIgnoredPopup])
         row.spacing = 8
         row.alignment = .firstBaseline
         return row
@@ -110,11 +110,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         ignoredNote.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         ignoredNote.textColor = .secondaryLabelColor
         ignoredNote.preferredMaxLayoutWidth = 230
-        clearIgnoredButton.bezelStyle = .rounded
-        clearIgnoredButton.controlSize = .small
-        clearIgnoredButton.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        clearIgnoredButton.target = self
-        clearIgnoredButton.action = #selector(clearIgnoredClicked)
+        removeIgnoredPopup.controlSize = .small
+        removeIgnoredPopup.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         foldersField.placeholderString = AssistantPlaces.defaultRoots.joined(separator: ", ")
         foldersField.delegate = self
         foldersField.widthAnchor.constraint(equalToConstant: 300).isActive = true
@@ -385,10 +382,33 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         // The whole grid row, so no empty gap stays where the list would be.
         if let grid = ignoredRow.superview as? NSGridView { grid.cell(for: ignoredRow)?.row?.isHidden = ignored.isEmpty }
         ignoredRow.isHidden = ignored.isEmpty
+        // Remove ▾: each app (#305), then Remove All. A pull-down's first item is its title.
+        let menu = NSMenu()
+        menu.addItem(withTitle: String(localized: "Remove", comment: "Settings › Assistant: pull-down to take apps off the list of apps that never pause the assistant"),
+                     action: nil, keyEquivalent: "")
+        for (id, name) in zip(ignored, names) {
+            let item = NSMenuItem(title: name, action: #selector(removeIgnoredClicked(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = id
+            menu.addItem(item)
+        }
+        if ignored.count > 1 {
+            menu.addItem(.separator())
+            let all = NSMenuItem(title: String(localized: "Remove All", comment: "Settings › Assistant: empties the list of apps that never pause the assistant"),
+                                 action: #selector(removeIgnoredClicked(_:)), keyEquivalent: "")
+            all.target = self
+            menu.addItem(all)
+        }
+        removeIgnoredPopup.menu = menu
     }
 
-    @objc private func clearIgnoredClicked() {
-        settings.assistantIgnoredRecorders = []
+    /// One app off the list, or all of them (no app: Remove All) (#305).
+    @objc private func removeIgnoredClicked(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else {
+            settings.assistantIgnoredRecorders = []
+            return
+        }
+        settings.assistantIgnoredRecorders.removeAll { $0 == id }
     }
 
     @objc private func listeningChanged() {

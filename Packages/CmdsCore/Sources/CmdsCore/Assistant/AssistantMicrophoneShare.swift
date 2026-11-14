@@ -7,6 +7,8 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
     /// A process Core Audio knows, as far as the rules need it.
     public struct Process: Equatable, Sendable {
         public var pid: Int32
+        /// Its bundle ID, or for a process without one (a command-line tool such as ffmpeg or sox) its executable's
+        /// full path (#305: so it can be ignored too).
         public var bundleID: String
         /// It records from an input now.
         public var recording: Bool
@@ -43,6 +45,16 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
         ownBundleID.hasPrefix(cmdsBundleID) && ownBundleID.hasSuffix(".dev")
     }
 
+    /// A cmds build (released or Debug) by bundle ID: its recording is its assistant listening (#295, #305).
+    public static func isCmds(_ bundleID: String) -> Bool {
+        bundleID.hasPrefix(cmdsBundleID)
+    }
+
+    /// A recorder known by its executable's path, not a bundle ID (#305).
+    public static func isExecutablePath(_ id: String) -> Bool {
+        id.hasPrefix("/")
+    }
+
     /// The PID of the app the assistant stopped listening for; nil when it did not stop by itself.
     public private(set) var pausedFor: Int32?
     /// The user had it listen again during another app's recording: not stopped again until that has ended.
@@ -54,11 +66,13 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
     /// The processes other than this one (`own` PID) that record and count. `ownBundleID`: this app's (#295: a Debug
     /// build stops while the released app's assistant listens, so only one of them answers; the released app never
     /// stops for a Debug build). `ignored`: the bundle IDs the user chose never to stop for ("Don't Pause for …"),
-    /// matched as given and as a helper's app (`ignoreID(for:)`).
+    /// matched as given and as a helper's app (`ignoreID(for:)`). Another instance of this same build (#305: two copies
+    /// of the released app) counts when it is older (a lower PID), so the newer one stops and only one answers.
     public static func recorders(_ processes: [Process], own: Int32, ownBundleID: String,
                                  ignored: Set<String> = []) -> [Process] {
         processes.filter { process in
-            process.recording && process.pid != own && countsAsRecorder(process.bundleID, ownBundleID: ownBundleID)
+            process.recording && process.pid != own
+                && (process.bundleID == ownBundleID ? process.pid < own : countsAsRecorder(process.bundleID, ownBundleID: ownBundleID))
                 && !ignored.contains(process.bundleID) && !ignored.contains(ignoreID(for: process.bundleID))
         }
     }
@@ -70,9 +84,9 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
     }
 
     /// The ID "Don't Pause for …" keeps for a recorder (#295): its app's for a helper (Chrome's `….helper` records for
-    /// Meet), so all of the app's helpers are ignored.
+    /// Meet), so all of the app's helpers are ignored; a command-line tool's path as it is (#305).
     public static func ignoreID(for bundleID: String) -> String {
-        appBundleID(ofHelper: bundleID)
+        isExecutablePath(bundleID) ? bundleID : appBundleID(ofHelper: bundleID)
     }
 
     /// The app a helper process belongs to by its bundle ID (`com.google.Chrome.helper` → `com.google.Chrome`); the

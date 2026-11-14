@@ -312,8 +312,11 @@ reports, for the pane, the model, the context window (ctx) and the quota windows
 }
 ```
 
-**Settings › Agents › Antigravity limits › Set Up…** does this for you (it keeps a copy of the file, and asks before
-replacing another status line).
+**Settings › Agents › Antigravity limits › Set Up…** does this for you with the full path of cmds' own CLI (it keeps a
+copy of the file, and asks before replacing another status line). Written by hand, use the full path too
+(`/Applications/cmds.app/Contents/Resources/bin/cmds hook agy-status`): agy in a terminal outside cmds otherwise runs
+whatever `cmds` its PATH finds, which may be an old copy or a broken link. A status line with a bare `cmds` or a path
+that is gone shows **Update** there.
 
 `stack_with_default` keeps agy's own status line (the hook prints nothing). The hook finds the `agy` process among its
 ancestors, so the usage goes when agy exits. Only those figures are sent to the app; the JSON's account e-mail and
@@ -441,7 +444,8 @@ cannot move (no session id from the status line, sessions not shared, an SSH pan
 sidebar shows the account as a person icon in its colour left of the workspace number (the name in its tooltip); click
 it for the same menu. With several Claude Code panes in a workspace, the menu has a section per pane (its task or pane
 id and its account), so each can be switched; the row shows the focused (else latest) one. While a switch waits for
-Claude Code to be idle the button shows `→ name` and the menu has **Cancel Switch** (as Cancel on the pane's banner).
+Claude Code to be idle the button shows `→ name` and the menu has **Cancel Switch** (as Cancel on the pane's banner). Once Claude Code has restarted with the new account
+there is nothing to cancel: choose the previous account to switch back.
 A pane where you start `claude` yourself gets the account whose folder matches
 the `CLAUDE_CONFIG_DIR` Claude Code reports through the status line (none set: the account using `~/.claude`, if
 any).

@@ -39,6 +39,28 @@ final class AssistantMicrophoneShareTests: XCTestCase {
         XCTAssertFalse(AssistantMicrophoneShare.isDebugBuild("com.example.dev"))
     }
 
+    /// #305: two copies of the same build: the newer one (higher PID) stops while the older one listens.
+    func testTheNewerOfTwoInstancesOfTheSameBuildStops() {
+        let older = AssistantMicrophoneShare.Process(pid: 9, bundleID: "tokyo.n-n.cmds", recording: true)
+        let newer = AssistantMicrophoneShare.Process(pid: 30, bundleID: "tokyo.n-n.cmds", recording: true)
+        XCTAssertEqual(AssistantMicrophoneShare.recorders([older, newer], own: 30, ownBundleID: "tokyo.n-n.cmds").map(\.pid), [9])
+        XCTAssertEqual(AssistantMicrophoneShare.recorders([older, newer], own: 9, ownBundleID: "tokyo.n-n.cmds").map(\.pid), [])
+        let olderDev = AssistantMicrophoneShare.Process(pid: 9, bundleID: "tokyo.n-n.cmds.dev", recording: true)
+        XCTAssertEqual(AssistantMicrophoneShare.recorders([olderDev], own: 30, ownBundleID: "tokyo.n-n.cmds.dev").map(\.pid), [9])
+        XCTAssertTrue(AssistantMicrophoneShare.isCmds("tokyo.n-n.cmds.dev"))
+        XCTAssertFalse(AssistantMicrophoneShare.isCmds("us.zoom.xos"))
+    }
+
+    /// #305: a command-line tool recording is known by its path and can be ignored by it.
+    func testACommandLineToolIsIgnoredByItsPath() {
+        let tool = AssistantMicrophoneShare.Process(pid: 40, bundleID: "/opt/homebrew/bin/sox", recording: true)
+        XCTAssertEqual(AssistantMicrophoneShare.ignoreID(for: tool.bundleID), "/opt/homebrew/bin/sox")
+        XCTAssertEqual(AssistantMicrophoneShare.ignoreID(for: "/Applications/X.app/Contents/MacOS/x.helper"),
+                       "/Applications/X.app/Contents/MacOS/x.helper")
+        XCTAssertEqual(AssistantMicrophoneShare.recorders([tool, zoom], own: 1, ownBundleID: "tokyo.n-n.cmds",
+                                                          ignored: ["/opt/homebrew/bin/sox"]).map(\.pid), [500])
+    }
+
     /// #295: apps the user chose never to stop for, by their ID or their helper's.
     func testIgnoredAppsAndTheirHelpersDoNotCount() {
         let processes: [AssistantMicrophoneShare.Process] = [

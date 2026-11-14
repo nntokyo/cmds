@@ -1869,6 +1869,17 @@
         }
       }
     },
+    "Antigravity’s status line runs cmds through the PATH or a path that is gone, so agy outside cmds may not reach it. Update writes this app’s full path.": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity のステータスラインが PATH 経由、または存在しない場所の cmds を実行しているため、cmds の外の agy から届かないことがあります。「更新」でこのアプリのフルパスに書き換えます。"
+          }
+        }
+      }
+    },
     "App %@ · Wired %@ · Compressed %@": {
       "localizations": {
         "en": {
@@ -2934,17 +2945,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claudeアカウント："
-          }
-        }
-      }
-    },
-    "Clear": {
-      "comment": "Settings › Assistant: empties the list of apps that never pause the assistant",
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "クリア"
           }
         }
       }
@@ -8097,6 +8097,17 @@
         }
       }
     },
+    "Remove All": {
+      "comment": "Settings › Assistant: empties the list of apps that never pause the assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて削除"
+          }
+        }
+      }
+    },
     "Remove Schedule": {
       "localizations": {
         "ja": {
@@ -11638,6 +11649,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "追跡されていないファイル：%lld"
+          }
+        }
+      }
+    },
+    "Update": {
+      "comment": "Settings › Agents › Antigravity limits: rewrites cmds' status line with this app's full path (#305)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新"
           }
         }
       }

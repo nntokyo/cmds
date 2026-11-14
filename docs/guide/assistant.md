@@ -64,7 +64,11 @@ it off in **Settings › Assistant › Pause while another app uses the micropho
 
 An app that keeps the microphone open all the time (voice control, a noise filter, OBS) would keep it paused: choose
 **Don’t Pause for …** under the reason in the menu bar, and it listens again at once and never pauses for that app
-again. Settings › Assistant lists those apps under the setting; **Clear** empties the list.
+again. A command-line tool that records (sox, ffmpeg) is named and ignored by its file. Settings › Assistant lists
+those apps under the setting; **Remove** takes one off the list, or all of them.
+
+Two cmds open at once answer only once: a cmds Dev build pauses while the released app's assistant listens, and of
+two copies of the same app the one opened later pauses.
 
 Its name interrupts it at any time: while it speaks or works out an answer (also while Claude is searching), "Jarvis,
 …" / 「ジャービス、…」 stops it and takes the new request at once; Claude's late answer to the old one is dropped. While it

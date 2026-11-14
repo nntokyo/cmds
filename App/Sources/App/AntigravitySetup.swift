@@ -9,7 +9,8 @@ enum AntigravitySetup {
     static var path: String { AntigravitySettings.path() }
 
     static var state: AntigravitySettings.State {
-        AntigravitySettings.state(of: FileManager.default.contents(atPath: path))
+        AntigravitySettings.state(of: FileManager.default.contents(atPath: path),
+                                  exists: { FileManager.default.isExecutableFile(atPath: $0) })
     }
 
     /// The `cmds` the status line runs: this app's own CLI by its full path (agy in any terminal finds it, also
@@ -38,7 +39,8 @@ enum AntigravitySetup {
                 if response == .alertFirstButtonReturn { write(in: window, done: done) }
             }
             if let window { alert.beginSheetModal(for: window, completionHandler: answer) } else { answer(alert.runModal()) }
-        case .noFile, .notSetUp:
+        case .noFile, .notSetUp, .needsUpdate:
+            // #305: cmds' own hook by a bare `cmds` or a gone path is rewritten without asking.
             write(in: window, done: done)
         }
     }
@@ -69,6 +71,9 @@ enum AntigravitySetup {
         switch state {
         case .setUp:
             return String(localized: "Set up. The quota windows (Gemini 5h / 7d…) show in the sidebar footer and the menu bar while agy runs in a terminal (not with agy -p), and are kept until they reset.",
+                          comment: "Settings › Agents › Antigravity limits")
+        case .needsUpdate:
+            return String(localized: "Antigravity’s status line runs cmds through the PATH or a path that is gone, so agy outside cmds may not reach it. Update writes this app’s full path.",
                           comment: "Settings › Agents › Antigravity limits")
         case .otherCommand:
             return String(localized: "Antigravity’s status line runs another command. Set Up replaces it (asks first) so cmds gets its quota windows.",

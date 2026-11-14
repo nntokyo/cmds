@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Voice assistant (Mac): Settings › Assistant › Remove takes one app off the list of apps it never pauses for, or all
+  of them. A command-line tool that records (sox, ffmpeg) is named by its file and can be ignored too (#305).
+
+### Fixed
+
+- Voice assistant (Mac): two copies of the same cmds open at once both answered; the one opened later now pauses while
+  the other listens (#305).
+- Antigravity limits: a status line that runs `cmds hook agy-status` through the PATH or a path that is gone (agy
+  outside cmds may run an old copy or a broken link) now shows Update in Settings › Agents, which writes this app's
+  full path (#305).
+
 ## [0.24.0] - 2026-11-14
 
 Mac only; the iPhone/iPad app is unchanged.

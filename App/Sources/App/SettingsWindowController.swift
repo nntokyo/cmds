@@ -556,8 +556,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// The Antigravity row: its note and whether Set Up is still needed (the file can change outside cmds).
     private func refreshAntigravity() {
         agyNote.stringValue = AntigravitySetup.note
-        let done = AntigravitySetup.state == .setUp
-        agySetupButton.title = done ? String(localized: "Set Up", comment: "Settings › Agents › Antigravity limits: done") : String(localized: "Set Up…", comment: "Settings › Agents › Antigravity limits")
+        let state = AntigravitySetup.state
+        let done = state == .setUp
+        if done {
+            agySetupButton.title = String(localized: "Set Up", comment: "Settings › Agents › Antigravity limits: done")
+        } else if case .needsUpdate = state {
+            agySetupButton.title = String(localized: "Update", comment: "Settings › Agents › Antigravity limits: rewrites cmds' status line with this app's full path (#305)")
+        } else {
+            agySetupButton.title = String(localized: "Set Up…", comment: "Settings › Agents › Antigravity limits")
+        }
         agySetupButton.isEnabled = !done
     }
 
