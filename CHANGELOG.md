@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.24.2] - 2026-11-15
+
+Mac only; the iPhone/iPad app is unchanged.
+
 ### Fixed
 
 - Voice assistant (Mac): a command-line tool you chose not to pause for paused it again after an upgrade (Homebrew
