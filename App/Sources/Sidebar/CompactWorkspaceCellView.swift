@@ -16,6 +16,12 @@ final class CompactWorkspaceCellView: NSTableCellView {
     private let statusBar = NSView()
     private var statusKey: String?
     private var tooltipText: String?
+    /// The Claude account of the agent's session, as the full row's account button (#296): its colour only (the
+    /// name is in the tooltip); a click opens the same menu.
+    private let accountButton = NSButton()
+    private var accountKey: String?
+    private var accountTitle: String?
+    private var workspaceID: String?
 
     init() {
         super.init(frame: .zero)
@@ -28,7 +34,12 @@ final class CompactWorkspaceCellView: NSTableCellView {
         dot.layer?.backgroundColor = NSColor.systemOrange.cgColor
         statusBar.wantsLayer = true
         statusBar.layer?.cornerRadius = 1
-        for view in [numberLabel, dot, statusBar] {
+        accountButton.isBordered = false
+        accountButton.imagePosition = .imageOnly
+        accountButton.target = self
+        accountButton.action = #selector(accountClicked)
+        accountButton.isHidden = true
+        for view in [numberLabel, dot, statusBar, accountButton] {
             view.translatesAutoresizingMaskIntoConstraints = false
             addSubview(view)
         }
@@ -44,6 +55,9 @@ final class CompactWorkspaceCellView: NSTableCellView {
             statusBar.widthAnchor.constraint(equalToConstant: 16),
             statusBar.heightAnchor.constraint(equalToConstant: 2),
             statusBar.topAnchor.constraint(equalTo: numberLabel.bottomAnchor, constant: 2),
+            // Left of the number (the attention dot is on its right), so the row keeps its height.
+            accountButton.trailingAnchor.constraint(equalTo: numberLabel.leadingAnchor, constant: -1),
+            accountButton.centerYAnchor.constraint(equalTo: numberLabel.centerYAnchor),
         ])
         setAccessibilityElement(true)
         setAccessibilityRole(.cell)
@@ -54,9 +68,11 @@ final class CompactWorkspaceCellView: NSTableCellView {
 
     @MainActor
     func configure(with workspace: Workspace, index: Int) {
+        workspaceID = workspace.id
         if appliedScale != SidebarTextSize.scale {
             appliedScale = SidebarTextSize.scale
             numberLabel.font = Self.numberFont
+            accountKey = nil
         }
         let number = "\(index + 1)"
         if numberLabel.stringValue != number { numberLabel.stringValue = number }
@@ -117,7 +133,40 @@ final class CompactWorkspaceCellView: NSTableCellView {
             toolTip = text
             setAccessibilityLabel(text)
         }
+        updateAccountButton(ClaudeAccountMenu.pane(of: workspace, controller: AppController.shared))
     }
+
+    /// The account icon in the account's colour (the target's while a switch waits); hidden as in the full row.
+    @MainActor
+    private func updateAccountButton(_ pane: Pane?) {
+        guard let pane else {
+            accountKey = nil
+            accountTitle = nil
+            accountButton.isHidden = true
+            return
+        }
+        let badge = ClaudeAccountMenu.badge(for: pane, controller: AppController.shared)
+        let key = "\(badge.title)|\(badge.toolTip)|\(badge.color)"
+        accountButton.isHidden = false
+        guard key != accountKey else { return }
+        accountKey = key
+        accountTitle = badge.title
+        accountButton.image = ClaudeAccountMenu.image(badge.color, pointSize: SidebarTextSize.size(10))
+        // No room for a title: the tooltip names the account, and the target first while a switch waits.
+        accountButton.toolTip = badge.switching ? badge.title + "\n" + badge.toolTip : badge.toolTip
+        accountButton.setAccessibilityLabel(badge.accessibilityLabel)
+    }
+
+    @objc private func accountClicked() {
+        guard let id = workspaceID, let workspace = AppController.shared.workspace(id: id),
+              let menu = ClaudeAccountMenu.menu(for: workspace, controller: AppController.shared, in: window) else { return }
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: accountButton.bounds.maxY + 2), in: accountButton)
+    }
+
+    #if DEBUG
+    /// For `debug.sidebar_account`: the account shown (as the full row's title), nil while hidden.
+    var debugAccountTitle: String? { accountButton.isHidden ? nil : accountTitle }
+    #endif
 
     /// Everything the full row shows.
     @MainActor
