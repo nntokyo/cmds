@@ -7,32 +7,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.23.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.23.0</link>
-      <sparkle:version>32</sparkle:version>
-      <sparkle:shortVersionString>0.23.0</sparkle:shortVersionString>
+      <title>cmds 0.24.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.0</link>
+      <sparkle:version>33</sparkle:version>
+      <sparkle:shortVersionString>0.24.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 14 Nov 2026 07:34:31 GMT</pubDate>
+      <pubDate>Sat, 14 Nov 2026 11:35:15 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
 <ul>
-<li>Antigravity（agy）の利用上限：設定 › エージェント › Antigravity の上限 ›「設定する…」で、agy のステータスラインに cmds を追加します（元のファイルの控えを残し、別の設定がある場合は確認します）。cmds の外のターミナルで動く agy からも上限を受け取り、最後の値はリセットまで再起動後も表示します。上限が届くのは対話モードの agy を動かしている間です（agy -p では届きません）。</li>
+<li>音声アシスタント（Mac）：常にマイクを使うアプリのために一時停止したとき、メニューバーに「○○では一時停止しない」が出ます。選ぶとすぐ聞き取りに戻り、以後そのアプリは無視します。無視しているアプリは 設定 › アシスタント で確認・消去できます。</li>
+<li>Siri：ショートカットのフレーズで、cmds を「コマンズ」「シーエムディーエス」「Commands」と呼んでも通じるようにしました。</li>
+<li>サイドバーのアカウント：Claude Code が複数動いているワークスペースでは、メニューにペインごとの欄が出ます。切り替えを待っている間は「切り替えを取り消す」が出ます。</li>
 </ul>
 <h3>修正</h3>
-<ul><li>サイドバー下部で Antigravity の上限が「Antigra」「Gen」と切れていたのを、「agy　5h / 7d」で表示するようにし、各エージェントのバーの位置をそろえました。</li></ul>
+<ul>
+<li>コンパクト表示のサイドバーにも各セッションのアカウントのアイコンを出し、アカウントの追加・削除・並べ替えですぐ更新するようにしました。</li>
+<li>音声アシスタント（Mac）：cmds と cmds Dev を同時に開いても、返事をするのは一方だけになりました（リリース版が聞き取っている間は Dev 版が止まります）。</li>
+</ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Added</h3>
 <ul>
-<li>Antigravity (agy) limits: Settings › Agents › Antigravity limits › Set Up… adds cmds to agy's status line (keeping a copy of the file, asking before replacing another). agy in a terminal outside cmds sends its quota too, and the last quota is kept across restarts until it resets. agy reports it only while an interactive session runs, not with agy -p.</li>
+<li>Voice assistant (Mac): when it pauses for an app that keeps the microphone open, the menu bar offers Don't Pause for that app; it listens again at once and ignores that app from then on. Settings › Assistant lists the ignored apps with Clear.</li>
+<li>Siri: cmds can also be called Commands, C M D S, シーエムディーエス or コマンズ in the Shortcuts phrases.</li>
+<li>Sidebar accounts: a workspace with several Claude Code panes shows a section per pane in the account menu; while a switch waits, the menu offers Cancel Switch.</li>
 </ul>
 <h3>Fixed</h3>
-<ul><li>The sidebar footer showed Antigravity's limits cut off ("Antigra", "Gen"); it now shows agy 5h / 7d, with every agent's meters aligned.</li></ul>
+<ul>
+<li>The compact sidebar now shows each session's account icon too, and the icons update at once when accounts are added, removed or reordered.</li>
+<li>Voice assistant (Mac): with cmds Dev open next to cmds, only one assistant answers; the Dev build pauses while the released app's assistant listens.</li>
+</ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.23.0/cmds-0.23.0.dmg" length="17084039" type="application/octet-stream" sparkle:edSignature="p2c8n22hs2a7oyEw68ukKNdZtYyNSihSmf+Y+2JxAobqvh3Nlb7wYJ/yTEMr23jYVFG9ZoO6HaHkN2+pV11JDA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.0/cmds-0.24.0.dmg" length="17100800" type="application/octet-stream" sparkle:edSignature="pVsco5ZXxvk+WqfChVnyT/C1RsTxVfWdXNP385njaASGx1DVjPpODK9PG4lP/KnyydhetVdXyjEK9UQhwa16CQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: eXhXY6FF6ePmOH9UUcoN0GnzUq73tRukeGxbULbqjZjPexv9vQVWfM2fqeobA70c1tv+2Mg4XOPx5vn54e/PCw==
-length: 2764
+edSignature: feIP8MlaqzVIYA+NGcONu2dZM5k2qqEEXXWWa97fXpn11DMztzgYMraqWrlRw6cGy4YDh+rUDPAnGBBlcvcuDA==
+length: 3580
 -->
