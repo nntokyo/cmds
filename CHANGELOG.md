@@ -7,6 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-14
+
+Mac only; the iPhone/iPad app is unchanged.
+
+### Added
+
+- Antigravity limits: Settings › Agents › Antigravity limits › Set Up… adds `cmds hook agy-status` to agy's status
+  line (`~/.gemini/antigravity-cli/settings.json`; a copy of the file is kept, and it asks before replacing another
+  status line). agy running in a terminal outside cmds now sends its quota too, and the last quota is kept across
+  restarts until its windows reset. agy reports it only while an interactive session runs, not with `agy -p` (#290).
+
+### Fixed
+
+- Sidebar footer: Antigravity's limits were cut off ("Antigra", "Gen"). It now shows `agy` with `5h` / `7d` (other
+  model groups by name, `3P 5h`), and every agent's meters start at the same place (#290).
+
 ## [0.22.0] - 2026-11-13
 
 ### Added
@@ -723,7 +739,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.22.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.23.0...master
+[0.23.0]: https://github.com/nntokyo/cmds/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/nntokyo/cmds/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/nntokyo/cmds/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/nntokyo/cmds/compare/v0.19.0...v0.20.0
