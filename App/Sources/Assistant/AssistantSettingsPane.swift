@@ -26,6 +26,16 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
                                                target: nil, action: nil)
     private let shareCheckbox = NSButton(checkboxWithTitle: String(localized: "Pause while another app uses the microphone", comment: "Settings › Assistant: stop listening during a call in another app"),
                                          target: nil, action: nil)
+    /// The apps that never pause it (#295: "Don't Pause for …" in the menu bar), with Clear; hidden while none.
+    private let ignoredNote = NSTextField(wrappingLabelWithString: "")
+    private let clearIgnoredButton = NSButton(title: String(localized: "Clear", comment: "Settings › Assistant: empties the list of apps that never pause the assistant"),
+                                              target: nil, action: nil)
+    private lazy var ignoredRow: NSStackView = {
+        let row = NSStackView(views: [ignoredNote, clearIgnoredButton])
+        row.spacing = 8
+        row.alignment = .firstBaseline
+        return row
+    }()
     private let foldersField = NSTextField()
     private let hotkeyPopup = NSPopUpButton()
     private let listeningPopup = NSPopUpButton()
@@ -97,6 +107,14 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         reportTasksCheckbox.action = #selector(reportTasksToggled)
         shareCheckbox.target = self
         shareCheckbox.action = #selector(shareToggled)
+        ignoredNote.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        ignoredNote.textColor = .secondaryLabelColor
+        ignoredNote.preferredMaxLayoutWidth = 230
+        clearIgnoredButton.bezelStyle = .rounded
+        clearIgnoredButton.controlSize = .small
+        clearIgnoredButton.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+        clearIgnoredButton.target = self
+        clearIgnoredButton.action = #selector(clearIgnoredClicked)
         foldersField.placeholderString = AssistantPlaces.defaultRoots.joined(separator: ", ")
         foldersField.delegate = self
         foldersField.widthAnchor.constraint(equalToConstant: 300).isActive = true
@@ -140,6 +158,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
             [NSGridCell.emptyContentView, note(String(localized: "Automatic uses a headset such as AirPods when one is connected: it is close to your mouth and hears much less of a loud room.", comment: "Settings › Assistant: under Microphone"))],
             [NSGridCell.emptyContentView, shareCheckbox],
             [NSGridCell.emptyContentView, note(String(localized: "During a call or a recording in another app it stops listening, and listens again when that ends. Resume Listening in the menu bar during the call keeps it on until the call ends.", comment: "Settings › Assistant: under Pause while another app uses the microphone"))],
+            [NSGridCell.emptyContentView, ignoredRow],
             [label(String(localized: "Style:", comment: "Settings › Assistant")), stylePopup],
             [NSGridCell.emptyContentView, waitingCheckbox],
             [label(String(localized: "Orb size:", comment: "Settings › Assistant: the size of the orb shown while waiting")), orbSizePopup],
@@ -181,6 +200,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         interpreterCheckbox.state = settings.assistantInterpreter ? .on : .off
         reportTasksCheckbox.state = settings.assistantReportTasks ? .on : .off
         shareCheckbox.state = settings.assistantShareMicrophone ? .on : .off
+        refreshIgnored()
         if foldersField.currentEditor() == nil { foldersField.stringValue = settings.assistantProjectFolders }
         hotkeyPopup.selectItem(at: hotkeyPopup.indexOfItem(withRepresentedObject: settings.assistantHotkey.rawValue))
         listeningPopup.selectItem(at: listeningPopup.indexOfItem(withRepresentedObject: settings.assistantListening.rawValue))
@@ -353,6 +373,22 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
 
     @objc private func shareToggled() {
         settings.assistantShareMicrophone = shareCheckbox.state == .on
+    }
+
+    /// The apps that never pause it, by name (#295); the row is hidden while there are none.
+    private func refreshIgnored() {
+        let ignored = settings.assistantIgnoredRecorders
+        var names = ignored
+        if #available(macOS 26.0, *) { names = ignored.map(AssistantController.ignoredAppName(bundleID:)) }
+        let list = names.formatted(.list(type: .and))
+        ignoredNote.stringValue = String(localized: "Never pauses for \(list).", comment: "Settings › Assistant: apps chosen with Don't Pause for … in the menu bar")
+        // The whole grid row, so no empty gap stays where the list would be.
+        if let grid = ignoredRow.superview as? NSGridView { grid.cell(for: ignoredRow)?.row?.isHidden = ignored.isEmpty }
+        ignoredRow.isHidden = ignored.isEmpty
+    }
+
+    @objc private func clearIgnoredClicked() {
+        settings.assistantIgnoredRecorders = []
     }
 
     @objc private func listeningChanged() {

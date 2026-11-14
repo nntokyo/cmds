@@ -90,8 +90,12 @@ final class AssistantController {
     var microphoneShare = AssistantMicrophoneShare()
     /// The name of the app that recorded when the assistant paused for it (`pausedForApp`).
     var recorderName: String?
+    /// The bundle ID of that app's recording process (#295: "Don't Pause for …"; empty when Core Audio gave none).
+    var recorderBundleID: String?
     /// The app the assistant paused for, while it is paused for it (the menu bar says so).
     var pausedForApp: String? { microphoneShare.pausedFor == nil ? nil : recorderName }
+    /// The bundle ID of the app it paused for, while it is paused for it (#295).
+    var pausedForBundleID: String? { microphoneShare.pausedFor == nil ? nil : recorderBundleID }
     /// Follow-through lines waiting for the assistant to be free.
     var announcements: [String] = []
     private var stateChanges: AnyCancellable?

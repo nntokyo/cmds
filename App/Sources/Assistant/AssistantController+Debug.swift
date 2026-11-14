@@ -10,7 +10,8 @@ import CmdsCore
 extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
     /// `showWhileWaiting?`, `orbSize?`, `listening?`), `off`, `pause`, `resume`, `recorders` (`apps`: bundle IDs to take
-    /// as recording, #278; none: Core Audio again), `hotkey`, `hotkey_up` (push to talk),
+    /// as recording, #278; none: Core Audio again), `ignore_recorder` (the menu bar's "Don't Pause for …", #295),
+    /// `clear_ignored` (Settings' Clear), `hotkey`, `hotkey_up` (push to talk),
     /// `hear` (`text`; `noisy?`, `pushed?`: as heard in a loud room / with the shortcut held),
     /// `speak` (`text`: speaking it without a voice until `spoken`; `card: true`: reading out the card that waits),
     /// `spoken`, `hear_audio` (`path`: an audio file through speech recognition instead of the microphone; `tail?`
@@ -38,6 +39,13 @@ extension AssistantController {
             // Apps to take as recording instead of Core Audio's (#278); none: Core Audio again.
             overrides.recorders = params?["apps"]?.arrayValue?.compactMap(\.stringValue)
             shareMicrophone()
+        case "ignore_recorder":
+            // The menu bar's "Don't Pause for …" (#295); writes the setting (an isolated instance's own).
+            guard canIgnoreRecorder else { throw RPCError.invalidParams("not paused for an app that can be ignored") }
+            ignoreRecorder()
+        case "clear_ignored":
+            // Settings › Assistant's Clear (#295).
+            settings.assistantIgnoredRecorders = []
         case "hotkey": hotkey()
         case "hotkey_up": hotkeyReleased()
         case "speak":
@@ -129,6 +137,10 @@ extension AssistantController {
             // Paused for another app's recording (#278), and the user resumed during it.
             "pausedFor": pausedForApp.map(JSONValue.string) ?? .null,
             "shareOverridden": .bool(microphoneShare.overridden),
+            // Its bundle ID, the menu bar's "Don't Pause for …" (null: not offered) and the ignore list (#295).
+            "pausedForBundleID": pausedForBundleID.map(JSONValue.string) ?? .null,
+            "ignoreOffer": ignorableRecorderName.map(JSONValue.string) ?? .null,
+            "ignoredRecorders": .array(settings.assistantIgnoredRecorders.map(JSONValue.string)),
             // Inputs as Settings lists them, and the one `Microphone` chooses now (#270; nothing is opened).
             "inputs": .array(inputs.map { device in
                 .object(["name": .string(device.name), "headset": .bool(device.isHeadset)])
