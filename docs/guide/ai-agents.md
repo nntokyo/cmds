@@ -316,7 +316,8 @@ reports, for the pane, the model, the context window (ctx) and the quota windows
 copy of the file, and asks before replacing another status line). Written by hand, use the full path too
 (`/Applications/cmds.app/Contents/Resources/bin/cmds hook agy-status`): agy in a terminal outside cmds otherwise runs
 whatever `cmds` its PATH finds, which may be an old copy or a broken link. A status line with a bare `cmds` or a path
-that is gone shows **Update** there.
+that is gone shows **Update** there, and cmds says so once in a notification at launch (click it to open Settings ›
+Agents); it never changes the file without you.
 
 `stack_with_default` keeps agy's own status line (the hook prints nothing). The hook finds the `agy` process among its
 ancestors, so the usage goes when agy exits. Only those figures are sent to the app; the JSON's account e-mail and

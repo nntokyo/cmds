@@ -207,8 +207,11 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   The pretended apps go through the same rules (#295): on a Debug build `apps: ["tokyo.n-n.cmds"]` pauses it with
   `pausedFor` "cmds" and `ignoreOffer` null; for another app `pausedForBundleID` and `ignoreOffer` (the menu's "Don't
   Pause for …" name) are set, `ignore_recorder` adds it to `ignoredRecorders` and the phase is `idle` at once (it
-  stays so while the app "records"), `clear_ignored` empties the list. Run it in an isolated instance (the list is a
-  setting).
+  stays so while the app "records"), `clear_ignored` empties the list, `unignore {app}` takes one off (#305). Run it
+  in an isolated instance (the list is a setting; it persists per support folder in
+  `tokyo.n-n.cmds.isolated.<hash>`, so delete that defaults domain afterwards). `live_recorders` returns who records
+  now by Core Audio after the same rules (`[{pid, id}]`; a command-line tool's `id` is its path), without starting
+  the microphone or pausing: with `ffmpeg -f avfoundation -i ":0" -t 5 -f null -` running it lists ffmpeg (#310).
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
 - `debug.sidebar_account {workspace, pane?, choose?, cancel?}` (DEBUG builds, #284, #296) returns the row's account

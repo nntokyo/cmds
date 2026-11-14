@@ -49,6 +49,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // Before the schedules start: those waiting for Codex's limit read it.
         controller.restoreAgentLimits()
+        // agy's status line pointing at an old or missing cmds (#310): told once.
+        AntigravitySetup.noticeIfNeeded()
         // After the restore: a catch-up run may need the session's pane.
         controller.scheduleRunner.start()
         metadataMonitor = MetadataMonitor(controller: controller)
@@ -170,6 +172,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         let userInfo = response.notification.request.content.userInfo
         let paneID = userInfo["paneID"] as? String
         let aboutSchedules = userInfo["schedules"] as? Bool == true
+        let aboutAntigravity = userInfo[AntigravitySetup.noticeUserInfoKey] as? Bool == true
         let action = response.actionIdentifier
         let noticeSchedule = userInfo[ScheduleRunner.noticeScheduleKey] as? String
         let noticeDue = userInfo[ScheduleRunner.noticeDueKey] as? Double
@@ -190,6 +193,11 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
                     self.controller.continueWhenLimitResets(pane)
                 }
                 NSApp.activate()
+                if aboutAntigravity {
+                    SettingsWindowController.shared.show(tab: .agents)
+                    completionHandler()
+                    return
+                }
                 if aboutSchedules || action == ScheduleRunner.openSchedulesAction {
                     SchedulesWindowController.shared.showWindow(nil)
                     return

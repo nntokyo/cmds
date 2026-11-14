@@ -1825,6 +1825,17 @@
         }
       }
     },
+    "Antigravity limits may not arrive": {
+      "comment": "notification: agy's status line runs an old or missing cmds (#310)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity の上限が届かない可能性があります"
+          }
+        }
+      }
+    },
     "Antigravity limits:": {
       "comment": "Settings › Agents",
       "localizations": {
@@ -12401,6 +12412,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」のペイン"
+          }
+        }
+      }
+    },
+    "agy’s status line runs cmds through the PATH or a path that is gone. Click to open Settings › Agents and choose Update.": {
+      "comment": "notification: agy's status line runs an old or missing cmds (#310)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "agy のステータスラインが PATH 経由、または存在しない場所の cmds を実行しています。クリックして 設定 › エージェント を開き、「更新」を選んでください。"
           }
         }
       }
