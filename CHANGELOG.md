@@ -78,7 +78,8 @@ Mac only; the iPhone/iPad app is unchanged.
   file as plain text, or with colours as ANSI escape codes; the file is readable only by you (0600), an existing file
   is replaced only when asked, and long histories are read in chunks while the pane keeps running (#253).
 
-- iPhone/iPad: browser panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
+- iPhone/iPad 0.15.0 (on the App Store since 2026-11-11, listed here with the Mac release it was written for): browser
+  panes show their page in a web view (Reload, Open in Safari), loaded by the phone itself; pages
   only the Mac can reach (`localhost`, files) say so instead. Preview panes render Markdown and diffs like the Mac and
   show other text files as text; the same for files opened while browsing a files pane.
 

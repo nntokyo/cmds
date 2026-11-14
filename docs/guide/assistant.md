@@ -50,7 +50,8 @@ decide, which takes longer.
 Two actions in the Shortcuts app (macOS 26): **Agent Status** returns and says the same short status the assistant
 gives; **Ask the Assistant** hands it a request as if you said it with its name (it must be on and listening) and
 returns its answer. Anything it would do still waits for your yes on the Mac. Siri knows them as "cmds status" /
-「cmdsの状況」 and "Ask cmds" / 「cmdsに頼む」. For a morning or evening summary, make a personal automation in Shortcuts
+「cmdsの状況」 and "Ask cmds" / 「cmdsに頼む」. Instead of "cmds" you can say "Commands" / 「コマンズ」 or 「シーエムディーエス」 (spoken names given to Siri; not yet
+tried with Siri itself). For a morning or evening summary, make a personal automation in Shortcuts
 (time of day → Agent Status → Speak Text or Show Notification).
 
 ## Calls

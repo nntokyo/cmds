@@ -111,6 +111,17 @@ targets:
         # Also the voice assistant (#243), which listens for its name when the user turns it on.
         NSMicrophoneUsageDescription: cmds' assistant listens for its name when you turn it on, or a program running in cmds would like to use the microphone.
         NSSpeechRecognitionUsageDescription: cmds' assistant recognises what you say to it on this Mac. Nothing heard is stored.
+        # Siri and Shortcuts (#282): "cmds" is not a word Siri knows, so the phrases ("cmdsの状況", "Ask cmds") also take
+        # these spoken names.
+        INAlternativeAppNames:
+          - INAlternativeAppName: Commands
+            INAlternativeAppNamePronunciationHint: commands
+          - INAlternativeAppName: C M D S
+            INAlternativeAppNamePronunciationHint: see em dee ess
+          - INAlternativeAppName: シーエムディーエス
+            INAlternativeAppNamePronunciationHint: しーえむでぃーえす
+          - INAlternativeAppName: コマンズ
+            INAlternativeAppNamePronunciationHint: こまんず
         NSCameraUsageDescription: A program running in cmds would like to use the camera.
         NSContactsUsageDescription: A program running in cmds would like to access your contacts.
         NSCalendarsUsageDescription: A program running in cmds would like to access your calendars.
