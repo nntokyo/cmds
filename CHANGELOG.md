@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Voice assistant (Mac): a command-line tool you chose not to pause for paused it again after an upgrade (Homebrew
+  runs it from a versioned folder); it is now matched by its file name (#310).
+- Antigravity limits: when agy's status line runs cmds through the PATH or a path that is gone, cmds now says so once
+  in a notification at launch; clicking it opens Settings › Agents (Update). The file is not changed (#310).
+- Website guide: Don't Pause for … and Settings › Assistant › Remove are described (#310).
+
 ## [0.24.1] - 2026-11-15
 
 Mac only; the iPhone/iPad app is unchanged.

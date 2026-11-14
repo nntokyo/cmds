@@ -64,7 +64,8 @@ it off in **Settings › Assistant › Pause while another app uses the micropho
 
 An app that keeps the microphone open all the time (voice control, a noise filter, OBS) would keep it paused: choose
 **Don’t Pause for …** under the reason in the menu bar, and it listens again at once and never pauses for that app
-again. A command-line tool that records (sox, ffmpeg) is named and ignored by its file. Settings › Assistant lists
+again. A command-line tool that records (sox, ffmpeg) is named and ignored by its file name, so it stays ignored when an
+upgrade moves it (Homebrew runs it from a versioned folder). Settings › Assistant lists
 those apps under the setting; **Remove** takes one off the list, or all of them.
 
 Two cmds open at once answer only once: a cmds Dev build pauses while the released app's assistant listens, and of

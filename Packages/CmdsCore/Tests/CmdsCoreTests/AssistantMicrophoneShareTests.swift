@@ -57,6 +57,13 @@ final class AssistantMicrophoneShareTests: XCTestCase {
         XCTAssertEqual(AssistantMicrophoneShare.ignoreID(for: tool.bundleID), "/opt/homebrew/bin/sox")
         XCTAssertEqual(AssistantMicrophoneShare.toolName(tool.bundleID), "sox")
         XCTAssertNil(AssistantMicrophoneShare.toolName("us.zoom.xos"))
+        // #310: still ignored after an upgrade moved it to another versioned path.
+        let upgraded = AssistantMicrophoneShare.Process(pid: 41, bundleID: "/opt/homebrew/Cellar/sox/14.5.0/bin/sox", recording: true)
+        XCTAssertEqual(AssistantMicrophoneShare.recorders([upgraded, zoom], own: 1, ownBundleID: "tokyo.n-n.cmds",
+                                                          ignored: ["/opt/homebrew/Cellar/sox/14.4.2/bin/sox"]).map(\.pid), [500])
+        // A bundle ID never matches a tool's name.
+        XCTAssertEqual(AssistantMicrophoneShare.recorders([zoom], own: 1, ownBundleID: "tokyo.n-n.cmds",
+                                                          ignored: ["/usr/local/bin/us.zoom.xos"]).map(\.pid), [500])
         XCTAssertEqual(AssistantMicrophoneShare.ignoreID(for: "/Applications/X.app/Contents/MacOS/x.helper"),
                        "/Applications/X.app/Contents/MacOS/x.helper")
         XCTAssertEqual(AssistantMicrophoneShare.recorders([tool, zoom], own: 1, ownBundleID: "tokyo.n-n.cmds",

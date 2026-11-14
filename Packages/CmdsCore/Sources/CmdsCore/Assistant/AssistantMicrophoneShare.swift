@@ -78,8 +78,16 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
         processes.filter { process in
             process.recording && process.pid != own
                 && (process.bundleID == ownBundleID ? process.pid < own : countsAsRecorder(process.bundleID, ownBundleID: ownBundleID))
-                && !ignored.contains(process.bundleID) && !ignored.contains(ignoreID(for: process.bundleID))
+                && !isIgnored(process.bundleID, ignored)
         }
+    }
+
+    /// In the ignore list: as given, as a helper's app, or a command-line tool by its file name (#310: Homebrew runs a
+    /// tool from a versioned path, `/opt/homebrew/Cellar/sox/14.4.2/bin/sox`, that changes on every upgrade).
+    static func isIgnored(_ id: String, _ ignored: Set<String>) -> Bool {
+        if ignored.contains(id) || ignored.contains(ignoreID(for: id)) { return true }
+        guard let tool = toolName(id) else { return false }
+        return ignored.contains { toolName($0) == tool }
     }
 
     /// Whether a process with this bundle ID recording is a reason to stop, before the user's ignore list (#295).

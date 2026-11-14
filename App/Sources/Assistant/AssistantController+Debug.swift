@@ -11,7 +11,8 @@ extension AssistantController {
     /// `action`: `state` (default), `on` (`mute?`, `style?`, `web?`, `interpreter?`, `reportTasks?`, `projectFolders?`,
     /// `showWhileWaiting?`, `orbSize?`, `listening?`), `off`, `pause`, `resume`, `recorders` (`apps`: bundle IDs to take
     /// as recording, #278; none: Core Audio again), `ignore_recorder` (the menu bar's "Don't Pause for …", #295),
-    /// `clear_ignored` (Settings' Clear), `hotkey`, `hotkey_up` (push to talk),
+    /// `clear_ignored` (Settings' Remove › Remove All), `unignore` (`app`: Remove › one app, #305), `live_recorders`
+    /// (who records now by Core Audio, through the same rules; changes nothing, #310), `hotkey`, `hotkey_up` (push to talk),
     /// `hear` (`text`; `noisy?`, `pushed?`: as heard in a loud room / with the shortcut held),
     /// `speak` (`text`: speaking it without a voice until `spoken`; `card: true`: reading out the card that waits),
     /// `spoken`, `hear_audio` (`path`: an audio file through speech recognition instead of the microphone; `tail?`
@@ -46,6 +47,12 @@ extension AssistantController {
         case "clear_ignored":
             // Settings › Assistant's Remove › Remove All (#295).
             settings.assistantIgnoredRecorders = []
+        case "live_recorders":
+            // #310: who records now by Core Audio, through the same rules (no microphone of its own, no pause).
+            let live = AssistantMicrophoneShare.recorders(AssistantAudioDevices.processes(), own: getpid(),
+                                                         ownBundleID: Bundle.main.bundleIdentifier ?? "",
+                                                         ignored: Set(settings.assistantIgnoredRecorders))
+            return .object(["recorders": .array(live.map { .object(["pid": .number(Double($0.pid)), "id": .string($0.bundleID)]) })])
         case "unignore":
             // Settings › Assistant's Remove › one app (#305).
             guard let id = params?["app"]?.stringValue else { throw RPCError.invalidParams("app is required") }

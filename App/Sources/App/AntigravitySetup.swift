@@ -1,5 +1,6 @@
 import AppKit
 import CmdsCore
+import UserNotifications
 
 /// Settings › Agents › Antigravity limits (#290): adds `cmds hook agy-status` to the status line in agy's
 /// `settings.json`, so its quota windows reach cmds (sidebar footer, menu bar, widget, iPhone). Asks before replacing
@@ -84,6 +85,32 @@ enum AntigravitySetup {
             return String(localized: "Adds cmds to Antigravity’s status line (~/.gemini/antigravity-cli/settings.json), so its quota windows show in the sidebar footer and the menu bar.",
                           comment: "Settings › Agents › Antigravity limits")
         }
+    }
+
+    /// A notification's `userInfo` key: clicking it opens Settings › Agents (#310).
+    nonisolated static let noticeUserInfoKey = "antigravitySetup"
+    /// The status-line command last told about, so each needs-Update command is told once.
+    private static let noticedKey = "AntigravityUpdateNoticed"
+
+    /// At launch (#310): agy's status line runs cmds through the PATH or a path that is gone, so its quota may not
+    /// arrive; say so once per such command, with Settings › Agents › Update one click away. The file is not changed.
+    static func noticeIfNeeded() {
+        // Not from an isolated test instance (CMDS_SUPPORT_DIR): it reads the user's real agy settings too.
+        guard AppSettings.shared.suiteName == nil else { return }
+        let defaults = AppSettings.shared.defaults
+        guard case .needsUpdate(let command) = state else {
+            // Fixed (or never set up): the same command going wrong again is told again.
+            defaults.removeObject(forKey: noticedKey)
+            return
+        }
+        guard defaults.string(forKey: noticedKey) != command else { return }
+        defaults.set(command, forKey: noticedKey)
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "Antigravity limits may not arrive", comment: "notification: agy's status line runs an old or missing cmds (#310)")
+        content.body = String(localized: "agy’s status line runs cmds through the PATH or a path that is gone. Click to open Settings › Agents and choose Update.",
+                              comment: "notification: agy's status line runs an old or missing cmds (#310)")
+        content.userInfo = [noticeUserInfoKey: true]
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "cmds.antigravity.update", content: content, trigger: nil))
     }
 
     private static func show(_ text: String, in window: NSWindow?) {
