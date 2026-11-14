@@ -43,7 +43,7 @@ extension AssistantController {
 
     /// The processes that count (`AssistantMicrophoneShare.recorders`): not this one, by this app's bundle ID (#295:
     /// a Debug build counts the released app), without the apps the user ignores.
-    private func sharingRecorders(_ processes: [AssistantMicrophoneShare.Process]) -> [AssistantMicrophoneShare.Process] {
+    func sharingRecorders(_ processes: [AssistantMicrophoneShare.Process]) -> [AssistantMicrophoneShare.Process] {
         AssistantMicrophoneShare.recorders(processes, own: getpid(), ownBundleID: Bundle.main.bundleIdentifier ?? "",
                                            ignored: Set(settings.assistantIgnoredRecorders))
     }

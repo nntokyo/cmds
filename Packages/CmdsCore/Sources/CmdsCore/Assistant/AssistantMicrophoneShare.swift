@@ -71,7 +71,7 @@ public struct AssistantMicrophoneShare: Equatable, Sendable {
     /// The processes other than this one (`own` PID) that record and count. `ownBundleID`: this app's (#295: a Debug
     /// build stops while the released app's assistant listens, so only one of them answers; the released app never
     /// stops for a Debug build). `ignored`: the bundle IDs the user chose never to stop for ("Don't Pause for …"),
-    /// matched as given and as a helper's app (`ignoreID(for:)`). Another instance of this same build (#305: two copies
+    /// matched by `isIgnored` (as given, as a helper's app, a tool by its file name). Another instance of this same build (#305: two copies
     /// of the released app) counts when it is older (a lower PID), so the newer one stops and only one answers.
     public static func recorders(_ processes: [Process], own: Int32, ownBundleID: String,
                                  ignored: Set<String> = []) -> [Process] {

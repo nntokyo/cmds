@@ -49,9 +49,7 @@ extension AssistantController {
             settings.assistantIgnoredRecorders = []
         case "live_recorders":
             // #310: who records now by Core Audio, through the same rules (no microphone of its own, no pause).
-            let live = AssistantMicrophoneShare.recorders(AssistantAudioDevices.processes(), own: getpid(),
-                                                         ownBundleID: Bundle.main.bundleIdentifier ?? "",
-                                                         ignored: Set(settings.assistantIgnoredRecorders))
+            let live = sharingRecorders(AssistantAudioDevices.processes())
             return .object(["recorders": .array(live.map { .object(["pid": .number(Double($0.pid)), "id": .string($0.bundleID)]) })])
         case "unignore":
             // Settings › Assistant's Remove › one app (#305).
