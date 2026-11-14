@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>How to use — cmds</title>
-<meta name="description" content="How to use cmds: install and first launch, workspaces and splits, tiled view, browser and preview panes, the cmds command, Claude Code setup, pairing the iPhone, SSH workspaces and keyboard shortcuts.">
+<meta name="description" content="How to use cmds: install and first launch, workspaces and splits, tiled view, browser and preview panes, the cmds command, Claude Code setup, pairing the iPhone, SSH workspaces, the voice assistant and keyboard shortcuts.">
 <link rel="canonical" href="https://cmds.n-n.tokyo/en/guide/">
 <link rel="alternate" hreflang="ja" href="https://cmds.n-n.tokyo/guide/">
 <link rel="alternate" hreflang="en" href="https://cmds.n-n.tokyo/en/guide/">
@@ -61,6 +61,7 @@
         <li><a href="#ssh">SSH workspaces</a></li>
         <li><a href="#files">Files panes</a></li>
         <li><a href="#schedules">Schedules</a></li>
+        <li><a href="#assistant">Voice assistant (Mac)</a></li>
         <li><a href="#shortcuts">Keyboard shortcuts</a></li>
       </ol>
     </nav>
@@ -206,8 +207,10 @@ cmds stats                                # CPU and memory per workspace and for
         <li>MCP server: register <code>claude mcp add --scope user cmds -- cmds mcp</code> (Codex: <code>[mcp_servers.cmds]</code> <code>command = "cmds"</code> <code>args = ["mcp"]</code> <code>env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]</code> in <code>~/.codex/config.toml</code>), and agents in a cmds terminal open web pages in a cmds browser pane instead of Chrome and check them with screenshots and JavaScript. They can also show files in previews and set the sidebar status.</li>
         <li>Skill: copy <code>integrations/claude/skills/cmds/SKILL.md</code> to <code>~/.claude/skills/cmds/</code> (Claude Code) or <code>~/.codex/skills/cmds/</code> (Codex), and the agent uses helper panes and previews without stealing your focus, and opens web pages in a cmds browser pane instead of Chrome.</li>
         <li>Codex: usage needs no setup. State and notifications come from Codex hooks: in <code>~/.codex/hooks.json</code>, add <code>command -v cmds &gt;/dev/null &amp;&amp; cmds hook codex || true</code> to <code>PermissionRequest</code>, <code>Stop</code> (ending in <code>|| echo '{}'</code>), <code>UserPromptSubmit</code>, <code>PreToolUse</code>, <code>PostToolUse</code> and <code>Interrupt</code>, then trust them in Codex's <code>/hooks</code>. cmds then shows approvals (orange, with the command), work and finished turns, also for sessions on the shared app-server. Without hooks, set <code>notifications = true</code>, <code>notification_method = "osc9"</code> and <code>notification_condition = "always"</code> under <code>[tui]</code> for notifications only (with both, every turn notifies twice).</li>
-        <li>Antigravity (<code>agy</code>): add <code>"statusLine": {"type": "command", "command": "cmds hook agy-status", "stack_with_default": true}</code> to <code>~/.gemini/antigravity-cli/settings.json</code> to show its model, context and limits (Gemini 5h / 7d, third-party models) like Claude Code's.</li>
+        <li>Antigravity (<code>agy</code>): add <code>"statusLine": {"type": "command", "command": "cmds hook agy-status", "stack_with_default": true}</code> to <code>~/.gemini/antigravity-cli/settings.json</code> to show its model, context and limits (Gemini 5h / 7d, third-party models) like Claude Code's. Settings › <strong>Agents</strong> › Antigravity limits › <strong>Set Up…</strong> adds this for you (it keeps a copy of the file, and asks before replacing another status line). The limits come only from interactive sessions: <code>agy -p</code> never runs the status line, so it does not update them.</li>
       </ul>
+      <h3 id="claude-accounts">Switching Claude accounts</h3>
+      <p>With several Claude accounts set up, click the account in a sidebar row (or right-click the row › <strong>Claude Account</strong>) and choose another. Claude Code quits once it is idle and the session continues under that account (the same as <code>cmds accounts switch --to NAME</code>). Accounts at their limit show when they reset. When the session cannot move, such as in an SSH pane, cmds says why.</p>
       <div class="split">
         <div>
           <h3>Reading the sidebar</h3>
@@ -324,9 +327,50 @@ cmds schedule history   # past runs</code></pre>
     </div>
   </section>
 
+  <section class="step" id="assistant">
+    <div class="wrap narrow">
+      <h2><span class="step-num">11</span>Voice assistant (Mac)</h2>
+      <p>Ask what your agents are doing and answer them by voice: “Jarvis, status”, “Jarvis, what is api doing?”, “Jarvis, approve api”. macOS 26 and later; in beta and free for now.</p>
+      <h3 id="assistant-setup">Turning it on</h3>
+      <ul>
+        <li>Settings › <strong>Assistant</strong> › <strong>Turn on the assistant</strong>, or <strong>Assistant</strong> in the cmds menu bar menu. The first time, macOS asks to allow the microphone and speech recognition.</li>
+        <li><strong>Pause Listening</strong> in the menu turns the microphone off until you choose <strong>Resume Listening</strong>. While the assistant is on, the menu bar icon has a small cyan dot.</li>
+        <li>Start with its name, “Jarvis” or “ジャービス” (change it in Settings › Assistant › <strong>Name</strong>). <kbd>⌥⌘J</kbd> makes it listen for one command without the name.</li>
+      </ul>
+      <h3 id="assistant-commands">What to say</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col">Say</th><th scope="col">It does</th></tr></thead>
+          <tbody>
+            <tr><td>“status”</td><td>Says which workspaces wait for you and which are working</td></tr>
+            <tr><td>“what is api doing?”</td><td>A short summary of that workspace's agent; “summarize api in detail” has Claude Code write it</td></tr>
+            <tr><td>“reply to api: run the tests”, “approve api”, “choose 2 for api”</td><td>Answers the agent (after a confirmation card)</td></tr>
+            <tr><td>“start Claude in web”</td><td>Starts Claude Code (or Codex) in a new workspace, optionally with a first task</td></tr>
+            <tr><td>“what's the weather in Funabashi tomorrow?”, “search …”</td><td>Web questions go to your own Claude Code</td></tr>
+            <tr><td>“pause listening”, “turn off”</td><td>Pauses the microphone / turns the assistant off</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Other questions go to Apple's on-device model (needs Apple Intelligence). Speak in the app's language (English or Japanese).</p>
+      <h3 id="assistant-confirm">Confirmation cards</h3>
+      <p>Voice alone only ever answers. Anything that types into a pane or starts a session shows a card with the workspace, the pane and the exact text. Say “yes”, press <kbd>Return</kbd> or click to run it; “no” or <kbd>Esc</kbd> drops it. Text that may delete, push or deploy, or goes to an SSH pane, needs <kbd>Return</kbd> or a click: a spoken yes is not enough.</p>
+      <h3 id="assistant-noisy">Loud places</h3>
+      <ul>
+        <li>Settings › Assistant › <strong>Listening</strong>: <strong>Automatic</strong> (default), <strong>Automatic with noise reduction</strong>, or <strong>Push to talk (hold the shortcut)</strong>, which hears only while you hold <kbd>⌥⌘J</kbd>, without the name. Push to talk is the most reliable in very loud places.</li>
+        <li>Settings › Assistant › <strong>Microphone</strong>: <strong>Automatic</strong> uses a headset such as AirPods when one is connected; close to your mouth, it hears much less of the room.</li>
+      </ul>
+      <h3 id="assistant-calls">Calls</h3>
+      <p>While another app uses the microphone (a call in Zoom or FaceTime, for example), the assistant stops listening by itself and listens again about 2 seconds after it ends. To keep it listening, turn off Settings › Assistant › <strong>Pause while another app uses the microphone</strong>.</p>
+      <h3 id="assistant-siri">Siri and Shortcuts</h3>
+      <p>The Shortcuts app has two actions (macOS 26): <strong>Agent Status</strong> and <strong>Ask the Assistant</strong>. Siri knows them as “cmds status” and “Ask cmds”. Anything a request would do still waits for your OK on the Mac.</p>
+      <h3 id="assistant-privacy">Privacy</h3>
+      <p>Speech is recognised on your Mac. What is not addressed to the assistant is dropped at once; no audio or transcript is stored. Only web questions, detailed summaries and instructions in your own words leave the Mac: they go to your own Claude Code (<code>claude -p</code>) and count toward its usage. Turn them off with <strong>Use Claude for web questions</strong> and <strong>Use Claude to understand free commands</strong> in Settings › Assistant. See <a href="/en/privacy/#assistant">section 6 of the privacy policy</a>.</p>
+    </div>
+  </section>
+
   <section class="step" id="shortcuts">
     <div class="wrap narrow">
-      <h2><span class="step-num">11</span>Keyboard shortcuts</h2>
+      <h2><span class="step-num">12</span>Keyboard shortcuts</h2>
       <div class="table-wrap">
         <table>
           <thead><tr><th scope="col">Action</th><th scope="col">Key</th></tr></thead>
@@ -350,6 +394,7 @@ cmds schedule history   # past runs</code></pre>
             <tr><td>Toggle sidebar / compact sidebar</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>
             <tr><td>Filter workspaces</td><td><kbd>⌥⌘F</kbd></td></tr>
             <tr><td>Bigger / smaller / actual size</td><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td></tr>
+            <tr><td>Talk to the voice assistant</td><td><kbd>⌥⌘J</kbd></td></tr>
             <tr><td>Settings</td><td><kbd>⌘,</kbd></td></tr>
           </tbody>
         </table>
