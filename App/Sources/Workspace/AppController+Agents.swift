@@ -33,7 +33,7 @@ extension AppController {
         usage.updatedAt = now
         usage.stale = nil
         if !usage.limits.isEmpty {
-            agentLimitsByKind[usage.agent] = AgentLimits(agent: usage.agent, limits: usage.limits, plan: usage.plan, updatedAt: now)
+            noteAgentLimits(AgentLimits(agent: usage.agent, limits: usage.limits, plan: usage.plan, updatedAt: now))
         }
         var process: AgentProcessRef?
         if let pid {
@@ -194,19 +194,38 @@ extension AppController {
     /// Codex's used-up windows changed (`AgentLimits.exhaustedReset`).
     static let codexLimitsDidChange = Notification.Name("cmdsCodexLimitsDidChange")
 
-    /// At launch: the Codex limits of the last run that have not reset yet (`CodexLimitsStore`, #227).
-    func restoreCodexLimits(now: Date = Date()) {
-        guard agentLimitsByKind[.codex] == nil,
-              let limits = CodexLimitsStore.load(supportDirectory: CmdsEnv.supportDirectoryURL(), now: now) else { return }
-        agentLimitsByKind[.codex] = limits
+    /// At launch: the Codex (#227) and Antigravity (#290) limits of the last run that have not reset yet
+    /// (`CodexLimitsStore`).
+    func restoreAgentLimits(now: Date = Date()) {
+        for agent in CodexLimitsStore.agents where agentLimitsByKind[agent] == nil {
+            if let limits = CodexLimitsStore.load(supportDirectory: CmdsEnv.supportDirectoryURL(), agent: agent, now: now) {
+                agentLimitsByKind[agent] = limits
+            }
+        }
     }
 
-    private func saveCodexLimits(_ limits: AgentLimits) {
+    private func saveAgentLimits(_ limits: AgentLimits) {
         do {
             try CodexLimitsStore.save(limits, supportDirectory: CmdsEnv.supportDirectoryURL())
         } catch {
-            agentLog.error("saving Codex limits failed: \(error.localizedDescription, privacy: .public)")
+            agentLog.error("saving \(limits.agent.rawValue, privacy: .public) limits failed: \(error.localizedDescription, privacy: .public)")
         }
+    }
+
+    /// An agent's account limits as reported (status line); kept across launches for the agents in
+    /// `CodexLimitsStore.agents` when they changed.
+    func noteAgentLimits(_ limits: AgentLimits) {
+        if CodexLimitsStore.agents.contains(limits.agent), CodexLimitsStore.changed(agentLimitsByKind[limits.agent], limits) {
+            saveAgentLimits(limits)
+        }
+        agentLimitsByKind[limits.agent] = limits
+    }
+
+    /// `agent.limits` (#290): an agent outside cmds' panes (agy in another terminal) reports only its account's limits.
+    func reportAgentLimits(_ usage: AgentUsage, now: Date = Date()) throws {
+        guard !usage.limits.isEmpty else { throw RPCError.invalidParams("usage has no limits") }
+        noteAgentLimits(AgentLimits(agent: usage.agent, limits: usage.limits, plan: usage.plan, updatedAt: now))
+        scheduleAgentRefresh()
     }
 
     /// Applies a metadata scan: drops usage of agents that exited, marks idle ones stale, takes Codex usage from its
@@ -215,8 +234,7 @@ extension AppController {
     func applyAgentScan(_ codex: CodexWatchResult, now: Date = Date()) {
         if let limits = codex.limits, limits.updatedAt > (agentLimitsByKind[.codex]?.updatedAt ?? .distantPast) {
             let resetChanged = limits.exhaustedReset != agentLimitsByKind[.codex]?.exhaustedReset
-            if CodexLimitsStore.changed(agentLimitsByKind[.codex], limits) { saveCodexLimits(limits) }
-            agentLimitsByKind[.codex] = limits
+            noteAgentLimits(limits)
             // Schedules that follow Codex's limit (ScheduleRunner).
             if resetChanged { NotificationCenter.default.post(name: Self.codexLimitsDidChange, object: nil) }
         }

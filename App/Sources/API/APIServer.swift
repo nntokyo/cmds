@@ -324,6 +324,13 @@ final class APIServer {
             try controller.reportAgentUsage(paneID: try params.string("pane"), usage: usage,
                                             pid: pid.flatMap { $0 > 0 && $0 <= Int(Int32.max) ? Int32($0) : nil },
                                             configDir: try params.string("configDir"))
+        case "agent.limits":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods, #290): an agent outside cmds' panes.
+            guard let raw = params.value?["usage"], case .object = raw,
+                  let usage = try? raw.decode(AgentUsage.self) else {
+                throw RPCError.invalidParams("usage must be an AgentUsage object")
+            }
+            try controller.reportAgentLimits(usage)
         case "agent.claude_hook":
             try controller.claudeHook(paneID: try params.string("pane"), input: try params.json("input"))
         case "agent.codex_hook":

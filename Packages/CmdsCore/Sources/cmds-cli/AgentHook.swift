@@ -16,11 +16,22 @@ enum AgentHook {
     static let maxProcessArgumentBytes = 256 * 1024
 
     /// `cmds hook agy-status`: Antigravity's (`agy`) status-line JSON → `agent.report`, like `claudeStatus`.
+    /// Outside a cmds pane (agy in another terminal) only the account's quota goes to the app (`agent.limits`, #290).
     static func antigravityStatus(_ ctx: Context) {
-        guard let pane = ctx.envPane else { return } // not inside cmds
         let input = readStandardInput(deadline: Date().addingTimeInterval(stdinDeadline))
         guard let usage = AntigravityStatusLine.usage(fromJSON: input),
               let encoded = try? JSONValue.from(usage) else { return }
+        guard let pane = ctx.envPane else {
+            if !usage.limits.isEmpty {
+                var limitsOnly = AgentUsage(agent: .antigravity, updatedAt: usage.updatedAt)
+                limitsOnly.limits = usage.limits
+                limitsOnly.plan = usage.plan
+                if let only = try? JSONValue.from(limitsOnly) {
+                    post(socketPath: ctx.socketPath, method: "agent.limits", params: .object(["usage": only]))
+                }
+            }
+            return
+        }
         var params: [String: JSONValue] = ["pane": .string(pane), "usage": encoded]
         if let pid = agentProcessID(.antigravity) { params["pid"] = .number(Double(pid)) }
         post(socketPath: ctx.socketPath, method: "agent.report", params: .object(params))

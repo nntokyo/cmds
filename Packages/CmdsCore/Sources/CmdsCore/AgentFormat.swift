@@ -89,7 +89,9 @@ public enum AgentFormat {
 
     /// `5h`, `7d`, `spend`, `limit` (a reached limit of unknown window), or the window length (`1h`, `30m`).
     /// `5h`/`7d` stay as they are in every language (short, like Claude's own usage screen); `spend` is translated.
-    public static func limitLabel(_ limit: UsageLimit, strings: Strings = .english) -> String {
+    /// `short` (the sidebar footer, #290): Antigravity's own Gemini windows without the group (`5h`, `7d`); other
+    /// groups keep it (`3P 5h`).
+    public static func limitLabel(_ limit: UsageLimit, strings: Strings = .english, short: Bool = false) -> String {
         switch limit.id {
         case UsageLimit.fiveHour: return "5h"
         case UsageLimit.sevenDay: return "7d"
@@ -99,7 +101,7 @@ public enum AgentFormat {
             if let minutes = limit.windowMinutes, minutes > 0 {
                 let window = minutes % 1440 == 0 ? "\(minutes / 1440)d" : minutes % 60 == 0 ? "\(minutes / 60)h" : "\(minutes)m"
                 // Antigravity has a window per model group (`gemini-5h`, `3p-5h`): `Gemini 5h`, `3P 5h`.
-                if let group = AntigravityStatusLine.groupName(limit.id) { return "\(group) \(window)" }
+                if let group = AntigravityStatusLine.groupName(limit.id), !(short && group == "Gemini") { return "\(group) \(window)" }
                 return window
             }
             return limit.id.replacingOccurrences(of: "_", with: " ")

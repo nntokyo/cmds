@@ -89,13 +89,15 @@ final class SystemUsageView: NSView {
             if let existing = agentRows[limits.agent] {
                 row = existing
             } else {
-                row = AgentLimitsRow(title: limits.agent.displayName)
+                row = AgentLimitsRow(title: limits.agent.shortName)
                 agentRows[limits.agent] = row
                 agentStack.insertView(row, at: min(index, agentStack.views.count), in: .top)
                 row.widthAnchor.constraint(equalTo: agentStack.widthAnchor).isActive = true
             }
             row.update(limits, now: now)
         }
+        let labelWidth = agentRows.values.map(\.labelTextWidth).max() ?? 0
+        for row in agentRows.values { row.setLabelWidth(labelWidth) }
         agentStack.isHidden = agentLimits.isEmpty
         let width = agentLimits.isEmpty ? Self.titleWidth : Self.agentTitleWidth
         cpuRow.titleWidth = width
@@ -417,7 +419,7 @@ private final class AgentLimitsRow: NSView {
         if windows.count != segments.count { rebuild(count: windows.count) }
         for (segment, limit) in zip(segments, windows) {
             let level = UsageLevel(percent: limit.usedPercent)
-            segment.set(label: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit, strings: .localized), value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit)
+            segment.set(label: limit.id == UsageLimit.spend ? "$" : AgentFormat.limitLabel(limit, strings: .localized, short: true), value: limit.id == UsageLimit.spend ? AgentFormat.limitValue(limit)
                         : AgentFormat.percent(limit.usedPercent), fraction: limit.usedPercent / 100, level: level)
         }
         // Old figures (no agent ran for a while) are dimmed.
@@ -435,6 +437,14 @@ private final class AgentLimitsRow: NSView {
         }
     }
 
+    /// The width of its longest window label (`3P 5h`).
+    var labelTextWidth: CGFloat { segments.map(\.labelTextWidth).max() ?? 0 }
+
+    /// One label column for every window (the footer gives all rows the same, so all meters line up).
+    func setLabelWidth(_ width: CGFloat) {
+        for segment in segments { segment.labelWidth = width }
+    }
+
     /// One window per line (meters as long as the CPU/Mem ones, readable at the narrowest sidebar).
     private func rebuild(count: Int) {
         lines.views.forEach { lines.removeView($0) }
@@ -449,6 +459,8 @@ private final class AgentLimitsRow: NSView {
 /// `5h ▰▰▱ 40%`.
 private final class LimitSegment: NSView {
     private let label = NSTextField(labelWithString: "")
+    private var labelWidthConstraint: NSLayoutConstraint!
+    private static var minimumLabelWidth: CGFloat { (16 * SidebarTextSize.scale).rounded() }
     private let meter = MeterView()
     private let value = NSTextField(labelWithString: "")
     private var level: UsageLevel?
@@ -458,8 +470,9 @@ private final class LimitSegment: NSView {
         label.font = .systemFont(ofSize: SidebarTextSize.size(10), weight: .medium)
         label.textColor = .tertiaryLabelColor
         label.lineBreakMode = .byClipping
-        // Fixed label column so meters of all windows line up.
-        label.widthAnchor.constraint(equalToConstant: (16 * SidebarTextSize.scale).rounded()).isActive = true
+        // Label column: at least `5h` wide; the row widens it to its longest label so meters of all windows line up.
+        labelWidthConstraint = label.widthAnchor.constraint(equalToConstant: Self.minimumLabelWidth)
+        labelWidthConstraint.isActive = true
         value.font = .monospacedDigitSystemFont(ofSize: SidebarTextSize.size(10.5), weight: .regular)
         value.alignment = .right
         value.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -486,6 +499,17 @@ private final class LimitSegment: NSView {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    /// The label's text width now.
+    var labelTextWidth: CGFloat { label.intrinsicContentSize.width.rounded(.up) }
+
+    var labelWidth: CGFloat {
+        get { labelWidthConstraint.constant }
+        set {
+            let width = max(Self.minimumLabelWidth, newValue)
+            if labelWidthConstraint.constant != width { labelWidthConstraint.constant = width }
+        }
+    }
 
     func set(label text: String, value newValue: String, fraction: Double, level newLevel: UsageLevel) {
         if label.stringValue != text { label.stringValue = text }

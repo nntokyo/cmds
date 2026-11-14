@@ -1568,6 +1568,17 @@
         }
       }
     },
+    "Adds cmds to Antigravity’s status line (~/.gemini/antigravity-cli/settings.json), so its quota windows show in the sidebar footer and the menu bar.": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity のステータスライン（~/.gemini/antigravity-cli/settings.json）に cmds を追加し、上限をサイドバー下部とメニューバーに表示します。"
+          }
+        }
+      }
+    },
     "Advertising (PSM %@)": {
       "localizations": {
         "ja": {
@@ -1788,6 +1799,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "ほかのワークスペースがワークツリー%@を使っています。"
+          }
+        }
+      }
+    },
+    "Antigravity could not be set up": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity を設定できませんでした"
+          }
+        }
+      }
+    },
+    "Antigravity limits:": {
+      "comment": "Settings › Agents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity の上限："
+          }
+        }
+      }
+    },
+    "Antigravity’s settings file is not valid JSON, so cmds left it alone: %@": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity の設定ファイルが正しい JSON ではないため、変更していません：%@"
+          }
+        }
+      }
+    },
+    "Antigravity’s settings file is not valid JSON.": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity の設定ファイルが正しい JSON ではありません。"
+          }
+        }
+      }
+    },
+    "Antigravity’s status line runs another command. Set Up replaces it (asks first) so cmds gets its quota windows.": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity のステータスラインで別のコマンドが動いています。「設定する」で cmds のコマンドに置き換えます（先に確認します）。"
           }
         }
       }
@@ -5305,6 +5371,17 @@
         }
       }
     },
+    "It runs “%@” now. cmds puts its own command there, with Antigravity’s default status line kept; a copy of the file is saved next to it.": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今は「%@」を実行しています。cmds のコマンドに置き換え、Antigravity 標準のステータスラインはそのまま残します。元のファイルは同じフォルダに控えを保存します。"
+          }
+        }
+      }
+    },
     "Items only in the folder being synced to go to its Trash (on a server: its Trash there). Nothing is deleted.": {
       "localizations": {
         "ja": {
@@ -8044,6 +8121,17 @@
         }
       }
     },
+    "Replace Antigravity’s status line?": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Antigravity のステータスラインを置き換えますか？"
+          }
+        }
+      }
+    },
     "Replace moves the existing item to the Trash. Keep Both gives the new one a numbered name.": {
       "localizations": {
         "ja": {
@@ -8900,6 +8988,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "サイドバーのステータスを設定"
+          }
+        }
+      }
+    },
+    "Set Up": {
+      "comment": "Settings › Agents › Antigravity limits: done",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定済み"
+          }
+        }
+      }
+    },
+    "Set Up…": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定する…"
+          }
+        }
+      }
+    },
+    "Set up. The quota windows (Gemini 5h / 7d…) show in the sidebar footer and the menu bar while agy runs in a terminal (not with agy -p), and are kept until they reset.": {
+      "comment": "Settings › Agents › Antigravity limits",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定済みです。agy をターミナルで動かしている間（agy -p では届きません）、上限（Gemini 5h / 7d など）がサイドバー下部とメニューバーに表示され、リセットまで保持されます。"
           }
         }
       }
