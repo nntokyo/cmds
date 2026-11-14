@@ -7,6 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-14
+
+Mac only; the iPhone/iPad app is unchanged.
+
+### Added
+
+- Voice assistant (Mac): when it pauses for an app that keeps the microphone open, the menu bar offers Don't Pause
+  for that app; it listens again at once and ignores that app from then on. Settings › Assistant lists the ignored
+  apps with Clear (#295).
+- Siri: cmds can also be called Commands, C M D S, シーエムディーエス or コマンズ in the Shortcuts phrases.
+- Sidebar accounts: a workspace with several Claude Code panes shows a section per pane in the account menu; while
+  a switch waits for the session to finish, the menu offers Cancel Switch (#296).
+
+### Fixed
+
+- Sidebar accounts: the compact sidebar now shows each session's account icon too, and the icons update at once when
+  you add, remove or reorder accounts (#296).
+- Voice assistant (Mac): with a cmds Dev build open next to cmds, only one assistant answers; the Dev build pauses
+  while the released app's assistant listens (#295).
+
 ## [0.23.0] - 2026-11-14
 
 Mac only; the iPhone/iPad app is unchanged.
