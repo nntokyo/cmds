@@ -382,6 +382,12 @@ in `CmdsCore/Assistant` and `CmdsCore/PaidFeatures.swift`.
   menu bar names the app) or resumes after 2 s with nobody recording, only a pause of its own. The user's pause / resume
   (`pause()` / `resume()`) tell it: resumed during a call it stays on until that call ends. Announcements wait while
   paused for a call. Settings › Assistant › Pause while another app uses the microphone (on by default).
+  Two instances (#295): `recorders` gets the app's own bundle ID; a Debug build (`tokyo.n-n.cmds.dev`) counts the
+  released app (`tokyo.n-n.cmds`, which records only for its assistant) as a recorder, so only the released app
+  answers and the Debug build's menu says "Paused while the assistant in cmds is listening"; the released app ignores
+  Debug builds, and the own PID never counts. Apps the user chose with the menu bar's "Don't Pause for …"
+  (`AssistantIgnoredRecorders`, a helper's app ID via `ignoreID(for:)`, matched as given and as the helper's app) never
+  count; choosing it resumes at once (`recorderIgnored`). Settings lists them with Clear.
 - **Rules**: `AssistantAddressing` (name prefix after an optional greeting, folded for width, case and kana; or the
   follow-up window), `AssistantMachine` (off → idle → listening / thinking / speaking / confirming, paused; follow-up
   8 s from the end of speech, confirmation timeout 60 s; only yes/no count without the name while a card waits),
