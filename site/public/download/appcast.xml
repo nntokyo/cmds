@@ -7,38 +7,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.24.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.1</link>
-      <sparkle:version>34</sparkle:version>
-      <sparkle:shortVersionString>0.24.1</sparkle:shortVersionString>
+      <title>cmds 0.24.2</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.2</link>
+      <sparkle:version>35</sparkle:version>
+      <sparkle:shortVersionString>0.24.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 14 Nov 2026 17:30:49 GMT</pubDate>
+      <pubDate>Sat, 14 Nov 2026 18:18:27 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
-<ul>
-<li>音声アシスタント（Mac）：設定 › アシスタント の「削除」で、一時停止しないアプリを 1 つずつ（またはすべて）外せるようにしました。録音しているのがコマンド（sox、ffmpeg など）でも、その名前で表示し、無視できます。</li>
-</ul>
 <h3>修正</h3>
 <ul>
-<li>音声アシスタント（Mac）：同じ cmds を 2 つ開くと両方が返事をしていたのを、後から開いたほうが止まるようにしました。</li>
-<li>Antigravity の上限：ステータスラインが PATH 経由や存在しない場所の cmds を実行している場合、設定 › エージェント に「更新」が出て、このアプリのフルパスに書き換えられるようにしました。</li>
+<li>音声アシスタント（Mac）：一時停止しないことにしたコマンドが、アップデート後にまた一時停止の原因になっていたのを直しました（Homebrew はバージョンごとのフォルダから実行するため）。コマンドはファイル名で照合します。</li>
+<li>Antigravity の上限：agy のステータスラインが PATH 経由や存在しない場所の cmds を実行しているとき、起動時に一度だけ通知します。クリックすると 設定 › エージェント（「更新」）が開きます。ファイルは勝手に書き換えません。</li>
+<li>サイトのガイドに「○○では一時停止しない」と「削除」の説明を追加しました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
-<h3>Added</h3>
-<ul>
-<li>Voice assistant (Mac): Settings › Assistant › Remove takes one app off the list of apps it never pauses for, or all of them. A command-line tool that records (sox, ffmpeg) is named by its file and can be ignored too.</li>
-</ul>
 <h3>Fixed</h3>
 <ul>
-<li>Voice assistant (Mac): two copies of the same cmds open at once both answered; the one opened later now pauses.</li>
-<li>Antigravity limits: a status line that runs cmds through the PATH or a path that is gone shows Update in Settings › Agents, which writes this app's full path.</li>
+<li>Voice assistant (Mac): a command-line tool you chose not to pause for paused it again after an upgrade (Homebrew runs it from a versioned folder); it is now matched by its file name.</li>
+<li>Antigravity limits: when agy's status line runs cmds through the PATH or a path that is gone, cmds says so once in a notification at launch; clicking it opens Settings › Agents (Update). The file is not changed.</li>
+<li>Website guide: Don't Pause for … and Settings › Assistant › Remove are described.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.1/cmds-0.24.1.dmg" length="17104772" type="application/octet-stream" sparkle:edSignature="CTr9c0kBE103Qy8AqjAD/xVgo65nF5Id3riHKfL49Of8uxbgHKaFHpmSQFlYe3g03Fz/iYupi6pv0eORXYKPDQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.2/cmds-0.24.2.dmg" length="17105500" type="application/octet-stream" sparkle:edSignature="Q7WpY/FEgrVQ2MT7POXo5VnSw0jyVsJamgzHyMmvIP+whNsBfGBM/Ku9Lx9FNvIIAAiTO/7hEJ9fgzI/YXITAQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: SDwIA20NbkASCxSoPo4InJY7twFmY9wIV6RLhT4H02C7FGjPTKO6yhgrcRrlXExeY0Xdz6W/waMnkcdxJQg5AQ==
-length: 2779
+edSignature: jJl1sYbriAbEp1I6aRpXTXvW8XEhvF3BxEqszc5suh9OesPKbjC4INv81HxO4YSzvpIFGWSFjKKSVUqHY5WqBg==
+length: 2717
 -->
