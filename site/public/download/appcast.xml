@@ -7,42 +7,38 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.24.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.0</link>
-      <sparkle:version>33</sparkle:version>
-      <sparkle:shortVersionString>0.24.0</sparkle:shortVersionString>
+      <title>cmds 0.24.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.1</link>
+      <sparkle:version>34</sparkle:version>
+      <sparkle:shortVersionString>0.24.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 14 Nov 2026 11:35:15 GMT</pubDate>
+      <pubDate>Sat, 14 Nov 2026 17:30:49 GMT</pubDate>
       <description><![CDATA[
 <h3>追加</h3>
 <ul>
-<li>音声アシスタント（Mac）：常にマイクを使うアプリのために一時停止したとき、メニューバーに「○○では一時停止しない」が出ます。選ぶとすぐ聞き取りに戻り、以後そのアプリは無視します。無視しているアプリは 設定 › アシスタント で確認・消去できます。</li>
-<li>Siri：ショートカットのフレーズで、cmds を「コマンズ」「シーエムディーエス」「Commands」と呼んでも通じるようにしました。</li>
-<li>サイドバーのアカウント：Claude Code が複数動いているワークスペースでは、メニューにペインごとの欄が出ます。切り替えを待っている間は「切り替えを取り消す」が出ます。</li>
+<li>音声アシスタント（Mac）：設定 › アシスタント の「削除」で、一時停止しないアプリを 1 つずつ（またはすべて）外せるようにしました。録音しているのがコマンド（sox、ffmpeg など）でも、その名前で表示し、無視できます。</li>
 </ul>
 <h3>修正</h3>
 <ul>
-<li>コンパクト表示のサイドバーにも各セッションのアカウントのアイコンを出し、アカウントの追加・削除・並べ替えですぐ更新するようにしました。</li>
-<li>音声アシスタント（Mac）：cmds と cmds Dev を同時に開いても、返事をするのは一方だけになりました（リリース版が聞き取っている間は Dev 版が止まります）。</li>
+<li>音声アシスタント（Mac）：同じ cmds を 2 つ開くと両方が返事をしていたのを、後から開いたほうが止まるようにしました。</li>
+<li>Antigravity の上限：ステータスラインが PATH 経由や存在しない場所の cmds を実行している場合、設定 › エージェント に「更新」が出て、このアプリのフルパスに書き換えられるようにしました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Added</h3>
 <ul>
-<li>Voice assistant (Mac): when it pauses for an app that keeps the microphone open, the menu bar offers Don't Pause for that app; it listens again at once and ignores that app from then on. Settings › Assistant lists the ignored apps with Clear.</li>
-<li>Siri: cmds can also be called Commands, C M D S, シーエムディーエス or コマンズ in the Shortcuts phrases.</li>
-<li>Sidebar accounts: a workspace with several Claude Code panes shows a section per pane in the account menu; while a switch waits, the menu offers Cancel Switch.</li>
+<li>Voice assistant (Mac): Settings › Assistant › Remove takes one app off the list of apps it never pauses for, or all of them. A command-line tool that records (sox, ffmpeg) is named by its file and can be ignored too.</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>The compact sidebar now shows each session's account icon too, and the icons update at once when accounts are added, removed or reordered.</li>
-<li>Voice assistant (Mac): with cmds Dev open next to cmds, only one assistant answers; the Dev build pauses while the released app's assistant listens.</li>
+<li>Voice assistant (Mac): two copies of the same cmds open at once both answered; the one opened later now pauses.</li>
+<li>Antigravity limits: a status line that runs cmds through the PATH or a path that is gone shows Update in Settings › Agents, which writes this app's full path.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.0/cmds-0.24.0.dmg" length="17100800" type="application/octet-stream" sparkle:edSignature="pVsco5ZXxvk+WqfChVnyT/C1RsTxVfWdXNP385njaASGx1DVjPpODK9PG4lP/KnyydhetVdXyjEK9UQhwa16CQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.1/cmds-0.24.1.dmg" length="17104772" type="application/octet-stream" sparkle:edSignature="CTr9c0kBE103Qy8AqjAD/xVgo65nF5Id3riHKfL49Of8uxbgHKaFHpmSQFlYe3g03Fz/iYupi6pv0eORXYKPDQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: feIP8MlaqzVIYA+NGcONu2dZM5k2qqEEXXWWa97fXpn11DMztzgYMraqWrlRw6cGy4YDh+rUDPAnGBBlcvcuDA==
-length: 3580
+edSignature: SDwIA20NbkASCxSoPo4InJY7twFmY9wIV6RLhT4H02C7FGjPTKO6yhgrcRrlXExeY0Xdz6W/waMnkcdxJQg5AQ==
+length: 2779
 -->
