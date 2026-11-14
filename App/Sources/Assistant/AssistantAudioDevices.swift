@@ -84,9 +84,20 @@ final class AssistantAudioDevices {
             var pidAddress = Self.address(kAudioProcessPropertyPID)
             var pidSize = UInt32(MemoryLayout<pid_t>.size)
             AudioObjectGetPropertyData(id, &pidAddress, 0, nil, &pidSize, &pid)
-            return AssistantMicrophoneShare.Process(pid: pid, bundleID: string(id, kAudioProcessPropertyBundleID) ?? "",
+            var bundleID = string(id, kAudioProcessPropertyBundleID) ?? ""
+            // #305: a command-line tool has no bundle ID; its path names it and lets the user ignore it.
+            if bundleID.isEmpty { bundleID = executablePath(pid) ?? "" }
+            return AssistantMicrophoneShare.Process(pid: pid, bundleID: bundleID,
                                                     recording: uint32(id, kAudioProcessPropertyIsRunningInput) != 0)
         }
+    }
+
+    /// The full path of a process's executable; nil when it is gone or not ours to see.
+    private static func executablePath(_ pid: pid_t) -> String? {
+        guard pid > 0 else { return nil }
+        var buffer = [CChar](repeating: 0, count: 4 * Int(MAXPATHLEN))
+        guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return nil }
+        return String(cString: buffer)
     }
 
     private static func address(_ selector: AudioObjectPropertySelector,

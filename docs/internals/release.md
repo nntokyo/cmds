@@ -14,8 +14,10 @@
 | Workspace export bundle | `WorkspaceBundle.currentVersion` (`CmdsCore/WorkspaceTransfer.swift`); newer bundles are refused | 1 |
 
 `cmds identify` (`system.identify`) reports the running app's version and build. Changes are recorded in
-[CHANGELOG.md](../../CHANGELOG.md) (Keep a Changelog). There are no git tags yet; tag releases as `vX.Y.Z` when the
-first one is cut.
+[CHANGELOG.md](../../CHANGELOG.md) (Keep a Changelog). Mac releases are tagged `vX.Y.Z` (with a GitHub
+release); an App Store build of the companion is tagged `ios-vX.Y.Z` on its version commit (no GitHub release).
+Every issue gets a label: `enhancement`, `bug`, `documentation`, or `refactor` for the refactor issue that gates a
+release.
 
 Compatibility rules worth keeping:
 

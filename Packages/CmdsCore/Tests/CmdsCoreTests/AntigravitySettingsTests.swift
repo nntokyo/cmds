@@ -1,4 +1,4 @@
-import CmdsCore
+@testable import CmdsCore
 import XCTest
 
 /// #290: setting up agy's status line for its quota.
@@ -9,11 +9,30 @@ final class AntigravitySettingsTests: XCTestCase {
         XCTAssertEqual(AntigravitySettings.state(of: nil), .noFile)
         XCTAssertEqual(AntigravitySettings.state(of: data(" \n")), .notSetUp)
         XCTAssertEqual(AntigravitySettings.state(of: data(#"{"theme":"dark"}"#)), .notSetUp)
-        XCTAssertEqual(AntigravitySettings.state(of: data(#"{"statusLine":{"type":"command","command":"cmds hook agy-status"}}"#)), .setUp)
+        XCTAssertEqual(AntigravitySettings.state(of: data(#"{"statusLine":{"type":"command","command":"cmds hook agy-status"}}"#)), .needsUpdate("cmds hook agy-status"))
         XCTAssertEqual(AntigravitySettings.state(of: data(#"{"statusLine":{"command":"'/Applications/cmds.app/Contents/Resources/bin/cmds' hook agy-status"}}"#)), .setUp)
         XCTAssertEqual(AntigravitySettings.state(of: data(#"{"statusLine":{"command":"~/bin/line.sh"}}"#)), .otherCommand("~/bin/line.sh"))
         XCTAssertEqual(AntigravitySettings.state(of: data("[1]")), .unreadable)
         XCTAssertEqual(AntigravitySettings.state(of: data("{")), .unreadable)
+    }
+
+    /// #305: a bare `cmds` (PATH) or a path that is gone is offered again, with this app's CLI.
+    func testAHookOnThePathOrAMissingPathNeedsAnUpdate() throws {
+        let cli = "/Applications/cmds.app/Contents/Resources/bin/cmds"
+        let there: (String) -> Bool = { $0 == cli || $0 == "/Users/a b/cmds" || $0 == "/x/it's/cmds" }
+        func state(_ command: String) -> AntigravitySettings.State {
+            let json = try! JSONSerialization.data(withJSONObject: ["statusLine": ["command": command]])
+            return AntigravitySettings.state(of: json, exists: there)
+        }
+        XCTAssertEqual(state("\(cli) hook agy-status"), .setUp)
+        XCTAssertEqual(state("'/Users/a b/cmds' hook agy-status"), .setUp)
+        XCTAssertEqual(state("'/x/it'\\''s/cmds' hook agy-status"), .setUp)
+        XCTAssertEqual(state("cmds hook agy-status"), .needsUpdate("cmds hook agy-status"))
+        XCTAssertEqual(state("/Users/r/Desktop/cmds.app/Contents/Resources/bin/cmds hook agy-status"),
+                       .needsUpdate("/Users/r/Desktop/cmds.app/Contents/Resources/bin/cmds hook agy-status"))
+        let updated = try XCTUnwrap(AntigravitySettings.settingUp(Data(#"{"statusLine":{"command":"cmds hook agy-status"}}"#.utf8), cli: cli))
+        XCTAssertEqual(AntigravitySettings.state(of: updated, exists: there), .setUp)
+        XCTAssertEqual(AntigravitySettings.program(of: "'/x/it'\\''s/cmds' hook agy-status"), "/x/it's/cmds")
     }
 
     func testSettingUpKeepsOtherKeys() throws {

@@ -48,11 +48,11 @@ extension AssistantController {
                                            ignored: Set(settings.assistantIgnoredRecorders))
     }
 
-    /// Paused for the released app's assistant (#295, a Debug build): the menu bar says so, and offers no "Don't
-    /// Pause for …" (only one of them answers).
-    var pausedForCmds: Bool { pausedForBundleID == AssistantMicrophoneShare.cmdsBundleID }
+    /// Paused for another cmds' assistant (#295 the released app for a Debug build, #305 an older copy of the same
+    /// build): the menu bar says so, and offers no "Don't Pause for …" (only one of them answers).
+    var pausedForCmds: Bool { AssistantMicrophoneShare.isCmds(pausedForBundleID ?? "") }
 
-    /// The app it paused for can be ignored (#295): it has a bundle ID, and is not the released app's assistant.
+    /// The app it paused for can be ignored (#295): it has a bundle ID (or a tool's path, #305), and is not cmds.
     var canIgnoreRecorder: Bool { !(pausedForBundleID ?? "").isEmpty && !pausedForCmds }
 
     /// "Don't Pause for …" (#295): the app it paused for (a helper's app) is added to the ignore list and it listens
@@ -75,12 +75,14 @@ extension AssistantController {
     /// (Chrome's `….helper` records for Meet in Chrome), else "Another app" (WebKit's media process, a daemon).
     private static func recorderName(bundleID: String) -> String {
         if bundleID == AssistantMicrophoneShare.cmdsBundleID { return "cmds" }
+        if AssistantMicrophoneShare.isExecutablePath(bundleID) { return (bundleID as NSString).lastPathComponent }
         return runningAppName(bundleID: bundleID) ?? String(localized: "Another app", comment: "assistant: an app records")
     }
 
     /// The name of a running app with this bundle ID or of the app a helper with it belongs to; nil when none runs.
     private static func runningAppName(bundleID: String) -> String? {
-        for candidate in [bundleID, AssistantMicrophoneShare.appBundleID(ofHelper: bundleID)] where !candidate.isEmpty {
+        for candidate in [bundleID, AssistantMicrophoneShare.appBundleID(ofHelper: bundleID)]
+        where !candidate.isEmpty && !AssistantMicrophoneShare.isExecutablePath(candidate) {
             if let app = NSRunningApplication.runningApplications(withBundleIdentifier: candidate).first(where: { $0.activationPolicy == .regular }),
                let name = app.localizedName {
                 return name
@@ -92,6 +94,8 @@ extension AssistantController {
     /// The name of an ignored app for Settings and the menu bar (#295): running, else installed (Launch Services),
     /// else its bundle ID.
     static func ignoredAppName(bundleID: String) -> String {
+        // #305: a command-line tool by its file name.
+        if AssistantMicrophoneShare.isExecutablePath(bundleID) { return (bundleID as NSString).lastPathComponent }
         if let name = runningAppName(bundleID: bundleID) { return name }
         if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
             let name = FileManager.default.displayName(atPath: url.path)
