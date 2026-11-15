@@ -64,23 +64,35 @@ enum PairingStore {
 /// The fingerprint a Mac advertises is only a hint: every connection is still pinned to the saved one, so a wrong or
 /// forged hint can only fail to connect.
 enum MacContinuity {
-    /// `target` has no pairing under its id, but a saved Mac has the fingerprint it advertises.
-    static func canAdopt(_ target: MacTarget) -> Bool {
-        savedID(for: target) != nil
+    /// The saved pairings, read from the Keychain once (the Mac picker asks about every row).
+    struct Saved {
+        let fingerprints: [(id: String, fingerprint: SyncFingerprint)]
+
+        func fingerprint(of id: String) -> SyncFingerprint? {
+            fingerprints.first { $0.id == id }?.fingerprint
+        }
+
+        /// The saved Mac `target` is, when it has no pairing under its own id: one with the fingerprint it advertises.
+        func savedID(for target: MacTarget) -> String? {
+            guard target.kind != .mock, fingerprint(of: target.id) == nil,
+                  let hint = target.fingerprintHint.flatMap(SyncFingerprint.init(base64url:)) else { return nil }
+            return SyncMacContinuity.ids(sharing: hint, in: fingerprints, except: target.id).first
+        }
+
+        /// Paired under its id, or a saved Mac under a new name (connecting adopts it).
+        func isPaired(_ target: MacTarget) -> Bool {
+            fingerprint(of: target.id) != nil || savedID(for: target) != nil
+        }
     }
 
-    private static func savedID(for target: MacTarget) -> String? {
-        guard target.kind != .mock, !PairingStore.isPaired(target.id),
-              let hint = target.fingerprintHint.flatMap(SyncFingerprint.init(base64url:)) else { return nil }
-        return SyncMacContinuity.ids(sharing: hint, in: PairingStore.fingerprints(), except: target.id).first
-    }
+    static func saved() -> Saved { Saved(fingerprints: PairingStore.fingerprints()) }
 
     /// Before connecting to `target`: when it is a saved Mac under a new name, its pairing and remote access are
     /// filed under the new id as well. A saved Bonjour name is replaced (the service was renamed); an address stays,
     /// as it may still be used from elsewhere. True when `target` is paired afterwards.
     @discardableResult
     static func adopt(_ target: MacTarget) -> Bool {
-        guard let old = savedID(for: target), let pairing = PairingStore.pairing(for: old) else { return false }
+        guard let old = saved().savedID(for: target), let pairing = PairingStore.pairing(for: old) else { return false }
         PairingStore.save(pairing, for: target.id)
         guard PairingStore.isPaired(target.id) else { return false }
         carryRemoteAccess(from: old, to: target.id)
