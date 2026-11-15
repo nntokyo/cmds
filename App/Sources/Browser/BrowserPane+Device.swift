@@ -313,7 +313,7 @@ extension BrowserPane {
             "appearance": .string(webView.appearance?.name.rawValue ?? ""),
             "menu": .array(deviceMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),
             "responsive": responsiveView?.debugFrames ?? .null,
-            "download": downloadNoticeText.map { .string($0) } ?? .null,
+            "download": noticeText.map { .string($0) } ?? .null,
             "watch": watchJSON, "watchReloads": .number(Double(watchReloadCount)),
             "watchPaths": .array(watchCountedPaths.map { .string($0) }),
             "watchMenu": .array(watchMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),

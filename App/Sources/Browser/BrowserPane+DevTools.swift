@@ -36,7 +36,7 @@ extension BrowserPane {
     /// The page asked for a passkey (#336): browser panes cannot answer it until #162; the notice offers Safari.
     func pageAskedForPasskey() {
         guard let page = webView.url, let host = page.host(), !host.isEmpty else { return }
-        showDownload(.passkey(host: host, page: page))
+        showNotice(.passkey(host: host, page: page))
     }
 
     func receiveConsole(_ messages: [[String: Any]]) {

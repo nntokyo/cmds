@@ -44,8 +44,8 @@ final class BrowserPane: NSView {
     /// Opens a `target="_blank"` link in a new browser pane beside this one; false: none could be opened.
     var onOpenInNewPane: ((URL) -> Bool)?
     let pageDelegate = BrowserPageDelegate()
-    private var downloadBanner: BrowserDownloadBannerView?
-    private var downloadBannerHide: DispatchWorkItem?
+    private var noticeBanner: BrowserNoticeView?
+    private var noticeHide: DispatchWorkItem?
     // Reload on file changes (BrowserPane+Watch.swift, #252).
     /// The folder watched and whether remote pages reload too; nil: off.
     var watch: BrowserWatch?
@@ -67,9 +67,9 @@ final class BrowserPane: NSView {
     var watchCountedPaths: [String] = []
     #endif
     /// How long a finished download's notice stays.
-    static let downloadNoticeTime: TimeInterval = 10
-    /// Space between the download notice and the page area's edges.
-    static let downloadNoticeInset: CGFloat = 8
+    static let noticeTime: TimeInterval = 10
+    /// Space between the notice and the page area's edges.
+    static let noticeInset: CGFloat = 8
 
     // Load failures, sign-in and WebContent crashes (BrowserPane+LoadErrors.swift, #338).
     /// The page that did not load (or whose WebContent process ended) while its notice covers the page.
@@ -344,7 +344,7 @@ final class BrowserPane: NSView {
         responsiveView = nil
         pageDelegate.tearDown()  // answers open dialogs, closes pop-ups
         stopWatching()
-        downloadBannerHide?.cancel()
+        noticeHide?.cancel()
         observations.removeAll()
         breakpointRefresh?.cancel()
         NotificationCenter.default.removeObserver(self)
@@ -360,44 +360,45 @@ final class BrowserPane: NSView {
     }
 
     #if DEBUG
-    /// The text of the download notice shown (`debug.browser`).
-    var downloadNoticeText: String? { downloadBanner?.toolTip }
+    /// The text of the notice shown (`debug.browser`).
+    var noticeText: String? { noticeBanner?.toolTip }
     #endif
 
-    /// A download's notice at the bottom of the page area (nil: removes it; the top would cover the address bar).
+    /// The notice at the bottom of the page area: a download or a passkey request (nil: removes it; the top would cover
+    /// the address bar).
     /// `onCancel` stops a running download.
-    func showDownload(_ state: BrowserDownloadBannerView.State?, onCancel: (() -> Void)? = nil) {
-        downloadBannerHide?.cancel()
-        downloadBannerHide = nil
-        downloadBanner?.removeFromSuperview()
-        downloadBanner = nil
+    func showNotice(_ state: BrowserNoticeView.State?, onCancel: (() -> Void)? = nil) {
+        noticeHide?.cancel()
+        noticeHide = nil
+        noticeBanner?.removeFromSuperview()
+        noticeBanner = nil
         guard let state else { return }
-        let banner = BrowserDownloadBannerView(state: state)
-        banner.onDismiss = { [weak self, weak banner] in self?.removeDownloadNotice(banner) }
+        let banner = BrowserNoticeView(state: state)
+        banner.onDismiss = { [weak self, weak banner] in self?.removeNotice(banner) }
         banner.onCancel = { [weak self, weak banner] in
             onCancel?()
-            self?.removeDownloadNotice(banner)
+            self?.removeNotice(banner)
         }
-        downloadBanner = banner
+        noticeBanner = banner
         banner.translatesAutoresizingMaskIntoConstraints = false
         addSubview(banner)  // above the page and the responsive view
-        let inset = Self.downloadNoticeInset
+        let inset = Self.noticeInset
         NSLayoutConstraint.activate([
             banner.leadingAnchor.constraint(equalTo: viewportHost.leadingAnchor, constant: inset),
             banner.trailingAnchor.constraint(lessThanOrEqualTo: viewportHost.trailingAnchor, constant: -inset),
             banner.bottomAnchor.constraint(equalTo: viewportHost.bottomAnchor, constant: -inset),
         ])
         if case .finished = state {
-            let hide = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.showDownload(nil) } }
-            downloadBannerHide = hide
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.downloadNoticeTime, execute: hide)
+            let hide = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.showNotice(nil) } }
+            noticeHide = hide
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.noticeTime, execute: hide)
         }
     }
 
     /// Removes `banner` when it is still the notice shown (a newer download's notice stays).
-    private func removeDownloadNotice(_ banner: BrowserDownloadBannerView?) {
-        guard let banner, downloadBanner === banner else { return }
-        showDownload(nil)
+    private func removeNotice(_ banner: BrowserNoticeView?) {
+        guard let banner, noticeBanner === banner else { return }
+        showNotice(nil)
     }
 
     /// Ends the WebContent process of a web view whose page stopped responding. Freeing the web view is not enough:
