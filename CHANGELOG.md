@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.27.1] - 2026-11-16
+
+Mac only; the iPhone/iPad app is unchanged.
+
 ### Fixed
 
 - Agents: the MCP server is also registered with the Antigravity CLI (`agy mcp add`), for a Claude account signed in
