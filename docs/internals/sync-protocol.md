@@ -40,6 +40,9 @@ the network; only the bytes travel over an L2CAP channel. Code: `CmdsCore/Sync/S
   name `cmds`). Its characteristic `SyncBluetooth.infoCharacteristicUUID` is readable without pairing and
   holds `SyncBluetooth.Info`: `version(1)=1 | PSM (UInt16 LE) | first 8 bytes of the certificate
   fingerprint | Mac name (UTF-8, ≤ 64 bytes)`. Like the Bonjour TXT record these are hints only.
+  When publishing the channel, adding the service or advertising fails (macOS answered "No resources available for
+  L2CAP" once), it tries again after 5 s, 15 s, 1 min, then every 5 min (`SyncBluetoothPeripheral.retryDelays`, #343);
+  `cmds sync` shows the failure and when the next try is.
 - **Relay (Mac).** For each opened channel (at most 8) the Mac binds a TCP socket on 127.0.0.1, registers
   its local port as peer `bluetooth:<first 8 hex digits of the CBCentral identifier>`
   (`SyncLoopbackPeers`), connects to its own sync listener and copies bytes both ways
