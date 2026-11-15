@@ -123,3 +123,30 @@ final class AgentSessionTests: XCTestCase {
         }
     }
 }
+
+final class AgentResumeFreshStartTests: XCTestCase {
+    /// A Claude Code session never prompted has no transcript: it starts anew instead of `--resume` failing.
+    func testSessionWithoutTranscriptStartsAnew() throws {
+        let home = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-resume-\(UUID().uuidString)").path
+        defer { try? FileManager.default.removeItem(atPath: home) }
+        let id = "02df703c-4d9a-4918-a04b-b06ad830c8db"
+        let dir = home + "/.claude-app"
+        try FileManager.default.createDirectory(atPath: dir + "/projects/-w", withIntermediateDirectories: true)
+        let session = AgentSession(agent: .claude, sessionID: id, cwd: "/w", configDir: dir)
+
+        XCTAssertFalse(AgentResume.hasConversation(session, home: home))
+        XCTAssertEqual(AgentResume.typedCommand(for: session, home: home), "cd '/w' && env CLAUDE_CONFIG_DIR='\(dir)' claude")
+
+        FileManager.default.createFile(atPath: dir + "/projects/-w/\(id).jsonl", contents: Data("{}\n".utf8))
+        XCTAssertTrue(AgentResume.hasConversation(session, home: home))
+        XCTAssertEqual(AgentResume.typedCommand(for: session, home: home), AgentResume.command(for: session))
+
+        // Plain claude looks in ~/.claude; Codex and SSH sessions are not checked.
+        let plain = AgentSession(agent: .claude, sessionID: id, cwd: "/w")
+        XCTAssertEqual(AgentResume.typedCommand(for: plain, home: home), "cd '/w' && claude")
+        let codex = AgentSession(agent: .codex, sessionID: id, cwd: "/w")
+        XCTAssertEqual(AgentResume.typedCommand(for: codex, home: home), AgentResume.command(for: codex))
+        let remote = AgentSession(agent: .claude, sessionID: id, cwd: "/w", host: "server")
+        XCTAssertEqual(AgentResume.typedCommand(for: remote, home: home), AgentResume.command(for: remote))
+    }
+}

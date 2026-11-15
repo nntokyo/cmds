@@ -388,7 +388,10 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
   - *Never*: forgets them.
 - **What is typed**, into the pane's own shell and only once: `cd '<dir>' && claude --resume <id>` or
   `cd '<dir>' && codex resume <id>` (Return included). Only ids made of letters, digits, `-`, `_`, `.` are accepted;
-  a directory that cannot be quoted the same way in sh/zsh/fish/tcsh is left out of the command.
+  a directory that cannot be quoted the same way in sh/zsh/fish/tcsh is left out of the command. A local Claude Code
+  session that was started but never given a prompt has no transcript yet (Claude Code writes it at the first
+  prompt), so `--resume` would only say "No conversation found": cmds types `cd '<dir>' && claude` (with the
+  account's `CLAUDE_CONFIG_DIR`) instead, and `cmds sessions` shows that command.
 - **When**: the shell must be the pane's foreground process, its screen settled, and the cursor right after a prompt
   ending in `$ # % > ❯ ➜ λ »` with nothing typed (a half-typed command line waits; a prompt ending in another
   character never resumes by itself: Cancel and type the command shown by `cmds sessions`). A pane that runs Claude
@@ -541,7 +544,8 @@ folder: **Share Sessions…** (or `cmds accounts share`, then `--yes`) shows wha
 - leaves alone a `projects` that already links elsewhere, and accounts whose folder does not exist yet.
 
 Before switching, cmds checks that the session's file is reachable from the next account (it lists folder names; it
-does not read transcripts). The first time an account opens a project, Claude Code may ask whether you trust the
+does not read transcripts). A session never given a prompt has no file yet: it switches too, and Claude Code starts
+anew under the next account in the same folder. The first time an account opens a project, Claude Code may ask whether you trust the
 folder.
 
 ### Claude in Chrome with several accounts

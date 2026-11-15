@@ -57,7 +57,7 @@ extension AppController {
         return sessions.map { session in
             let pane = paneHolding(session)
             return AgentHistoryEntry(session: session, pane: pane?.id, state: pane.map { historyState(of: $0) },
-                                     command: AgentResume.command(for: session))
+                                     command: AgentResume.typedCommand(for: session))
         }
     }
 

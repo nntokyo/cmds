@@ -139,7 +139,7 @@ extension AppController {
                     continue
                 }
                 entries.append(AgentSessionEntry(workspace: workspace.id, pane: pane.id, state: state, session: session,
-                                                 command: AgentResume.command(for: session)))
+                                                 command: AgentResume.typedCommand(for: session)))
             }
         }
         return AgentSessionList(mode: AgentResumeSettings.mode, sessions: entries)
@@ -315,7 +315,8 @@ extension AppController {
 
     /// Types the resume command once. A local pane is checked for agent processes on its tty first.
     private func performResume(_ pane: Pane) {
-        guard let offer = pane.resumeOffer, let command = AgentResume.command(for: offer), let terminal = pane.terminal else {
+        // A Claude Code session never used (no transcript) starts anew instead of `--resume` failing.
+        guard let offer = pane.resumeOffer, let command = AgentResume.typedCommand(for: offer), let terminal = pane.terminal else {
             clearResumeOffer(pane)
             return
         }
