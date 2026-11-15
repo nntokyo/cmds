@@ -7,7 +7,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Browser panes: find in page. ⌘F opens a find bar over the page (⌘G / ⇧⌘G next / previous, Match Case), and
+  `cmds browser find TEXT` does the same from a terminal (#338).
+- Browser panes: HTTP Basic and Digest sign-in asks for a user name and password in a sheet (kept until cmds quits,
+  never saved) (#338).
+
 ### Fixed
+
+- Browser panes: a page that does not load (connection refused, server not found, too many redirects, an untrusted
+  certificate) shows a notice with the address, the reason and Reload instead of leaving the previous page without
+  a word; the address bar keeps the failed address and `cmds browser url` reports it with the reason. Untrusted
+  certificates are refused, with Continue Anyway for that server until cmds quits (#338).
+- Browser panes: when a page's web content process ends, the page reloads (once a minute, else a notice with Reload)
+  instead of leaving an empty pane, address bar and `cmds browser url` (#338).
+- Browser panes: the address bar opens `/path` and `~/path` as files, keeps `mailto:` and `tel:` (handed to Mail /
+  FaceTime), searches for `1.5` and `README.md` instead of opening them as sites, and opens `localhostfoo.com` over
+  https. `cmds browser navigate` and `browser open` fail for input with nothing to load (`''`,
+  `http://exa mple.com`) instead of exiting 0 (#338).
 
 - iPhone/iPad: a paired Mac no longer asks to pair again when its network name or address changes (macOS renames the
   service to "Name (2)" after a name conflict, e.g. around an update; the Mac is renamed; it was paired by address

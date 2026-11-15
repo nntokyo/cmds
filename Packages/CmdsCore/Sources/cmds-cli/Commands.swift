@@ -505,6 +505,7 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             print(result["url"]?.stringValue ?? "")
             if let title = nonEmpty(result["title"]?.stringValue) { print(title) }
+            if let error = result["error"]?.stringValue { printError("the page did not load: \(error)") }
         },
         Command(name: "browser eval", usage: "browser eval [--pane P] <script|->",
                 summary: "Evaluate JavaScript in a browser pane and print the JSON result.",
@@ -522,6 +523,7 @@ extension CLI {
         browserDeviceCommand,
         browserResponsiveCommand,
         browserWatchCommand,
+        browserFindCommand,
         consoleCommand, treeCommand, clickCommand, fillCommand, waitForCommand,
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",
