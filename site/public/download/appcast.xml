@@ -7,28 +7,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.25.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.25.1</link>
-      <sparkle:version>38</sparkle:version>
-      <sparkle:shortVersionString>0.25.1</sparkle:shortVersionString>
+      <title>cmds 0.26.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.26.0</link>
+      <sparkle:version>39</sparkle:version>
+      <sparkle:shortVersionString>0.26.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 15 Nov 2026 10:19:48 GMT</pubDate>
+      <pubDate>Sun, 15 Nov 2026 16:17:15 GMT</pubDate>
       <description><![CDATA[
+<h3>追加</h3>
+<ul>
+<li>ブラウザペイン：ページ内検索。⌘F でページの上に検索バーが開きます（⌘G / ⇧⌘G で次 / 前、大文字と小文字を区別）。ターミナルからは <code>cmds browser find TEXT</code>。</li>
+<li>ブラウザペイン：HTTP の Basic / Digest 認証でユーザー名とパスワードをシートで尋ねます（cmds を終了するまで保持し、保存はしません）。</li>
+<li>ブラウザペイン：ページがパスキーやセキュリティキーを求めたとき、ブラウザペインではまだ使えないことを知らせ、Safari で開けるようにしました。</li>
+</ul>
 <h3>修正</h3>
 <ul>
-<li>Claude アカウント：切り替えて再開したセッションが、会話の履歴に残っている前のアカウントの上限メッセージ（「You've hit your 5-hour limit · resets …」）を表示し直すと、cmds が切り替え先のアカウントの上限と見なしていました。そのため全アカウントが上限扱いになり、自動切り替えが止まっていました。新しいアカウントでプロンプトを処理し始めるまでに表示された上限メッセージは無視するようにしました。</li>
+<li>Claude アカウント：設定フォルダが作り直されて Claude in Chrome のホストスクリプトが消え、拡張機能が接続できなくなったとき、cmds が知らせてスクリプトを元に戻せるようにしました（何も上書きしません）。<code>cmds accounts chrome</code> でも修復できます。</li>
+<li>ブラウザペイン：読み込めなかったページ（接続拒否、サーバが見つからない、リダイレクト過多、信頼できない証明書）は、アドレスと理由、再読み込みボタンを表示します。Web コンテンツのプロセスが終了したページは再読み込みします。</li>
+<li>ブラウザペイン：アドレスバーの解釈を改善しました（<code>/path</code> や <code>~/path</code> はファイル、<code>mailto:</code> / <code>tel:</code> はメール / FaceTime、<code>README.md</code> などは検索）。</li>
+<li>ブラウザペイン：<code>cmds browser eval</code> はタイムアウトで諦め、止まったページは復旧します。<code>wait-for</code> はページ移動をまたいで待ちます。閉じたペインのメモリを解放します。</li>
+<li>Mac：Bluetooth 同期が一度拒否されると止まったままになる問題を修正し、間隔をあけて再試行するようにしました。</li>
+<li>iPhone/iPad：Mac の名前やアドレスが変わってもペアリングし直さずに済むようにし、カメラを使わないペアリングが止まる問題を修正しました（App Store の 0.26.0 が必要）。</li>
 </ul>
-<p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
+<h3>Added</h3>
+<ul>
+<li>Browser panes: find in page (⌘F; ⌘G / ⇧⌘G; Match Case), also <code>cmds browser find TEXT</code>.</li>
+<li>Browser panes: HTTP Basic and Digest sign-in asks for a user name and password in a sheet (kept until cmds quits, never saved).</li>
+<li>Browser panes: a page asking for a passkey or security key gets a notice with Open in Safari.</li>
+</ul>
 <h3>Fixed</h3>
 <ul>
-<li>Claude accounts: a resumed session shows its transcript again, including the previous account's limit messages; cmds took them for the new account's limit, so every account ended up limited and automatic switching stopped. Limit messages shown before Claude Code works on a prompt under the new account are now ignored.</li>
+<li>Claude accounts: when Claude in Chrome cannot connect because its host script went with a config folder that was made again, cmds says so and offers to put the script back (nothing is overwritten); <code>cmds accounts chrome</code> repairs it too.</li>
+<li>Browser panes: pages that do not load show the address, the reason and Reload; a page whose web content process ends reloads.</li>
+<li>Browser panes: the address bar opens <code>/path</code> and <code>~/path</code> as files, hands <code>mailto:</code> / <code>tel:</code> to Mail / FaceTime and searches for things like <code>README.md</code>.</li>
+<li>Browser panes: <code>cmds browser eval</code> times out and a stuck page recovers; <code>wait-for</code> waits across navigations; closed panes are freed.</li>
+<li>Mac: Bluetooth sync tries again after macOS refuses it once.</li>
+<li>iPhone/iPad: a paired Mac no longer asks to pair again when its name or address changes, and pairing without the camera no longer hangs (needs the App Store build 0.26.0).</li>
 </ul>
-<p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.25.1/cmds-0.25.1.dmg" length="17174340" type="application/octet-stream" sparkle:edSignature="uHDego07OkifXVq2hOAuGKbk3Z1it7vnZaPjZpRJzegTZheU2o/pNODZpNWhaGPKsQIRt4ah6FBJvU4MslHTDQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.26.0/cmds-0.26.0.dmg" length="17242275" type="application/octet-stream" sparkle:edSignature="96Cq4Dj35QNnDviCYNWGoVw8VTSWNyRSGC6P7kVOB6x7IcUOA6hjnGATB82x0xUUrpAn+oE3z4GZUFVjUw8uDQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: XoYH1AiE9IG6lI8dYg20gZtICQmtwo/bvj9XSwrdhm3KlvuA8v2nUrxGm5Vh/oPhsz8U1jz17gOkoT06P1PTCA==
-length: 2342
+edSignature: 1fTXdlH40RfV32FbhrdKZyEngIjGqlylgQEkWkB7vFwy2o8BHLn1r2JY3PylZ+nht9Elcy7Uzci8KnnyQwLbAQ==
+length: 5000
 -->
