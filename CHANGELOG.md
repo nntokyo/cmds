@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Agents: cmds registers its MCP server (`cmds mcp`) by itself with Claude Code (plain `claude` and every Claude
+  account, each of which keeps its own MCP servers) and Codex, at launch and when an account is added, so agents in
+  cmds terminals have browser panes, previews and terminal panes as tools without `claude mcp add`. Once per config:
+  one you removed is not added again; Settings › Agents turns it off (#351).
+
 ## [0.26.0] - 2026-11-15
 
 Mac and iPhone/iPad (the iPhone/iPad entries need the App Store build 0.26.0).

@@ -318,6 +318,11 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   `projects` folder renamed `projects.before-cmds-<yyyyMMdd-HHmm>` first; a rename whose target exists fails, and a
   link that cannot be made after the rename moves the folder back. `transcriptReachable` checks
   `<dir>/projects/*/<id>.jsonl` by name before a switch.
+- **MCP registration**: `AgentMCPRegistration` (CmdsCore, unit-tested) reads Claude Code's `.claude.json` (plain
+  and per account) and Codex's `config.toml` and says registered / stale (cmds' own full path gone) / missing;
+  `MCPAutoRegistration` (app) registers at launch and on `accountsDidChange`, through `claude mcp add --scope user`
+  with `CLAUDE_CONFIG_DIR`, or by appending a table to Codex's file (after a copy). Targets done are kept in
+  `MCPRegisteredTargets` so a removed registration is not added again; Settings › Agents (`RegisterMCPServer`).
 - **Claude in Chrome**: `ClaudeChromeHost.check/repair` (unit-tested): each Chromium browser's
   `NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json` names one account's
   `<configDir>/chrome/chrome-native-host`; a missing (or not executable) one is reported in `account.list`

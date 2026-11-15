@@ -12,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarItem: MenuBarStatusItem?
     private var widgetPublisher: WidgetPublisher?
 
+    private var mcpObserver: NSObjectProtocol?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Debug builds and isolated instances are never reopened by macOS at login ("Reopen windows when logging
         // back in", #247): it would start them without the environment they were started with.
@@ -73,8 +75,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         widgetPublisher?.start()
         TransferCenter.removeLeftoverParts()
         // Claude in Chrome's host script gone with a config folder made again (ClaudeChromeHost): offered once.
-        // Not in an isolated test instance (CMDS_SUPPORT_DIR): a modal alert would stop it.
+        // Not in an isolated test instance (CMDS_SUPPORT_DIR): a modal alert would stop it, and its agents' configs are
+        // the user's.
         if CmdsEnv.supportDirectoryOverride() == nil {
+            // cmds' MCP server for Claude Code (every account) and Codex, once per config (MCPAutoRegistration).
+            MCPAutoRegistration.run(accounts: controller.claudeAccounts.accounts)
+            mcpObserver = NotificationCenter.default.addObserver(forName: AppController.accountsDidChange, object: nil, queue: .main) { _ in
+                MainActor.assumeIsolated { MCPAutoRegistration.run(accounts: AppController.shared.claudeAccounts.accounts) }
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [controller] in controller.offerChromeHostRepair() }
         }
         // An isolated test instance (CMDS_SUPPORT_DIR) must not take keyboard focus from the app in use.
