@@ -52,14 +52,14 @@ public enum ClaudeLimitDetector {
         }
     }
 
-    /// The newest limit message on `screen` (rows joined by "\n"), or nil.
-    public static func detect(screen: String, now: Date = Date(), timeZone: TimeZone = .current) -> ClaudeLimitHit? {
-        let lines = screen.components(separatedBy: "\n").map(clean).filter { !$0.isEmpty }
-        let recent = lines.suffix(scannedLines)
+    /// The newest limit message on `screen` (rows joined by "\n") whose line is not in `ignoring`, or nil.
+    public static func detect(screen: String, now: Date = Date(), timeZone: TimeZone = .current,
+                              ignoring: Set<String> = []) -> ClaudeLimitHit? {
+        let recent = recentLines(screen)
         for index in recent.indices.reversed() {
             let line = recent[index]
             if isResetNotice(line) { return nil }
-            guard let kind = kind(of: line) else { continue }
+            guard !ignoring.contains(line), let kind = kind(of: line) else { continue }
             // A long message may wrap: the reset time can be on the next row.
             // A time zone cut by the wrap (`(America/Ne` / `w_York).`) continues on the next row without a space.
             var reset = resetDate(in: line, now: now, timeZone: timeZone)
@@ -73,6 +73,16 @@ public enum ClaudeLimitDetector {
             return ClaudeLimitHit(kind: kind, resetsAt: reset, line: line)
         }
         return nil
+    }
+
+    /// Every limit message line on `screen` (as `ClaudeLimitHit.line`), e.g. the ones a resumed session shows again.
+    public static func hitLines(screen: String) -> Set<String> {
+        Set(recentLines(screen).filter { kind(of: $0) != nil })
+    }
+
+    /// The last `scannedLines` non-empty lines, cleaned.
+    private static func recentLines(_ screen: String) -> ArraySlice<String> {
+        screen.components(separatedBy: "\n").map(clean).filter { !$0.isEmpty }.suffix(scannedLines)
     }
 
     /// A status-line window (5-hour, 7-day, spend) at 100 %: the account is limited until the latest such reset.

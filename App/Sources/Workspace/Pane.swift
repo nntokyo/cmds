@@ -66,11 +66,13 @@ final class Pane {
     /// Limit lines already handled in this pane, per account (`<source>|<account>|…`), until the limit they recorded
     /// ends, at least 5 h: Claude Code keeps showing the line while it waits.
     var seenLimitLines: [String: Date] = [:]
-    /// After a switch: the previous account's limit lines, which the resumed session may show again (not a limit of the
-    /// new account). Dropped once the screen's newest limit line is another one, or none after `carriedLimitLinesSince`
-    /// plus a moment for the resumed session to draw.
+    /// After a switch: limit lines that are not the new account's: the previous account's, and every one the resumed
+    /// session shows again from its transcript (also older limits of the conversation). Ignored while on screen.
     var carriedLimitLines: Set<String> = []
-    var carriedLimitLinesSince: Date?
+    /// When a switch finished, until Claude Code works on a prompt under the new account (a hook, the spinner or an API
+    /// call after it): every limit line on screen is carried (the resumed session replays its transcript, which can
+    /// hold the previous account's limit messages). Nil otherwise.
+    var holdsLimitLinesSince: Date?
     /// An account switch offered or in progress.
     var accountSwitch: AccountSwitch?
 

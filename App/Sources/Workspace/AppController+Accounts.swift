@@ -17,8 +17,6 @@ extension AppController {
     static let accountsDidChange = Notification.Name("cmdsClaudeAccountsDidChange")
     /// The same limit line of an account in a pane is handled once until its limit ends, and at least this long.
     static let limitLineMemory = ClaudeLimitDetector.sessionWindow
-    /// How long a resumed session may take to show the previous account's limit lines again (`Pane.carriedLimitLines`).
-    static let carriedLimitLinesGrace: TimeInterval = 30
     /// JSON-RPC "internal error": sharing failed on the Mac, not because of the request.
     private static let internalErrorCode = -32603
 
@@ -264,30 +262,41 @@ extension AppController {
         for pane in workspaces.flatMap(\.orderedPanes) where pane.kind == .terminal && pane.ssh == nil && !pane.isClosing {
             guard pane.agentUsage?.agent == .claude || (pane.claudeAccount != nil && pane.agentActivity != .none),
                   let terminal = pane.terminal else { continue }
-            let hit = ClaudeLimitDetector.detect(screen: terminal.visibleText(), now: now)
-            if isCarriedLimitLine(pane, hit, now: now) { continue }
-            guard let hit else { continue }
+            let screen = terminal.visibleText()
+            if carriesLimitLines(pane, screen: screen) { continue }
+            guard let hit = ClaudeLimitDetector.detect(screen: screen, now: now, ignoring: pane.carriedLimitLines) else { continue }
             handleLimitHit(pane, hit, key: limitKey(.screen, account: currentAccount(of: pane)) + hit.line, now: now)
         }
     }
 
-    /// The newest limit line is one the previous account hit (the resumed session shows it again): not a limit of the
-    /// account the pane has now. Forgets those lines once another one is the newest, or there is none after a moment.
-    private func isCarriedLimitLine(_ pane: Pane, _ hit: ClaudeLimitHit?, now: Date) -> Bool {
-        guard !pane.carriedLimitLines.isEmpty else { return false }
-        if let hit, pane.carriedLimitLines.contains(hit.line) { return true }
-        if hit != nil || now.timeIntervalSince(pane.carriedLimitLinesSince ?? now) > Self.carriedLimitLinesGrace {
-            pane.carriedLimitLines = []
-            pane.carriedLimitLinesSince = nil
+    /// After a switch: until Claude Code works on a prompt under the new account, every limit line on the screen is the
+    /// resumed transcript's (true: nothing to detect yet). Later, carried lines are ignored while they stay on screen.
+    private func carriesLimitLines(_ pane: Pane, screen: String) -> Bool {
+        if let since = pane.holdsLimitLinesSince {
+            // Working on a prompt: a limit line from now on can be the new account's (it may come back at once).
+            let signals = pane.agentSignals
+            let worked = [signals.workingHookAt, signals.titleAnimatedAt, signals.reportChangedAt].contains { ($0 ?? .distantPast) > since }
+            if worked {
+                pane.holdsLimitLinesSince = nil
+            } else {
+                pane.carriedLimitLines.formUnion(ClaudeLimitDetector.hitLines(screen: screen))
+                return true
+            }
+        }
+        if !pane.carriedLimitLines.isEmpty {
+            pane.carriedLimitLines.formIntersection(ClaudeLimitDetector.hitLines(screen: screen))
         }
         return false
     }
 
-    /// A switch to another account is done: the limit lines the previous one hit on this pane's screen are carried.
+    /// A switch to another account is done: the limit lines on the screen and the ones the previous account hit are
+    /// carried, and so is every one shown until Claude Code works under the new account (`carriesLimitLines`).
     func carryLimitLines(_ pane: Pane, from account: String?, now: Date) {
         let prefix = limitKey(.screen, account: account)
-        pane.carriedLimitLines = Set(pane.seenLimitLines.keys.filter { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) })
-        pane.carriedLimitLinesSince = pane.carriedLimitLines.isEmpty ? nil : now
+        var lines = Set(pane.seenLimitLines.keys.filter { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) })
+        if let terminal = pane.terminal { lines.formUnion(ClaudeLimitDetector.hitLines(screen: terminal.visibleText())) }
+        pane.carriedLimitLines = lines
+        pane.holdsLimitLinesSince = now
     }
 
     /// From `agent.report`: a status-line window at 100 %.
