@@ -28,8 +28,9 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 - Responses carry the request `id` and either `result` or `error {code, message}`. Methods without a result return
   `{}`.
 - Error codes: `-32700` / `-32600` malformed line (answered with `id: 0`), `-32601` unknown method, `-32602` invalid
-  params, `403` refused (restricted sockets), `404` no such workspace/pane, `500` anything else (e.g. a JavaScript
-  exception in `browser.eval`).
+  params, `403` refused (restricted sockets), `404` no such workspace/pane, `408` a page did not answer in time
+  (`browser.eval`, `browser.wait_for`), `500` anything else (e.g. a JavaScript exception in `browser.eval`).
+  Messages are English whatever the app's language (WebKit and system errors included).
 - Requests are handled on the main actor in arrival order; `browser.eval` / `browser.snapshot` reply when done
   without blocking other requests.
 
@@ -109,7 +110,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `sidebar.set_status` | `workspace?`, `text` | – (sets the sidebar text without ringing; `""` clears) |
 | `browser.open` | `pane?` (terminal to split from), `url`, `focus?` (default true) | `PaneInfo` |
 | `browser.navigate` | `pane`, `url` | – |
-| `browser.eval` | `pane`, `script` | `{"value": ...}` (JSON-serializable result) |
+| `browser.eval` | `pane`, `script`, `timeout?` (seconds, default 30, more than 0 and at most 300) | `{"value": ...}` (JSON-serializable result); error 408 when the script has not finished by the timeout. A page that then does not answer at all (a script that never yields, `while (true) {}`) is loaded again in a new web view (back/forward history starts over), and the message says so: `the script did not finish in 30 s; the page stopped responding and was reloaded`. Click, fill and the page tree get the same 30 s deadline |
 | `browser.get_url` | `pane` | `{"url", "title"}` |
 | `browser.snapshot` | `pane`, `fullPage?` (the whole page, up to 16384 CSS px tall; taller is an invalid-params error), `selector?` (the first matching element; no match: 404), and one of `device?` (a preset or `WIDTHxHEIGHT`), `devices?` (up to 4, a list or `"a,b"`) or `width?` (+ `height?`, default 900): capture at that size in an off-screen web view that loads the pane's URL again. Other params are refused (invalid params, "unsupported") | `{"png_base64", "images"}`: `png_base64` is the first image (what clients before #169 read), `images` = `[{device, width, height, png_base64}]` (`device` null for the pane itself; sizes in CSS px; images are 2× CSS px, 1× above 4096 px tall). With a device size set on the pane the visible page comes at that size, not scaled to the pane. An app before #169 ignores the new params and returns only `png_base64`: clients check for `images` |
 | `browser.set_viewport` | `pane`, `device?` (a preset id, `WIDTHxHEIGHT` or `off`) or `width?` + `height?` (CSS pixels, 100–4096), `rotate?` (swap width and height), `userAgent?` (`""` = WebKit's own; without it a new size brings the preset's user agent, custom sizes and `off` WebKit's own), `colorScheme?` (`system` / `light` / `dark`) | `BrowserEmulation`; only what is given changes, no params just reads (`cmds browser device`; [guide](../guide/workspaces-and-panes.md#device-sizes-and-color-scheme)) |
@@ -119,7 +120,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `browser.snapshot_tree` | `pane`, `selector?` (start there), `maxNodes?` (≤ 2000) | `{"nodes": [{ref, role, name?, value?, level?, checked?, disabled?, url?, children?}], "text", "title", "url", "truncated", "count"}`; `text` is the compact form (`- button "Go" [ref=e3]`). Refs stay valid until the page navigates |
 | `browser.click` | `pane`, `ref` or `selector` | `{"ref", "tag"}`; 404 when nothing matches or the ref is gone, -32602 for a disabled element or an invalid selector |
 | `browser.fill` | `pane`, `ref` or `selector`, `value` | `{"ref", "value"}` (checkboxes: `checked`); sends `input` and `change` |
-| `browser.wait_for` | `pane`, `selector` or `text`, `timeout?` (seconds, default 5, ≤ 60) | `{"found": true, "ref", "elapsed"}` (ms); error 408 after the timeout |
+| `browser.wait_for` | `pane`, `selector` or `text`, `timeout?` (seconds, default 5, 0–60; 0 checks once) | `{"found": true, "ref", "elapsed"}` (ms); error 408 after the timeout. When the page navigates meanwhile, it keeps waiting on the new page |
 | `events.subscribe` | – | `{"subscribed": true}`, then events (below) on the same connection |
 | `debug.preview_snapshot` | `pane` (a preview pane) | `{"png_base64"}`; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
 | `debug.show_settings` | `tab?` (`general`, `sidebar`, `agents`, `menuBar`, `assistant`, `updates`) | `{"window"}` (window number); opens cmds › Settings… (on that tab); DEBUG builds only, for tests |

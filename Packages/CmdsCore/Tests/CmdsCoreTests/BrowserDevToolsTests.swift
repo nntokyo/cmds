@@ -102,6 +102,8 @@ final class BrowserDevToolsTests: XCTestCase {
                        .fill(.ref("e4"), value: ""))
         XCTAssertEqual(try BrowserPageAction(method: "browser.wait_for", params: ["text": "Saved"]),
                        .waitFor(selector: nil, text: "Saved", timeout: 5))
+        XCTAssertEqual(try BrowserPageAction(method: "browser.wait_for", params: ["text": "Saved", "timeout": 0]),
+                       .waitFor(selector: nil, text: "Saved", timeout: 0))  // checks once (#338)
         let actions: [BrowserPageAction] = [.tree(selector: "form", maxNodes: 10), .click(.selector("a")),
                                             .fill(.ref("e1"), value: "x"), .waitFor(selector: "#ok", text: nil, timeout: 2.5)]
         for action in actions {
@@ -109,7 +111,7 @@ final class BrowserDevToolsTests: XCTestCase {
         }
         let bad: [(String, JSONValue)] = [
             ("browser.fill", ["ref": "e1"]), ("browser.wait_for", [:]), ("browser.wait_for", ["selector": "a", "text": "b"]),
-            ("browser.wait_for", ["text": "a", "timeout": 61]), ("browser.wait_for", ["text": "a", "timeout": 0]),
+            ("browser.wait_for", ["text": "a", "timeout": 61]), ("browser.wait_for", ["text": "a", "timeout": -1]),
             ("browser.click", [:]), ("browser.snapshot_tree", ["maxNodes": 0]), ("browser.nope", [:]),
         ]
         for (method, params) in bad {

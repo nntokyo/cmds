@@ -42,6 +42,9 @@ final class PaneArgumentCLITests: XCTestCase {
         XCTAssertEqual(exitCode(["browser", "snapshot", "--selector", ""]), CLIError.Code.usage.rawValue)
         XCTAssertEqual(exitCode(["browser", "snapshot", "--full", "-o", "/tmp/x.png", "--pane", "p2"]),
                        CLIError.Code.unavailable.rawValue)
+        // `-o -` is stdout (#338): one image only, never a file named "-".
+        XCTAssertEqual(exitCode(["browser", "snapshot", "--device", "iphone,ipad", "-o", "-"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "snapshot", "-o", "-", "--pane", "p2"]), CLIError.Code.unavailable.rawValue)
 
         let args = try Arguments(["--full", "--selector", "main", "--device", "iphone,800x600"],
                                  options: ["pane", "output", "selector", "device"], flags: ["full"])
@@ -70,7 +73,17 @@ final class PaneArgumentCLITests: XCTestCase {
         XCTAssertEqual(exitCode(["browser", "wait-for", "--text", "a", "--selector", "b"]), CLIError.Code.usage.rawValue)
         XCTAssertEqual(exitCode(["browser", "wait-for", "--text", "a", "--timeout", "soon"]), CLIError.Code.usage.rawValue)
         XCTAssertEqual(exitCode(["browser", "wait-for", "--text", "a", "--timeout", "999"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "wait-for", "--pane", "p2", "--text", "a", "--timeout", "0"]),
+                       CLIError.Code.unavailable.rawValue)  // 0 checks once (#338)
         XCTAssertEqual(exitCode(["browser", "tree", "--pane", "p2"]), CLIError.Code.unavailable.rawValue)
+    }
+
+    /// `cmds browser eval --timeout` (#338): checked before anything is sent.
+    func testBrowserEvalTimeout() {
+        XCTAssertEqual(exitCode(["browser", "eval", "--timeout", "soon", "1"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "eval", "--timeout", "0", "1"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "eval", "--timeout", "301", "1"]), CLIError.Code.usage.rawValue)
+        XCTAssertEqual(exitCode(["browser", "eval", "--pane", "p2", "--timeout", "2.5", "1"]), CLIError.Code.unavailable.rawValue)
     }
 
     /// `cmds browser responsive` (#170): bad device lists and conflicting options are usage errors.

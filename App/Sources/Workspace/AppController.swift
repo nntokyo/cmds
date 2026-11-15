@@ -509,8 +509,9 @@ final class AppController {
         return (browser.currentURL?.absoluteString, browser.pageTitle)
     }
 
-    func browserEvaluate(paneID: String, script: String) async throws -> JSONValue {
-        try await browser(paneID: paneID).evaluateJavaScript(script)
+    func browserEvaluate(paneID: String, script: String, timeout: TimeInterval = BrowserEval.defaultTimeout)
+        async throws -> JSONValue {
+        try await browser(paneID: paneID).evaluateJavaScript(script, timeout: timeout)
     }
 
     func browserSnapshot(paneID: String, request: BrowserSnapshotRequest = BrowserSnapshotRequest()) async throws

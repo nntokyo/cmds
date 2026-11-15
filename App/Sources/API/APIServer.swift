@@ -68,8 +68,12 @@ final class APIServer {
             case "browser.eval":
                 let pane = try browserPaneID(params)
                 let script = try params.required("script")
+                let timeout = try BrowserEval.timeout(params: params.value)
                 Task { @MainActor in
-                    await respond(id, to: connection) { ["value": try await self.controller.browserEvaluate(paneID: pane, script: script)] }
+                    await respond(id, to: connection) {
+                        let value = try await self.controller.browserEvaluate(paneID: pane, script: script, timeout: timeout)
+                        return ["value": value]
+                    }
                 }
             case "files.compare", "files.sync":
                 // Compares (connecting to servers) off the main thread; FolderCompare.swift.
@@ -678,11 +682,22 @@ final class APIServer {
     private static func rpcError(_ error: Error) -> RPCError {
         if let error = error as? RPCError { return error }
         if let error = error as? WorktreeError { return RPCError(code: internalErrorCode, message: error.description) }
+        if error is PageScriptTimeout { return RPCError(code: 408, message: "the page did not answer in time") }
         let nsError = error as NSError
         if let message = nsError.userInfo[BrowserPane.javaScriptExceptionMessageKey] as? String {
             return RPCError(code: internalErrorCode, message: "JavaScript exception: \(message)")
         }
-        return RPCError(code: internalErrorCode, message: nsError.localizedDescription)
+        return RPCError(code: internalErrorCode, message: nsError.apiMessage)
+    }
+}
+
+extension NSError {
+    /// The error's text for API replies: system errors' `localizedDescription` is in the app's language, API
+    /// messages stay English (#338, docs/internals/localization.md).
+    var apiMessage: String {
+        let path = userInfo[NSFilePathErrorKey] as? String
+            ?? (userInfo[NSURLErrorFailingURLErrorKey] as? URL)?.absoluteString
+        return EnglishErrorText.message(domain: domain, code: code, path: path) ?? localizedDescription
     }
 }
 

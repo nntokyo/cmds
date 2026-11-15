@@ -506,14 +506,23 @@ extension CLI {
             print(result["url"]?.stringValue ?? "")
             if let title = nonEmpty(result["title"]?.stringValue) { print(title) }
         },
-        Command(name: "browser eval", usage: "browser eval [--pane P] <script|->",
+        Command(name: "browser eval", usage: "browser eval [--pane P] [--timeout SEC] <script|->",
                 summary: "Evaluate JavaScript in a browser pane and print the JSON result.",
-                details: "The script may use `await`; its value must be JSON-serializable.\n" + browserPaneNote,
-                options: ["pane"]) { ctx in
-            try ctx.args.expectPositionals(1...1, usage: "cmds browser eval [--pane P] <script|->")
+                details: """
+                    The script may use `await`; its value must be JSON-serializable.
+                    Fails (exit 1) when the script has not finished after --timeout seconds (default \(Int(BrowserEval.defaultTimeout)), at most \(Int(BrowserEval.maxTimeout))); a page that stopped responding (a script that never yields) is then reloaded.
+                    \(browserPaneNote)
+                    """,
+                options: ["pane", "timeout"]) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds browser eval [--pane P] [--timeout SEC] <script|->")
             let script = ctx.args.positionals[0] == "-" ? readStandardInput() : ctx.args.positionals[0]
-            let result = try ctx.call("browser.eval", browserTarget(ctx).merging(["script": .string(script)]) { $1 },
-                                      timeout: 120)
+            var params = browserTarget(ctx).merging(["script": .string(script)]) { $1 }
+            if let raw = ctx.args[option: "timeout"] {
+                guard let seconds = Double(raw) else { throw CLIError.usage("--timeout expects seconds") }
+                params["timeout"] = .number(seconds)
+            }
+            let timeout = try usageError { try BrowserEval.timeout(params: .object(params.compactMapValues { $0 })) }
+            let result = try ctx.call("browser.eval", params, timeout: timeout + BrowserEval.clientMargin)
             if ctx.json { return ctx.printJSON(result) }
             let value = result["value"] ?? .null
             if case .string(let string) = value { print(string) } else { ctx.printJSON(value) }

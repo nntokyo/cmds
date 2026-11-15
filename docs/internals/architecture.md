@@ -70,6 +70,16 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   so a page's CSP does not apply (as for `browser.eval`'s fallback, #88). The responsive view no longer removes all
   user scripts on close (that would drop the console capture); its scroll script stays and posts nothing without its
   handler. `isInspectable` follows Settings (`BrowserInspectable`).
+- **Page script deadlines** (#338; `WKWebView.callScript` in `Browser/BrowserPane.swift`, timeout and English error
+  text in `CmdsCore/BrowserEval.swift`): every page script the API runs has a deadline and uses the completion form
+  of `callAsyncJavaScript`, so a page that never answers keeps neither the reply nor the web view. `browser.eval`
+  (default 30 s) and tree / click / fill (30 s) then try a trivial script for 2 s; no answer means the page's main
+  thread is stuck, so `replaceStuckWebView` gives the pane a new web view (same content controller, data store,
+  emulation and responsive view) and loads the URL again. Freeing the old web view does not end its WebContent
+  process (it never handles the close and spins until quit), so its pid from `_webProcessIdentifier` (WebKit SPI;
+  skipped when missing) is killed after checking the process name. `wait_for` asks in 1 s rounds with their own
+  deadline, so a round lost with its document (navigation) is replaced by one on the new page. Closed panes are
+  freed: the owner's callbacks capture the view `unowned`, and `tearDown` drops the script message handlers.
 - **Responsive view** (`Browser/ResponsiveView.swift`, `BrowserPane+Responsive.swift`; settings, requests and scroll
   math in `CmdsCore/BrowserResponsive.swift`; #170): still a `browser` pane (no new `PaneKind`, no sync protocol
   change: the iPhone shows the first frame's URL). The pane's own `WKWebView` becomes the first frame; the others are

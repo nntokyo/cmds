@@ -115,6 +115,12 @@ final class MCPServerTests: XCTestCase {
         replies["browser.eval"] = .object(["value": .object(["n": 1])])
         XCTAssertEqual(text(callTool(server, "browser_eval", #"{"script":"({n: 1})"}"#)), #"{"n":1}"#)
         XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p9"))
+        XCTAssertNil(requests.last?.params["timeout"] ?? nil)  // the app's default
+        _ = callTool(server, "browser_eval", #"{"script":"1","timeout":2.5}"#)
+        XCTAssertEqual(requests.last?.params["timeout"] ?? nil, .number(2.5))
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_eval", #"{"script":"1","timeout":0}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)  // refused before anything is sent (#338)
 
         _ = callTool(server, "browser_url", #"{"pane":"p4"}"#)
         XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p4"))

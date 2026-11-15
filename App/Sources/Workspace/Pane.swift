@@ -189,7 +189,9 @@ final class Pane {
         self.browser = browser
         title = "Browser"
         container = PaneContainerView(paneID: id, content: browser)
-        browser.onStateChange = { [weak self] in
+        // `[unowned browser]` here and below: the pane keeps its view, and a strong capture made the view keep
+        // itself, so a closed pane's web view and WebContent process lived until quit (#338).
+        browser.onStateChange = { [weak self, unowned browser] in
             guard let self else { return }
             self.title = browser.pageTitle.isEmpty ? (browser.currentURL?.host ?? "Browser") : browser.pageTitle
             self.controller?.paneDidChange(self)
@@ -223,7 +225,7 @@ final class Pane {
         self.preview = preview
         title = preview.fileName
         container = PaneContainerView(paneID: id, content: preview)
-        preview.onStateChange = { [weak self] in
+        preview.onStateChange = { [weak self, unowned preview] in
             guard let self else { return }
             self.title = preview.fileName
             self.controller?.paneDidChange(self)
@@ -242,7 +244,7 @@ final class Pane {
         title = files.title
         workingDirectory = files.folder
         container = PaneContainerView(paneID: id, content: files)
-        files.onStateChange = { [weak self] in
+        files.onStateChange = { [weak self, unowned files] in
             guard let self else { return }
             self.title = files.title
             self.workingDirectory = files.folder

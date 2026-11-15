@@ -279,7 +279,7 @@ public enum BrowserPageAction: Equatable, Sendable {
     case tree(selector: String?, maxNodes: Int)
     case click(ElementTarget)
     case fill(ElementTarget, value: String)
-    /// Exactly one of `selector` and `text`; `timeout` in seconds.
+    /// Exactly one of `selector` and `text`; `timeout` in seconds (0: checks once).
     case waitFor(selector: String?, text: String?, timeout: Double)
 
     public static let maxValueLength = 100_000
@@ -308,7 +308,7 @@ public enum BrowserPageAction: Equatable, Sendable {
             var timeout = PageScripts.defaultWaitTimeout
             switch params?["timeout"] {
             case nil, .null?: break
-            case .number(let value)? where value > 0 && value <= PageScripts.maxWaitTimeout: timeout = value
+            case .number(let value)? where value >= 0 && value <= PageScripts.maxWaitTimeout: timeout = value  // 0: once
             default: throw RPCError.invalidParams("timeout must be 0–\(Int(PageScripts.maxWaitTimeout)) seconds")
             }
             self = .waitFor(selector: selector, text: text, timeout: timeout)

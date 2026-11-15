@@ -133,8 +133,9 @@ extension BrowserPane {
             }
             return result;
             """
-        let raw = try await webView.callAsyncJavaScript(script, arguments: ["selector": selector ?? NSNull()], in: nil,
-                                                        contentWorld: .defaultClient)
+        let raw = try await webView.callScript(script, arguments: ["selector": selector ?? NSNull()],
+                                               in: .defaultClient,
+                                               until: Date(timeIntervalSinceNow: BrowserEval.defaultTimeout))
         guard let object = raw as? [String: Any] else { throw RPCError(code: 500, message: "could not measure the page") }
         if let message = object["invalidSelector"] as? String {
             throw RPCError.invalidParams("invalid selector \(selector ?? ""): \(message)")
@@ -213,6 +214,6 @@ private final class CaptureWebView: NSObject, WKNavigationDelegate {
     }
 
     private func failed(_ error: Error) {
-        finish(.failure(RPCError(code: 500, message: "the page did not load: \(error.localizedDescription)")))
+        finish(.failure(RPCError(code: 500, message: "the page did not load: \((error as NSError).apiMessage)")))
     }
 }

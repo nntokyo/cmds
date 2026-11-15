@@ -130,8 +130,8 @@ extension BrowserPane {
         }
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let result = try? await webView.callAsyncJavaScript(Breakpoints.pageScript, arguments: [:], in: nil,
-                                                                 contentWorld: .defaultClient)
+            let result = try? await webView.callScript(Breakpoints.pageScript, in: .defaultClient,
+                                                        until: Date(timeIntervalSinceNow: BrowserEval.defaultTimeout))
             guard let object = result as? [String: Any], let width = (object["width"] as? NSNumber)?.intValue,
                   webView.url?.scheme != "about", webView.url != nil else {
                 breakpointLabel.stringValue = ""
