@@ -80,6 +80,7 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
         }
         RunLoop.main.add(timer, forMode: .common)
         refreshTimer = timer
+        controller.offerChromeHostRepair(in: window)
     }
 
     func windowWillClose(_ notification: Notification) {
@@ -353,6 +354,7 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
             guard response == .alertFirstButtonReturn, let self else { return }
             do {
                 try self.controller.addAccount(name: nameField.stringValue, configDir: pathField.stringValue)
+                self.controller.offerChromeHostRepair(in: self.window)
             } catch {
                 self.showError(error)
             }
@@ -448,6 +450,7 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
             guard response == .alertFirstButtonReturn, let self else { return }
             do { _ = try self.controller.shareAccountSessions() } catch { self.showError(error) }
             self.refresh()
+            self.controller.offerChromeHostRepair(in: self.window)
         }
     }
 

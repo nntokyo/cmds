@@ -398,6 +398,8 @@ final class APIServer {
                                                "hooksAdded": .array(result.hooksAdded.map(JSONValue.string))]
             if let backup = result.backup { object["backup"] = .string(backup) }
             return .object(object)
+        case "account.repair_chrome":
+            return ["written": .array(try controller.repairChromeHost().map(JSONValue.string))]
         case "account.clear_limit":
             try controller.clearAccountLimit(name: try params.required("name"))
         case "account.share":

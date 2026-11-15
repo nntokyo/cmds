@@ -23,6 +23,10 @@ Mac and iPhone/iPad (the iPhone/iPad entries need the App Store build 0.26.0).
 
 ### Fixed
 
+- Claude accounts: when Claude in Chrome cannot connect because its host script went with a config folder that was
+  made again (the browser's manifest names `<config dir>/chrome/chrome-native-host` of one account), cmds says so when
+  it starts, in Settings › Claude Accounts and when Claude Code starts in a pane, and offers to put the script back
+  (nothing is overwritten). `cmds accounts` shows it and `cmds accounts chrome` repairs it (#347).
 - Browser panes: a page that does not load (connection refused, server not found, too many redirects, an untrusted
   certificate) shows a notice with the address, the reason and Reload instead of leaving the previous page without
   a word; the address bar keeps the failed address and `cmds browser url` reports it with the reason. Untrusted

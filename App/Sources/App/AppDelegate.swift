@@ -72,6 +72,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         widgetPublisher = WidgetPublisher(controller: controller)
         widgetPublisher?.start()
         TransferCenter.removeLeftoverParts()
+        // Claude in Chrome's host script gone with a config folder made again (ClaudeChromeHost): offered once.
+        // Not in an isolated test instance (CMDS_SUPPORT_DIR): a modal alert would stop it.
+        if CmdsEnv.supportDirectoryOverride() == nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [controller] in controller.offerChromeHostRepair() }
+        }
         // An isolated test instance (CMDS_SUPPORT_DIR) must not take keyboard focus from the app in use.
         if CmdsEnv.supportDirectoryOverride() == nil { NSApp.activate() }
     }
