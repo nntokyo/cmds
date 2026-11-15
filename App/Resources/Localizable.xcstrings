@@ -1610,6 +1610,17 @@
         }
       }
     },
+    "Adds `cmds mcp` to Claude Code (also each Claude account) and Codex when missing, so agents in cmds terminals get browser panes, previews and terminal panes as tools. Once per agent: one you removed is not added again.": {
+      "comment": "Settings › Agents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude Code（各 Claude アカウントも）と Codex に `cmds mcp` が無ければ追加し、cmds のターミナルで動くエージェントがブラウザペイン・プレビュー・ターミナルペインをツールとして使えるようにします。エージェントごとに一度だけ行い、削除したものは追加し直しません。"
+          }
+        }
+      }
+    },
     "Adds cmds to Antigravity’s status line (~/.gemini/antigravity-cli/settings.json), so its quota windows show in the sidebar footer and the menu bar.": {
       "comment": "Settings › Agents › Antigravity limits",
       "localizations": {
@@ -3825,6 +3836,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%1$@”をサーバのゴミ箱に移動できませんでした（%2$@）。何も削除されていません。"
+          }
+        }
+      }
+    },
+    "Could not register with %@; see Console for the reason.": {
+      "comment": "Settings › Agents › MCP server",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に登録できませんでした。理由はコンソールを参照してください。"
           }
         }
       }
@@ -6114,6 +6136,28 @@
         }
       }
     },
+    "MCP server": {
+      "comment": "Settings › Agents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MCP サーバー"
+          }
+        }
+      }
+    },
+    "MCP server:": {
+      "comment": "Settings › Agents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MCP サーバー:"
+          }
+        }
+      }
+    },
     "Mac identity: %@": {
       "localizations": {
         "ja": {
@@ -8105,6 +8149,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "やり直す"
+          }
+        }
+      }
+    },
+    "Register cmds’ MCP server with your agents": {
+      "comment": "Settings › Agents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds の MCP サーバーをエージェントに登録する"
+          }
+        }
+      }
+    },
+    "Registered with %@.": {
+      "comment": "Settings › Agents › MCP server",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に登録しました。"
+          }
+        }
+      }
+    },
+    "Registered with %@. Agents started from now on in a cmds terminal have its tools (browser panes, previews, terminal panes).": {
+      "comment": "notification: MCP server registered; the agents listed",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ に登録しました。これから cmds のターミナルで起動するエージェントは、そのツール（ブラウザペイン、プレビュー、ターミナルペイン）を使えます。"
           }
         }
       }
@@ -12886,6 +12963,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsはこのペインのリモートシェルにコマンドを1つ入力します。~/.local/bin/cmds-remote.sh（小さなshスクリプト。サーバーにpython3、socat、ncのいずれかが必要）を書き込み、サーバーに`cmds`コマンドがなければそれへのリンク~/.local/bin/cmdsも作成します。ほかには何も変更しません。\n\n続ける前に、ペインにシェルのプロンプトが表示されている（プログラムが実行中でない）ことを確認してください。"
+          }
+        }
+      }
+    },
+    "cmds’ MCP server is ready for your agents": {
+      "comment": "notification: MCP server registered",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds の MCP サーバーをエージェントで使えるようにしました"
           }
         }
       }

@@ -24,6 +24,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let subagentsPopup = NSPopUpButton()
     private let menuBarCheckbox = NSButton(checkboxWithTitle: String(localized: "Show in menu bar"), target: nil, action: nil)
     private let inspectableCheckbox = NSButton(checkboxWithTitle: String(localized: "Allow Safari's Web Inspector"), target: nil, action: nil)
+    private let mcpCheckbox = NSButton(checkboxWithTitle: String(localized: "Register cmds’ MCP server with your agents", comment: "Settings › Agents"), target: nil, action: nil)
     private let memoryWarningCheckbox = NSButton(checkboxWithTitle: String(localized: "Warn when memory is short"), target: nil, action: nil)
     /// Settings › Sidebar: what the rows and the footer show (#107).
     private let sidebarItemCheckboxes = SettingsWindowController.checkboxes(for: SidebarItem.self)
@@ -156,6 +157,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         menuBarCheckbox.action = #selector(menuBarToggled)
         inspectableCheckbox.target = self
         inspectableCheckbox.action = #selector(inspectableToggled)
+        mcpCheckbox.target = self
+        mcpCheckbox.action = #selector(mcpToggled)
         memoryWarningCheckbox.target = self
         memoryWarningCheckbox.action = #selector(memoryWarningToggled)
         for checkbox in Array(menuBarOptionCheckboxes.values) + Array(sidebarItemCheckboxes.values) {
@@ -196,6 +199,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let agents: [[NSView]] = [
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
+            [Self.label(String(localized: "MCP server:", comment: "Settings › Agents")), mcpCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Adds `cmds mcp` to Claude Code (also each Claude account) and Codex when missing, so agents in cmds terminals get browser panes, previews and terminal panes as tools. Once per agent: one you removed is not added again.", comment: "Settings › Agents"))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
             [Self.label(String(localized: "Antigravity limits:", comment: "Settings › Agents")), agySetupButton],
@@ -437,6 +442,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         menuBarCheckbox.state = settings.showInMenuBar ? .on : .off
         inspectableCheckbox.state = settings.browserInspectable ? .on : .off
         memoryWarningCheckbox.state = settings.memoryWarning ? .on : .off
+        mcpCheckbox.state = MCPAutoRegistration.isEnabled ? .on : .off
         for (item, checkbox) in sidebarItemCheckboxes { checkbox.state = settings.sidebar(item) ? .on : .off }
         for (option, checkbox) in menuBarOptionCheckboxes {
             checkbox.state = settings.menuBar(option) ? .on : .off
@@ -522,6 +528,23 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func inspectableToggled() {
         settings.browserInspectable = inspectableCheckbox.state == .on
+    }
+
+    @objc private func mcpToggled() {
+        MCPAutoRegistration.isEnabled = mcpCheckbox.state == .on
+        // Turned on: register now, also where it was done before and since removed (the user asks for it).
+        if MCPAutoRegistration.isEnabled {
+            MCPAutoRegistration.run(accounts: AppController.shared.claudeAccounts.accounts, force: true) { added, failed in
+                guard !added.isEmpty || !failed.isEmpty else { return }
+                let alert = NSAlert()
+                alert.messageText = String(localized: "MCP server", comment: "Settings › Agents")
+                var lines: [String] = []
+                if !added.isEmpty { lines.append(String(localized: "Registered with \(added.joined(separator: ", ")).", comment: "Settings › Agents › MCP server")) }
+                if !failed.isEmpty { lines.append(String(localized: "Could not register with \(failed.joined(separator: ", ")); see Console for the reason.", comment: "Settings › Agents › MCP server")) }
+                alert.informativeText = lines.joined(separator: "\n")
+                alert.runModal()
+            }
+        }
     }
 
     @objc private func memoryWarningToggled() {
