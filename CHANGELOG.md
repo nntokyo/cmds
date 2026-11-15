@@ -7,7 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-15
+
+Mac and iPhone/iPad (the iPhone/iPad entries need the App Store build 0.26.0).
+
 ### Added
+
+- Browser panes: when a page asks for a passkey or security key, a notice says that browser panes cannot use them yet
+  (Apple has not granted the entitlement, #162), with Open in Safari (#336).
 
 - Browser panes: find in page. ⌘F opens a find bar over the page (⌘G / ⇧⌘G next / previous, Match Case), and
   `cmds browser find TEXT` does the same from a terminal (#338).
@@ -26,7 +33,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   FaceTime), searches for `1.5` and `README.md` instead of opening them as sites, and opens `localhostfoo.com` over
   https. `cmds browser navigate` and `browser open` fail for input with nothing to load (`''`,
   `http://exa mple.com`) instead of exiting 0 (#338).
-
 - iPhone/iPad: a paired Mac no longer asks to pair again when its network name or address changes (macOS renames the
   service to "Name (2)" after a name conflict, e.g. around an update; the Mac is renamed; it was paired by address
   and is later found on the network). The phone recognises the Mac by the identity it pinned, and the pairing and
