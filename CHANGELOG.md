@@ -13,6 +13,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   service to "Name (2)" after a name conflict, e.g. around an update; the Mac is renamed; it was paired by address
   and is later found on the network). The phone recognises the Mac by the identity it pinned, and the pairing and
   the remote access settings follow. After pairing anew, the remote access settings are kept (#325).
+- iPhone/iPad: pairing without the camera no longer hangs at "Reading the Mac's identity…" (#331).
+
+## [0.25.1] - 2026-11-15
+
+Mac only; the iPhone/iPad entries above wait for the next App Store build.
+
+### Fixed
+
+- Claude accounts: after a switch, the resumed session shows its transcript again, including the previous account's
+  limit messages ("You've hit your 5-hour limit · resets …"); cmds took them for the new account's limit, so every
+  account ended up limited and automatic switching stopped. Limit messages shown before Claude Code works on a
+  prompt under the new account are now ignored (#329).
 
 ## [0.25.0] - 2026-11-15
 
