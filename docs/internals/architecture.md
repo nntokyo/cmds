@@ -129,7 +129,7 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   dropped ones) before the pop-ups close. Downloads: `shouldPerformDownload`, a response WebKit cannot show or a
   `Content-Disposition: attachment` become `WKDownload`s owned by `BrowserDownloads.shared` (they outlive the pane),
   saved to ~/Downloads under `BrowserDownloadName.unique` (`name 2.ext`); WebKit sets `com.apple.quarantine`. The
-  notice is a `BrowserDownloadBannerView` at the bottom of the pane (the container's top banner would cover the
+  notice is a `BrowserNoticeView` (also the passkey notice, #336) at the bottom of the pane (the container's top banner would cover the
   address bar). The snapshot `CaptureWebView` has no UI delegate: no windows, dialogs answered by WebKit, downloads
   fail the capture.
 - **Browser pane device sizes** (`Browser/BrowserPane+Device.swift`, presets and settings in
