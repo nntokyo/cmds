@@ -4,13 +4,24 @@ import Foundation
 /// agents in cmds terminals have its tools without a manual `claude mcp add`.
 ///
 /// Targets: Claude Code's user config of plain `claude` (`~/.claude.json`) and of every account's config directory
-/// (`<CLAUDE_CONFIG_DIR>/.claude.json`: each account has its own MCP servers), and Codex (`~/.codex/config.toml`).
-/// Claude Code is changed only through its own CLI (`claude mcp add --scope user`); Codex's `codex mcp add` cannot set
+/// (`<CLAUDE_CONFIG_DIR>/.claude.json`: each account has its own MCP servers), Codex (`~/.codex/config.toml`) and the
+/// Antigravity CLI (`~/.gemini/config/mcp_config.json`, same shape as Claude Code's; agy starts the server as its own
+/// child, so it gets the pane's `CMDS_PANE_ID`). Claude Code and agy are changed only through their own CLIs
+/// (`claude mcp add --scope user`, `agy mcp add`); Codex's `codex mcp add` cannot set
 /// `env_vars`, so a `[mcp_servers.cmds]` table is appended to its file (after a copy). A server named `cmds`, or any
 /// server running `… mcp` of a `cmds`, counts as registered and is never replaced, unless it is cmds' own entry by a
 /// full path that is gone (cmds.app moved). This file only decides; the app runs the commands.
 public enum AgentMCPRegistration {
     public static let serverName = "cmds"
+
+    /// What is remembered once a target is done: its file and the creation time of the folder that holds its config,
+    /// so a config folder made again (signing in afresh) counts as new and is registered again, while one the user
+    /// removed the server from stays as the user left it. (The file's own date is no use: the agents write it
+    /// atomically, so it is new after every change.)
+    public static func doneKey(file: String, folder: String, fileManager: FileManager = .default) -> String {
+        let created = (try? fileManager.attributesOfItem(atPath: folder))?[.creationDate] as? Date
+        return created.map { "\(file)@\(Int($0.timeIntervalSince1970))" } ?? file
+    }
 
     public enum State: Equatable, Sendable {
         /// Registered; `command` is what it runs.
@@ -65,6 +76,22 @@ public enum AgentMCPRegistration {
 
     public static func claudeRemoveArguments() -> [String] {
         ["mcp", "remove", "--scope", "user", serverName]
+    }
+
+    // MARK: Antigravity CLI
+
+    /// agy's global MCP servers (`mcpServers`, read with `claudeState`).
+    public static func agyConfigFile(home: String = NSHomeDirectory()) -> String {
+        home + "/.gemini/config/mcp_config.json"
+    }
+
+    /// `agy mcp add cmds <cli> mcp` (flags would go before the name).
+    public static func agyAddArguments(cli: String) -> [String] {
+        ["mcp", "add", serverName, cli, "mcp"]
+    }
+
+    public static func agyRemoveArguments() -> [String] {
+        ["mcp", "remove", serverName]
     }
 
     // MARK: Codex

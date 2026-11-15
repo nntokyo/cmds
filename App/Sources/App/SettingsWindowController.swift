@@ -200,7 +200,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.label(String(localized: "Show subagents:")), subagentsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Claude Code subagents as cards under each workspace, with their current action. Needs the SubagentStart / SubagentStop hooks."))],
             [Self.label(String(localized: "MCP server:", comment: "Settings › Agents")), mcpCheckbox],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "Adds `cmds mcp` to Claude Code (also each Claude account) and Codex when missing, so agents in cmds terminals get browser panes, previews and terminal panes as tools. Once per agent: one you removed is not added again.", comment: "Settings › Agents"))],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Adds `cmds mcp` to Claude Code (also each Claude account), Codex and the Antigravity CLI when missing, so agents in cmds terminals get browser panes, previews and terminal panes as tools. Once per agent: one you removed is not added again.", comment: "Settings › Agents"))],
             [Self.label(String(localized: "Claude accounts:")), accountsButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Several of your own Claude Code accounts: when one hits its limit, continue the session with the next."))],
             [Self.label(String(localized: "Antigravity limits:", comment: "Settings › Agents")), agySetupButton],

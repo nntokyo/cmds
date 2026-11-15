@@ -3,26 +3,32 @@ import CmdsCore
 import UserNotifications
 
 /// Registers cmds' MCP server (`cmds mcp`) with the agents on this Mac by itself (`AgentMCPRegistration`): Claude
-/// Code's plain config and every Claude account's config directory, and Codex. Runs at launch and when an account is
-/// added; Settings › Agents › "Register the MCP server with agents" turns it off.
+/// Code's plain config and every Claude account's config directory, Codex, and the Antigravity CLI. Runs at launch,
+/// when the accounts change, and when a pane's Claude Code reports its config directory (at most once a minute: an
+/// account signed in while cmds runs); Settings › Agents › "Register cmds' MCP server with your agents" turns it off.
 ///
 /// Each target is registered once: a registration the user removed later is not added again (the targets done are
-/// remembered in `MCPRegisteredTargets`). cmds' own entry by a full path that is gone (cmds.app moved) is pointed at
-/// this app again. One notification lists what was added.
+/// remembered in `MCPRegisteredTargets` with the creation time of their config folder, so a folder made again is
+/// registered again). cmds' own entry by a full path that is gone (cmds.app moved) is pointed at this app again. One
+/// notification lists what was added. A run asked for while one runs follows it.
 @MainActor
 enum MCPAutoRegistration {
     static let enabledKey = "RegisterMCPServer"
     static let doneKey = "MCPRegisteredTargets"
     private static var running = false
+    private static var again = false
+    private static var lastCheck: Date = .distantPast
 
     struct Target: Sendable {
-        enum Kind: Sendable { case claude(configDir: String?), codex }
+        enum Kind: Sendable { case claude(configDir: String?), codex, agy }
         var kind: Kind
         var file: String
-        /// Shown in the notification: "Claude Code", "Claude Code (work)", "Codex".
+        /// The folder whose creation time tells a config made again (`AgentMCPRegistration.doneKey`).
+        var folder: String
+        /// Shown in the notification: "Claude Code", "Claude Code (work)", "Codex", "Antigravity CLI".
         var label: String
         /// Remembered once done.
-        var key: String { file }
+        var key: String { AgentMCPRegistration.doneKey(file: file, folder: folder) }
     }
 
     static var isEnabled: Bool {
@@ -41,27 +47,51 @@ enum MCPAutoRegistration {
         var targets: [Target] = []
         let plain = AgentMCPRegistration.claudeConfigFile(configDir: nil)
         if fileManager.fileExists(atPath: plain) {
-            targets.append(Target(kind: .claude(configDir: nil), file: plain, label: "Claude Code"))
+            targets.append(Target(kind: .claude(configDir: nil), file: plain, folder: NSHomeDirectory(), label: "Claude Code"))
         }
         for account in accounts where ClaudeAccounts.configDirExists(account) {
             let file = AgentMCPRegistration.claudeConfigFile(configDir: account.configDir)
             guard !targets.contains(where: { $0.file == file }) else { continue }
-            targets.append(Target(kind: .claude(configDir: ClaudeAccounts.expandedPath(account.configDir)), file: file,
-                                  label: "Claude Code (\(account.name))"))
+            let dir = ClaudeAccounts.expandedPath(account.configDir)
+            targets.append(Target(kind: .claude(configDir: dir), file: file, folder: dir, label: "Claude Code (\(account.name))"))
         }
         let codex = AgentMCPRegistration.codexConfigFile()
-        if fileManager.fileExists(atPath: (codex as NSString).deletingLastPathComponent) {
-            targets.append(Target(kind: .codex, file: codex, label: "Codex"))
+        let codexDir = (codex as NSString).deletingLastPathComponent
+        if fileManager.fileExists(atPath: codexDir) {
+            targets.append(Target(kind: .codex, file: codex, folder: codexDir, label: "Codex"))
+        }
+        // agy keeps its own settings in antigravity-cli; its MCP servers in config/ (made by `agy mcp add`).
+        let agy = AgentMCPRegistration.agyConfigFile()
+        if fileManager.fileExists(atPath: NSHomeDirectory() + "/.gemini/antigravity-cli") {
+            targets.append(Target(kind: .agy, file: agy, folder: NSHomeDirectory() + "/.gemini", label: "Antigravity CLI"))
         }
         return targets
     }
 
     /// Registers where needed, off the main thread; `force` also adds to targets done before (Settings' button).
+    /// From a pane's status line report: at most once a minute (the run itself only reads files when nothing is missing).
+    static func runSoon() {
+        guard Date().timeIntervalSince(lastCheck) >= 60 else { return }
+        run(accounts: AppController.shared.claudeAccounts.accounts)
+    }
+
     static func run(accounts: [ClaudeAccount], force: Bool = false, done: (([String], [String]) -> Void)? = nil) {
-        guard (isEnabled || force), !running, let cli else { return }
+        // Not in an isolated test instance (CMDS_SUPPORT_DIR): the agents' configs are the user's.
+        guard isEnabled || force, force || CmdsEnv.supportDirectoryOverride() == nil, let cli else { return }
+        guard !running else {
+            // Once this run ends (a forced run with its answer is not queued: the user can click again).
+            if done == nil { again = true }
+            return
+        }
         running = true
+        lastCheck = Date()
         let targets = targets(accounts: accounts)
-        let previously = Set(UserDefaults.standard.stringArray(forKey: doneKey) ?? [])
+        var previously = Set(UserDefaults.standard.stringArray(forKey: doneKey) ?? [])
+        // 0.27.0 kept bare paths: they stand for the folder as it is now.
+        for target in targets where previously.contains(target.file) {
+            previously.remove(target.file)
+            previously.insert(target.key)
+        }
         DispatchQueue.global(qos: .utility).async {
             var added: [String] = []
             var failed: [String] = []
@@ -78,6 +108,10 @@ enum MCPAutoRegistration {
             }
             DispatchQueue.main.async {
                 running = false
+                if again {
+                    again = false
+                    DispatchQueue.main.async { run(accounts: AppController.shared.claudeAccounts.accounts) }
+                }
                 UserDefaults.standard.set(Array(previously.union(finished)).sorted(), forKey: doneKey)
                 if !added.isEmpty, done == nil { notify(added) }
                 done?(added, failed)
@@ -90,17 +124,22 @@ enum MCPAutoRegistration {
     nonisolated static func register(_ target: Target, cli: String, skipMissing: Bool) -> Outcome {
         let fileManager = FileManager.default
         switch target.kind {
-        case .claude(let configDir):
+        case .claude, .agy:
+            let agy = { if case .agy = target.kind { return true } else { return false } }()
+            let configDir: String? = { if case .claude(let dir) = target.kind { return dir } else { return nil } }()
+            let add = agy ? AgentMCPRegistration.agyAddArguments(cli: cli) : AgentMCPRegistration.claudeAddArguments(cli: cli)
+            let remove = agy ? AgentMCPRegistration.agyRemoveArguments() : AgentMCPRegistration.claudeRemoveArguments()
+            let tool = agy ? agyCandidates : ClaudeChromeHost.claudeCandidates()
             switch AgentMCPRegistration.claudeState(fileManager.contents(atPath: target.file)) {
             case .registered: return .present
             case .unreadable: return .failed("\(target.file) is not valid JSON")
             case .missing:
                 if skipMissing { return .skipped }
-                return runClaude(AgentMCPRegistration.claudeAddArguments(cli: cli), configDir: configDir)
+                return runTool(tool, add, configDir: configDir)
             case .stale:
                 // Its own entry by a gone path: replaced (a server named otherwise is left alone).
-                _ = runClaude(AgentMCPRegistration.claudeRemoveArguments(), configDir: configDir)
-                return runClaude(AgentMCPRegistration.claudeAddArguments(cli: cli), configDir: configDir)
+                _ = runTool(tool, remove, configDir: configDir)
+                return runTool(tool, add, configDir: configDir)
             }
         case .codex:
             let text = fileManager.contents(atPath: target.file).flatMap { String(data: $0, encoding: .utf8) }
@@ -128,13 +167,18 @@ enum MCPAutoRegistration {
         }
     }
 
-    /// Runs `claude` (the first one found) with `CLAUDE_CONFIG_DIR` set for an account.
-    nonisolated static func runClaude(_ arguments: [String], configDir: String?) -> Outcome {
-        guard let claude = ClaudeChromeHost.claudeCandidates().first(where: FileManager.default.isExecutableFile(atPath:)) else {
-            return .failed("claude was not found")
+    /// Where `agy` is: its installer's folder, Homebrew.
+    nonisolated static var agyCandidates: [String] {
+        [NSHomeDirectory() + "/.gemini/bin/agy", NSHomeDirectory() + "/.local/bin/agy", "/opt/homebrew/bin/agy", "/usr/local/bin/agy"]
+    }
+
+    /// Runs the first of `candidates` found (`claude` with `CLAUDE_CONFIG_DIR` set for an account, or `agy`).
+    nonisolated static func runTool(_ candidates: [String], _ arguments: [String], configDir: String?) -> Outcome {
+        guard let tool = candidates.first(where: FileManager.default.isExecutableFile(atPath:)) else {
+            return .failed("\(((candidates.first ?? "") as NSString).lastPathComponent) was not found")
         }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: claude)
+        process.executableURL = URL(fileURLWithPath: tool)
         process.arguments = arguments
         var environment = ProcessInfo.processInfo.environment
         environment.removeValue(forKey: "CLAUDE_CONFIG_DIR")

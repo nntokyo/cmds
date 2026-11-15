@@ -319,10 +319,13 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   link that cannot be made after the rename moves the folder back. `transcriptReachable` checks
   `<dir>/projects/*/<id>.jsonl` by name before a switch.
 - **MCP registration**: `AgentMCPRegistration` (CmdsCore, unit-tested) reads Claude Code's `.claude.json` (plain
-  and per account) and Codex's `config.toml` and says registered / stale (cmds' own full path gone) / missing;
-  `MCPAutoRegistration` (app) registers at launch and on `accountsDidChange`, through `claude mcp add --scope user`
-  with `CLAUDE_CONFIG_DIR`, or by appending a table to Codex's file (after a copy). Targets done are kept in
-  `MCPRegisteredTargets` so a removed registration is not added again; Settings › Agents (`RegisterMCPServer`).
+  and per account), agy's `~/.gemini/config/mcp_config.json` (same shape) and Codex's `config.toml` and says
+  registered / stale (cmds' own full path gone) / missing; `MCPAutoRegistration` (app) registers at launch, on
+  `accountsDidChange` and on a pane's config-dir report (once a minute), through `claude mcp add --scope user` with
+  `CLAUDE_CONFIG_DIR` or `agy mcp add`, or by appending a table to Codex's file (after a copy). Targets done are kept
+  in `MCPRegisteredTargets` as `<file>@<config folder creation time>` (`doneKey`), so a removed registration is not
+  added again but a folder made again is; a run asked for during another follows it; Settings › Agents
+  (`RegisterMCPServer`).
 - **Claude in Chrome**: `ClaudeChromeHost.check/repair` (unit-tested): each Chromium browser's
   `NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json` names one account's
   `<configDir>/chrome/chrome-native-host`; a missing (or not executable) one is reported in `account.list`
