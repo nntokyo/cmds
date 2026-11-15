@@ -7,28 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.27.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.27.0</link>
-      <sparkle:version>40</sparkle:version>
-      <sparkle:shortVersionString>0.27.0</sparkle:shortVersionString>
+      <title>cmds 0.27.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.27.1</link>
+      <sparkle:version>41</sparkle:version>
+      <sparkle:shortVersionString>0.27.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 15 Nov 2026 16:37:39 GMT</pubDate>
+      <pubDate>Sun, 15 Nov 2026 17:07:48 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
+<h3>修正</h3>
 <ul>
-<li>エージェント：cmds が自分の MCP サーバー（<code>cmds mcp</code>）を Claude Code（素の <code>claude</code> と各 Claude アカウント。アカウントごとに MCP サーバーは別です）と Codex に自動で登録します。起動時とアカウント追加時に行うので、<code>claude mcp add</code> をしなくても cmds のターミナルのエージェントがブラウザペイン・プレビュー・ターミナルペインをツールとして使えます。設定ごとに一度だけ行い、削除したものは追加し直しません。設定 › エージェントでオフにできます。</li>
+<li>エージェント：MCP サーバーの自動登録を Antigravity CLI（<code>agy</code>）にも広げました。cmds の起動中にサインインした Claude アカウントにも（次の起動を待たずに）登録し、作り直された設定フォルダにも登録し直します（これまではパスで覚えていたため、作り直したフォルダには登録されませんでした）。登録処理の実行中に来た依頼も捨てずに続けて行います。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
-<h3>Added</h3>
+<h3>Fixed</h3>
 <ul>
-<li>Agents: cmds registers its MCP server (<code>cmds mcp</code>) by itself with Claude Code (plain <code>claude</code> and every Claude account, each with its own MCP servers) and Codex, at launch and when an account is added, so agents in cmds terminals have browser panes, previews and terminal panes as tools without <code>claude mcp add</code>. Once per config: one you removed is not added again; Settings › Agents turns it off.</li>
+<li>Agents: the MCP server is also registered with the Antigravity CLI (<code>agy</code>), for a Claude account signed in while cmds runs (not only at the next launch), and again for a config folder that was made again. A registration asked for while one runs is no longer dropped.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.27.0/cmds-0.27.0.dmg" length="17269656" type="application/octet-stream" sparkle:edSignature="ileIrpwHN0PoBEChM2KDNoiNioGLER2OSWegdWgvemOLXEzar/513lxm4EqT76TrksflgFjw10QC9pFR0494Aw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.27.1/cmds-0.27.1.dmg" length="17274265" type="application/octet-stream" sparkle:edSignature="WlU9zCNv7/YKmH3HhB99qcf/QEr+FB3HUGXY6sL5cugUq+pK6XTAANEaJVfnIiXmwS2H4yAoVaEhLCV+Yhk5BA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 62rfxlXhiSNHfwi9e53yR4HtUnU2cFviDIyfyEQ/E8euDVV4fgVO7jPJ/gLMw52YQ9JQDIBfI5hkJYvmzyrNBA==
-length: 2539
+edSignature: NT95k1iJC15rl+Rrv5ARP7tPPngavkPzofnJXJYN6MwUYrKerEYy7OylrG5Ppcfbj9NrpkNhxMHF+wXRcDf9AA==
+length: 2232
 -->
