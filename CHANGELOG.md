@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.27.2] - 2026-11-16
+
+Mac only; the iPhone/iPad app is unchanged.
+
 ### Fixed
 
 - Claude accounts: a Claude Code session that was started but never given a prompt (no transcript yet, e.g. one
