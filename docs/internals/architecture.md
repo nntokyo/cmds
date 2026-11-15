@@ -281,7 +281,9 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   line until the limit it recorded ends, at least 5 h (`Pane.seenLimitLines`), merged into the account's limit
   (`ClaudeAccounts.merge`) and saved; offers in other panes to continue with that account are worked out again. After
   a switch the previous account's lines are carried (`Pane.carriedLimitLines`): the resumed session can show them
-  again, and they are ignored until another limit line is the newest, or none is shown 30 s after the switch (#315).
+  again from its transcript (also older limits of the conversation), so until Claude Code works on a prompt under the
+  new account every limit line on screen is carried too (#315, #329). Carried lines are ignored while they stay on
+  screen.
   `Context limit reached` and other limits of the conversation are not account limits. A zone cut by the wrap
   (`(America/Ne` / `w_York)`) is read with the next row joined without a space.
 - **Switch** (`Pane.accountSwitch`, `AccountSwitch.Phase`): `offered(problem?)` → `waitingForIdle` → `quitting` →

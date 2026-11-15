@@ -92,6 +92,25 @@ final class ClaudeAccountTests: XCTestCase {
         XCTAssertEqual(detect("You've hit your limit · resets 3pm (Mars/Olympus)")?.resetsAt, tokyoDate(11, 2, 15))
     }
 
+    func testHitLinesAndIgnoring() {
+        // A resumed session replays its transcript: older limit notices of the conversation and the latest one.
+        let screen = """
+            ⏺ Usage limit reached · continuing automatically at 4:50pm · esc to cancel
+            > go on
+              ⎿  You've hit your 5-hour limit · resets 9:50pm (Asia/Tokyo)
+            ⏺ Done.
+            """
+        let lines = ClaudeLimitDetector.hitLines(screen: screen)
+        XCTAssertEqual(lines, ["Usage limit reached · continuing automatically at 4:50pm · esc to cancel",
+                               "You've hit your 5-hour limit · resets 9:50pm (Asia/Tokyo)"])
+        XCTAssertNil(ClaudeLimitDetector.detect(screen: screen, now: now, timeZone: tokyo, ignoring: lines))
+        // A new limit below the replayed ones is found.
+        let fresh = screen + "\n  ⎿  You've hit your 5-hour limit · resets 11pm (Asia/Tokyo)"
+        XCTAssertEqual(ClaudeLimitDetector.detect(screen: fresh, now: now, timeZone: tokyo, ignoring: lines)?.resetsAt,
+                       tokyoDate(11, 2, 23))
+        XCTAssertEqual(ClaudeLimitDetector.hitLines(screen: "$ ls\nREADME.md"), [])
+    }
+
     func testRateLimitMessages() {
         let api = #"  ⎿  API Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"This request would exceed the rate limit for your organization"}}"#
         XCTAssertEqual(detect(api)?.kind, .rateLimit)
