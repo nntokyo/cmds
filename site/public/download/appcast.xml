@@ -7,44 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.25.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.25.0</link>
-      <sparkle:version>37</sparkle:version>
-      <sparkle:shortVersionString>0.25.0</sparkle:shortVersionString>
+      <title>cmds 0.25.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.25.1</link>
+      <sparkle:version>38</sparkle:version>
+      <sparkle:shortVersionString>0.25.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 15 Nov 2026 08:31:30 GMT</pubDate>
+      <pubDate>Sun, 15 Nov 2026 10:19:48 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
-<ul>
-<li>Claude アカウント：<strong>サインイン</strong>（サイドバーのアカウントメニュー、設定 › Claude アカウント、<code>cmds accounts login 名前</code>）。そのアカウントのワークスペースを開いて <code>claude auth login</code> を実行します。</li>
-<li>Claude アカウント：<strong>cmds用に設定</strong>（同じメニューと設定、<code>cmds accounts setup 名前</code>）。アカウントの settings.json に cmds のステータスラインとフックがなければ追加します（元のファイルは残ります）。必要なアカウントには「未設定」と出ます。未設定のアカウントでは、アカウントボタンが出ず、切り替えも働きませんでした。</li>
-<li>Claude アカウント：サイドバーのアカウントメニューに「上限で自動的に切り替える」「上限を消去」「セッションを共有…」を追加しました。コマンドを使わずにアカウントを扱えます。</li>
-</ul>
 <h3>修正</h3>
 <ul>
-<li>Claude アカウント：同じ Claude アカウントにサインインした 2 つのアカウントは上限が共通です。「◯◯と同じサインイン」と表示し、同時に上限中として扱い、その間では切り替えません（切り替えても同じ上限で止まっていました）。</li>
-<li>Claude アカウント：Claude Code 2.1.3xx の上限表示（Usage limit reached · continuing automatically at 4:50pm）からリセット時刻を読みます。これまでは 5 時間後と推定していました。</li>
-<li>Claude アカウント：設定フォルダが存在しないアカウントを、切り替え先や <code>--account auto</code> に選ばなくなりました。</li>
+<li>Claude アカウント：切り替えて再開したセッションが、会話の履歴に残っている前のアカウントの上限メッセージ（「You've hit your 5-hour limit · resets …」）を表示し直すと、cmds が切り替え先のアカウントの上限と見なしていました。そのため全アカウントが上限扱いになり、自動切り替えが止まっていました。新しいアカウントでプロンプトを処理し始めるまでに表示された上限メッセージは無視するようにしました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
-<h3>Added</h3>
-<ul>
-<li>Claude accounts: <strong>Sign In</strong> (the sidebar's account menu, Settings › Claude Accounts, <code>cmds accounts login NAME</code>) opens a workspace under the account and runs <code>claude auth login</code>.</li>
-<li>Claude accounts: <strong>Set Up for cmds</strong> (the same menu and Settings, <code>cmds accounts setup NAME</code>) adds cmds's status line and hooks to an account's settings.json when they are missing (the previous file is kept). Accounts that need it show "not set up": without it their workspaces had no account button and never switched.</li>
-<li>Claude accounts: the sidebar's account menu also has Switch Automatically at the Limit, Clear Limit and Share Sessions…, so accounts can be handled without the command line.</li>
-</ul>
 <h3>Fixed</h3>
 <ul>
-<li>Claude accounts: two accounts signed in to the same Claude account share one limit. They show "same sign-in as …", are marked limited together, and a session is never switched between them.</li>
-<li>Claude accounts: the limit notice of Claude Code 2.1.3xx (Usage limit reached · continuing automatically at 4:50pm) gives the reset time; it used to be estimated as five hours later.</li>
-<li>Claude accounts: an account whose config directory does not exist is never chosen to continue with, nor by <code>--account auto</code>.</li>
+<li>Claude accounts: a resumed session shows its transcript again, including the previous account's limit messages; cmds took them for the new account's limit, so every account ended up limited and automatic switching stopped. Limit messages shown before Claude Code works on a prompt under the new account are now ignored.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.25.0/cmds-0.25.0.dmg" length="17169799" type="application/octet-stream" sparkle:edSignature="4xJUj8ZC2DGuPw8YrkgdqMXfx59dBEYNSTzXGIOcHM7+GbDjPA1usUOx6Zlx2Y/9v2F7AdB8NmS30hguy8gsBA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.25.1/cmds-0.25.1.dmg" length="17174340" type="application/octet-stream" sparkle:edSignature="uHDego07OkifXVq2hOAuGKbk3Z1it7vnZaPjZpRJzegTZheU2o/pNODZpNWhaGPKsQIRt4ah6FBJvU4MslHTDQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: NofChuRhoSJJpGmBKBJG+Ogi93fBQpj8Yl/Dj0i0f8JiglS731mplqjJz8kaOfjrP7xqdXuG2KJZGzHZ4jcfAQ==
-length: 4575
+edSignature: XoYH1AiE9IG6lI8dYg20gZtICQmtwo/bvj9XSwrdhm3KlvuA8v2nUrxGm5Vh/oPhsz8U1jz17gOkoT06P1PTCA==
+length: 2342
 -->
