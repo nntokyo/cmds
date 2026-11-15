@@ -93,10 +93,116 @@ enum ClaudeAccountMenu {
             }
         }
         menu.addItem(.separator())
+        for item in accountItems(controller: controller) { menu.addItem(item) }
         menu.addItem(Handler.item(String(localized: "Manage Accounts…", comment: "sidebar account menu")) {
             ClaudeAccountsWindowController.shared.showWindow(nil)
         })
         return menu
+    }
+
+    /// What `cmds accounts auto|login|clear|share` do, without the command line: switching by itself at the limit
+    /// (checked when on), Sign In per account, Clear Limit per limited account, and Share Sessions… while some
+    /// account's sessions are not shared.
+    private static func accountItems(controller: AppController) -> [NSMenuItem] {
+        let list = controller.accountList()
+        var items: [NSMenuItem] = []
+        let auto = Handler.item(String(localized: "Switch Automatically at the Limit", comment: "sidebar account menu")) {
+            controller.setAccountAutoSwitch(!list.autoSwitch)
+        }
+        auto.state = list.autoSwitch ? .on : .off
+        items.append(auto)
+
+        let signIn = NSMenuItem(title: String(localized: "Sign In", comment: "sidebar account menu: submenu of accounts"),
+                                action: nil, keyEquivalent: "")
+        signIn.submenu = NSMenu()
+        for account in list.accounts {
+            let item = Handler.item(account.name + (note(account).map { " — " + $0 } ?? "")) {
+                do {
+                    try controller.signInToAccount(name: account.name)
+                } catch {
+                    show((error as? RPCError)?.message ?? error.localizedDescription, title: String(localized: "Claude Accounts"),
+                         in: controller.window)
+                }
+            }
+            item.image = swatch(color(of: account.name, controller: controller))
+            signIn.submenu?.addItem(item)
+        }
+        items.append(signIn)
+
+        let unset = list.accounts.filter { $0.needsSetup == true }
+        if !unset.isEmpty {
+            let setUp = NSMenuItem(title: String(localized: "Set Up for cmds", comment: "account menu: add cmds's status line and hooks to an account"),
+                                   action: nil, keyEquivalent: "")
+            setUp.submenu = NSMenu()
+            for account in unset {
+                let item = Handler.item(account.name) { confirmSetUp(account.name, controller: controller, in: controller.window) }
+                item.image = swatch(color(of: account.name, controller: controller))
+                setUp.submenu?.addItem(item)
+            }
+            items.append(setUp)
+        }
+
+        let limited = list.accounts.filter { $0.limit != nil }
+        if !limited.isEmpty {
+            let clear = NSMenuItem(title: String(localized: "Clear Limit"), action: nil, keyEquivalent: "")
+            clear.submenu = NSMenu()
+            for account in limited {
+                let item = Handler.item(account.name) {
+                    try? controller.clearAccountLimit(name: account.name)
+                    refreshRows(controller)
+                }
+                item.image = swatch(color(of: account.name, controller: controller))
+                clear.submenu?.addItem(item)
+            }
+            items.append(clear)
+        }
+        if list.accounts.count > 1, list.accounts.contains(where: { $0.sessions == .missing || $0.sessions == .separate }) {
+            items.append(Handler.item(String(localized: "Share Sessions…")) {
+                ClaudeAccountsWindowController.shared.showAndShareSessions()
+            })
+        }
+        return items
+    }
+
+    /// Why an account cannot take a session as it is: not signed in, not set up for cmds, the same sign-in as another
+    /// account.
+    static func note(_ account: ClaudeAccountStatus) -> String? {
+        if !account.exists { return String(localized: "not signed in", comment: "account menu: the config folder does not exist") }
+        var notes: [String] = []
+        if account.needsSetup == true {
+            notes.append(String(localized: "not set up", comment: "account menu: settings.json lacks cmds's status line or hooks"))
+        }
+        if let other = account.sameSignInAs {
+            notes.append(String(localized: "same sign-in as \(other)", comment: "account menu: two accounts are one Claude account"))
+        }
+        return notes.isEmpty ? nil : notes.joined(separator: ", ")
+    }
+
+    /// Set Up: says what is added to the account's settings.json, then adds it and says what happened.
+    static func confirmSetUp(_ name: String, controller: AppController, in window: NSWindow?) {
+        let alert = NSAlert()
+        alert.messageText = String(localized: "Set up “\(name)” for cmds?")
+        alert.informativeText = String(localized: """
+            cmds adds its status line and hooks to this account’s settings.json when they are missing. They tell cmds \
+            the session, its usage and its state: without them the account’s workspaces have no account button and \
+            cannot be switched. Other settings stay, and the previous file is kept next to it. Sessions started \
+            afterwards use it.
+            """)
+        alert.addButton(withTitle: String(localized: "Set Up for cmds", comment: "account menu: add cmds's status line and hooks to an account"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        let run: (NSApplication.ModalResponse) -> Void = { response in
+            guard response == .alertFirstButtonReturn else { return }
+            do {
+                let result = try controller.setUpAccount(name: name)
+                if result.statusLine == .own {
+                    show(String(localized: "The hooks were added. This account has a status line of its own: add cmds hook claude-status to it (see the guide, “Usage and limits”)."),
+                         title: String(localized: "Claude Accounts"), in: window)
+                }
+            } catch {
+                show((error as? RPCError)?.message ?? error.localizedDescription, title: String(localized: "Claude Accounts"), in: window)
+            }
+        }
+        if let window { alert.beginSheetModal(for: window, completionHandler: run) } else { run(alert.runModal()) }
     }
 
     /// A pane's section header: its task (else "Pane id") and the account it runs under.
@@ -117,8 +223,10 @@ enum ClaudeAccountMenu {
         var items: [NSMenuItem] = []
         let (current, switchingTo) = shown(pane, controller: controller)
         let now = Date()
+        let notes = Dictionary(uniqueKeysWithValues: controller.accountList(now: now).accounts.map { ($0.name, note($0)) })
         for account in controller.claudeAccounts.accounts {
             var title = account.name
+            if let note = notes[account.name] ?? nil, current.map(account.hasName) != true { title += " — " + note }
             if let limit = account.limit, limit.isActive(at: now) {
                 title += " — " + String(localized: "Limit — \(AppController.localizedReset(limit))")
             }
@@ -173,9 +281,9 @@ enum ClaudeAccountMenu {
         (controller.window?.windowController as? MainWindowController)?.sidebar.updateUsage()
     }
 
-    private static func show(_ text: String, in window: NSWindow?) {
+    private static func show(_ text: String, title: String? = nil, in window: NSWindow?) {
         let alert = NSAlert()
-        alert.messageText = String(localized: "The account cannot be switched", comment: "sidebar account menu: alert title")
+        alert.messageText = title ?? String(localized: "The account cannot be switched", comment: "sidebar account menu: alert title")
         alert.informativeText = text
         if let window { alert.beginSheetModal(for: window) } else { alert.runModal() }
     }

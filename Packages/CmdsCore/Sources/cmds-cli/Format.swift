@@ -261,6 +261,8 @@ enum Format {
             } else {
                 line += account.exists ? "available" : "missing directory"
             }
+            if let other = account.sameSignInAs { line += "  same sign-in as \(other)" }
+            if account.needsSetup == true { line += "  not set up (cmds accounts setup \(account.name))" }
             switch account.sessions {
             case .shared: line += "  sessions shared"
             case .missing, .separate: line += "  sessions not shared"

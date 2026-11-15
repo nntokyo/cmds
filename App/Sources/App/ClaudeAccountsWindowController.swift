@@ -17,6 +17,8 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
     private let downButton = NSButton()
     private let clearLimitButton = NSButton(title: String(localized: "Clear Limit"), target: nil, action: nil)
     private let openButton = NSButton(title: String(localized: "New Workspace"), target: nil, action: nil)
+    private let signInButton = NSButton(title: String(localized: "Sign In"), target: nil, action: nil)
+    private let setUpButton = NSButton(title: String(localized: "Set Up for cmds…"), target: nil, action: nil)
     private let shareButton = NSButton(title: String(localized: "Share Sessions…"), target: nil, action: nil)
     private let autoSwitchCheckbox = NSButton(checkboxWithTitle: String(localized: "Switch automatically when an account hits its limit"),
                                               target: nil, action: nil)
@@ -143,10 +145,16 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
         openButton.target = self
         openButton.action = #selector(openWorkspace)
         openButton.toolTip = String(localized: "A new workspace whose shell uses this account (CLAUDE_CONFIG_DIR); run claude there, and /login the first time")
+        signInButton.target = self
+        signInButton.action = #selector(signIn)
+        signInButton.toolTip = String(localized: "A new workspace under this account that runs claude auth login: sign in, or sign in as another Claude account")
         shareButton.target = self
         shareButton.action = #selector(shareSessions)
-        for button in [clearLimitButton, openButton, shareButton] { button.bezelStyle = .rounded }
-        let buttons = NSStackView(views: [addRemove, upButton, downButton, NSView(), openButton, clearLimitButton])
+        setUpButton.target = self
+        setUpButton.action = #selector(setUp)
+        setUpButton.toolTip = String(localized: "Add cmds’s status line and hooks to this account’s settings.json (needed for the account button and switching)")
+        for button in [clearLimitButton, openButton, signInButton, setUpButton, shareButton] { button.bezelStyle = .rounded }
+        let buttons = NSStackView(views: [addRemove, upButton, downButton, NSView(), signInButton, setUpButton, openButton, clearLimitButton])
         buttons.spacing = 6
         buttons.setHuggingPriority(.defaultLow, for: .horizontal)
 
@@ -222,6 +230,8 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
         downButton.isEnabled = hasSelection && row < list.accounts.count - 1
         clearLimitButton.isEnabled = selectedAccount?.limit != nil
         openButton.isEnabled = selectedAccount?.exists ?? false
+        signInButton.isEnabled = selectedAccount != nil
+        setUpButton.isEnabled = selectedAccount?.needsSetup == true
     }
 
     // MARK: - Table
@@ -251,6 +261,13 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
                 field.stringValue = String(localized: "Limit — \(AppController.localizedReset(limit))")
                 field.textColor = .systemOrange
                 field.toolTip = limit.message
+            } else if let note = ClaudeAccountMenu.note(account) {
+                // Not signed in, or one Claude account under two names: nothing to switch to.
+                field.stringValue = note
+                field.textColor = .systemOrange
+                field.toolTip = account.needsSetup == true
+                    ? String(localized: "This account’s settings.json lacks cmds’s status line or hooks: click Set Up for cmds….")
+                    : account.sameSignInAs.map { AccountSwitchProblem.sameSignIn(account: $0).localized }
             } else {
                 field.stringValue = String(localized: "Available")
             }
@@ -376,6 +393,28 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
         controller.createWorkspace(title: "Claude: \(account.name)", account: account)
         NSApp.activate()
         controller.window?.makeKeyAndOrderFront(nil)
+    }
+
+    @objc private func signIn() {
+        guard let account = selectedAccount else { return }
+        do {
+            try controller.signInToAccount(name: account.name)
+            NSApp.activate()
+            controller.window?.makeKeyAndOrderFront(nil)
+        } catch {
+            showError(error)
+        }
+    }
+
+    @objc private func setUp() {
+        guard let account = selectedAccount else { return }
+        ClaudeAccountMenu.confirmSetUp(account.name, controller: controller, in: window)
+    }
+
+    /// Share Sessions… from the sidebar's account menu: the window, then its confirmation sheet.
+    func showAndShareSessions() {
+        showWindow(nil)
+        shareSessions()
     }
 
     @objc private func autoSwitchToggled() {

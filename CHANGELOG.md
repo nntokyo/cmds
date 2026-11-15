@@ -7,6 +7,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Claude accounts: **Sign In** (the sidebar's account menu, Settings › Claude Accounts, `cmds accounts login NAME`)
+  opens a workspace under the account and runs `claude auth login`.
+- Claude accounts: **Set Up for cmds** (the account menu, Settings › Claude Accounts, `cmds accounts setup NAME`) adds cmds's
+  status line and hooks to an account's `settings.json` when they are missing (the previous file is kept). Accounts
+  that need it are shown as "not set up": without it their workspaces had no account button and never switched.
+- Claude accounts: the sidebar's account menu also has **Switch Automatically at the Limit**, **Clear Limit** and
+  **Share Sessions…**, so accounts can be handled without the command line.
+
+### Fixed
+
+- Claude accounts: two accounts signed in to the same Claude account share one limit. They are shown as "same sign-in
+  as …" (menu, Settings, `cmds accounts`), are marked limited together, and a session is never switched between them
+  (it used to "switch" and stop at the same limit).
+
+- Claude accounts: the limit notice of Claude Code 2.1.3xx (`Usage limit reached · continuing automatically at
+  4:50pm`) gives the reset time (it was estimated as five hours later, so the account stayed "limited" and "Continue
+  at" came too late); `Usage limit reset · Continuing automatically` ends the limit shown above it.
+- Claude accounts: an account whose config directory does not exist is never chosen to continue with (the pane said
+  "share sessions first" instead of switching to the next account or offering to continue at the reset), nor by
+  `--account auto`.
+
 ## [0.24.3] - 2026-11-15
 
 Mac only; the iPhone/iPad app is unchanged.

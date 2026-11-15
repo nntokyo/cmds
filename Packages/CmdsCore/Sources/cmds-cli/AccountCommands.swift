@@ -11,7 +11,7 @@ extension CLI {
                     An account is a name and a Claude Code config directory (CLAUDE_CONFIG_DIR) you signed in to yourself
                     (claude, then /login). cmds stores only names and paths. When a pane's account hits its limit, cmds
                     offers to continue the session with the next account in this order that has not (cmds accounts auto
-                    on: by itself). Subcommands: add, remove, move, share, clear, switch, auto. Use only your own
+                    on: by itself). Subcommands: add, remove, move, share, login, setup, clear, switch, auto. Use only your own
                     accounts; you are responsible for following Anthropic's terms for each. See docs/guide/ai-agents.md
                     "Several Claude accounts".
                     """) { ctx in
@@ -23,8 +23,8 @@ extension CLI {
         Command(name: "accounts add", usage: "accounts add <name> <config-dir>",
                 summary: "Add a Claude account: a name and its config directory (absolute or ~/…; ~/.claude is plain claude's).",
                 details: """
-                    Names: letters, digits, - _ . @ (not "auto"). The directory may not exist yet: open a pane with
-                    `cmds new --account NAME`, run claude and /login there. Nothing is read from the directory.
+                    Names: letters, digits, - _ . @ (not "auto"). The directory may not exist yet:
+                    `cmds accounts login NAME` signs it in. Only which Claude account it is signed in to is read from it.
                     """) { ctx in
             try ctx.args.expectPositionals(2...2, usage: "cmds accounts add <name> <config-dir>")
             var dir = ctx.args.positionals[1]
@@ -61,6 +61,39 @@ extension CLI {
             guard case .array(let steps) = result else { return }
             print(Format.shareSteps(steps, applied: apply), terminator: "")
             if !apply { print("(nothing changed; run with --yes to do this)") }
+        },
+        Command(name: "accounts login", usage: "accounts login <name>",
+                summary: "Open a workspace under a Claude account and run `claude auth login` there (sign in, or sign in as another account).",
+                details: """
+                    The same as Sign In in the sidebar's account menu and in Settings › Claude Accounts. The config
+                    directory is created by Claude Code when it does not exist yet. Prints the workspace.
+                    """) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds accounts login <name>")
+            let result = try ctx.call("account.login", ["name": .string(ctx.args.positionals[0])])
+            ctx.printResult(result, field: "workspace")
+        },
+        Command(name: "accounts setup", usage: "accounts setup <name>",
+                summary: "Add cmds's status line and hooks to a Claude account's settings.json (what the account button and switching need).",
+                details: """
+                    Adds only what is missing to <config-dir>/settings.json: the status line (cmds hook claude-status;
+                    the first account's status line when that one reports) when there is none, and the hooks
+                    (cmds hook claude) for Notification, Stop, UserPromptSubmit, SubagentStart and SubagentStop.
+                    Other settings stay; a status line of your own is left alone; the previous file is copied to
+                    settings.json.cmds-backup-<time>. The same as Set Up for cmds in the sidebar's account menu. Sessions
+                    started afterwards use it.
+                    """) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds accounts setup <name>")
+            let result = try ctx.call("account.setup", ["name": .string(ctx.args.positionals[0])])
+            if ctx.json { return ctx.printJSON(result) }
+            let added = (result["hooksAdded"]?.arrayValue ?? []).compactMap(\.stringValue)
+            var parts: [String] = []
+            if result["statusLineAdded"]?.boolValue == true { parts.append("status line added") }
+            if !added.isEmpty { parts.append("hooks added: " + added.joined(separator: ", ")) }
+            if result["statusLine"]?.stringValue == "own" {
+                parts.append("the status line is your own: add `cmds hook claude-status` to it (docs/guide/ai-agents.md)")
+            }
+            print(parts.isEmpty ? "nothing to add" : parts.joined(separator: "; "))
+            if let backup = result["backup"]?.stringValue { print("previous settings: \(backup)") }
         },
         Command(name: "accounts clear", usage: "accounts clear <name>",
                 summary: "Forget a Claude account's recorded limit (e.g. it reset early or was detected wrongly).") { ctx in

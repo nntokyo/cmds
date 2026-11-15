@@ -263,6 +263,12 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   `<support dir>/claude-accounts.json`, so an isolated instance has its own. Names and paths only. Loaded through
   `StoredFile`: a damaged file is moved aside (`claude-accounts.json.corrupt-<time>`, kept) and reported; one that
   cannot be read stays in place and is not saved over.
+- **Sign-in and setup** (read on demand for the list, a limit and a switch; nothing is stored): `ClaudeAccounts.signIn`
+  reads the account id in `<config dir>/.claude.json` (the default directory also `~/.claude.json`) only to compare
+  accounts: those with the same one share a limit (marked limited together, never a switch target for each other,
+  `sameSignInAs`). `ClaudeAccountSetup` reads `<config dir>/settings.json` (and the status-line script it names) for
+  cmds's status line and hooks (`needsSetup`) and, on Set Up for cmds / `account.setup`, adds what is missing after
+  copying the file aside. Sign In / `account.login` opens a workspace under the account running `claude auth login`.
 - **A pane's account** (`Pane.claudeAccount`, saved as `paneAccounts` per workspace in `session.json`): set when the
   pane is created with one (its environment gets `CLAUDE_CONFIG_DIR`), by a switch, or from the `configDir` that
   `cmds hook claude-status` sends with `agent.report` (the hook's own `CLAUDE_CONFIG_DIR`, inherited from Claude

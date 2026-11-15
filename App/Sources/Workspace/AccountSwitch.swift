@@ -36,6 +36,10 @@ enum AccountSwitchProblem: Equatable {
     case noSession
     case noOtherAccount
     case notShared(account: String)
+    /// `account` is signed in to the same Claude account as the pane's: the limit is the same one.
+    case sameSignIn(account: String)
+    /// `account`'s config directory does not exist yet: nobody signed in there.
+    case notSignedIn(account: String)
     case didNotQuit
 
     /// Sharing the sessions (Settings › Claude Accounts) would solve it.
@@ -51,6 +55,8 @@ enum AccountSwitchProblem: Equatable {
         case .noSession: return "no Claude Code session id is known for this pane (add `cmds hook claude-status` to the status line in the account's settings.json)"
         case .noOtherAccount: return "every other account has hit its limit (or there is no other account)"
         case .notShared(let account): return "the session's transcript is not reachable from account \(account): share sessions first (cmds accounts share)"
+        case .sameSignIn(let account): return "account \(account) is signed in to the same Claude account, so it has the same limit (sign it in to another one: cmds accounts login \(account))"
+        case .notSignedIn(let account): return "account \(account) is not signed in yet (its config directory does not exist): cmds accounts login \(account)"
         case .didNotQuit: return "Claude Code did not quit (Ctrl-C); quit it yourself and run cmds accounts switch again"
         }
     }
@@ -61,6 +67,8 @@ enum AccountSwitchProblem: Equatable {
         case .noSession: return String(localized: "The session id is not known: add cmds hook claude-status to the status line in this account’s settings.json.")
         case .noOtherAccount: return String(localized: "Every other account has hit its limit.")
         case .notShared(let account): return String(localized: "The session cannot be reached from “\(account)”: share sessions in Settings › Claude Accounts first.")
+        case .sameSignIn(let account): return String(localized: "“\(account)” is signed in to the same Claude account, so it has the same limit. Sign it in to another account (the account menu’s Sign In).")
+        case .notSignedIn(let account): return String(localized: "“\(account)” is not signed in yet. Sign in first (the account menu’s Sign In).")
         case .didNotQuit: return String(localized: "Claude Code did not quit. Quit it yourself, then try again.")
         }
     }

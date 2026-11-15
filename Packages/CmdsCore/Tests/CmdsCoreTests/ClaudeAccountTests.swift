@@ -124,6 +124,29 @@ final class ClaudeAccountTests: XCTestCase {
         }
     }
 
+    func testContinuingAutomatically() {
+        // Claude Code 2.1.3xx: the notice under the limit message has the time without "resets".
+        let screen = """
+            ❯ continue
+              ⎿  You've hit your 5-hour limit · resets 4:50pm (Asia/Tokyo)
+                 /usage-credits to finish what you’re working on.
+
+            ⏺ Usage limit reached · continuing automatically at 4:50pm · esc to cancel
+
+            ✻ Worked for 0s · done 16:40
+            """
+        let hit = detect(screen)
+        XCTAssertEqual(hit?.kind, .usageLimit)
+        XCTAssertEqual(hit?.line, "Usage limit reached · continuing automatically at 4:50pm · esc to cancel")
+        XCTAssertEqual(hit?.resetsAt, detect("⎿  You've hit your 5-hour limit · resets 4:50pm (Asia/Tokyo)")?.resetsAt)
+        XCTAssertNotNil(hit?.resetsAt)
+        // The notice alone (the turn ended in the grace allowance, no "You've hit" line).
+        XCTAssertNotNil(detect("⏺ Usage limit reached · continuing automatically at 4:50pm · esc to cancel")?.resetsAt)
+        XCTAssertEqual(detect(screen + "\n⏺ Automatic continue cancelled · /rate-limit-options to re-arm")?.resetsAt, hit?.resetsAt)
+        // The limit has reset: what is above is over.
+        XCTAssertNil(detect(screen + "\n\n⏺ Usage limit reset · Continuing automatically\n\n  Read 2 files"))
+    }
+
     func testNewestMessageWins() {
         let screen = """
             ⎿  API Error: Rate limit reached
@@ -215,16 +238,106 @@ final class ClaudeAccountTests: XCTestCase {
         var accounts = [ClaudeAccount(name: "a", configDir: "/a", limit: limit),
                         ClaudeAccount(name: "b", configDir: "/b"),
                         ClaudeAccount(name: "c", configDir: "/c", limit: expired)]
-        XCTAssertEqual(ClaudeAccounts.next(after: "a", in: accounts, now: now)?.name, "b")
-        XCTAssertEqual(ClaudeAccounts.next(after: "b", in: accounts, now: now)?.name, "c")
+        XCTAssertEqual(ClaudeAccounts.next(after: "a", in: accounts, now: now, usable: { _ in true })?.name, "b")
+        XCTAssertEqual(ClaudeAccounts.next(after: "b", in: accounts, now: now, usable: { _ in true })?.name, "c")
         // Wraps around, skipping limited accounts; never the current one.
-        XCTAssertEqual(ClaudeAccounts.next(after: "c", in: accounts, now: now)?.name, "b")
-        XCTAssertEqual(ClaudeAccounts.next(after: nil, in: accounts, now: now)?.name, "b")
-        XCTAssertEqual(ClaudeAccounts.firstAvailable(in: accounts, now: now)?.name, "b")
+        XCTAssertEqual(ClaudeAccounts.next(after: "c", in: accounts, now: now, usable: { _ in true })?.name, "b")
+        XCTAssertEqual(ClaudeAccounts.next(after: nil, in: accounts, now: now, usable: { _ in true })?.name, "b")
+        XCTAssertEqual(ClaudeAccounts.firstAvailable(in: accounts, now: now, usable: { _ in true })?.name, "b")
         accounts[1].limit = limit
         accounts[2].limit = limit
-        XCTAssertNil(ClaudeAccounts.next(after: "a", in: accounts, now: now))
-        XCTAssertNil(ClaudeAccounts.firstAvailable(in: accounts, now: now))
+        XCTAssertNil(ClaudeAccounts.next(after: "a", in: accounts, now: now, usable: { _ in true }))
+        XCTAssertNil(ClaudeAccounts.firstAvailable(in: accounts, now: now, usable: { _ in true }))
+    }
+
+    func testNextAccountSkipsMissingConfigDirs() throws {
+        let home = try temporaryDirectory().path
+        try FileManager.default.createDirectory(atPath: home + "/a", withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(atPath: home + "/b", withIntermediateDirectories: true)
+        let accounts = [ClaudeAccount(name: "a", configDir: home + "/a"), ClaudeAccount(name: "gone", configDir: home + "/gone"),
+                        ClaudeAccount(name: "b", configDir: home + "/b")]
+        // An account whose directory does not exist is never a target: no session can be reached from it.
+        XCTAssertEqual(ClaudeAccounts.next(after: "a", in: accounts, now: now)?.name, "b")
+        XCTAssertNil(ClaudeAccounts.next(after: "a", in: Array(accounts.prefix(2)), now: now))
+        XCTAssertEqual(ClaudeAccounts.firstAvailable(in: Array(accounts.dropFirst()), now: now)?.name, "b")
+    }
+
+    func testSignInOfConfigDirs() throws {
+        let home = try temporaryDirectory().path
+        func write(_ path: String, _ json: String) throws {
+            try FileManager.default.createDirectory(atPath: (path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+            try Data(json.utf8).write(to: URL(fileURLWithPath: path))
+        }
+        try write(home + "/.claude-a/.claude.json", #"{"oauthAccount":{"accountUuid":"one"},"other":1}"#)
+        try write(home + "/.claude-b/.claude.json", #"{"oauthAccount":{"accountUuid":"one"}}"#)
+        try write(home + "/.claude-c/.claude.json", #"{"oauthAccount":{"accountUuid":"two"}}"#)
+        try write(home + "/.claude-d/.claude.json", "not json")
+        // The default directory: a plain `claude` keeps the file next to it.
+        try write(home + "/.claude.json", #"{"oauthAccount":{"accountUuid":"two"}}"#)
+        try FileManager.default.createDirectory(atPath: home + "/.claude", withIntermediateDirectories: true)
+        let accounts = ["a", "b", "c", "d", "gone"].map { ClaudeAccount(name: $0, configDir: "~/.claude-\($0)") }
+            + [ClaudeAccount(name: "main", configDir: "~/.claude")]
+        let signIn: (ClaudeAccount) -> String? = { ClaudeAccounts.signIn(of: $0, home: home) }
+        XCTAssertEqual(accounts.map(signIn), ["one", "one", "two", nil, nil, "two"])
+        XCTAssertEqual(ClaudeAccounts.sameSignIn(as: accounts[0], in: accounts, signIn: signIn).map(\.name), ["b"])
+        XCTAssertEqual(ClaudeAccounts.sameSignIn(as: accounts[2], in: accounts, signIn: signIn).map(\.name), ["main"])
+        // Not signed in: the same as nobody.
+        XCTAssertEqual(ClaudeAccounts.sameSignIn(as: accounts[3], in: accounts, signIn: signIn), [])
+        // The default directory's own file wins once Claude Code ran with CLAUDE_CONFIG_DIR set to it.
+        try write(home + "/.claude/.claude.json", #"{"oauthAccount":{"accountUuid":"one"}}"#)
+        XCTAssertEqual(signIn(accounts[5]), "one")
+    }
+
+    func testAccountSetup() throws {
+        let home = try temporaryDirectory().path
+        let fileManager = FileManager.default
+        try fileManager.createDirectory(atPath: home + "/.claude", withIntermediateDirectories: true)
+        try fileManager.createDirectory(atPath: home + "/.claude-work", withIntermediateDirectories: true)
+        try Data("input=$(cat)\nprintf '%s' \"$input\" | cmds hook claude-status\n".utf8).write(to: URL(fileURLWithPath: home + "/.claude/statusline.sh"))
+        let hook = #"{"hooks":[{"type":"command","command":"command -v cmds >/dev/null && cmds hook claude || true"}]}"#
+        let all = ClaudeAccountSetup.hookEvents.map { #""\#($0)":[\#(hook)]"# }.joined(separator: ",")
+        try Data(#"{"statusLine":{"type":"command","command":"~/.claude/statusline.sh","padding":0},"hooks":{\#(all)}}"#.utf8)
+            .write(to: URL(fileURLWithPath: home + "/.claude/settings.json"))
+        try Data(#"{"model":"opus","hooks":{"Stop":[{"hooks":[{"type":"command","command":"say done"}]}]}}"#.utf8)
+            .write(to: URL(fileURLWithPath: home + "/.claude-work/settings.json"))
+        let main = ClaudeAccount(name: "main", configDir: "~/.claude")
+        let work = ClaudeAccount(name: "work", configDir: "~/.claude-work")
+        let gone = ClaudeAccount(name: "gone", configDir: "~/.claude-gone")
+        // The script is read: it calls the hook.
+        XCTAssertEqual(ClaudeAccountSetup.state(of: main, home: home)?.isComplete, true)
+        XCTAssertEqual(ClaudeAccountSetup.state(of: work, home: home),
+                       ClaudeAccountSetup.State(statusLine: .missing, missingHooks: ClaudeAccountSetup.hookEvents))
+        XCTAssertNil(ClaudeAccountSetup.state(of: gone, home: home))
+        XCTAssertThrowsError(try ClaudeAccountSetup.apply(to: gone, in: [main, work, gone], home: home))
+
+        let result = try ClaudeAccountSetup.apply(to: work, in: [main, work, gone], home: home, now: now)
+        XCTAssertTrue(result.statusLineAdded)
+        XCTAssertEqual(result.hooksAdded, ClaudeAccountSetup.hookEvents)
+        XCTAssertEqual(result.statusLine, .reports)
+        XCTAssertEqual(ClaudeAccountSetup.state(of: work, home: home)?.isComplete, true)
+        let backup = try XCTUnwrap(result.backup)
+        XCTAssertTrue(String(decoding: try XCTUnwrap(fileManager.contents(atPath: backup)), as: UTF8.self).contains("say done"))
+        let written = try XCTUnwrap(JSONSerialization.jsonObject(with: try XCTUnwrap(fileManager.contents(atPath: home + "/.claude-work/settings.json"))) as? [String: Any])
+        // Other settings and hooks stay; the status line is the first account's.
+        XCTAssertEqual(written["model"] as? String, "opus")
+        XCTAssertEqual((written["statusLine"] as? [String: Any])?["command"] as? String, "~/.claude/statusline.sh")
+        XCTAssertEqual(((written["hooks"] as? [String: Any])?["Stop"] as? [Any])?.count, 2)
+        // Again: nothing to add, no second backup.
+        let again = try ClaudeAccountSetup.apply(to: work, in: [main, work], home: home, now: now)
+        XCTAssertEqual(again.hooksAdded, [])
+        XCTAssertNil(again.backup)
+
+        // A status line of the user's own is never replaced; without any account that reports, the bare command.
+        let own = ClaudeAccountSetup.state(settings: Data(#"{"statusLine":{"type":"command","command":"~/mine.sh"}}"#.utf8))
+        XCTAssertEqual(own.statusLine, .own)
+        let updated = try XCTUnwrap(ClaudeAccountSetup.updated(settings: Data(#"{"statusLine":{"type":"command","command":"~/mine.sh"}}"#.utf8),
+                                                             statusLine: ["type": "command", "command": ClaudeAccountSetup.statusCommand]))
+        XCTAssertTrue(String(decoding: updated, as: UTF8.self).contains("~/mine.sh"))
+        XCTAssertFalse(String(decoding: updated, as: UTF8.self).contains("claude-status"))
+        XCTAssertEqual(ClaudeAccountSetup.state(settings: try XCTUnwrap(ClaudeAccountSetup.updated(settings: nil, statusLine: ClaudeAccountSetup.statusLineTemplate(from: [], home: home)))).isComplete, true)
+        // Not a JSON object: left alone.
+        XCTAssertTrue(ClaudeAccountSetup.state(settings: Data("[1]".utf8)).unreadable)
+        XCTAssertThrowsError(try ClaudeAccountSetup.updated(settings: Data("oops".utf8), statusLine: [:]))
     }
 
     func testConfigDirExistsAndNames() throws {
@@ -240,12 +353,12 @@ final class ClaudeAccountTests: XCTestCase {
 
     func testNextAccountMatchesNamesIgnoringCase() {
         let accounts = [ClaudeAccount(name: "Work", configDir: "/w"), ClaudeAccount(name: "home", configDir: "/h")]
-        XCTAssertEqual(ClaudeAccounts.next(after: "work", in: accounts, now: now)?.name, "home")
+        XCTAssertEqual(ClaudeAccounts.next(after: "work", in: accounts, now: now, usable: { _ in true })?.name, "home")
         // An account that is not (or no longer) in the list: the first free one, from the top.
-        XCTAssertEqual(ClaudeAccounts.next(after: "gone", in: accounts, now: now)?.name, "Work")
+        XCTAssertEqual(ClaudeAccounts.next(after: "gone", in: accounts, now: now, usable: { _ in true })?.name, "Work")
         // A single account never switches to itself.
-        XCTAssertNil(ClaudeAccounts.next(after: "Work", in: Array(accounts.prefix(1)), now: now))
-        XCTAssertNil(ClaudeAccounts.next(after: nil, in: [], now: now))
+        XCTAssertNil(ClaudeAccounts.next(after: "Work", in: Array(accounts.prefix(1)), now: now, usable: { _ in true }))
+        XCTAssertNil(ClaudeAccounts.next(after: nil, in: [], now: now, usable: { _ in true }))
     }
 
     func testMergeKeepsLaterEstimateOverExpiredLimit() {
