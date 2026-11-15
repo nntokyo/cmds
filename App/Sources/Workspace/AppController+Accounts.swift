@@ -73,13 +73,19 @@ extension AppController {
 
     func accountList(now: Date = Date()) -> ClaudeAccountList {
         let accounts = claudeAccounts.accounts
+        var signIns: [String: String] = [:]
+        for account in accounts { signIns[account.name] = ClaudeAccounts.signIn(of: account) }
         let statuses = accounts.map { account -> ClaudeAccountStatus in
             let panes = workspaces.flatMap(\.orderedPanes)
                 .filter { $0.claudeAccount.map(account.hasName) ?? false }.map(\.id)
             return ClaudeAccountStatus(name: account.name, configDir: account.configDir,
                                        exists: ClaudeAccounts.configDirExists(account),
                                        limit: account.isLimited(at: now) ? account.limit : nil,
-                                       sessions: ClaudeSessionSharing.link(of: account, in: accounts), panes: panes)
+                                       sessions: ClaudeSessionSharing.link(of: account, in: accounts), panes: panes,
+                                       sameSignInAs: signIns[account.name].flatMap { id in
+                                           accounts.first { !$0.hasName(account.name) && signIns[$0.name] == id }?.name
+                                       },
+                                       needsSetup: ClaudeAccountSetup.state(of: account).map { !$0.isComplete })
         }
         return ClaudeAccountList(accounts: statuses, autoSwitch: claudeAccounts.autoSwitch)
     }
@@ -131,6 +137,42 @@ extension AppController {
     func setAccountAutoSwitch(_ on: Bool) {
         claudeAccounts.autoSwitch = on
         saveClaudeAccounts()
+    }
+
+    /// The other accounts signed in to the same Claude account as `name` (they share its limit); none when `name` is
+    /// not one of the user's accounts or is not signed in.
+    func accountsSharingSignIn(with name: String?) -> [ClaudeAccount] {
+        guard let name, let account = claudeAccounts.account(named: name) else { return [] }
+        return ClaudeAccounts.sameSignIn(as: account, in: claudeAccounts.accounts)
+    }
+
+    /// Set Up (the sidebar's account menu, Settings › Claude Accounts, `account.setup`): adds cmds's status line and
+    /// hooks to the account's `settings.json` when missing (`ClaudeAccountSetup.apply`; the previous file is kept).
+    @discardableResult
+    func setUpAccount(name: String) throws -> ClaudeAccountSetup.Result {
+        let account = try account(named: name)
+        do {
+            let result = try ClaudeAccountSetup.apply(to: account, in: claudeAccounts.accounts)
+            NotificationCenter.default.post(name: Self.accountsDidChange, object: nil)
+            return result
+        } catch let error as ClaudeAccountSetup.SetupError {
+            throw RPCError.invalidParams("account \(account.name): \(error.description)")
+        } catch {
+            throw RPCError(code: Self.internalErrorCode, message: "setting up \(account.name) failed: \(error)")
+        }
+    }
+
+    /// The shell command that signs a config directory in (`claude auth login`), run in a workspace under the account.
+    static let signInCommand = "claude auth login"
+
+    /// Sign In (the sidebar's account menu, Settings › Claude Accounts, `account.login`): a new workspace under the
+    /// account whose shell runs `claude auth login` and stays open. Claude Code creates the directory when missing.
+    @discardableResult
+    func signInToAccount(name: String, select: Bool = true) throws -> WorkspaceInfo {
+        let account = try account(named: name)
+        let shell = ProcessInfo.processInfo.environment["SHELL"].flatMap { AgentResume.quotedPath($0) != nil ? $0 : nil } ?? "/bin/zsh"
+        let command = "\(shell) -lic '\(Self.signInCommand); exec \(shell) -l'"
+        return createWorkspace(title: String(localized: "Sign in: \(account.name)"), command: command, account: account, select: select)
     }
 
     /// Forget an account's limit (the user knows it has reset, or the detection was wrong).
@@ -272,7 +314,13 @@ extension AppController {
         guard !claudeAccounts.accounts.isEmpty, pane.accountSwitch?.isInProgress != true else { return }
         let from = currentAccount(of: pane)
         if let from, let index = claudeAccounts.accounts.firstIndex(where: { $0.name == from }) {
-            claudeAccounts.accounts[index].limit = ClaudeAccounts.merge(claudeAccounts.accounts[index].limit, limit, now: now)
+            // Accounts signed in to the same Claude account have hit the same limit.
+            let limited = [index] + accountsSharingSignIn(with: from).compactMap { other in
+                claudeAccounts.accounts.firstIndex { $0.hasName(other.name) }
+            }
+            for index in limited {
+                claudeAccounts.accounts[index].limit = ClaudeAccounts.merge(claudeAccounts.accounts[index].limit, limit, now: now)
+            }
             saveClaudeAccounts()
             refreshOffers(to: from, except: pane, now: now)
         }

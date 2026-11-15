@@ -361,6 +361,15 @@ final class APIServer {
         case "account.set":
             if let auto = try params.bool("autoSwitch") { controller.setAccountAutoSwitch(auto) }
             return try .from(controller.accountList())
+        case "account.login":
+            return ["workspace": .string(try controller.signInToAccount(name: try params.required("name"), select: false).id)]
+        case "account.setup":
+            let result = try controller.setUpAccount(name: try params.required("name"))
+            var object: [String: JSONValue] = ["statusLine": .string(result.statusLine.rawValue),
+                                               "statusLineAdded": .bool(result.statusLineAdded),
+                                               "hooksAdded": .array(result.hooksAdded.map(JSONValue.string))]
+            if let backup = result.backup { object["backup"] = .string(backup) }
+            return .object(object)
         case "account.clear_limit":
             try controller.clearAccountLimit(name: try params.required("name"))
         case "account.share":

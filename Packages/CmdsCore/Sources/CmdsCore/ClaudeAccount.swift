@@ -2,8 +2,10 @@ import Foundation
 
 // Several Claude Code accounts of the user (docs/guide/ai-agents.md "Several Claude accounts").
 // An account is a name and a Claude Code config directory (`CLAUDE_CONFIG_DIR`) the user signed in to once with
-// `claude` → `/login`. cmds keeps only the name, the path and the last limit it saw; it never reads, copies or
-// stores what Claude Code keeps in that directory (credentials, settings, transcripts).
+// `claude` → `/login`. cmds keeps only the name, the path and the last limit it saw; it never copies or stores what
+// Claude Code keeps in that directory (credentials, settings, transcripts). The one thing it reads there is which
+// sign-in the directory has (`ClaudeAccounts.signIn`: the account id in `.claude.json`, compared and never kept or
+// shown), since two directories signed in to the same Claude account share one limit.
 
 /// One Claude Code account: a name and its config directory.
 public struct ClaudeAccount: Codable, Equatable, Sendable {
@@ -188,17 +190,43 @@ public enum ClaudeAccounts {
         return accounts.first { (expandedPath($0.configDir, home: home) as NSString).resolvingSymlinksInPath == resolved }
     }
 
-    /// The account to continue with after `current` hit its limit: the next one in the user's order (wrapping
-    /// around) without an active limit, never `current` itself. nil when every other account is limited.
-    public static func next(after current: String?, in accounts: [ClaudeAccount], now: Date = Date()) -> ClaudeAccount? {
-        let start = current.flatMap { name in accounts.firstIndex { $0.hasName(name) } }
-        let ordered = start.map { Array(accounts[($0 + 1)...] + accounts[..<$0]) } ?? accounts
-        return ordered.first { !$0.isLimited(at: now) }
+    /// The Claude sign-in of the account's config directory: the account id Claude Code records in
+    /// `<configDir>/.claude.json` (`oauthAccount.accountUuid`); for the default directory without one, `~/.claude.json`
+    /// (a plain `claude`). nil when not signed in (or not readable). Only for comparing accounts: never stored, logged
+    /// or sent anywhere.
+    public static func signIn(of account: ClaudeAccount, home: String = NSHomeDirectory()) -> String? {
+        let dir = expandedPath(account.configDir, home: home)
+        var files = [dir + "/.claude.json"]
+        if dir == expandedPath(defaultConfigDir, home: home) { files.append(home + "/.claude.json") }
+        for file in files {
+            guard let data = FileManager.default.contents(atPath: file),
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }
+            if let id = (object["oauthAccount"] as? [String: Any])?["accountUuid"] as? String, !id.isEmpty { return id }
+        }
+        return nil
     }
 
-    /// `--account auto`: the first account in order without an active limit.
-    public static func firstAvailable(in accounts: [ClaudeAccount], now: Date = Date()) -> ClaudeAccount? {
-        accounts.first { !$0.isLimited(at: now) }
+    /// The other accounts signed in to the same Claude account as `account` (one limit for all of them).
+    public static func sameSignIn(as account: ClaudeAccount, in accounts: [ClaudeAccount],
+                                  signIn: (ClaudeAccount) -> String? = { ClaudeAccounts.signIn(of: $0) }) -> [ClaudeAccount] {
+        guard let own = signIn(account) else { return [] }
+        return accounts.filter { !$0.hasName(account.name) && signIn($0) == own }
+    }
+
+    /// The account to continue with after `current` hit its limit: the next one in the user's order (wrapping
+    /// around) without an active limit whose config directory exists (`usable`), never `current` itself. nil when
+    /// every other account is limited or missing.
+    public static func next(after current: String?, in accounts: [ClaudeAccount], now: Date = Date(),
+                            usable: (ClaudeAccount) -> Bool = { configDirExists($0) }) -> ClaudeAccount? {
+        let start = current.flatMap { name in accounts.firstIndex { $0.hasName(name) } }
+        let ordered = start.map { Array(accounts[($0 + 1)...] + accounts[..<$0]) } ?? accounts
+        return ordered.first { !$0.isLimited(at: now) && usable($0) }
+    }
+
+    /// `--account auto`: the first account in order without an active limit whose config directory exists (`usable`).
+    public static func firstAvailable(in accounts: [ClaudeAccount], now: Date = Date(),
+                                      usable: (ClaudeAccount) -> Bool = { configDirExists($0) }) -> ClaudeAccount? {
+        accounts.first { !$0.isLimited(at: now) && usable($0) }
     }
 
     /// The limit to keep when a new one is seen: a later reset wins; an estimate never replaces a known time
@@ -267,9 +295,17 @@ public struct ClaudeAccountStatus: Codable, Equatable, Sendable {
     public var sessions: ClaudeProjectsLink
     /// Terminal panes using this account now.
     public var panes: [String]
+    /// Another account (the first in the list) whose config directory is signed in to the same Claude account: they
+    /// share one limit, so a session never switches between them. nil when there is none.
+    public var sameSignInAs: String?
+    /// The account's `settings.json` lacks cmds's status line or hooks (`ClaudeAccountSetup`): its panes show no
+    /// account button and cannot be switched. nil when the config directory does not exist.
+    public var needsSetup: Bool?
 
     public init(name: String, configDir: String, exists: Bool, limit: ClaudeAccountLimit?, sessions: ClaudeProjectsLink,
-                panes: [String]) {
+                panes: [String], sameSignInAs: String? = nil, needsSetup: Bool? = nil) {
+        self.sameSignInAs = sameSignInAs
+        self.needsSetup = needsSetup
         self.name = name
         self.configDir = configDir
         self.exists = exists

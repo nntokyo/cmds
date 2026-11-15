@@ -413,18 +413,32 @@ Code panes under each of them and move a session to the next account when one hi
 An account is a name and a Claude Code config directory (`CLAUDE_CONFIG_DIR`). Claude Code keeps everything of an
 account there (sign-in, settings, sessions); `~/.claude` is the one plain `claude` uses. cmds stores only the names
 and paths (in `claude-accounts.json` in its support directory), never reads, copies or stores credentials, and never
-signs in for you.
+signs in for you. The one thing it looks at in a folder is which Claude account it is signed in to (the account id in
+its `.claude.json`, only compared, never kept or shown): two folders signed in to the same Claude account share one
+limit, so they show **same sign-in as …**, hit their limit together and a session never moves between them.
 
 1. Add the accounts in **Settings › Agents › Claude accounts › Manage…** (+, a name and a folder such as
    `~/.claude-work`) or with `cmds accounts add work ~/.claude-work`. Their order is the switching order (▲▼,
    `cmds accounts move`).
-2. Sign in once per account yourself: select it and click **New Workspace** (or `cmds new --account work`), run
-   `claude` there and type `/login`.
-3. Set up each account's `settings.json` (`<config dir>/settings.json`) like `~/.claude/settings.json`: the
+2. Sign in once per account yourself: select it and click **Sign In** (or the sidebar's account menu › **Sign In**,
+   or `cmds accounts login work`). A workspace opens under the account and runs `claude auth login`; finish in the
+   browser. An account shown as **not signed in** or **same sign-in as …** needs this (the second: sign in as the
+   other Claude account).
+3. Set up each account's `settings.json`: select it and click **Set Up for cmds…** (or the account menu › **Set Up for cmds**, or
+   `cmds accounts setup work`). cmds adds what is missing and nothing else: the status line when there is none (the
+   first account's, when that one reports to cmds) and the hooks; a status line of your own is left alone, and the
+   previous file is kept as `settings.json.cmds-backup-<time>`. An account shown as **not set up** needs this: its
+   workspaces have no account button, its limit is not seen and its sessions cannot be switched. By hand, it is
+   `<config dir>/settings.json` like `~/.claude/settings.json`: the
    [hooks](#notifications-hooks) and, needed for switching, the [status line](#usage-and-limits-status-line), which
    tells cmds the session id and which account Claude Code runs under. Copying the file or symlinking it to
    `~/.claude/settings.json` both work; cmds does not touch it.
 4. **Share Sessions…** ([below](#sharing-sessions-between-accounts)).
+
+Everything here also works without the command line: the account button of a workspace in the sidebar opens a menu
+with the accounts to continue the session with, **Switch Automatically at the Limit**, **Sign In**, **Set Up for cmds**,
+**Clear Limit**, **Share Sessions…** and **Manage Accounts…**. (A workspace has the button once its account is set
+up; until then use **Settings › Agents › Claude accounts › Manage…**.)
 
 ### Starting Claude Code under an account
 
@@ -457,7 +471,8 @@ Every 2 s cmds reads the last 40 lines of each local pane running Claude Code fo
 Claude Code's limit messages (a file or diff that only contains the words does not count):
 
 - usage limit: `You've hit your limit · resets 3pm (Asia/Tokyo)`, `You've hit your weekly limit · resets Nov 7, 9am`,
-  `5-hour limit reached ∙ resets 3pm`, `Claude usage limit reached. Your limit will reset at 3pm (…)`;
+  `5-hour limit reached ∙ resets 3pm`, `Claude usage limit reached. Your limit will reset at 3pm (…)`,
+  `Usage limit reached · continuing automatically at 4:50pm` (`Usage limit reset · Continuing automatically` ends it);
 - API rate limit: `API Error: 429 {…"rate_limit_error"…}`, `API Error: Rate limit reached`.
 
 A status-line window (5-hour, 7-day, spend) at 100 % counts too. Warnings (`Approaching usage limit`, `You've used 90%

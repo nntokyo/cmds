@@ -17,9 +17,9 @@ extension AppController {
     /// Offers (or, with `autoSwitch`, starts) moving the pane's session to the next free account. `notify` false:
     /// only refreshes the offer (after sharing, or when the chosen account is no longer free).
     func offerAccountSwitch(_ pane: Pane, from: String?, notify: Bool = true, now: Date = Date()) {
-        let target = ClaudeAccounts.next(after: from, in: claudeAccounts.accounts, now: now)
+        let target = nextAccount(after: from, now: now)
         let session = switchableSession(pane)
-        let problem = switchProblem(pane, session: session, target: target)
+        let problem = switchProblem(pane, session: session, from: from, target: target)
         var change = AccountSwitch(from: from, to: target?.name, session: session, phase: .offered(problem: problem))
         let fromName = AccountSwitch.displayName(from)
         if problem == nil, notify, claudeAccounts.autoSwitch, let target {
@@ -66,10 +66,21 @@ extension AppController {
         return nil
     }
 
-    private func switchProblem(_ pane: Pane, session: AgentSession?, target: ClaudeAccount?) -> AccountSwitchProblem? {
+    /// The next account after `from` a session can move to: free, its directory exists, and not signed in to the
+    /// same Claude account as `from` (that one has the same limit).
+    func nextAccount(after from: String?, now: Date = Date()) -> ClaudeAccount? {
+        let same = Set(accountsSharingSignIn(with: from).map { $0.name.lowercased() })
+        return ClaudeAccounts.next(after: from, in: claudeAccounts.accounts, now: now) {
+            ClaudeAccounts.configDirExists($0) && !same.contains($0.name.lowercased())
+        }
+    }
+
+    private func switchProblem(_ pane: Pane, session: AgentSession?, from: String?, target: ClaudeAccount?) -> AccountSwitchProblem? {
         guard pane.ssh == nil else { return .notLocal }
         guard let session, session.host == nil else { return .noSession }
         guard let target else { return .noOtherAccount }
+        guard ClaudeAccounts.configDirExists(target) else { return .notSignedIn(account: target.name) }
+        if accountsSharingSignIn(with: from).contains(where: { $0.hasName(target.name) }) { return .sameSignIn(account: target.name) }
         guard ClaudeSessionSharing.transcriptReachable(sessionID: session.sessionID, configDir: target.configDir) else {
             return .notShared(account: target.name)
         }
@@ -78,7 +89,8 @@ extension AppController {
 
     /// Why the pane's session cannot move to `name` now (the sidebar's account menu, before it asks): nil when it can.
     func accountSwitchProblem(_ pane: Pane, to name: String) -> AccountSwitchProblem? {
-        switchProblem(pane, session: switchableSession(pane), target: claudeAccounts.account(named: name))
+        switchProblem(pane, session: switchableSession(pane), from: limitedAccount(of: pane),
+                      target: claudeAccounts.account(named: name))
     }
 
     // MARK: Switching
@@ -95,10 +107,10 @@ extension AppController {
             target = try account(named: name)
             if target?.name == from, from != nil { throw RPCError.invalidParams("pane \(pane.id) already uses \(name)") }
         } else {
-            target = ClaudeAccounts.next(after: from, in: claudeAccounts.accounts)
+            target = nextAccount(after: from)
         }
         let session = switchableSession(pane)
-        if let problem = switchProblem(pane, session: session, target: target) { throw RPCError.invalidParams(problem.english) }
+        if let problem = switchProblem(pane, session: session, from: from, target: target) { throw RPCError.invalidParams(problem.english) }
         guard let target else { throw RPCError.invalidParams(AccountSwitchProblem.noOtherAccount.english) }
         if pane.accountSwitch?.isInProgress == true, pane.accountSwitch?.to == target.name { return target.name }
         pane.accountSwitch = AccountSwitch(from: from, to: target.name, session: session, phase: .waitingForIdle)

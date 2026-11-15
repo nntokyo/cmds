@@ -1366,6 +1366,16 @@
         }
       }
     },
+    "A new workspace under this account that runs claude auth login: sign in, or sign in as another Claude account": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアカウントで新しいワークスペースを開き、claude auth loginを実行します。サインイン、または別のClaudeアカウントへのサインインし直しに使います"
+          }
+        }
+      }
+    },
     "A new workspace whose shell uses this account (CLAUDE_CONFIG_DIR); run claude there, and /login the first time": {
       "localizations": {
         "ja": {
@@ -1565,6 +1575,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アカウントをまたいでセッションを続けるには、2つ以上のアカウントを追加してください。"
+          }
+        }
+      }
+    },
+    "Add cmds’s status line and hooks to this account’s settings.json (needed for the account button and switching)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアカウントのsettings.jsonにcmdsのステータスラインとフックを追加します（アカウントボタンと切り替えに必要です）"
           }
         }
       }
@@ -9091,6 +9111,27 @@
         }
       }
     },
+    "Set Up for cmds": {
+      "comment": "account menu: add cmds's status line and hooks to an account",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds用に設定"
+          }
+        }
+      }
+    },
+    "Set Up for cmds…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds用に設定…"
+          }
+        }
+      }
+    },
     "Set Up…": {
       "comment": "Settings › Agents › Antigravity limits",
       "localizations": {
@@ -9098,6 +9139,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定する…"
+          }
+        }
+      }
+    },
+    "Set up “%@” for cmds?": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”をcmds用に設定しますか？"
           }
         }
       }
@@ -9441,6 +9492,27 @@
           "stringUnit": {
             "state": "translated",
             "value": "サイドバーの文字サイズ"
+          }
+        }
+      }
+    },
+    "Sign In": {
+      "comment": "sidebar account menu: submenu of accounts",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サインイン"
+          }
+        }
+      }
+    },
+    "Sign in: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サインイン: %@"
           }
         }
       }
@@ -10092,6 +10164,17 @@
         }
       }
     },
+    "Switch Automatically at the Limit": {
+      "comment": "sidebar account menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上限で自動的に切り替える"
+          }
+        }
+      }
+    },
     "Switch automatically when an account hits its limit": {
       "localizations": {
         "ja": {
@@ -10636,6 +10719,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "フォルダは同じです（%lld項目）。"
+          }
+        }
+      }
+    },
+    "The hooks were added. This account has a status line of its own: add cmds hook claude-status to it (see the guide, “Usage and limits”).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フックを追加しました。このアカウントには独自のステータスラインがあります。そこにcmds hook claude-statusを追加してください（ガイドの「Usage and limits」を参照）。"
           }
         }
       }
@@ -11222,6 +11315,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このMacのタイムゾーン"
+          }
+        }
+      }
+    },
+    "This account’s settings.json lacks cmds’s status line or hooks: click Set Up for cmds….": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアカウントのsettings.jsonにcmdsのステータスラインまたはフックがありません。「cmds用に設定…」をクリックしてください。"
           }
         }
       }
@@ -12437,6 +12540,16 @@
         }
       }
     },
+    "cmds adds its status line and hooks to this account’s settings.json when they are missing. They tell cmds the session, its usage and its state: without them the account’s workspaces have no account button and cannot be switched. Other settings stay, and the previous file is kept next to it. Sessions started afterwards use it.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このアカウントのsettings.jsonにcmdsのステータスラインとフックがなければ追加します。これらはセッション、使用量、状態をcmdsに伝えます。ないと、このアカウントのワークスペースにはアカウントボタンが出ず、切り替えもできません。ほかの設定はそのまま残り、元のファイルは同じ場所に保存されます。設定後に開始したセッションから有効になります。"
+          }
+        }
+      }
+    },
     "cmds created the worktree %@ (branch %@) for this workspace. Close and Remove Worktree also removes that folder with git worktree remove: files git ignores (build output, dependencies) go with it, the branch stays. It is not removed while it has uncommitted changes, untracked files or commits that are not pushed.": {
       "localizations": {
         "en": {
@@ -12876,6 +12989,28 @@
         }
       }
     },
+    "not set up": {
+      "comment": "account menu: settings.json lacks cmds's status line or hooks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未設定"
+          }
+        }
+      }
+    },
+    "not signed in": {
+      "comment": "account menu: the config folder does not exist",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未サインイン"
+          }
+        }
+      }
+    },
     "projects is a link or file pointing elsewhere; cmds leaves it alone.": {
       "localizations": {
         "ja": {
@@ -12933,6 +13068,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ごろリセット"
+          }
+        }
+      }
+    },
+    "same sign-in as %@": {
+      "comment": "account menu: two accounts are one Claude account",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@と同じサインイン"
           }
         }
       }
@@ -13228,6 +13374,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」はブランチ名として使えません。"
+          }
+        }
+      }
+    },
+    "“%@” is not signed in yet. Sign in first (the account menu’s Sign In).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”はまだサインインしていません。先にサインインしてください（アカウントメニューの「サインイン」）。"
+          }
+        }
+      }
+    },
+    "“%@” is signed in to the same Claude account, so it has the same limit. Sign it in to another account (the account menu’s Sign In).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”は同じClaudeアカウントにサインインしているため、上限も同じです。別のアカウントでサインインし直してください（アカウントメニューの「サインイン」）。"
           }
         }
       }

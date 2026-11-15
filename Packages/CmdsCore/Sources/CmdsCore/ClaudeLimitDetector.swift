@@ -31,10 +31,12 @@ public struct ClaudeLimitHit: Equatable, Sendable {
 /// count:
 /// - usage limit: `You've hit your limit · resets 3pm (Asia/Tokyo)`, `You've hit your weekly limit · resets Nov 7,
 ///   9am`, `5-hour limit reached ∙ resets 3pm`, `Claude usage limit reached. Your limit will reset at 3pm
-///   (America/New_York).`, `Claude AI usage limit reached|1760000000`;
+///   (America/New_York).`, `Claude AI usage limit reached|1760000000`, `Usage limit reached · continuing
+///   automatically at 4:50pm · esc to cancel` (Claude Code 2.1.3xx, which then continues by itself);
 /// - rate limit: `API Error: 429 {"type":"error","error":{"type":"rate_limit_error",…}}`, `API Error: Rate limit
 ///   reached`, `Request rejected (429)`.
 /// Warnings such as `Approaching usage limit · resets at 10pm` or `You've used 90% of your weekly limit` are not hits.
+/// `Usage limit reset · Continuing automatically` ends the limit: the messages above it are over.
 public enum ClaudeLimitDetector {
     public static let scannedLines = 40
     /// Claude Code's usage window: a usage limit without a reset time lasts this long.
@@ -56,6 +58,7 @@ public enum ClaudeLimitDetector {
         let recent = lines.suffix(scannedLines)
         for index in recent.indices.reversed() {
             let line = recent[index]
+            if isResetNotice(line) { return nil }
             guard let kind = kind(of: line) else { continue }
             // A long message may wrap: the reset time can be on the next row.
             // A time zone cut by the wrap (`(America/Ne` / `w_York).`) continues on the next row without a space.
@@ -100,6 +103,11 @@ public enum ClaudeLimitDetector {
         #"^(?:(?:api )?error\b.*(?:\b429\b|rate_limit_error|rate limit)|(?:api error: )?rate limit (?:reached|exceeded)|request rejected \(429\))"#)
     private static let warningWords = ["approaching", "you've used", "% of your", "will be reached"]
 
+    /// Claude Code says the limit has reset (and continues by itself): `Usage limit reset · Continuing automatically`.
+    static func isResetNotice(_ line: String) -> Bool {
+        line.lowercased().hasPrefix("usage limit reset")
+    }
+
     static func kind(of line: String) -> ClaudeLimitKind? {
         let lower = line.lowercased()
         guard !warningWords.contains(where: lower.contains) else { return nil }
@@ -116,7 +124,7 @@ public enum ClaudeLimitDetector {
     private static let relativePattern = regex(
         #"\breset(?:s)?\s+in\s+(?:(\d{1,3})\s*(?:h|hr|hrs|hours?)\b)?\s*(?:(\d{1,4})\s*(?:m|min|mins|minutes?)\b)?"#)
     private static let absolutePattern = regex(
-        #"\breset(?:s)?(?:\s+at)?[\s:]+(?:(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(?:at\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?:\s*\(([A-Za-z_]+(?:/[A-Za-z0-9_+\-]+){0,2})\)|\s*(\([^)]*$))?"#)
+        #"(?:\breset(?:s)?(?:\s+at)?|\bcontinuing automatically at)[\s:]+(?:(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(?:at\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?:\s*\(([A-Za-z_]+(?:/[A-Za-z0-9_+\-]+){0,2})\)|\s*(\([^)]*$))?"#)
 
     /// What `resetDate` does with a time zone it cannot read (cut off at the end of the text, or not known).
     enum UnreadableZone {
@@ -126,7 +134,8 @@ public enum ClaudeLimitDetector {
         case useDefault
     }
 
-    /// The reset time in a limit message: `…|<epoch>`, `resets in 2h 5m`, or a clock time with an optional weekday or
+    /// The reset time in a limit message: `…|<epoch>`, `resets in 2h 5m`, or a clock time (after `resets` / `reset at` /
+    /// `continuing automatically at`) with an optional weekday or
     /// month and day and an optional `(Area/City)` time zone (else `timeZone`). Clock times are the next one after `now`.
     /// A zone cut off at the end of `text` or not known: nil (`.giveUp`, the caller joins the next row), or read in
     /// `timeZone` (`.useDefault`).
