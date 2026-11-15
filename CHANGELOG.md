@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- iPhone/iPad: a paired Mac no longer asks to pair again when its network name or address changes (macOS renames the
+  service to "Name (2)" after a name conflict, e.g. around an update; the Mac is renamed; it was paired by address
+  and is later found on the network). The phone recognises the Mac by the identity it pinned, and the pairing and
+  the remote access settings follow. After pairing anew, the remote access settings are kept (#325).
+
 ## [0.25.0] - 2026-11-15
 
 Mac only; the iPhone/iPad app is unchanged. All of it is #320.

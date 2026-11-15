@@ -16,6 +16,24 @@ final class SyncPairingTests: XCTestCase {
         XCTAssertFalse(PairingToken.isWellFormedCode("１２３４５６"))
     }
 
+    /// #325: a saved Mac is the same Mac when it has the pinned fingerprint, whatever id it is filed under.
+    func testSavedMacsSharingAFingerprint() {
+        let mac = SyncFingerprint(certificate: Data("mac".utf8))
+        let other = SyncFingerprint(certificate: Data("other".utf8))
+        let saved = [(id: "bonjour:Mac._cmds._tcp.local.", fingerprint: mac),
+                     (id: "manual:192.168.1.5:47823", fingerprint: mac),
+                     (id: "bonjour:Office._cmds._tcp.local.", fingerprint: other)]
+        // Found as "Mac (2)" after a name conflict: both entries of that Mac, in order; never another Mac's.
+        XCTAssertEqual(SyncMacContinuity.ids(sharing: mac, in: saved, except: "bonjour:Mac (2)._cmds._tcp.local."),
+                       ["bonjour:Mac._cmds._tcp.local.", "manual:192.168.1.5:47823"])
+        // The id itself is left out.
+        XCTAssertEqual(SyncMacContinuity.ids(sharing: mac, in: saved, except: "bonjour:Mac._cmds._tcp.local."),
+                       ["manual:192.168.1.5:47823"])
+        XCTAssertEqual(SyncMacContinuity.ids(sharing: SyncFingerprint(certificate: Data("new".utf8)), in: saved, except: "x"), [])
+        XCTAssertTrue(SyncMacContinuity.isBonjourID("bonjour:Mac._cmds._tcp.local."))
+        XCTAssertFalse(SyncMacContinuity.isBonjourID("manual:192.168.1.5:47823"))
+    }
+
     func testConstantTimeEquals() {
         XCTAssertTrue(PairingToken.constantTimeEquals("abc", "abc"))
         XCTAssertFalse(PairingToken.constantTimeEquals("abc", "abd"))
