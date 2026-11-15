@@ -352,6 +352,17 @@
         }
       }
     },
+    "%@ asks for a passkey. Browser panes cannot use passkeys yet.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ がパスキーを求めています。ブラウザペインではまだパスキーを使えません。"
+          }
+        }
+      },
+      "comment": "browser pane notice; host is the site, e.g. github.com"
+    },
     "%@ failed: %@": {
       "localizations": {
         "en": {
@@ -7316,6 +7327,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "プレビューで開く…"
+          }
+        }
+      }
+    },
+    "Open in Safari": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safari で開く"
           }
         }
       }

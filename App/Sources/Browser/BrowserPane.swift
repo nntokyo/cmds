@@ -38,6 +38,7 @@ final class BrowserPane: NSView {
     var consoleBuffer = ConsoleBuffer()
     /// The DOM event the page-world console hook hands messages over with (random, so pages cannot fake it).
     let consoleEventName = "cmds-console-" + UUID().uuidString
+    let passkeyEventName = "cmds-passkey-" + UUID().uuidString
     // Pop-ups, `_blank` links, dialogs, uploads and downloads (BrowserPageDelegate.swift, #235).
     /// Opens a `target="_blank"` link in a new browser pane beside this one; false: none could be opened.
     var onOpenInNewPane: ((URL) -> Bool)?

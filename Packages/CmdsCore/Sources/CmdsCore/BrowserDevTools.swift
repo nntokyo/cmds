@@ -146,7 +146,7 @@ public enum ConsoleCapture {
     public static func hook(eventName: String) -> String {
         """
         (() => {
-          const name = \(jsonString(eventName));
+          const name = \(ConsoleCapture.jsonString(eventName));
           const dispatch = EventTarget.prototype.dispatchEvent, Custom = CustomEvent, stringify = JSON.stringify;
           const send = (record) => {
             try { dispatch.call(document, new Custom(name, { detail: stringify(record) })); } catch (e) {}
@@ -210,7 +210,7 @@ public enum ConsoleCapture {
             const batch = queue; queue = [];
             if (batch.length) window.webkit.messageHandlers.\(handlerName).postMessage(batch);
           };
-          document.addEventListener(\(jsonString(eventName)), (event) => {
+          document.addEventListener(\(ConsoleCapture.jsonString(eventName)), (event) => {
             const now = Date.now();
             if (now - windowStart > 1000) { windowStart = now; sent = 0; }
             if (++sent > \(maxPerSecond)) { dropped++; return; }
@@ -640,4 +640,47 @@ public enum PageScripts {
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
         """
+}
+
+/// A page asking for a passkey or security key (#336): browser panes cannot answer WebAuthn until Apple grants the
+/// browser entitlement (#162), so the pane says so. The page-world `hook` wraps `navigator.credentials.get/create` and
+/// signals requests with `publicKey` (not `mediation: 'conditional'`, which sign-in pages start on load for autofill);
+/// the page's call goes on unchanged. The `listener` (cmds' content world) forwards them to `handlerName`.
+public enum PasskeyRequestCapture {
+    public static let handlerName = "cmdsPasskey"
+
+    /// `eventName`: random per web view (`cmds-passkey-<uuid>`).
+    public static func hook(eventName: String) -> String {
+        """
+        (() => {
+          // The prototype: `navigator.credentials` may not exist yet at document start.
+          const container = typeof CredentialsContainer === 'function' ? CredentialsContainer.prototype : null;
+          if (!container) return;
+          const name = \(ConsoleCapture.jsonString(eventName));
+          const dispatch = EventTarget.prototype.dispatchEvent, Custom = CustomEvent;
+          for (const method of ['get', 'create']) {
+            const original = container[method];
+            if (typeof original !== 'function') continue;
+            container[method] = function (options) {
+              try {
+                if (options && options.publicKey && options.mediation !== 'conditional') {
+                  dispatch.call(document, new Custom(name, { detail: method }));
+                }
+              } catch (e) {}
+              return original.apply(this, arguments);
+            };
+          }
+        })();
+        """
+    }
+
+    public static func listener(eventName: String) -> String {
+        """
+        (() => {
+          document.addEventListener(\(ConsoleCapture.jsonString(eventName)), (event) => {
+            window.webkit.messageHandlers.\(handlerName).postMessage(String(event.detail));
+          });
+        })();
+        """
+    }
 }
