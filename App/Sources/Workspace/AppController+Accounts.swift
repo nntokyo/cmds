@@ -241,6 +241,8 @@ extension AppController {
         let name = ClaudeAccounts.account(forConfigDir: configDir, in: claudeAccounts.accounts)?.name
         // Claude Code runs here: a good moment to see that Claude in Chrome can reach it (throttled).
         checkChromeHostSoon()
+        // An account signed in while cmds runs gets cmds' MCP server too (MCPAutoRegistration, throttled).
+        MCPAutoRegistration.runSoon()
         guard name != pane.claudeAccount else { return }
         pane.claudeAccount = name
         emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))

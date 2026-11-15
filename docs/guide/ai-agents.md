@@ -168,16 +168,20 @@ agent to use these tools rather than Chrome inside cmds, and Chrome only when yo
 Chrome sign-ins (browser panes do not share them), or for what `browser_eval` cannot do (file uploads). Outside a cmds
 terminal (`CMDS_PANE_ID` not set) the server offers no tools, so registering it for every project is harmless.
 
-cmds registers it by itself: when it starts, and when you add a Claude account, it adds `cmds mcp` (by the full
-path of the CLI inside cmds.app) where it is missing:
+cmds registers it by itself: when it starts, when you add a Claude account, and when Claude Code reports a config
+folder in a pane (at most once a minute, so an account you sign in to while cmds runs is covered), it adds `cmds mcp`
+(by the full path of the CLI inside cmds.app) where it is missing:
 
 - Claude Code: plain `claude` (`~/.claude.json`) and every [Claude account](#several-claude-accounts) whose folder
   exists, each with `claude mcp add --scope user` (each config folder has its own MCP servers);
 - Codex: a `[mcp_servers.cmds]` table appended to `~/.codex/config.toml` (or `$CODEX_HOME`), with `env_vars` as
-  below; the previous file is copied to `config.toml.cmds-backup-<time>`.
+  below; the previous file is copied to `config.toml.cmds-backup-<time>`;
+- [Antigravity CLI](#antigravity-cli): `agy mcp add cmds … mcp` (into `~/.gemini/config/mcp_config.json`) when
+  `~/.gemini/antigravity-cli` exists. agy starts the server as its own child, so it knows the pane it runs in.
 
 A server already registered under any name that runs `cmds mcp` counts and is left alone. Each config is done once:
-one you remove is not added again. If cmds.app moves, its own entries are pointed at the new place. A notification
+one you remove is not added again, unless its config folder is made again (a new sign-in in a new folder), which counts
+as a new config. If cmds.app moves, its own entries are pointed at the new place. A notification
 lists what was added; agents started afterwards have the tools. Settings › Agents › **Register cmds' MCP server with
 your agents** turns this off; turning it on again registers everywhere it is missing, also where you removed it.
 

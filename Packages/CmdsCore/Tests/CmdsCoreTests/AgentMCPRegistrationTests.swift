@@ -56,3 +56,26 @@ final class AgentMCPRegistrationTests: XCTestCase {
         XCTAssertEqual(AgentMCPRegistration.codexAppending(nil, cli: "cmds"), AgentMCPRegistration.codexTable(cli: "cmds"))
     }
 }
+
+final class AgentMCPRegistrationKeyTests: XCTestCase {
+    func testAgy() {
+        XCTAssertEqual(AgentMCPRegistration.agyConfigFile(home: "/h"), "/h/.gemini/config/mcp_config.json")
+        XCTAssertEqual(AgentMCPRegistration.agyAddArguments(cli: "/a/cmds"), ["mcp", "add", "cmds", "/a/cmds", "mcp"])
+        // agy writes the same shape as Claude Code, with "disabled".
+        let written = #"{"mcpServers":{"cmds":{"args":["mcp"],"command":"/a/cmds","disabled":false}}}"#
+        XCTAssertEqual(AgentMCPRegistration.claudeState(Data(written.utf8), exists: { _ in true }), .registered(command: "/a/cmds"))
+    }
+
+    /// A config folder made again (a new creation time) gives a new key, so it is registered again.
+    func testDoneKeyFollowsTheFolder() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-mcp-\(UUID().uuidString)").path
+        try FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(atPath: dir) }
+        try FileManager.default.setAttributes([.creationDate: Date(timeIntervalSince1970: 1000)], ofItemAtPath: dir)
+        let first = AgentMCPRegistration.doneKey(file: dir + "/.claude.json", folder: dir)
+        XCTAssertEqual(first, dir + "/.claude.json@1000")
+        try FileManager.default.setAttributes([.creationDate: Date(timeIntervalSince1970: 2000)], ofItemAtPath: dir)
+        XCTAssertNotEqual(AgentMCPRegistration.doneKey(file: dir + "/.claude.json", folder: dir), first)
+        XCTAssertEqual(AgentMCPRegistration.doneKey(file: "/x/.claude.json", folder: "/no/such/folder"), "/x/.claude.json")
+    }
+}

@@ -1610,13 +1610,13 @@
         }
       }
     },
-    "Adds `cmds mcp` to Claude Code (also each Claude account) and Codex when missing, so agents in cmds terminals get browser panes, previews and terminal panes as tools. Once per agent: one you removed is not added again.": {
+    "Adds `cmds mcp` to Claude Code (also each Claude account), Codex and the Antigravity CLI when missing, so agents in cmds terminals get browser panes, previews and terminal panes as tools. Once per agent: one you removed is not added again.": {
       "comment": "Settings › Agents",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude Code（各 Claude アカウントも）と Codex に `cmds mcp` が無ければ追加し、cmds のターミナルで動くエージェントがブラウザペイン・プレビュー・ターミナルペインをツールとして使えるようにします。エージェントごとに一度だけ行い、削除したものは追加し直しません。"
+            "value": "Claude Code（各 Claude アカウントも）、Codex、Antigravity CLI に `cmds mcp` が無ければ追加し、cmds のターミナルで動くエージェントがブラウザペイン・プレビュー・ターミナルペインをツールとして使えるようにします。エージェントごとに一度だけ行い、削除したものは追加し直しません。"
           }
         }
       }

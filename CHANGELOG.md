@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Agents: the MCP server is also registered with the Antigravity CLI (`agy mcp add`), for a Claude account signed in
+  while cmds runs (when its Claude Code first reports, not only at the next launch), and again for a config folder
+  that was made again (it was remembered by path, so a recreated folder stayed without it). A registration asked for
+  while one runs is no longer dropped (#354).
+
 ## [0.27.0] - 2026-11-16
 
 Mac only; the iPhone/iPad app is unchanged.
