@@ -15,8 +15,10 @@ import CmdsCore
 ///   account (`ClaudeSessionSharing`), never mid-turn, never in SSH panes.
 extension AppController {
     static let accountsDidChange = Notification.Name("cmdsClaudeAccountsDidChange")
-    /// The same limit line in a pane is handled once in this time (a resumed session may show it again).
+    /// The same limit line of an account in a pane is handled once until its limit ends, and at least this long.
     static let limitLineMemory = ClaudeLimitDetector.sessionWindow
+    /// How long a resumed session may take to show the previous account's limit lines again (`Pane.carriedLimitLines`).
+    static let carriedLimitLinesGrace: TimeInterval = 30
     /// JSON-RPC "internal error": sharing failed on the Mac, not because of the request.
     private static let internalErrorCode = -32603
 
@@ -219,10 +221,31 @@ extension AppController {
     func scanClaudeLimits(now: Date = Date()) {
         for pane in workspaces.flatMap(\.orderedPanes) where pane.kind == .terminal && pane.ssh == nil && !pane.isClosing {
             guard pane.agentUsage?.agent == .claude || (pane.claudeAccount != nil && pane.agentActivity != .none),
-                  let terminal = pane.terminal,
-                  let hit = ClaudeLimitDetector.detect(screen: terminal.visibleText(), now: now) else { continue }
-            handleLimitHit(pane, hit, key: "screen|" + hit.line, now: now)
+                  let terminal = pane.terminal else { continue }
+            let hit = ClaudeLimitDetector.detect(screen: terminal.visibleText(), now: now)
+            if isCarriedLimitLine(pane, hit, now: now) { continue }
+            guard let hit else { continue }
+            handleLimitHit(pane, hit, key: "screen|\(currentAccount(of: pane) ?? "")|" + hit.line, now: now)
         }
+    }
+
+    /// The newest limit line is one the previous account hit (the resumed session shows it again): not a limit of the
+    /// account the pane has now. Forgets those lines once another one is the newest, or there is none after a moment.
+    private func isCarriedLimitLine(_ pane: Pane, _ hit: ClaudeLimitHit?, now: Date) -> Bool {
+        guard !pane.carriedLimitLines.isEmpty else { return false }
+        if let hit, pane.carriedLimitLines.contains(hit.line) { return true }
+        if hit != nil || now.timeIntervalSince(pane.carriedLimitLinesSince ?? now) > Self.carriedLimitLinesGrace {
+            pane.carriedLimitLines = []
+            pane.carriedLimitLinesSince = nil
+        }
+        return false
+    }
+
+    /// A switch to another account is done: the limit lines the previous one hit on this pane's screen are carried.
+    func carryLimitLines(_ pane: Pane, from account: String?, now: Date) {
+        let prefix = "screen|\(account ?? "")|"
+        pane.carriedLimitLines = Set(pane.seenLimitLines.keys.filter { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) })
+        pane.carriedLimitLinesSince = pane.carriedLimitLines.isEmpty ? nil : now
     }
 
     /// From `agent.report`: a status-line window at 100 %.
@@ -232,15 +255,27 @@ extension AppController {
     }
 
     private func handleLimitHit(_ pane: Pane, _ hit: ClaudeLimitHit, key: String, now: Date) {
-        pane.seenLimitLines = pane.seenLimitLines.filter { now.timeIntervalSince($0.value) < Self.limitLineMemory }
+        pane.seenLimitLines = pane.seenLimitLines.filter { $0.value > now }
         guard pane.seenLimitLines[key] == nil else { return }
-        pane.seenLimitLines[key] = now
+        let limit = hit.limit(now: now)
+        // At least the usage window: a line Claude Code keeps showing after the reset is not a new limit.
+        pane.seenLimitLines[key] = max(limit.resetsAt, now.addingTimeInterval(Self.limitLineMemory))
         guard !claudeAccounts.accounts.isEmpty, pane.accountSwitch?.isInProgress != true else { return }
         let from = currentAccount(of: pane)
         if let from, let index = claudeAccounts.accounts.firstIndex(where: { $0.name == from }) {
-            claudeAccounts.accounts[index].limit = ClaudeAccounts.merge(claudeAccounts.accounts[index].limit, hit.limit(now: now), now: now)
+            claudeAccounts.accounts[index].limit = ClaudeAccounts.merge(claudeAccounts.accounts[index].limit, limit, now: now)
             saveClaudeAccounts()
+            refreshOffers(to: from, except: pane, now: now)
         }
         offerAccountSwitch(pane, from: from, now: now)
+    }
+
+    /// `name` hit its limit: offers elsewhere to continue with it are worked out again (the next free account, or why
+    /// there is none), so Continue never moves a session to an account that is limited.
+    private func refreshOffers(to name: String, except pane: Pane, now: Date) {
+        for other in workspaces.flatMap(\.orderedPanes) where other !== pane {
+            guard let change = other.accountSwitch, !change.isInProgress, change.to == name else { continue }
+            offerAccountSwitch(other, from: change.from, notify: false, now: now)
+        }
     }
 }

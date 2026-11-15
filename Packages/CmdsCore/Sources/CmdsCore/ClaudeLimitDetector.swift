@@ -58,10 +58,15 @@ public enum ClaudeLimitDetector {
             let line = recent[index]
             guard let kind = kind(of: line) else { continue }
             // A long message may wrap: the reset time can be on the next row.
+            // A time zone cut by the wrap (`(America/Ne` / `w_York).`) continues on the next row without a space.
             var reset = resetDate(in: line, now: now, timeZone: timeZone)
             if reset == nil, recent.indices.contains(index + 1) {
-                reset = resetDate(in: line + " " + recent[index + 1], now: now, timeZone: timeZone)
+                let next = recent[index + 1]
+                reset = resetDate(in: line + next, now: now, timeZone: timeZone)
+                    ?? resetDate(in: line + " " + next, now: now, timeZone: timeZone)
             }
+            // A zone that cannot be read even so: the Mac's zone is the best guess left.
+            if reset == nil { reset = resetDate(in: line, now: now, timeZone: timeZone, unreadableZone: .useDefault) }
             return ClaudeLimitHit(kind: kind, resetsAt: reset, line: line)
         }
         return nil
@@ -87,8 +92,10 @@ public enum ClaudeLimitDetector {
         return text
     }
 
+    /// `<window> limit reached` (`5-hour`, `weekly`, `Opus weekly`…), but not a limit of the conversation itself
+    /// (`Context limit reached · /compact or /clear to continue`, output or token limits), which no account switch helps.
     private static let usagePattern = regex(
-        #"^(?:error:\s*)?(?:you've (?:hit|reached) your\b.*\blimit\b|claude(?: ai)? usage limit reached|(?:[a-z0-9-]+ ){0,3}limit reached\b)"#)
+        #"^(?:error:\s*)?(?:you've (?:hit|reached) your\b.*\blimit\b|claude(?: ai)? usage limit reached|(?:(?!(?:context|conversation|output|tokens?|length|size)\b)[a-z0-9-]+ ){0,3}limit reached\b)"#)
     private static let ratePattern = regex(
         #"^(?:(?:api )?error\b.*(?:\b429\b|rate_limit_error|rate limit)|(?:api error: )?rate limit (?:reached|exceeded)|request rejected \(429\))"#)
     private static let warningWords = ["approaching", "you've used", "% of your", "will be reached"]
@@ -109,11 +116,14 @@ public enum ClaudeLimitDetector {
     private static let relativePattern = regex(
         #"\breset(?:s)?\s+in\s+(?:(\d{1,3})\s*(?:h|hr|hrs|hours?)\b)?\s*(?:(\d{1,4})\s*(?:m|min|mins|minutes?)\b)?"#)
     private static let absolutePattern = regex(
-        #"\breset(?:s)?(?:\s+at)?[\s:]+(?:(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(?:at\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?:\s*\(([A-Za-z_]+(?:/[A-Za-z0-9_+\-]+){0,2})\))?"#)
+        #"\breset(?:s)?(?:\s+at)?[\s:]+(?:(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(?:at\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?:\s*\(([A-Za-z_]+(?:/[A-Za-z0-9_+\-]+){0,2})\)|\s*(\([^)]*$))?"#)
 
     /// The reset time in a limit message: `…|<epoch>`, `resets in 2h 5m`, or a clock time with an optional weekday or
     /// month and day and an optional `(Area/City)` time zone (else `timeZone`). Clock times are the next one after `now`.
-    static func resetDate(in text: String, now: Date, timeZone: TimeZone) -> Date? {
+    /// A zone cut off at the end of `text` or not known: nil (`.giveUp`, the caller joins the next row), or read in
+    /// `timeZone` (`.useDefault`).
+    static func resetDate(in text: String, now: Date, timeZone: TimeZone,
+                          unreadableZone: UnreadableZone = .giveUp) -> Date? {
         let range = NSRange(text.startIndex..., in: text)
         if let match = epochPattern.firstMatch(in: text, range: range), let raw = group(match, 1, in: text),
            let number = Double(raw) {
@@ -139,7 +149,10 @@ public enum ClaudeLimitDetector {
             guard (0...23).contains(hour) else { return nil }
         }
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = group(match, 7, in: text).flatMap(TimeZone.init(identifier:)) ?? timeZone
+        let zoneName = group(match, 7, in: text)
+        let zone = zoneName.flatMap(TimeZone.init(identifier:))
+        if unreadableZone == .giveUp, (zoneName != nil && zone == nil) || group(match, 8, in: text) != nil { return nil }
+        calendar.timeZone = zone ?? timeZone
         let months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"]
         if let monthName = group(match, 2, in: text)?.lowercased().prefix(3), let month = months.firstIndex(of: String(monthName)),
            let day = group(match, 3, in: text).flatMap(Int.init), (1...31).contains(day) {
@@ -161,6 +174,8 @@ public enum ClaudeLimitDetector {
         }
         return calendar.nextDate(after: now, matching: time, matchingPolicy: .nextTime)
     }
+
+    enum UnreadableZone { case giveUp, useDefault }
 
     private static func group(_ match: NSTextCheckingResult, _ index: Int, in text: String) -> String? {
         let range = match.range(at: index)
