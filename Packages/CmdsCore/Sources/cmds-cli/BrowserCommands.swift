@@ -65,16 +65,19 @@ extension CLI {
             WIDTHxHEIGHT instead of the pane's size; up to \(BrowserSnapshotRequest.maxTargets) comma-separated ones load
             the page again off screen, one after another (same cookies, not the pane's in-page state), and need -o:
             -o shot.png writes shot-iphone.png, shot-ipad.png, … The pane itself is not scrolled or resized.
-            Without -o a single PNG is written to stdout when it is not a terminal. Prints the files written.
+            Without -o, or with -o -, a single PNG is written to stdout when it is not a terminal. Prints the files
+            written.
             \(browserPaneNote)
             """,
         options: ["pane", "output", "selector", "device"], flags: ["full"], aliases: ["o": "output"]
     ) { ctx in
         try ctx.args.expectPositionals(0...0, usage: "cmds browser snapshot [--pane P] [--full] [--selector S] [--device D[,D…]] [-o file.png]")
         let request = try browserSnapshotRequest(ctx.args)
-        let output = ctx.args[option: "output"]
+        // `-o -` is stdout (#338), which takes one image.
+        let output = ctx.args[option: "output"].flatMap { $0 == "-" ? nil : $0 }
         if request.targets.count > 1, output == nil, !ctx.json {
-            throw CLIError.usage("several devices give several images; use -o file.png (written as file-<device>.png)")
+            throw CLIError.usage(
+                "several devices give several images; use -o file.png (written as file-<device>.png), not stdout")
         }
         let result = try ctx.call("browser.snapshot", browserTarget(ctx).merging(request.params) { $1 }, timeout: 300)
         let images: [BrowserSnapshotImage]

@@ -59,7 +59,7 @@ extension AppController {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try Data(changes.text.utf8).write(to: file, options: .atomic)
         } catch {
-            throw RPCError(code: 500, message: "cannot write the diff: \(error.localizedDescription)")
+            throw RPCError(code: 500, message: "cannot write the diff: \((error as NSError).apiMessage)")
         }
         if let existing = current.orderedPanes.first(where: { pane in
             pane.preview.map { $0.path.hasPrefix(folder.path + "/") } ?? false

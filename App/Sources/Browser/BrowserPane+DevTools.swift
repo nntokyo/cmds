@@ -76,17 +76,35 @@ extension BrowserPane {
         return try await runPageScript(PageScripts.fill, arguments)
     }
 
-    /// `browser.wait_for`: `{found: true, ref, elapsed}`, or a 408 error after `timeout` seconds.
+    /// `browser.wait_for`: `{found: true, ref, elapsed}`, or a 408 error after `timeout` seconds (0: checks once).
+    /// The page is asked in short rounds with a deadline of their own: a round lost with its document (the page
+    /// navigated) is given up and the next one waits on the new page, so the reply always comes in time (#338).
     func waitFor(selector: String?, text: String?, timeout: Double) async throws -> JSONValue {
-        let result = try await runPageScript(PageScripts.waitFor, [
-            "selector": selector ?? NSNull(), "text": text ?? NSNull(), "timeout": timeout * 1000,
-        ])
-        guard result["found"]?.boolValue == true else {
-            let what = selector.map { "selector \($0)" } ?? "text \"\(text ?? "")\""
-            throw RPCError(code: 408, message: "timed out after \(Self.seconds(timeout)) s waiting for \(what)")
-        }
-        return result
+        let started = Date()
+        let deadline = started.addingTimeInterval(timeout)
+        repeat {
+            let round = min(Self.waitRound, max(0, deadline.timeIntervalSinceNow))
+            let arguments: [String: Any] = ["selector": selector ?? NSNull(), "text": text ?? NSNull(),
+                                            "timeout": round * 1000]
+            do {
+                let result = try await runPageScript(PageScripts.waitFor, arguments,
+                                                     until: Date(timeIntervalSinceNow: round + Self.waitRoundGrace))
+                if result["found"]?.boolValue == true, case .object(var object) = result {
+                    object["elapsed"] = .number((Date().timeIntervalSince(started) * 1000).rounded())
+                    return .object(object)
+                }
+            } catch is PageScriptTimeout {
+                // Lost with its document, or a page busy for a while: the next round asks again.
+            }
+        } while deadline.timeIntervalSinceNow > 0
+        let what = selector.map { "selector \($0)" } ?? "text \"\(text ?? "")\""
+        throw RPCError(code: 408, message: "timed out after \(BrowserEval.format(timeout)) s waiting for \(what)")
     }
+
+    /// How long one round of `waitFor` polls in the page.
+    static let waitRound: TimeInterval = 1
+    /// How much longer than its round the page has to answer before the round counts as lost.
+    static let waitRoundGrace: TimeInterval = 0.5
 
     private static func arguments(_ target: ElementTarget) -> [String: Any] {
         switch target {
@@ -95,19 +113,22 @@ extension BrowserPane {
         }
     }
 
-    private static func seconds(_ value: Double) -> String {
-        value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value)
-    }
-
     /// Runs a CmdsCore page script as an async function body in cmds' content world and returns its JSON value. Errors
-    /// it throws become clean API errors (404 for a missing element or ref, else invalid params).
-    private func runPageScript(_ body: String, _ arguments: [String: Any]) async throws -> JSONValue {
+    /// it throws become clean API errors (404 for a missing element or ref, else invalid params). Without `deadline`,
+    /// a page that has not answered after `BrowserEval.defaultTimeout` gets a 408 error, and a stuck one is reloaded
+    /// (`scriptTimedOut`); with one, `PageScriptTimeout` is thrown.
+    private func runPageScript(_ body: String, _ arguments: [String: Any],
+                               until deadline: Date? = nil) async throws -> JSONValue {
         // `value` is an argument of fill, so the result has another name.
         let wrapped = "const __cmdsResult = await (async () => {\n\(body)\n})();\n"
             + "return __cmdsResult === undefined ? null : JSON.stringify(__cmdsResult);"
         let raw: Any?
         do {
-            raw = try await webView.callAsyncJavaScript(wrapped, arguments: arguments, in: nil, contentWorld: .defaultClient)
+            let until = deadline ?? Date(timeIntervalSinceNow: BrowserEval.defaultTimeout)
+            raw = try await webView.callScript(wrapped, arguments: arguments, in: .defaultClient, until: until)
+        } catch is PageScriptTimeout {
+            if deadline != nil { throw PageScriptTimeout() }
+            throw await scriptTimedOut(after: BrowserEval.defaultTimeout)
         } catch let error as NSError {
             guard let message = error.userInfo[Self.javaScriptExceptionMessageKey] as? String else { throw error }
             let text = message.hasPrefix("Error: ") ? String(message.dropFirst(7)) : message

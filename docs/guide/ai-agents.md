@@ -137,7 +137,7 @@ status:
 |---|---|
 | `browser_open` | Open a URL in a browser pane split to the right of the agent's terminal, without taking the focus; returns the pane id |
 | `browser_navigate`, `browser_url` | Load a URL; the URL and title |
-| `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs) |
+| `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs); `timeout` seconds (default 30, at most 300), after which a page that stopped responding is reloaded |
 | `browser_snapshot` | A PNG of the visible page, returned as an image (also when its workspace is not shown). `fullPage`, `selector` (one element), `device` or `devices` (e.g. `["iphone", "ipad", "desktop-1440"]`: one image per size, each after a line naming it) |
 | `browser_set_viewport` | Show the page at a device size (`device`: a preset such as `iphone-se`, `WIDTHxHEIGHT` or `off`; `rotate`), with a user agent and `colorScheme` (`light` / `dark` / `system`), to check responsive layouts ([device sizes](workspaces-and-panes.md#device-sizes-and-color-scheme)) |
 | `browser_responsive` | The page at phone, tablet and desktop size side by side in one pane (`url` opens a new pane, else `pane`; `devices`, `syncScroll`, `off`). `browser_snapshot` of such a pane returns one image per frame ([responsive view](workspaces-and-panes.md#responsive-view)) |
@@ -145,7 +145,7 @@ status:
 | `browser_console` | Console messages, uncaught errors and unhandled promise rejections of the page (`level`, `limit`, `clear`) ([Browser DevTools](#browser-devtools)) |
 | `browser_snapshot_tree` | The page as a compact tree of roles and names with refs (`- button "Sign in" [ref=e3]`; `selector` to start lower) |
 | `browser_click` / `browser_fill` | Click, or fill a field / select / checkbox, by `ref` or `selector` |
-| `browser_wait_for` | Wait for a `selector` or `text` to be visible (`timeout` seconds, default 5); an error when it is not |
+| `browser_wait_for` | Wait for a `selector` or `text` to be visible (`timeout` seconds, default 5, 0 checks once); an error when it is not |
 | `open_file` | Show a file (image, PDF, Markdown, diff, …) in a preview pane |
 | `terminal_split` | Open a terminal pane split off the agent's terminal (`direction` `right` / `down`, `cwd`), without taking the focus, and type `command` into its shell (a dev server, a watcher); the pane stays when the command exits. Returns the pane id |
 | `terminal_read` | The visible screen of a terminal pane opened from the agent's terminal, or its last `lines` lines including scrollback (at most 2000) |
@@ -221,7 +221,8 @@ cmds browser wait-for --text "Welcome" --timeout 10
   take an option's value or text, checkboxes and radio buttons `true` / `false`. These events are synthetic
   (`isTrusted` is false); a page that only accepts real input needs a person.
 - **wait-for** polls every 100 ms for a visible element matching the selector, or visible text, and fails with a
-  timeout error after the timeout (default 5 s, at most 60 s).
+  timeout error after the timeout (default 5 s, at most 60 s; 0 checks once). When the page navigates meanwhile, it
+  goes on waiting on the new page.
 - All of it works on pages with a strict Content Security Policy: WebKit injects cmds' scripts itself, so the page's
   policy does not apply to them (the console hook runs in the page's own JavaScript world, everything else in a world
   the page cannot see).

@@ -11,7 +11,8 @@ final class BrowserPane: NSView {
     /// The user clicked into the page or the address field.
     var onFocus: (() -> Void)?
 
-    let webView: WKWebView
+    /// Replaced only when its page stopped responding (`replaceStuckWebView`).
+    private(set) var webView: WKWebView
     private let addressField = AddressField()
     private let backButton = BrowserPane.toolbarButton("chevron.left", label: String(localized: "Back"))
     private let forwardButton = BrowserPane.toolbarButton("chevron.right", label: String(localized: "Forward"))
@@ -86,9 +87,7 @@ final class BrowserPane: NSView {
     var pageTitle: String { loadFailure != nil ? "" : (webView.title ?? "") }
 
     init(emulation: BrowserEmulation = BrowserEmulation()) {
-        webView = WKWebView(frame: .zero, configuration: Self.webViewConfiguration(websiteDataStore: .default()))
-        webView.allowsBackForwardNavigationGestures = true
-        webView.allowsMagnification = true
+        webView = Self.makeWebView(configuration: Self.webViewConfiguration(websiteDataStore: .default()))
         self.emulation = emulation
         super.init(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
         wantsLayer = true
@@ -159,7 +158,19 @@ final class BrowserPane: NSView {
     /// An expression may use `await` (`await fetch("/api").then(r => r.json())`); a statement list keeps
     /// eval's completion value (`const a = 1; a + 1`), or, when it uses top-level `await`, runs as an async
     /// function body whose value is what it `return`s. Pages that refuse eval: `evaluateWithoutEval`.
-    func evaluateJavaScript(_ script: String) async throws -> JSONValue {
+    /// A script still running after `timeout` seconds gets a 408 error; a page that stopped responding (a script that
+    /// never yields) is then loaded again in a new web view (`scriptTimedOut`, #338).
+    func evaluateJavaScript(_ script: String,
+                            timeout: TimeInterval = BrowserEval.defaultTimeout) async throws -> JSONValue {
+        let deadline = Date(timeIntervalSinceNow: timeout)
+        do {
+            return try await evaluateJavaScript(script, until: deadline)
+        } catch is PageScriptTimeout {
+            throw await scriptTimedOut(after: timeout)
+        }
+    }
+
+    private func evaluateJavaScript(_ script: String, until deadline: Date) async throws -> JSONValue {
         // Parse checks use the Function constructors, which compile without running the script.
         let body = """
             try { new Function(""); } catch (e) { if (e instanceof EvalError) return { cmdsNoEval: true }; throw e; }
@@ -186,26 +197,85 @@ final class BrowserPane: NSView {
             \(Self.returnValueAsJSON)
             """
         // The page's eval check comes first, so nothing of the script has run when it falls back.
-        let result = try await webView.callAsyncJavaScript(body, arguments: ["__cmdsScript": script], in: nil,
-                                                           contentWorld: .page)
+        let result = try await webView.callScript(body, arguments: ["__cmdsScript": script], in: .page, until: deadline)
         if let refused = result as? [String: Any], refused["cmdsNoEval"] as? Bool == true {
-            return try await evaluateWithoutEval(script)
+            return try await evaluateWithoutEval(script, until: deadline)
         }
         return Self.decodeEvaluation(result)
+    }
+
+    /// How long a page whose script timed out has to answer a trivial script before it counts as stuck.
+    static let responsiveCheckTime: TimeInterval = 2
+
+    /// The error for a script past its deadline. When the page does not answer a trivial script either, its script
+    /// never yields and its WebContent process is busy for good (WebKit has no public way to stop it): the pane gets a
+    /// new web view and loads the page again.
+    func scriptTimedOut(after seconds: TimeInterval) async -> RPCError {
+        let stuck = webView
+        let answers: Bool
+        do {
+            _ = try await stuck.callScript("return 1;", in: .defaultClient,
+                                           until: Date(timeIntervalSinceNow: Self.responsiveCheckTime))
+            answers = true
+        } catch {
+            answers = !(error is PageScriptTimeout)
+        }
+        if !answers, webView === stuck { replaceStuckWebView() }
+        return RPCError(code: 408, message: BrowserEval.timeoutMessage(seconds: seconds, reloaded: webView !== stuck))
+    }
+
+    /// Gives the pane a new web view (its own WebContent process) with the same scripts, settings and data store, and
+    /// loads the page again; back/forward history starts over. The stuck web view is freed and its process ended
+    /// (`endWebContentProcess`). For a page that stopped responding (`scriptTimedOut`). The old web view's delegate
+    /// is detached before its process is killed, so the crash handling (`webContentProcessDidTerminate`) does not
+    /// reload the page a second time or show its notice.
+    private func replaceStuckWebView() {
+        let old = webView
+        let url = old.url ?? lastCommittedURL
+        let responsiveSettings = responsive
+        if responsiveSettings != nil { setResponsive(nil) }
+        pageDelegate.tearDown()  // pop-ups share the stuck process
+        observations.removeAll()
+        breakpointRefresh?.cancel()
+        old.stopLoading()
+        BrowserPageDelegate.detach(old)
+        old.removeFromSuperview()
+        Self.endWebContentProcess(of: old)
+
+        let configuration = Self.webViewConfiguration(websiteDataStore: old.configuration.websiteDataStore)
+        configuration.userContentController = old.configuration.userContentController  // console and passkey capture
+        webView = Self.makeWebView(configuration: configuration)
+        webView.customUserAgent = emulation.userAgent
+        pageDelegate.attach(webView)
+        viewportHost.addSubview(webView)
+        observe()
+        applyColorScheme()
+        applyInspectable()
+        layoutWebView()
+        if let responsiveSettings { setResponsive(responsiveSettings) }
+        clearLoadFailure()
+        if let url, url.isFileURL {
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        } else if let url, Self.isWebPage(url) {
+            webView.load(URLRequest(url: url))
+        } else {
+            showStartPage()
+        }
+        stateDidChange()
     }
 
     /// For pages whose Content Security Policy refuses eval and the Function constructors (no 'unsafe-eval', #88):
     /// WebKit compiles the script itself, which the page's policy does not cover. The script runs as an expression,
     /// else as an async function body whose value is what it `return`s (a statement list's last value is not kept).
     /// Only a failure to parse moves on to the body form; what the script throws is its result, so it runs once.
-    private func evaluateWithoutEval(_ script: String) async throws -> JSONValue {
+    private func evaluateWithoutEval(_ script: String, until deadline: Date) async throws -> JSONValue {
         /// The value, or the message of what the script threw. WebKit throws only when the source does not parse.
         func run(_ value: String) async throws -> Result<JSONValue, NSError> {
-            let result = try await webView.callAsyncJavaScript("""
+            let result = try await webView.callScript("""
                 let value;
                 try { value = \(value); } catch (e) { return { cmdsThrew: String(e) }; }
                 \(Self.returnValueAsJSON)
-                """, arguments: [:], in: nil, contentWorld: .page)
+                """, in: .page, until: deadline)
             if let thrown = result as? [String: Any], let message = thrown["cmdsThrew"] as? String {
                 return .failure(NSError(domain: WKError.errorDomain, code: WKError.javaScriptExceptionOccurred.rawValue,
                                         userInfo: [Self.javaScriptExceptionMessageKey: message]))
@@ -213,10 +283,12 @@ final class BrowserPane: NSView {
             return .success(Self.decodeEvaluation(result))
         }
         /// While on, the console hook ignores the error event of the expression form's failure to parse (#201).
+        /// Turning it off again gets a little time even after the deadline.
         func quietConsole(_ on: Bool) async {
-            _ = try? await webView.callAsyncJavaScript(
+            _ = try? await webView.callScript(
                 "document.dispatchEvent(new CustomEvent(name, { detail: on }));",
-                arguments: ["name": consoleEventName + "-quiet", "on": on], in: nil, contentWorld: .page)
+                arguments: ["name": consoleEventName + "-quiet", "on": on], in: .page,
+                until: on ? deadline : max(deadline, Date(timeIntervalSinceNow: Self.responsiveCheckTime)))
         }
         await quietConsole(true)
         let expression: Result<Result<JSONValue, NSError>, Error>
@@ -274,8 +346,17 @@ final class BrowserPane: NSView {
         stopWatching()
         downloadBannerHide?.cancel()
         observations.removeAll()
+        breakpointRefresh?.cancel()
+        NotificationCenter.default.removeObserver(self)
         webView.stopLoading()
         BrowserPageDelegate.detach(webView)
+        // The content controller keeps its handlers; the callbacks are the owner's. Neither may keep the pane (#338).
+        webView.configuration.userContentController.removeAllScriptMessageHandlers()
+        onStateChange = nil
+        onFocus = nil
+        onEmulationChange = nil
+        onOpenInNewPane = nil
+        defaultWatchFolder = nil
     }
 
     #if DEBUG
@@ -317,6 +398,32 @@ final class BrowserPane: NSView {
     private func removeDownloadNotice(_ banner: BrowserDownloadBannerView?) {
         guard let banner, downloadBanner === banner else { return }
         showDownload(nil)
+    }
+
+    /// Ends the WebContent process of a web view whose page stopped responding. Freeing the web view is not enough:
+    /// WebKit closes the page, but the process's main thread never gets to it and spins at 100 % CPU until the app
+    /// quits (checked on macOS 27; WebKit's `_killWebContentProcess` did not end it either). WebKit has no public call
+    /// for it, so this reads the process id WebKit's `_webProcessIdentifier` reports and kills it: every page in that
+    /// process is frozen with it (they share its main thread). Without that property the pane still recovers (a new
+    /// web view); only the old process stays.
+    private static func endWebContentProcess(of webView: WKWebView) {
+        let identifier = NSSelectorFromString("_webProcessIdentifier")
+        guard webView.responds(to: identifier),
+              let pid = (webView.value(forKey: "_webProcessIdentifier") as? NSNumber)?.int32Value,
+              pid > 1, pid != getpid() else { return }
+        var name = [CChar](repeating: 0, count: 256)
+        guard proc_name(pid, &name, UInt32(name.count)) > 0, String(cString: name).contains("WebContent") else {
+            return
+        }
+        kill(pid, SIGKILL)
+    }
+
+    /// The pane's web view (also when a stuck one is replaced).
+    private static func makeWebView(configuration: WKWebViewConfiguration) -> WKWebView {
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.allowsBackForwardNavigationGestures = true
+        webView.allowsMagnification = true
+        return webView
     }
 
     /// A browser pane's web view settings (also the responsive view's extra frames, with the pane's data store).
@@ -462,13 +569,47 @@ final class BrowserPane: NSView {
     }
 }
 
+/// A page script gave no answer by its deadline (`WKWebView.callScript`).
+struct PageScriptTimeout: Error {}
+
 extension WKWebView {
+    /// `callAsyncJavaScript` in the main frame that gives up at `deadline` (nil: waits) with `PageScriptTimeout`.
+    /// Unlike WebKit's async form it does not keep the web view while it waits: a page that never answers (a script
+    /// that never yields, a document gone with a navigation) would keep it, and its WebContent process, for good
+    /// (#338).
+    func callScript(_ body: String, arguments: [String: Any] = [:], in world: WKContentWorld,
+                    until deadline: Date?) async throws -> Any? {
+        let answer = ScriptAnswer()
+        return try await withCheckedThrowingContinuation { continuation in
+            answer.continuation = continuation
+            callAsyncJavaScript(body, arguments: arguments, in: nil, in: world) { result in
+                MainActor.assumeIsolated { answer.finish(result.map { $0 as Any? }) }
+            }
+            if let deadline {
+                DispatchQueue.main.asyncAfter(deadline: .now() + max(0, deadline.timeIntervalSinceNow)) {
+                    MainActor.assumeIsolated { answer.finish(.failure(PageScriptTimeout())) }
+                }
+            }
+        }
+    }
+
     /// Sends `agent` from now on (nil: WebKit's own). A web page shown is reloaded: servers see a new user agent only
     /// with a new request.
     func setUserAgent(_ agent: String?) {
         guard customUserAgent != agent else { return }
         customUserAgent = agent
         if BrowserPane.isWebPage(url) { reload() }
+    }
+}
+
+/// The first of a script's answer and its deadline (`WKWebView.callScript`).
+@MainActor
+private final class ScriptAnswer {
+    var continuation: CheckedContinuation<Any?, Error>?
+
+    func finish(_ result: Result<Any?, Error>) {
+        continuation?.resume(with: result)
+        continuation = nil
     }
 }
 

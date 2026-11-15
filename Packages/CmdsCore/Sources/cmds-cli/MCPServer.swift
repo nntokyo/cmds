@@ -178,7 +178,9 @@ final class MCPServer {
              properties: ["pane": browserPane]),
         Tool(name: "browser_eval",
              description: "Run JavaScript in a cmds browser pane and return its JSON value. The script may use top-level await (then `return` the value). Use it to read the page (document.body.innerText), click (el.click()) and fill inputs (set el.value, then dispatch an 'input' event).",
-             properties: ["script": string("JavaScript to run in the page."), "pane": browserPane], required: ["script"]),
+             properties: ["script": string("JavaScript to run in the page."), "pane": browserPane,
+                          "timeout": .object(["type": "number", "description": .string("Seconds the script may run (default \(Int(BrowserEval.defaultTimeout)), at most \(Int(BrowserEval.maxTimeout))); then an error, and a page that stopped responding is reloaded.")])],
+             required: ["script"]),
         Tool(name: "browser_snapshot",
              description: "A PNG screenshot of a cmds browser pane: the visible page, or the full page (fullPage), one element (selector), or the page at other sizes (device, or up to \(BrowserSnapshotRequest.maxTargets) devices at once, each loaded again off screen with the same cookies). Returns one image per size, each after a line naming it. The pane is not scrolled or resized.",
              properties: [
@@ -375,7 +377,10 @@ final class MCPServer {
             return [Self.text(lines.joined(separator: "\n"))]
         case "browser_eval":
             let script = try argument(arguments, "script")
-            let result = try browserCall("browser.eval", arguments, ["script": .string(script)], timeout: Self.pageTimeout)
+            let timeout = try toolArguments { try BrowserEval.timeout(params: arguments) }
+            var params: [String: JSONValue?] = ["script": .string(script)]
+            if case .number = arguments["timeout"] { params["timeout"] = .number(timeout) }
+            let result = try browserCall("browser.eval", arguments, params, timeout: timeout + BrowserEval.clientMargin)
             let value = result["value"] ?? .null
             if case .string(let string) = value { return [Self.text(string)] }
             return [Self.text(encodeJSON(value, pretty: false))]

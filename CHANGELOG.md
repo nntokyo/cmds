@@ -32,6 +32,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   and is later found on the network). The phone recognises the Mac by the identity it pinned, and the pairing and
   the remote access settings follow. After pairing anew, the remote access settings are kept (#325).
 - iPhone/iPad: pairing without the camera no longer hangs at "Reading the Mac's identity…" (#331).
+- Browser panes: `cmds browser eval` (and MCP `browser_eval`) gives up after a timeout (`--timeout`, default 30 s,
+  at most 300) instead of waiting for good. When the script never yields (`while (true) {}`), the page is reloaded in
+  a new web view and its stuck WebContent process ends, so the pane works again; before, it stayed dead until cmds
+  quit (#338).
+- Browser panes: `cmds browser wait-for` (MCP `browser_wait_for`) answers in time when the page navigates while it
+  waits, and goes on waiting on the new page; `--timeout 0` checks once instead of being refused (#338).
+- Browser panes: `cmds browser snapshot -o -` writes the PNG to stdout instead of a file named `-`; with several
+  devices it is refused (#338).
+- Closed browser, preview and files panes are freed: each closed browser pane kept its web view and a WebContent
+  process (about 30 MB) until cmds quit (#338).
+- API and CLI errors from WebKit and the system (e.g. a page that did not load) are in English, not the app's language
+  (#338).
 
 ## [0.25.1] - 2026-11-15
 
