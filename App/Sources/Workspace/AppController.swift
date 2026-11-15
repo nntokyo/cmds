@@ -483,7 +483,11 @@ final class AppController {
     /// Opens a browser split to the right of `paneID` (default: focused pane).
     @discardableResult
     func openBrowser(paneID: String? = nil, url: String, focus: Bool = true, recordOpener: Bool = false) throws -> PaneInfo {
-        try split(paneID: paneID, direction: .right, kind: .browser, url: url, focus: focus, recordOpener: recordOpener)
+        // Nothing to load (`http://exa mple.com`): an error, not a blank pane. Empty input opens the start page.
+        if !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, BrowserPane.url(fromUserInput: url) == nil {
+            throw RPCError.invalidParams("cannot load \"\(url.prefix(200))\": not a valid URL")
+        }
+        return try split(paneID: paneID, direction: .right, kind: .browser, url: url, focus: focus, recordOpener: recordOpener)
     }
 
     /// `http://localhost:PORT` in a browser split of the workspace's focused pane, showing the workspace (a click on a
@@ -504,9 +508,10 @@ final class AppController {
         try browser(paneID: paneID).navigate(to: url)
     }
 
-    func browserLocation(paneID: String) throws -> (url: String?, title: String) {
+    /// `error`: why the page shown did not load, in English (#338).
+    func browserLocation(paneID: String) throws -> (url: String?, title: String, error: String?) {
         let browser = try browser(paneID: paneID)
-        return (browser.currentURL?.absoluteString, browser.pageTitle)
+        return (browser.currentURL?.absoluteString, browser.pageTitle, browser.loadFailure?.reason)
     }
 
     func browserEvaluate(paneID: String, script: String, timeout: TimeInterval = BrowserEval.defaultTimeout)
@@ -1091,7 +1096,7 @@ final class AppController {
         case .browser:
             let browser = BrowserPane(emulation: emulation ?? BrowserEmulation())
             pane = Pane(id: id, workspaceID: workspace.id, browser: browser)
-            if let url, !url.isEmpty { browser.navigate(to: url) } else { browser.showStartPage() }
+            if let url, !url.isEmpty, (try? browser.navigate(to: url)) != nil {} else { browser.showStartPage() }
         case .preview:
             let preview = PreviewPane(path: file?.path ?? NSHomeDirectory(), format: file?.format)
             pane = Pane(id: id, workspaceID: workspace.id, preview: preview)

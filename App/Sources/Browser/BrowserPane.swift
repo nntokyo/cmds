@@ -71,8 +71,20 @@ final class BrowserPane: NSView {
     /// Space between the download notice and the page area's edges.
     static let downloadNoticeInset: CGFloat = 8
 
-    var currentURL: URL? { webView.url }
-    var pageTitle: String { webView.title ?? "" }
+    // Load failures, sign-in and WebContent crashes (BrowserPane+LoadErrors.swift, #338).
+    /// The page that did not load (or whose WebContent process ended) while its notice covers the page.
+    var loadFailure: BrowserLoadFailure?
+    var loadFailureView: BrowserLoadFailureView?
+    /// The last page committed in the pane: what a crashed page reloads.
+    var lastCommittedURL: URL?
+    /// When a crashed page was last reloaded by itself (once a minute at most).
+    var lastCrashReload: Date?
+    // Find in page (BrowserPane+Find.swift, #338).
+    var findBar: TerminalFindBar?
+
+    /// The page shown, or the one that failed to load (the address bar and `browser.get_url` keep it).
+    var currentURL: URL? { loadFailure?.url ?? webView.url }
+    var pageTitle: String { loadFailure != nil ? "" : (webView.title ?? "") }
 
     init(emulation: BrowserEmulation = BrowserEmulation()) {
         webView = Self.makeWebView(configuration: Self.webViewConfiguration(websiteDataStore: .default()))
@@ -94,9 +106,17 @@ final class BrowserPane: NSView {
 
     // MARK: - Public API
 
-    /// Loads `input`: a URL (scheme optional) or, for anything else, a web search.
-    func navigate(to input: String) {
-        guard let url = Self.url(fromUserInput: input) else { return }
+    /// Loads `input`: a URL (scheme optional), a file path or, for anything else, a web search
+    /// (`BrowserAddress.url(fromUserInput:)`). `mailto:`, `tel:` and the like go to the app that handles them.
+    /// Throws for input with nothing to load (empty, or a URL that does not parse).
+    func navigate(to input: String) throws {
+        guard let url = Self.url(fromUserInput: input) else {
+            throw RPCError.invalidParams("cannot load \"\(input.prefix(200))\": not a valid URL")
+        }
+        if BrowserAddress.opensExternally(url) {
+            NSWorkspace.shared.open(url)
+            return
+        }
         webView.load(URLRequest(url: url))
         addressField.stringValue = url.absoluteString
     }
@@ -110,9 +130,14 @@ final class BrowserPane: NSView {
     }
 
     func reload() {
+        if loadFailure != nil { return retryFailedLoad() }
         if let responsiveView { responsiveView.reloadAll() } else { webView.reload() }
     }
-    func goBack() { webView.goBack() }
+    func goBack() {
+        // The page before the one that failed is still loaded under the notice: back shows it.
+        if loadFailure?.crashed == false { return clearLoadFailure() }
+        webView.goBack()
+    }
     func goForward() { webView.goForward() }
 
     func focusAddressBar() {
@@ -201,10 +226,12 @@ final class BrowserPane: NSView {
 
     /// Gives the pane a new web view (its own WebContent process) with the same scripts, settings and data store, and
     /// loads the page again; back/forward history starts over. The stuck web view is freed and its process ended
-    /// (`endWebContentProcess`). For a page that stopped responding (`scriptTimedOut`).
+    /// (`endWebContentProcess`). For a page that stopped responding (`scriptTimedOut`). The old web view's delegate
+    /// is detached before its process is killed, so the crash handling (`webContentProcessDidTerminate`) does not
+    /// reload the page a second time or show its notice.
     private func replaceStuckWebView() {
         let old = webView
-        let url = old.url
+        let url = old.url ?? lastCommittedURL
         let responsiveSettings = responsive
         if responsiveSettings != nil { setResponsive(nil) }
         pageDelegate.tearDown()  // pop-ups share the stuck process
@@ -226,6 +253,7 @@ final class BrowserPane: NSView {
         applyInspectable()
         layoutWebView()
         if let responsiveSettings { setResponsive(responsiveSettings) }
+        clearLoadFailure()
         if let url, url.isFileURL {
             webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
         } else if let url, Self.isWebPage(url) {
@@ -412,22 +440,7 @@ final class BrowserPane: NSView {
         return ["http", "https", "file"].contains(scheme)
     }
 
-    static func url(fromUserInput raw: String) -> URL? {
-        let input = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !input.isEmpty else { return nil }
-        if input.contains("://") || input.hasPrefix("about:") || input.hasPrefix("data:") {
-            return URL(string: input)
-        }
-        let looksLocal = input.hasPrefix("localhost") || input.hasPrefix("127.0.0.1") || input.hasPrefix("[::1]")
-            || input.range(of: #"^\d{1,3}(\.\d{1,3}){3}(:\d+)?(/.*)?$"#, options: .regularExpression) != nil
-        if looksLocal { return URL(string: "http://" + input) }
-        if !input.contains(" "), input.contains("."), let url = URL(string: "https://" + input), url.host != nil {
-            return url
-        }
-        var components = URLComponents(string: "https://www.google.com/search")!
-        components.queryItems = [URLQueryItem(name: "q", value: input)]
-        return components.url
-    }
+    static func url(fromUserInput raw: String) -> URL? { BrowserAddress.url(fromUserInput: raw) }
 
     // MARK: - Layout
 
@@ -515,9 +528,10 @@ final class BrowserPane: NSView {
         ]
     }
 
-    private func stateDidChange() {
+    func stateDidChange() {
+        if let url = webView.url, loadFailure == nil { lastCommittedURL = url }
         if window?.firstResponder !== addressField.currentEditor() {
-            let url = webView.url
+            let url = currentURL
             addressField.stringValue = url?.scheme == "about" ? "" : (url?.absoluteString ?? "")
         }
         updateButtons()
@@ -536,7 +550,7 @@ final class BrowserPane: NSView {
     }
 
     private func updateButtons() {
-        backButton.isEnabled = webView.canGoBack
+        backButton.isEnabled = webView.canGoBack || loadFailure?.crashed == false  // back from a failed load
         forwardButton.isEnabled = webView.canGoForward
     }
 
@@ -550,7 +564,7 @@ final class BrowserPane: NSView {
     @objc private func reloadClicked() { reload() }
 
     @objc private func addressSubmitted() {
-        navigate(to: addressField.stringValue)
+        guard (try? navigate(to: addressField.stringValue)) != nil else { return NSSound.beep() }
         window?.makeFirstResponder(webView)
     }
 }

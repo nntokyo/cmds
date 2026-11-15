@@ -353,6 +353,7 @@
       }
     },
     "%@ asks for a passkey. Browser panes cannot use passkeys yet.": {
+      "comment": "browser pane notice; host is the site, e.g. github.com",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -360,8 +361,7 @@
             "value": "%@ がパスキーを求めています。ブラウザペインではまだパスキーを使えません。"
           }
         }
-      },
-      "comment": "browser pane notice; host is the site, e.g. github.com"
+      }
     },
     "%@ failed: %@": {
       "localizations": {
@@ -2586,6 +2586,16 @@
         }
       }
     },
+    "Can’t Open the Page": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページを開けません"
+          }
+        }
+      }
+    },
     "Catch-up": {
       "localizations": {
         "ja": {
@@ -3423,6 +3433,16 @@
         }
       }
     },
+    "Continue Anyway": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このまま続ける"
+          }
+        }
+      }
+    },
     "Continue This Session With": {
       "comment": "sidebar account menu: header",
       "localizations": {
@@ -3460,6 +3480,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@に続ける"
+          }
+        }
+      }
+    },
+    "Continue only if you know this server, such as a development server with a self-signed certificate.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自己署名証明書を使う開発用サーバなど、よく知っているサーバの場合にのみ続けてください。"
           }
         }
       }
@@ -5519,6 +5549,16 @@
         }
       }
     },
+    "Its web content process ended unexpectedly. Reload to open it again.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Webコンテンツのプロセスが予期せず終了しました。再読み込みすると、もう一度開きます。"
+          }
+        }
+      }
+    },
     "JARVIS (animated)": {
       "comment": "Settings › Assistant › Style",
       "localizations": {
@@ -6020,6 +6060,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "場所："
+          }
+        }
+      }
+    },
+    "Log In": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン"
+          }
+        }
+      }
+    },
+    "Log in to %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@にログイン"
           }
         }
       }
@@ -7038,6 +7098,16 @@
         }
       }
     },
+    "Not found": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見つかりません"
+          }
+        }
+      }
+    },
     "Not shared": {
       "localizations": {
         "ja": {
@@ -7549,6 +7619,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペイン："
+          }
+        }
+      }
+    },
+    "Password": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワード"
           }
         }
       }
@@ -11055,6 +11135,16 @@
         }
       }
     },
+    "The server says: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバからのメッセージ：%@"
+          }
+        }
+      }
+    },
     "The session cannot be reached from “%@”: share sessions in Settings › Claude Accounts first.": {
       "localizations": {
         "ja": {
@@ -11151,6 +11241,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "タイトルは64文字以内の1行にしてください。"
+          }
+        }
+      }
+    },
+    "The user name or password was not accepted.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザ名またはパスワードが正しくありません。"
           }
         }
       }
@@ -11310,6 +11410,16 @@
         }
       }
     },
+    "This Connection Is Not Private": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この接続ではプライバシーが保護されません"
+          }
+        }
+      }
+    },
     "This Mac is on battery power right now.": {
       "localizations": {
         "ja": {
@@ -11336,6 +11446,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "このMacのタイムゾーン"
+          }
+        }
+      }
+    },
+    "This Page Stopped Working": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このページは動作を停止しました"
           }
         }
       }
@@ -11923,6 +12043,16 @@
         }
       }
     },
+    "User Name": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ユーザ名"
+          }
+        }
+      }
+    },
     "View": {
       "localizations": {
         "ja": {
@@ -12466,6 +12596,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分のパーソナルボイスで回答を読み上げられます。cmdsは先にmacOSに許可を求めます。声を録音したり複製したりはしません。"
+          }
+        }
+      }
+    },
+    "Your password will be sent unencrypted.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "パスワードは暗号化されずに送信されます。"
           }
         }
       }

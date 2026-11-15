@@ -108,6 +108,19 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.controller.browserPageAction(paneID: pane, action) }
                 }
+            case "browser.find":
+                // WebKit's find in page from the current match (BrowserPane+Find.swift, #338).
+                let pane = try browserPaneID(params)
+                let text = try params.required("text")
+                guard !text.isEmpty else { throw RPCError.invalidParams("text must not be empty") }
+                let backwards = try params.bool("backwards") ?? false
+                let caseSensitive = try params.bool("caseSensitive") ?? false
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        let browser = try self.controller.browser(paneID: pane)
+                        return ["matchFound": .bool(await browser.find(text, backwards: backwards, caseSensitive: caseSensitive))]
+                    }
+                }
             case "browser.snapshot":
                 // Unknown params are refused (BrowserSnapshotRequest.knownParams), so newer clients get a clear error.
                 let request = try BrowserSnapshotRequest(params: params.value)
@@ -137,7 +150,18 @@ final class APIServer {
                 }
                 let answer = try params.string("answer")
                 let text = try params.string("text")
-                connection.reply(id: id, result: browser.debugState(answer: answer, text: text))
+                // #338: the load error's notice (`loadErrorAction`: `reload` / `continue` presses its button), the find
+                // bar (`findAction`, `findText`: BrowserPane+Find.swift) and the WebContent process's pid.
+                let loadError = browser.debugLoadFailure(action: try params.string("loadErrorAction"))
+                browser.debugFindAction(try params.string("findAction"), text: try params.string("findText"))
+                var state = browser.debugState(answer: answer, text: text)
+                if case .object(var object) = state {
+                    object["loadError"] = loadError
+                    object["find"] = browser.debugFind
+                    object["webProcessID"] = browser.debugWebProcessID
+                    state = .object(object)
+                }
+                connection.reply(id: id, result: state)
             case "debug.files":
                 // Tests only: drive a files pane (FilesPane+Debug.swift).
                 guard let files = controller.pane(id: try params.required("pane"))?.files else {
@@ -487,7 +511,9 @@ final class APIServer {
             try controller.browserNavigate(paneID: try browserPaneID(params), url: try params.required("url"))
         case "browser.get_url":
             let location = try controller.browserLocation(paneID: try browserPaneID(params))
-            return ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
+            var result: [String: JSONValue] = ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
+            if let error = location.error { result["error"] = .string(error) }
+            return .object(result)
         case "browser.console":
             let request = try BrowserConsoleRequest(params: params.value)
             return try controller.browser(paneID: try browserPaneID(params))

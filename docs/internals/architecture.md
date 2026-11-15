@@ -147,6 +147,16 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   for the screenshot (#169) and responsive-view (#170) work too. Settings are `BrowserEmulation`, saved in
   session.json (`browser.emulation`) and export bundles (`emulation`), both optional keys. The iPhone is not told
   (no sync protocol change): it keeps loading the pane's URL at its own size.
+- **Browser address input, load failures and find** (#338): `CmdsCore/BrowserAddress.swift` turns address-bar text
+  into a URL (`BrowserAddress.url(fromUserInput:)`: file paths, kept schemes, http for local hosts, https for names
+  with a plausible top-level domain, else a search; nil = an RPC error) and gives the English reasons of
+  `browser.get_url`'s `error` (`BrowserLoadError`). `Browser/BrowserPane+LoadErrors.swift`: `BrowserPageDelegate`'s
+  navigation-failure, crash (`webViewWebContentProcessDidTerminate`) and auth-challenge callbacks put a
+  `BrowserLoadFailureView` over the viewport and keep `BrowserLoadFailure` (its URL is `currentURL` until another
+  page starts loading); server-trust challenges get WebKit's default handling unless the host:port is in
+  `BrowserPageDelegate.trustedHosts` (Continue Anyway, memory only); Basic / Digest challenges get a sign-in sheet
+  (`URLCredential` `.forSession`). `Browser/BrowserPane+Find.swift`: ⌘F reuses `TerminalFindBar` (no regex toggle)
+  over the viewport and `WKWebView.find(_:configuration:)`; `browser.find` is the same search without the bar.
 - **Files pane** (`PaneKind.files`, `PaneInfo.workingDirectory` = the folder; [guide](../guide/files.md)): the
   folder is read on a background queue (`FileEntry` per item, sorted by `FileSorting`) and watched with the same
   vnode `FileWatcher` as preview panes (re-listed at most every 0.5 s). Git states come from
