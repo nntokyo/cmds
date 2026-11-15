@@ -79,6 +79,8 @@ enum ClaudeAccountMenu {
         let panes = panes(of: workspace, controller: controller)
         guard !panes.isEmpty else { return nil }
         let menu = NSMenu()
+        // Read once per menu: the list looks at each account's folder (sign-in, settings).
+        let list = controller.accountList()
         for pane in panes {
             if pane !== panes[0] { menu.addItem(.separator()) }
             let title = panes.count == 1
@@ -87,13 +89,13 @@ enum ClaudeAccountMenu {
             let header = NSMenuItem(title: title, action: nil, keyEquivalent: "")
             header.isEnabled = false
             menu.addItem(header)
-            for item in items(for: pane, controller: controller, in: window) {
+            for item in items(for: pane, list: list, controller: controller, in: window) {
                 if panes.count > 1 { item.indentationLevel = 1 }
                 menu.addItem(item)
             }
         }
         menu.addItem(.separator())
-        for item in accountItems(controller: controller) { menu.addItem(item) }
+        for item in accountItems(list, controller: controller) { menu.addItem(item) }
         menu.addItem(Handler.item(String(localized: "Manage Accounts…", comment: "sidebar account menu")) {
             ClaudeAccountsWindowController.shared.showWindow(nil)
         })
@@ -103,8 +105,7 @@ enum ClaudeAccountMenu {
     /// What `cmds accounts auto|login|clear|share` do, without the command line: switching by itself at the limit
     /// (checked when on), Sign In per account, Clear Limit per limited account, and Share Sessions… while some
     /// account's sessions are not shared.
-    private static func accountItems(controller: AppController) -> [NSMenuItem] {
-        let list = controller.accountList()
+    private static func accountItems(_ list: ClaudeAccountList, controller: AppController) -> [NSMenuItem] {
         var items: [NSMenuItem] = []
         let auto = Handler.item(String(localized: "Switch Automatically at the Limit", comment: "sidebar account menu")) {
             controller.setAccountAutoSwitch(!list.autoSwitch)
@@ -120,8 +121,7 @@ enum ClaudeAccountMenu {
                 do {
                     try controller.signInToAccount(name: account.name)
                 } catch {
-                    show((error as? RPCError)?.message ?? error.localizedDescription, title: String(localized: "Claude Accounts"),
-                         in: controller.window)
+                    show(text(of: error), title: String(localized: "Claude Accounts"), in: controller.window)
                 }
             }
             item.image = swatch(color(of: account.name, controller: controller))
@@ -199,7 +199,7 @@ enum ClaudeAccountMenu {
                          title: String(localized: "Claude Accounts"), in: window)
                 }
             } catch {
-                show((error as? RPCError)?.message ?? error.localizedDescription, title: String(localized: "Claude Accounts"), in: window)
+                show(text(of: error), title: String(localized: "Claude Accounts"), in: window)
             }
         }
         if let window { alert.beginSheetModal(for: window, completionHandler: run) } else { run(alert.runModal()) }
@@ -219,11 +219,12 @@ enum ClaudeAccountMenu {
     }
 
     /// One pane's items: the accounts, and Cancel Switch while a switch waits for Claude Code (#296).
-    private static func items(for pane: Pane, controller: AppController, in window: NSWindow?) -> [NSMenuItem] {
+    private static func items(for pane: Pane, list: ClaudeAccountList, controller: AppController,
+                              in window: NSWindow?) -> [NSMenuItem] {
         var items: [NSMenuItem] = []
         let (current, switchingTo) = shown(pane, controller: controller)
         let now = Date()
-        let notes = Dictionary(uniqueKeysWithValues: controller.accountList(now: now).accounts.map { ($0.name, note($0)) })
+        let notes = Dictionary(uniqueKeysWithValues: list.accounts.map { ($0.name, note($0)) })
         for account in controller.claudeAccounts.accounts {
             var title = account.name
             if let note = notes[account.name] ?? nil, current.map(account.hasName) != true { title += " — " + note }
@@ -279,6 +280,11 @@ enum ClaudeAccountMenu {
     /// The rows show a switch asked for or cancelled at once, not at the next usage sample.
     private static func refreshRows(_ controller: AppController) {
         (controller.window?.windowController as? MainWindowController)?.sidebar.updateUsage()
+    }
+
+    /// What an alert says about a failed account action: the app's own message, else the system's.
+    private static func text(of error: Error) -> String {
+        (error as? RPCError)?.message ?? error.localizedDescription
     }
 
     private static func show(_ text: String, title: String? = nil, in window: NSWindow?) {
