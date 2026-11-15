@@ -121,9 +121,7 @@ final class SyncBluetoothPeripheral: NSObject {
     }
 
     private func stop() {
-        retry?.cancel()
-        retry = nil
-        failures = 0
+        cancelRetry()
         if let manager {
             manager.stopAdvertising()
             manager.removeAllServices()
@@ -228,6 +226,13 @@ extension SyncBluetoothPeripheral {
         }
     }
 
+    /// No more tries: stopped, or Bluetooth went off (it starts over when it comes back).
+    private func cancelRetry() {
+        retry?.cancel()
+        retry = nil
+        failures = 0
+    }
+
     /// A publish, service or advertising failure (e.g. "No resources available for L2CAP"): tries again later
     /// (`retryDelays`) instead of staying off until Bluetooth or cmds restarts (#343).
     private func failed(_ error: Error) {
@@ -263,9 +268,7 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
             case .poweredOff:
                 status = LocalizedStatus("Bluetooth is off")
                 // L2CAP channel, services and relays are gone; start over when it comes back.
-                retry?.cancel()
-                retry = nil
-                failures = 0
+                cancelRetry()
                 psm = nil
                 service = nil
                 publishedInfo = nil
