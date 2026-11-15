@@ -12,6 +12,9 @@ struct MacTarget: Codable, Hashable, Identifiable {
 
     var kind: Kind
     var displayName: String
+    /// The certificate fingerprint the Mac advertises (Bonjour TXT `fp`, base64url): only a hint to recognise a Mac
+    /// this phone paired with under another name or address (`MacContinuity`); connections trust the pinned one.
+    var fingerprintHint: String?
 
     var id: String {
         switch kind {

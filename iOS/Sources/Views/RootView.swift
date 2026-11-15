@@ -68,7 +68,12 @@ struct ConnectView: View {
                     Text("Enable iOS Sync in cmds on your Mac. The first connection to a Mac needs its pairing code.")
                 }
 
-                let otherRecents = recents.filter { r in !browser.macs.contains { $0.id == r.id } }
+                // Not the Macs listed above: by id, or the same Mac under the name it had before (`MacContinuity`).
+                let adoptable = Set(browser.macs.filter(MacContinuity.canAdopt).compactMap(\.fingerprintHint))
+                let otherRecents = recents.filter { r in
+                    !browser.macs.contains { $0.id == r.id }
+                        && !(PairingStore.pairing(for: r.id).map { adoptable.contains($0.fingerprint.base64url) } ?? false)
+                }
                 if !otherRecents.isEmpty {
                     Section("Recent") {
                         ForEach(otherRecents) { mac in
@@ -137,7 +142,7 @@ struct ConnectView: View {
                     Text(mac.subtitle).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if PairingStore.isPaired(mac.id) {
+                if PairingStore.isPaired(mac.id) || MacContinuity.canAdopt(mac) {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(.green)
                         .accessibilityLabel("Paired")

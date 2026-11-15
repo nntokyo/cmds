@@ -421,6 +421,18 @@ On `welcome` the phone stores `{fingerprint, token}` as one Keychain item per Ma
 (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`, service `tokyo.n-n.cmds.companion.pairing.v2`,
 account `MacTarget.id`). Tokens of protocol v1 are deleted at launch and never sent again.
 
+`MacTarget.id` is the Bonjour service name or the address the Mac was paired by, and both can change while the Mac
+stays the same (Bonjour renames the service to "Name (2)" after a name conflict, the Mac is renamed, a Mac paired by
+address is later found on the network). The Mac is its pinned fingerprint, so what the phone keeps follows it
+(`MacContinuity`, `SyncMacContinuity`, #325):
+
+- Before connecting to a discovered Mac without a pairing under its id, the phone looks for a saved Mac with the
+  fingerprint the service advertises (TXT `fp`) and files that pairing and its remote access under the new id too. A
+  saved Bonjour name is replaced; a saved address stays. The hint is not trusted: the connection is pinned to the saved
+  fingerprint, so a wrong or forged `fp` can only fail.
+- After pairing anew (the Mac replaced this phone's token), every other saved entry with that fingerprint gets the new
+  token, and remote access settings saved under one of them are kept for the new id.
+
 Later connections are pinned to the stored fingerprint and send the stored token. If the Mac presents
 any other certificate, the handshake is refused before anything is written and the phone stops with
 "This Mac's identity changed — re-pair": no automatic retry, no fallback to plaintext or to manual

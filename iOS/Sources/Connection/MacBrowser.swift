@@ -48,10 +48,13 @@ final class MacBrowser {
     private static func target(for result: NWBrowser.Result) -> MacTarget? {
         guard case .service(let name, let type, let domain, _) = result.endpoint else { return nil }
         var display = name
-        if case .bonjour(let txt) = result.metadata, let n = txt[SyncProtocol.txtKeyName], !n.isEmpty {
-            display = n
+        var fingerprint: String?
+        if case .bonjour(let txt) = result.metadata {
+            if let n = txt[SyncProtocol.txtKeyName], !n.isEmpty { display = n }
+            fingerprint = txt[SyncProtocol.txtKeyFingerprint]
         }
-        return MacTarget(kind: .bonjour(name: name, type: type, domain: domain), displayName: display)
+        return MacTarget(kind: .bonjour(name: name, type: type, domain: domain), displayName: display,
+                         fingerprintHint: fingerprint)
     }
 
     private static func describe(_ error: NWError) -> String {

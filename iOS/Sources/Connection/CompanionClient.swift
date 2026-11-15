@@ -133,6 +133,8 @@ final class CompanionClient {
     func connect(to target: MacTarget) {
         select(target)
         backoff.reset()
+        // A Mac this phone paired with, found under a new name: its pairing follows it (`MacContinuity`).
+        MacContinuity.adopt(target)
         guard target.kind == .mock || PairingStore.isPaired(target.id) else {
             teardown()
             status = .pairingRequired(message: upgradeNotice)
@@ -379,7 +381,10 @@ final class CompanionClient {
         case .welcome(let welcome):
             macName = welcome.macName
             if let target, target.kind != .mock, case .pinned(let pin) = transportPolicy {
-                PairingStore.save(MacPairing(fingerprint: pin, token: welcome.token), for: target.id)
+                let pairing = MacPairing(fingerprint: pin, token: welcome.token)
+                PairingStore.save(pairing, for: target.id)
+                // Paired anew: the same Mac under another name or address keeps working, and its remote access stays.
+                if pendingPairingCode != nil { MacContinuity.paired(target.id, pairing: pairing) }
                 var named = target
                 named.displayName = welcome.macName
                 RecentMacs.remember(named)

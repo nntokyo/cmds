@@ -14,6 +14,17 @@ enum Keychain {
         return item as? Data
     }
 
+    /// The accounts of every item of `service`.
+    static func accounts(service: String) -> [String] {
+        var query = baseQuery(service: service, account: nil)
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitAll
+        var items: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &items) == errSecSuccess,
+              let list = items as? [[String: Any]] else { return [] }
+        return list.compactMap { $0[kSecAttrAccount as String] as? String }
+    }
+
     /// Adds a new item (does not replace an existing one; delete it first).
     @discardableResult
     static func add(_ data: Data, service: String, account: String) -> OSStatus {
