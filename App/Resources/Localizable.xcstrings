@@ -4541,6 +4541,16 @@
         }
       }
     },
+    "Failed: %@. Trying again in %lld s.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "失敗：%@。%lld 秒後にやり直します。"
+          }
+        }
+      }
+    },
     "Fetches, creates a new branch from the base and a git worktree for it, and opens a workspace there, so agents can work side by side without touching your checkout.": {
       "localizations": {
         "ja": {

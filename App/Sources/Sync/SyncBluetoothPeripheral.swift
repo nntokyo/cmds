@@ -31,6 +31,11 @@ final class SyncBluetoothPeripheral: NSObject {
     /// Channels whose relay is still being set up (they count against `maxChannels`).
     private var settingUp = 0
     private var observer: NSObjectProtocol?
+    /// After a failed publish, service or advertising (#343): the next try, and how many failed in a row.
+    private var retry: DispatchWorkItem?
+    private var failures = 0
+    /// Seconds before trying again after the 1st, 2nd, 3rd… failure in a row (the last one repeats).
+    static let retryDelays: [Int] = [5, 15, 60, 300]
 
     private override init() {
         super.init()
@@ -116,6 +121,9 @@ final class SyncBluetoothPeripheral: NSObject {
     }
 
     private func stop() {
+        retry?.cancel()
+        retry = nil
+        failures = 0
         if let manager {
             manager.stopAdvertising()
             manager.removeAllServices()
@@ -205,6 +213,41 @@ final class SyncBluetoothPeripheral: NSObject {
     }
 }
 
+extension SyncBluetoothPeripheral {
+    /// Publishes the L2CAP channel, else (it is published) the service, which then advertises.
+    private func start(_ peripheral: CBPeripheralManager) {
+        retry?.cancel()
+        retry = nil
+        if psm == nil {
+            // No link encryption: an encrypted channel needs a Bluetooth bond, whose pairing prompt fails
+            // silently on the phone ("Unknown error" from openL2CAPChannel, seen on a real iPhone). The
+            // channel only carries the pinned TLS stream, which is where trust and secrecy come from.
+            peripheral.publishL2CAPChannel(withEncryption: false)
+        } else {
+            publishService()
+        }
+    }
+
+    /// A publish, service or advertising failure (e.g. "No resources available for L2CAP"): tries again later
+    /// (`retryDelays`) instead of staying off until Bluetooth or cmds restarts (#343).
+    private func failed(_ error: Error) {
+        let delay = Self.retryDelays[min(failures, Self.retryDelays.count - 1)]
+        failures += 1
+        status = LocalizedStatus("Failed: \(error.localizedDescription). Trying again in \(delay) s.")
+        retry?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, let manager = self.manager, manager.state == .poweredOn else { return }
+                self.retry = nil
+                self.status = LocalizedStatus("Starting…")
+                self.start(manager)
+            }
+        }
+        retry = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(delay), execute: work)
+    }
+}
+
 extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
     nonisolated func peripheralManagerDidUpdateState(_ peripheral: CBPeripheralManager) {
         MainActor.assumeIsolated {
@@ -212,14 +255,7 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
             switch peripheral.state {
             case .poweredOn:
                 status = LocalizedStatus("Starting…")
-                if psm == nil {
-                    // No link encryption: an encrypted channel needs a Bluetooth bond, whose pairing prompt fails
-                    // silently on the phone ("Unknown error" from openL2CAPChannel, seen on a real iPhone). The
-                    // channel only carries the pinned TLS stream, which is where trust and secrecy come from.
-                    peripheral.publishL2CAPChannel(withEncryption: false)
-                } else {
-                    publishService()
-                }
+                start(peripheral)
             case .unauthorized:
                 status = LocalizedStatus("Not allowed (System Settings › Privacy & Security › Bluetooth)")
             case .unsupported:
@@ -227,6 +263,9 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
             case .poweredOff:
                 status = LocalizedStatus("Bluetooth is off")
                 // L2CAP channel, services and relays are gone; start over when it comes back.
+                retry?.cancel()
+                retry = nil
+                failures = 0
                 psm = nil
                 service = nil
                 publishedInfo = nil
@@ -242,9 +281,8 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
         MainActor.assumeIsolated {
             guard peripheral === manager else { return }
             if let error {
-                status = LocalizedStatus("Failed: \(error.localizedDescription)")
                 syncLog.error("bluetooth: L2CAP publish failed: \(error.localizedDescription, privacy: .public)")
-                return
+                return failed(error)
             }
             psm = PSM
             publishService()
@@ -255,9 +293,8 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
         MainActor.assumeIsolated {
             guard peripheral === manager, service === self.service else { return }
             if let error {
-                status = LocalizedStatus("Failed: \(error.localizedDescription)")
                 syncLog.error("bluetooth: adding the service failed: \(error.localizedDescription, privacy: .public)")
-                return
+                return failed(error)
             }
             peripheral.startAdvertising([CBAdvertisementDataServiceUUIDsKey: [CBUUID(string: SyncBluetooth.serviceUUID)],
                                          CBAdvertisementDataLocalNameKey: "cmds"])
@@ -268,9 +305,10 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
         MainActor.assumeIsolated {
             guard peripheral === manager else { return }
             if let error {
-                status = LocalizedStatus("Failed: \(error.localizedDescription)")
                 syncLog.error("bluetooth: advertising failed: \(error.localizedDescription, privacy: .public)")
+                failed(error)
             } else {
+                failures = 0
                 status = LocalizedStatus("Advertising (PSM \(psm.map(String.init) ?? "?"))")
                 syncLog.notice("bluetooth: advertising, PSM \(self.psm ?? 0, privacy: .public)")
             }

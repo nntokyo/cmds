@@ -31,6 +31,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   service to "Name (2)" after a name conflict, e.g. around an update; the Mac is renamed; it was paired by address
   and is later found on the network). The phone recognises the Mac by the identity it pinned, and the pairing and
   the remote access settings follow. After pairing anew, the remote access settings are kept (#325).
+- Mac: Bluetooth sync no longer stays off after macOS refuses it once ("No resources available for L2CAP"); cmds
+  tries again after 5 s, 15 s, 1 min, then every 5 min, and `cmds sync` says when (#343).
 - iPhone/iPad: pairing without the camera no longer hangs at "Reading the Mac's identity…" (#331).
 - Browser panes: `cmds browser eval` (and MCP `browser_eval`) gives up after a timeout (`--timeout`, default 30 s,
   at most 300) instead of waiting for good. When the script never yields (`while (true) {}`), the page is reloaded in
