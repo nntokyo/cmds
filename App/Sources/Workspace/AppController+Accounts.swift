@@ -225,7 +225,7 @@ extension AppController {
             let hit = ClaudeLimitDetector.detect(screen: terminal.visibleText(), now: now)
             if isCarriedLimitLine(pane, hit, now: now) { continue }
             guard let hit else { continue }
-            handleLimitHit(pane, hit, key: "screen|\(currentAccount(of: pane) ?? "")|" + hit.line, now: now)
+            handleLimitHit(pane, hit, key: limitKey(.screen, account: currentAccount(of: pane)) + hit.line, now: now)
         }
     }
 
@@ -243,7 +243,7 @@ extension AppController {
 
     /// A switch to another account is done: the limit lines the previous one hit on this pane's screen are carried.
     func carryLimitLines(_ pane: Pane, from account: String?, now: Date) {
-        let prefix = "screen|\(account ?? "")|"
+        let prefix = limitKey(.screen, account: account)
         pane.carriedLimitLines = Set(pane.seenLimitLines.keys.filter { $0.hasPrefix(prefix) }.map { String($0.dropFirst(prefix.count)) })
         pane.carriedLimitLinesSince = pane.carriedLimitLines.isEmpty ? nil : now
     }
@@ -251,7 +251,16 @@ extension AppController {
     /// From `agent.report`: a status-line window at 100 %.
     func noteStatusLineLimits(_ pane: Pane, usage: AgentUsage, now: Date = Date()) {
         guard usage.agent == .claude, pane.ssh == nil, let hit = ClaudeLimitDetector.hit(fromLimits: usage.limits, now: now) else { return }
-        handleLimitHit(pane, hit, key: "status|\(currentAccount(of: pane) ?? "")|\(hit.resetsAt?.timeIntervalSince1970 ?? 0)", now: now)
+        handleLimitHit(pane, hit, key: limitKey(.statusLine, account: currentAccount(of: pane)) + "\(hit.resetsAt?.timeIntervalSince1970 ?? 0)",
+                       now: now)
+    }
+
+    /// Where a limit was seen, for the keys of `Pane.seenLimitLines`.
+    private enum LimitSource: String { case screen, statusLine = "status" }
+
+    /// The start of a `Pane.seenLimitLines` key: the source and the account (`screen|work|`); the line or reset follows.
+    private func limitKey(_ source: LimitSource, account: String?) -> String {
+        "\(source.rawValue)|\(account ?? "")|"
     }
 
     private func handleLimitHit(_ pane: Pane, _ hit: ClaudeLimitHit, key: String, now: Date) {

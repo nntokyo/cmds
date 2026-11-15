@@ -118,6 +118,14 @@ public enum ClaudeLimitDetector {
     private static let absolutePattern = regex(
         #"\breset(?:s)?(?:\s+at)?[\s:]+(?:(mon|tue|wed|thu|fri|sat|sun)[a-z]*\.?,?\s+)?(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(?:at\s+)?)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a\.m\.|p\.m\.)?(?:\s*\(([A-Za-z_]+(?:/[A-Za-z0-9_+\-]+){0,2})\)|\s*(\([^)]*$))?"#)
 
+    /// What `resetDate` does with a time zone it cannot read (cut off at the end of the text, or not known).
+    enum UnreadableZone {
+        /// No date: the caller tries again with the next row joined.
+        case giveUp
+        /// The time in the given `timeZone`.
+        case useDefault
+    }
+
     /// The reset time in a limit message: `…|<epoch>`, `resets in 2h 5m`, or a clock time with an optional weekday or
     /// month and day and an optional `(Area/City)` time zone (else `timeZone`). Clock times are the next one after `now`.
     /// A zone cut off at the end of `text` or not known: nil (`.giveUp`, the caller joins the next row), or read in
@@ -174,8 +182,6 @@ public enum ClaudeLimitDetector {
         }
         return calendar.nextDate(after: now, matching: time, matchingPolicy: .nextTime)
     }
-
-    enum UnreadableZone { case giveUp, useDefault }
 
     private static func group(_ match: NSTextCheckingResult, _ index: Int, in text: String) -> String? {
         let range = match.range(at: index)
