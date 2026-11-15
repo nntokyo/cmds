@@ -85,7 +85,9 @@ extension AppController {
                                        },
                                        needsSetup: ClaudeAccountSetup.state(of: account).map { !$0.isComplete })
         }
-        return ClaudeAccountList(accounts: statuses, autoSwitch: claudeAccounts.autoSwitch)
+        let missing = chromeHostMissing()
+        return ClaudeAccountList(accounts: statuses, autoSwitch: claudeAccounts.autoSwitch,
+                                 chromeHostMissing: missing.isEmpty ? nil : missing)
     }
 
     func addAccount(name: String, configDir: String) throws {
@@ -237,6 +239,8 @@ extension AppController {
     func noteClaudeConfigDir(_ pane: Pane, configDir: String?) {
         guard let configDir, pane.ssh == nil else { return }
         let name = ClaudeAccounts.account(forConfigDir: configDir, in: claudeAccounts.accounts)?.name
+        // Claude Code runs here: a good moment to see that Claude in Chrome can reach it (throttled).
+        checkChromeHostSoon()
         guard name != pane.claudeAccount else { return }
         pane.claudeAccount = name
         emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))

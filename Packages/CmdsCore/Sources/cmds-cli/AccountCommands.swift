@@ -11,7 +11,7 @@ extension CLI {
                     An account is a name and a Claude Code config directory (CLAUDE_CONFIG_DIR) you signed in to yourself
                     (claude, then /login). cmds stores only names and paths. When a pane's account hits its limit, cmds
                     offers to continue the session with the next account in this order that has not (cmds accounts auto
-                    on: by itself). Subcommands: add, remove, move, share, login, setup, clear, switch, auto. Use only your own
+                    on: by itself). Subcommands: add, remove, move, share, login, setup, chrome, clear, switch, auto. Use only your own
                     accounts; you are responsible for following Anthropic's terms for each. See docs/guide/ai-agents.md
                     "Several Claude accounts".
                     """) { ctx in
@@ -94,6 +94,21 @@ extension CLI {
             }
             print(parts.isEmpty ? "nothing to add" : parts.joined(separator: "; "))
             if let backup = result["backup"]?.stringValue { print("previous settings: \(backup)") }
+        },
+        Command(name: "accounts chrome", usage: "accounts chrome",
+                summary: "Put back Claude in Chrome's host script when its config folder was made again (the extension cannot connect).",
+                details: """
+                    The browser's manifest (NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json) names
+                    <config-dir>/chrome/chrome-native-host of the account that last turned Claude in Chrome on. When that
+                    folder is removed or made again, the extension cannot connect under any account. This writes the
+                    missing script (a copy of another account's, else `exec claude --chrome-native-host`); nothing is
+                    overwritten and the manifest is not changed. `cmds accounts` says when it is missing.
+                    """) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds accounts chrome")
+            let result = try ctx.call("account.repair_chrome")
+            if ctx.json { return ctx.printJSON(result) }
+            let written = (result["written"]?.arrayValue ?? []).compactMap(\.stringValue)
+            print(written.isEmpty ? "nothing to repair" : written.map { "wrote \($0)" }.joined(separator: "\n"))
         },
         Command(name: "accounts clear", usage: "accounts clear <name>",
                 summary: "Forget a Claude account's recorded limit (e.g. it reset early or was detected wrongly).") { ctx in

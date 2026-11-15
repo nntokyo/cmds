@@ -319,9 +319,13 @@ public struct ClaudeAccountStatus: Codable, Equatable, Sendable {
 public struct ClaudeAccountList: Codable, Equatable, Sendable {
     public var accounts: [ClaudeAccountStatus]
     public var autoSwitch: Bool
+    /// Claude in Chrome's host scripts that a browser's manifest names but that are missing (`ClaudeChromeHost`):
+    /// the extension cannot connect under any account. nil when there are none.
+    public var chromeHostMissing: [String]?
 
-    public init(accounts: [ClaudeAccountStatus], autoSwitch: Bool) {
+    public init(accounts: [ClaudeAccountStatus], autoSwitch: Bool, chromeHostMissing: [String]? = nil) {
         self.accounts = accounts
         self.autoSwitch = autoSwitch
+        self.chromeHostMissing = chromeHostMissing
     }
 }

@@ -318,6 +318,12 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   `projects` folder renamed `projects.before-cmds-<yyyyMMdd-HHmm>` first; a rename whose target exists fails, and a
   link that cannot be made after the rename moves the folder back. `transcriptReachable` checks
   `<dir>/projects/*/<id>.jsonl` by name before a switch.
+- **Claude in Chrome**: `ClaudeChromeHost.check/repair` (unit-tested): each Chromium browser's
+  `NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json` names one account's
+  `<configDir>/chrome/chrome-native-host`; a missing (or not executable) one is reported in `account.list`
+  (`chromeHostMissing`) and offered once per run (`AppController+ChromeHost`: launch, accounts window, add, share, and
+  a pane's status line report at most once a minute). Repair copies another config directory's wrapper, else writes
+  `exec <claude> --chrome-native-host`; never overwrites, never edits the manifest.
 
 ### Schedules
 
