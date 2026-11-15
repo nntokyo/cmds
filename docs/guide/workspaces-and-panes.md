@@ -302,7 +302,10 @@ cmds browser snapshot --full --device iphone,ipad,desktop-1440 -o /tmp/shot.png
 
 cmds can be chosen as the default web browser (**System Settings › Desktop & Dock › Default web browser**): links
 opened from other apps then open in a browser split beside the focused pane. Passkeys and security keys don't work in
-browser panes yet; they need an entitlement from Apple ([#162](https://github.com/nntokyo/cmds/issues/162)).
+browser panes yet; they need an entitlement from Apple ([#162](https://github.com/nntokyo/cmds/issues/162)). When a
+page asks for one (signing in or registering with a passkey or security key), a notice at the bottom of the pane says
+so, with **Open in Safari** to finish there. Sign-in pages that only offer passkeys in the autofill list on load do
+not show it.
 
 ### Device sizes and color scheme
 

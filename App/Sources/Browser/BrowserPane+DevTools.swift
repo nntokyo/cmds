@@ -15,6 +15,11 @@ extension BrowserPane {
                                               injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .defaultClient))
         controller.addUserScript(WKUserScript(source: ConsoleCapture.hook(eventName: consoleEventName),
                                               injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
+        controller.add(PasskeyMessageHandler(self), contentWorld: .defaultClient, name: PasskeyRequestCapture.handlerName)
+        controller.addUserScript(WKUserScript(source: PasskeyRequestCapture.listener(eventName: passkeyEventName),
+                                              injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .defaultClient))
+        controller.addUserScript(WKUserScript(source: PasskeyRequestCapture.hook(eventName: passkeyEventName),
+                                              injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         applyInspectable()
         NotificationCenter.default.addObserver(self, selector: #selector(inspectableSettingChanged),
                                                name: AppSettings.didChange, object: nil)
@@ -26,6 +31,12 @@ extension BrowserPane {
         let on = AppSettings.shared.browserInspectable
         if webView.isInspectable != on { webView.isInspectable = on }
         for frame in responsiveView?.webViews.dropFirst() ?? [] where frame.isInspectable != on { frame.isInspectable = on }
+    }
+
+    /// The page asked for a passkey (#336): browser panes cannot answer it until #162; the notice offers Safari.
+    func pageAskedForPasskey() {
+        guard let page = webView.url, let host = page.host(), !host.isEmpty else { return }
+        showDownload(.passkey(host: host, page: page))
     }
 
     func receiveConsole(_ messages: [[String: Any]]) {
@@ -117,5 +128,17 @@ private final class ConsoleMessageHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let batch = message.body as? [[String: Any]] else { return }
         MainActor.assumeIsolated { pane?.receiveConsole(batch) }
+    }
+}
+
+/// A passkey request of the page (#336): the pane shows its notice.
+private final class PasskeyMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var pane: BrowserPane?
+
+    init(_ pane: BrowserPane) { self.pane = pane }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.frameInfo.isMainFrame else { return }
+        MainActor.assumeIsolated { pane?.pageAskedForPasskey() }
     }
 }

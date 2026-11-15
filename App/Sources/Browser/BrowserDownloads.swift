@@ -78,6 +78,8 @@ final class BrowserDownloadBannerView: NSVisualEffectView {
         case downloading(name: String)
         case finished(name: String, file: URL)
         case failed(name: String, reason: String)
+        /// The page asked for a passkey (#336): `page` opens in Safari.
+        case passkey(host: String, page: URL)
     }
 
     var onCancel: (() -> Void)?
@@ -117,6 +119,13 @@ final class BrowserDownloadBannerView: NSVisualEffectView {
             tint = .systemOrange
             text = name.isEmpty ? String(localized: "Download failed: \(reason)")
                 : String(localized: "Download of “\(name)” failed: \(reason)")
+            buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .passkey(let host, _):
+            symbol = "person.badge.key"
+            tint = .systemOrange
+            text = String(localized: "\(host) asks for a passkey. Browser panes cannot use passkeys yet.",
+                          comment: "browser pane notice; host is the site, e.g. github.com")
+            buttons.append(button(String(localized: "Open in Safari"), #selector(openInSafariClicked), primary: true))
             buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
         }
         let icon = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage())
@@ -162,6 +171,22 @@ final class BrowserDownloadBannerView: NSVisualEffectView {
 
     @objc private func cancelClicked() { onCancel?() }
     @objc private func dismissClicked() { onDismiss?() }
+
+    @objc private func openInSafariClicked() {
+        if case .passkey(_, let page) = notice { Self.openInSafari(page) }
+        onDismiss?()
+    }
+
+    /// Safari, else the default browser when it is not cmds itself (passkeys work there).
+    static func openInSafari(_ url: URL) {
+        let workspace = NSWorkspace.shared
+        if let safari = workspace.urlForApplication(withBundleIdentifier: "com.apple.Safari") {
+            workspace.open([url], withApplicationAt: safari, configuration: NSWorkspace.OpenConfiguration())
+        } else if let browser = workspace.urlForApplication(toOpen: url),
+                  Bundle(url: browser)?.bundleIdentifier != Bundle.main.bundleIdentifier {
+            workspace.open([url], withApplicationAt: browser, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
 
     @objc private func showClicked() {
         if case .finished(_, let file) = notice { NSWorkspace.shared.activateFileViewerSelecting([file]) }
