@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-11-16
+
+Mac only; the iPhone/iPad app is unchanged.
+
 ### Added
 
 - Agents: cmds registers its MCP server (`cmds mcp`) by itself with Claude Code (plain `claude` and every Claude
