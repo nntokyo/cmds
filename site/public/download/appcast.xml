@@ -7,28 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.27.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.27.1</link>
-      <sparkle:version>41</sparkle:version>
-      <sparkle:shortVersionString>0.27.1</sparkle:shortVersionString>
+      <title>cmds 0.27.2</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.27.2</link>
+      <sparkle:version>42</sparkle:version>
+      <sparkle:shortVersionString>0.27.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 15 Nov 2026 17:07:48 GMT</pubDate>
+      <pubDate>Sun, 15 Nov 2026 17:35:15 GMT</pubDate>
       <description><![CDATA[
 <h3>修正</h3>
 <ul>
-<li>エージェント：MCP サーバーの自動登録を Antigravity CLI（<code>agy</code>）にも広げました。cmds の起動中にサインインした Claude アカウントにも（次の起動を待たずに）登録し、作り直された設定フォルダにも登録し直します（これまではパスで覚えていたため、作り直したフォルダには登録されませんでした）。登録処理の実行中に来た依頼も捨てずに続けて行います。</li>
+<li>Claude アカウント：起動しただけでまだ一度もプロンプトを送っていない Claude Code のセッション（起動時に再開されて使っていないものなど）を別のアカウントに切り替えられませんでした（セッションは共有済みなのに「先にセッションを共有してください」と表示）。会話がまだ無いので、切り替え先のアカウントで Claude Code を新しく起動して切り替えるようにしました。このようなセッションの再開（起動時、最近のセッション）も、失敗する <code>claude --resume</code> ではなく Claude Code の起動を入力します。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Fixed</h3>
 <ul>
-<li>Agents: the MCP server is also registered with the Antigravity CLI (<code>agy</code>), for a Claude account signed in while cmds runs (not only at the next launch), and again for a config folder that was made again. A registration asked for while one runs is no longer dropped.</li>
+<li>Claude accounts: a Claude Code session that was started but never given a prompt could not be switched to another account ("share sessions first", although they were shared); it now switches by starting Claude Code anew under the account. Resuming such a session starts Claude Code instead of a <code>claude --resume</code> that fails with "No conversation found".</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.27.1/cmds-0.27.1.dmg" length="17274265" type="application/octet-stream" sparkle:edSignature="WlU9zCNv7/YKmH3HhB99qcf/QEr+FB3HUGXY6sL5cugUq+pK6XTAANEaJVfnIiXmwS2H4yAoVaEhLCV+Yhk5BA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.27.2/cmds-0.27.2.dmg" length="17242427" type="application/octet-stream" sparkle:edSignature="1RBi4ZRy/QNOW+nFgvFNyH5aQ+5s+vGsAxpVxyuf+F1yKPuOrzkZksWTii7CVGzlVTB67D6dop+0xnWVC1VSBA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: NT95k1iJC15rl+Rrv5ARP7tPPngavkPzofnJXJYN6MwUYrKerEYy7OylrG5Ppcfbj9NrpkNhxMHF+wXRcDf9AA==
-length: 2232
+edSignature: TttknJKteC41fQ43TZQjG0RKX13paKIfiHCMUbz8LzaVwv9/GZOij+GdRKYjD1bGz3g0z33gLmwWOGHFwW7SAw==
+length: 2517
 -->
