@@ -7,6 +7,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.24.3] - 2026-11-15
+
+Mac only; the iPhone/iPad app is unchanged.
+
+### Fixed
+
+- Claude accounts: Claude Code's "Context limit reached" (and other limits of the conversation) no longer counts as
+  the account's limit, so it no longer switches the session to the next account (#315).
+- Claude accounts: a reset time whose time zone wraps onto the next row (`(America/Ne` / `w_York)`) is read in that
+  zone, not the Mac's (#315).
+- Claude accounts: after a switch, the next account hitting the same limit message in the same pane is detected;
+  the previous account's message shown again by the resumed session is still ignored (#315).
+- Claude accounts: when the account offered by "Continue with …" hits its limit too, the bar offers the next free
+  one instead of continuing with the limited account (#315).
+- Claude accounts: Share Sessions after moving an account whose `projects` links to a folder outside the accounts to
+  the top keeps the accounts' shared folder, instead of moving it aside (#315).
+
 ## [0.24.2] - 2026-11-15
 
 Mac only; the iPhone/iPad app is unchanged.
