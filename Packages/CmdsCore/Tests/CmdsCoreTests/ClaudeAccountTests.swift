@@ -75,6 +75,23 @@ final class ClaudeAccountTests: XCTestCase {
         XCTAssertEqual(detect(screen)?.resetsAt, tokyoDate(11, 7, 9))
     }
 
+    func testTimeZoneCutByTheWrap() {
+        // 68 columns: the zone wraps in the middle of its name.
+        let screen = """
+              ⎿  Claude usage limit reached. Your limit will reset at 3pm (America/Ne
+                 w_York).
+            """
+        XCTAssertEqual(detect(screen)?.resetsAt, tokyoDate(11, 3, 5))
+        let afterParen = """
+              ⎿  Claude usage limit reached. Your limit will reset at 3pm (
+                 America/New_York).
+            """
+        XCTAssertEqual(detect(afterParen)?.resetsAt, tokyoDate(11, 3, 5))
+        // Cut with nothing after it (the last row), or a zone that is not known: read in the Mac's zone.
+        XCTAssertEqual(detect("Claude usage limit reached. Your limit will reset at 3pm (America/Ne")?.resetsAt, tokyoDate(11, 2, 15))
+        XCTAssertEqual(detect("You've hit your limit · resets 3pm (Mars/Olympus)")?.resetsAt, tokyoDate(11, 2, 15))
+    }
+
     func testRateLimitMessages() {
         let api = #"  ⎿  API Error: 429 {"type":"error","error":{"type":"rate_limit_error","message":"This request would exceed the rate limit for your organization"}}"#
         XCTAssertEqual(detect(api)?.kind, .rateLimit)
@@ -89,6 +106,12 @@ final class ClaudeAccountTests: XCTestCase {
             "Approaching usage limit · resets at 10pm",
             "You've used 90% of your weekly limit · resets Nov 7, 9am",
             "Approaching Opus usage limit",
+            // Limits of the conversation, not of the account (another account would not help).
+            "Context limit reached · /compact or /clear to continue",
+            "⎿  Context limit reached",
+            "Conversation limit reached",
+            "Output token limit reached",
+            "Max tokens limit reached",
             // The words inside code or prose do not count: the message must start the line.
             #"  let message = "You've hit your limit · resets 3pm""#,
             "+    XCTAssertEqual(detect(\"5-hour limit reached\"), …)",
@@ -462,6 +485,36 @@ final class ClaudeAccountTests: XCTestCase {
                                                       home: home), ["c"])
         XCTAssertTrue(ClaudeSessionSharing.transcriptReachable(sessionID: uuid, configDir: home + "/c", home: home))
         XCTAssertEqual(ClaudeSessionSharing.link(of: c, in: withC, home: home), .shared)
+    }
+
+    func testSharingWithTheFirstLinkedOutsideKeepsTheAccountsFolder() throws {
+        let home = try temporaryDirectory().path
+        let fm = FileManager.default
+        try fm.createDirectory(atPath: home + "/a/projects/-p", withIntermediateDirectories: true)
+        try Data("{}\n".utf8).write(to: URL(fileURLWithPath: home + "/a/projects/-p/\(uuid).jsonl"))
+        try fm.createDirectory(atPath: home + "/b", withIntermediateDirectories: true)
+        try fm.createDirectory(atPath: home + "/elsewhere", withIntermediateDirectories: true)
+        try fm.createDirectory(atPath: home + "/c", withIntermediateDirectories: true)
+        try fm.createSymbolicLink(atPath: home + "/c/projects", withDestinationPath: home + "/elsewhere")
+        let a = ClaudeAccount(name: "a", configDir: home + "/a"), b = ClaudeAccount(name: "b", configDir: home + "/b")
+        let c = ClaudeAccount(name: "c", configDir: home + "/c")
+        try ClaudeSessionSharing.apply(ClaudeSessionSharing.plan([a, b, c], now: now, home: home), accounts: [a, b, c], home: home)
+
+        // c (a link to a folder outside the accounts) is moved to the top: a's folder stays the store, c is left alone.
+        let reordered = [c, a, b]
+        XCTAssertEqual(ClaudeSessionSharing.store(reordered, home: home)?.account, "a")
+        XCTAssertEqual(ClaudeSessionSharing.link(of: c, in: reordered, home: home), .elsewhere)
+        let steps = ClaudeSessionSharing.plan(reordered, now: now, home: home)
+        XCTAssertEqual(steps.map(\.action.name), [.skip, .unchanged, .unchanged])
+        XCTAssertEqual(try ClaudeSessionSharing.apply(steps, accounts: reordered, home: home), [])
+        XCTAssertEqual(try fm.contentsOfDirectory(atPath: home + "/a").sorted(), ["projects"])
+        XCTAssertTrue(ClaudeSessionSharing.transcriptReachable(sessionID: uuid, configDir: home + "/b", home: home))
+
+        // Only links outside the accounts and no folder of their own: the first one's target is the store, as before.
+        let d = ClaudeAccount(name: "d", configDir: home + "/d")
+        try fm.createDirectory(atPath: home + "/d", withIntermediateDirectories: true)
+        try fm.createSymbolicLink(atPath: home + "/d/projects", withDestinationPath: home + "/elsewhere")
+        XCTAssertEqual(ClaudeSessionSharing.store([c, d], home: home)?.path, (home + "/elsewhere" as NSString).resolvingSymlinksInPath)
     }
 
     func testApplyNeverMovesTheStoreAside() throws {

@@ -111,6 +111,9 @@ extension AppController {
     /// (it hit its limit meanwhile, sessions are not shared…), the offer is worked out again and shown instead.
     func continueAccountSwitch(_ pane: Pane) {
         guard let change = pane.accountSwitch else { return }
+        if let name = change.to, claudeAccounts.account(named: name)?.isLimited() == true {
+            return offerAccountSwitch(pane, from: change.from, notify: false)
+        }
         do {
             try requestAccountSwitch(paneID: pane.id, to: change.to)
         } catch {
@@ -210,6 +213,7 @@ extension AppController {
         session.lastSeen = now
         guard AgentResume.command(for: session) != nil else { return fail(.noSession) }
         pane.accountSwitch = nil
+        carryLimitLines(pane, from: change.from, now: now)
         // The agent is gone (as when its process is seen exiting).
         pane.agentUsage = nil
         pane.agentSource = nil

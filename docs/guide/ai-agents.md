@@ -461,7 +461,8 @@ Claude Code's limit messages (a file or diff that only contains the words does n
 - API rate limit: `API Error: 429 {…"rate_limit_error"…}`, `API Error: Rate limit reached`.
 
 A status-line window (5-hour, 7-day, spend) at 100 % counts too. Warnings (`Approaching usage limit`, `You've used 90%
-of …`) do not. The account is marked limited until the reset time in the message (in its time zone, else the
+of …`) and limits of the conversation itself (`Context limit reached · /compact or /clear to continue`), which another
+account would not lift, do not. The account is marked limited until the reset time in the message (in its time zone, else the
 Mac's); without one, for 5 hours (usage limit) or 15 minutes (rate limit). Settings and `cmds accounts` show it;
 **Clear Limit** / `cmds accounts clear NAME` forgets it.
 
@@ -471,7 +472,8 @@ Then, if you have accounts set up:
   “personal”** and **Dismiss** — the ring, the sidebar text and, when cmds is in the background, a macOS notification
   with **Continue with Next Account**. When it cannot switch, the bar says why: every other account is limited, the
   session id is unknown (no status line in that account), or the session is not reachable from the next account
-  (**Settings…** to share sessions).
+  (**Settings…** to share sessions). If the offered account hits its limit too before you click, the bar offers the
+  next free one instead.
 - **Automatic** (Settings › Claude Accounts › Switch automatically, `cmds accounts auto on`): the same, without asking.
 
 Switching to the next account in order that has not hit its limit, in that pane only:
@@ -497,7 +499,9 @@ only in its own config directory. So that the next account can resume a session,
 folder: **Share Sessions…** (or `cmds accounts share`, then `--yes`) shows what it will do and, when you confirm,
 
 - keeps the first account's `projects` folder (the first one whose folder exists) as the shared one; if that is
-  already a link (you reordered the accounts after sharing), the folder it links to stays the shared one,
+  already a link (you reordered the accounts after sharing), the folder it links to stays the shared one. A link to a
+  folder that is no account's own (made by hand) is left alone, and the first account with a `projects` folder of
+  its own keeps it as the shared one,
 - turns every other account's `projects` into a symbolic link to it; an account's own `projects` folder is renamed to
   `projects.before-cmds-<date>` first (kept, never deleted, merged or overwritten; move sessions you want back in
   yourself; if the link then cannot be made, the folder is moved back),

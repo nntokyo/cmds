@@ -271,9 +271,13 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
 - **Limits**: the metadata scan (2 s) calls `scanClaudeLimits`: the visible text of local panes running Claude Code
   goes through `ClaudeLimitDetector.detect` (last 40 lines, a line must start with a limit message); `agent.report`
   checks the status-line windows (`hit(fromLimits:)`). Without a reset time a limit lasts 5 h (usage,
-  `ClaudeLimitDetector.sessionWindow`) or 15 min (rate, `rateLimitWait`). A hit is handled once per pane and line for 5 h
-  (`Pane.seenLimitLines`, because a resumed session can show the old line again), merged into the account's limit
-  (`ClaudeAccounts.merge`) and saved.
+  `ClaudeLimitDetector.sessionWindow`) or 15 min (rate, `rateLimitWait`). A hit is handled once per pane, account and
+  line until the limit it recorded ends, at least 5 h (`Pane.seenLimitLines`), merged into the account's limit
+  (`ClaudeAccounts.merge`) and saved; offers in other panes to continue with that account are worked out again. After
+  a switch the previous account's lines are carried (`Pane.carriedLimitLines`): the resumed session can show them
+  again, and they are ignored until another limit line is the newest, or none is shown 30 s after the switch (#315).
+  `Context limit reached` and other limits of the conversation are not account limits. A zone cut by the wrap
+  (`(America/Ne` / `w_York)`) is read with the next row joined without a space.
 - **Switch** (`Pane.accountSwitch`, `AccountSwitch.Phase`): `offered(problem?)` → `waitingForIdle` → `quitting` →
   handed to the resume machinery (`resumeOffer` + `resumeRequestedAt`). A 0.3 s timer runs while a switch is in
   progress; the rules are `ClaudeAccountSwitchTiming` (unit-tested): idle (`PaneReadiness.isAgentIdle`) = Claude Code

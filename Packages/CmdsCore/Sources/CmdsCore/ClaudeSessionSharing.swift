@@ -60,17 +60,23 @@ public enum ClaudeSessionSharing {
     /// The store's real path: the first existing account's `projects` with symlinks resolved, so when that account's
     /// `projects` is already a link (the accounts were reordered after sharing), the folder it links to stays the store.
     /// `account`: the account whose own `projects` is that folder, else the first existing account.
+    /// When the first account's `projects` links to a folder that is no account's own while another account has a
+    /// `projects` folder of its own, that folder is the store (the first in order): the link is left alone, and the
+    /// sessions already shared are not moved aside for a folder outside the accounts.
     public static func store(_ accounts: [ClaudeAccount], fileManager: FileManager = .default,
                              home: String = NSHomeDirectory()) -> (account: String, path: String)? {
         let existing = accounts.filter { ClaudeAccounts.configDirExists($0, fileManager: fileManager, home: home) }
         guard let first = existing.first else { return nil }
+        let ownFolders = existing.filter { itemType(projectsPath($0.configDir, home: home), fileManager: fileManager) == .typeDirectory }
         let path = resolvedProjectsPath(first.configDir, home: home)
-        let owner = existing.first { account in
-            let projects = projectsPath(account.configDir, home: home)
-            return itemType(projects, fileManager: fileManager) == .typeDirectory
-                && resolvedProjectsPath(account.configDir, home: home) == path
+        if let owner = ownFolders.first(where: { resolvedProjectsPath($0.configDir, home: home) == path }) {
+            return (owner.name, path)
         }
-        return ((owner ?? first).name, path)
+        if itemType(projectsPath(first.configDir, home: home), fileManager: fileManager) == .typeSymbolicLink,
+           let own = ownFolders.first {
+            return (own.name, resolvedProjectsPath(own.configDir, home: home))
+        }
+        return (first.name, path)
     }
 
     static func resolvedProjectsPath(_ configDir: String, home: String) -> String {

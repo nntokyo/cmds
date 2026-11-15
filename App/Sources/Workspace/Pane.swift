@@ -63,8 +63,14 @@ final class Pane {
     /// The account Claude Code runs under here: given when the pane was created (its shell has the account's
     /// `CLAUDE_CONFIG_DIR`), set by a switch, or learned from the status line. Saved in the session.
     var claudeAccount: String?
-    /// Limit lines already handled in this pane, by when (a resumed session may show the old line again).
+    /// Limit lines already handled in this pane, per account (`<source>|<account>|…`), until the limit they recorded
+    /// ends, at least 5 h: Claude Code keeps showing the line while it waits.
     var seenLimitLines: [String: Date] = [:]
+    /// After a switch: the previous account's limit lines, which the resumed session may show again (not a limit of the
+    /// new account). Dropped once the screen's newest limit line is another one, or none after `carriedLimitLinesSince`
+    /// plus a moment for the resumed session to draw.
+    var carriedLimitLines: Set<String> = []
+    var carriedLimitLinesSince: Date?
     /// An account switch offered or in progress.
     var accountSwitch: AccountSwitch?
 
