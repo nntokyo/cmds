@@ -81,7 +81,11 @@ extension AppController {
         guard let target else { return .noOtherAccount }
         guard ClaudeAccounts.configDirExists(target) else { return .notSignedIn(account: target.name) }
         if accountsSharingSignIn(with: from).contains(where: { $0.hasName(target.name) }) { return .sameSignIn(account: target.name) }
-        guard ClaudeSessionSharing.transcriptReachable(sessionID: session.sessionID, configDir: target.configDir) else {
+        // Not reachable from the target: sessions are not shared, unless the session has no conversation yet (never
+        // prompted, so Claude Code wrote no transcript): then nothing is lost and Claude Code starts anew under the
+        // target (`AgentResume.typedCommand`).
+        guard ClaudeSessionSharing.transcriptReachable(sessionID: session.sessionID, configDir: target.configDir)
+                || !AgentResume.hasConversation(session) else {
             return .notShared(account: target.name)
         }
         return nil

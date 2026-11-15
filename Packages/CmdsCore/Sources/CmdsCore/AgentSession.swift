@@ -204,6 +204,36 @@ public enum AgentResume {
         return "cd \(quoted) && \(resume)"
     }
 
+    /// Claude Code anew (no `--resume`) in the session's folder and under its account: for a session that has no
+    /// conversation to continue. nil for other agents and SSH panes.
+    public static func startCommand(for session: AgentSession) -> String? {
+        guard session.agent == .claude, session.host == nil else { return nil }
+        var start = "claude"
+        if let dir = session.configDir {
+            guard dir.hasPrefix("/"), let quoted = quotedPath(dir) else { return nil }
+            start = "env CLAUDE_CONFIG_DIR=\(quoted) claude"
+        }
+        guard let cwd = session.cwd, let quoted = quotedPath(cwd) else { return start }
+        return "cd \(quoted) && \(start)"
+    }
+
+    /// A local Claude Code session has a conversation to continue: its transcript
+    /// (`<config dir>/projects/*/<id>.jsonl`, `~/.claude` without an account) exists. Claude Code writes it at the
+    /// first prompt, so a session that was started and never used has none, and `claude --resume <id>` would only
+    /// print "No conversation found". Other agents and SSH sessions: true (not checked).
+    public static func hasConversation(_ session: AgentSession, home: String = NSHomeDirectory()) -> Bool {
+        guard session.agent == .claude, session.host == nil else { return true }
+        return ClaudeSessionSharing.transcriptReachable(sessionID: session.sessionID, configDir: session.configDir ?? "~/.claude",
+                                                        home: home)
+    }
+
+    /// What to type to bring the session back: `command`, or `startCommand` when a local Claude Code session has no
+    /// conversation yet.
+    public static func typedCommand(for session: AgentSession, home: String = NSHomeDirectory()) -> String? {
+        if !hasConversation(session, home: home), let start = startCommand(for: session) { return start }
+        return command(for: session)
+    }
+
     /// Single-quoted for sh/bash/zsh/fish/tcsh alike: only absolute or `~/…` paths without `'`, `\`, `!` or
     /// control characters (those would need shell-specific escaping). `~/x` becomes `~/'x'` so the tilde expands.
     public static func quotedPath(_ path: String) -> String? {

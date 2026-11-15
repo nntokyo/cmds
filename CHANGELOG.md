@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Claude accounts: a Claude Code session that was started but never given a prompt (no transcript yet, e.g. one
+  resumed at launch and not used) could not be switched to another account ("share sessions first", although they
+  were shared); it now switches by starting Claude Code anew under the account. Resuming such a session (at launch,
+  Recent Sessions) starts Claude Code instead of typing a `claude --resume` that fails with "No conversation found"
+  (#357).
+
 ## [0.27.1] - 2026-11-16
 
 Mac only; the iPhone/iPad app is unchanged.
