@@ -139,6 +139,8 @@ final class WebSocketTransport: SyncTransport {
     /// Written by the verify block, read by the state handler; both run on the main queue.
     private final class PeerCheckBox: @unchecked Sendable {
         var value: SyncTLS.PeerCheck?
+        /// The verify block refused the certificate (set by `start`).
+        var onRefused: (() -> Void)?
     }
 
     private let connection: NWConnection
@@ -158,7 +160,10 @@ final class WebSocketTransport: SyncTransport {
         tcp.connectionTimeout = Self.connectionTimeoutSeconds
         let peer = PeerCheckBox()
         self.peer = peer
-        let tls = SyncTLS.clientOptions(policy: policy, queue: .main) { peer.value = $0 }
+        let tls = SyncTLS.clientOptions(policy: policy, queue: .main) { check in
+            peer.value = check
+            if !check.accepted { peer.onRefused?() }
+        }
         let params = NWParameters(tls: tls, tcp: tcp)
         params.defaultProtocolStack.applicationProtocols.insert(ws, at: 0)
         params.includePeerToPeer = true
@@ -188,6 +193,12 @@ final class WebSocketTransport: SyncTransport {
     }
 
     func start() {
+        // A refused certificate is reported from the verify block itself: to a Bonjour service the connection may
+        // stay in `.preparing` afterwards (iOS 27: manual pairing then hung at "Reading the Mac's identity…" until the
+        // connect timeout, #325), so the state handler below is not waited for. After the block has returned.
+        peer.onRefused = { [weak self] in
+            DispatchQueue.main.async { self?.finishRefused() }
+        }
         connection.stateUpdateHandler = { [weak self] state in
             guard let self else { return }
             switch state {
