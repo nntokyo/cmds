@@ -39,6 +39,8 @@ struct ConnectView: View {
     @State private var scanning = false
 
     var body: some View {
+        // Read once per update: every row asks whether its Mac is paired.
+        let saved = MacContinuity.saved()
         NavigationStack {
             List {
                 Section {
@@ -60,7 +62,7 @@ struct ConnectView: View {
                         }
                     }
                     ForEach(browser.macs) { mac in
-                        macRow(mac, systemImage: "desktopcomputer")
+                        macRow(mac, systemImage: "desktopcomputer", paired: saved.isPaired(mac))
                     }
                 } header: {
                     Text("On this network")
@@ -69,15 +71,15 @@ struct ConnectView: View {
                 }
 
                 // Not the Macs listed above: by id, or the same Mac under the name it had before (`MacContinuity`).
-                let adoptable = Set(browser.macs.filter(MacContinuity.canAdopt).compactMap(\.fingerprintHint))
+                let adoptable = Set(browser.macs.filter { saved.savedID(for: $0) != nil }.compactMap(\.fingerprintHint))
                 let otherRecents = recents.filter { r in
                     !browser.macs.contains { $0.id == r.id }
-                        && !(PairingStore.pairing(for: r.id).map { adoptable.contains($0.fingerprint.base64url) } ?? false)
+                        && !(saved.fingerprint(of: r.id).map { adoptable.contains($0.base64url) } ?? false)
                 }
                 if !otherRecents.isEmpty {
                     Section("Recent") {
                         ForEach(otherRecents) { mac in
-                            macRow(mac, systemImage: "clock")
+                            macRow(mac, systemImage: "clock", paired: saved.isPaired(mac))
                         }
                         .onDelete { offsets in
                             for i in offsets {
@@ -129,7 +131,7 @@ struct ConnectView: View {
         }
     }
 
-    private func macRow(_ mac: MacTarget, systemImage: String) -> some View {
+    private func macRow(_ mac: MacTarget, systemImage: String, paired: Bool) -> some View {
         Button {
             client.connect(to: mac)
         } label: {
@@ -142,7 +144,7 @@ struct ConnectView: View {
                     Text(mac.subtitle).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if PairingStore.isPaired(mac.id) || MacContinuity.canAdopt(mac) {
+                if paired {
                     Image(systemName: "checkmark.seal.fill")
                         .foregroundStyle(.green)
                         .accessibilityLabel("Paired")
