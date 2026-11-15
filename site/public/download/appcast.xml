@@ -7,36 +7,44 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.24.3</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.3</link>
-      <sparkle:version>36</sparkle:version>
-      <sparkle:shortVersionString>0.24.3</sparkle:shortVersionString>
+      <title>cmds 0.25.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.25.0</link>
+      <sparkle:version>37</sparkle:version>
+      <sparkle:shortVersionString>0.25.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 15 Nov 2026 04:07:44 GMT</pubDate>
+      <pubDate>Sun, 15 Nov 2026 08:31:30 GMT</pubDate>
       <description><![CDATA[
+<h3>追加</h3>
+<ul>
+<li>Claude アカウント：<strong>サインイン</strong>（サイドバーのアカウントメニュー、設定 › Claude アカウント、<code>cmds accounts login 名前</code>）。そのアカウントのワークスペースを開いて <code>claude auth login</code> を実行します。</li>
+<li>Claude アカウント：<strong>cmds用に設定</strong>（同じメニューと設定、<code>cmds accounts setup 名前</code>）。アカウントの settings.json に cmds のステータスラインとフックがなければ追加します（元のファイルは残ります）。必要なアカウントには「未設定」と出ます。未設定のアカウントでは、アカウントボタンが出ず、切り替えも働きませんでした。</li>
+<li>Claude アカウント：サイドバーのアカウントメニューに「上限で自動的に切り替える」「上限を消去」「セッションを共有…」を追加しました。コマンドを使わずにアカウントを扱えます。</li>
+</ul>
 <h3>修正</h3>
 <ul>
-<li>Claude アカウント：Claude Code の「Context limit reached」（会話そのものの上限）をアカウントの上限と見なし、次のアカウントへ切り替えていたのを直しました。</li>
-<li>Claude アカウント：リセット時刻のタイムゾーンが画面の折り返しで途中で切れると、Mac の時刻帯で読んでいたのを直しました。</li>
-<li>Claude アカウント：切り替えたあと、同じペインで次のアカウントが同じ上限メッセージを出しても検出されなかったのを直しました。</li>
-<li>Claude アカウント：「○○で続ける」のアカウントもあとから上限に達したとき、上限中のアカウントへ切り替えず、次の空いているアカウントを提案します。</li>
-<li>Claude アカウント：アカウント外のフォルダにリンクしているアカウントを先頭に移してからセッションを共有すると、共有中のフォルダが退避されていたのを直しました。</li>
+<li>Claude アカウント：同じ Claude アカウントにサインインした 2 つのアカウントは上限が共通です。「◯◯と同じサインイン」と表示し、同時に上限中として扱い、その間では切り替えません（切り替えても同じ上限で止まっていました）。</li>
+<li>Claude アカウント：Claude Code 2.1.3xx の上限表示（Usage limit reached · continuing automatically at 4:50pm）からリセット時刻を読みます。これまでは 5 時間後と推定していました。</li>
+<li>Claude アカウント：設定フォルダが存在しないアカウントを、切り替え先や <code>--account auto</code> に選ばなくなりました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
+<h3>Added</h3>
+<ul>
+<li>Claude accounts: <strong>Sign In</strong> (the sidebar's account menu, Settings › Claude Accounts, <code>cmds accounts login NAME</code>) opens a workspace under the account and runs <code>claude auth login</code>.</li>
+<li>Claude accounts: <strong>Set Up for cmds</strong> (the same menu and Settings, <code>cmds accounts setup NAME</code>) adds cmds's status line and hooks to an account's settings.json when they are missing (the previous file is kept). Accounts that need it show "not set up": without it their workspaces had no account button and never switched.</li>
+<li>Claude accounts: the sidebar's account menu also has Switch Automatically at the Limit, Clear Limit and Share Sessions…, so accounts can be handled without the command line.</li>
+</ul>
 <h3>Fixed</h3>
 <ul>
-<li>Claude accounts: Claude Code's "Context limit reached" (a limit of the conversation) no longer counts as the account's limit and no longer switches the session to the next account.</li>
-<li>Claude accounts: a reset time whose time zone wraps onto the next row is read in that zone, not the Mac's.</li>
-<li>Claude accounts: after a switch, the next account hitting the same limit message in the same pane is detected.</li>
-<li>Claude accounts: when the account offered by "Continue with …" hits its limit too, the bar offers the next free one instead.</li>
-<li>Claude accounts: Share Sessions after moving an account linked to a folder outside the accounts to the top keeps the shared folder instead of moving it aside.</li>
+<li>Claude accounts: two accounts signed in to the same Claude account share one limit. They show "same sign-in as …", are marked limited together, and a session is never switched between them.</li>
+<li>Claude accounts: the limit notice of Claude Code 2.1.3xx (Usage limit reached · continuing automatically at 4:50pm) gives the reset time; it used to be estimated as five hours later.</li>
+<li>Claude accounts: an account whose config directory does not exist is never chosen to continue with, nor by <code>--account auto</code>.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.3/cmds-0.24.3.dmg" length="17111440" type="application/octet-stream" sparkle:edSignature="BT//dDqPbHf3DvTJL+iNogCzzhUbhW65+JMjGMQIqaeuihUNuNF18Tl5L+/6zXw+iINKihB0J7w2KwmXB/JPCw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.25.0/cmds-0.25.0.dmg" length="17169799" type="application/octet-stream" sparkle:edSignature="4xJUj8ZC2DGuPw8YrkgdqMXfx59dBEYNSTzXGIOcHM7+GbDjPA1usUOx6Zlx2Y/9v2F7AdB8NmS30hguy8gsBA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: Jw2NNBWlscBj41WBHakAYIfMFxEb67TF/XPTMoNRXRXrbDMgJjzHa7vXLIqNmPrXglZLmmJwhF7NWXoRoSO8Bg==
-length: 3233
+edSignature: NofChuRhoSJJpGmBKBJG+Ogi93fBQpj8Yl/Dj0i0f8JiglS731mplqjJz8kaOfjrP7xqdXuG2KJZGzHZ4jcfAQ==
+length: 4575
 -->

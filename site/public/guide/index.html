@@ -71,7 +71,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>インストールと初回起動</h2>
       <ol>
-        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.24.3/cmds-0.24.3.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
+        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.25.0/cmds-0.25.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
         <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
         <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
         <li>ウィンドウを閉じても cmds とターミナル（エージェント）は動き続けます。Dock のアイコンか <kbd>⌘N</kbd> でウィンドウが戻ります。エージェントの実行中に終了しようとすると確認が出ます。</li>
@@ -212,6 +212,7 @@ cmds stats                                # ワークスペースごとと Mac �
       </ul>
       <h3 id="claude-accounts">Claude アカウントの切り替え</h3>
       <p>Claude のアカウントを複数設定しているときは、サイドバーの行のアカウントをクリック（または行を右クリック › <strong>Claude アカウント</strong>）して、別のアカウントを選べます。Claude Code が待機中になったら一度終了し、同じセッションをそのアカウントで続けます（<code>cmds accounts switch --to 名前</code> と同じです）。上限に達したアカウントには、リセットの時刻が出ます。SSH のペインなど、セッションを移せないときは理由を表示します。</p>
+      <p>同じメニューから、コマンドを使わずにアカウントを扱えます。<strong>サインイン</strong>は、そのアカウントのワークスペースを開いて <code>claude auth login</code> を実行します。<strong>cmds用に設定</strong>は、アカウントの <code>settings.json</code> に cmds のステータスラインとフックがなければ追加します（元のファイルは残ります）。ほかに<strong>上限で自動的に切り替える</strong>、<strong>上限を消去</strong>、<strong>セッションを共有…</strong>があります。「未サインイン」「未設定」「◯◯と同じサインイン」と出ているアカウントは、そのままでは切り替え先になりません。同じ Claude アカウントにサインインした 2 つのアカウントは上限も共通です。コマンドでは <code>cmds accounts login 名前</code>、<code>cmds accounts setup 名前</code> です。</p>
       <div class="split">
         <div>
           <h3>サイドバーの見方</h3>
