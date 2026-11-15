@@ -18,6 +18,8 @@ import CmdsCore
 @MainActor
 final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
     weak var pane: BrowserPane?
+    /// The URL the pane's page is navigating to (the failed URL when an error does not name it).
+    private var pendingURL: URL?
     private var popups: [BrowserPopupWindow] = []
     private var sheets: [PendingSheet] = []
     /// The text field of a `prompt()` dialog.
@@ -187,6 +189,17 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction,
                  decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void) {
+        // `mailto:`, `tel:`…: a link the user follows goes to the app that handles it; WebKit cannot load them (#338).
+        if let url = navigationAction.request.url, !BrowserAddress.loadsInPane(url),
+           !WKWebView.handlesURLScheme(url.scheme ?? "") {
+            if BrowserAddress.opensExternally(url), navigationAction.navigationType == .linkActivated {
+                NSWorkspace.shared.open(url)
+            }
+            return decisionHandler(.cancel)
+        }
+        if navigationAction.targetFrame?.isMainFrame == true, webView === pane?.webView {
+            pendingURL = navigationAction.request.url
+        }
         decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
     }
 
@@ -203,6 +216,94 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
         BrowserDownloads.shared.start(download, for: pane)
+    }
+}
+
+// MARK: - Load failures, sign-in and crashes (BrowserPane+LoadErrors.swift, #338)
+
+extension BrowserPageDelegate {
+    /// `host:port` of servers whose untrusted certificate the user accepted (Continue Anyway) until the app quits.
+    static var trustedHosts: Set<String> = []
+
+    static func trustKey(_ url: URL) -> String? {
+        guard let host = url.host(percentEncoded: false)?.lowercased() else { return nil }
+        return "\(host):\(url.port ?? (url.scheme?.lowercased() == "http" ? 80 : 443))"
+    }
+
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        pane?.pageDidStartLoading(in: webView)
+    }
+
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        pane?.pageDidStartLoading(in: webView)
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        pane?.loadDidFail(in: webView, error: error, url: pendingURL)
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        pane?.loadDidFail(in: webView, error: error, url: pendingURL)
+    }
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        pane?.webContentProcessDidTerminate(webView)
+    }
+
+    /// Untrusted certificates: refused (WebKit's handling) unless the user chose Continue Anyway for the host.
+    /// HTTP Basic / Digest: a sign-in sheet; the credential is kept for the session only, never saved.
+    func webView(_ webView: WKWebView, didReceive challenge: URLAuthenticationChallenge,
+                 completionHandler: @escaping @MainActor (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        let space = challenge.protectionSpace
+        switch space.authenticationMethod {
+        case NSURLAuthenticationMethodServerTrust:
+            if let trust = space.serverTrust, Self.trustedHosts.contains("\(space.host.lowercased()):\(space.port)") {
+                completionHandler(.useCredential, URLCredential(trust: trust))
+            } else {
+                completionHandler(.performDefaultHandling, nil)
+            }
+        case NSURLAuthenticationMethodHTTPBasic, NSURLAuthenticationMethodHTTPDigest:
+            askForCredential(challenge, in: webView, completionHandler: completionHandler)
+        default:
+            completionHandler(.performDefaultHandling, nil)
+        }
+    }
+
+    /// The sign-in sheet; Cancel (or no window to show it on) shows the server's own answer (401).
+    private func askForCredential(_ challenge: URLAuthenticationChallenge, in webView: WKWebView,
+                                  completionHandler: @escaping @MainActor (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+        let space = challenge.protectionSpace
+        let alert = NSAlert()
+        let host = space.port == 80 || space.port == 443 ? space.host : "\(space.host):\(space.port)"
+        alert.messageText = String(localized: "Log in to \(host)")
+        var notes: [String] = []
+        if let realm = space.realm, !realm.isEmpty { notes.append(String(localized: "The server says: \(realm)")) }
+        if challenge.previousFailureCount > 0 { notes.append(String(localized: "The user name or password was not accepted.")) }
+        if !space.receivesCredentialSecurely { notes.append(String(localized: "Your password will be sent unencrypted.")) }
+        alert.informativeText = notes.joined(separator: "\n")
+        alert.addButton(withTitle: String(localized: "Log In"))
+        alert.addButton(withTitle: String(localized: "Cancel"))
+        let user = NSTextField(string: challenge.proposedCredential?.user ?? "")
+        user.placeholderString = String(localized: "User Name")
+        let password = NSSecureTextField(string: "")
+        password.placeholderString = String(localized: "Password")
+        let fields = NSStackView(views: [user, password])
+        fields.orientation = .vertical
+        fields.spacing = 8
+        for field in [user, password] {
+            field.widthAnchor.constraint(equalToConstant: Self.promptFieldSize.width).isActive = true
+        }
+        fields.frame = NSRect(x: 0, y: 0, width: Self.promptFieldSize.width, height: Self.promptFieldSize.height * 2 + 8)
+        alert.accessoryView = fields
+        alert.window.initialFirstResponder = user.stringValue.isEmpty ? user : password
+        present(alert, for: webView) { response in
+            if response == .alertFirstButtonReturn {
+                completionHandler(.useCredential, URLCredential(user: user.stringValue, password: password.stringValue,
+                                                                persistence: .forSession))
+            } else {
+                completionHandler(.performDefaultHandling, nil)
+            }
+        }
     }
 }
 
@@ -291,7 +392,13 @@ private extension PendingSheet {
             "message": .string(alert.informativeText),
             "buttons": .array(alert.buttons.map { .string($0.title) }),
             "field": (alert.accessoryView as? NSTextField).map { .string($0.stringValue) } ?? .null,
+            "fields": .array(signInFields.map { .string($0 is NSSecureTextField ? "" : $0.stringValue) }),
         ])
+    }
+
+    /// The user name and password fields of a sign-in sheet.
+    var signInFields: [NSTextField] {
+        (alert?.accessoryView as? NSStackView)?.arrangedSubviews.compactMap { $0 as? NSTextField } ?? []
     }
 
     /// Ends the sheet as its OK (first) or Cancel (second, else first) button would; `text` goes into a prompt's
@@ -299,6 +406,11 @@ private extension PendingSheet {
     func debugAnswer(ok: Bool, text: String?) {
         if let alert {
             if let text, let field = alert.accessoryView as? NSTextField { field.stringValue = text }
+            // The sign-in sheet (#338): `text` is `user:password`.
+            if let text, signInFields.count == 2, let colon = text.firstIndex(of: ":") {
+                signInFields[0].stringValue = String(text[..<colon])
+                signInFields[1].stringValue = String(text[text.index(after: colon)...])
+            }
             let cancel: NSApplication.ModalResponse = alert.buttons.count > 1 ? .alertSecondButtonReturn : .alertFirstButtonReturn
             end(ok ? .alertFirstButtonReturn : cancel)
         } else {

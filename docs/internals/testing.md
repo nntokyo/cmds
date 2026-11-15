@@ -109,6 +109,17 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   page, the file names are numbered, and in a workspace that is not shown (and during `cmds browser snapshot` of it)
   no pop-up or sheet appears. Downloads land in the real ~/Downloads: delete the test files afterwards. Close a pane
   with a pop-up and an open alert (no exception, the pop-up goes).
+- Browser load failures, sign-in, crashes and find (#338): serve on 127.0.0.1 a page, a `302` loop to itself, a `401`
+  with `WWW-Authenticate: Basic realm="…"` and the same page over TLS with a self-signed certificate (`openssl req
+  -x509 …`); navigate to those and to a port nothing listens on. `debug.browser {pane, loadErrorAction?, findAction?,
+  findText?}` also returns `loadError` (the notice's URL, English reason, title, message, buttons, `crashed`; null
+  when none), `find` (the find bar's text, status and whether it has the keyboard) and `webProcessID` (the pid of the
+  pane's WebContent process); `loadErrorAction` `reload` / `continue` presses the notice's button, `findAction`
+  `open` (typing `findText`) / `next` / `previous` / `close` drives the find bar. The sign-in sheet comes in `sheet`
+  (`fields`: the user name, the password left out) and `answer: ok` with `text: "user:password"` fills it.
+  `cmds browser url` reports the failed URL and the reason; Continue Anyway loads the TLS page. Killing the pane's
+  `webProcessID` (check with `ps` that it is a `com.apple.WebKit.WebContent`) reloads the page; a second kill within
+  a minute leaves the notice.
 - `debug.find {pane, action?, …}` (DEBUG builds) drives a terminal pane's find bar (#173) and returns its state
   (open, text, count, engine = libghostty's search, hits, the selected hit's row/column/width and marker frame for
   Match Case / regex, scrollbar, which of field and terminal has the keyboard): `open {text?, caseSensitive?,

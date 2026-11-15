@@ -209,7 +209,43 @@ focused. ⌘L focuses the address bar, ⌘R reloads, ⌘[ / ⌘] go back / forwa
 cmds browser open --no-focus http://localhost:3000   # prints the pane id
 cmds browser eval 'document.title'                   # run JavaScript, print the JSON result
 cmds browser snapshot -o /tmp/page.png               # PNG of the visible page
+cmds browser find 'Sign in'                          # select the next match on the page
 ```
+
+### The address bar
+
+- A web address loads as typed; without a scheme, `localhost`, `*.localhost`, IP addresses and `name:port` get
+  `http://` and other names with a dot and a real-looking top-level domain get `https://` (`example.com`,
+  `localhostfoo.com`).
+- `/path/page.html` and `~/page.html` open the file.
+- `mailto:`, `tel:`, `sms:` and `facetime:` go to the app that handles them (Mail, FaceTime, Messages); links to them
+  in pages do the same.
+- Anything else is a web search: words, numbers such as `1.5`, and file names such as `README.md` or `main.rs` (type
+  `https://` to open a site under such a domain).
+- An address that cannot be loaded (`http://exa mple.com`) is refused with a beep; `cmds browser navigate` and
+  `browser open` fail with an error.
+
+### Pages that do not load, sign-in and crashes
+
+- When a page cannot be loaded (the server refuses the connection or is not found, too many redirects, an untrusted
+  certificate…) a notice covers the page with the address, the reason and **Reload**. The address bar keeps the
+  address that failed; Back shows the page before it. `cmds browser url` prints the address and `the page did not
+  load: <reason>` on stderr (`--json`: `error`).
+- **Untrusted certificates** (self-signed, expired, unknown authority) are refused. **Continue Anyway** on the notice
+  trusts that server (host and port) until cmds quits; nothing is saved, and there is no command for it.
+- **HTTP sign-in** (Basic and Digest): a sheet asks for the user name and password. They are kept until cmds quits,
+  never saved; Cancel shows the server's own answer (401).
+- If a page's web content process ends (it crashed or was killed), the page reloads by itself; when that happens
+  again within a minute, a notice with **Reload** stays instead. The address stays in the address bar and
+  `cmds browser url` meanwhile.
+
+### Finding text in a page
+
+**Edit › Find › Find…** (⌘F) in a browser pane opens the find bar of [terminal panes](#finding-text-in-a-terminal)
+over the page. Typing selects the first match and scrolls to it; Return or ⌘G goes to the next match (down the page),
+⇧Return or ⇧⌘G to the previous one, wrapping at the ends. **Aa** matches case; "Not found" shows when there is no
+match. Esc closes the bar. `cmds browser find [--backwards] [--case-sensitive] TEXT` does the same from a terminal
+(exit 1 when nothing matches).
 
 ### Pop-ups, dialogs and downloads
 

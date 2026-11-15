@@ -66,11 +66,17 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         return pane
     }
 
-    /// ⌘F: the focused terminal's find bar (TerminalFind).
-    @objc func find(_ sender: Any?) { focusedTerminalPane?.find.open() }
-    /// ⌘G / ⇧⌘G: next (up, older output) / previous hit.
-    @objc func findNext(_ sender: Any?) { focusedTerminalPane?.find.navigate(next: true) }
-    @objc func findPrevious(_ sender: Any?) { focusedTerminalPane?.find.navigate(next: false) }
+    /// ⌘F: the focused terminal's find bar (TerminalFind), or the focused browser pane's (BrowserPane+Find, #338).
+    @objc func find(_ sender: Any?) {
+        if let pane = focusedTerminalPane { pane.find.open() } else { focusedBrowser?.openFind() }
+    }
+    /// ⌘G / ⇧⌘G: next (terminal: up, older output; browser: down the page) / previous hit.
+    @objc func findNext(_ sender: Any?) {
+        if let pane = focusedTerminalPane { pane.find.navigate(next: true) } else { focusedBrowser?.findBarNavigate(forward: true) }
+    }
+    @objc func findPrevious(_ sender: Any?) {
+        if let pane = focusedTerminalPane { pane.find.navigate(next: false) } else { focusedBrowser?.findBarNavigate(forward: false) }
+    }
 
     /// ⇧⌘P: CommandPalette over the main window.
     @objc func showCommandPalette(_ sender: Any?) {
@@ -434,10 +440,13 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         switch menuItem.action {
-        case #selector(find(_:)), #selector(exportScrollback(_:)):
+        case #selector(find(_:)):
+            return focusedTerminalPane != nil || focusedBrowser != nil
+        case #selector(exportScrollback(_:)):
             return focusedTerminalPane != nil
         case #selector(findNext(_:)), #selector(findPrevious(_:)):
-            return focusedTerminalPane?.find.isOpen == true
+            if let pane = focusedTerminalPane { return pane.find.isOpen }
+            return focusedBrowser?.isFindOpen == true
         case #selector(browserReload(_:)):
             if controller.focusedDisconnectedSSHPane != nil {
                 menuItem.title = String(localized: "Reconnect SSH")

@@ -85,7 +85,7 @@ enum MainMenu {
         menu.addItem(item("Paste", #selector(NSText.paste(_:)), "v"))
         menu.addItem(item("Select All", #selector(NSText.selectAll(_:)), "a"))
         menu.addItem(.separator())
-        // The terminal's find bar (TerminalFind). The sidebar takes ⌘F itself while it has the keyboard (filter), a
+        // The terminal's find bar (TerminalFind), a browser pane's (BrowserPane+Find). The sidebar takes ⌘F itself while it has the keyboard (filter), a
         // files list ⇧⌘G (Go to Folder).
         let find = NSMenu(title: String(localized: "Find"))
         find.addItem(item("Find…", #selector(CommandRouter.find(_:)), "f", target: router))

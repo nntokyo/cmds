@@ -166,6 +166,34 @@ extension CLI {
         print(BrowserWatch.summary(result))
     }
 
+    /// `cmds browser find` (#338): WebKit's find in page, as ⌘G in the pane's find bar.
+    static let browserFindCommand = Command(
+        name: "browser find",
+        usage: "browser find [--pane P] [--backwards] [--case-sensitive] <text>",
+        summary: "Find text in a browser pane's page: select and scroll to the next match.",
+        details: """
+            Searches from the current match (or selection) down the page, wrapping at the end; --backwards goes up.
+            Case-insensitive unless --case-sensitive. Prints "found", or fails (exit 1) with "not found".
+            \(browserPaneNote)
+            """,
+        options: ["pane"], flags: ["backwards", "case-sensitive"]
+    ) { ctx in
+        let usage = "cmds browser find [--pane P] [--backwards] [--case-sensitive] <text>"
+        try ctx.args.expectPositionals(1...1, usage: usage)
+        let text = ctx.args.positionals[0]
+        guard !text.isEmpty else { throw CLIError.usage("the text to find must not be empty") }
+        let params = browserTarget(ctx).merging([
+            "text": .string(text),
+            "backwards": ctx.args.has("backwards") ? true : nil,
+            "caseSensitive": ctx.args.has("case-sensitive") ? true : nil,
+        ]) { $1 }
+        let result = try callNewMethod(ctx, "browser.find", params,
+                                       unsupported: "this cmds app cannot find text in browser panes; update cmds")
+        if ctx.json { return ctx.printJSON(result) }
+        guard result["matchFound"]?.boolValue == true else { throw CLIError.failure("not found") }
+        print("found")
+    }
+
     /// The change a command line asks for: on (the default), --off or --status; bad combinations are usage errors.
     static func browserWatchChange(_ args: Arguments) throws -> BrowserWatchChange {
         let modes = [args.has("off"), args.has("status"), args[option: "dir"] != nil].filter { $0 }.count
