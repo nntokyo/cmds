@@ -7,32 +7,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.24.2</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.2</link>
-      <sparkle:version>35</sparkle:version>
-      <sparkle:shortVersionString>0.24.2</sparkle:shortVersionString>
+      <title>cmds 0.24.3</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.24.3</link>
+      <sparkle:version>36</sparkle:version>
+      <sparkle:shortVersionString>0.24.3</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 14 Nov 2026 18:18:27 GMT</pubDate>
+      <pubDate>Sun, 15 Nov 2026 04:07:44 GMT</pubDate>
       <description><![CDATA[
 <h3>修正</h3>
 <ul>
-<li>音声アシスタント（Mac）：一時停止しないことにしたコマンドが、アップデート後にまた一時停止の原因になっていたのを直しました（Homebrew はバージョンごとのフォルダから実行するため）。コマンドはファイル名で照合します。</li>
-<li>Antigravity の上限：agy のステータスラインが PATH 経由や存在しない場所の cmds を実行しているとき、起動時に一度だけ通知します。クリックすると 設定 › エージェント（「更新」）が開きます。ファイルは勝手に書き換えません。</li>
-<li>サイトのガイドに「○○では一時停止しない」と「削除」の説明を追加しました。</li>
+<li>Claude アカウント：Claude Code の「Context limit reached」（会話そのものの上限）をアカウントの上限と見なし、次のアカウントへ切り替えていたのを直しました。</li>
+<li>Claude アカウント：リセット時刻のタイムゾーンが画面の折り返しで途中で切れると、Mac の時刻帯で読んでいたのを直しました。</li>
+<li>Claude アカウント：切り替えたあと、同じペインで次のアカウントが同じ上限メッセージを出しても検出されなかったのを直しました。</li>
+<li>Claude アカウント：「○○で続ける」のアカウントもあとから上限に達したとき、上限中のアカウントへ切り替えず、次の空いているアカウントを提案します。</li>
+<li>Claude アカウント：アカウント外のフォルダにリンクしているアカウントを先頭に移してからセッションを共有すると、共有中のフォルダが退避されていたのを直しました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Fixed</h3>
 <ul>
-<li>Voice assistant (Mac): a command-line tool you chose not to pause for paused it again after an upgrade (Homebrew runs it from a versioned folder); it is now matched by its file name.</li>
-<li>Antigravity limits: when agy's status line runs cmds through the PATH or a path that is gone, cmds says so once in a notification at launch; clicking it opens Settings › Agents (Update). The file is not changed.</li>
-<li>Website guide: Don't Pause for … and Settings › Assistant › Remove are described.</li>
+<li>Claude accounts: Claude Code's "Context limit reached" (a limit of the conversation) no longer counts as the account's limit and no longer switches the session to the next account.</li>
+<li>Claude accounts: a reset time whose time zone wraps onto the next row is read in that zone, not the Mac's.</li>
+<li>Claude accounts: after a switch, the next account hitting the same limit message in the same pane is detected.</li>
+<li>Claude accounts: when the account offered by "Continue with …" hits its limit too, the bar offers the next free one instead.</li>
+<li>Claude accounts: Share Sessions after moving an account linked to a folder outside the accounts to the top keeps the shared folder instead of moving it aside.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.2/cmds-0.24.2.dmg" length="17105500" type="application/octet-stream" sparkle:edSignature="Q7WpY/FEgrVQ2MT7POXo5VnSw0jyVsJamgzHyMmvIP+whNsBfGBM/Ku9Lx9FNvIIAAiTO/7hEJ9fgzI/YXITAQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.24.3/cmds-0.24.3.dmg" length="17111440" type="application/octet-stream" sparkle:edSignature="BT//dDqPbHf3DvTJL+iNogCzzhUbhW65+JMjGMQIqaeuihUNuNF18Tl5L+/6zXw+iINKihB0J7w2KwmXB/JPCw=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: jJl1sYbriAbEp1I6aRpXTXvW8XEhvF3BxEqszc5suh9OesPKbjC4INv81HxO4YSzvpIFGWSFjKKSVUqHY5WqBg==
-length: 2717
+edSignature: Jw2NNBWlscBj41WBHakAYIfMFxEb67TF/XPTMoNRXRXrbDMgJjzHa7vXLIqNmPrXglZLmmJwhF7NWXoRoSO8Bg==
+length: 3233
 -->
