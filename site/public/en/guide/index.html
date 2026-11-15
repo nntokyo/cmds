@@ -71,7 +71,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>Install and first launch</h2>
       <ol>
-        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.24.3/cmds-0.24.3.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
+        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.25.0/cmds-0.25.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
         <li>If the macOS firewall is on, macOS asks about incoming connections. Choose <strong>Allow</strong> if you want to use the iPhone/iPad companion; the terminal works either way.</li>
         <li>Allow notifications, so panes that need you can notify you while cmds is in the background.</li>
         <li>Updates are automatic (0.2.0 and later): cmds checks once a day, downloads a new version and installs it when cmds quits. <strong>cmds › Check for Updates…</strong> installs it now; turn it off in <strong>cmds › Settings… › Updates</strong>.</li>
@@ -211,6 +211,7 @@ cmds stats                                # CPU and memory per workspace and for
       </ul>
       <h3 id="claude-accounts">Switching Claude accounts</h3>
       <p>With several Claude accounts set up, click the account in a sidebar row (or right-click the row › <strong>Claude Account</strong>) and choose another. Claude Code quits once it is idle and the session continues under that account (the same as <code>cmds accounts switch --to NAME</code>). Accounts at their limit show when they reset. When the session cannot move, such as in an SSH pane, cmds says why.</p>
+      <p>The same menu handles accounts without the command line. <strong>Sign In</strong> opens a workspace under the account and runs <code>claude auth login</code>. <strong>Set Up for cmds</strong> adds cmds's status line and hooks to the account's <code>settings.json</code> when they are missing (the previous file is kept). There are also <strong>Switch Automatically at the Limit</strong>, <strong>Clear Limit</strong> and <strong>Share Sessions…</strong>. An account shown as "not signed in", "not set up" or "same sign-in as …" cannot take a session as it is: two accounts signed in to the same Claude account share one limit. On the command line: <code>cmds accounts login NAME</code>, <code>cmds accounts setup NAME</code>.</p>
       <div class="split">
         <div>
           <h3>Reading the sidebar</h3>
