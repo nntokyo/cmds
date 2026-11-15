@@ -274,9 +274,7 @@ extension AppController {
     private func carriesLimitLines(_ pane: Pane, screen: String) -> Bool {
         if let since = pane.holdsLimitLinesSince {
             // Working on a prompt: a limit line from now on can be the new account's (it may come back at once).
-            let signals = pane.agentSignals
-            let worked = [signals.workingHookAt, signals.titleAnimatedAt, signals.reportChangedAt].contains { ($0 ?? .distantPast) > since }
-            if worked {
+            if pane.agentSignals.workedSince(since) {
                 pane.holdsLimitLinesSince = nil
             } else {
                 pane.carriedLimitLines.formUnion(ClaudeLimitDetector.hitLines(screen: screen))
