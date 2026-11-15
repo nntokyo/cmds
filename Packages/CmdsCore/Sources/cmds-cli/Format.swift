@@ -272,7 +272,12 @@ enum Format {
             if !account.panes.isEmpty { line += "  panes \(account.panes.joined(separator: " "))" }
             out += line + "\n"
         }
-        return out + "switch at the limit: \(list.autoSwitch ? "automatic" : "ask")\n"
+        out += "switch at the limit: \(list.autoSwitch ? "automatic" : "ask")\n"
+        if let missing = list.chromeHostMissing, !missing.isEmpty {
+            out += "Claude in Chrome cannot connect: \(missing.map(abbreviate).joined(separator: ", ")) is missing "
+                + "(cmds accounts chrome)\n"
+        }
+        return out
     }
 
     /// `cmds accounts share`: what each account's projects folder becomes.

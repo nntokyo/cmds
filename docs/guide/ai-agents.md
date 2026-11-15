@@ -527,6 +527,19 @@ Before switching, cmds checks that the session's file is reachable from the next
 does not read transcripts). The first time an account opens a project, Claude Code may ask whether you trust the
 folder.
 
+### Claude in Chrome with several accounts
+
+The Claude in Chrome extension reaches Claude Code through one file per browser
+(`NativeMessagingHosts/com.anthropic.claude_code_browser_extension.json`) that names a script in the config folder of
+the account that last turned it on: `<config dir>/chrome/chrome-native-host`. When that folder is removed or made
+again (signing in afresh, moving accounts around), the extension cannot connect under any account. cmds notices it
+when it starts, when Settings › Claude Accounts opens, after adding an account or sharing sessions, and when Claude
+Code starts in a pane, and offers **Repair** once: it writes the missing script (a copy of another account's, else
+one that runs `claude --chrome-native-host`), overwrites nothing and leaves the browser's file as it is.
+`cmds accounts` says `Claude in Chrome cannot connect` and `cmds accounts chrome` repairs it. Each account still
+needs Claude in Chrome turned on for itself (`/chrome` › Enabled by default, or `claude --chrome`): the setting is
+kept in each config folder.
+
 ## Moving to a new version
 
 To move workspaces with their agent sessions from a running cmds to a newly started one (an update that is not

@@ -3001,6 +3001,26 @@
         }
       }
     },
+    "Claude in Chrome cannot connect": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude in Chrome が接続できません"
+          }
+        }
+      }
+    },
+    "Claude in Chrome could not be repaired": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude in Chrome を修復できませんでした"
+          }
+        }
+      }
+    },
     "Clear Finished": {
       "localizations": {
         "ja": {
@@ -7037,6 +7057,16 @@
         }
       }
     },
+    "Not Now": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "後で"
+          }
+        }
+      }
+    },
     "Not allowed (System Settings › Privacy & Security › Bluetooth)": {
       "localizations": {
         "ja": {
@@ -8326,6 +8356,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "名前を変更…"
+          }
+        }
+      }
+    },
+    "Repair": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修復"
           }
         }
       }
@@ -10639,6 +10679,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "アシスタントは一時停止中です。cmds のメニューバーから聞き取りを再開してください。"
+          }
+        }
+      }
+    },
+    "The browser starts Claude Code through a script that is missing: %@. Its config folder was probably made again. Put the script back? Nothing else is changed.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブラウザは Claude Code を起動するスクリプトを使いますが、見つかりません: %@。設定フォルダが作り直された可能性があります。スクリプトを元に戻しますか？ ほかには何も変更しません。"
           }
         }
       }
