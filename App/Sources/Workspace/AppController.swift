@@ -1088,7 +1088,10 @@ final class AppController {
         switch kind {
         case .terminal:
             var environment = terminalEnvironment(paneID: id, workspaceID: workspace.id)
-            if let account { environment[ClaudeAccounts.configDirVariable] = ClaudeAccounts.expandedPath(account.configDir) }
+            // An account on the default directory is plain `claude` (`ClaudeAccounts.isDefaultConfigDir`, #360).
+            if let account, !ClaudeAccounts.isDefaultConfigDir(account.configDir) {
+                environment[ClaudeAccounts.configDirVariable] = ClaudeAccounts.expandedPath(account.configDir)
+            }
             let config = TerminalLaunchConfig(workingDirectory: cwd, command: command, environment: environment)
             pane = Pane(id: id, workspaceID: workspace.id, terminal: TerminalEngineProvider.shared.makeSurface(config: config))
             pane.claudeAccount = account?.name

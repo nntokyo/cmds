@@ -141,6 +141,11 @@ final class AgentResumeFreshStartTests: XCTestCase {
         XCTAssertTrue(AgentResume.hasConversation(session, home: home))
         XCTAssertEqual(AgentResume.typedCommand(for: session, home: home), AgentResume.command(for: session))
 
+        // An account on the default directory is plain claude, also when the shell has another CLAUDE_CONFIG_DIR (#360).
+        let main = AgentSession(agent: .claude, sessionID: id, cwd: "/w", configDir: home + "/.claude")
+        XCTAssertEqual(AgentResume.command(for: main, home: home), "cd '/w' && env -u CLAUDE_CONFIG_DIR claude --resume \(id)")
+        XCTAssertEqual(AgentResume.startCommand(for: main, home: home), "cd '/w' && env -u CLAUDE_CONFIG_DIR claude")
+
         // Plain claude looks in ~/.claude; Codex and SSH sessions are not checked.
         let plain = AgentSession(agent: .claude, sessionID: id, cwd: "/w")
         XCTAssertEqual(AgentResume.typedCommand(for: plain, home: home), "cd '/w' && claude")

@@ -171,6 +171,34 @@ public enum ClaudeAccounts {
         return (expanded as NSString).standardizingPath
     }
 
+    /// `path` is the default config directory (`~/.claude`): an account on it is plain `claude`, run without
+    /// `CLAUDE_CONFIG_DIR` (`AgentResume.command`, a pane opened with the account).
+    public static func isDefaultConfigDir(_ path: String, home: String = NSHomeDirectory()) -> Bool {
+        expandedPath(path, home: home) == expandedPath(defaultConfigDir, home: home)
+    }
+
+    /// A name for an account on `configDir` (cmds offering to add a config folder it found in use, #360): the folder's
+    /// name without the leading `.` and a `claude-` prefix (`~/.claude` → `claude`, `~/.claude-work` → `work`), only
+    /// the characters names may have, made unique among `taken` with `-2`, `-3`…
+    public static func suggestedName(forConfigDir configDir: String, taken: [String], home: String = NSHomeDirectory()) -> String {
+        var base = (expandedPath(configDir, home: home) as NSString).lastPathComponent
+        while base.hasPrefix(".") { base.removeFirst() }
+        if base.lowercased().hasPrefix("claude-"), base.count > "claude-".count { base = String(base.dropFirst("claude-".count)) }
+        let allowed = CharacterSet(charactersIn: "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.@")
+        base = String(String.UnicodeScalarView(base.unicodeScalars.filter(allowed.contains)))
+        while let first = base.unicodeScalars.first, !CharacterSet.alphanumerics.contains(first) { base.removeFirst() }
+        base = String(base.prefix(maxNameLength - 3))
+        if base.isEmpty || nameProblem(base) != nil { base = "claude" }
+        let lowered = Set(taken.map { $0.lowercased() })
+        var name = base
+        var counter = 2
+        while lowered.contains(name.lowercased()) {
+            name = "\(base)-\(counter)"
+            counter += 1
+        }
+        return name
+    }
+
     /// The account's config directory exists as a directory (the user has created / signed in to it).
     public static func configDirExists(_ account: ClaudeAccount, fileManager: FileManager = .default,
                                        home: String = NSHomeDirectory()) -> Bool {
@@ -191,13 +219,13 @@ public enum ClaudeAccounts {
     }
 
     /// The Claude sign-in of the account's config directory: the account id Claude Code records in
-    /// `<configDir>/.claude.json` (`oauthAccount.accountUuid`); for the default directory without one, `~/.claude.json`
-    /// (a plain `claude`). nil when not signed in (or not readable). Only for comparing accounts: never stored, logged
-    /// or sent anywhere.
+    /// `<configDir>/.claude.json` (`oauthAccount.accountUuid`); for the default directory, `~/.claude.json` first,
+    /// the file of a plain `claude`, which is how cmds runs that account (#360). nil when not signed in (or not
+    /// readable). Only for comparing accounts: never stored, logged or sent anywhere.
     public static func signIn(of account: ClaudeAccount, home: String = NSHomeDirectory()) -> String? {
         let dir = expandedPath(account.configDir, home: home)
         var files = [dir + "/.claude.json"]
-        if dir == expandedPath(defaultConfigDir, home: home) { files.append(home + "/.claude.json") }
+        if isDefaultConfigDir(dir, home: home) { files.insert(home + "/.claude.json", at: 0) }
         for file in files {
             guard let data = FileManager.default.contents(atPath: file),
                   let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { continue }

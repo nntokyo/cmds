@@ -113,13 +113,13 @@ final class CLIFormatEnglishTests: XCTestCase {
         ]
         XCTAssertEqual(Format.shareSteps(steps, applied: false), """
             main: /m/projects is shared already
-            work: rename /w/projects to projects.before-cmds-1 (kept), then link
+            work: rename /w/projects to projects.before-cmds-1 (kept), then link and copy its sessions the shared folder lacks
             fresh: link /f/projects to the shared folder
             gone: left alone — no folder
 
             """)
         XCTAssertEqual(Format.shareSteps(Array(steps[1...2]), applied: true), """
-            work: renamed /w/projects to projects.before-cmds-1 (kept), then linked
+            work: renamed /w/projects to projects.before-cmds-1 (kept), then linked and copied its sessions the shared folder lacks
             fresh: linked /f/projects to the shared folder
 
             """)

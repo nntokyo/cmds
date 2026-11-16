@@ -77,6 +77,10 @@ extension AppController {
 
     private func switchProblem(_ pane: Pane, session: AgentSession?, from: String?, target: ClaudeAccount?) -> AccountSwitchProblem? {
         guard pane.ssh == nil else { return .notLocal }
+        // A Claude Code that does not report: the session cmds knows (if any) is not the one running (#360).
+        if let silent = silentClaude(in: pane) {
+            return .notReporting(configDir: (silent.configDir as NSString).abbreviatingWithTildeInPath)
+        }
         guard let session, session.host == nil else { return .noSession }
         guard let target else { return .noOtherAccount }
         guard ClaudeAccounts.configDirExists(target) else { return .notSignedIn(account: target.name) }

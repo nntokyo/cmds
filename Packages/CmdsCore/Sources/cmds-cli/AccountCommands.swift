@@ -50,8 +50,8 @@ extension CLI {
                 details: """
                     Claude Code keeps sessions in <config-dir>/projects. The first account (that exists) keeps its projects
                     folder; every other account's projects becomes a symbolic link to it. A projects folder of its own is
-                    renamed to projects.before-cmds-<date> first (kept, never deleted or merged). Without --yes only
-                    shows what would be done.
+                    renamed to projects.before-cmds-<date> first (kept, never deleted), then the sessions in it the shared
+                    folder lacks are copied there (nothing overwritten). Without --yes only shows what would be done.
                     """,
                 flags: ["yes"]) { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds accounts share [--yes]")

@@ -20,7 +20,8 @@ public enum ClaudeProjectsLink: String, Codable, Sendable {
 /// `claude --resume <id>` only looks in its own config directory. The first account (in the user's order) whose
 /// config directory exists keeps its `projects` directory: the *store*. Every other account gets
 /// `projects` → the store as a symlink. An account's own `projects` directory is renamed to
-/// `projects.before-cmds-<date>` first; nothing is deleted, copied over or merged. Only done when the user asks
+/// `projects.before-cmds-<date>` first, then what it holds that the store lacks is copied into the store (#360), so
+/// its sessions can be continued at once; nothing is deleted or overwritten. Only done when the user asks
 /// (Settings › Claude Accounts › Share Sessions…, `cmds accounts share --yes`).
 public enum ClaudeSessionSharing {
     public struct Step: Equatable, Sendable {
@@ -28,7 +29,7 @@ public enum ClaudeSessionSharing {
             /// Already shared (or the store itself).
             case none
             case createLink
-            /// Rename `projects` to `backupName`, then create the link.
+            /// Rename `projects` to `backupName`, create the link, then copy what the store lacks from it.
             case moveAsideAndLink(backupName: String)
             /// Left alone (`elsewhere`, `noConfigDir`).
             case skip(reason: String)
@@ -156,12 +157,41 @@ public enum ClaudeSessionSharing {
                     }
                     throw error
                 }
+                // The account's own sessions: a copy (the renamed folder stays as it is) of each file or folder the
+                // store does not have yet. A failure here leaves the sharing done; the folder keeps everything.
+                do {
+                    try copyMissing(from: backup, into: store.path, fileManager: fileManager)
+                } catch {
+                    throw SharingError("\(step.projectsPath) is shared now, but copying its sessions from \(backup) "
+                                       + "into the shared folder stopped: \(error)")
+                }
             case .createLink:
                 try fileManager.createSymbolicLink(atPath: step.projectsPath, withDestinationPath: store.path)
             }
             linked.append(step.account)
         }
         return linked
+    }
+
+    /// Copies each item of `source` that `destination` does not have, going into the folders both have (a project
+    /// folder, a session's folder of subagents and tool results). Never overwrites, never follows a symlink out of
+    /// `source` (links are copied as links). Returns the number of items copied.
+    @discardableResult
+    static func copyMissing(from source: String, into destination: String, fileManager: FileManager) throws -> Int {
+        var copied = 0
+        for name in try fileManager.contentsOfDirectory(atPath: source) {
+            let from = (source as NSString).appendingPathComponent(name)
+            let to = (destination as NSString).appendingPathComponent(name)
+            guard let toType = itemType(to, fileManager: fileManager) else {
+                try fileManager.copyItem(atPath: from, toPath: to)
+                copied += 1
+                continue
+            }
+            if itemType(from, fileManager: fileManager) == .typeDirectory, toType == .typeDirectory {
+                copied += try copyMissing(from: from, into: to, fileManager: fileManager)
+            }
+        }
+        return copied
     }
 
     /// `projects.before-cmds-20261102-1530` (with `-2`, `-3`… if taken).

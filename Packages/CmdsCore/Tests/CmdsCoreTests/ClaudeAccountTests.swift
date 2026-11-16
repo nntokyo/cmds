@@ -302,9 +302,22 @@ final class ClaudeAccountTests: XCTestCase {
         XCTAssertEqual(ClaudeAccounts.sameSignIn(as: accounts[2], in: accounts, signIn: signIn).map(\.name), ["main"])
         // Not signed in: the same as nobody.
         XCTAssertEqual(ClaudeAccounts.sameSignIn(as: accounts[3], in: accounts, signIn: signIn), [])
-        // The default directory's own file wins once Claude Code ran with CLAUDE_CONFIG_DIR set to it.
+        // The default directory is plain `claude` (#360): `~/.claude.json` wins over the file Claude Code writes when
+        // CLAUDE_CONFIG_DIR is set to it, which is used only when the other is missing.
         try write(home + "/.claude/.claude.json", #"{"oauthAccount":{"accountUuid":"one"}}"#)
+        XCTAssertEqual(signIn(accounts[5]), "two")
+        try FileManager.default.removeItem(atPath: home + "/.claude.json")
         XCTAssertEqual(signIn(accounts[5]), "one")
+    }
+
+    func testSuggestedName() {
+        let home = "/Users/me"
+        XCTAssertEqual(ClaudeAccounts.suggestedName(forConfigDir: "~/.claude", taken: [], home: home), "claude")
+        XCTAssertEqual(ClaudeAccounts.suggestedName(forConfigDir: "/Users/me/.claude-work", taken: [], home: home), "work")
+        XCTAssertEqual(ClaudeAccounts.suggestedName(forConfigDir: "~/.claude", taken: ["Claude", "claude-2"], home: home), "claude-3")
+        XCTAssertEqual(ClaudeAccounts.suggestedName(forConfigDir: "~/My Config!", taken: [], home: home), "MyConfig")
+        XCTAssertEqual(ClaudeAccounts.suggestedName(forConfigDir: "~/.__", taken: [], home: home), "claude")
+        XCTAssertEqual(ClaudeAccounts.suggestedName(forConfigDir: "~/auto", taken: [], home: home), "claude")
     }
 
     func testAccountSetup() throws {
@@ -543,10 +556,40 @@ final class ClaudeAccountTests: XCTestCase {
             XCTAssertTrue(ClaudeSessionSharing.transcriptReachable(sessionID: uuid, configDir: dir, home: home), dir)
         }
         XCTAssertTrue(fm.fileExists(atPath: home + "/work/\(backup)/-Users-me-old/old.jsonl"))
+        // work's own session was copied into the shared folder (#360): it can be continued from every account.
+        XCTAssertEqual(fm.contents(atPath: home + "/main/projects/-Users-me-old/old.jsonl"), Data("old\n".utf8))
+        XCTAssertTrue(ClaudeSessionSharing.transcriptReachable(sessionID: "old", configDir: "~/fresh", home: home))
         XCTAssertEqual(try fm.destinationOfSymbolicLink(atPath: home + "/other/projects"), home + "/elsewhere")
         // Sharing again changes nothing.
         let again = ClaudeSessionSharing.plan(accounts, now: now, home: home)
         XCTAssertEqual(try ClaudeSessionSharing.apply(again, accounts: accounts, home: home), [])
+    }
+
+    /// #360: what the shared folder lacks is copied in, into the folders both have; nothing there is overwritten.
+    func testSharingCopiesOnlyWhatTheStoreLacks() throws {
+        let home = try temporaryDirectory().path
+        let fm = FileManager.default
+        func write(_ path: String, _ text: String) throws {
+            try fm.createDirectory(atPath: home + (path as NSString).deletingLastPathComponent, withIntermediateDirectories: true)
+            try Data(text.utf8).write(to: URL(fileURLWithPath: home + path))
+        }
+        try write("/a/projects/-p/same.jsonl", "store")
+        try write("/b/projects/-p/same.jsonl", "mine")
+        try write("/b/projects/-p/new.jsonl", "new")
+        try write("/b/projects/-p/new/subagents/agent-1.jsonl", "sub")
+        try write("/b/projects/-q/other.jsonl", "q")
+        let accounts = [ClaudeAccount(name: "a", configDir: home + "/a"), ClaudeAccount(name: "b", configDir: home + "/b")]
+        let steps = ClaudeSessionSharing.plan(accounts, now: now, home: home)
+        guard case .moveAsideAndLink(let backup) = steps[1].action else { return XCTFail("\(steps[1].action)") }
+        XCTAssertEqual(try ClaudeSessionSharing.apply(steps, accounts: accounts, home: home), ["b"])
+        func text(_ path: String) -> String? { fm.contents(atPath: home + path).map { String(decoding: $0, as: UTF8.self) } }
+        XCTAssertEqual(text("/a/projects/-p/same.jsonl"), "store")
+        XCTAssertEqual(text("/a/projects/-p/new.jsonl"), "new")
+        XCTAssertEqual(text("/a/projects/-p/new/subagents/agent-1.jsonl"), "sub")
+        XCTAssertEqual(text("/a/projects/-q/other.jsonl"), "q")
+        // The renamed folder keeps everything.
+        XCTAssertEqual(text("/b/\(backup)/-p/same.jsonl"), "mine")
+        XCTAssertEqual(text("/b/\(backup)/-p/new.jsonl"), "new")
     }
 
     func testSharingCreatesStoreProjects() throws {

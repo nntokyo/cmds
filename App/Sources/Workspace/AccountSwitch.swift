@@ -34,6 +34,8 @@ struct AccountSwitch {
 enum AccountSwitchProblem: Equatable {
     case notLocal
     case noSession
+    /// Claude Code runs in the pane but does not report (#360): `configDir` (abbreviated) has no cmds status line.
+    case notReporting(configDir: String)
     case noOtherAccount
     case notShared(account: String)
     /// `account` is signed in to the same Claude account as the pane's: the limit is the same one.
@@ -53,6 +55,7 @@ enum AccountSwitchProblem: Equatable {
         switch self {
         case .notLocal: return "accounts are for local terminal panes, not SSH panes"
         case .noSession: return "no Claude Code session id is known for this pane (add `cmds hook claude-status` to the status line in the account's settings.json)"
+        case .notReporting(let dir): return "Claude Code in this pane does not report to cmds: \(dir)/settings.json has no `cmds hook claude-status` status line (set it up: cmds accounts setup NAME, after cmds accounts add NAME \(dir) if it is no account)"
         case .noOtherAccount: return "every other account has hit its limit (or there is no other account)"
         case .notShared(let account): return "the session's transcript is not reachable from account \(account): share sessions first (cmds accounts share)"
         case .sameSignIn(let account): return "account \(account) is signed in to the same Claude account, so it has the same limit (sign it in to another one: cmds accounts login \(account))"
@@ -65,6 +68,7 @@ enum AccountSwitchProblem: Equatable {
         switch self {
         case .notLocal: return String(localized: "Accounts are for local terminal panes, not SSH panes.")
         case .noSession: return String(localized: "The session id is not known: add cmds hook claude-status to the status line in this account’s settings.json.")
+        case .notReporting(let dir): return String(localized: "Claude Code here does not report to cmds: \(dir) is not set up for cmds. Set it up in Settings › Claude Accounts (add the folder as an account if it is none).")
         case .noOtherAccount: return String(localized: "Every other account has hit its limit.")
         case .notShared(let account): return String(localized: "The session cannot be reached from “\(account)”: share sessions in Settings › Claude Accounts first.")
         case .sameSignIn(let account): return String(localized: "“\(account)” is signed in to the same Claude account, so it has the same limit. Sign it in to another account (the account menu’s Sign In).")

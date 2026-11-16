@@ -433,7 +433,7 @@ final class ClaudeAccountsWindowController: NSWindowController, NSWindowDelegate
             case .none: lines.append(String(localized: "\(step.account): keeps \(step.projectsPath) (the shared folder)"))
             case .createLink: lines.append(String(localized: "\(step.account): projects becomes a link to the shared folder"))
             case .moveAsideAndLink(let backup):
-                lines.append(String(localized: "\(step.account): its projects folder is renamed to \(backup) (kept, not deleted), then linked"))
+                lines.append(String(localized: "\(step.account): its projects folder is renamed to \(backup) (kept, not deleted), then linked; its sessions are copied into the shared folder"))
             case .skip(let reason): lines.append(String(localized: "\(step.account): left alone (\(reason))"))
             }
         }
