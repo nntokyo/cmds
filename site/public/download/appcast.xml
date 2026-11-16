@@ -7,28 +7,32 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.27.2</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.27.2</link>
-      <sparkle:version>42</sparkle:version>
-      <sparkle:shortVersionString>0.27.2</sparkle:shortVersionString>
+      <title>cmds 0.27.3</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.27.3</link>
+      <sparkle:version>43</sparkle:version>
+      <sparkle:shortVersionString>0.27.3</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sun, 15 Nov 2026 17:35:15 GMT</pubDate>
+      <pubDate>Mon, 16 Nov 2026 08:21:03 GMT</pubDate>
       <description><![CDATA[
 <h3>修正</h3>
 <ul>
-<li>Claude アカウント：起動しただけでまだ一度もプロンプトを送っていない Claude Code のセッション（起動時に再開されて使っていないものなど）を別のアカウントに切り替えられませんでした（セッションは共有済みなのに「先にセッションを共有してください」と表示）。会話がまだ無いので、切り替え先のアカウントで Claude Code を新しく起動して切り替えるようにしました。このようなセッションの再開（起動時、最近のセッション）も、失敗する <code>claude --resume</code> ではなく Claude Code の起動を入力します。</li>
+<li>Claude アカウント：設定フォルダーに cmds のステータスラインが無い Claude Code（サインインし直して作り直された <code>~/.claude</code> で素の <code>claude</code> を起動した場合など）は cmds に報告せず、セッションを切り替えられませんでした（セッションが無い、または以前の古いセッションのまま）。45 秒たっても報告が無い Claude Code に気づき、そのフォルダーの「cmds用に設定」を一度提案します（アカウントでなければ追加も）。古いセッションは使わず、切り替え時には理由を表示します。</li>
+<li>Claude アカウント：セッションの共有時、名前を変えて残した元の <code>projects</code> フォルダーのセッションのうち、共有フォルダーに無いものをコピーするようにしました（上書きはしません）。すぐに別のアカウントで続けられます。</li>
+<li>Claude アカウント：<code>~/.claude</code> のアカウントを素の <code>claude</code> として動かすようにしました（<code>env -u CLAUDE_CONFIG_DIR</code> で再開し、サインインは <code>~/.claude.json</code> を見ます）。<code>CLAUDE_CONFIG_DIR=~/.claude</code> では別のサインインが使われ、表示と実際のアカウントが食い違うことがありました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
 <h3>Fixed</h3>
 <ul>
-<li>Claude accounts: a Claude Code session that was started but never given a prompt could not be switched to another account ("share sessions first", although they were shared); it now switches by starting Claude Code anew under the account. Resuming such a session starts Claude Code instead of a <code>claude --resume</code> that fails with "No conversation found".</li>
+<li>Claude accounts: a Claude Code whose config folder has no cmds status line (a <code>~/.claude</code> made again, under a plain <code>claude</code>) never reported, so its session could not be switched. cmds now notices it after 45 s, offers Set Up for cmds for its folder once (adding it as an account when it is none), drops the old session and says why in the switch.</li>
+<li>Claude accounts: sharing sessions copies the sessions of an account's renamed <code>projects</code> folder that the shared folder lacks (never overwriting), so they can continue under another account at once.</li>
+<li>Claude accounts: an account on <code>~/.claude</code> runs as a plain <code>claude</code> (<code>env -u CLAUDE_CONFIG_DIR</code>, sign-in from <code>~/.claude.json</code>), so the account shown and the one used agree.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.27.2/cmds-0.27.2.dmg" length="17242427" type="application/octet-stream" sparkle:edSignature="1RBi4ZRy/QNOW+nFgvFNyH5aQ+5s+vGsAxpVxyuf+F1yKPuOrzkZksWTii7CVGzlVTB67D6dop+0xnWVC1VSBA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.27.3/cmds-0.27.3.dmg" length="17287274" type="application/octet-stream" sparkle:edSignature="yYumcEe3eROlgo9glG0FtbUfVTVGqpYwzZFffrDd98UHW8+mgBbHXsWUUP1AINqdoV32CyhRsyi7R+jVIA0IAg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: TttknJKteC41fQ43TZQjG0RKX13paKIfiHCMUbz8LzaVwv9/GZOij+GdRKYjD1bGz3g0z33gLmwWOGHFwW7SAw==
-length: 2517
+edSignature: ppH4yWKFdJidok8JXS+jzcrRXGhzrJe5LNg2h1zAFBTa1jceW8hPYo+o/rjSC6mUVR9cQHxC3Mrr2FUPTh3sCg==
+length: 3691
 -->
