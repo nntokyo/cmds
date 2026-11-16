@@ -293,7 +293,13 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   pane is created with one (its environment gets `CLAUDE_CONFIG_DIR`), by a switch, or from the `configDir` that
   `cmds hook claude-status` sends with `agent.report` (the hook's own `CLAUDE_CONFIG_DIR`, inherited from Claude
   Code; dropped on SSH panes' sockets). A remembered Claude Code session carries `account` and `configDir`
-  (`AgentSession`), so `AgentResume.command` resumes it with `env CLAUDE_CONFIG_DIR='<dir>' claude --resume <id>`.
+  (`AgentSession`), so `AgentResume.command` resumes it with `env CLAUDE_CONFIG_DIR='<dir>' claude --resume <id>`
+  (`env -u CLAUDE_CONFIG_DIR` for `~/.claude`, `ClaudeAccounts.isDefaultConfigDir`: a plain `claude`, whose sign-in is
+  `~/.claude.json`, also what `signIn` reads first for it). A Claude Code that does not report (#360,
+  AppController+SilentClaude): the metadata scan looks at local panes without Claude usage whose foreground process is
+  Claude Code started over 45 s ago (`PaneProcessProbe.claudeProcess`: start time and `CLAUDE_CONFIG_DIR` from
+  `KERN_PROCARGS2`), drops a remembered session older than the process, and offers Set Up once per folder;
+  `switchProblem` returns `notReporting` for such a pane.
 - **Limits**: the metadata scan (2 s) calls `scanClaudeLimits`: the visible text of local panes running Claude Code
   goes through `ClaudeLimitDetector.detect` (last 40 lines, a line must start with a limit message); `agent.report`
   checks the status-line windows (`hit(fromLimits:)`). Without a reset time a limit lasts 5 h (usage,
@@ -316,7 +322,8 @@ Code: `CmdsCore/ClaudeAccount.swift` (accounts, rules, `claude-accounts.json`), 
   whose folder exists, its `projects` with symlinks resolved (after reordering, the real folder a linked account points
   to; its owner counts as shared and is never moved aside); others get `projects` → store as a symlink, an own
   `projects` folder renamed `projects.before-cmds-<yyyyMMdd-HHmm>` first; a rename whose target exists fails, and a
-  link that cannot be made after the rename moves the folder back. `transcriptReachable` checks
+  link that cannot be made after the rename moves the folder back. Then `copyMissing` copies what the store lacks
+  from the renamed folder (recursing into folders both have, never overwriting). `transcriptReachable` checks
   `<dir>/projects/*/<id>.jsonl` by name before a switch.
 - **MCP registration**: `AgentMCPRegistration` (CmdsCore, unit-tested) reads Claude Code's `.claude.json` (plain
   and per account), agy's `~/.gemini/config/mcp_config.json` (same shape) and Codex's `config.toml` and says

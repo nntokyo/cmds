@@ -484,7 +484,16 @@ Claude Code to be idle the button shows `→ name` and the menu has **Cancel Swi
 there is nothing to cancel: choose the previous account to switch back.
 A pane where you start `claude` yourself gets the account whose folder matches
 the `CLAUDE_CONFIG_DIR` Claude Code reports through the status line (none set: the account using `~/.claude`, if
-any).
+any). An account on `~/.claude` is a plain `claude`: cmds runs it without `CLAUDE_CONFIG_DIR` (`env -u
+CLAUDE_CONFIG_DIR claude …`), because Claude Code keeps a plain `claude`'s sign-in apart from the one it uses with
+`CLAUDE_CONFIG_DIR=~/.claude`, and the two may be different Claude accounts.
+
+**A Claude Code that does not report**: when a pane runs Claude Code whose config folder has no cmds status line (a
+`~/.claude` made again by signing in afresh, typically), cmds sees no session, limit or account for it. After 45 s
+without a report it offers once **Set Up for cmds** for that folder (adding it as an account first if it is none; only
+when you have accounts), drops a session it remembered in that pane from before that Claude Code started, and a switch
+says that the folder is not set up instead of moving a stale session. Claude Code picks up the new settings as it
+runs.
 
 ### When an account hits its limit
 
@@ -518,7 +527,8 @@ Switching to the next account in order that has not hit its limit, in that pane 
    running, and the screen has not changed for 2 s. Never mid-turn.
 2. Sends Ctrl-C twice in quick succession, as Claude Code asks to quit (a draft typed in its prompt is cleared by the
    first one), again if needed; after three tries without effect it gives up and says so.
-3. Once the shell is back, types `cd '<dir>' && env CLAUDE_CONFIG_DIR='<next folder>' claude --resume <id>` the way
+3. Once the shell is back, types `cd '<dir>' && env CLAUDE_CONFIG_DIR='<next folder>' claude --resume <id>`
+   (`env -u CLAUDE_CONFIG_DIR claude …` for `~/.claude`) the way
    [resuming](#resuming-sessions) does (at an empty shell prompt, once). The conversation continues under the next
    account; ask Claude to go on with what it was doing.
 
@@ -539,8 +549,9 @@ folder: **Share Sessions…** (or `cmds accounts share`, then `--yes`) shows wha
   folder that is no account's own (made by hand) is left alone, and the first account with a `projects` folder of
   its own keeps it as the shared one,
 - turns every other account's `projects` into a symbolic link to it; an account's own `projects` folder is renamed to
-  `projects.before-cmds-<date>` first (kept, never deleted, merged or overwritten; move sessions you want back in
-  yourself; if the link then cannot be made, the folder is moved back),
+  `projects.before-cmds-<date>` first (kept, never deleted; if the link then cannot be made, the folder is moved
+  back), and the sessions in it that the shared folder does not have are copied there (nothing in the shared folder
+  is overwritten), so they can be continued under any account at once,
 - leaves alone a `projects` that already links elsewhere, and accounts whose folder does not exist yet.
 
 Before switching, cmds checks that the session's file is reachable from the next account (it lists folder names; it

@@ -184,19 +184,19 @@ public enum AgentResume {
     /// The command line typed into the pane's shell (without the trailing Return):
     /// `cd '<cwd>' && claude --resume <id>` / `cd '<cwd>' && codex resume <id>`; a Claude Code session of an account
     /// (`configDir`) runs `env CLAUDE_CONFIG_DIR='<dir>' claude --resume <id>` (`env` works in every shell).
+    /// The default directory (`~/.claude`) is plain `claude`, `env -u CLAUDE_CONFIG_DIR claude …` (#360): Claude Code
+    /// keeps a plain `claude`'s sign-in in `~/.claude.json` and the keychain's own entry, but with
+    /// `CLAUDE_CONFIG_DIR` set (even to `~/.claude`) in `<dir>/.claude.json` and another entry, which may be signed in
+    /// to another Claude account.
     /// nil when the session cannot be resumed safely (unsupported agent, invalid id, unquotable config dir).
     /// A cwd that cannot be quoted for every shell (quotes, backslashes, control characters) is left out.
-    public static func command(for session: AgentSession) -> String? {
+    public static func command(for session: AgentSession, home: String = NSHomeDirectory()) -> String? {
         guard isValidSessionID(session.sessionID) else { return nil }
         let resume: String
         switch session.agent {
         case .claude:
-            if let dir = session.configDir {
-                guard dir.hasPrefix("/"), let quoted = quotedPath(dir) else { return nil }
-                resume = "env CLAUDE_CONFIG_DIR=\(quoted) claude --resume \(session.sessionID)"
-            } else {
-                resume = "claude --resume \(session.sessionID)"
-            }
+            guard let claude = claudeCommand(configDir: session.configDir, home: home) else { return nil }
+            resume = "\(claude) --resume \(session.sessionID)"
         case .codex: resume = "codex resume \(session.sessionID)"
         case .antigravity, .other: return nil
         }
@@ -206,15 +206,19 @@ public enum AgentResume {
 
     /// Claude Code anew (no `--resume`) in the session's folder and under its account: for a session that has no
     /// conversation to continue. nil for other agents and SSH panes.
-    public static func startCommand(for session: AgentSession) -> String? {
-        guard session.agent == .claude, session.host == nil else { return nil }
-        var start = "claude"
-        if let dir = session.configDir {
-            guard dir.hasPrefix("/"), let quoted = quotedPath(dir) else { return nil }
-            start = "env CLAUDE_CONFIG_DIR=\(quoted) claude"
-        }
+    public static func startCommand(for session: AgentSession, home: String = NSHomeDirectory()) -> String? {
+        guard session.agent == .claude, session.host == nil,
+              let start = claudeCommand(configDir: session.configDir, home: home) else { return nil }
         guard let cwd = session.cwd, let quoted = quotedPath(cwd) else { return start }
         return "cd \(quoted) && \(start)"
+    }
+
+    /// `claude` under `configDir` (see `command(for:)`); nil when the directory cannot be typed safely.
+    static func claudeCommand(configDir: String?, home: String) -> String? {
+        guard let dir = configDir else { return "claude" }
+        guard dir.hasPrefix("/"), let quoted = quotedPath(dir) else { return nil }
+        if ClaudeAccounts.isDefaultConfigDir(dir, home: home) { return "env -u \(ClaudeAccounts.configDirVariable) claude" }
+        return "env \(ClaudeAccounts.configDirVariable)=\(quoted) claude"
     }
 
     /// A local Claude Code session has a conversation to continue: its transcript
@@ -230,8 +234,8 @@ public enum AgentResume {
     /// What to type to bring the session back: `command`, or `startCommand` when a local Claude Code session has no
     /// conversation yet.
     public static func typedCommand(for session: AgentSession, home: String = NSHomeDirectory()) -> String? {
-        if !hasConversation(session, home: home), let start = startCommand(for: session) { return start }
-        return command(for: session)
+        if !hasConversation(session, home: home), let start = startCommand(for: session, home: home) { return start }
+        return command(for: session, home: home)
     }
 
     /// Single-quoted for sh/bash/zsh/fish/tcsh alike: only absolute or `~/…` paths without `'`, `\`, `!` or

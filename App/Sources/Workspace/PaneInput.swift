@@ -81,6 +81,41 @@ enum PaneProcessProbe {
         return false
     }
 
+    /// A Claude Code process: when it started and the `CLAUDE_CONFIG_DIR` it was started with (nil: not set).
+    struct ClaudeProcess: Equatable {
+        var pid: pid_t
+        var startedAt: Date
+        var configDir: String?
+    }
+
+    /// The Claude Code process on the same terminal as `pid`: `pid` itself when it is one (a plain `claude` leads its
+    /// process group), else the oldest one on that terminal unless `foregroundOnly`.
+    static func claudeProcess(onTerminalOf pid: pid_t, foregroundOnly: Bool = false) -> ClaudeProcess? {
+        if agentKind(of: pid) == .claude { return claudeProcess(pid) }
+        guard !foregroundOnly, let info = kinfo(pid), info.kp_eproc.e_tdev != -1 else { return nil }
+        let tty = info.kp_eproc.e_tdev
+        let estimate = proc_listallpids(nil, 0)
+        guard estimate > 0 else { return nil }
+        var pids = [pid_t](repeating: 0, count: Int(estimate) + 64)
+        let count = pids.withUnsafeMutableBytes { proc_listallpids($0.baseAddress, Int32($0.count)) }
+        var found: ClaudeProcess?
+        for candidate in pids.prefix(Int(max(0, count))) where candidate > 0 {
+            guard let other = kinfo(candidate), other.kp_eproc.e_tdev == tty, agentKind(of: candidate) == .claude,
+                  let process = claudeProcess(candidate) else { continue }
+            if found == nil || process.startedAt < found!.startedAt { found = process }
+        }
+        return found
+    }
+
+    private static func claudeProcess(_ pid: pid_t) -> ClaudeProcess? {
+        guard let info = kinfo(pid) else { return nil }
+        let start = info.kp_proc.p_un.__p_starttime
+        let startedAt = Date(timeIntervalSince1970: TimeInterval(start.tv_sec) + TimeInterval(start.tv_usec) / 1_000_000)
+        let variable = ClaudeAccounts.configDirVariable
+        let configDir = environment(pid, names: [variable])[variable].flatMap { $0.isEmpty ? nil : $0 }
+        return ClaudeProcess(pid: pid, startedAt: startedAt, configDir: configDir)
+    }
+
     private static func isAgent(_ pid: pid_t) -> Bool { agentKind(of: pid) != nil }
 
     /// The coding agent `pid` is: Claude Code, a Codex session (not one of its helper commands), Antigravity, or nil.
@@ -109,6 +144,18 @@ enum PaneProcessProbe {
         var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
         guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
         return info
+    }
+
+    /// The variables `names` of the process's environment (its own processes only, as for `arguments`).
+    private static func environment(_ pid: pid_t, names: [String]) -> [String: String] {
+        var mib: [Int32] = [CTL_KERN, KERN_PROCARGS2, pid]
+        var size = 256 * 1024
+        var buffer = [UInt8](repeating: 0, count: size)
+        guard sysctl(&mib, 3, &buffer, &size, nil, 0) == 0 else { return [:] }
+        return buffer.withUnsafeBytes { raw in
+            ProcessArguments.parse(UnsafeRawBufferPointer(rebasing: raw[0..<size]), maxArguments: 0,
+                                   environmentNames: names)?.environment ?? [:]
+        }
     }
 
     private static func arguments(_ pid: pid_t) -> [String] {

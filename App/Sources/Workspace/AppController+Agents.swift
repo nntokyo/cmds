@@ -286,6 +286,8 @@ extension AppController {
                 if appearedOrGone { emit(.pane(workspaceID: workspace.id, paneID: pane.id)) }
             }
         }
+        // Claude Code that runs without reporting (AppController+SilentClaude, #360).
+        checkSilentClaudes(now: now)
     }
 
     private static let agentRefreshDelay: TimeInterval = 0.25

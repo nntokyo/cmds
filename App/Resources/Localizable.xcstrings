@@ -363,6 +363,16 @@
         }
       }
     },
+    "%@ could not be set up": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を設定できませんでした"
+          }
+        }
+      }
+    },
     "%@ failed: %@": {
       "localizations": {
         "en": {
@@ -711,18 +721,18 @@
         }
       }
     },
-    "%@: its projects folder is renamed to %@ (kept, not deleted), then linked": {
+    "%@: its projects folder is renamed to %@ (kept, not deleted), then linked; its sessions are copied into the shared folder": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "new",
-            "value": "%1$@: its projects folder is renamed to %2$@ (kept, not deleted), then linked"
+            "value": "%1$@: its projects folder is renamed to %2$@ (kept, not deleted), then linked; its sessions are copied into the shared folder"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@：projectsフォルダを%2$@に名前変更して（削除せずに残します）からリンクします"
+            "value": "%1$@：projectsフォルダを%2$@に名前を変えて残し（削除しません）、共有フォルダにリンクします。その中のセッションは共有フォルダにコピーします"
           }
         }
       }
@@ -2926,6 +2936,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude Codeが終了しませんでした。手動で終了してから、もう一度試してください。"
+          }
+        }
+      }
+    },
+    "Claude Code here does not report to cmds: %@ is not set up for cmds. Set it up in Settings › Claude Accounts (add the folder as an account if it is none).": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ここのClaude Codeはcmdsに報告していません。%@がcmds用に設定されていません。「設定」›「Claudeアカウント」で設定してください（アカウントでなければ、先にそのフォルダをアカウントとして追加します）。"
+          }
+        }
+      }
+    },
+    "Claude Code in “%@” does not report to cmds": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”のClaude Codeがcmdsに報告していません"
           }
         }
       }
@@ -5546,6 +5576,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "今は「%@」を実行しています。cmds のコマンドに置き換え、Antigravity 標準のステータスラインはそのまま残します。元のファイルは同じフォルダに控えを保存します。"
+          }
+        }
+      }
+    },
+    "It uses %@, whose settings.json has no cmds status line (the folder was probably made again). Without it cmds sees no session, limit or account there and cannot move the session to another account. Set it up? The status line and hooks are added to settings.json (a copy is kept); Claude Code picks them up as it runs.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@を使っていますが、そのsettings.jsonにcmdsのステータスラインがありません（フォルダが作り直されたとみられます）。このままではcmdsにはセッション・上限・アカウントが見えず、セッションを別のアカウントに移せません。設定しますか？ settings.jsonにステータスラインとフックを追加します（元のファイルのコピーを残します）。動いているClaude Codeもそのまま読み込みます。"
           }
         }
       }
@@ -8327,6 +8367,7 @@
       }
     },
     "Remove": {
+      "comment": "Settings › Assistant: pull-down to take apps off the list of apps that never pause the assistant",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -8448,6 +8489,7 @@
       }
     },
     "Replace": {
+      "comment": "Settings › Agents › Antigravity limits",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -10947,6 +10989,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "フォルダがありません。"
+          }
+        }
+      }
+    },
+    "The folder is also added to your Claude accounts as “%@”.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このフォルダをClaudeアカウント“%@”としても追加します。"
           }
         }
       }

@@ -290,7 +290,7 @@ enum Format {
             case .link?: return "\(account): \(applied ? "linked" : "link") \(projects) to the shared folder\n"
             case .moveAside?:
                 let backup = step["backup"]?.stringValue ?? ""
-                return "\(account): \(applied ? "renamed" : "rename") \(projects) to \(backup) (kept), then \(applied ? "linked" : "link")\n"
+                return "\(account): \(applied ? "renamed" : "rename") \(projects) to \(backup) (kept), then \(applied ? "linked" : "link") and \(applied ? "copied" : "copy") its sessions the shared folder lacks\n"
             default: return "\(account): left alone — \(step["reason"]?.stringValue ?? "")\n"
             }
         }.joined()
