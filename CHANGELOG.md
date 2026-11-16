@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.27.3] - 2026-11-16
+
+Mac only; the iPhone/iPad app is unchanged.
+
+### Fixed
+
+- Claude accounts: a Claude Code whose config folder has no cmds status line (a `~/.claude` made again by signing in
+  afresh, typically, under a plain `claude`) never reported to cmds, so its session could not be switched: the pane
+  showed no session or kept an old one from before. cmds now notices such a Claude Code after 45 s and offers
+  **Set Up for cmds** for its folder once (adding it as an account when it is none), drops the old session, and the
+  switch says why instead of moving the old one (#360).
+- Claude accounts: sharing sessions now copies the sessions of an account's own `projects` folder (renamed to
+  `projects.before-cmds-<date>`) that the shared folder lacks, so they can be continued under another account at
+  once; nothing is overwritten (#360).
+- Claude accounts: an account on `~/.claude` now runs as a plain `claude` (resumed with `env -u CLAUDE_CONFIG_DIR`,
+  its sign-in read from `~/.claude.json`): with `CLAUDE_CONFIG_DIR=~/.claude` Claude Code used another sign-in, so
+  the account shown and the one the resumed session ran under could differ (#360).
+
 ## [0.27.2] - 2026-11-16
 
 Mac only; the iPhone/iPad app is unchanged.
