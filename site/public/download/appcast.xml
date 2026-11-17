@@ -7,36 +7,28 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.28.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.28.0</link>
-      <sparkle:version>44</sparkle:version>
-      <sparkle:shortVersionString>0.28.0</sparkle:shortVersionString>
+      <title>cmds 0.28.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.28.1</link>
+      <sparkle:version>45</sparkle:version>
+      <sparkle:shortVersionString>0.28.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Tue, 17 Nov 2026 01:19:38 GMT</pubDate>
+      <pubDate>Tue, 17 Nov 2026 01:35:58 GMT</pubDate>
       <description><![CDATA[
-<h3>追加</h3>
-<ul>
-<li>アシスタント：回答を NVIDIA の声で話せるようにしました。build.nvidia.com で取得した無料の API キーを「設定 › アシスタント › NVIDIA APIキー」に入れると（キーチェーンに保存）、「声」に NVIDIA の Magpie TTS Multilingual の声が並びます（日本語は Ray、Isabela など8種類）。NVIDIA に送るのは回答の文章だけで、話した音声は送りません。速さの設定は再生時に反映します。キーや接続が無いときはシステムの声で話し、前回の問題を設定に表示します。</li>
-</ul>
 <h3>修正</h3>
 <ul>
-<li>アシスタント：内蔵モデルが作り出した <code>[[COUNT]]</code> のような目印だけの回答を読み上げていました。読み上げないようにしました。</li>
+<li>アシスタント：「ワークスペースはいくつ？」（エージェントやセッションの数も）に、実際のワークスペースから答えるようにしました。ワークスペースの数、エージェントが動いている数、そのうちあなたを待っている数を答えます。これまでは内蔵モデルに回り、数えられませんでした。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
-<h3>Added</h3>
-<ul>
-<li>Assistant: NVIDIA's voices for spoken answers. With a free API key from build.nvidia.com in Settings › Assistant › NVIDIA API key (kept in the keychain), the Voice list offers NVIDIA's Magpie TTS Multilingual voices for the app's language (Japanese: eight, such as Ray and Isabela). Only the answers' text is sent to NVIDIA, never what you say. Without the key or a connection the system voice speaks.</li>
-</ul>
 <h3>Fixed</h3>
 <ul>
-<li>Assistant: an answer that was only a made-up marker such as <code>[[COUNT]]</code> is no longer read out.</li>
+<li>Assistant: "how many workspaces" (also agents and sessions) is answered from the workspaces: how many there are, how many run an agent and how many of those wait for you. It went to the on-device model, which could not count them.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.28.0/cmds-0.28.0.dmg" length="17183122" type="application/octet-stream" sparkle:edSignature="k1Ep3ekH1daW91UkNf06c0HbNWyemgxASrqSLn7eGYPcEE2y1zyZNDBY41ziCsIBSWsGZ2M46mQ854mCVi9ABQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.28.1/cmds-0.28.1.dmg" length="17142287" type="application/octet-stream" sparkle:edSignature="hcqm7BxT4kG1zZrePzhnPQ5oBPziravNnl/kZ1Wg0jFe0jO2NJYnGpJZv7GQgGCev2f6t785bqrAgE4bU8wgDQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: Awd8qUgBkTESuOQ3VS3qG9+MJ9GtUoVoQZaIYr/PnQZMMn//K15WhjlvEWRyfHvmokCAiAVNU5U4EgrjIdFKAw==
-length: 2832
+edSignature: YVeGyubC5HQGMN4ZaXZrOMEakFV0e8+6x4MFI3TjBn9yWbMe8082DX5WnsoqSJ1YLMPA/apy686csEjhSL8+Cg==
+length: 2088
 -->
