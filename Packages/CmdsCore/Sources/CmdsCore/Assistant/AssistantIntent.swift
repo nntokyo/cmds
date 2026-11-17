@@ -6,6 +6,8 @@ import Foundation
 public enum AssistantIntent: Equatable, Sendable {
     /// All workspaces with an agent: who needs the user, who works.
     case status
+    /// How many workspaces there are, and how many agents run in them ("how many workspaces", 「ワークスペースはいくつ」).
+    case counts
     /// One workspace: what its agent does or asks ("what is api doing", "apiは何してる").
     case workspaceStatus(target: String)
     /// A summary of a workspace's screen; `detailed` ("in detail", "詳しく") runs `claude -p`.
@@ -337,6 +339,10 @@ public enum AssistantIntent: Equatable, Sendable {
         Rule(#"(.+?)の(?:状況|状態|進捗|様子)(?:情報|状況)?(?:は|を|が)?(?:教えて|知りたい|はどう|どう|どうなってる|確認して)?(?:ください)?(?:ですか)?"#) { groups in
             target(groups[0]).flatMap { ["全体", "みんな", "全部", "エージェント"].contains($0) ? nil : .workspaceStatus(target: $0) }
         },
+
+        // How many.
+        Rule(#"how many (?:workspaces|agents|sessions|claudes?|codex(?:es)?)(?: (?:are|do i have|have i got|is))?(?: (?:there|open|running|working|now|right now|in cmds))*"#) { _ in .counts },
+        Rule(#"(?:今|いま)?(?:(?:cmdsの|シーエムディーエスの)?(?:ワークスペース|ワーク スペース|エージェント|セッション|クロード(?:コード)?|コーデックス)(?:の数|って|は|が)?)(?:今|いま)?(?:いくつ|幾つ|何個|なんこ|何件|なんけん|何人|なんにん|何台|何つ|何本|どれくらい|どのくらい|何)(?:ある|あります|開いてる|開いています|動いてる|動いています|起動してる|起動しています)?(?:の|か)?(?:ですか)?|(?:ワークスペース|エージェント|セッション)の数(?:は|を教えて)?"#) { _ in .counts },
 
         // Everything.
         Rule(#"(?:(?:give me )?(?:a |the )?status(?: report| update)?|report|what(?:'s| is) (?:going on|happening|up)|how are (?:things|we doing|the agents)(?: going)?|any (?:news|updates))"#) { _ in .status },

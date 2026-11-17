@@ -109,6 +109,8 @@ public enum AssistantPlanner {
         switch intent {
         case .status:
             return .answer(AssistantReport.status(world, strings: strings))
+        case .counts:
+            return .answer(AssistantReport.counts(world, strings: strings))
         case .workspaceStatus(let name):
             return workspace(name, in: world, strings: strings) { workspace in
                 summarize(workspace, detailed: false, world: world, strings: strings)

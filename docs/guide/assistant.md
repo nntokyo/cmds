@@ -84,6 +84,7 @@ It understands the app's language (cmds › Language): Japanese or English.
 | Say | It does |
 |---|---|
 | "status" / 「状況は？」 | How many workspaces wait for you and which, and which are working (「入力待ち2件: api, api-v2。作業中1件: web。」); ask about one workspace for what it asks |
+| "how many workspaces" / 「ワークスペースはいくつ？」 | How many workspaces there are, how many run an agent and how many of those wait for you (「ワークスペースは3個で、エージェントが2個動いています。そのうち1個があなたを待っています。」); also "how many agents / sessions", 「エージェントは何個動いてる？」 |
 | "what is api doing" / 「apiは何してる？」 | A short summary of that workspace's agent, from its state and screen; without an agent, that none runs and what its shell runs (a program's name, or idle), never a guess from the screen |
 | "summarize api in detail" / 「apiを詳しく要約して」 | A longer summary by Claude Code (`claude -p`, see below) |
 | "reply to api: run the tests" / 「apiに『テストを実行して』と返信」 | Offers to type the text into the agent's pane and press Return |

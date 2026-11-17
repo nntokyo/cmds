@@ -286,6 +286,23 @@ final class AssistantVocabularyTests: XCTestCase {
         XCTAssertEqual(AssistantInterpretation(kind: .start, agent: "codex").intent(in: w), .startAgent(.codex, place: nil, task: nil))
     }
 
+    /// How many workspaces and agents: a rule, answered from the workspaces (the on-device model made up "[[COUNT]]").
+    func testCounts() {
+        for text in ["ワークスペースはいくつ", "ワークスペースはいくつある？", "今ワークスペースは何個ありますか", "ワークスペースの数は",
+                     "エージェントは何個動いてる", "セッションはいくつ", "クロードは何人動いてる", "how many workspaces",
+                     "How many workspaces are there?", "how many agents are running", "how many sessions do I have"] {
+            XCTAssertEqual(AssistantIntent.parse(text), .counts, text)
+        }
+        for text in ["apiは何してる", "状況は？", "ワークスペースを開いて"] {
+            XCTAssertNotEqual(AssistantIntent.parse(text), .counts, text)
+        }
+        XCTAssertEqual(plan("how many workspaces"), .answer("2 workspaces, 1 agent running."))
+        let waiting = world([.init(id: "w3", title: "docs", state: .needsUser, agent: "Codex", panes: [.init(id: "p3", title: "zsh", agent: "Codex")])])
+        XCTAssertEqual(plan("ワークスペースはいくつ", waiting), .answer("3 workspaces, 2 agents running, 1 waiting for you."))
+        let quiet = AssistantWorld(workspaces: [.init(id: "w1", title: "a", panes: [.init(id: "p1", title: "zsh")])], now: now)
+        XCTAssertEqual(plan("how many agents", quiet), .answer("1 workspace, no agents running."))
+    }
+
     func testOnDeviceApologiesAreNotSpoken() {
         XCTAssertTrue(AssistantModelReply.isAction("[[ACTION]]"))
         // A marker the model made up alone is no answer; words with brackets in them are.

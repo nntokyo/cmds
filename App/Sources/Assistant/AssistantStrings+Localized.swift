@@ -44,6 +44,17 @@ private extension AssistantLine {
         case .workingList(let count, let names):
             return String(localized: "\(count) working: \(names).", comment: "assistant: spoken status (count and names of workspaces whose agent works)")
         case .allQuiet(let count): return String(localized: "\(count) agents, nothing needs you.", comment: "assistant: spoken status")
+        case .counts(let workspaces, let agents, let waiting):
+            // English has singulars ("1 workspace"): CmdsCore's text; Japanese has none.
+            guard AssistantLanguage.current.isJapanese else { return english }
+            guard agents > 0 else {
+                return String(localized: "\(workspaces) workspaces, no agents running.", comment: "assistant: how many workspaces (no agent runs)")
+            }
+            if waiting > 0 {
+                return String(localized: "\(workspaces) workspaces, \(agents) agents running, \(waiting) waiting for you.",
+                              comment: "assistant: how many workspaces, agents running and agents waiting for the user")
+            }
+            return String(localized: "\(workspaces) workspaces, \(agents) agents running.", comment: "assistant: how many workspaces and agents running")
         case .needsYou(let workspace): return String(localized: "\(workspace) needs you.", comment: "assistant: spoken status of a workspace")
         case .asks(let question): return String(localized: "It asks: \(question)", comment: "assistant: what the agent asks")
         case .working(let workspace): return String(localized: "\(workspace) is working.", comment: "assistant: spoken status of a workspace")
