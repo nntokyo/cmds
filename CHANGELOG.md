@@ -7,6 +7,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-11-17
+
+Mac only; the iPhone/iPad app is unchanged.
+
+### Added
+
+- Assistant: NVIDIA's voices for spoken answers. With a free API key from build.nvidia.com typed into Settings ›
+  Assistant › NVIDIA API key (kept in the keychain), the Voice list offers NVIDIA's Magpie TTS Multilingual voices for
+  the app's language (Japanese: eight, such as Ray and Isabela). Only the answers' text is sent to NVIDIA, never what
+  you say; the Rate setting applies as it plays. Without the key or a connection the system voice speaks, and Settings
+  shows the last problem.
+
+### Fixed
+
+- Assistant: an answer that was only a marker the on-device model made up (such as `[[COUNT]]`) was read out; it is
+  no longer spoken.
+
 ## [0.27.3] - 2026-11-16
 
 Mac only; the iPhone/iPad app is unchanged.
