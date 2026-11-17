@@ -11,6 +11,8 @@ public enum AssistantLine: Equatable, Sendable {
     /// "1 working: web."
     case workingList(count: Int, names: String)
     case allQuiet(count: Int)
+    /// "3 workspaces, 2 agents running, 1 needs you." (`waiting` 0: that part is left out; `agents` 0: no agents).
+    case counts(workspaces: Int, agents: Int, waiting: Int)
     case needsYou(workspace: String)
     case asks(String)
     case working(workspace: String)
@@ -95,6 +97,11 @@ public enum AssistantLine: Equatable, Sendable {
         case .waitingList(let count, let names): return "\(count) waiting: \(names)."
         case .workingList(let count, let names): return "\(count) working: \(names)."
         case .allQuiet(let count): return count == 1 ? "1 agent, nothing needs you." : "\(count) agents, nothing needs you."
+        case .counts(let workspaces, let agents, let waiting):
+            let places = workspaces == 1 ? "1 workspace" : "\(workspaces) workspaces"
+            guard agents > 0 else { return "\(places), no agents running." }
+            let running = agents == 1 ? "1 agent running" : "\(agents) agents running"
+            return waiting > 0 ? "\(places), \(running), \(waiting) waiting for you." : "\(places), \(running)."
         case .needsYou(let workspace): return "\(workspace) needs you."
         case .asks(let question): return "It asks: \(question)"
         case .working(let workspace): return "\(workspace) is working."
@@ -219,6 +226,13 @@ public enum AssistantReport {
         if !waiting.isEmpty { lines.append(.waitingList(count: waiting.count, names: names(waiting))) }
         if !working.isEmpty { lines.append(.workingList(count: working.count, names: names(working))) }
         return strings.join(lines)
+    }
+
+    /// How many workspaces there are, how many of them run an agent and how many of those wait for the user.
+    public static func counts(_ world: AssistantWorld, strings: AssistantStrings) -> String {
+        let agents = world.workspaces.filter { !$0.hasNoAgent }
+        return strings(.counts(workspaces: world.workspaces.count, agents: agents.count,
+                               waiting: agents.filter { $0.state == .needsUser }.count))
     }
 
     /// "api: Claude. api needs you. It asks: Run the tests? 3 options, the first is Yes. Waiting for 4 minutes."

@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Assistant: "how many workspaces" / 「ワークスペースはいくつ？」 (also agents and sessions) is answered from the
+  workspaces: how many there are, how many run an agent and how many of those wait for you. It went to the on-device
+  model, which could not count them.
+
 ## [0.28.0] - 2026-11-17
 
 Mac only; the iPhone/iPad app is unchanged.

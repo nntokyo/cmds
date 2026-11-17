@@ -1166,6 +1166,51 @@
         }
       }
     },
+    "%lld workspaces, %lld agents running, %lld waiting for you.": {
+      "comment": "assistant: how many workspaces, agents running and agents waiting for the user",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld workspaces, %2$lld agents running, %3$lld waiting for you."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースは%1$lld個で、エージェントが%2$lld個動いています。そのうち%3$lld個があなたを待っています。"
+          }
+        }
+      }
+    },
+    "%lld workspaces, %lld agents running.": {
+      "comment": "assistant: how many workspaces and agents running",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld workspaces, %2$lld agents running."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースは%1$lld個で、エージェントが%2$lld個動いています。"
+          }
+        }
+      }
+    },
+    "%lld workspaces, no agents running.": {
+      "comment": "assistant: how many workspaces (no agent runs)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースは%lld個で、動いているエージェントはありません。"
+          }
+        }
+      }
+    },
     "%lldd%lldh": {
       "comment": "duration: days and hours (2d3h)",
       "localizations": {
