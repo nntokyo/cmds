@@ -295,6 +295,17 @@
         }
       }
     },
+    "%@ (NVIDIA)": {
+      "comment": "Settings › Assistant › Voice: one of NVIDIA's voices, spoken by NVIDIA's service",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（NVIDIA）"
+          }
+        }
+      }
+    },
     "%@ (Personal Voice)": {
       "comment": "Settings › Assistant › Voice: the user's own Personal Voice",
       "localizations": {
@@ -5873,6 +5884,17 @@
         }
       }
     },
+    "Last problem: %@": {
+      "comment": "Settings › Assistant: why NVIDIA's voice did not speak last time",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回の問題：%@"
+          }
+        }
+      }
+    },
     "Later": {
       "localizations": {
         "ja": {
@@ -6643,6 +6665,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "サーバのゴミ箱に移動中…"
+          }
+        }
+      }
+    },
+    "NVIDIA API key": {
+      "comment": "Settings › Assistant",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA APIキー"
+          }
+        }
+      }
+    },
+    "NVIDIA API key:": {
+      "comment": "Settings › Assistant: the key for NVIDIA's voices",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIA APIキー："
+          }
+        }
+      }
+    },
+    "NVIDIA's voices speak through build.nvidia.com with your own API key (free; get one there). Only the answers' text is sent to NVIDIA, never what you say. Without the key or a connection the system voice speaks.": {
+      "comment": "Settings › Assistant: under NVIDIA API key",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NVIDIAの声は、あなたのAPIキーでbuild.nvidia.comを通して話します（無料。キーはbuild.nvidia.comで取得できます）。NVIDIAに送るのは回答の文章だけで、あなたが話した音声は送りません。キーや接続が無いときはシステムの声で話します。"
           }
         }
       }
@@ -9033,6 +9088,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "自分の版をコピーとして保存"
+          }
+        }
+      }
+    },
+    "Saved (type a new key to replace it)": {
+      "comment": "Settings › Assistant: NVIDIA API key field when a key is stored",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存済み（新しいキーを入力すると置き換えます）"
           }
         }
       }
