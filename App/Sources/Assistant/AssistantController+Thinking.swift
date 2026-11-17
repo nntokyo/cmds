@@ -220,6 +220,8 @@ extension AssistantController {
                    await handleAsCommand(question, world: world, request: machine.request) { return nil }
                 return strings(.cannotTell)
             }
+            // A marker it made up alone ("[[COUNT]]"): no answer.
+            if AssistantModelReply.isPlaceholder(answer) { return strings(.cannotTell) }
             let text = AssistantWeb.withoutMarker(answer)
             return text.isEmpty ? strings(.modelUnavailable) : text
         } catch {

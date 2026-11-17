@@ -302,7 +302,7 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
 
     /// NVIDIA's voices for `language`: as the service listed them, else the known ones.
     private static func nvidiaVoices(language: String) -> [String] {
-        let known = ["Magpie-Multilingual.JA-JP.Isabela", "Magpie-Multilingual.JA-JP.Ray"]
+        let known = ["HouZhen", "Isabela", "Jason", "Long", "Louise", "Pascal", "Ray", "Siwei"].map { "Magpie-Multilingual.JA-JP.\($0)" }
         return (nvidiaVoices ?? known).filter { NvidiaSpeech.language(ofVoice: $0)?.lowercased() == language.lowercased() }
     }
 

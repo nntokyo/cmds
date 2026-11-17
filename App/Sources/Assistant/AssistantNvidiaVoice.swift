@@ -55,6 +55,10 @@ final class AssistantNvidiaVoice {
         engine.connect(pitch, to: engine.mainMixerNode, format: format)
         fallback.delegate = fallbackDelegate
         fallbackDelegate.ended = { [weak self] in self?.partEnded() }
+        // An NVIDIA voice chosen: read the key and look the function up now, not while the first answer waits.
+        if NvidiaSpeech.voiceName(fromSetting: AppSettings.shared.assistantVoice) != nil, NvidiaKey.isSet {
+            Task { await NvidiaSynthesis.prepare() }
+        }
     }
 
     /// Whether answers can go to NVIDIA now: an NVIDIA voice is chosen for `language` and a key is set.
@@ -215,6 +219,12 @@ enum NvidiaSynthesis {
         }
     }
 
+    /// Reads the key and looks the function up (the first answer then waits only for its audio).
+    static func prepare() async {
+        guard let key = NvidiaKey.value else { return }
+        _ = await function(key: key)
+    }
+
     /// Forgets the function looked up (a new key).
     static func reset() async { await cache.set(nil) }
 
@@ -284,7 +294,19 @@ enum NvidiaKey {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account]
     }
 
+    /// The key once read (macOS may ask the first time whether cmds may read an item made by another program).
+    private static let cache = NSLock()
+    nonisolated(unsafe) private static var cached: String?
+
     static var value: String? {
+        cache.lock()
+        defer { cache.unlock() }
+        if let cached { return cached }
+        cached = read()
+        return cached
+    }
+
+    private static func read() -> String? {
         var item: CFTypeRef?
         var query = query
         query[kSecReturnData as String] = true
@@ -306,6 +328,9 @@ enum NvidiaKey {
     @discardableResult
     static func set(_ key: String) -> Bool {
         let key = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        cache.lock()
+        cached = nil
+        cache.unlock()
         SecItemDelete(query as CFDictionary)
         guard !key.isEmpty else { return true }
         var item = query

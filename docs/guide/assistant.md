@@ -193,9 +193,9 @@ Speech stays on this Mac; cmds never records or copies a voice. The permission b
 
 **NVIDIA's voices.** With a free API key from [build.nvidia.com](https://build.nvidia.com) (sign in, Get API Key,
 `nvapi-…`) typed into **NVIDIA API key**, the Voice list also offers NVIDIA's Magpie TTS Multilingual voices for the
-app's language, marked "(NVIDIA)" (Japanese: Ray, Isabela). The key is kept in the login keychain (service
+app's language, marked "(NVIDIA)" (Japanese: eight voices such as Ray and Isabela). The key is kept in the login keychain (service
 `cmds NVIDIA API key`; `security add-generic-password -a nvidia -s "cmds NVIDIA API key" -w` stores it from a terminal)
-and the field never shows it again. With such a voice the text of each answer is sent to NVIDIA's service
+and the field never shows it again (a key stored from a terminal: macOS asks once whether cmds may read it; choose Always Allow). With such a voice the text of each answer is sent to NVIDIA's service
 (`grpc.nvcf.nvidia.com`) and the audio it returns plays here; the rate applies when it plays. What you say is never
 sent. A part that cannot be spoken that way (no key, offline, the key refused) is said by the system voice, and
 Settings shows the last problem. NVIDIA's terms for its API trial apply to the key.
