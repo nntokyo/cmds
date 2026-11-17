@@ -7,32 +7,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.27.3</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.27.3</link>
-      <sparkle:version>43</sparkle:version>
-      <sparkle:shortVersionString>0.27.3</sparkle:shortVersionString>
+      <title>cmds 0.28.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.28.0</link>
+      <sparkle:version>44</sparkle:version>
+      <sparkle:shortVersionString>0.28.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Mon, 16 Nov 2026 08:21:03 GMT</pubDate>
+      <pubDate>Tue, 17 Nov 2026 01:19:38 GMT</pubDate>
       <description><![CDATA[
+<h3>追加</h3>
+<ul>
+<li>アシスタント：回答を NVIDIA の声で話せるようにしました。build.nvidia.com で取得した無料の API キーを「設定 › アシスタント › NVIDIA APIキー」に入れると（キーチェーンに保存）、「声」に NVIDIA の Magpie TTS Multilingual の声が並びます（日本語は Ray、Isabela など8種類）。NVIDIA に送るのは回答の文章だけで、話した音声は送りません。速さの設定は再生時に反映します。キーや接続が無いときはシステムの声で話し、前回の問題を設定に表示します。</li>
+</ul>
 <h3>修正</h3>
 <ul>
-<li>Claude アカウント：設定フォルダーに cmds のステータスラインが無い Claude Code（サインインし直して作り直された <code>~/.claude</code> で素の <code>claude</code> を起動した場合など）は cmds に報告せず、セッションを切り替えられませんでした（セッションが無い、または以前の古いセッションのまま）。45 秒たっても報告が無い Claude Code に気づき、そのフォルダーの「cmds用に設定」を一度提案します（アカウントでなければ追加も）。古いセッションは使わず、切り替え時には理由を表示します。</li>
-<li>Claude アカウント：セッションの共有時、名前を変えて残した元の <code>projects</code> フォルダーのセッションのうち、共有フォルダーに無いものをコピーするようにしました（上書きはしません）。すぐに別のアカウントで続けられます。</li>
-<li>Claude アカウント：<code>~/.claude</code> のアカウントを素の <code>claude</code> として動かすようにしました（<code>env -u CLAUDE_CONFIG_DIR</code> で再開し、サインインは <code>~/.claude.json</code> を見ます）。<code>CLAUDE_CONFIG_DIR=~/.claude</code> では別のサインインが使われ、表示と実際のアカウントが食い違うことがありました。</li>
+<li>アシスタント：内蔵モデルが作り出した <code>[[COUNT]]</code> のような目印だけの回答を読み上げていました。読み上げないようにしました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
+<h3>Added</h3>
+<ul>
+<li>Assistant: NVIDIA's voices for spoken answers. With a free API key from build.nvidia.com in Settings › Assistant › NVIDIA API key (kept in the keychain), the Voice list offers NVIDIA's Magpie TTS Multilingual voices for the app's language (Japanese: eight, such as Ray and Isabela). Only the answers' text is sent to NVIDIA, never what you say. Without the key or a connection the system voice speaks.</li>
+</ul>
 <h3>Fixed</h3>
 <ul>
-<li>Claude accounts: a Claude Code whose config folder has no cmds status line (a <code>~/.claude</code> made again, under a plain <code>claude</code>) never reported, so its session could not be switched. cmds now notices it after 45 s, offers Set Up for cmds for its folder once (adding it as an account when it is none), drops the old session and says why in the switch.</li>
-<li>Claude accounts: sharing sessions copies the sessions of an account's renamed <code>projects</code> folder that the shared folder lacks (never overwriting), so they can continue under another account at once.</li>
-<li>Claude accounts: an account on <code>~/.claude</code> runs as a plain <code>claude</code> (<code>env -u CLAUDE_CONFIG_DIR</code>, sign-in from <code>~/.claude.json</code>), so the account shown and the one used agree.</li>
+<li>Assistant: an answer that was only a made-up marker such as <code>[[COUNT]]</code> is no longer read out.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.27.3/cmds-0.27.3.dmg" length="17287274" type="application/octet-stream" sparkle:edSignature="yYumcEe3eROlgo9glG0FtbUfVTVGqpYwzZFffrDd98UHW8+mgBbHXsWUUP1AINqdoV32CyhRsyi7R+jVIA0IAg=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.28.0/cmds-0.28.0.dmg" length="17183122" type="application/octet-stream" sparkle:edSignature="k1Ep3ekH1daW91UkNf06c0HbNWyemgxASrqSLn7eGYPcEE2y1zyZNDBY41ziCsIBSWsGZ2M46mQ854mCVi9ABQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: ppH4yWKFdJidok8JXS+jzcrRXGhzrJe5LNg2h1zAFBTa1jceW8hPYo+o/rjSC6mUVR9cQHxC3Mrr2FUPTh3sCg==
-length: 3691
+edSignature: Awd8qUgBkTESuOQ3VS3qG9+MJ9GtUoVoQZaIYr/PnQZMMn//K15WhjlvEWRyfHvmokCAiAVNU5U4EgrjIdFKAw==
+length: 2832
 -->
