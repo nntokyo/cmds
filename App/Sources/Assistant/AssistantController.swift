@@ -378,7 +378,7 @@ final class AssistantController {
     }
 
     /// The voice, rate and language from the settings; muted as in effect unless given.
-    private func manner(muted: Bool? = nil) -> AssistantVoice.Manner {
+    func manner(muted: Bool? = nil) -> AssistantVoice.Manner {
         AssistantVoice.Manner(language: language.voiceLanguage, voice: settings.assistantVoice, rate: settings.assistantRate,
                               muted: muted ?? self.muted)
     }

@@ -48,6 +48,12 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
     private let personalSettingsButton = NSButton(title: String(localized: "Personal Voice Settings…", comment: "Settings › Assistant: opens System Settings › Accessibility › Personal Voice"),
                                                   target: nil, action: nil)
     private let personalNote = NSTextField(wrappingLabelWithString: "")
+    /// The user's NVIDIA API key for NVIDIA's voices (`NvidiaKey`): typed, stored in the keychain, never shown again.
+    private let nvidiaKeyField = NSSecureTextField()
+    private let nvidiaNote = NSTextField(wrappingLabelWithString: "")
+    /// NVIDIA's voices as the service listed them (nil: not asked yet; the known Japanese ones are offered meanwhile).
+    private static var nvidiaVoices: [String]?
+    private var nvidiaVoicesLoading = false
     /// The voice list is rebuilt when the language or the Personal Voices change.
     private var voiceListKey = ""
 
@@ -85,6 +91,9 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
             button.target = self
         }
         personalButton.action = #selector(personalVoiceClicked)
+        nvidiaKeyField.delegate = self
+        nvidiaKeyField.widthAnchor.constraint(equalToConstant: 240).isActive = true
+        nvidiaKeyField.setAccessibilityLabel(String(localized: "NVIDIA API key", comment: "Settings › Assistant"))
         personalSettingsButton.action = #selector(personalVoiceSettingsClicked)
         personalNote.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         personalNote.textColor = .secondaryLabelColor
@@ -164,6 +173,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
             [label(String(localized: "Voice:", comment: "Settings › Assistant")), voicePopup],
             [NSGridCell.emptyContentView, personalButtons],
             [NSGridCell.emptyContentView, personalNote],
+            [label(String(localized: "NVIDIA API key:", comment: "Settings › Assistant: the key for NVIDIA's voices")), nvidiaKeyField],
+            [NSGridCell.emptyContentView, nvidiaNote],
             [label(String(localized: "Rate:", comment: "Settings › Assistant: speaking rate")), rateSlider],
             [NSGridCell.emptyContentView, mutedCheckbox],
             section(String(localized: "Claude Code", comment: "Settings › Assistant: section header (what the assistant asks Claude Code)")),
@@ -255,7 +266,8 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         let voices = AssistantVoice.all
         let authorization = AssistantVoice.personalVoiceAuthorization
         let personal = AssistantVoices.personal(voices, language: language)
-        let key = ([language, "\(authorization)"] + personal.map(\.identifier)).joined(separator: "|")
+        let nvidia = Self.nvidiaVoices(language: language)
+        let key = ([language, "\(authorization)"] + personal.map(\.identifier) + nvidia).joined(separator: "|")
         if key != voiceListKey {
             voiceListKey = key
             voicePopup.removeAllItems()
@@ -272,6 +284,11 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
                 voicePopup.addItem(withTitle: String(localized: "\(voice.name) (Personal Voice)", comment: "Settings › Assistant › Voice: the user's own Personal Voice"))
                 voicePopup.lastItem?.representedObject = voice.identifier
             }
+            if !nvidia.isEmpty { voicePopup.menu?.addItem(.separator()) }
+            for name in nvidia {
+                voicePopup.addItem(withTitle: String(localized: "\(NvidiaSpeech.displayName(ofVoice: name)) (NVIDIA)", comment: "Settings › Assistant › Voice: one of NVIDIA's voices, spoken by NVIDIA's service"))
+                voicePopup.lastItem?.representedObject = NvidiaSpeech.setting(forVoice: name)
+            }
         }
         let index = settings.assistantVoice.map { voicePopup.indexOfItem(withRepresentedObject: $0) } ?? 0
         voicePopup.selectItem(at: max(index, 0))
@@ -280,6 +297,35 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
         personalButton.isHidden = state != .notRequested
         personalSettingsButton.isHidden = state == .unsupported
         personalNote.stringValue = Self.personalNote(state, chosenMissing: index < 0)
+        refreshNvidia()
+    }
+
+    /// NVIDIA's voices for `language`: as the service listed them, else the known ones.
+    private static func nvidiaVoices(language: String) -> [String] {
+        let known = ["HouZhen", "Isabela", "Jason", "Long", "Louise", "Pascal", "Ray", "Siwei"].map { "Magpie-Multilingual.JA-JP.\($0)" }
+        return (nvidiaVoices ?? known).filter { NvidiaSpeech.language(ofVoice: $0)?.lowercased() == language.lowercased() }
+    }
+
+    /// The key field's placeholder, the note (what is sent, the last failure), and the voice list once a key is set.
+    private func refreshNvidia() {
+        let set = NvidiaKey.isSet
+        nvidiaKeyField.placeholderString = set
+            ? String(localized: "Saved (type a new key to replace it)", comment: "Settings › Assistant: NVIDIA API key field when a key is stored")
+            : "nvapi-…"
+        var lines = [String(localized: "NVIDIA's voices speak through build.nvidia.com with your own API key (free; get one there). Only the answers' text is sent to NVIDIA, never what you say. Without the key or a connection the system voice speaks.", comment: "Settings › Assistant: under NVIDIA API key")]
+        if let error = AssistantNvidiaVoice.lastError {
+            lines.append(String(localized: "Last problem: \(error)", comment: "Settings › Assistant: why NVIDIA's voice did not speak last time"))
+        }
+        nvidiaNote.stringValue = lines.joined(separator: "\n")
+        guard set, Self.nvidiaVoices == nil, !nvidiaVoicesLoading else { return }
+        nvidiaVoicesLoading = true
+        Task { [weak self] in
+            let result = await NvidiaSynthesis.voices()
+            guard let self else { return }
+            self.nvidiaVoicesLoading = false
+            if case .success(let voices) = result, !voices.isEmpty { Self.nvidiaVoices = voices }
+            self.refresh()
+        }
     }
 
     private static func personalNote(_ state: AssistantVoices.PersonalVoiceState, chosenMissing: Bool) -> String {
@@ -325,7 +371,15 @@ final class AssistantSettingsPane: NSObject, NSTextFieldDelegate, NSMenuDelegate
     }
 
     func controlTextDidEndEditing(_ notification: Notification) {
-        if (notification.object as? NSTextField) === foldersField {
+        if (notification.object as? NSTextField) === nvidiaKeyField {
+            let key = nvidiaKeyField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            nvidiaKeyField.stringValue = ""
+            guard !key.isEmpty else { return }
+            NvidiaKey.set(key)
+            Self.nvidiaVoices = nil
+            Task { await NvidiaSynthesis.reset() }
+            refresh()
+        } else if (notification.object as? NSTextField) === foldersField {
             settings.assistantProjectFolders = foldersField.stringValue
         } else {
             settings.assistantNames = namesField.stringValue

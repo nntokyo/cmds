@@ -14,6 +14,14 @@ public enum AssistantModelReply {
         return refusals.contains { $0.occurs(in: text) }
     }
 
+    /// A made-up marker alone, in the shape of the real ones (`[[COUNT]]`, `[ANSWER]`, `{count}`, `<NAME>`): the model
+    /// copied the form instead of answering. Never spoken.
+    public static func isPlaceholder(_ answer: String) -> Bool {
+        let text = answer.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".。")))
+        return text.range(of: #"^(\[{1,2}|\{{1,2}|<)\s*[A-Za-z_][A-Za-z0-9_ -]{0,40}\s*(\]{1,2}|\}{1,2}|>)$"#,
+                          options: .regularExpression) != nil
+    }
+
     /// What may surround a marker the model half-broke ("[ACTION]", "ACTION.").
     static let markerCharacters = CharacterSet(charactersIn: "[] .。")
 

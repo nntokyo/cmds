@@ -3,11 +3,13 @@ import CmdsCore
 
 /// Speaks the assistant's answers (#243) with `AVSpeechSynthesizer`, in the app's language, with the voice and rate
 /// from Settings › Assistant: a system voice or the user's own Personal Voice (when the user allowed cmds to use it and
-/// it speaks the language; else the system voice). Muted: says nothing and reports the end at once. On this Mac only:
-/// no cloud speech.
+/// it speaks the language; else the system voice). Muted: says nothing and reports the end at once. On this Mac only,
+/// unless the user chose one of NVIDIA's voices and gave an API key (`AssistantNvidiaVoice`): then the answers' text,
+/// and nothing else, goes to NVIDIA to be spoken.
 @MainActor
 final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
+    private let nvidia = AssistantNvidiaVoice()
     private var utterances = AssistantUtterances<() -> Void>()
     /// Whom to tell when utterance number … starts.
     private var started: (number: Int, call: (() -> Void)?)?
@@ -15,6 +17,12 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     override init() {
         super.init()
         synthesizer.delegate = self
+        nvidia.onStart = { [weak self] number in
+            guard let self, let started = self.started, started.number == number else { return }
+            self.started = nil
+            started.call?()
+        }
+        nvidia.onEnd = { [weak self] number in self?.utterances.ended(number)?() }
     }
 
     /// Every voice on this Mac as a plain value (Personal Voices only once cmds may use them).
@@ -63,7 +71,16 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
             return
         }
         self.started = (number, started)
-        synthesizer.speak(utterance(text, number: number, manner: manner))
+        say(text, number: number, manner: manner)
+    }
+
+    /// One part: by NVIDIA's voice when it is chosen and usable, else by the synthesizer.
+    private func say(_ text: String, number: Int, manner: Manner) {
+        if let voice = AssistantNvidiaVoice.voice(for: manner) {
+            nvidia.enqueue(text, number: number, voice: voice, manner: manner)
+        } else {
+            synthesizer.speak(utterance(text, number: number, manner: manner))
+        }
     }
 
     /// Another part of the open utterance (the next sentence of an answer still being written).
@@ -73,7 +90,7 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
             utterances.ended(number)?()
             return
         }
-        synthesizer.speak(utterance(text, number: number, manner: manner))
+        say(text, number: number, manner: manner)
     }
 
     /// No more parts: the utterance ends after the last one (at once when it has been said).
@@ -95,6 +112,7 @@ final class AssistantVoice: NSObject, AVSpeechSynthesizerDelegate {
     func stop() {
         let pending = utterances.stop()
         if synthesizer.isSpeaking { synthesizer.stopSpeaking(at: .immediate) }
+        nvidia.stop()
         pending?()
     }
 

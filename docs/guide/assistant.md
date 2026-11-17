@@ -191,6 +191,15 @@ cmds was not allowed, when this Mac does not support it, or when you have none y
 Speech stays on this Mac; cmds never records or copies a voice. The permission belongs to the app, so a Debug build
 (cmds Dev) asks again.
 
+**NVIDIA's voices.** With a free API key from [build.nvidia.com](https://build.nvidia.com) (sign in, Get API Key,
+`nvapi-…`) typed into **NVIDIA API key**, the Voice list also offers NVIDIA's Magpie TTS Multilingual voices for the
+app's language, marked "(NVIDIA)" (Japanese: eight voices such as Ray and Isabela). The key is kept in the login keychain (service
+`cmds NVIDIA API key`; `security add-generic-password -a nvidia -s "cmds NVIDIA API key" -w` stores it from a terminal)
+and the field never shows it again (a key stored from a terminal: macOS asks once whether cmds may read it; choose Always Allow). With such a voice the text of each answer is sent to NVIDIA's service
+(`grpc.nvcf.nvidia.com`) and the audio it returns plays here; the rate applies when it plays. What you say is never
+sent. A part that cannot be spoken that way (no key, offline, the key refused) is said by the system voice, and
+Settings shows the last problem. NVIDIA's terms for its API trial apply to the key.
+
 ## Privacy and cost
 
 - Speech is recognised on this Mac (SpeechAnalyzer). What is not addressed to the assistant is dropped at once; no
@@ -203,6 +212,8 @@ Speech stays on this Mac; cmds never records or copies a voice. The permission b
   the screen's text as input and no tools at all; a web question gets only your words and only the WebSearch and
   WebFetch tools; a free instruction gets your words and the workspaces' names and states, no tools, and the small
   model (Haiku).
+- With one of NVIDIA's voices chosen, the answers' text (not your speech) goes to NVIDIA to be spoken, with your own
+  API key.
 - No paid API is used.
 
 ## Not yet

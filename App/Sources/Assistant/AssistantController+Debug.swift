@@ -172,6 +172,13 @@ extension AssistantController {
                 "showWhileWaiting": .bool(settings.assistantShowWhileWaiting), "orbSize": .string(settings.assistantOrbSize.rawValue),
                 "listening": .string(settings.assistantListening.rawValue), "microphone": .string(settings.assistantMicrophone),
                 "shareMicrophone": .bool(settings.assistantShareMicrophone),
+                "voice": .string(settings.assistantVoice ?? ""),
+            ]),
+            // NVIDIA's voice: whether answers go there now, and its last failure.
+            "nvidia": .object([
+                "voice": .string(AssistantNvidiaVoice.voice(for: manner()) ?? ""),
+                "keySet": .bool(NvidiaKey.isSet),
+                "lastError": .string(AssistantNvidiaVoice.lastError ?? ""),
             ]),
             "hudVisible": .bool(hud.isVisible),
             "queued": .array(queued.map { .string(String(describing: $0)) }),

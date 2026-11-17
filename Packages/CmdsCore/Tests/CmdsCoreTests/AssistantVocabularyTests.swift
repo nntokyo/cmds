@@ -288,6 +288,13 @@ final class AssistantVocabularyTests: XCTestCase {
 
     func testOnDeviceApologiesAreNotSpoken() {
         XCTAssertTrue(AssistantModelReply.isAction("[[ACTION]]"))
+        // A marker the model made up alone is no answer; words with brackets in them are.
+        for placeholder in ["[[COUNT]]", "[COUNT]", " {count}。", "<NAME>", "[[ workspace_count ]]"] {
+            XCTAssertTrue(AssistantModelReply.isPlaceholder(placeholder), placeholder)
+        }
+        for answer in ["ワークスペースは3つです。", "[api] is running", "3", "[[COUNT]] workspaces", "<>"] {
+            XCTAssertFalse(AssistantModelReply.isPlaceholder(answer), answer)
+        }
         XCTAssertTrue(AssistantModelReply.isAction("[ACTION]"))
         XCTAssertTrue(AssistantModelReply.isAction("申し訳ありませんが、アプリの起動はできません。EPAの進捗は、経済連携協定のことですか"))
         XCTAssertTrue(AssistantModelReply.isAction("I'm sorry, but I can't start apps."))

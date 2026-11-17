@@ -189,7 +189,9 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   texts, `snapshot: true` the HUD drawn off screen (or `screencapture -l <window>`). The waiting orb: `state.orb`
   (`visible`, `look` standingBy / hearing / attention / paused, `frame`, `window`, `size`, `saved`, `hearing`;
   `orb.png_base64` with `snapshot` while it shows; wait 0.5 s after it comes back from the HUD, it fades in),
-  `level {value}` as the microphone's level (≥ 0.15: hearing), `click {button: orb}` (the HUD with the last answer),
+  `level {value}` as the microphone's level (≥ 0.15: hearing), `state.nvidia` (`voice`: the NVIDIA voice answers go to
+  now, empty when none; `keySet`; `lastError`: the last failure, cleared once a part played) with `settings.voice` (an
+  NVIDIA voice is `nvidia:Magpie-Multilingual.JA-JP.Ray`; `defaults write <suite> AssistantVoice …`), `click {button: orb}` (the HUD with the last answer),
   `move_orb {x, y}` (dropped with its centre there; stored as `AssistantOrbCenter` in the instance's defaults suite).
   Check: visible after `on`, hidden while the HUD shows after `hear`, back after the HUD hides, `paused` after `pause`,
   hidden after `defaults write <suite> AssistantShowWhileWaiting -bool false`, `AssistantOrbSize medium` 72 pt. Isolated instances register no
