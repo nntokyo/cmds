@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.28.1] - 2026-11-17
+
+Mac only; the iPhone/iPad app is unchanged.
+
 ### Fixed
 
 - Assistant: "how many workspaces" / 「ワークスペースはいくつ？」 (also agents and sessions) is answered from the
