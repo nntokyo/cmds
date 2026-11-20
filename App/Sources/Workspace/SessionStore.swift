@@ -18,6 +18,9 @@ struct SessionState: Codable {
         /// SSH pane: reconnected only when the user clicks Connect (never on launch).
         case ssh(host: String, remoteCwd: String?)
         case split(axis: SplitAxis, ratio: Double, first: Node, second: Node)
+        /// Panes stacked as tabs in one place (pane nodes in tab order; `selected` = index of the one shown). Added
+        /// later: older versions cannot read it (they set the session aside and start empty).
+        case tabs(selected: Int, tabs: [Node])
     }
 
     struct WorkspaceState: Codable {

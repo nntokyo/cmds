@@ -95,6 +95,7 @@
       <ul>
         <li><kbd>⌘N</kbd> で新しいワークスペース、<kbd>⌘1</kbd>…<kbd>⌘9</kbd> で切り替え、<kbd>⇧⌘R</kbd>（またはダブルクリック）で名前を変更。行はドラッグで並べ替えられます。</li>
         <li><kbd>⌘D</kbd> で右に、<kbd>⇧⌘D</kbd> で下に分割。<kbd>⌥⌘</kbd>＋矢印でペイン間を移動、<kbd>⇧⌘↩</kbd> でペインをズーム、<kbd>⌘W</kbd> で閉じます。</li>
+        <li><strong>タブ</strong>：<kbd>⌘T</kbd>（ペイン › 新規タブ、タブバーの＋）でペインの隣にタブを追加します（ブラウザならブラウザのタブ、それ以外はターミナル）。<kbd>⌥⌘]</kbd> / <kbd>⌥⌘[</kbd> で次・前のタブ、<kbd>⌘W</kbd> やタブの × で閉じます。タブをドラッグして別のタブバーに落とすとそのタブに、ペインの上端の帯に落とすとそのペインとタブにまとまります。見えていないタブのプログラムやページも動き続け、セッションと一緒に復元されます。<code>cmds tab</code> / <code>cmds pane move --beside P --tab</code> でも。</li>
         <li><strong>ペインの移動</strong>：ペインの上端にマウスを乗せると出るつまみをドラッグし、別のペインの端に落とすとその側に分割、中央に落とすと入れ替え、サイドバーのワークスペースに落とすとそこへ移動、ウィンドウの外に落とすと新しいワークスペースになります。ペイン › 左右上下のペインと入れ替え（<kbd>⌥⇧⌘</kbd>＋矢印）、別のワークスペースへ移動…、新しいワークスペースへ移動 や <code>cmds pane move</code> / <code>cmds pane swap</code> でも。ターミナルのプログラムやブラウザのページはそのまま続きます。</li>
         <li>サイドバーの各行には、Git ブランチ、ディレクトリ、待ち受けポート、エージェントの状態とタスク、最新の通知が表示されます。<kbd>⌥⌘F</kbd> で絞り込み、表示 › ワークスペースをプロジェクトでまとめる も使えます。</li>
         <li>見ていないペインのプログラムが通知（OSC 9/777、ベル、<code>cmds notify</code>）を出すと、そのペインが<strong>オレンジのリング</strong>で光ります。<kbd>⇧⌘U</kbd> で最新の通知へジャンプ。</li>
@@ -143,6 +144,8 @@
       <h2><span class="step-num">4</span>ブラウザとプレビュー</h2>
       <ul>
         <li><kbd>⇧⌘B</kbd> でターミナルの右にブラウザを開きます。<kbd>⌘L</kbd> でアドレスバー、<kbd>⌘R</kbd> で再読み込み、<kbd>⌘[</kbd> / <kbd>⌘]</kbd> で戻る・進む。</li>
+        <li>新しいウインドウで開くリンク、<code>cmds browser open</code>、エージェントの <code>browser_open</code> は、分割を増やさずにブラウザペインの<strong>タブ</strong>で開きます（設定 › 一般 › 新しいページをタブで開く。オフにすると従来どおり分割）。</li>
+        <li><strong>Chrome のブックマーク</strong>：Google Chrome を使っていれば、アドレスバーの下に Chrome のブックマークバーが出ます。クリックでそのペインに、<kbd>⌘</kbd>-クリックで新しいタブに開き、フォルダはメニューで開きます（すべてをタブで開く も）。読み取りのみで、Chrome のログイン情報やパスワードは共有しません。macOS が読み込みを許可しないときは、設定 › 一般 の案内からフルディスクアクセスで cmds をオンにします。表示とプロファイルは設定 › 一般 で選べます。</li>
         <li><kbd>⇧⌘O</kbd>（ファイル › プレビューで開く…）、またはターミナルに表示されたパスの <kbd>⌘</kbd>-クリックで、ファイルをプレビューペインに表示。画像、PDF、動画、Office、テキストは Quick Look、Markdown は整形表示、diff は色付きで表示します。</li>
         <li>ファイルが変更されると自動で再読み込みされます。エージェントが書いたレポートや画像をそのまま確認できます。</li>
       </ul>
@@ -384,6 +387,7 @@ cmds schedule history   # 実行履歴</code></pre>
             <tr><td>次 / 前のワークスペース</td><td><kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd>、<kbd>⌃Tab</kbd> / <kbd>⌃⇧Tab</kbd></td></tr>
             <tr><td>ワークスペース名を変更</td><td><kbd>⇧⌘R</kbd></td></tr>
             <tr><td>右に分割 / 下に分割</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
+            <tr><td>新規タブ / 次のタブ / 前のタブ</td><td><kbd>⌘T</kbd> / <kbd>⌥⌘]</kbd> / <kbd>⌥⌘[</kbd></td></tr>
             <tr><td>ペイン間の移動</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>隣のペインと入れ替え</td><td><kbd>⌥⇧⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>ペイン（タイル）のズーム</td><td><kbd>⇧⌘↩</kbd></td></tr>
@@ -394,7 +398,7 @@ cmds schedule history   # 実行履歴</code></pre>
             <tr><td>もう一方のペインにコピー / 移動</td><td><kbd>F5</kbd> / <kbd>F6</kbd></td></tr>
             <tr><td>転送</td><td><kbd>⌥⌘T</kbd></td></tr>
             <tr><td>アドレスバー / 再読み込み（SSH は再接続） / 戻る / 進む</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>
-            <tr><td>ペインを閉じる / ワークスペースを閉じる</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
+            <tr><td>ペイン（タブ）を閉じる / ワークスペースを閉じる</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
             <tr><td>サイドバーの表示 / コンパクト表示</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>
             <tr><td>ワークスペースを絞り込む</td><td><kbd>⌥⌘F</kbd></td></tr>
             <tr><td>文字を大きく / 小さく / 標準サイズ</td><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td></tr>

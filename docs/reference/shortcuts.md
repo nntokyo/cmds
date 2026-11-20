@@ -37,6 +37,10 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 |---|---|---|
 | Split right | ⌘D | Pane |
 | Split down | ⇧⌘D | Pane |
+| New tab beside the focused pane (browser tab in a browser, else a terminal) | ⌘T | Pane |
+| Next / previous tab of the focused pane | ⌥⌘] / ⌥⌘[ | Pane |
+| Show a tab / close it | click it / its × or a middle click | – |
+| Make a pane a tab of another | drag its grip or tab onto a tab bar, or onto the top strip of a pane | – |
 | Focus pane left / right / up / down | ⌥⌘← / ⌥⌘→ / ⌥⌘↑ / ⌥⌘↓ | Pane |
 | Swap the focused pane with the pane left / right / above / below (also across tiles) | ⌥⇧⌘← / ⌥⇧⌘→ / ⌥⇧⌘↑ / ⌥⇧⌘↓ | Pane |
 | Move the focused pane to another workspace (picker) / to a new workspace | – | Pane › Move to Workspace… / Move to New Workspace |
@@ -46,8 +50,9 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Find in the terminal (find bar; Esc closes) | ⌘F | Edit › Find |
 | Export the focused terminal's scrollback to a file | – | Pane › Export Scrollback… |
 | Next / previous hit (also Return / ⇧Return in the find bar) | ⌘G / ⇧⌘G | Edit › Find |
-| Close pane | ⌘W | File |
+| Close pane (a tab: Close Tab) | ⌘W | File |
 | Open browser split | ⇧⌘B | File |
+| Open a Chrome bookmark in a new tab | ⌘-click it in the bookmarks bar | – |
 | Open in Preview… (file picker) | ⇧⌘O | File |
 | Preview a file path shown in a terminal | ⌘-click the path | – |
 | New files pane (lists the focused pane's folder; an SSH pane's remote folder on its host) | ⇧⌘E | File |

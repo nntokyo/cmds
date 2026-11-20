@@ -17,6 +17,10 @@ extension AppController {
                 let a = convert(first, sessions: sessions, next: &next)
                 let b = convert(second, sessions: sessions, next: &next)
                 return .split(axis: axis, ratio: ratio.isFinite ? ratio : 0.5, first: a, second: b)
+            case .tabs(_, let tabs):
+                // Bundles have no tabs: the group's panes side by side, in tab order (pane indices unchanged).
+                let panes = tabs.map { convert($0, sessions: sessions, next: &next) }
+                return WorkspaceBundle.Node.sideBySide(panes)
             case .terminal(let cwd):
                 defer { next += 1 }
                 return .pane(.terminal(cwd: cwd, session: sessions[next]))
@@ -80,6 +84,15 @@ extension AppController {
         }
         return ImportResult(workspaces: created.map(\.id), panes: created.reduce(0) { $0 + $1.panes.count },
                             closed: closed, resume: resumeMode, offers: offers)
+    }
+}
+
+extension WorkspaceBundle.Node {
+    /// `nodes` in even columns, left to right (a single node as it is).
+    static func sideBySide(_ nodes: [WorkspaceBundle.Node]) -> WorkspaceBundle.Node {
+        guard let first = nodes.first else { return .pane(.terminal(cwd: nil, session: nil)) }
+        guard nodes.count > 1 else { return first }
+        return .split(axis: .horizontal, ratio: 1 / Double(nodes.count), first: first, second: sideBySide(Array(nodes.dropFirst())))
     }
 }
 

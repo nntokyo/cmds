@@ -162,6 +162,10 @@ enum MainMenu {
         menu.addItem(item("Split Right", #selector(CommandRouter.splitRight(_:)), "d", target: router))
         menu.addItem(item("Split Down", #selector(CommandRouter.splitDown(_:)), "d", [.command, .shift], target: router))
         menu.addItem(.separator())
+        menu.addItem(item("New Tab", #selector(CommandRouter.newTab(_:)), "t", target: router))
+        menu.addItem(item("Next Tab", #selector(CommandRouter.nextTab(_:)), "]", [.command, .option], target: router))
+        menu.addItem(item("Previous Tab", #selector(CommandRouter.previousTab(_:)), "[", [.command, .option], target: router))
+        menu.addItem(.separator())
         let arrows: [(String.LocalizationValue, Int, Selector)] = [
             ("Focus Left", NSLeftArrowFunctionKey, #selector(CommandRouter.focusLeft(_:))),
             ("Focus Right", NSRightArrowFunctionKey, #selector(CommandRouter.focusRight(_:))),

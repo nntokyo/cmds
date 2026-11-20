@@ -9,6 +9,9 @@ enum PaneDrop: Equatable {
     case swap(target: String)
     /// Into the workspace, beside its focused pane (its sidebar row).
     case workspace(String)
+    /// Into the tab group of the pane `target` at `index` among its tabs (a tab bar), or right after it (nil: the
+    /// strip along the top of a pane).
+    case tab(target: String, index: Int?)
 
     /// On the pane `target`: beside it on `side`, or a swap for the centre (nil).
     init(on target: String, side: PaneSide?) {
@@ -21,12 +24,14 @@ enum PaneDrop: Equatable {
 /// attention and opener stay; only its container is re-parented when the views are rebuilt. Zoom is cleared in the
 /// workspaces involved. An emptied workspace closes as when its last pane is closed.
 extension AppController {
-    /// Moves `paneID` beside the pane `beside` (on `side`), or into `workspaceID` beside its focused pane. With `focus`
+    /// Moves `paneID` beside the pane `beside` (on `side`; with `intoTabs` into its tab group, at `tabIndex` or right
+    /// after it), or
+    /// into `workspaceID` beside its focused pane. With `focus`
     /// the moved pane takes the keyboard and its workspace is shown; else the selection stays (the destination's
     /// focused pane too). Returns the destination workspace's id.
     @discardableResult
     func movePane(paneID: String, toWorkspace workspaceID: String? = nil, beside besideID: String? = nil,
-                  side: PaneSide = .right, focus: Bool = true) throws -> String {
+                  side: PaneSide = .right, focus: Bool = true, intoTabs: Bool = false, tabIndex: Int? = nil) throws -> String {
         let pane = try resolvePane(paneID)
         guard let source = workspace(id: pane.workspaceID) else { throw RPCError.notFound("pane not found: \(paneID)") }
         let destination: Workspace
@@ -56,7 +61,12 @@ extension AppController {
         let wasFocused = source.focusedPaneID == pane.id
         detach(pane, from: source)
         // Looked up again: taking the pane out collapses its parent, which may now hold the target's leaf.
-        destination.root?.leaf(for: target.id)?.insert(pane.id, side: side)
+        if intoTabs, let leaf = destination.root?.leaf(for: target.id) {
+            leaf.addTab(pane.id, after: target.id)
+            if let tabIndex { leaf.moveTab(pane.id, to: tabIndex) }
+        } else {
+            destination.root?.leaf(for: target.id)?.insert(pane.id, side: side)
+        }
         attach(pane, to: destination, from: source)
         if focus || destination === source && wasFocused {
             applyFocus(pane, in: destination)
@@ -144,6 +154,8 @@ extension AppController {
                 try focusPane(id: paneID)
             case .workspace(let workspaceID):
                 try movePane(paneID: paneID, toWorkspace: workspaceID)
+            case .tab(let target, let index):
+                try moveIntoTabs(paneID: paneID, of: target, index: index)
             }
         } catch {
             NSSound.beep()

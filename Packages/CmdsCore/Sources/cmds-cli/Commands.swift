@@ -340,6 +340,26 @@ extension CLI {
             ])
             ctx.printResult(result, field: "id")
         },
+        Command(name: "tab", usage: "tab [--pane P] [--browser URL] [--cwd DIR] [--no-focus]",
+                summary: "Open a new tab beside a pane (default: the current one) and focus it.",
+                details: """
+                    The new tab stacks with the pane in its place of the layout (a tab bar appears above them). A
+                    browser pane gets a browser tab (--browser URL: that page), any other pane a terminal (--cwd DIR,
+                    default the pane's directory). --no-focus keeps the keyboard where it is. Prints the new pane id.
+                    """,
+                options: ["pane", "browser", "cwd"], flags: ["no-focus"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds tab [options]")
+            let url = ctx.args[option: "browser"]
+            if ctx.args.rest != nil { throw CLIError.usage("a new tab does not run a command; use `cmds split` for that") }
+            let result = try ctx.call("pane.new_tab", [
+                "pane": ctx.pane.json,
+                "kind": url == nil ? nil : "browser",
+                "url": url.json,
+                "cwd": ctx.args[option: "cwd"].map { .string(absolutePath($0)) },
+                "focus": ctx.args.has("no-focus") ? false : nil,
+            ])
+            ctx.printResult(result, field: "id")
+        },
         Command(name: "reconnect", usage: "reconnect [pane]",
                 summary: "Reconnect an SSH pane whose ssh exited (as ⌘R or its Reconnect button do).") { ctx in
             try ctx.args.expectPositionals(0...1, usage: "cmds reconnect [pane]")
@@ -368,17 +388,18 @@ extension CLI {
             try ctx.call("pane.close", ["pane": (ctx.args.positionals.first ?? ctx.envPane).json])
         },
         Command(name: "pane move",
-                usage: "pane move <pane> [--to WS] [--beside P] [--side left|right|top|bottom] [--new-workspace] [--no-focus]",
+                usage: "pane move <pane> [--to WS] [--beside P [--tab]] [--side left|right|top|bottom] [--new-workspace] [--no-focus]",
                 summary: "Move a pane beside another pane, into another workspace or into a new workspace.",
                 details: """
-                    --beside P puts it on --side (default right) of pane P, in P's workspace (also within its own).
+                    --beside P puts it on --side (default right) of pane P, in P's workspace (also within its own);
+                    with --tab it becomes a tab of P's tab group instead (right after P).
                     --to WS (id, 1-based index or title) puts it into that workspace beside its focused pane.
                     --new-workspace opens a new workspace with it, after its own (a pane alone in its workspace stays).
                     What runs in the pane keeps running. A workspace left without panes closes. --no-focus keeps the
                     keyboard and the shown workspace where they are. Prints the workspace the pane is in now.
                     """,
-                options: ["to", "beside", "side"], flags: ["new-workspace", "no-focus"]) { ctx in
-            let usage = "cmds pane move <pane> [--to WS] [--beside P] [--side SIDE] [--new-workspace] [--no-focus]"
+                options: ["to", "beside", "side"], flags: ["new-workspace", "no-focus", "tab"]) { ctx in
+            let usage = "cmds pane move <pane> [--to WS] [--beside P [--tab]] [--side SIDE] [--new-workspace] [--no-focus]"
             try ctx.args.expectPositionals(1...1, usage: usage)
             let request = try paneMoveParams(ctx.args)
             var params = request.params
@@ -485,8 +506,12 @@ extension CLI {
             ctx.printResult(result, field: "id")
         },
         Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] <url>",
-                summary: "Open a browser split to the right of a pane (default: the current one).",
-                details: "--no-focus keeps the keyboard in the current pane. Prints the new pane id.",
+                summary: "Open a page in a new browser tab of the workspace, or a browser split to the right of a pane (default: the current one).",
+                details: """
+                    With Settings › General › Open new pages in tabs (on by default) the page becomes a tab of the
+                    workspace's browser pane; without one, or with the setting off, a split. --no-focus keeps the
+                    keyboard in the current pane. Prints the new pane id.
+                    """,
                 options: ["pane"], flags: ["no-focus"]) { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] [--no-focus] <url>")
             let result = try ctx.call("browser.open", ["pane": ctx.pane.json, "url": .string(ctx.args.positionals[0]),
@@ -621,6 +646,10 @@ extension CLI {
         let beside = args[option: "beside"]
         let side = args[option: "side"]
         let fresh = args.has("new-workspace")
+        let tab = args.has("tab")
+        if tab, beside == nil || side != nil || fresh {
+            throw CLIError.usage("--tab needs --beside P (whose tabs it joins), without --side or --new-workspace")
+        }
         if fresh, to != nil || beside != nil || side != nil {
             throw CLIError.usage("--new-workspace cannot be combined with --to, --beside or --side")
         }
@@ -633,6 +662,7 @@ extension CLI {
             "beside": beside.json,
             "side": side.json,
             "newWorkspace": fresh ? true : nil,
+            "tab": tab ? true : nil,
             "focus": args.has("no-focus") ? false : nil,
         ], to)
     }

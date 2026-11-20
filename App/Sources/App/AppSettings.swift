@@ -111,8 +111,12 @@ final class AppSettings: NSObject {
     static let showInMenuBarKey = "ShowInMenuBar"
     static let browserInspectableKey = "BrowserInspectable"
     static let memoryWarningKey = "MemoryWarning"
+    static let browserOpensTabsKey = "BrowserOpensTabs"
+    static let chromeBookmarksKey = "BrowserChromeBookmarks"
+    static let chromeProfileKey = "BrowserChromeProfile"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
-                               showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey] + MenuBarOption.allCases.map(\.rawValue)
+                               showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey,
+                               browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -219,6 +223,27 @@ final class AppSettings: NSObject {
     var memoryWarning: Bool {
         get { defaults.object(forKey: Self.memoryWarningKey) as? Bool ?? true }
         set { set(newValue ? nil : false, forKey: Self.memoryWarningKey) }
+    }
+
+    /// Pages opened by a link that wants a new window (`target="_blank"`), by `cmds browser open` or an agent's
+    /// `browser_open` become a tab of a browser of the workspace instead of a split (Settings › General).
+    /// On by default; only "off" is stored.
+    var browserOpensTabs: Bool {
+        get { defaults.object(forKey: Self.browserOpensTabsKey) as? Bool ?? true }
+        set { set(newValue ? nil : false, forKey: Self.browserOpensTabsKey) }
+    }
+
+    /// Browser panes show Google Chrome's bookmarks bar when Chrome's bookmarks are found (Settings › General).
+    /// On by default; only "off" is stored.
+    var chromeBookmarks: Bool {
+        get { defaults.object(forKey: Self.chromeBookmarksKey) as? Bool ?? true }
+        set { set(newValue ? nil : false, forKey: Self.chromeBookmarksKey) }
+    }
+
+    /// The Chrome profile folder whose bookmarks are shown (`Default`, `Profile 1`); nil = the one Chrome used last.
+    var chromeProfile: String? {
+        get { defaults.string(forKey: Self.chromeProfileKey).flatMap { $0.isEmpty ? nil : $0 } }
+        set { set(newValue, forKey: Self.chromeProfileKey) }
     }
 
     /// An on-by-default switch (Settings › Sidebar, Settings › Menu Bar); only "off" is stored.

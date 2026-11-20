@@ -458,6 +458,18 @@ final class APIServer {
                                               focus: try params.bool("focus") ?? true, ssh: ssh,
                                               account: try controller.resolveAccountParam(try params.string("account")),
                                               recordOpener: try params.string("pane") != nil))
+        case "pane.new_tab":
+            // Like pane.split (not for SSH panes' sockets): a tab beside the pane instead of a split.
+            let rawKind = try params.string("kind") ?? (try params.string("url") != nil ? "browser" : nil)
+            let kind = try rawKind.map { raw -> PaneKind in
+                guard let kind = PaneKind(rawValue: raw), kind == .terminal || kind == .browser else {
+                    throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\"")
+                }
+                return kind
+            }
+            return try .from(controller.newTab(paneID: try params.string("pane"), kind: kind, url: try params.string("url"),
+                                               cwd: try params.string("cwd"), focus: try params.bool("focus") ?? true,
+                                               recordOpener: try params.string("pane") != nil))
         case "pane.open_file":
             let direction = try splitDirection(params)
             let format = try params.string("format").map { raw -> PreviewFormat in
@@ -486,6 +498,13 @@ final class APIServer {
         case "pane.move":
             // #218. Like pane.split, not in RemoteAPIPolicy.allowedMethods: SSH-pane sockets get 403.
             let move = try PaneMoveRequest(params: params.value)
+            if move.tab, let beside = move.beside {
+                if let workspace = move.workspace, workspace != controller.workspaceID(forPane: beside) {
+                    throw RPCError.invalidParams("pane \(beside) is not in workspace \(workspace)")
+                }
+                try controller.moveIntoTabs(paneID: move.pane, of: beside, focus: move.focus)
+                return ["pane": .string(move.pane), "workspace": controller.workspaceID(forPane: move.pane).map(JSONValue.string) ?? .null]
+            }
             let workspace = move.newWorkspace
                 ? try controller.movePaneToNewWorkspace(paneID: move.pane, focus: move.focus)
                 : try controller.movePane(paneID: move.pane, toWorkspace: move.workspace, beside: move.beside,
@@ -508,7 +527,8 @@ final class APIServer {
         case "browser.open":
             return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url"),
                                                     focus: try params.bool("focus") ?? true,
-                                                    recordOpener: try params.string("pane") != nil))
+                                                    recordOpener: try params.string("pane") != nil,
+                                                    tabs: try params.bool("tab")))
         case "browser.navigate":
             try controller.browserNavigate(paneID: try browserPaneID(params), url: try params.required("url"))
         case "browser.get_url":

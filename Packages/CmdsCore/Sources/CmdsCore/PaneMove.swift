@@ -1,8 +1,8 @@
 import Foundation
 
 /// Params of `pane.move` (#218, docs/reference/api.md): `pane`, and where it goes: `beside` another pane (on `side`,
-/// default right), into `workspace` (beside its focused pane), or `newWorkspace`. `focus` (default true): the moved
-/// pane takes the keyboard and its workspace is shown.
+/// default right; with `tab` into its tab group instead), into `workspace` (beside its focused pane), or
+/// `newWorkspace`. `focus` (default true): the moved pane takes the keyboard and its workspace is shown.
 public struct PaneMoveRequest: Equatable, Sendable {
     public var pane: String
     public var workspace: String?
@@ -10,15 +10,18 @@ public struct PaneMoveRequest: Equatable, Sendable {
     public var side: PaneSide
     public var newWorkspace: Bool
     public var focus: Bool
+    /// Into the tab group of `beside` (a tab right after it) instead of a split.
+    public var tab: Bool
 
     public init(pane: String, workspace: String? = nil, beside: String? = nil, side: PaneSide = .right,
-                newWorkspace: Bool = false, focus: Bool = true) {
+                newWorkspace: Bool = false, focus: Bool = true, tab: Bool = false) {
         self.pane = pane
         self.workspace = workspace
         self.beside = beside
         self.side = side
         self.newWorkspace = newWorkspace
         self.focus = focus
+        self.tab = tab
     }
 
     public init(params: JSONValue?) throws {
@@ -32,7 +35,10 @@ public struct PaneMoveRequest: Equatable, Sendable {
         }
         self.init(pane: pane, workspace: try params.string("workspace"), beside: try params.string("beside"),
                   side: side ?? .right, newWorkspace: try params.bool("newWorkspace") ?? false,
-                  focus: try params.bool("focus") ?? true)
+                  focus: try params.bool("focus") ?? true, tab: try params.bool("tab") ?? false)
+        if tab, beside == nil || side != nil || newWorkspace {
+            throw RPCError.invalidParams("tab needs beside (the pane whose tabs it joins), without side or newWorkspace")
+        }
         if newWorkspace {
             guard workspace == nil, beside == nil, side == nil else {
                 throw RPCError.invalidParams("newWorkspace cannot be combined with workspace, beside or side")

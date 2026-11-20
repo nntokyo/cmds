@@ -170,7 +170,7 @@ final class MCPServer {
 
     static let tools: [Tool] = [
         Tool(name: "browser_open",
-             description: "Open a URL in a new cmds browser pane split to the right of your terminal, without taking the keyboard focus. Returns the pane id. Use this instead of Chrome inside cmds.",
+             description: "Open a URL in a new cmds browser pane, without taking the keyboard focus: a new tab of the workspace's browser pane, or a split to the right of your terminal when there is none (or the user turned tabs off). Returns the pane id. Use this instead of Chrome inside cmds.",
              properties: ["url": string("URL to load (http, https, file).")], required: ["url"]),
         Tool(name: "browser_navigate", description: "Load a URL in a cmds browser pane.",
              properties: ["url": string("URL to load."), "pane": browserPane], required: ["url"]),

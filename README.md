@@ -17,7 +17,9 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 - **Find and command palette**: ⌘F searches a terminal's scrollback (libghostty's highlighted search; Match Case and
   regular expressions too), ⇧⌘P finds workspaces, panes, menu commands, agent sessions and ports.
 - **Attention ring**: panes light up on OSC 9/777 notifications, the bell or `cmds notify`; ⇧⌘U jumps to the latest.
-- **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`), with phone, tablet and desktop sizes, a breakpoint indicator and light/dark (`cmds browser device`).
+- **Tabs**: stack terminals, browsers, previews and files panes as tabs in any place of the layout (⌘T); links and
+  agents' pages open as browser tabs instead of new splits.
+- **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`), with phone, tablet and desktop sizes, a breakpoint indicator and light/dark (`cmds browser device`), and Google Chrome's bookmarks bar.
 - **Preview panes**: images, PDFs, video and Office files (Quick Look), rendered Markdown and coloured diffs, reloaded
   when the file changes; ⌘-click a path in the terminal to open it.
 - **Files panes**: a folder on the Mac or on an SSH host (SFTP with your own ssh, keys and agent) as a list (size,
@@ -105,7 +107,7 @@ More: [docs/guide/getting-started.md](docs/guide/getting-started.md).
 
   ```sh
   cmds split down -- npm run dev            # dev server in a new pane below
-  cmds browser open http://localhost:3000   # browser pane on the right
+  cmds browser open http://localhost:3000   # browser pane on the right (then tabs)
   git diff | cmds open --diff -             # coloured diff in a preview pane
   cmds files                                # this directory in a files pane
   cmds files home:/var/www                  # a folder on the SSH host "home"
@@ -126,6 +128,7 @@ More: [docs/guide/getting-started.md](docs/guide/getting-started.md).
 | Next / previous workspace | ⇧⌘] / ⇧⌘[, ⌃Tab / ⌃⇧Tab |
 | Rename workspace | ⇧⌘R |
 | Split right / down | ⌘D / ⇧⌘D |
+| New tab / next tab / previous tab | ⌘T / ⌥⌘] / ⌥⌘[ |
 | Focus pane left / right / up / down | ⌥⌘← / → / ↑ / ↓ |
 | Zoom pane | ⇧⌘↩ |
 | Jump to latest attention | ⇧⌘U |

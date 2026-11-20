@@ -43,6 +43,11 @@ final class BrowserPane: NSView {
     // Pop-ups, `_blank` links, dialogs, uploads and downloads (BrowserPageDelegate.swift, #235).
     /// Opens a `target="_blank"` link in a new browser pane beside this one; false: none could be opened.
     var onOpenInNewPane: ((URL) -> Bool)?
+    /// Opens a page in a new tab beside this pane, in the background (a ⌘-click on a Chrome bookmark).
+    var onOpenInNewTab: ((URL) -> Void)?
+    /// Chrome's bookmarks under the toolbar (Settings › General).
+    let bookmarksBar = ChromeBookmarksBarView()
+    private var bookmarksBarHeight: NSLayoutConstraint?
     let pageDelegate = BrowserPageDelegate()
     private var noticeBanner: BrowserNoticeView?
     private var noticeHide: DispatchWorkItem?
@@ -356,6 +361,7 @@ final class BrowserPane: NSView {
         onFocus = nil
         onEmulationChange = nil
         onOpenInNewPane = nil
+        onOpenInNewTab = nil
         defaultWatchFolder = nil
     }
 
@@ -491,19 +497,40 @@ final class BrowserPane: NSView {
         buildDeviceControls()
         viewportHost.translatesAutoresizingMaskIntoConstraints = false
         viewportHost.addSubview(webView)
+        bookmarksBar.translatesAutoresizingMaskIntoConstraints = false
+        bookmarksBar.onOpen = { [weak self] url, newTab in
+            guard let self else { return }
+            if newTab, let open = self.onOpenInNewTab { open(url) } else { try? self.navigate(to: url.absoluteString) }
+        }
+        bookmarksBar.onVisibilityChange = { [weak self] in self?.updateBookmarksBar() }
         addSubview(toolbar)
+        addSubview(bookmarksBar)
         addSubview(viewportHost)
+        let barHeight = bookmarksBar.heightAnchor.constraint(equalToConstant: 0)
+        bookmarksBarHeight = barHeight
         NSLayoutConstraint.activate([
             toolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
             toolbar.topAnchor.constraint(equalTo: topAnchor),
             toolbar.heightAnchor.constraint(equalToConstant: 30),
+            bookmarksBar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bookmarksBar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            bookmarksBar.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+            barHeight,
             viewportHost.leadingAnchor.constraint(equalTo: leadingAnchor),
             viewportHost.trailingAnchor.constraint(equalTo: trailingAnchor),
-            viewportHost.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+            viewportHost.topAnchor.constraint(equalTo: bookmarksBar.bottomAnchor),
             viewportHost.bottomAnchor.constraint(equalTo: bottomAnchor),
         ])
+        updateBookmarksBar()
         updateButtons()
+    }
+
+    /// Shows the bookmarks bar when it has something to show (the store is empty while the setting is off).
+    private func updateBookmarksBar() {
+        let shown = bookmarksBar.hasContent
+        bookmarksBar.isHidden = !shown
+        bookmarksBarHeight?.constant = shown ? ChromeBookmarksBarView.height : 0
     }
 
     private func observe() {

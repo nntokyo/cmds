@@ -1,7 +1,8 @@
 import AppKit
 import CmdsCore
 
-/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, subagent cards, Claude
+/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, browser tabs and Chrome
+/// bookmarks, subagent cards, Claude
 /// accounts and schedules (their own windows), automatic updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
 /// The tabs of Settings.
 enum SettingsTab: String {
@@ -26,6 +27,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let inspectableCheckbox = NSButton(checkboxWithTitle: String(localized: "Allow Safari's Web Inspector"), target: nil, action: nil)
     private let mcpCheckbox = NSButton(checkboxWithTitle: String(localized: "Register cmds’ MCP server with your agents", comment: "Settings › Agents"), target: nil, action: nil)
     private let memoryWarningCheckbox = NSButton(checkboxWithTitle: String(localized: "Warn when memory is short"), target: nil, action: nil)
+    private let browserTabsCheckbox = NSButton(checkboxWithTitle: String(localized: "Open new pages in tabs", comment: "Settings › General › Browser"), target: nil, action: nil)
+    private let chromeBookmarksCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Chrome bookmarks", comment: "Settings › General › Browser"), target: nil, action: nil)
+    private let chromeProfilePopup = NSPopUpButton()
+    /// Why Chrome's bookmarks cannot be shown (empty when they can), and the button to Privacy & Security.
+    private let chromeProblemNote = SettingsWindowController.note("")
+    private let chromeAccessButton = NSButton(title: String(localized: "Open Privacy Settings…", comment: "Settings › General › Chrome bookmarks without access"), target: nil, action: nil)
+    private var chromeObserver: NSObjectProtocol?
     /// Settings › Sidebar: what the rows and the footer show (#107).
     private let sidebarItemCheckboxes = SettingsWindowController.checkboxes(for: SidebarItem.self)
     /// Settings › Menu Bar: one checkbox per part of the item (#105).
@@ -161,6 +169,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         mcpCheckbox.action = #selector(mcpToggled)
         memoryWarningCheckbox.target = self
         memoryWarningCheckbox.action = #selector(memoryWarningToggled)
+        browserTabsCheckbox.target = self
+        browserTabsCheckbox.action = #selector(browserTabsToggled)
+        chromeBookmarksCheckbox.target = self
+        chromeBookmarksCheckbox.action = #selector(chromeBookmarksToggled)
+        chromeProfilePopup.target = self
+        chromeProfilePopup.action = #selector(chromeProfileChanged)
+        chromeAccessButton.bezelStyle = .rounded
+        chromeAccessButton.target = self
+        chromeAccessButton.action = #selector(openFullDiskAccess)
+        chromeObserver = NotificationCenter.default.addObserver(forName: ChromeBookmarkStore.didChange, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { SettingsWindowController.shared.refreshChromeProblem() }
+        }
         for checkbox in Array(menuBarOptionCheckboxes.values) + Array(sidebarItemCheckboxes.values) {
             checkbox.target = self
             checkbox.action = #selector(optionToggled(_:))
@@ -188,6 +208,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.label(String(localized: "Preview zoom:")), previewZoomPopup],
             [NSGridCell.emptyContentView, inspectableCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
+            [NSGridCell.emptyContentView, browserTabsCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Links that open a new window, `cmds browser open` and agents' browser_open add a tab to the workspace's browser instead of a split. ⌘T opens a tab beside any pane.", comment: "Settings › General › Browser"))],
+            [NSGridCell.emptyContentView, chromeBookmarksCheckbox],
+            [Self.label(String(localized: "Chrome profile:", comment: "Settings › General › Browser")), chromeProfilePopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "A bar of Google Chrome's bookmarks under the address bar (read only; ⌘-click opens a new tab). Chrome's sign-ins and passwords are not shared.", comment: "Settings › General › Browser"))],
+            [NSGridCell.emptyContentView, chromeProblemNote],
+            [NSGridCell.emptyContentView, chromeAccessButton],
             [Self.header(String(localized: "Memory")), NSGridCell.emptyContentView],
             [NSGridCell.emptyContentView, memoryWarningCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "A notification when memory pressure stays at warning or worse for a minute (at most every 30 minutes), with the swap in use and the heaviest process started from a cmds terminal."))],
@@ -237,7 +264,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let tabs = NSTabViewController()
         tabs.tabStyle = .toolbar
         for (tab, title, symbol, rows, headers) in [
-            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 9]),
+            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 16]),
             (.sidebar, String(localized: "Sidebar"), "sidebar.left", sidebar, []),
             (.agents, String(localized: "Agents"), "sparkles", agents, []),
             (.menuBar, String(localized: "Menu Bar"), "menubar.rectangle", menuBar, []),
@@ -442,6 +469,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         menuBarCheckbox.state = settings.showInMenuBar ? .on : .off
         inspectableCheckbox.state = settings.browserInspectable ? .on : .off
         memoryWarningCheckbox.state = settings.memoryWarning ? .on : .off
+        browserTabsCheckbox.state = settings.browserOpensTabs ? .on : .off
+        chromeBookmarksCheckbox.state = settings.chromeBookmarks ? .on : .off
+        fillChromeProfiles()
+        refreshChromeProblem()
         mcpCheckbox.state = MCPAutoRegistration.isEnabled ? .on : .off
         for (item, checkbox) in sidebarItemCheckboxes { checkbox.state = settings.sidebar(item) ? .on : .off }
         for (option, checkbox) in menuBarOptionCheckboxes {
@@ -549,6 +580,65 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func memoryWarningToggled() {
         settings.memoryWarning = memoryWarningCheckbox.state == .on
+    }
+
+    @objc private func browserTabsToggled() {
+        settings.browserOpensTabs = browserTabsCheckbox.state == .on
+    }
+
+    @objc private func chromeBookmarksToggled() {
+        settings.chromeBookmarks = chromeBookmarksCheckbox.state == .on
+    }
+
+    @objc private func chromeProfileChanged() {
+        settings.chromeProfile = chromeProfilePopup.selectedItem?.representedObject as? String
+    }
+
+    /// The note under the profile: why no bookmarks show; the button only when macOS refused access.
+    private func refreshChromeProblem() {
+        let problem = settings.chromeBookmarks ? ChromeBookmarkStore.shared.problem : nil
+        switch problem {
+        case .noAccess:
+            chromeProblemNote.stringValue = String(localized: "macOS keeps other apps from reading Chrome's data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds.", comment: "Settings › General › Chrome bookmarks")
+        case .notFound:
+            chromeProblemNote.stringValue = String(localized: "No Chrome bookmarks found for this profile.", comment: "Settings › General › Chrome bookmarks")
+        case .unreadable:
+            chromeProblemNote.stringValue = String(localized: "Chrome's bookmarks file could not be read.", comment: "Settings › General › Chrome bookmarks")
+        case nil:
+            chromeProblemNote.stringValue = ""
+        }
+        // The grid's rows, so hidden rows take no room.
+        for (view, hidden) in [(chromeProblemNote as NSView, problem == nil), (chromeAccessButton, problem != .noAccess)] {
+            view.isHidden = hidden
+            (view.superview as? NSGridView)?.cell(for: view)?.row?.isHidden = hidden
+        }
+    }
+
+    @objc private func openFullDiskAccess() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+
+    /// "Last used" and Chrome's profiles; disabled without Chrome or with the bar off.
+    private func fillChromeProfiles() {
+        let (profiles, lastUsed) = ChromeBookmarkStore.profiles()
+        chromeProfilePopup.removeAllItems()
+        let lastName = profiles.first { $0.directory == lastUsed }?.name
+        chromeProfilePopup.addItem(withTitle: lastName.map { String(localized: "Last used (\($0))", comment: "Settings › General › Chrome profile") }
+            ?? String(localized: "Last used", comment: "Settings › General › Chrome profile"))
+        for profile in profiles {
+            chromeProfilePopup.addItem(withTitle: profile.name == profile.directory ? profile.name : "\(profile.name) (\(profile.directory))")
+            chromeProfilePopup.lastItem?.representedObject = profile.directory
+        }
+        let chosen = settings.chromeProfile
+        if let chosen, !profiles.contains(where: { $0.directory == chosen }) {
+            chromeProfilePopup.addItem(withTitle: chosen)
+            chromeProfilePopup.lastItem?.representedObject = chosen
+        }
+        let index = chosen.map { chromeProfilePopup.indexOfItem(withRepresentedObject: $0) } ?? 0
+        chromeProfilePopup.selectItem(at: max(index, 0))
+        chromeProfilePopup.isEnabled = settings.chromeBookmarks && !profiles.isEmpty
     }
 
     @objc private func menuBarToggled() {
