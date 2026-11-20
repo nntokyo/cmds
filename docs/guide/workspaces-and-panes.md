@@ -257,7 +257,8 @@ cmds browser find 'Sign in'                          # select the next match on 
 When Google Chrome is installed, a bar under the address bar shows Chrome's bookmarks bar: a click loads the bookmark
 in the pane, ⌘-click opens it in a new tab in the background, folders open a menu (with **Open All in Tabs**). What
 does not fit is in the » menu; Chrome's Other and Mobile bookmarks are in **Other Bookmarks** at the right. cmds only
-reads Chrome's bookmarks file (`~/Library/Application Support/Google/Chrome/<profile>/Bookmarks`), again whenever you
+reads Chrome's bookmark files (`~/Library/Application Support/Google/Chrome/<profile>/AccountBookmarks`, the bookmarks
+saved in your Google Account, then `Bookmarks`, those on this Mac), again whenever you
 come back to cmds after changing them in Chrome; it never writes there, and Chrome's sign-ins, cookies and passwords
 are not shared (sign in to sites in the pane itself). `javascript:` bookmarklets and `chrome://` pages are left out.
 
