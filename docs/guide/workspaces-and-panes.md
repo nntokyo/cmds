@@ -97,8 +97,8 @@ browser, preview, files), title and an orange icon when it needs attention.
   --beside P --tab` makes a pane a tab of P's group ([CLI](../reference/cli.md)). `cmds ls` lists every tab of a
   group; in `--json`, a tab's pane has `tabs` (the group in order) and `background: true` when it is not shown.
 
-Tabs are restored with the session. Export bundles (File › Export Workspaces…) put a group's panes side by side, as
-older cmds versions can read them. The iPhone shows the tab that is shown on the Mac.
+Tabs are restored with the session. An older cmds version opening the same session, and export bundles (File ›
+Export Workspaces…), show a group's panes side by side instead. The iPhone shows the tab that is shown on the Mac.
 
 ### Moving panes
 

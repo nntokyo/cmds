@@ -52,7 +52,8 @@ final class TabGroupView: NSView {
 final class TabBarView: NSView, NSDraggingSource {
     static let height: CGFloat = 28
     private static let maxTabWidth: CGFloat = 220
-    private static let minTabWidth: CGFloat = 72
+    /// Narrower tabs show only their icon (and the × when hovered or shown).
+    private static let titleMinWidth: CGFloat = 64
     private static let plusWidth: CGFloat = 28
     private static let closeSize: CGFloat = 16
     private static let dragThreshold: CGFloat = 4
@@ -100,10 +101,11 @@ final class TabBarView: NSView, NSDraggingSource {
 
     // MARK: Geometry
 
+    /// Every tab fits before the +: wide tabs shrink evenly, down to an icon each (never past the bar).
     private var tabWidth: CGFloat {
         guard !tabs.isEmpty else { return Self.maxTabWidth }
         let available = max(bounds.width - Self.plusWidth, 0)
-        return min(Self.maxTabWidth, max(Self.minTabWidth, (available / CGFloat(tabs.count)).rounded(.down)))
+        return max(min(Self.maxTabWidth, (available / CGFloat(tabs.count)).rounded(.down)), 1)
     }
 
     private func tabRect(_ index: Int) -> NSRect {
@@ -117,12 +119,11 @@ final class TabBarView: NSView, NSDraggingSource {
     }
 
     private var plusRect: NSRect {
-        let x = min(CGFloat(tabs.count) * tabWidth, max(bounds.width - Self.plusWidth, 0))
-        return NSRect(x: x, y: 0, width: Self.plusWidth, height: bounds.height)
+        NSRect(x: CGFloat(tabs.count) * tabWidth, y: 0, width: Self.plusWidth, height: bounds.height)
     }
 
     private func index(at point: NSPoint) -> Int? {
-        guard point.x >= 0, point.y >= 0, point.y <= bounds.height else { return nil }
+        guard point.x >= 0, point.y >= 0, point.y <= bounds.height, !plusRect.contains(point) else { return nil }
         let index = Int(point.x / tabWidth)
         return tabs.indices.contains(index) && tabRect(index).contains(point) ? index : nil
     }
@@ -175,13 +176,15 @@ final class TabBarView: NSView, NSDraggingSource {
         NSColor(calibratedWhite: 0.24, alpha: 1).setFill()
         NSRect(x: rect.maxX - 1, y: 6, width: 1, height: rect.height - 12).fill()
 
-        var x = rect.minX + 9
+        let narrow = rect.width < Self.titleMinWidth
+        var x = narrow ? rect.midX - 7 : rect.minX + 9
+        let closeShown = showsClose(index)
+        if narrow, closeShown { x = rect.minX + 4 }
         let iconRect = NSRect(x: x, y: rect.midY - 7, width: 14, height: 14)
         drawSymbol(Self.symbol(for: tab.kind), in: iconRect,
                    color: tab.attention ? .systemOrange : (selected ? .labelColor : .secondaryLabelColor))
         x = iconRect.maxX + 6
-        let showsClose = selected || hoveredIndex == index
-        let textRight = (showsClose ? closeRect(index).minX : rect.maxX - 6) - 4
+        let textRight = (closeShown ? closeRect(index).minX : rect.maxX - 6) - 4
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byTruncatingTail
         let title = NSAttributedString(string: tab.title.isEmpty ? Self.defaultTitle(tab.kind) : tab.title, attributes: [
@@ -190,9 +193,9 @@ final class TabBarView: NSView, NSDraggingSource {
             .paragraphStyle: paragraph,
         ])
         let textHeight: CGFloat = 15
-        title.draw(with: NSRect(x: x, y: rect.midY - textHeight / 2, width: max(textRight - x, 0), height: textHeight),
-                   options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine])
-        if showsClose {
+        if !narrow { title.draw(with: NSRect(x: x, y: rect.midY - textHeight / 2, width: max(textRight - x, 0), height: textHeight),
+                   options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine]) }
+        if closeShown {
             let close = closeRect(index)
             if hoveringClose, hoveredIndex == index {
                 NSColor(calibratedWhite: 1, alpha: 0.12).setFill()
@@ -245,11 +248,17 @@ final class TabBarView: NSView, NSDraggingSource {
         hoverArea = area
     }
 
+    /// The × of the tab at `index` is drawn there (selected or hovered, and the tab wide enough).
+    private func showsClose(_ index: Int) -> Bool {
+        tabs.indices.contains(index) && (tabs[index].paneID == selectedID || hoveredIndex == index)
+            && tabWidth >= Self.closeSize + 20
+    }
+
     private func updateHover(_ event: NSEvent?) {
         let point = event.map { convert($0.locationInWindow, from: nil) }
         var index = point.flatMap(index(at:))
         if index == nil, let point, plusRect.contains(point) { index = -1 }
-        let close = index.map { $0 >= 0 && point.map(closeRect($0).contains) == true } ?? false
+        let close = index.map { $0 >= 0 && tabWidth >= Self.closeSize + 20 && point.map(closeRect($0).contains) == true } ?? false
         if index != hoveredIndex || close != hoveringClose {
             hoveredIndex = index
             hoveringClose = close
@@ -264,12 +273,16 @@ final class TabBarView: NSView, NSDraggingSource {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
+    // A tab is shown on mouse up, not down: showing it rebuilds the views (this bar included), which would end a drag
+    // before it starts. So any tab can be dragged, shown or not.
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if let index = index(at: point) {
-            pressed = (index, event.locationInWindow, closeRect(index).contains(point) && (tabs[index].paneID == selectedID || hoveredIndex == index))
-            if pressed?.onClose == false { onSelect?(tabs[index].paneID) }
-        } else if plusRect.contains(point) || event.clickCount == 2 {
+        if plusRect.contains(point) {
+            pressed = nil
+            onNewTab?()
+        } else if let index = index(at: point) {
+            pressed = (index, event.locationInWindow, showsClose(index) && closeRect(index).contains(point))
+        } else if event.clickCount == 2 {
             pressed = nil
             onNewTab?()
         }
@@ -285,9 +298,14 @@ final class TabBarView: NSView, NSDraggingSource {
 
     override func mouseUp(with event: NSEvent) {
         defer { pressed = nil }
-        guard let pressed, pressed.onClose, tabs.indices.contains(pressed.index) else { return }
+        guard let pressed, tabs.indices.contains(pressed.index) else { return }
         let point = convert(event.locationInWindow, from: nil)
-        if closeRect(pressed.index).contains(point) { onClose?(tabs[pressed.index].paneID) }
+        let id = tabs[pressed.index].paneID
+        if pressed.onClose {
+            if closeRect(pressed.index).contains(point) { onClose?(id) }
+        } else {
+            onSelect?(id)
+        }
     }
 
     override func otherMouseUp(with event: NSEvent) {

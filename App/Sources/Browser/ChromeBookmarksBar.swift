@@ -159,7 +159,14 @@ final class ChromeBookmarksBarView: NSView {
     private let overflowButton = BrowserPane.toolbarButton("chevron.right.2", label: String(localized: "More Bookmarks"))
     private let otherButton = NSButton(title: "", target: nil, action: nil)
     private var otherItems: [ChromeBookmarks.Item] = []
-    private var observer: NSObjectProtocol?
+    /// Removed in deinit (the bar of every closed browser pane would stay registered otherwise).
+    nonisolated(unsafe) private var observer: NSObjectProtocol?
+    /// The bookmarks changed while the pane was off screen (a hidden tab or workspace): reloaded when it comes back.
+    private var reloadPending = false
+    /// Buttons are made for this many bar items at most; the rest are only in the » menu.
+    private static let maxButtons = 60
+    /// Open All in Tabs asks first above this many links.
+    private static let openAllConfirmCount = 20
     /// How many bar items fit (the rest are in the » menu).
     private var shownCount = 0
 
@@ -175,7 +182,10 @@ final class ChromeBookmarksBarView: NSView {
         addSubview(overflowButton)
         addSubview(otherButton)
         observer = NotificationCenter.default.addObserver(forName: ChromeBookmarkStore.didChange, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.reload() }
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                if self.window == nil { self.reloadPending = true } else { self.reload() }
+            }
         }
         reload()
     }
@@ -183,9 +193,19 @@ final class ChromeBookmarksBarView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    deinit {
+        if let observer { NotificationCenter.default.removeObserver(observer) }
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil, reloadPending { reload() }
+    }
+
     override var isFlipped: Bool { true }
 
     func reload() {
+        reloadPending = false
         let wasShown = hasContent
         let tree = ChromeBookmarkStore.shared.tree
         items = tree?.bar ?? []
@@ -195,7 +215,7 @@ final class ChromeBookmarksBarView: NSView {
         }
         otherItems = other
         buttons.forEach { $0.removeFromSuperview() }
-        buttons = items.enumerated().map { index, item in
+        buttons = items.prefix(Self.maxButtons).enumerated().map { index, item in
             let button = NSButton(title: "", target: self, action: #selector(itemClicked(_:)))
             switch item {
             case .link(let title, let url):
@@ -243,7 +263,7 @@ final class ChromeBookmarksBarView: NSView {
         shownCount = 0
         for (index, button) in buttons.enumerated() {
             let width = min(button.intrinsicContentSize.width, 180)
-            let remainingAfter = index < buttons.count - 1 ? overflowWidth + spacing : 0
+            let remainingAfter = index < items.count - 1 ? overflowWidth + spacing : 0
             if x + width + remainingAfter > right {
                 break
             }
@@ -253,7 +273,7 @@ final class ChromeBookmarksBarView: NSView {
             shownCount += 1
         }
         for button in buttons[shownCount...] { button.isHidden = true }
-        overflowButton.isHidden = shownCount >= buttons.count
+        overflowButton.isHidden = shownCount >= items.count
         overflowButton.frame = NSRect(x: x, y: (height - 20) / 2, width: overflowWidth, height: 20)
     }
 
@@ -277,7 +297,7 @@ final class ChromeBookmarksBarView: NSView {
     }
 
     @objc private func overflowClicked(_ sender: NSButton) {
-        popUp(menu(title: "", items: Array(items[shownCount...])), below: sender)
+        popUp(menu(title: "", items: Array(items[min(shownCount, items.count)...])), below: sender)
     }
 
     @objc private func otherClicked(_ sender: NSButton) {
@@ -290,8 +310,16 @@ final class ChromeBookmarksBarView: NSView {
     }
 
     @objc private func openAllInTabs(_ sender: NSMenuItem) {
-        guard let urls = sender.representedObject as? [URL] else { return }
-        for url in urls { onOpen?(url, true) }
+        guard let urls = sender.representedObject as? [URL], !urls.isEmpty else { return }
+        if urls.count > Self.openAllConfirmCount {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Open \(urls.count) tabs?", comment: "Chrome bookmarks: Open All in Tabs of a large folder")
+            alert.addButton(withTitle: String(localized: "Open", comment: "Chrome bookmarks: Open All in Tabs of a large folder"))
+            alert.addButton(withTitle: String(localized: "Cancel"))
+            guard alert.runModal() == .alertFirstButtonReturn else { return }
+        }
+        // Each new tab goes right after the pane's own: opened last to first, they end up in the folder's order.
+        for url in urls.reversed() { onOpen?(url, true) }
     }
 
     private func popUp(_ menu: NSMenu, below button: NSButton) {

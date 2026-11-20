@@ -630,7 +630,8 @@ final class APIServer {
             workspace = selected
         }
         if let focused = workspace.focusedPane, focused.kind == .browser { return focused.id }
-        if let first = workspace.orderedPanes.first(where: { $0.kind == .browser }) { return first.id }
+        // A browser on screen before a tab in the background.
+        if let first = (workspace.visiblePanes + workspace.orderedPanes).first(where: { $0.kind == .browser }) { return first.id }
         throw RPCError.notFound("no browser pane in workspace \(workspace.id) (open one with `cmds browser open <url>`)")
     }
 

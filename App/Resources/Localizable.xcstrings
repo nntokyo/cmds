@@ -7684,11 +7684,23 @@
       }
     },
     "Open": {
+      "comment": "Chrome bookmarks: Open All in Tabs of a large folder",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "開く"
+          }
+        }
+      }
+    },
+    "Open %lld tabs?": {
+      "comment": "Chrome bookmarks: Open All in Tabs of a large folder",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld個のタブを開きますか？"
           }
         }
       }

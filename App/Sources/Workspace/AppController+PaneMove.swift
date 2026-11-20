@@ -62,7 +62,9 @@ extension AppController {
         detach(pane, from: source)
         // Looked up again: taking the pane out collapses its parent, which may now hold the target's leaf.
         if intoTabs, let leaf = destination.root?.leaf(for: target.id) {
-            leaf.addTab(pane.id, after: target.id)
+            // Without focus, a group whose tab has the keyboard keeps showing it.
+            let keyboardHere = !focus && destination.focusedPaneID.map(leaf.tabs.contains) == true
+            leaf.addTab(pane.id, after: target.id, select: !keyboardHere)
             if let tabIndex { leaf.moveTab(pane.id, to: tabIndex) }
         } else {
             destination.root?.leaf(for: target.id)?.insert(pane.id, side: side)
@@ -133,6 +135,11 @@ extension AppController {
         first.zoomedPaneID = nil
         second.zoomedPaneID = nil
         guard first !== second else {
+            // A pane swapped into a tab that is not shown: the keyboard goes to the pane now in its place.
+            if let focused = first.focusedPaneID, first.root?.isBackgroundTab(focused) == true {
+                let replacement = focused == a.id ? b : (focused == b.id ? a : nil)
+                if let replacement { applyFocus(replacement, in: first) }
+            }
             emit(.workspace(id: first.id))
             if first.id == selectedWorkspaceID { focusSelectedPaneView() }
             return
@@ -205,14 +212,12 @@ extension AppController {
 
     /// Takes `pane` out of `source`'s tree; a source that keeps panes focuses the one that followed it in reading order.
     private func detach(_ pane: Pane, from source: Workspace) {
-        let order = source.orderedPanes.map(\.id)
+        let next = source.focusedPaneID == pane.id ? nextFocus(afterRemoving: pane.id, from: source) : nil
         source.panes[pane.id] = nil
         source.root = source.root.flatMap { SplitNode.removing(pane.id, from: $0) }
         source.zoomedPaneID = nil
-        guard source.root != nil, source.focusedPaneID == pane.id else { return }
-        let index = order.firstIndex(of: pane.id) ?? 0
-        let remaining = source.orderedPanes
-        if let next = remaining[safe: min(index, remaining.count - 1)] { applyFocus(next, in: source) }
+        guard source.root != nil, let next = next?() else { return }
+        applyFocus(next, in: source)
     }
 
     /// Puts `pane` (already in `destination`'s tree) into `destination`; its sidebar notification text goes along.

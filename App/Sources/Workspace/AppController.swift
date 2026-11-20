@@ -368,9 +368,7 @@ final class AppController {
             throw RPCError.invalidParams("pane \(pane.id) was not opened from pane \(openedBy)")
         }
         guard let workspace = workspace(id: pane.workspaceID), let root = workspace.root else { return }
-        let order = workspace.orderedPanes.map(\.id)
-        // A tab of a group: the group's next shown tab takes the focus.
-        let group = root.leaf(for: pane.id).flatMap { $0.isTabGroup ? $0 : nil }
+        let next = nextFocus(afterRemoving: pane.id, from: workspace)
         pane.tearDown()
         workspace.panes[pane.id] = nil
         workspace.root = SplitNode.removing(pane.id, from: root)
@@ -380,14 +378,7 @@ final class AppController {
             try closeWorkspace(id: workspace.id)
             return
         }
-        if workspace.focusedPaneID == pane.id, let group, let shown = group.paneID.flatMap({ workspace.panes[$0] }) {
-            applyFocus(shown, in: workspace)
-        } else if workspace.focusedPaneID == pane.id {
-            // Focus the pane that followed (or preceded) the closed one in reading order.
-            let index = order.firstIndex(of: pane.id) ?? 0
-            let remaining = workspace.orderedPanes
-            if let next = remaining[safe: min(index, remaining.count - 1)] { applyFocus(next, in: workspace) }
-        }
+        if workspace.focusedPaneID == pane.id, let next = next() { applyFocus(next, in: workspace) }
         emit(.workspace(id: workspace.id))
         if workspace.id == selectedWorkspaceID { focusSelectedPaneView() }
     }
@@ -482,7 +473,7 @@ final class AppController {
     func toggleZoom(paneID: String? = nil) throws {
         let pane = try resolvePane(paneID)
         guard let workspace = workspace(id: pane.workspaceID) else { return }
-        workspace.zoomedPaneID = workspace.zoomedPaneID == nil && workspace.panes.count > 1 ? pane.id : nil
+        workspace.zoomedPaneID = workspace.zoomedPaneID == nil && workspace.showsSeveralPanes ? pane.id : nil
         applyFocus(pane, in: workspace)
         emit(.workspace(id: workspace.id))
         if workspace.id == selectedWorkspaceID { pane.focus() }
@@ -612,9 +603,16 @@ final class AppController {
     /// has one, else in a new preview split to the right. The pane keeps the keyboard.
     func openFileFromTerminal(_ pane: Pane, path: String) {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
-        let existing = workspace.orderedPanes.first { $0.kind == .preview }
+        // A preview on screen, else one in the background of another place (brought to the front); never a tab of
+        // the terminal's own group, which would hide the terminal.
+        let ownGroup = workspace.root?.leaf(for: pane.id)?.tabs ?? [pane.id]
+        let existing = workspace.visiblePanes.first { $0.kind == .preview }
+            ?? workspace.orderedPanes.first { $0.kind == .preview && !ownGroup.contains($0.id) }
         do {
             try openFile(paneID: existing?.id ?? pane.id, path: path, focus: false)
+            if let existing, workspace.root?.leaf(for: existing.id)?.selectTab(existing.id) == true {
+                emit(.workspace(id: workspace.id))
+            }
         } catch {
             NSSound.beep()
         }
@@ -931,9 +929,11 @@ final class AppController {
         func node(_ split: SplitNode, in workspace: Workspace) -> SessionState.Node {
             switch split.content {
             case .leaf(let id):
+                // A tab group as even columns (older versions read that); `tabGroups` stacks them again.
                 guard split.isTabGroup else { return paneNode(id, in: workspace) }
-                return .tabs(selected: split.tabs.firstIndex(of: id) ?? 0,
-                             tabs: split.tabs.map { paneNode($0, in: workspace) })
+                return SplitNode.evenColumns(split.tabs.map { paneNode($0, in: workspace) }) { ratio, first, second in
+                    .split(axis: .horizontal, ratio: ratio, first: first, second: second)
+                } ?? paneNode(id, in: workspace)
             case .split(let axis, let first, let second):
                 return .split(axis: axis, ratio: split.ratio, first: node(first, in: workspace), second: node(second, in: workspace))
             }
@@ -976,6 +976,12 @@ final class AppController {
                 }
                 return SessionState.PaneOpener(paneIndex: index, openerIndex: openerIndex)
             }
+            let paneIDs = root.paneIDs
+            let tabGroups = root.tabGroups.compactMap { group -> SessionState.TabGroup? in
+                let indices = group.tabs.compactMap { paneIDs.firstIndex(of: $0) }
+                guard indices.count == group.tabs.count, let shown = group.paneID else { return nil }
+                return SessionState.TabGroup(paneIndices: indices, selected: group.tabs.firstIndex(of: shown) ?? 0)
+            }
             return SessionState.WorkspaceState(
                 title: workspace.customTitle, workingDirectory: workspace.workingDirectory,
                 layout: node(root, in: workspace),
@@ -984,7 +990,8 @@ final class AppController {
                 paneAccounts: paneAccounts.isEmpty ? nil : paneAccounts,
                 paneTags: paneTags.isEmpty ? nil : paneTags,
                 paneOpeners: paneOpeners.isEmpty ? nil : paneOpeners,
-                worktree: workspace.worktreePath)
+                worktree: workspace.worktreePath,
+                tabGroups: tabGroups.isEmpty ? nil : tabGroups)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -1013,18 +1020,8 @@ final class AppController {
         var leafIndex = 0
         var accounts: [Int: ClaudeAccount] = [:]
         func build(_ node: SessionState.Node, in workspace: Workspace) -> SplitNode {
+            if case .split = node {} else { leafIndex += 1 }
             switch node {
-            case .split, .tabs: break
-            default: leafIndex += 1
-            }
-            switch node {
-            case .tabs(let selected, let tabs):
-                // Pane nodes; anything else a hand-edited file put here gives its panes as tabs.
-                let ids = tabs.flatMap { build($0, in: workspace).paneIDs }
-                guard !ids.isEmpty else {
-                    return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: NSHomeDirectory(), command: nil, url: nil).id)
-                }
-                return SplitNode(tabs: ids, selected: ids[safe: selected])
             case .terminal(let cwd):
                 let account = accounts[leafIndex - 1]
                 return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil,
@@ -1066,10 +1063,23 @@ final class AppController {
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
             }) { first, _ in first }
-            let root = build(saved.layout, in: workspace)
-            workspace.root = root
+            var root = build(saved.layout, in: workspace)
             let ids = root.paneIDs
+            // Tab groups: indices of distinct panes, each pane in one group at most (a hand-edited file may say more).
+            var grouped = Set<Int>()
+            for group in saved.tabGroups ?? [] {
+                let indices = group.paneIndices
+                guard indices.count > 1, indices.allSatisfy({ ids.indices.contains($0) && !grouped.contains($0) }),
+                      Set(indices).count == indices.count else { continue }
+                let tabs = indices.map { ids[$0] }
+                guard let stacked = SplitNode.stacking(tabs, selected: tabs[safe: group.selected], in: root) else { continue }
+                root = stacked
+                grouped.formUnion(indices)
+            }
+            workspace.root = root
             workspace.focusedPaneID = ids[safe: saved.focusedPaneIndex ?? 0] ?? ids.first
+            // The focused pane is on screen: its tab is the one shown.
+            if let focused = workspace.focusedPaneID { root.leaf(for: focused)?.selectTab(focused) }
             if let focused = workspace.focusedPane, focused.ssh != nil {
                 updateLocation(of: workspace, from: focused)
             } else {

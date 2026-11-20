@@ -73,6 +73,14 @@ public final class SplitNode {
         }
     }
 
+    /// The leaves with more than one tab, in reading order.
+    public var tabGroups: [SplitNode] {
+        switch content {
+        case .leaf: return isTabGroup ? [self] : []
+        case .split(_, let first, let second): return first.tabGroups + second.tabGroups
+        }
+    }
+
     /// A leaf with more than one tab.
     public var isTabGroup: Bool { tabs.count > 1 }
 
@@ -179,6 +187,33 @@ public final class SplitNode {
         guard let index = tabs.firstIndex(of: old) else { return }
         tabs[index] = new
         if shown { content = .leaf(paneID: new) }
+    }
+
+    /// Stacks the panes `ids` as tabs in the place of the first one (in that order, showing `selected` or the first):
+    /// the others leave their places, as `removing` does. Session restore turns the splits that older versions read
+    /// back into tab groups this way. nil (nothing changed) unless there are two or more distinct panes of the tree.
+    public static func stacking(_ ids: [String], selected: String?, in root: SplitNode) -> SplitNode? {
+        guard ids.count > 1, Set(ids).count == ids.count, ids.allSatisfy({ root.leaf(for: $0) != nil }) else { return nil }
+        var root = root
+        for id in ids.dropFirst() {
+            guard let rest = removing(id, from: root) else { return nil }
+            root = rest
+        }
+        guard let leaf = root.leaf(for: ids[0]) else { return nil }
+        for (previous, id) in zip(ids, ids.dropFirst()) { leaf.addTab(id, after: previous, select: false) }
+        leaf.selectTab(selected.flatMap { ids.contains($0) ? $0 : nil } ?? ids[0])
+        return root
+    }
+
+    /// `items` as even columns in a balanced tree of splits (depth about log2 of the count), so a long list stays
+    /// within nesting limits: how tab groups are saved for older versions and in export bundles.
+    public static func evenColumns<Node>(_ items: [Node], split: (_ ratio: Double, _ first: Node, _ second: Node) -> Node) -> Node? {
+        guard let first = items.first else { return nil }
+        guard items.count > 1 else { return first }
+        let half = items.count / 2
+        let left = evenColumns(Array(items[..<half]), split: split)!
+        let right = evenColumns(Array(items[half...]), split: split)!
+        return split(Double(half) / Double(items.count), left, right)
     }
 
     /// Structural fingerprint (ignores ratios) used to decide when views must be rebuilt.

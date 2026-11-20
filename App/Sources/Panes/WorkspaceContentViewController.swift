@@ -329,7 +329,7 @@ final class WorkspaceContentViewController: NSViewController {
     /// Attention rings and the focus outline. In a tile the outline marks the focused pane of the active tile only;
     /// a single-pane tile leaves attention to the tile's own ring.
     private func updateRings(of workspace: Workspace, active: Bool, tiled: Bool) {
-        let multiple = workspace.panes.count > 1 && workspace.zoomedPaneID == nil
+        let multiple = workspace.showsSeveralPanes && workspace.zoomedPaneID == nil
         for pane in workspace.panes.values {
             pane.container.attention = pane.attention && (!tiled || multiple)
             pane.container.showsFocus = multiple && active && pane.id == workspace.focusedPaneID

@@ -111,13 +111,21 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   `RenderOnlyWindow` outside the screen) loads the pane's URL, waits for `didFinish` (30 s limit) and 600 ms, is
   captured the same way and closed; one at a time, at most 4. Unknown params are refused, and the answer's `images`
   tells clients the app knows the new params (an older app ignores them and returns only `png_base64`).
+- **Chrome bookmarks** (`Browser/ChromeBookmarksBar.swift`, parsing and profiles in `CmdsCore/ChromeBookmarks.swift`):
+  `ChromeBookmarkStore` reads `<Chrome>/<profile>/Bookmarks` off the main actor when cmds becomes active or settings
+  change, only when the file's date changed, and posts `didChange`; each browser pane's `ChromeBookmarksBarView`
+  rebuilds its buttons (at most 60; the rest in the » menu), deferred while the pane is off screen. macOS's
+  protection of other apps' data makes the files look missing while listing Chrome's folder fails with EPERM: that
+  is reported as `noAccess` (Settings offers Full Disk Access). `CMDS_CHROME_FOLDER` replaces Chrome's folder for
+  tests.
 - **Browser pop-ups, dialogs and downloads** (`Browser/BrowserPageDelegate.swift`, `BrowserPopupWindow.swift`,
   `BrowserDownloads.swift`; decisions, sizes and names in `CmdsCore/BrowserWindows.swift`;
   [guide](../guide/workspaces-and-panes.md#pop-ups-dialogs-and-downloads), #235): one `BrowserPageDelegate` per pane
   is the UI and navigation delegate of the pane's web view, the responsive view's other frames and the pane's
   pop-ups. `createWebViewWith` (`BrowserNewWindow.decide`): a link activation without window features to a web page
-  opens a browser split beside the pane (`AppController.openBrowser`, focused only when the pane is the focused one;
-  `_blank` links have no opener in WebKit anyway), else the same pane; anything else (`window.open`, with or without
+  opens a new tab of the pane, or with Settings › General › Open new pages in tabs off a browser split beside it
+  (`AppController.openBrowser`, focused only when the pane is the focused one; `_blank` links have no opener in WebKit
+  anyway), else the same pane; anything else (`window.open`, with or without
   features, forms) is a `BrowserPopupWindow` whose `WKWebView` is made from the configuration WebKit passes (so
   `window.opener` / `postMessage` work; it shares the pane's content controller, so the console hook runs there too),
   sized by `BrowserPopupSize`, centred over the opener's window, `.fullScreenAuxiliary`, ⌘W handled by the window
@@ -200,6 +208,18 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   carry the pane id (`.cmdsPane`): the content view hit-tests panes (`TileDropZone` → `PaneSide`, centre = swap),
   the sidebar takes drops on rows, and the grip moves the pane into a new workspace when the drag ends outside the
   window without Esc.
+- **Tabs** (`CmdsCore/SplitTree.swift` `SplitNode.tabs`, `Workspace/AppController+Tabs.swift`,
+  `Panes/TabGroupView.swift`; [guide](../guide/workspaces-and-panes.md#tabs)): a leaf holds one or more pane ids in
+  tab order; `paneID` (the `.leaf` content) is the one shown. `paneIDs` lists every tab (API, sidebar, sessions, agent
+  bookkeeping see all panes), `visiblePaneIDs` only the shown ones, and `layoutNode` (wire, iPhone) has the shown tab
+  of each leaf; `PaneInfo.tabs` / `background` describe groups. `applyFocus` brings a pane's tab to the front, so the
+  focused pane is always on screen; closing or moving a pane picks the next focus among the panes on screen
+  (`nextFocus`), never a background tab. `structureKey` includes the tabs and the shown one, so switching tabs rebuilds
+  the views like a split does: containers of background tabs leave the window (terminals keep running, as in a hidden
+  workspace). The tab bar selects on mouse up so a drag can start from any tab; drops on a bar or on the top strip of
+  a pane are `PaneDrop.tab`. A swap exchanges tab slots (a pane taking a background slot stays in the background).
+  `browser.open` (`openBrowser`) adds the page as a tab of the requesting browser or the workspace's browser
+  (`browserTabGroup`) unless `AppSettings.browserOpensTabs` is off.
 - **Attention / notification ring**: a pane lights up (colored ring border) when its program sends OSC 9/777,
   rings the bell, or `cmds notify` targets it — and the pane is not the focused pane of the key window.
   Focusing the pane clears it. The workspace row in the sidebar shows a dot + the latest notification text.
@@ -207,7 +227,8 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   default ([reference/environment.md](../reference/environment.md)).
 - **Session restore** (`Workspace/SessionStore.swift`): `session.json` in the support directory keeps the workspaces
   with their split layout, per-pane cwd / URL / preview file / SSH host and remote cwd, the focused pane and the
-  remembered agent sessions; `agent-history.json` next to it the recent agent sessions of all panes
+  remembered agent sessions; tab groups are saved as even columns in `layout` (so older versions read the panes side by
+  side) plus `tabGroups` (pane indices and the shown one), which `SplitNode.stacking` turns back into groups; `agent-history.json` next to it the recent agent sessions of all panes
   (`CmdsCore/AgentSessionHistory.swift`, `AppController+AgentHistory.swift`). Pane and workspace ids are not persisted; they are reassigned on launch. Terminal
   contents and running processes are not restored. **Export/import** (`AppController+Transfer.swift`,
   `CmdsCore/WorkspaceTransfer.swift`) writes the same information as a portable bundle

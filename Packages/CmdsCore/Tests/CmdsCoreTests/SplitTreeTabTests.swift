@@ -112,4 +112,33 @@ final class SplitTreeTabTests: XCTestCase {
         XCTAssertEqual(leaf.tabs, ["c", "a", "b"])
         XCTAssertEqual(leaf.paneID, "c")
     }
+
+    func testStackingTurnsPanesIntoATabGroup() throws {
+        // (h a (v b c)) with b and c becoming tabs of a.
+        let root = SplitNode(axis: .horizontal, ratio: 0.5, first: SplitNode(paneID: "a"),
+                             second: SplitNode(axis: .vertical, ratio: 0.5, first: SplitNode(paneID: "b"), second: SplitNode(paneID: "c")))
+        let stacked = try XCTUnwrap(SplitNode.stacking(["a", "b", "c"], selected: "b", in: root))
+        XCTAssertEqual(stacked.structureKey, "[a,b,c|b]")
+        let other = SplitNode(axis: .horizontal, ratio: 0.5, first: SplitNode(paneID: "a"), second: SplitNode(paneID: "b"))
+        XCTAssertNil(SplitNode.stacking(["a", "z"], selected: nil, in: other), "a missing pane changes nothing")
+        XCTAssertNil(SplitNode.stacking(["a", "a"], selected: nil, in: other))
+        XCTAssertNil(SplitNode.stacking(["a"], selected: nil, in: other))
+        XCTAssertEqual(other.structureKey, "(h a b)")
+        let unknownSelection = try XCTUnwrap(SplitNode.stacking(["b", "a"], selected: "z", in: other))
+        XCTAssertEqual(unknownSelection.structureKey, "[b,a|b]")
+    }
+
+    func testEvenColumnsStayShallow() throws {
+        indirect enum T: Equatable { case leaf(Int), split(Double, T, T) }
+        func depth(_ t: T) -> Int { if case .split(_, let a, let b) = t { return 1 + max(depth(a), depth(b)) }; return 0 }
+        func leaves(_ t: T) -> [Int] { if case .split(_, let a, let b) = t { return leaves(a) + leaves(b) }; if case .leaf(let i) = t { return [i] }; return [] }
+        let many = try XCTUnwrap(SplitNode.evenColumns((0..<100).map(T.leaf)) { .split($0, $1, $2) })
+        XCTAssertEqual(leaves(many), Array(0..<100), "reading order kept")
+        XCTAssertLessThanOrEqual(depth(many), 7)
+        XCTAssertEqual(SplitNode.evenColumns([T.leaf(1)]) { .split($0, $1, $2) }, .leaf(1))
+        XCTAssertNil(SplitNode.evenColumns([T]()) { .split($0, $1, $2) })
+        if case .split(let ratio, _, _) = try XCTUnwrap(SplitNode.evenColumns((0..<3).map(T.leaf)) { .split($0, $1, $2) }) {
+            XCTAssertEqual(ratio, 1.0 / 3.0, accuracy: 0.0001, "one column of three on the left")
+        }
+    }
 }
