@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.29.0] - 2026-11-20
+
+Mac only; the iPhone/iPad app is unchanged (it shows the tab that is shown on the Mac).
+
 ### Added
 
 - Tabs: any place of the layout can hold several panes as tabs (terminals, browsers, previews, files panes), with a
