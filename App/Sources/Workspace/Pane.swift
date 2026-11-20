@@ -205,12 +205,21 @@ final class Pane {
             guard let self else { return nil }
             return self.controller?.defaultWatchFolder(for: self)
         }
-        // A `_blank` link: a browser split beside this pane, focused only when this pane has the focus (an agent's
-        // click in a background pane does not take the keyboard, #235).
+        // A `_blank` link: a new tab of this pane (Settings › General › Open new pages in tabs), else a browser split
+        // beside it; focused only when this pane has the focus (an agent's click in a background pane does not take
+        // the keyboard, #235).
         browser.onOpenInNewPane = { [weak self] url in
             guard let self, let controller = self.controller else { return false }
             let focus = controller.focusedPane === self
             return (try? controller.openBrowser(paneID: self.id, url: url.absoluteString, focus: focus)) != nil
+        }
+        browser.onDeveloperAction = { [weak self] action in
+            guard let self else { return }
+            self.controller?.runDeveloperAction(action, paneID: self.id)
+        }
+        browser.onOpenInNewTab = { [weak self] url in
+            guard let self, let controller = self.controller else { return }
+            _ = try? controller.newTab(paneID: self.id, kind: .browser, url: url.absoluteString, focus: false)
         }
     }
 
@@ -299,9 +308,11 @@ final class Pane {
     }
 
     func info(focused: Bool) -> PaneInfo {
-        PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
-                 workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
-                 file: preview?.path, account: claudeAccount, openedBy: openedBy)
+        let group = controller?.workspace(id: workspaceID)?.root?.leaf(for: id).flatMap { $0.isTabGroup ? $0 : nil }
+        return PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
+                        workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
+                        file: preview?.path, account: claudeAccount, openedBy: openedBy,
+                        tabs: group?.tabs, background: group.map { $0.paneID != id ? true : nil } ?? nil)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.

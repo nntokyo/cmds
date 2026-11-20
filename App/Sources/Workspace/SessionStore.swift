@@ -20,6 +20,14 @@ struct SessionState: Codable {
         case split(axis: SplitAxis, ratio: Double, first: Node, second: Node)
     }
 
+    /// Panes of `layout` (reading order) stacked as tabs in the place of the first: `paneIndices` in tab order,
+    /// `selected` the index (into `paneIndices`) of the tab shown. `layout` keeps a group's panes as even columns, so
+    /// older versions, which ignore this field, show them side by side instead of losing the session.
+    struct TabGroup: Codable {
+        var paneIndices: [Int]
+        var selected: Int
+    }
+
     struct WorkspaceState: Codable {
         var title: String?
         var workingDirectory: String?
@@ -41,6 +49,8 @@ struct SessionState: Codable {
         /// The worktree cmds created the workspace in (`Workspace.worktreePath`, #172). Added later: older sessions lack
         /// it, older versions ignore it.
         var worktree: String? = nil
+        /// Tab groups (`TabGroup`). Added later: older sessions lack it, older versions ignore it.
+        var tabGroups: [TabGroup]? = nil
     }
 
     /// The pane at `paneIndex` was opened from the terminal pane at `openerIndex` (reading order of `layout`).
@@ -133,7 +143,8 @@ enum SessionStore {
 
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
-        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners, worktree
+        case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners, worktree,
+             tabGroups
     }
 
     init(from decoder: Decoder) throws {
@@ -152,6 +163,8 @@ extension SessionState.WorkspaceState {
         let openers = (try? c.decodeIfPresent([Lossy<SessionState.PaneOpener>].self, forKey: .paneOpeners))?.compactMap(\.value) ?? []
         paneOpeners = openers.isEmpty ? nil : openers
         worktree = try? c.decodeIfPresent(String.self, forKey: .worktree)
+        let groups = (try? c.decodeIfPresent([Lossy<SessionState.TabGroup>].self, forKey: .tabGroups))?.compactMap(\.value) ?? []
+        tabGroups = groups.isEmpty ? nil : groups
     }
 }
 

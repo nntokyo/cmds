@@ -301,7 +301,7 @@ final class AppController {
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
                url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
                ssh: SSHLaunch? = nil, file: PreviewTarget? = nil, account: ClaudeAccount? = nil,
-               filesHost: String? = nil, recordOpener: Bool = false) throws -> PaneInfo {
+               filesHost: String? = nil, recordOpener: Bool = false, asTab: Bool = false) throws -> PaneInfo {
         let source = try resolvePane(paneID)
         if account != nil, kind != .terminal || ssh != nil || (source.ssh != nil && cwd == nil && command == nil) {
             throw RPCError.invalidParams("an account is for local terminal panes (its config directory is on this Mac)")
@@ -331,7 +331,13 @@ final class AppController {
         }
         if recordOpener, source.kind == .terminal { pane.openedBy = source.id }
         workspace.zoomedPaneID = nil
-        leaf.split(axis: direction.axis, newPaneID: pane.id)
+        if asTab {
+            // Without focus, a group whose tab has the keyboard gets it in the background.
+            let keyboardHere = !focus && workspace.focusedPaneID.map(leaf.tabs.contains) == true
+            leaf.addTab(pane.id, after: source.id, select: !keyboardHere)
+        } else {
+            leaf.split(axis: direction.axis, newPaneID: pane.id)
+        }
         guard focus else {
             emit(.workspace(id: workspace.id))
             return pane.info(focused: false)
@@ -362,7 +368,7 @@ final class AppController {
             throw RPCError.invalidParams("pane \(pane.id) was not opened from pane \(openedBy)")
         }
         guard let workspace = workspace(id: pane.workspaceID), let root = workspace.root else { return }
-        let order = workspace.orderedPanes.map(\.id)
+        let next = nextFocus(afterRemoving: pane.id, from: workspace)
         pane.tearDown()
         workspace.panes[pane.id] = nil
         workspace.root = SplitNode.removing(pane.id, from: root)
@@ -372,12 +378,7 @@ final class AppController {
             try closeWorkspace(id: workspace.id)
             return
         }
-        if workspace.focusedPaneID == pane.id {
-            // Focus the pane that followed (or preceded) the closed one in reading order.
-            let index = order.firstIndex(of: pane.id) ?? 0
-            let remaining = workspace.orderedPanes
-            if let next = remaining[safe: min(index, remaining.count - 1)] { applyFocus(next, in: workspace) }
-        }
+        if workspace.focusedPaneID == pane.id, let next = next() { applyFocus(next, in: workspace) }
         emit(.workspace(id: workspace.id))
         if workspace.id == selectedWorkspaceID { focusSelectedPaneView() }
     }
@@ -472,7 +473,7 @@ final class AppController {
     func toggleZoom(paneID: String? = nil) throws {
         let pane = try resolvePane(paneID)
         guard let workspace = workspace(id: pane.workspaceID) else { return }
-        workspace.zoomedPaneID = workspace.zoomedPaneID == nil && workspace.panes.count > 1 ? pane.id : nil
+        workspace.zoomedPaneID = workspace.zoomedPaneID == nil && workspace.showsSeveralPanes ? pane.id : nil
         applyFocus(pane, in: workspace)
         emit(.workspace(id: workspace.id))
         if workspace.id == selectedWorkspaceID { pane.focus() }
@@ -482,12 +483,26 @@ final class AppController {
 
     /// Opens a browser split to the right of `paneID` (default: focused pane).
     @discardableResult
-    func openBrowser(paneID: String? = nil, url: String, focus: Bool = true, recordOpener: Bool = false) throws -> PaneInfo {
+    /// A page in a browser pane: with `tabs` (default: Settings › General › Open new pages in tabs) a new tab of the browser
+    /// pane that asked, else of the workspace's browser tabs; a browser split beside the pane otherwise.
+    func openBrowser(paneID: String? = nil, url: String, focus: Bool = true, recordOpener: Bool = false,
+                     tabs: Bool? = nil) throws -> PaneInfo {
         // Nothing to load (`http://exa mple.com`): an error, not a blank pane. Empty input opens the start page.
         if !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, BrowserPane.url(fromUserInput: url) == nil {
             throw RPCError.invalidParams("cannot load \"\(url.prefix(200))\": not a valid URL")
         }
-        return try split(paneID: paneID, direction: .right, kind: .browser, url: url, focus: focus, recordOpener: recordOpener)
+        let requester = try resolvePane(paneID)
+        guard tabs ?? AppSettings.shared.browserOpensTabs, let group = browserTabGroup(for: requester) else {
+            return try split(paneID: requester.id, direction: .right, kind: .browser, url: url, focus: focus,
+                             recordOpener: recordOpener)
+        }
+        var info = try split(paneID: group.id, direction: .right, kind: .browser, url: url, focus: focus, asTab: true)
+        // The opener is the pane that asked, not the browser tab the page joined.
+        if recordOpener, requester.kind == .terminal, let pane = pane(id: info.id) {
+            pane.openedBy = requester.id
+            info.openedBy = requester.id
+        }
+        return info
     }
 
     /// `http://localhost:PORT` in a browser split of the workspace's focused pane, showing the workspace (a click on a
@@ -588,9 +603,16 @@ final class AppController {
     /// has one, else in a new preview split to the right. The pane keeps the keyboard.
     func openFileFromTerminal(_ pane: Pane, path: String) {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
-        let existing = workspace.orderedPanes.first { $0.kind == .preview }
+        // A preview on screen, else one in the background of another place (brought to the front); never a tab of
+        // the terminal's own group, which would hide the terminal.
+        let ownGroup = workspace.root?.leaf(for: pane.id)?.tabs ?? [pane.id]
+        let existing = workspace.visiblePanes.first { $0.kind == .preview }
+            ?? workspace.orderedPanes.first { $0.kind == .preview && !ownGroup.contains($0.id) }
         do {
             try openFile(paneID: existing?.id ?? pane.id, path: path, focus: false)
+            if let existing, workspace.root?.leaf(for: existing.id)?.selectTab(existing.id) == true {
+                emit(.workspace(id: workspace.id))
+            }
         } catch {
             NSSound.beep()
         }
@@ -907,25 +929,32 @@ final class AppController {
         func node(_ split: SplitNode, in workspace: Workspace) -> SessionState.Node {
             switch split.content {
             case .leaf(let id):
-                let pane = workspace.panes[id]
-                if pane?.kind == .browser {
-                    let emulation = pane?.browser?.emulation
-                    return .browser(url: pane?.url, emulation: emulation?.isDefault == false ? emulation : nil,
-                                    responsive: pane?.browser?.responsive)
-                }
-                if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
-                if let files = pane?.files {
-                    return .files(path: files.folder, showHidden: files.showHidden ? true : nil,
-                                  follow: files.followsTerminal ? true : nil, host: files.host)
-                }
-                if let pane, let ssh = pane.ssh {
-                    let cwd = (try? SSHLaunch.validateRemoteCwd(pane.workingDirectory)) ?? ssh.launch.remoteCwd
-                    return .ssh(host: ssh.launch.host, remoteCwd: cwd)
-                }
-                return .terminal(cwd: pane?.workingDirectory)
+                // A tab group as even columns (older versions read that); `tabGroups` stacks them again.
+                guard split.isTabGroup else { return paneNode(id, in: workspace) }
+                return SplitNode.evenColumns(split.tabs.map { paneNode($0, in: workspace) }) { ratio, first, second in
+                    .split(axis: .horizontal, ratio: ratio, first: first, second: second)
+                } ?? paneNode(id, in: workspace)
             case .split(let axis, let first, let second):
                 return .split(axis: axis, ratio: split.ratio, first: node(first, in: workspace), second: node(second, in: workspace))
             }
+        }
+        func paneNode(_ id: String, in workspace: Workspace) -> SessionState.Node {
+            let pane = workspace.panes[id]
+            if pane?.kind == .browser {
+                let emulation = pane?.browser?.emulation
+                return .browser(url: pane?.url, emulation: emulation?.isDefault == false ? emulation : nil,
+                                responsive: pane?.browser?.responsive)
+            }
+            if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
+            if let files = pane?.files {
+                return .files(path: files.folder, showHidden: files.showHidden ? true : nil,
+                              follow: files.followsTerminal ? true : nil, host: files.host)
+            }
+            if let pane, let ssh = pane.ssh {
+                let cwd = (try? SSHLaunch.validateRemoteCwd(pane.workingDirectory)) ?? ssh.launch.remoteCwd
+                return .ssh(host: ssh.launch.host, remoteCwd: cwd)
+            }
+            return .terminal(cwd: pane?.workingDirectory)
         }
         let states = workspaces.compactMap { workspace -> SessionState.WorkspaceState? in
             guard let root = workspace.root else { return nil }
@@ -947,6 +976,12 @@ final class AppController {
                 }
                 return SessionState.PaneOpener(paneIndex: index, openerIndex: openerIndex)
             }
+            let paneIDs = root.paneIDs
+            let tabGroups = root.tabGroups.compactMap { group -> SessionState.TabGroup? in
+                let indices = group.tabs.compactMap { paneIDs.firstIndex(of: $0) }
+                guard indices.count == group.tabs.count, let shown = group.paneID else { return nil }
+                return SessionState.TabGroup(paneIndices: indices, selected: group.tabs.firstIndex(of: shown) ?? 0)
+            }
             return SessionState.WorkspaceState(
                 title: workspace.customTitle, workingDirectory: workspace.workingDirectory,
                 layout: node(root, in: workspace),
@@ -955,7 +990,8 @@ final class AppController {
                 paneAccounts: paneAccounts.isEmpty ? nil : paneAccounts,
                 paneTags: paneTags.isEmpty ? nil : paneTags,
                 paneOpeners: paneOpeners.isEmpty ? nil : paneOpeners,
-                worktree: workspace.worktreePath)
+                worktree: workspace.worktreePath,
+                tabGroups: tabGroups.isEmpty ? nil : tabGroups)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -1027,10 +1063,23 @@ final class AppController {
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
             }) { first, _ in first }
-            let root = build(saved.layout, in: workspace)
-            workspace.root = root
+            var root = build(saved.layout, in: workspace)
             let ids = root.paneIDs
+            // Tab groups: indices of distinct panes, each pane in one group at most (a hand-edited file may say more).
+            var grouped = Set<Int>()
+            for group in saved.tabGroups ?? [] {
+                let indices = group.paneIndices
+                guard indices.count > 1, indices.allSatisfy({ ids.indices.contains($0) && !grouped.contains($0) }),
+                      Set(indices).count == indices.count else { continue }
+                let tabs = indices.map { ids[$0] }
+                guard let stacked = SplitNode.stacking(tabs, selected: tabs[safe: group.selected], in: root) else { continue }
+                root = stacked
+                grouped.formUnion(indices)
+            }
+            workspace.root = root
             workspace.focusedPaneID = ids[safe: saved.focusedPaneIndex ?? 0] ?? ids.first
+            // The focused pane is on screen: its tab is the one shown.
+            if let focused = workspace.focusedPaneID { root.leaf(for: focused)?.selectTab(focused) }
             if let focused = workspace.focusedPane, focused.ssh != nil {
                 updateLocation(of: workspace, from: focused)
             } else {
@@ -1144,6 +1193,8 @@ final class AppController {
         let wasRemote = workspace.isRemote
         workspace.focusedPaneID = pane.id
         pane.focusedAt = Date()
+        // A background tab comes to the front of its group.
+        if let leaf = workspace.root?.leaf(for: pane.id), leaf.paneID != pane.id { leaf.selectTab(pane.id) }
         if let zoomed = workspace.zoomedPaneID, zoomed != pane.id { workspace.zoomedPaneID = nil }
         followTerminal(pane, in: workspace)
         // Moving to or from an SSH pane always replaces the location (an SSH pane may not know its cwd yet).

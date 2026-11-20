@@ -110,6 +110,10 @@ final class Workspace {
     var displayTitle: String { DefaultTitle.localized(title) }
 
     var orderedPanes: [Pane] { (root?.paneIDs ?? []).compactMap { panes[$0] } }
+    /// Panes on screen when the workspace is shown: the shown tab of each place, in reading order.
+    var visiblePanes: [Pane] { (root?.visiblePaneIDs ?? []).compactMap { panes[$0] } }
+    /// More than one pane on screen (a tab group alone counts as one).
+    var showsSeveralPanes: Bool { (root?.visiblePaneIDs.count ?? 0) > 1 }
     var focusedPane: Pane? { focusedPaneID.flatMap { panes[$0] } }
     var attention: Bool { panes.values.contains { $0.attention } }
 

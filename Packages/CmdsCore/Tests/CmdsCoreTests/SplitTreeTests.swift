@@ -112,6 +112,8 @@ final class SplitTreeTests: XCTestCase {
         let fresh = try PaneMoveRequest(params: ["pane": "p1", "newWorkspace": true])
         XCTAssertTrue(fresh.newWorkspace)
         XCTAssertTrue(fresh.focus)
+        let tab = try PaneMoveRequest(params: ["pane": "p1", "beside": "p2", "tab": true])
+        XCTAssertEqual(tab, PaneMoveRequest(pane: "p1", beside: "p2", tab: true))
     }
 
     func testMoveRequestRefusesBadParams() {
@@ -122,6 +124,8 @@ final class SplitTreeTests: XCTestCase {
             ["pane": "p1", "beside": "p1"],
             ["pane": "p1", "beside": "p2", "side": "middle"],
             ["pane": "p1", "newWorkspace": true, "workspace": "w2"],
+            ["pane": "p1", "workspace": "w2", "tab": true],
+            ["pane": "p1", "beside": "p2", "side": "left", "tab": true],
             ["pane": "p1", "newWorkspace": true, "side": "left"],
             ["pane": "p1", "workspace": 2],
             ["pane": "p1", "workspace": "w2", "focus": "yes"],

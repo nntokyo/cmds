@@ -43,6 +43,20 @@ final class BrowserPane: NSView {
     // Pop-ups, `_blank` links, dialogs, uploads and downloads (BrowserPageDelegate.swift, #235).
     /// Opens a `target="_blank"` link in a new browser pane beside this one; false: none could be opened.
     var onOpenInNewPane: ((URL) -> Bool)?
+    /// Opens a page in a new tab beside this pane, in the background (a ⌘-click on a Chrome bookmark).
+    var onOpenInNewTab: ((URL) -> Void)?
+    // Developer tools (BrowserPane+WebDev.swift).
+    let developerButton = BrowserPane.toolbarButton("chevron.left.forwardslash.chevron.right",
+                                                    label: String(localized: "Developer"))
+    /// The page source or SEO report asked for (the owner opens it in a tab beside the pane).
+    var onDeveloperAction: ((BrowserDeveloperAction) -> Void)?
+    /// The console drawer while it is open, in `consoleHost` under the page.
+    var consoleDrawer: BrowserConsoleView?
+    let consoleHost = NSView()
+    var consoleDrawerHeight: NSLayoutConstraint?
+    /// Chrome's bookmarks under the toolbar (Settings › General).
+    let bookmarksBar = ChromeBookmarksBarView()
+    private var bookmarksBarHeight: NSLayoutConstraint?
     let pageDelegate = BrowserPageDelegate()
     private var noticeBanner: BrowserNoticeView?
     private var noticeHide: DispatchWorkItem?
@@ -356,6 +370,8 @@ final class BrowserPane: NSView {
         onFocus = nil
         onEmulationChange = nil
         onOpenInNewPane = nil
+        onOpenInNewTab = nil
+        onDeveloperAction = nil
         defaultWatchFolder = nil
     }
 
@@ -481,7 +497,10 @@ final class BrowserPane: NSView {
         addressField.action = #selector(addressSubmitted)
         addressField.onFocus = { [weak self] in self?.onFocus?() }
 
-        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, addressField, breakpointLabel, deviceButton])
+        developerButton.target = self
+        developerButton.action = #selector(developerButtonClicked(_:))
+        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, addressField, breakpointLabel,
+                                          deviceButton, developerButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 6
         toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
@@ -491,19 +510,48 @@ final class BrowserPane: NSView {
         buildDeviceControls()
         viewportHost.translatesAutoresizingMaskIntoConstraints = false
         viewportHost.addSubview(webView)
+        bookmarksBar.translatesAutoresizingMaskIntoConstraints = false
+        bookmarksBar.onOpen = { [weak self] url, newTab in
+            guard let self else { return }
+            if newTab, let open = self.onOpenInNewTab { open(url) } else { try? self.navigate(to: url.absoluteString) }
+        }
+        bookmarksBar.onVisibilityChange = { [weak self] in self?.updateBookmarksBar() }
         addSubview(toolbar)
+        addSubview(bookmarksBar)
         addSubview(viewportHost)
+        consoleHost.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(consoleHost)
+        let barHeight = bookmarksBar.heightAnchor.constraint(equalToConstant: 0)
+        bookmarksBarHeight = barHeight
+        let consoleHeight = consoleHost.heightAnchor.constraint(equalToConstant: 0)
+        consoleDrawerHeight = consoleHeight
         NSLayoutConstraint.activate([
             toolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
             toolbar.topAnchor.constraint(equalTo: topAnchor),
             toolbar.heightAnchor.constraint(equalToConstant: 30),
+            bookmarksBar.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bookmarksBar.trailingAnchor.constraint(equalTo: trailingAnchor),
+            bookmarksBar.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
+            barHeight,
             viewportHost.leadingAnchor.constraint(equalTo: leadingAnchor),
             viewportHost.trailingAnchor.constraint(equalTo: trailingAnchor),
-            viewportHost.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
-            viewportHost.bottomAnchor.constraint(equalTo: bottomAnchor),
+            viewportHost.topAnchor.constraint(equalTo: bookmarksBar.bottomAnchor),
+            viewportHost.bottomAnchor.constraint(equalTo: consoleHost.topAnchor),
+            consoleHost.leadingAnchor.constraint(equalTo: leadingAnchor),
+            consoleHost.trailingAnchor.constraint(equalTo: trailingAnchor),
+            consoleHost.bottomAnchor.constraint(equalTo: bottomAnchor),
+            consoleHeight,
         ])
+        updateBookmarksBar()
         updateButtons()
+    }
+
+    /// Shows the bookmarks bar when it has something to show (the store is empty while the setting is off).
+    private func updateBookmarksBar() {
+        let shown = bookmarksBar.hasContent
+        bookmarksBar.isHidden = !shown
+        bookmarksBarHeight?.constant = shown ? ChromeBookmarksBarView.height : 0
     }
 
     private func observe() {

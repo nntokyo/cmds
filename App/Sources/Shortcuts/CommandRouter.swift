@@ -95,6 +95,27 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     @objc func splitRight(_ sender: Any?) { _ = try? controller.split(direction: .right) }
     @objc func splitDown(_ sender: Any?) { _ = try? controller.split(direction: .down) }
+    // View › Developer (BrowserPane+WebDev.swift).
+    @objc func browserViewSource(_ sender: Any?) {
+        guard let pane = controller.focusedPane, pane.browser != nil else { return NSSound.beep() }
+        controller.runDeveloperAction(.source, paneID: pane.id)
+    }
+    @objc func browserToggleConsole(_ sender: Any?) { focusedBrowser?.toggleConsole() }
+    @objc func browserSEOReport(_ sender: Any?) {
+        guard let pane = controller.focusedPane, pane.browser != nil else { return NSSound.beep() }
+        controller.runDeveloperAction(.seo, paneID: pane.id)
+    }
+
+    /// ⌘T: a new tab beside the focused pane (a browser tab in a browser, else a terminal).
+    @objc func newTab(_ sender: Any?) { _ = try? controller.newTab() }
+    @objc func nextTab(_ sender: Any?) { controller.selectAdjacentTab(offset: 1) }
+    @objc func previousTab(_ sender: Any?) { controller.selectAdjacentTab(offset: -1) }
+
+    /// The focused pane is a tab of a group.
+    private var focusedPaneIsTab: Bool {
+        guard let workspace = controller.selectedWorkspace, let id = workspace.focusedPaneID else { return false }
+        return workspace.root?.leaf(for: id)?.isTabGroup == true
+    }
     @objc func openBrowser(_ sender: Any?) {
         guard (try? controller.split(direction: .right, kind: .browser)) != nil else { return }
         focusedBrowser?.focusAddressBar()
@@ -400,6 +421,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             New workspace ⌘N · Close pane ⌘W · Close workspace ⇧⌘W
             Workspace 1–9 ⌘1…⌘9 · Next/previous ⌃Tab / ⌃⇧Tab, ⇧⌘] / ⇧⌘[
             Split right ⌘D · Split down ⇧⌘D · Zoom pane ⇧⌘↩
+            New tab ⌘T · Next/previous tab ⌥⌘] / ⌥⌘[ · Close tab ⌘W
             Focus pane ⌥⌘←/→/↑/↓ · Swap pane ⌥⇧⌘←/→/↑/↓ · Latest attention ⇧⌘U
             Browser split ⇧⌘B · Address ⌘L · Reload ⌘R · Back ⌘[ · Forward ⌘]
             Open in Preview ⇧⌘O · ⌘-click a file path in a terminal to preview it
@@ -507,7 +529,17 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(filesNewFolder(_:)), #selector(filesEnclosingFolder(_:)), #selector(filesGoToFolder(_:)),
              #selector(filesOpenTerminal(_:)):
             return focusedFiles != nil
-        case #selector(closePane(_:)), #selector(closeWorkspace(_:)), #selector(splitRight(_:)),
+        case #selector(browserViewSource(_:)), #selector(browserSEOReport(_:)):
+            return focusedBrowser != nil
+        case #selector(browserToggleConsole(_:)):
+            menuItem.title = focusedBrowser?.isConsoleOpen == true ? String(localized: "Hide Console") : String(localized: "Show Console")
+            return focusedBrowser != nil
+        case #selector(nextTab(_:)), #selector(previousTab(_:)):
+            return focusedPaneIsTab
+        case #selector(closePane(_:)):
+            menuItem.title = focusedPaneIsTab ? String(localized: "Close Tab") : String(localized: "Close Pane")
+            return controller.focusedPane != nil
+        case #selector(closeWorkspace(_:)), #selector(splitRight(_:)), #selector(newTab(_:)),
              #selector(splitDown(_:)), #selector(openBrowser(_:)), #selector(renameWorkspace(_:)),
              #selector(focusLeft(_:)), #selector(focusRight(_:)), #selector(focusUp(_:)), #selector(focusDown(_:)):
             return controller.focusedPane != nil

@@ -43,12 +43,16 @@ extension BrowserPane {
         for message in messages {
             if let entry = ConsoleEntry(message: message) { consoleBuffer.append(entry) }
         }
+        consoleDrawer?.setNeedsRefresh()
     }
 
     /// `browser.console`.
     func console(level: ConsoleEntry.Level?, since: Int?, limit: Int?, clear: Bool) -> JSONValue {
         let result = consoleBuffer.json(level: level, since: since, limit: limit)
-        if clear { consoleBuffer.clear() }
+        if clear {
+            consoleBuffer.clear()
+            consoleDrawer?.refresh()
+        }
         return result
     }
 
@@ -117,7 +121,7 @@ extension BrowserPane {
     /// it throws become clean API errors (404 for a missing element or ref, else invalid params). Without `deadline`,
     /// a page that has not answered after `BrowserEval.defaultTimeout` gets a 408 error, and a stuck one is reloaded
     /// (`scriptTimedOut`); with one, `PageScriptTimeout` is thrown.
-    private func runPageScript(_ body: String, _ arguments: [String: Any],
+    func runPageScript(_ body: String, _ arguments: [String: Any],
                                until deadline: Date? = nil) async throws -> JSONValue {
         // `value` is an argument of fill, so the result has another name.
         let wrapped = "const __cmdsResult = await (async () => {\n\(body)\n})();\n"

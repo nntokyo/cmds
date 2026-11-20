@@ -29,7 +29,7 @@ final class PaneDragHandleView: NSView, NSDraggingSource {
     /// The drag image: a label at most this wide, this tall, held this far from its left end.
     private static let dragImageMaxWidth: CGFloat = 280
     private static let dragImageHeight: CGFloat = 24
-    private static let dragImageGrabOffset: CGFloat = 20
+    static let dragImageGrabOffset: CGFloat = 20
 
     let paneID: String
     /// The title shown in the drag image.
@@ -114,7 +114,7 @@ final class PaneDragHandleView: NSView, NSDraggingSource {
     }
 
     /// A rounded label: grip glyph and the title, at most `dragImageMaxWidth` wide.
-    private static func dragImage(title: String) -> NSImage {
+    static func dragImage(title: String) -> NSImage {
         let text = NSAttributedString(string: "⠿  " + (title.isEmpty ? String(localized: "Pane") : title), attributes: [
             .font: NSFont.systemFont(ofSize: 12, weight: .medium), .foregroundColor: NSColor.white,
         ])

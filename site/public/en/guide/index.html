@@ -94,6 +94,7 @@
       <ul>
         <li><kbd>⌘N</kbd> opens a workspace, <kbd>⌘1</kbd>…<kbd>⌘9</kbd> switch, <kbd>⇧⌘R</kbd> (or a double-click) renames. Drag rows to reorder.</li>
         <li><kbd>⌘D</kbd> splits right, <kbd>⇧⌘D</kbd> down. <kbd>⌥⌘</kbd> + arrows move between panes, <kbd>⇧⌘↩</kbd> zooms a pane, <kbd>⌘W</kbd> closes it.</li>
+        <li><strong>Tabs</strong>: <kbd>⌘T</kbd> (Pane › New Tab, or the tab bar's +) adds a tab beside the pane: a browser tab in a browser, else a terminal. <kbd>⌥⌘]</kbd> / <kbd>⌥⌘[</kbd> go to the next / previous tab; <kbd>⌘W</kbd> or a tab's × closes it. Drag a tab onto another tab bar to join it, or onto the strip along the top of a pane to make tabs of the two. Tabs you don't see keep running, and they come back with the session. Also <code>cmds tab</code> and <code>cmds pane move --beside P --tab</code>.</li>
         <li><strong>Moving panes</strong>: drag the grip that appears at a pane's top edge onto another pane's edge to split there, onto its centre to swap the two, onto a workspace in the sidebar to move it there, or out of the window for a new workspace. Also Pane › Swap with Pane Left / Right / Up / Down (<kbd>⌥⇧⌘</kbd> + arrows), Move to Workspace…, Move to New Workspace, and <code>cmds pane move</code> / <code>cmds pane swap</code>. Programs in terminals and browser pages keep running.</li>
         <li>Each sidebar row shows the git branch, directory, listening ports, the agent's state and task, and the latest notification. <kbd>⌥⌘F</kbd> filters; View › Group Workspaces by Project groups them.</li>
         <li>When a program in a pane you are not looking at sends a notification (OSC 9/777, the bell, <code>cmds notify</code>), the pane lights up with an <strong>orange ring</strong>. <kbd>⇧⌘U</kbd> jumps to the latest.</li>
@@ -142,6 +143,9 @@
       <h2><span class="step-num">4</span>Browser and preview</h2>
       <ul>
         <li><kbd>⇧⌘B</kbd> opens a browser to the right of the terminal. <kbd>⌘L</kbd> address bar, <kbd>⌘R</kbd> reload, <kbd>⌘[</kbd> / <kbd>⌘]</kbd> back / forward.</li>
+        <li>Links that open a new window, <code>cmds browser open</code> and agents' <code>browser_open</code> open as <strong>tabs</strong> of the browser pane instead of new splits (Settings › General › Open new pages in tabs; turn it off for splits as before).</li>
+        <li><strong>Developer tools</strong>: from the toolbar's <strong>&lt;/&gt;</strong> button or View › Developer. <strong>View Page Source</strong> (<kbd>⌥⌘U</kbd>) shows the HTML the server sent in a new tab with line numbers and colours; the <strong>Console</strong> (<kbd>⌥⌘C</kbd>) shows the page's messages and errors by level and runs JavaScript; the <strong>SEO Report</strong> scores title, description, h1 and heading order, canonical, robots and robots.txt, lang, viewport, Open Graph, Twitter card, image alt, structured data, https and more. Agents use <code>cmds browser source</code> / <code>cmds browser seo</code> or the MCP tools <code>browser_source</code> / <code>browser_seo</code> / <code>browser_console</code>.</li>
+        <li><strong>Chrome bookmarks</strong>: with Google Chrome, its bookmarks bar shows under the address bar. Click loads a bookmark in the pane, <kbd>⌘</kbd>-click opens it in a new tab, folders open as menus (with Open All in Tabs). Read only; Chrome's sign-ins and passwords are not shared. When macOS does not let cmds read them, Settings › General shows how to turn on Full Disk Access for cmds. Turn the bar off or pick a profile in Settings › General.</li>
         <li><kbd>⇧⌘O</kbd> (File › Open in Preview…) or <kbd>⌘</kbd>-click on a path printed in the terminal shows the file in a preview pane: images, PDF, video, Office and text through Quick Look, rendered Markdown, coloured diffs.</li>
         <li>Previews reload when the file changes, so reports and images an agent writes show up right away.</li>
       </ul>
@@ -383,6 +387,8 @@ cmds schedule history   # past runs</code></pre>
             <tr><td>Next / previous workspace</td><td><kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd>, <kbd>⌃Tab</kbd> / <kbd>⌃⇧Tab</kbd></td></tr>
             <tr><td>Rename workspace</td><td><kbd>⇧⌘R</kbd></td></tr>
             <tr><td>Split right / down</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
+            <tr><td>Page source / console (browser pane)</td><td><kbd>⌥⌘U</kbd> / <kbd>⌥⌘C</kbd></td></tr>
+            <tr><td>New tab / next tab / previous tab</td><td><kbd>⌘T</kbd> / <kbd>⌥⌘]</kbd> / <kbd>⌥⌘[</kbd></td></tr>
             <tr><td>Move between panes</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>Swap with the neighbouring pane</td><td><kbd>⌥⇧⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>Zoom pane (tile)</td><td><kbd>⇧⌘↩</kbd></td></tr>
@@ -393,7 +399,7 @@ cmds schedule history   # past runs</code></pre>
             <tr><td>Copy / move to the other pane</td><td><kbd>F5</kbd> / <kbd>F6</kbd></td></tr>
             <tr><td>Transfers</td><td><kbd>⌥⌘T</kbd></td></tr>
             <tr><td>Address bar / reload (reconnect SSH) / back / forward</td><td><kbd>⌘L</kbd> / <kbd>⌘R</kbd> / <kbd>⌘[</kbd> / <kbd>⌘]</kbd></td></tr>
-            <tr><td>Close pane / close workspace</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
+            <tr><td>Close pane (tab) / close workspace</td><td><kbd>⌘W</kbd> / <kbd>⇧⌘W</kbd></td></tr>
             <tr><td>Toggle sidebar / compact sidebar</td><td><kbd>⌘B</kbd> / <kbd>⌃⌘S</kbd></td></tr>
             <tr><td>Filter workspaces</td><td><kbd>⌥⌘F</kbd></td></tr>
             <tr><td>Bigger / smaller / actual size</td><td><kbd>⌘+</kbd> / <kbd>⌘−</kbd> / <kbd>⌘0</kbd></td></tr>

@@ -10,24 +10,28 @@ extension CLI {
 
     static let consoleCommand = Command(
         name: "browser console",
-        usage: "browser console [--pane P] [--level L] [--limit N] [--clear] [--follow]",
+        usage: "browser console [--pane P] [--level L] [--limit N] [--clear] [--follow] [--show|--hide]",
         summary: "Print a browser pane's console messages, uncaught errors and unhandled promise rejections.",
         details: """
             cmds records them from the start of every page (the last \(ConsoleBuffer.defaultCapacity), also before you
             ask). --level debug|log|info|warn|error keeps that level and more severe ones; --limit the newest N; --clear
-            empties the record after printing; --follow keeps printing new ones until interrupted. Only the main frame
-            (no iframes; in the responsive view, the first frame).
+            empties the record after printing; --follow keeps printing new ones until interrupted; --show / --hide open
+            or close the console drawer at the bottom of the pane. Only the main frame (no iframes; in the responsive
+            view, the first frame).
             \(browserPaneNote)
             """,
-        options: ["pane", "level", "limit"], flags: ["clear", "follow"]
+        options: ["pane", "level", "limit"], flags: ["clear", "follow", "show", "hide"]
     ) { ctx in
-        try ctx.args.expectPositionals(0...0, usage: "cmds browser console [--pane P] [--level L] [--limit N] [--clear] [--follow]")
+        try ctx.args.expectPositionals(0...0, usage: "cmds browser console [--pane P] [--level L] [--limit N] [--clear] [--follow] [--show|--hide]")
+        if ctx.args.has("show"), ctx.args.has("hide") { throw CLIError.usage("give --show or --hide, not both") }
         var params: [String: JSONValue] = [:]
         if let level = ctx.args[option: "level"] { params["level"] = .string(level) }
         if let limit = try ctx.args.int("limit") { params["limit"] = .number(Double(limit)) }
         if ctx.args.has("clear") { params["clear"] = .bool(true) }
         var request = try usageError { try BrowserConsoleRequest(params: .object(params)) }
-        var result = try devToolsCall(ctx, "browser.console", request.params)
+        var first = request.params
+        if ctx.args.has("show") || ctx.args.has("hide") { first["show"] = .bool(ctx.args.has("show")) }
+        var result = try devToolsCall(ctx, "browser.console", first)
         func show(_ result: JSONValue) {
             if ctx.json { return ctx.printJSON(result, compact: ctx.args.has("follow")) }
             let entries = (try? result["entries"]?.decode([ConsoleEntry].self)) ?? []

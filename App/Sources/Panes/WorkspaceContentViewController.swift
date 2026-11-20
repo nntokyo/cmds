@@ -53,7 +53,10 @@ final class WorkspaceContentViewController: NSViewController {
         let view = ContentDropView()
         view.registerForDraggedTypes([.cmdsWorkspace, .cmdsPane])
         view.onUpdate = { [weak self] info in self?.dragUpdated(info) ?? [] }
-        view.onExit = { [weak self] in self?.dropHighlight.show(nil) }
+        view.onExit = { [weak self] in
+            self?.dropHighlight.show(nil)
+            self?.clearTabDropMarks()
+        }
         view.onPerform = { [weak self] info in self?.performDrop(info) ?? false }
         view.wantsLayer = true
         view.layer?.backgroundColor = NSColor(calibratedWhite: 0.09, alpha: 1).cgColor
@@ -128,6 +131,17 @@ final class WorkspaceContentViewController: NSViewController {
 
     private func dragUpdated(_ info: NSDraggingInfo) -> NSDragOperation {
         if let pane = info.cmdsPaneID {
+            let point = view.convert(info.draggingLocation, from: nil)
+            clearTabDropMarks()
+            if let tab = tabDropTarget(moving: pane, at: point) {
+                if let bar = tab.bar {
+                    bar.showDropMark(at: bar.convert(point, from: view))
+                    dropHighlight.show(nil)
+                } else {
+                    dropHighlight.show(tab.highlight)
+                }
+                return .move
+            }
             let drop = paneDropTarget(moving: pane, info)
             dropHighlight.show(drop?.highlight)
             return drop == nil ? [] : .move
@@ -140,7 +154,18 @@ final class WorkspaceContentViewController: NSViewController {
         return info.cmdsDropOperation
     }
 
+    private func clearTabDropMarks() {
+        for entry in tabBars { entry.bar?.showDropMark(at: nil) }
+    }
+
     private func performDrop(_ info: NSDraggingInfo) -> Bool {
+        clearTabDropMarks()
+        if let pane = info.cmdsPaneID, let tab = tabDropTarget(moving: pane, at: view.convert(info.draggingLocation, from: nil)) {
+            dropHighlight.show(nil)
+            let drop = tab.drop
+            DispatchQueue.main.async { [weak self] in self?.controller.dropPane(pane, drop) }
+            return true
+        }
         if let pane = info.cmdsPaneID {
             guard let drop = paneDropTarget(moving: pane, info) else { return false }
             dropHighlight.show(nil)
@@ -174,6 +199,27 @@ final class WorkspaceContentViewController: NSViewController {
         return nil
     }
 
+    /// A drop that makes the dragged pane a tab: on a tab bar (between its tabs), or on the strip along the top of a
+    /// pane without tabs (a new group of the two). nil elsewhere.
+    func tabDropTarget(moving: String, at point: NSPoint) -> (drop: PaneDrop, highlight: NSRect, bar: TabBarView?)? {
+        if let (bar, shownID) = tabBar(at: point) {
+            let index = bar.insertionIndex(at: bar.convert(point, from: view))
+            return (.tab(target: shownID, index: index), bar.convert(bar.bounds, to: view), bar)
+        }
+        for pane in visiblePanes {
+            let frame = pane.container.convert(pane.container.bounds, to: view)
+            guard frame.contains(point), pane.id != moving, frame.height > Self.tabStripHeight * 4,
+                  point.y < frame.minY + Self.tabStripHeight,
+                  controller.workspace(id: pane.workspaceID)?.root?.leaf(for: pane.id)?.isTabGroup == false else { continue }
+            return (.tab(target: pane.id, index: nil),
+                    NSRect(x: frame.minX, y: frame.minY, width: frame.width, height: Self.tabStripHeight), nil)
+        }
+        return nil
+    }
+
+    /// The strip along the top of a pane where a dropped pane becomes its tab.
+    static let tabStripHeight: CGFloat = 26
+
     /// `paneDropTarget(moving:at:)` at the mouse of a drag.
     private func paneDropTarget(moving: String, _ info: NSDraggingInfo)
         -> (target: String, side: PaneSide?, highlight: NSRect)? {
@@ -185,7 +231,10 @@ final class WorkspaceContentViewController: NSViewController {
 
     /// Rebuilds the view tree only when the workspace(s), structure or zoom changed; otherwise updates rings.
     func render() {
-        defer { updateSubagents() }
+        defer {
+            updateTabBars()
+            updateSubagents()
+        }
         if controller.isTiling {
             renderTiles()
             return
@@ -264,6 +313,7 @@ final class WorkspaceContentViewController: NSViewController {
 
     /// Replaces the hosted view; keeps the keyboard in the content area when it was there.
     private func rebuild(_ make: () -> NSView) {
+        tabBars = []
         let isFirstResponderInside = (view.window?.firstResponder as? NSView)?.isDescendant(of: host) ?? false
         install(make())
         if isFirstResponderInside || view.window?.firstResponder === view.window {
@@ -279,7 +329,7 @@ final class WorkspaceContentViewController: NSViewController {
     /// Attention rings and the focus outline. In a tile the outline marks the focused pane of the active tile only;
     /// a single-pane tile leaves attention to the tile's own ring.
     private func updateRings(of workspace: Workspace, active: Bool, tiled: Bool) {
-        let multiple = workspace.panes.count > 1 && workspace.zoomedPaneID == nil
+        let multiple = workspace.showsSeveralPanes && workspace.zoomedPaneID == nil
         for pane in workspace.panes.values {
             pane.container.attention = pane.attention && (!tiled || multiple)
             pane.container.showsFocus = multiple && active && pane.id == workspace.focusedPaneID
@@ -339,6 +389,46 @@ final class WorkspaceContentViewController: NSViewController {
         return candidates.min { ($0.distance, $0.offset) < ($1.distance, $1.offset) }?.id
     }
 
+    // MARK: - Tab bars
+
+    private struct TabBarEntry {
+        let workspaceID: String
+        weak var node: SplitNode?
+        weak var bar: TabBarView?
+    }
+
+    /// The tab bars of the views on screen (made by `makeView`; dropped on every rebuild).
+    private var tabBars: [TabBarEntry] = []
+
+    private func updateTabBar(_ bar: TabBarView, node: SplitNode, in workspace: Workspace) {
+        let tabs = node.tabs.compactMap { id -> TabItem? in
+            guard let pane = workspace.panes[id] else { return nil }
+            let title = pane.agentTopic ?? DefaultTitle.localized(pane.title)
+            return TabItem(paneID: id, title: title, kind: pane.kind, attention: pane.attention)
+        }
+        let active = workspace.id == controller.selectedWorkspaceID && node.tabs.contains(workspace.focusedPaneID ?? "")
+        bar.update(tabs: tabs, selected: node.paneID, active: active)
+    }
+
+    /// Titles, attention dots and the active state of every tab bar on screen.
+    private func updateTabBars() {
+        tabBars.removeAll { $0.bar == nil || $0.node == nil }
+        for entry in tabBars {
+            guard let bar = entry.bar, let node = entry.node, let workspace = controller.workspace(id: entry.workspaceID)
+            else { continue }
+            updateTabBar(bar, node: node, in: workspace)
+        }
+    }
+
+    /// The tab bar under `point` (this view's flipped coordinates) and the tab group's shown pane.
+    private func tabBar(at point: NSPoint) -> (bar: TabBarView, shownID: String)? {
+        for entry in tabBars {
+            guard let bar = entry.bar, bar.window != nil, let shown = entry.node?.paneID else { continue }
+            if bar.convert(bar.bounds, to: view).contains(point) { return (bar, shown) }
+        }
+        return nil
+    }
+
     private func install(_ content: NSView) {
         host.subviews.forEach { $0.removeFromSuperview() }
         content.translatesAutoresizingMaskIntoConstraints = true
@@ -350,7 +440,20 @@ final class WorkspaceContentViewController: NSViewController {
     private func makeView(for node: SplitNode, in workspace: Workspace) -> NSView {
         switch node.content {
         case .leaf(let id):
-            return workspace.panes[id]?.container ?? NSView()
+            let shown = workspace.panes[id]?.container ?? NSView()
+            guard node.isTabGroup else { return shown }
+            let bar = TabBarView()
+            let workspaceID = workspace.id
+            bar.onSelect = { [weak self] paneID in try? self?.controller.selectTab(paneID: paneID) }
+            bar.onClose = { [weak self] paneID in try? self?.controller.closePane(id: paneID) }
+            bar.onNewTab = { [weak self, weak node] in
+                guard let self, let shownID = node?.paneID else { return }
+                try? self.controller.newTab(paneID: shownID)
+            }
+            bar.onDraggedOutOfWindow = { [weak self] paneID in self?.controller.movePaneToNewWorkspaceFromUI(paneID: paneID) }
+            tabBars.append(TabBarEntry(workspaceID: workspaceID, node: node, bar: bar))
+            updateTabBar(bar, node: node, in: workspace)
+            return TabGroupView(shown: shown, bar: bar)
         case .split(let axis, let first, let second):
             let view = SplitContainerView(node: node, axis: axis,
                                           first: makeView(for: first, in: workspace),

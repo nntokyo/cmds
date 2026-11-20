@@ -73,6 +73,33 @@ pane: Needs Input, then Working, Idle, Stopped. Plain shells get no state.
 - ⌥⌘ + arrow keys move the focus; **View › Zoom Pane** (⇧⌘↩) shows one pane alone until toggled back.
 - ⌘W closes the focused pane, ⇧⌘W the workspace.
 
+### Tabs
+
+Several panes can share one place of the layout as tabs; a tab bar above them shows each tab's icon (terminal,
+browser, preview, files), title and an orange icon when it needs attention.
+
+- **Pane › New Tab** (⌘T) adds a tab beside the focused pane: a browser tab (start page, address bar focused) in a
+  browser pane, else a terminal in the pane's directory. The **+** at the end of the tab bar does the same, as does a
+  double-click on its empty part.
+- Click a tab to show it; **Pane › Next Tab / Previous Tab** (⌥⌘] / ⌥⌘[) go round the tabs of the focused pane.
+- ⌘W closes the focused tab (**File › Close Tab**), as do the × on a tab and a middle click; the next tab is shown.
+  The last tab left is a plain pane again (no tab bar).
+- **Drag a tab** like a pane's grip ([Moving panes](#moving-panes)): onto a pane's edge, a sidebar row or out of the
+  window. Dropped on a tab bar it joins that group at the mark (or moves within its own); dropped on the strip along
+  the top of a pane without tabs, the two become a tab group.
+- Tabs that are not shown keep running: a terminal's programs, a browser's page. Focusing such a pane (`cmds focus`,
+  the command palette, Latest Attention) shows its tab.
+- **Browser pages open in tabs** (on by default; Settings › General › Open new pages in tabs): a link that opens a new
+  window (`target="_blank"`) becomes a tab of its browser pane, and `cmds browser open` or an agent's `browser_open`
+  becomes a tab of the workspace's browser pane (the one on screen first) instead of a new split. Without a browser
+  pane they still split. Turned off, every new page gets a split, as before.
+- From scripts: `cmds tab [--pane P] [--browser URL] [--cwd DIR] [--no-focus]` opens a tab, `cmds pane move <pane>
+  --beside P --tab` makes a pane a tab of P's group ([CLI](../reference/cli.md)). `cmds ls` lists every tab of a
+  group; in `--json`, a tab's pane has `tabs` (the group in order) and `background: true` when it is not shown.
+
+Tabs are restored with the session. An older cmds version opening the same session, and export bundles (File ›
+Export Workspaces…), show a group's panes side by side instead. The iPhone shows the tab that is shown on the Mac.
+
 ### Moving panes
 
 A pane can move within its workspace, to another workspace or into a new one. It stays the same pane: its id,
@@ -225,6 +252,21 @@ cmds browser find 'Sign in'                          # select the next match on 
 - An address that cannot be loaded (`http://exa mple.com`) is refused with a beep; `cmds browser navigate` and
   `browser open` fail with an error.
 
+### Chrome bookmarks
+
+When Google Chrome is installed, a bar under the address bar shows Chrome's bookmarks bar: a click loads the bookmark
+in the pane, ⌘-click opens it in a new tab in the background, folders open a menu (with **Open All in Tabs**). What
+does not fit is in the » menu; Chrome's Other and Mobile bookmarks are in **Other Bookmarks** at the right. cmds only
+reads Chrome's bookmarks file (`~/Library/Application Support/Google/Chrome/<profile>/Bookmarks`), again whenever you
+come back to cmds after changing them in Chrome; it never writes there, and Chrome's sign-ins, cookies and passwords
+are not shared (sign in to sites in the pane itself). `javascript:` bookmarklets and `chrome://` pages are left out.
+
+- **Settings › General › Show Chrome bookmarks** turns the bar off; **Chrome profile** picks a profile (default: the
+  one Chrome used last).
+- macOS keeps apps from reading other apps' data: when it refuses, Settings says so and **Open Privacy Settings…**
+  leads to Privacy & Security › Full Disk Access, where turning cmds on lets it read the bookmarks (come back to cmds
+  afterwards).
+
 ### Pages that do not load, sign-in and crashes
 
 - When a page cannot be loaded (the server refuses the connection or is not found, too many redirects, an untrusted
@@ -253,7 +295,8 @@ match. Esc closes the bar. `cmds browser find [--backwards] [--case-sensitive] T
   cmds, titled with the page's title and its host. The page that opened it can talk to it as in Safari, so the sign-in
   finishes in the pane. ⌘W or the page itself closes it; closing the pane closes its pop-ups. Panes in a workspace that
   is not shown open no pop-ups.
-- **Links that open a new window** (`target="_blank"`) open in a new browser split beside the pane.
+- **Links that open a new window** (`target="_blank"`) open in a new tab of the pane ([Tabs](#tabs)), or a new
+  browser split beside it when Settings › General › Open new pages in tabs is off.
 - **`alert`, `confirm` and `prompt`** appear as sheets on the window, headed with the page's host.
 - **File fields** (`<input type="file">`) open the usual file panel.
 - **Downloads** (a `download` link, or a file the browser cannot show) go to the Downloads folder, numbered when the
@@ -313,6 +356,30 @@ cmds browser watch --off
   reload the page once when you come back. The button is filled while it is on; its tooltip says when it is paused. It turns red when the folder is removed or moved (watching resumes when it
   is back) or cannot be watched; the tooltip and the menu say why.
 - Per pane, not kept across relaunches. AI agents can turn it on with the MCP tool `browser_watch`.
+
+### Developer tools
+
+The **</>** button in a browser pane's toolbar and **View › Developer** have three tools for web development:
+
+- **View Page Source** (⌥⌘U): the HTML the server sent for the page (asked again from the page with its cookies,
+  usually from the cache) in a new tab beside the pane, with line numbers and coloured tags, attributes, strings and
+  comments. `cmds browser source --rendered` gives the DOM after scripts ran instead.
+- **Console** (⌥⌘C): a drawer at the bottom of the pane with the page's console messages, uncaught errors and
+  unhandled promise rejections, coloured by level (the same record as `cmds browser console`, from the start of
+  each page), a level filter and Clear. The line at the bottom runs JavaScript in the page (Return; ↑ / ↓ go through
+  earlier lines) and prints the result.
+- **SEO Report**: checks what the page declares for search engines and link previews and shows a report (score,
+  problems, warnings, notes, what passed, the page's title, description, Open Graph, headings…) in a tab:
+  title and description length (wide characters such as Japanese count twice, as in search results), one h1 and
+  heading levels in order, canonical, robots meta tag (noindex) and robots.txt (the whole site disallowed, sitemaps),
+  `lang`, viewport, Open Graph (og:title / description / image) and Twitter card, image alt, links without text,
+  JSON-LD structured data (types, invalid blocks), https and mixed content, thin content, favicon, charset and the
+  HTTP status. The score is 100 less 15 per problem and 5 per warning. It checks the page as loaded in the pane; it
+  does not crawl the site or measure speed.
+
+The source and report files are kept in the support folder (`Developer/`, one per page, replaced when opened again).
+From scripts and agents: `cmds browser source`, `cmds browser seo`, `cmds browser console --show`, and the MCP tools
+`browser_source`, `browser_seo` and `browser_console` ([ai-agents.md](ai-agents.md#browser-devtools)).
 
 ### Screenshots
 
@@ -516,7 +583,7 @@ script.
 
 ## Session restore
 
-When cmds quits and starts again, it restores the workspaces, their split layout and titles, and per pane the
+When cmds quits and starts again, it restores the workspaces, their split layout, tabs and titles, and per pane the
 working directory, browser URL (with its device size and color scheme), previewed file, files pane folder (with its hidden-files and Follow Terminal
 settings) or SSH host. Terminals start fresh shells in their directories
 (screen contents and running programs are not restored); SSH panes wait for you to connect. Coding-agent sessions that
@@ -639,6 +706,10 @@ once to all open panes and remembers it:
   its task always show. **Footer**: AI limits (Claude Code, Codex), CPU and memory. All on by default.
 - **Browser page zoom** and **Preview zoom**: the starting zoom of browser panes and of rendered previews
   (Markdown, diffs, text).
+- **Open new pages in tabs** (General): links that open a new window, `cmds browser open` and agents' pages become
+  tabs of a browser pane instead of splits ([Tabs](#tabs)). On by default.
+- **Show Chrome bookmarks** and **Chrome profile** (General): the bar of Chrome's bookmarks in browser panes
+  ([Chrome bookmarks](#chrome-bookmarks)). On by default when Chrome's bookmarks can be read.
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
 - **Menu Bar**: show the item, and what its icon and menu show ([Menu bar](#menu-bar)). All on by default.

@@ -360,6 +360,14 @@ enum Format {
             let childIndent = root ? indent : indent + (last ? "   " : "│  ")
             switch node {
             case .pane(let id):
+                // A tab group (`PaneInfo.tabs`): every tab, the shown one marked.
+                if let tabs = panes[id]?.tabs, tabs.count > 1 {
+                    return indent + branch + "tabs (\(tabs.count))\n" + tabs.enumerated().map { index, tab in
+                        let last = index == tabs.count - 1
+                        let text = panes[tab].map { pane($0, currentPane: currentPane) } ?? "   \(tab)"
+                        return childIndent + (last ? "└─ " : "├─ ") + text + (tab == id ? "  (shown)" : "") + "\n"
+                    }.joined()
+                }
                 let text = panes[id].map { pane($0, currentPane: currentPane) } ?? "   \(id)"
                 return indent + branch + text + "\n"
             case .split(let axis, let ratio, let first, let second):

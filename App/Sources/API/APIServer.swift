@@ -108,6 +108,43 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.controller.browserPageAction(paneID: pane, action) }
                 }
+            case "browser.source", "browser.seo":
+                // Page scripts (BrowserPane+WebDev.swift); `open: true` also shows the result in a preview tab.
+                let pane = try browserPaneID(params)
+                let method = request.method
+                let rendered = try params.bool("rendered") ?? false
+                let open = try params.bool("open") ?? false
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        let browser = try self.controller.browser(paneID: pane)
+                        if method == "browser.seo" {
+                            let report = try await browser.seoReport()
+                            if open {
+                                try self.controller.showDeveloperFile(report.markdown,
+                                    name: AppController.developerFileName("seo", for: report.url, extension: "md"),
+                                    format: .markdown, besideBrowser: pane, focus: false)
+                            }
+                            var value = try JSONValue.from(report)
+                            if case .object(var object) = value {
+                                object["text"] = .string(report.text)
+                                value = .object(object)
+                            }
+                            return value
+                        }
+                        let source = try await browser.pageSource(rendered: rendered)
+                        if open {
+                            try self.controller.showDeveloperFile(source.source,
+                                name: AppController.developerFileName(rendered ? "dom" : "source", for: source.url, extension: "html"),
+                                format: .source, besideBrowser: pane, focus: false)
+                        }
+                        var result: [String: JSONValue] = [
+                            "url": .string(source.url), "source": .string(source.source), "rendered": .bool(source.rendered),
+                            "truncated": .bool(source.truncated), "length": .number(Double(source.source.utf8.count)),
+                        ]
+                        if let status = source.status { result["status"] = .number(Double(status)) }
+                        return .object(result)
+                    }
+                }
             case "browser.find":
                 // WebKit's find in page from the current match (BrowserPane+Find.swift, #338).
                 let pane = try browserPaneID(params)
@@ -458,11 +495,23 @@ final class APIServer {
                                               focus: try params.bool("focus") ?? true, ssh: ssh,
                                               account: try controller.resolveAccountParam(try params.string("account")),
                                               recordOpener: try params.string("pane") != nil))
+        case "pane.new_tab":
+            // Like pane.split (not for SSH panes' sockets): a tab beside the pane instead of a split.
+            let rawKind = try params.string("kind") ?? (try params.string("url") != nil ? "browser" : nil)
+            let kind = try rawKind.map { raw -> PaneKind in
+                guard let kind = PaneKind(rawValue: raw), kind == .terminal || kind == .browser else {
+                    throw RPCError.invalidParams("kind must be \"terminal\" or \"browser\"")
+                }
+                return kind
+            }
+            return try .from(controller.newTab(paneID: try params.string("pane"), kind: kind, url: try params.string("url"),
+                                               cwd: try params.string("cwd"), focus: try params.bool("focus") ?? true,
+                                               recordOpener: try params.string("pane") != nil))
         case "pane.open_file":
             let direction = try splitDirection(params)
             let format = try params.string("format").map { raw -> PreviewFormat in
                 guard let format = PreviewFormat(rawValue: raw == "quicklook" ? "quickLook" : raw) else {
-                    throw RPCError.invalidParams("format must be \"markdown\", \"diff\" or \"quicklook\"")
+                    throw RPCError.invalidParams("format must be \"markdown\", \"diff\", \"source\" or \"quicklook\"")
                 }
                 return format
             }
@@ -486,6 +535,13 @@ final class APIServer {
         case "pane.move":
             // #218. Like pane.split, not in RemoteAPIPolicy.allowedMethods: SSH-pane sockets get 403.
             let move = try PaneMoveRequest(params: params.value)
+            if move.tab, let beside = move.beside {
+                if let workspace = move.workspace, workspace != controller.workspaceID(forPane: beside) {
+                    throw RPCError.invalidParams("pane \(beside) is not in workspace \(workspace)")
+                }
+                try controller.moveIntoTabs(paneID: move.pane, of: beside, focus: move.focus)
+                return ["pane": .string(move.pane), "workspace": controller.workspaceID(forPane: move.pane).map(JSONValue.string) ?? .null]
+            }
             let workspace = move.newWorkspace
                 ? try controller.movePaneToNewWorkspace(paneID: move.pane, focus: move.focus)
                 : try controller.movePane(paneID: move.pane, toWorkspace: move.workspace, beside: move.beside,
@@ -508,7 +564,8 @@ final class APIServer {
         case "browser.open":
             return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url"),
                                                     focus: try params.bool("focus") ?? true,
-                                                    recordOpener: try params.string("pane") != nil))
+                                                    recordOpener: try params.string("pane") != nil,
+                                                    tabs: try params.bool("tab")))
         case "browser.navigate":
             try controller.browserNavigate(paneID: try browserPaneID(params), url: try params.required("url"))
         case "browser.get_url":
@@ -518,8 +575,10 @@ final class APIServer {
             return .object(result)
         case "browser.console":
             let request = try BrowserConsoleRequest(params: params.value)
-            return try controller.browser(paneID: try browserPaneID(params))
-                .console(level: request.level, since: request.since, limit: request.limit, clear: request.clear)
+            let browser = try controller.browser(paneID: try browserPaneID(params))
+            // `show`: open (true) or close (false) the pane's console drawer.
+            if let show = try params.bool("show"), show != browser.isConsoleOpen { browser.toggleConsole(focus: false) }
+            return browser.console(level: request.level, since: request.since, limit: request.limit, clear: request.clear)
         case "browser.set_responsive":
             return try controller.browserSetResponsive(paneID: try browserPaneID(params),
                                                        change: try BrowserResponsiveChange(params: params.value))
@@ -610,7 +669,8 @@ final class APIServer {
             workspace = selected
         }
         if let focused = workspace.focusedPane, focused.kind == .browser { return focused.id }
-        if let first = workspace.orderedPanes.first(where: { $0.kind == .browser }) { return first.id }
+        // A browser on screen before a tab in the background.
+        if let first = (workspace.visiblePanes + workspace.orderedPanes).first(where: { $0.kind == .browser }) { return first.id }
         throw RPCError.notFound("no browser pane in workspace \(workspace.id) (open one with `cmds browser open <url>`)")
     }
 

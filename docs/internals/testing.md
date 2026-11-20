@@ -78,6 +78,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   shows its first or last rows, and `snapshot: true` adds `png_base64`, the tab drawn off screen without the toolbar
   (also with the screen locked; transparent background, so composite it on a dark or light colour to view it).
 - Launch the binary directly; `open` does not pass the environment reliably.
+- Tabs and Chrome bookmarks: `CMDS_CHROME_FOLDER=/tmp/x/chrome` points the bookmarks bar at a fake Chrome folder
+  (`Local State` with `profile.last_used` / `info_cache`, `<profile>/Bookmarks` with `roots.bookmark_bar` / `other` /
+  `synced`). Build groups with `cmds tab`, `cmds browser open` and `cmds pane move --beside P --tab`, check
+  `cmds ls` / `PaneInfo.tabs` / `background` after closing, swapping and moving tabs (the focused pane is never a
+  background tab), and `tabGroups` in session.json across a relaunch. Without the variable, a Debug build is usually
+  refused Chrome's real folder by macOS: Settings › General then shows the Full Disk Access note.
 - A window that is not on screen (another Space, hidden) is not drawn, so `screencapture` shows nothing. DEBUG
   builds answer `debug.preview_snapshot {pane}` → `{"png_base64"}` with a picture of a preview pane drawn off screen
   (web content via WKWebView's snapshot; Quick Look's out-of-process view stays blank), and

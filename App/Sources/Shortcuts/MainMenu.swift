@@ -152,6 +152,11 @@ enum MainMenu {
         menu.addItem(item("Reload on File Changes", #selector(CommandRouter.browserToggleWatch(_:)), "", target: router))
         menu.addItem(item("Back", #selector(CommandRouter.browserBack(_:)), "[", target: router))
         menu.addItem(item("Forward", #selector(CommandRouter.browserForward(_:)), "]", target: router))
+        let developer = NSMenu(title: String(localized: "Developer"))
+        developer.addItem(item("View Page Source", #selector(CommandRouter.browserViewSource(_:)), "u", [.command, .option], target: router))
+        developer.addItem(item("Show Console", #selector(CommandRouter.browserToggleConsole(_:)), "c", [.command, .option], target: router))
+        developer.addItem(item("SEO Report", #selector(CommandRouter.browserSEOReport(_:)), "", target: router))
+        menu.addItem(submenu(developer))
         menu.addItem(.separator())
         menu.addItem(item("Enter Full Screen", #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control]))
         return menu
@@ -161,6 +166,10 @@ enum MainMenu {
         let menu = NSMenu(title: String(localized: "Pane"))
         menu.addItem(item("Split Right", #selector(CommandRouter.splitRight(_:)), "d", target: router))
         menu.addItem(item("Split Down", #selector(CommandRouter.splitDown(_:)), "d", [.command, .shift], target: router))
+        menu.addItem(.separator())
+        menu.addItem(item("New Tab", #selector(CommandRouter.newTab(_:)), "t", target: router))
+        menu.addItem(item("Next Tab", #selector(CommandRouter.nextTab(_:)), "]", [.command, .option], target: router))
+        menu.addItem(item("Previous Tab", #selector(CommandRouter.previousTab(_:)), "[", [.command, .option], target: router))
         menu.addItem(.separator())
         let arrows: [(String.LocalizationValue, Int, Selector)] = [
             ("Focus Left", NSLeftArrowFunctionKey, #selector(CommandRouter.focusLeft(_:))),
