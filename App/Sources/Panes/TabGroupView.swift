@@ -71,7 +71,8 @@ final class TabBarView: NSView, NSDraggingSource {
 
     private var hoveredIndex: Int?
     private var hoveringClose = false
-    private var pressed: (index: Int, point: NSPoint, onClose: Bool)?
+    /// The tab pressed (by pane id: an agent may add or close tabs before the mouse goes up).
+    private var pressed: (index: Int, paneID: String, point: NSPoint, onClose: Bool)?
     private var draggingID: String?
     /// While a pane is dragged over the bar: where it would go (index between tabs).
     private var dropIndex: Int? {
@@ -281,7 +282,7 @@ final class TabBarView: NSView, NSDraggingSource {
             pressed = nil
             onNewTab?()
         } else if let index = index(at: point) {
-            pressed = (index, event.locationInWindow, showsClose(index) && closeRect(index).contains(point))
+            pressed = (index, tabs[index].paneID, event.locationInWindow, showsClose(index) && closeRect(index).contains(point))
         } else if event.clickCount == 2 {
             pressed = nil
             onNewTab?()
@@ -289,20 +290,20 @@ final class TabBarView: NSView, NSDraggingSource {
     }
 
     override func mouseDragged(with event: NSEvent) {
-        guard let pressed, !pressed.onClose, tabs.indices.contains(pressed.index),
+        guard let pressed, !pressed.onClose, let tab = tabs.first(where: { $0.paneID == pressed.paneID }),
               hypot(event.locationInWindow.x - pressed.point.x, event.locationInWindow.y - pressed.point.y) >= Self.dragThreshold
         else { return }
         self.pressed = nil
-        beginDrag(tabs[pressed.index], event: event)
+        beginDrag(tab, event: event)
     }
 
     override func mouseUp(with event: NSEvent) {
         defer { pressed = nil }
-        guard let pressed, tabs.indices.contains(pressed.index) else { return }
+        guard let pressed, let index = tabs.firstIndex(where: { $0.paneID == pressed.paneID }) else { return }
         let point = convert(event.locationInWindow, from: nil)
-        let id = tabs[pressed.index].paneID
+        let id = pressed.paneID
         if pressed.onClose {
-            if closeRect(pressed.index).contains(point) { onClose?(id) }
+            if closeRect(index).contains(point) { onClose?(id) }
         } else {
             onSelect?(id)
         }

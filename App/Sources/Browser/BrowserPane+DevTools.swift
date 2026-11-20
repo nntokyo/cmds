@@ -43,13 +43,16 @@ extension BrowserPane {
         for message in messages {
             if let entry = ConsoleEntry(message: message) { consoleBuffer.append(entry) }
         }
-        consoleDrawer?.refresh()
+        consoleDrawer?.setNeedsRefresh()
     }
 
     /// `browser.console`.
     func console(level: ConsoleEntry.Level?, since: Int?, limit: Int?, clear: Bool) -> JSONValue {
         let result = consoleBuffer.json(level: level, since: since, limit: limit)
-        if clear { consoleBuffer.clear() }
+        if clear {
+            consoleBuffer.clear()
+            consoleDrawer?.refresh()
+        }
         return result
     }
 

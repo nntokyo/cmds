@@ -7,7 +7,7 @@ import CmdsCore
 extension BrowserPane {
     /// `browser.source`: the HTML the server sent (or with `rendered` the DOM now), capped at `PageSource.maxBytes`.
     func pageSource(rendered: Bool) async throws -> (url: String, source: String, rendered: Bool, truncated: Bool, status: Int?) {
-        let result = try await runPageScript(PageSource.script, ["rendered": rendered])
+        let result = try await runPageScript(PageSource.script, ["rendered": rendered, "maxBytes": PageSource.maxBytes])
         guard case .object(let object) = result, let source = object["source"]?.stringValue else {
             throw RPCError(code: 500, message: "the page gave no source")
         }
@@ -27,13 +27,16 @@ extension BrowserPane {
 
     var isConsoleOpen: Bool { consoleDrawer != nil }
 
-    /// Shows or hides the console drawer at the bottom of the pane (View › Developer › Console, ⌥⌘C).
-    func toggleConsole() {
+    /// Shows or hides the console drawer at the bottom of the pane (View › Developer › Console, ⌥⌘C). With `focus`
+    /// (the user asked) its JavaScript line takes the keyboard; the API never moves the keyboard (an agent showing the
+    /// console must not turn what the user types into page scripts).
+    func toggleConsole(focus: Bool = true) {
         if let drawer = consoleDrawer {
+            let hadKeyboard = (window?.firstResponder as? NSView)?.isDescendant(of: drawer) == true
             drawer.removeFromSuperview()
             consoleDrawer = nil
             consoleDrawerHeight?.constant = 0
-            window?.makeFirstResponder(webView)
+            if hadKeyboard { window?.makeFirstResponder(webView) }
         } else {
             let drawer = BrowserConsoleView(pane: self)
             consoleDrawer = drawer
@@ -47,7 +50,7 @@ extension BrowserPane {
             ])
             consoleDrawerHeight?.constant = min(BrowserConsoleView.preferredHeight, max(bounds.height * 0.45, 120))
             drawer.refresh()
-            drawer.focusInput()
+            if focus { drawer.focusInput() }
         }
         updateDeveloperButton()
     }
@@ -74,6 +77,7 @@ extension BrowserPane {
 
     @objc private func viewSourceChosen() { onDeveloperAction?(.source) }
     @objc private func consoleChosen() { toggleConsole() }
+
     @objc private func seoChosen() { onDeveloperAction?(.seo) }
 }
 
@@ -96,6 +100,8 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
     private let levelPopup = NSPopUpButton()
     /// Lines of evaluated input and their results, by the console sequence number they follow.
     private var evaluations: [(afterSeq: Int, input: String, result: String, failed: Bool)] = []
+    /// Counts every evaluation (the list is capped, so its count alone cannot tell a new one).
+    private var evaluationCount = 0
     private var history: [String] = []
     private var historyIndex: Int?
     private var shownSignature = ""
@@ -189,11 +195,25 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
         (levelPopup.selectedItem?.representedObject as? String).flatMap(ConsoleEntry.Level.init(rawValue:))
     }
 
+    private var refreshScheduled = false
+
+    /// Redraws soon (at most four times a second while a page logs constantly).
+    func setNeedsRefresh() {
+        guard !refreshScheduled else { return }
+        refreshScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            MainActor.assumeIsolated {
+                self?.refreshScheduled = false
+                self?.refresh()
+            }
+        }
+    }
+
     /// Redraws when the buffer, the filter or the evaluations changed.
     func refresh() {
         guard let pane else { return }
         let entries = pane.consoleBuffer.entries(level: minimumLevel)
-        let signature = "\(entries.last?.seq ?? 0)|\(entries.count)|\(evaluations.count)|\(minimumLevel?.rawValue ?? "")"
+        let signature = "\(entries.last?.seq ?? 0)|\(entries.count)|\(evaluationCount)|\(pane.consoleBuffer.dropped)|\(minimumLevel?.rawValue ?? "")"
         guard signature != shownSignature else { return }
         shownSignature = signature
         let atBottom = scrollView.verticalScroller.map { $0.floatValue > 0.98 } ?? true
@@ -262,6 +282,7 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
             }
             guard let self else { return }
             self.evaluations.append((after, script, line.0, line.1))
+            self.evaluationCount += 1
             if self.evaluations.count > 200 { self.evaluations.removeFirst(self.evaluations.count - 200) }
             self.refresh()
             self.textView.scrollToEndOfDocument(nil)

@@ -13,17 +13,34 @@ public enum PageSource {
     /// At most this much source is returned (the rest is cut, `truncated`).
     public static let maxBytes = 5 * 1024 * 1024
 
-    /// `callAsyncJavaScript` body. Argument `rendered` (Bool). Returns `{url, source, rendered, status?, contentType?}`.
+    /// `callAsyncJavaScript` body. Arguments `rendered` (Bool), `maxBytes` (Int). Returns `{url, source, rendered, status?,
+    /// contentType?}`.
     public static let script = """
         const dom = () => {
           const doctype = document.doctype ? '<!DOCTYPE ' + document.doctype.name + '>\\n' : '';
           return { url: location.href, source: doctype + document.documentElement.outerHTML, rendered: true };
         };
-        if (rendered || !/^(https?|file):$/.test(location.protocol)) return dom();
+        // Pages that are no HTML (images, video, PDF in the pane): their DOM.
+        if (rendered || !/^(https?|file):$/.test(location.protocol) || !/html|xml/i.test(document.contentType || '')) return dom();
         try {
-          const response = await fetch(location.href, { credentials: 'include', cache: 'force-cache' });
-          const source = await response.text();
-          return { url: location.href, source, rendered: false, status: response.status,
+          // From the cache when it has the page, else asked again (a GET with the page's cookies).
+          let response;
+          try { response = await fetch(location.href, { credentials: 'include', cache: 'only-if-cached', mode: 'same-origin' }); }
+          catch (e) { response = await fetch(location.href, { credentials: 'include', cache: 'force-cache' }); }
+          // Read at most maxBytes (+1 to tell it was cut), decoded with the page's own encoding (Shift_JIS, EUC-JP…).
+          const reader = response.body.getReader();
+          const chunks = []; let size = 0;
+          while (size <= maxBytes) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value); size += value.length;
+          }
+          try { reader.cancel(); } catch (e) {}
+          const bytes = new Uint8Array(Math.min(size, maxBytes + 1)); let offset = 0;
+          for (const chunk of chunks) { const part = chunk.subarray(0, bytes.length - offset); bytes.set(part, offset); offset += part.length; if (offset >= bytes.length) break; }
+          let decoder;
+          try { decoder = new TextDecoder(document.characterSet || 'utf-8'); } catch (e) { decoder = new TextDecoder('utf-8'); }
+          return { url: location.href, source: decoder.decode(bytes), rendered: false, status: response.status,
                    contentType: response.headers.get('content-type') };
         } catch (e) {
           return dom();
@@ -48,13 +65,19 @@ public enum SourceHTML {
         PreviewHTML.page(title: title, bodyClass: "source", body: render(source), extraCSS: css)
     }
 
+    /// Above this size the lines are not coloured (it takes seconds and much memory on the main thread).
+    public static let colourLimit = 1_000_000
+
     public static func render(_ source: String) -> String {
         var rows: [String] = []
         var inComment = false
         var number = 0
-        for line in source.split(separator: "\n", omittingEmptySubsequences: false) {
+        let colours = source.utf8.count <= colourLimit
+        // By UTF-16 units: "\r\n" is one Character to Swift and would not split at "\n".
+        for raw in source.components(separatedBy: "\n") {
             number += 1
-            let (html, stillInComment) = colour(String(line.hasSuffix("\r") ? line.dropLast() : line), inComment: inComment)
+            let line = raw.hasSuffix("\r") ? String(raw.dropLast()) : raw
+            let (html, stillInComment) = colours ? colour(line, inComment: inComment) : (PreviewHTML.escape(line), false)
             inComment = stillInComment
             rows.append("<tr><td class=\"ln\">\(number)</td><td class=\"code\">\(html)</td></tr>")
         }
@@ -310,7 +333,7 @@ public struct SEOReport: Codable, Equatable, Sendable {
 
     /// The report shown in a preview pane.
     public var markdown: String {
-        var lines = ["# SEO report", "", "**\(score)/100** · \(markdownEscaped(url))", ""]
+        var lines = ["# SEO report", "", "**\(score)/100** · \(code(url))", ""]
         let groups: [(SEOCheck.Status, String)] = [(.fail, "Problems"), (.warn, "Warnings"), (.info, "Notes"), (.pass, "Passed")]
         for (status, heading) in groups {
             let found = checks.filter { $0.status == status }
@@ -318,44 +341,52 @@ public struct SEOReport: Codable, Equatable, Sendable {
             lines += ["## \(heading)", ""] + found.map { "- **\($0.id)** — \(markdownEscaped($0.message))" } + [""]
         }
         lines += ["## Page", "", "| | |", "|---|---|"]
-        let og = ["title", "description", "image", "url", "type"].compactMap { key in
-            facts.openGraph[key].map { "og:\(key) = \($0)" }
+        // Text values escaped, addresses as code (shown exactly, never a link).
+        var rows: [(String, String?)] = [
+            ("Title", facts.title.map(markdownEscaped)), ("Description", facts.description.map(markdownEscaped)),
+            ("Canonical", facts.canonical.map(code)), ("Robots", facts.robots.map(code)), ("Language", facts.lang.map(code)),
+            ("Viewport", facts.viewport.map(code)),
+        ]
+        for key in ["title", "description", "image", "url", "type"] {
+            guard let value = facts.openGraph[key] else { continue }
+            rows.append(("og:\(key)", key == "image" || key == "url" ? code(value) : markdownEscaped(value)))
         }
-        let rows: [(String, String?)] = [
-            ("Title", facts.title), ("Description", facts.description), ("Canonical", facts.canonical),
-            ("Robots", facts.robots), ("Language", facts.lang), ("Viewport", facts.viewport),
-            ("Open Graph", og.isEmpty ? nil : og.joined(separator: "<br>")),
-            ("Twitter card", facts.twitterCard),
-            ("Structured data", facts.structuredDataTypes.isEmpty ? nil : facts.structuredDataTypes.joined(separator: ", ")),
+        rows += [
+            ("Twitter card", facts.twitterCard.map(code)),
+            ("Structured data", facts.structuredDataTypes.isEmpty ? nil : markdownEscaped(facts.structuredDataTypes.joined(separator: ", "))),
             ("Links", "\(facts.links) (\(facts.internalLinks) internal, \(facts.externalLinks) external, \(facts.nofollowLinks) nofollow)"),
             ("Images", "\(facts.images) (\(facts.imagesWithoutAlt) without alt)"),
             ("Words", String(facts.wordCount)),
         ]
         for (name, value) in rows {
-            lines.append("| \(name) | \(value.map { tableCell($0) } ?? "—") |")
+            lines.append("| \(name) | \(value ?? "—") |")
         }
         if !facts.headings.isEmpty {
+            // Flat: indenting by level would turn deep headings into a code block.
             lines += ["", "## Headings", ""]
-            lines += facts.headings.prefix(SEOAudit.maxHeadings).map {
-                String(repeating: "  ", count: max(0, $0.level - 1)) + "- h\($0.level) \(markdownEscaped($0.text))"
-            }
+            lines += facts.headings.prefix(SEOAudit.maxHeadings).map { "- **h\($0.level)** \(markdownEscaped($0.text))" }
         }
         return lines.joined(separator: "\n") + "\n"
     }
 
+    /// Page text as one line of Markdown text (a page's value cannot start a heading, list or block).
     private func markdownEscaped(_ text: String) -> String {
         var out = ""
         for character in text {
-            if "\\`*_[]<>|#".contains(character) { out.append("\\") }
+            if character.isNewline { out.append(" "); continue }
+            // Not `_` or `#`: messages quote URLs (an escape would stay in an autolink), and no line starts with page text.
+            if "\\`*[]<>|".contains(character) { out.append("\\") }
             out.append(character)
         }
         return out
     }
 
-    private func tableCell(_ text: String) -> String {
-        // `<br>` joins Open Graph lines; everything else is escaped.
-        text.components(separatedBy: "<br>").map(markdownEscaped).joined(separator: "<br>")
-            .replacingOccurrences(of: "\n", with: " ")
+    /// URLs and other values as code, so they are shown exactly (no escapes in them, no link made of them).
+    private func code(_ text: String) -> String {
+        let flat = String(text.map { $0.isNewline ? " " : $0 })
+        let ticks = flat.contains("`") ? "``" : "`"
+        // `|` escaped even in code: it would end a table cell.
+        return ticks + " " + flat.replacingOccurrences(of: "|", with: "\\|") + " " + ticks
     }
 }
 
@@ -429,9 +460,15 @@ public enum SEOAudit {
         }
 
         let robots = facts.robots ?? ""
-        if robots.contains("noindex") || robots.contains("none") {
+        // Directives, possibly for a crawler (`googlebot: noindex`); `max-image-preview:none` is no `none`.
+        let directives = Set(robots.split { $0 == "," || $0 == " " }.map { part -> String in
+            let token = part.trimmingCharacters(in: .whitespaces)
+            return token.split(separator: ":").count == 2 && !token.hasPrefix("max-") && !token.hasPrefix("unavailable_after")
+                ? String(token.split(separator: ":")[1]) : token
+        })
+        if directives.contains("noindex") || directives.contains("none") {
             add("robots", .fail, "<meta name=\"robots\"> asks search engines not to index the page (\(robots))")
-        } else if robots.contains("nofollow") {
+        } else if directives.contains("nofollow") {
             add("robots", .warn, "<meta name=\"robots\"> asks not to follow the links (\(robots))")
         } else {
             add("robots", .pass, robots.isEmpty ? "indexable (no robots meta tag)" : "indexable (\(robots))")
@@ -552,20 +589,31 @@ public enum SEOAudit {
         try { const nav = performance.getEntriesByType('navigation')[0]; if (nav && nav.responseStatus) status = nav.responseStatus; } catch (e) {}
         let robotsTxt = null;
         if (/^https?:$/.test(location.protocol)) {
+          // A server that does not answer skips the check (5 s), not the whole report.
+          const abort = new AbortController();
+          const timer = setTimeout(() => abort.abort(), 5000);
           try {
-            const r = await fetch(location.origin + '/robots.txt', { credentials: 'omit', redirect: 'follow' });
-            const body = r.ok ? (await r.text()).slice(0, 200000) : '';
-            let agentAll = false, disallowsAll = false, sitemaps = 0;
+            const r = await fetch(location.origin + '/robots.txt', { credentials: 'omit', redirect: 'follow', signal: abort.signal });
+            const body = r.ok && /^text\\/plain/i.test(r.headers.get('content-type') || 'text/plain')
+              ? (await r.text()).slice(0, 500000) : '';
+            // Groups: consecutive User-agent lines, then their rules. The `*` group disallowing `/` (with no Allow)
+            // shuts out every crawler without a group of its own.
+            let agents = [], inRules = false, starDisallowsAll = false, starAllows = false, sitemaps = 0;
             for (const raw of body.split(/\\r?\\n/)) {
               const line = raw.replace(/#.*/, '').trim();
               const m = line.match(/^([A-Za-z-]+)\\s*:\\s*(.*)$/); if (!m) continue;
               const key = m[1].toLowerCase(), value = m[2].trim();
-              if (key === 'user-agent') agentAll = value === '*';
-              else if (key === 'disallow' && agentAll && value === '/') disallowsAll = true;
-              else if (key === 'sitemap') sitemaps++;
+              if (key === 'user-agent') { if (inRules) { agents = []; inRules = false; } agents.push(value); continue; }
+              if (key === 'sitemap') { sitemaps++; continue; }
+              if (key !== 'allow' && key !== 'disallow') continue;
+              inRules = true;
+              if (!agents.includes('*')) continue;
+              if (key === 'disallow' && value === '/') starDisallowsAll = true;
+              if (key === 'allow' && value !== '') starAllows = true;
             }
-            robotsTxt = { status: r.status, disallowsAll, sitemaps };
+            robotsTxt = { status: r.status, disallowsAll: starDisallowsAll && !starAllows, sitemaps };
           } catch (e) { robotsTxt = { status: 0, disallowsAll: false, sitemaps: 0 }; }
+          clearTimeout(timer);
         }
         // Japanese, Chinese and Korean have no spaces: two of their characters count as a word.
         const bodyText = document.body ? document.body.innerText : '';

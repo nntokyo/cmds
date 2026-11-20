@@ -33,7 +33,14 @@ extension AppController {
         if let workspace = workspace(id: browser.workspaceID),
            let existing = workspace.orderedPanes.first(where: { $0.preview?.path == file.path }) {
             existing.preview?.open(path: file.path, format: format)
-            if focus { try focusPane(id: existing.id) }
+            if focus {
+                try focusPane(id: existing.id)
+            } else if let leaf = workspace.root?.leaf(for: existing.id), leaf.paneID != existing.id,
+                      !(workspace.focusedPaneID.map(leaf.tabs.contains) ?? false) {
+                // Shown, unless that hides the pane with the keyboard.
+                leaf.selectTab(existing.id)
+                emit(.workspace(id: workspace.id))
+            }
             return try paneInfo(id: existing.id)
         }
         return try split(paneID: browser.id, direction: .right, kind: .preview, focus: focus, file: target,

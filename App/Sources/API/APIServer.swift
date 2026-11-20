@@ -577,7 +577,7 @@ final class APIServer {
             let request = try BrowserConsoleRequest(params: params.value)
             let browser = try controller.browser(paneID: try browserPaneID(params))
             // `show`: open (true) or close (false) the pane's console drawer.
-            if let show = try params.bool("show"), show != browser.isConsoleOpen { browser.toggleConsole() }
+            if let show = try params.bool("show"), show != browser.isConsoleOpen { browser.toggleConsole(focus: false) }
             return browser.console(level: request.level, since: request.since, limit: request.limit, clear: request.clear)
         case "browser.set_responsive":
             return try controller.browserSetResponsive(paneID: try browserPaneID(params),

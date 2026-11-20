@@ -434,8 +434,10 @@ final class MCPServer {
             let rendered = arguments["rendered"]?.boolValue ?? false
             let limit = try toolArguments { () -> Int in
                 guard let raw = arguments["maxChars"], raw != .null else { return Self.defaultSourceChars }
-                guard let value = raw.intValue, value > 0 else { throw RPCError.invalidParams("maxChars must be a positive integer") }
-                return min(value, Self.maxSourceChars)
+                guard case .number(let value) = raw, value.isFinite, value >= 1 else {
+                    throw RPCError.invalidParams("maxChars must be a positive integer")
+                }
+                return Int(min(value.rounded(.down), Double(Self.maxSourceChars)))
             }
             let result = try devToolsCall("browser.source", arguments, ["rendered": rendered ? true : nil])
             let source = result["source"]?.stringValue ?? ""

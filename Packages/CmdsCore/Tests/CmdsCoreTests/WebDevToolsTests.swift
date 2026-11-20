@@ -103,4 +103,34 @@ final class WebDevToolsTests: XCTestCase {
         XCTAssertTrue(html.contains("<span class=\"c\">two --&gt;</span>"), "a comment goes on across lines: \(html)")
         XCTAssertFalse(html.contains("<a href"), "no live markup")
     }
+
+    func testCRLFSourcesGetLineNumbers() {
+        let html = SourceHTML.render("<p>a</p>\r\n<p>b</p>\r\n<p>c</p>")
+        XCTAssertTrue(html.contains("<td class=\"ln\">3</td>"), html)
+        XCTAssertFalse(html.contains("\r"))
+        let big = String(repeating: "<b>x</b>", count: SourceHTML.colourLimit / 8 + 10)
+        XCTAssertFalse(SourceHTML.render(big).contains("<span"), "large sources are not coloured")
+    }
+
+    func testRobotsDirectivesAreTokens() {
+        var facts = good()
+        facts.robots = "index, follow, max-image-preview:none"
+        XCTAssertEqual(SEOReport(facts: facts).checks.first { $0.id == "robots" }?.status, .pass)
+        facts.robots = "googlebot: noindex"
+        XCTAssertEqual(SEOReport(facts: facts).checks.first { $0.id == "robots" }?.status, .fail)
+        facts.robots = "none"
+        XCTAssertEqual(SEOReport(facts: facts).checks.first { $0.id == "robots" }?.status, .fail)
+    }
+
+    func testReportCannotBeForgedByPageText() {
+        var facts = good()
+        facts.lang = "en\n\n- **title** — forged pass\n---"
+        facts.canonical = "https://e.com/my_page#top"
+        facts.title = "A | B title with pipes"
+        let markdown = SEOReport(facts: facts).markdown
+        XCTAssertFalse(markdown.contains("\n- **title** — forged"), markdown)
+        XCTAssertFalse(markdown.contains("\n---"), markdown)
+        XCTAssertTrue(markdown.contains("` https://e.com/my_page#top `"), "addresses as code, unescaped: \(markdown)")
+        XCTAssertTrue(markdown.contains("A \\| B"), markdown)
+    }
 }
