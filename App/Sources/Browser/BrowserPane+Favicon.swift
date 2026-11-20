@@ -22,19 +22,40 @@ extension BrowserPane {
     func loadIfPending() {
         guard let url = pendingURL else { return }
         pendingURL = nil
+        loadingFromPending = true
         webView.load(URLRequest(url: url))
+    }
+
+    /// After `loadIfPending` started the page for a command: waits until it has loaded (at most 20 s), so scripts and
+    /// snapshots see the page, not the blank document before it.
+    func waitForPendingLoad() async {
+        guard loadingFromPending else { return }
+        let deadline = Date(timeIntervalSinceNow: 20)
+        while Date() < deadline, webView.isLoading || webView.url == nil {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+        loadingFromPending = false
     }
 
     // MARK: - Favicon
 
+    /// The site an icon belongs to: scheme, host and port (`http://localhost:5173`), or a local page's folder.
+    static func faviconSite(_ url: URL) -> String? {
+        guard let scheme = url.scheme?.lowercased() else { return nil }
+        if scheme == "file" { return "file://" + url.deletingLastPathComponent().path }
+        guard let host = url.host?.lowercased() else { return nil }
+        return "\(scheme)://\(host)" + (url.port.map { ":\($0)" } ?? "")
+    }
+
     /// Looks up the page's icon after a load (its `<link rel="icon">`s, then `/favicon.ico`), from the cache when known.
     func refreshFavicon() {
-        guard let page = webView.url, let scheme = page.scheme?.lowercased(), ["http", "https", "file"].contains(scheme) else {
-            setFavicon(nil, host: nil)
+        guard let page = webView.url, let scheme = page.scheme?.lowercased(), ["http", "https", "file"].contains(scheme),
+              let site = Self.faviconSite(page) else {
+            setFavicon(nil, site: nil)
             return
         }
-        let host = page.host ?? page.deletingLastPathComponent().path
-        if host != faviconHost { setFavicon(FaviconCache.shared.image(forHost: host), host: host) }
+        // Another site: its known icon, else none until found (never the previous site's).
+        if site != faviconHost { setFavicon(FaviconCache.shared.image(forSite: site), site: site) }
         faviconTask?.cancel()
         faviconTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -44,70 +65,132 @@ extension BrowserPane {
             for url in Favicon.urls(candidates, page: page) {
                 guard !Task.isCancelled else { return }
                 if let image = await FaviconCache.shared.image(for: url) {
-                    guard !Task.isCancelled, self.webView.url?.host == page.host else { return }
-                    FaviconCache.shared.remember(image, forHost: host)
-                    self.setFavicon(image, host: host)
+                    guard !Task.isCancelled, self.webView.url.flatMap(Self.faviconSite) == site else { return }
+                    FaviconCache.shared.remember(image, forSite: site)
+                    self.setFavicon(image, site: site)
                     return
                 }
             }
         }
     }
 
-    private func setFavicon(_ image: NSImage?, host: String?) {
-        faviconHost = host
+    private func setFavicon(_ image: NSImage?, site: String?) {
+        faviconHost = site
         guard image !== favicon else { return }
         favicon = image
         onFaviconChange?()
     }
 }
 
-/// Icons downloaded for tabs, by URL and by site (the bookmarks bar shows a visited site's icon). In memory only.
+/// Icons downloaded for tabs, by URL and by site (`BrowserPane.faviconSite`; the bookmarks bar shows a visited site's
+/// icon). In memory only. Downloads stop at `Favicon.maxBytes`; images are decoded off the main thread and scaled
+/// down to 64 px, so a huge or hostile icon costs little.
 @MainActor
 final class FaviconCache {
     static let shared = FaviconCache()
     static let didChange = Notification.Name("FaviconCacheDidChange")
+    /// Icons are kept at most this many pixels wide and high.
+    static let pixels = 64
 
     private var byURL: [URL: NSImage] = [:]
+    /// Icons that do not exist or cannot be decoded (not network errors or cancelled downloads: those are tried again).
     private var missing: Set<URL> = []
-    private var byHost: [String: NSImage] = [:]
+    private var bySite: [String: NSImage] = [:]
     private let session: URLSession = {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.timeoutIntervalForRequest = 10
+        configuration.timeoutIntervalForResource = 20
         configuration.httpCookieAcceptPolicy = .never
+        configuration.httpShouldSetCookies = false
         return URLSession(configuration: configuration)
     }()
 
-    func image(forHost host: String) -> NSImage? { byHost[host] }
+    func image(forSite site: String) -> NSImage? { bySite[site] }
 
-    func remember(_ image: NSImage, forHost host: String) {
-        guard byHost[host] !== image else { return }
-        if byHost.count > 500 { byHost.removeAll() }
-        byHost[host] = image
+    func remember(_ image: NSImage, forSite site: String) {
+        guard bySite[site] !== image else { return }
+        if bySite.count > 500 { bySite.removeAll() }
+        bySite[site] = image
         NotificationCenter.default.post(name: Self.didChange, object: self)
     }
 
-    /// The icon at `url` (downloaded once; a failure is remembered too). At most `Favicon.maxBytes`.
+    private enum Outcome { case image(NSImage), missing, failed }
+
+    /// The icon at `url` (downloaded once; an icon that does not exist is remembered too).
     func image(for url: URL) async -> NSImage? {
         if let image = byURL[url] { return image }
         if missing.contains(url) { return nil }
-        let data: Data?
-        if url.isFileURL || url.scheme == "data" {
-            data = try? Data(contentsOf: url, options: .mappedIfSafe)
-        } else {
-            var request = URLRequest(url: url)
-            request.setValue("image/*", forHTTPHeaderField: "Accept")
-            let result = try? await session.data(for: request)
-            let ok = (result?.1 as? HTTPURLResponse).map { (200..<300).contains($0.statusCode) } ?? false
-            data = ok ? result?.0 : nil
+        let outcome = await Self.load(url, session: session)
+        guard !Task.isCancelled else { return nil }
+        // `data:` icons are part of the page: never kept by their (possibly huge) address.
+        if url.scheme == "data" {
+            if case .image(let image) = outcome { return image }
+            return nil
         }
-        guard let data, data.count <= Favicon.maxBytes, let image = NSImage(data: data), image.isValid,
-              image.size.width > 0, image.size.height > 0 else {
+        switch outcome {
+        case .image(let image):
+            if byURL.count > 500 { byURL.removeAll() }
+            byURL[url] = image
+            return image
+        case .missing:
             if missing.count > 2000 { missing.removeAll() }
             missing.insert(url)
             return nil
+        case .failed:
+            return nil
         }
-        if byURL.count > 500 { byURL.removeAll() }
-        byURL[url] = image
-        return image
+    }
+
+    /// Reads at most `Favicon.maxBytes` (a local file only when it is a regular file that small) and decodes off the
+    /// main thread.
+    nonisolated private static func load(_ url: URL, session: URLSession) async -> Outcome {
+        var data = Data()
+        if url.isFileURL {
+            guard let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+                  attributes[.type] as? FileAttributeType == .typeRegular,
+                  ((attributes[.size] as? NSNumber)?.intValue ?? .max) <= Favicon.maxBytes,
+                  let read = try? Data(contentsOf: url) else { return .missing }
+            data = read
+        } else if url.scheme == "data" {
+            guard url.absoluteString.utf8.count <= Favicon.maxBytes * 2, let read = try? Data(contentsOf: url) else { return .missing }
+            data = read
+        } else {
+            var request = URLRequest(url: url)
+            request.setValue("image/*", forHTTPHeaderField: "Accept")
+            do {
+                let (bytes, response) = try await session.bytes(for: request)
+                guard let http = response as? HTTPURLResponse else { return .failed }
+                guard (200..<300).contains(http.statusCode) else { return (400..<500).contains(http.statusCode) ? .missing : .failed }
+                if http.expectedContentLength > Int64(Favicon.maxBytes) { return .missing }
+                for try await byte in bytes {
+                    data.append(byte)
+                    if data.count > Favicon.maxBytes { return .missing }
+                }
+            } catch {
+                return .failed  // offline, a server not up yet, cancelled: tried again next time
+            }
+        }
+        return decode(data).map(Outcome.image) ?? .missing
+    }
+
+    /// A thumbnail of at most `pixels` (ICO, PNG, JPEG, GIF, WebP through ImageIO; SVG through NSImage).
+    nonisolated private static func decode(_ data: Data) -> NSImage? {
+        if let source = CGImageSourceCreateWithData(data as CFData, nil),
+           let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+               kCGImageSourceCreateThumbnailFromImageAlways: true,
+               kCGImageSourceThumbnailMaxPixelSize: pixels,
+               kCGImageSourceCreateThumbnailWithTransform: true,
+           ] as CFDictionary) {
+            return NSImage(cgImage: image, size: NSSize(width: 16, height: 16))
+        }
+        // SVG (ImageIO does not read it): drawn once into a small bitmap.
+        guard let text = String(data: data.prefix(512), encoding: .utf8), text.contains("<svg"),
+              let svg = NSImage(data: data), svg.isValid else { return nil }
+        let bitmap = NSImage(size: NSSize(width: 16, height: 16), flipped: false) { rect in
+            svg.draw(in: rect)
+            return true
+        }
+        guard let cgImage = bitmap.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        return NSImage(cgImage: cgImage, size: NSSize(width: 16, height: 16))
     }
 }

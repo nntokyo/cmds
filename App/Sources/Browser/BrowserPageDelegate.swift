@@ -199,6 +199,12 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
         }
         if navigationAction.targetFrame?.isMainFrame == true, webView === pane?.webView {
             pendingURL = navigationAction.request.url
+            // Somewhere else than the page asked for (a link, back / forward, a form): no longer "that page" for an
+            // agent re-opening it (server redirects are `.other` and keep it).
+            switch navigationAction.navigationType {
+            case .linkActivated, .backForward, .formSubmitted, .formResubmitted: pane?.requestedURL = nil
+            default: break
+            }
         }
         decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
     }

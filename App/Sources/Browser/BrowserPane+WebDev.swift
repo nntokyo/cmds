@@ -8,6 +8,16 @@ extension BrowserPane {
     /// `browser.source`: the HTML the server sent (or with `rendered` the DOM now), capped at `PageSource.maxBytes`.
     func pageSource(rendered: Bool, fetchAgain: Bool = false) async throws
         -> (url: String, source: String, rendered: Bool, truncated: Bool, status: Int?, notCached: Bool) {
+        // A local page: the file itself (WebKit's fetch cannot read file: URLs).
+        if !rendered, let url = webView.url, url.isFileURL,
+           let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+           attributes[.type] as? FileAttributeType == .typeRegular,
+           let handle = FileHandle(forReadingAtPath: url.path) {
+            defer { try? handle.close() }
+            let data = (try? handle.read(upToCount: PageSource.maxBytes + 1)) ?? Data()
+            let text = String(decoding: data.prefix(PageSource.maxBytes), as: UTF8.self)
+            return (url.absoluteString, text, false, data.count > PageSource.maxBytes, nil, false)
+        }
         let result = try await runPageScript(PageSource.script, ["rendered": rendered, "fetchAgain": fetchAgain,
                                                                  "maxBytes": PageSource.maxBytes])
         guard case .object(let object) = result, let source = object["source"]?.stringValue else {
@@ -99,7 +109,7 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
     static var lastHeight: CGFloat = preferredHeight
     static let minimumHeight: CGFloat = 90
 
-    /// `height` within what the pane leaves for the page (at least 120 pt of page).
+    /// `height` within what the pane leaves for the page (at least 150 pt of page).
     static func clampedHeight(_ height: CGFloat, in paneHeight: CGFloat) -> CGFloat {
         max(minimumHeight, min(height, paneHeight - 150))
     }

@@ -89,16 +89,20 @@ browser, preview, files), title and an orange icon when it needs attention.
   the top of a pane without tabs, the two become a tab group.
 - Tabs that are not shown keep running: a terminal's programs, a browser's page. Focusing such a pane (`cmds focus`,
   the command palette, Latest Attention) shows its tab. After a relaunch, browser tabs that are not shown load their
-  page only when first shown (or when a command needs it), so many tabs do not slow the start.
-- Browser tabs show the page's icon (its `<link rel="icon">`, else `/favicon.ico`).
+  page only when first shown (or when a command needs it: `cmds browser eval` and the like wait for it to load), so
+  many tabs do not slow the start.
+- Browser tabs show the page's icon (its `<link rel="icon">`, else `/favicon.ico`; cmds downloads it without cookies,
+  at most 1 MB, an icon on another site only from the usual web ports; icons over plain `http` show only for local and
+  IP addresses).
 - **Right-click a tab** for Close Tab, Close Other Tabs, Close Tabs to the Right, Duplicate Tab (the same page, file,
   folder or directory), Reload Page and Move to New Workspace.
 - **Browser pages open in tabs** (on by default; Settings › General › Open new pages in tabs): a link that opens a new
   window (`target="_blank"`) becomes a tab of its browser pane, and `cmds browser open` or an agent's `browser_open`
   becomes a tab of the workspace's browser pane (the one on screen first) instead of a new split. Without a browser
-  pane they still split. Turned off, every new page gets a split, as before. An agent opening a page it already has
-  open gets that tab again (reloaded), and keeps at most 10 tabs it opened: beyond, its oldest tabs that are not shown
-  close (tabs you opened never close by themselves).
+  pane they still split. Turned off, every new page gets a split, as before. An agent's `browser_open` (or
+  `cmds browser open --reuse`) opening a page it already has open gets that tab again (reloaded), and keeps at most 10
+  tabs opened that way: beyond, the oldest that are not shown close. Tabs you open, and agent tabs where you typed an
+  address, never close by themselves.
 - From scripts: `cmds tab [--pane P] [--browser URL] [--cwd DIR] [--no-focus]` opens a tab, `cmds pane move <pane>
   --beside P --tab` makes a pane a tab of P's group ([CLI](../reference/cli.md)). `cmds ls` lists every tab of a
   group; in `--json`, a tab's pane has `tabs` (the group in order) and `background: true` when it is not shown.
@@ -374,7 +378,7 @@ The **</>** button in a browser pane's toolbar and **View › Developer** have t
   encoding), in a new tab beside the pane, with line numbers and coloured tags, attributes, strings and comments. A
   page that is not in the cache shows its DOM after scripts ran, with a note in the first line: cmds does not ask the
   server again by itself, since that would repeat what the URL does (one-time links); `cmds browser source --fetch`
-  does. `--rendered` always gives the DOM.
+  does. A local page (`file://`) shows its file. `--rendered` always gives the DOM.
 - **Console** (⌥⌘C): a drawer at the bottom of the pane (drag its top edge to resize) with the page's console
   messages, uncaught errors and unhandled promise rejections, coloured by level (the same record as
   `cmds browser console`, from the start of each page), a level filter and Clear. The line at the bottom runs JavaScript in the page (Return; ↑ / ↓ go through

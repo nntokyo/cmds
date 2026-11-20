@@ -3475,11 +3475,23 @@
       }
     },
     "Close": {
+      "comment": "Tab context menu",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "閉じる"
+          }
+        }
+      }
+    },
+    "Close %lld tabs?": {
+      "comment": "Tab context menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld個のタブを閉じますか？"
           }
         }
       }
@@ -8748,6 +8760,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ターミナルで実行中のプログラムは終了します。ワークスペースとペインは再起動後に復元されます。"
+          }
+        }
+      }
+    },
+    "Programs running in their terminals will be ended.": {
+      "comment": "Tab context menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルで実行中のプログラムは終了します。"
           }
         }
       }

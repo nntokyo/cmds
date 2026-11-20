@@ -26,14 +26,16 @@ public enum Favicon {
     /// `callAsyncJavaScript` body: the page's icon links (at most 20).
     public static let script = """
         return [...document.querySelectorAll('link[rel][href]')]
-          .filter(l => /(^|\\\\s)(icon|apple-touch-icon|apple-touch-icon-precomposed)(\\\\s|$)/i.test(l.getAttribute('rel')))
+          .filter(l => /(^|\\s)(icon|apple-touch-icon|apple-touch-icon-precomposed)(\\s|$)/i.test(l.getAttribute('rel')))
+          .filter(l => l.href.length <= 1500000)  // a huge data: URL never leaves the page
           .slice(0, 20)
           .map(l => ({ href: l.href, rel: (l.getAttribute('rel') || '').toLowerCase(),
                        sizes: l.getAttribute('sizes'), type: l.getAttribute('type') }));
         """
 
     /// The icon URLs to try for `page`, best first: an icon of the wanted size or just above, an SVG, any other icon,
-    /// Apple touch icons, then `/favicon.ico`. Only http, https and data URLs (no `file:` from a remote page).
+    /// Apple touch icons, then `/favicon.ico`. Only http, https and data URLs (no `file:` from a remote page); an icon
+    /// on another site only on the web's usual ports (80, 443), so a page cannot make cmds knock on other services.
     public static func urls(_ candidates: [Candidate], page: URL) -> [URL] {
         func score(_ candidate: Candidate) -> Int {
             let rel = candidate.rel
@@ -52,19 +54,30 @@ public enum Favicon {
             return value
         }
         let local = page.scheme?.lowercased() == "file"
+        func origin(_ url: URL) -> String { "\(url.scheme?.lowercased() ?? "")://\(url.host?.lowercased() ?? ""):\(url.port ?? -1)" }
+        func allowed(_ url: URL) -> Bool {
+            guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return true }
+            if origin(url) == origin(page) { return true }
+            return url.port == nil || url.port == 80 || url.port == 443
+        }
         var seen = Set<String>()
         var result: [URL] = []
         for candidate in candidates.sorted(by: { score($0) < score($1) }) {
             guard let url = URL(string: candidate.href, relativeTo: page)?.absoluteURL,
                   let scheme = url.scheme?.lowercased(),
-                  ["http", "https", "data"].contains(scheme) || (local && scheme == "file"),
+                  ["http", "https", "data"].contains(scheme) || (local && scheme == "file"), allowed(url),
                   seen.insert(url.absoluteString).inserted else { continue }
             result.append(url)
         }
-        if let scheme = page.scheme?.lowercased(), ["http", "https"].contains(scheme), let host = page.host,
-           let fallback = URL(string: "\(scheme)://\(host)\(page.port.map { ":\($0)" } ?? "")/favicon.ico"),
-           seen.insert(fallback.absoluteString).inserted {
-            result.append(fallback)
+        // Built from the page's own parts, so IPv6 hosts (`[::1]`) keep their brackets.
+        if let scheme = page.scheme?.lowercased(), ["http", "https"].contains(scheme),
+           var parts = URLComponents(url: page, resolvingAgainstBaseURL: false) {
+            parts.path = "/favicon.ico"
+            parts.query = nil
+            parts.fragment = nil
+            parts.user = nil
+            parts.password = nil
+            if let fallback = parts.url, seen.insert(fallback.absoluteString).inserted { result.append(fallback) }
         }
         return result
     }

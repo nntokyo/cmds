@@ -154,6 +154,26 @@ final class FaviconTests: XCTestCase {
         XCTAssertTrue(urls.firstIndex(of: "https://example.com:8443/touch.png")! > urls.firstIndex(of: "https://example.com:8443/big.png")!)
     }
 
+    func testScriptMatchesEveryIconRel() {
+        // One backslash reaches the page: `\s` in the regex, so `shortcut icon` and `alternate icon` match.
+        XCTAssertTrue(Favicon.script.contains("(^|\\s)(icon|"), Favicon.script)
+        XCTAssertFalse(Favicon.script.contains("\\\\s"))
+    }
+
+    func testOtherSitesOnlyOnWebPortsAndIPv6Fallback() {
+        let page = URL(string: "http://[::1]:3000/app")!
+        let urls = Favicon.urls([
+            .init(href: "http://192.168.1.1:8080/admin.png", rel: "icon"),
+            .init(href: "http://intranet.example:6379/x.ico", rel: "icon"),
+            .init(href: "https://cdn.example/icon.png", rel: "icon"),
+            .init(href: "/own.png", rel: "icon"),
+        ], page: page).map(\.absoluteString)
+        XCTAssertEqual(urls, ["https://cdn.example/icon.png", "http://[::1]:3000/own.png", "http://[::1]:3000/favicon.ico"].sorted { a, b in
+            urls.firstIndex(of: a) ?? 0 < urls.firstIndex(of: b) ?? 0 })
+        XCTAssertFalse(urls.contains { $0.contains("8080") || $0.contains("6379") }, "\(urls)")
+        XCTAssertTrue(urls.contains("http://[::1]:3000/favicon.ico"), "\(urls)")
+    }
+
     func testLocalPagesKeepLocalIcons() {
         let urls = Favicon.urls([.init(href: "icon.png", rel: "icon")], page: URL(string: "file:///Users/me/site/index.html")!)
         XCTAssertEqual(urls.map(\.absoluteString), ["file:///Users/me/site/icon.png"])

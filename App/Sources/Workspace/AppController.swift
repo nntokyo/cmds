@@ -481,29 +481,39 @@ final class AppController {
 
     // MARK: - Browser
 
-    /// Opens a browser split to the right of `paneID` (default: focused pane).
-    @discardableResult
+    /// Counts agents' tabs as they open (`Pane.agentTabOrder`).
+    static var agentTabCounter = 0
+
     /// A page in a browser pane: with `tabs` (default: Settings › General › Open new pages in tabs) a new tab of the browser
     /// pane that asked, else of the workspace's browser tabs; a browser split beside the pane otherwise.
+    @discardableResult
     func openBrowser(paneID: String? = nil, url: String, focus: Bool = true, recordOpener: Bool = false,
-                     tabs: Bool? = nil) throws -> PaneInfo {
+                     tabs: Bool? = nil, reuse: Bool = false) throws -> PaneInfo {
         // Nothing to load (`http://exa mple.com`): an error, not a blank pane. Empty input opens the start page.
         if !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, BrowserPane.url(fromUserInput: url) == nil {
             throw RPCError.invalidParams("cannot load \"\(url.prefix(200))\": not a valid URL")
         }
         let requester = try resolvePane(paneID)
-        let agent = recordOpener && requester.kind == .terminal
-        // An agent opening a page it already has open (also in a split): that tab again.
+        // An agent (`reuse`: MCP browser_open, `cmds browser open --reuse`) opening a page it already has open (also in
+        // a split): that tab again; and it keeps at most `maxAgentTabs` tabs.
+        let agent = reuse && recordOpener && requester.kind == .terminal
         if agent, let reused = try reuseAgentTab(of: requester, url: url, focus: focus) { return reused }
         guard tabs ?? AppSettings.shared.browserOpensTabs, let group = browserTabGroup(for: requester) else {
-            return try split(paneID: requester.id, direction: .right, kind: .browser, url: url, focus: focus,
-                             recordOpener: recordOpener)
+            let info = try split(paneID: requester.id, direction: .right, kind: .browser, url: url, focus: focus,
+                                 recordOpener: recordOpener)
+            if agent {
+                Self.agentTabCounter += 1
+                pane(id: info.id)?.agentTabOrder = Self.agentTabCounter
+            }
+            return info
         }
         var info = try split(paneID: group.id, direction: .right, kind: .browser, url: url, focus: focus, asTab: true)
         // The opener is the pane that asked, not the browser tab the page joined.
         if agent, let pane = pane(id: info.id) {
             pane.openedBy = requester.id
             info.openedBy = requester.id
+            Self.agentTabCounter += 1
+            pane.agentTabOrder = Self.agentTabCounter
             closeOldAgentTabs(openedBy: requester.id, keeping: pane.id)
         }
         return info
@@ -525,6 +535,14 @@ final class AppController {
         return browser
     }
 
+    /// `browser(paneID:)` for a command that needs the page itself: a background tab restored with the session is
+    /// loaded first and waited for.
+    func readyBrowser(paneID: String) async throws -> BrowserPane {
+        let browser = try browser(paneID: paneID)
+        await browser.waitForPendingLoad()
+        return browser
+    }
+
     func browserNavigate(paneID: String, url: String) throws {
         try browser(paneID: paneID).navigate(to: url)
     }
@@ -537,17 +555,17 @@ final class AppController {
 
     func browserEvaluate(paneID: String, script: String, timeout: TimeInterval = BrowserEval.defaultTimeout)
         async throws -> JSONValue {
-        try await browser(paneID: paneID).evaluateJavaScript(script, timeout: timeout)
+        try await readyBrowser(paneID: paneID).evaluateJavaScript(script, timeout: timeout)
     }
 
     func browserSnapshot(paneID: String, request: BrowserSnapshotRequest = BrowserSnapshotRequest()) async throws
         -> [BrowserSnapshotImage] {
-        try await browser(paneID: paneID).snapshot(request)
+        try await readyBrowser(paneID: paneID).snapshot(request)
     }
 
     /// `browser.snapshot_tree` / `click` / `fill` / `wait_for` (#167).
     func browserPageAction(paneID: String, _ action: BrowserPageAction) async throws -> JSONValue {
-        let browser = try browser(paneID: paneID)
+        let browser = try await readyBrowser(paneID: paneID)
         switch action {
         case .tree(let selector, let maxNodes): return try await browser.pageTree(selector: selector, maxNodes: maxNodes)
         case .click(let target): return try await browser.click(target)

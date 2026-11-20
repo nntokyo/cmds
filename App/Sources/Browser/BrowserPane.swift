@@ -57,6 +57,8 @@ final class BrowserPane: NSView {
     // Tabs (BrowserPane+Favicon.swift).
     /// A page not loaded yet: a background tab restored with the session loads when it is first shown (or asked for).
     var pendingURL: URL?
+    /// `loadIfPending` started the page and no command waited for it yet (`waitForPendingLoad`).
+    var loadingFromPending = false
     /// The address last asked for (`navigate`): what an agent asked to open, before or whatever the server redirects to.
     var requestedURL: URL?
     /// The page's icon for its tab (nil: none found yet, the globe is drawn).
@@ -64,6 +66,8 @@ final class BrowserPane: NSView {
     /// The page the icon belongs to (a new page of the same site keeps it until its own is known).
     var faviconHost: String?
     var faviconTask: Task<Void, Never>?
+    /// The user typed an address: the tab is theirs now (an agent's tab is no longer reused or closed for it).
+    var onUserNavigated: (() -> Void)?
     /// The icon changed (the owner redraws its tab).
     var onFaviconChange: (() -> Void)?
     /// Chrome's bookmarks under the toolbar (Settings › General).
@@ -387,6 +391,7 @@ final class BrowserPane: NSView {
         onOpenInNewPane = nil
         onOpenInNewTab = nil
         onFaviconChange = nil
+        onUserNavigated = nil
         faviconTask?.cancel()
         onDeveloperAction = nil
         defaultWatchFolder = nil
@@ -636,6 +641,7 @@ final class BrowserPane: NSView {
 
     @objc private func addressSubmitted() {
         guard (try? navigate(to: addressField.stringValue)) != nil else { return NSSound.beep() }
+        onUserNavigated?()
         window?.makeFirstResponder(webView)
     }
 }

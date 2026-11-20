@@ -378,7 +378,7 @@ final class MCPServer {
         switch name {
         case "browser_open":
             let result = try call("browser.open", ["pane": envPane.json, "url": .string(try argument(arguments, "url")),
-                                                   "focus": .bool(false)], Self.requestTimeout)
+                                                   "focus": .bool(false), "reuse": .bool(true)], Self.requestTimeout)
             let id = try recordOpenedPane(result)
             lastBrowserPane = id
             return [Self.text("Opened browser pane \(id).")]

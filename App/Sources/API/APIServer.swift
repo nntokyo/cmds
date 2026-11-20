@@ -117,7 +117,7 @@ final class APIServer {
                 let open = try params.bool("open") ?? false
                 Task { @MainActor in
                     await respond(id, to: connection) {
-                        let browser = try self.controller.browser(paneID: pane)
+                        let browser = try await self.controller.readyBrowser(paneID: pane)
                         if method == "browser.seo" {
                             let report = try await browser.seoReport()
                             if open {
@@ -156,7 +156,7 @@ final class APIServer {
                 let caseSensitive = try params.bool("caseSensitive") ?? false
                 Task { @MainActor in
                     await respond(id, to: connection) {
-                        let browser = try self.controller.browser(paneID: pane)
+                        let browser = try await self.controller.readyBrowser(paneID: pane)
                         return ["matchFound": .bool(await browser.find(text, backwards: backwards, caseSensitive: caseSensitive))]
                     }
                 }
@@ -567,7 +567,7 @@ final class APIServer {
             return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url"),
                                                     focus: try params.bool("focus") ?? true,
                                                     recordOpener: try params.string("pane") != nil,
-                                                    tabs: try params.bool("tab")))
+                                                    tabs: try params.bool("tab"), reuse: try params.bool("reuse") ?? false))
         case "browser.navigate":
             try controller.browserNavigate(paneID: try browserPaneID(params), url: try params.required("url"))
         case "browser.get_url":

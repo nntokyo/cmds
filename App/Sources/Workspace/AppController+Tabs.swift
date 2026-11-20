@@ -45,7 +45,24 @@ extension AppController {
                 guard let leaf = workspace(id: pane.workspaceID)?.root?.leaf(for: paneID),
                       let index = leaf.tabs.firstIndex(of: paneID) else { return NSSound.beep() }
                 let closing = command == .closeOthers ? leaf.tabs.filter { $0 != paneID } : Array(leaf.tabs[(index + 1)...])
-                if command == .closeOthers { try focusPane(id: paneID) }
+                // Several terminals at once (programs, agents) only after asking.
+                let terminals = closing.compactMap { self.pane(id: $0) }.filter { $0.terminal != nil }.count
+                if terminals > 0, closing.count > 1 {
+                    let alert = NSAlert()
+                    alert.messageText = String(localized: "Close \(closing.count) tabs?", comment: "Tab context menu")
+                    alert.informativeText = String(localized: "Programs running in their terminals will be ended.", comment: "Tab context menu")
+                    alert.addButton(withTitle: String(localized: "Close", comment: "Tab context menu"))
+                    alert.addButton(withTitle: String(localized: "Cancel"))
+                    guard alert.runModal() == .alertFirstButtonReturn else { return }
+                }
+                // The kept tab shows (without taking the keyboard from elsewhere).
+                if command == .closeOthers, leaf.paneID != paneID {
+                    if let workspace = workspace(id: pane.workspaceID), workspace.focusedPaneID.map(leaf.tabs.contains) == true {
+                        applyFocus(pane, in: workspace)
+                    } else {
+                        leaf.selectTab(paneID)
+                    }
+                }
                 for id in closing { try? closePane(id: id) }
             case .duplicate:
                 try duplicateTab(paneID: paneID)
@@ -65,7 +82,8 @@ extension AppController {
     func duplicateTab(paneID: String) throws -> PaneInfo {
         let pane = try resolvePane(paneID)
         if let browser = pane.browser {
-            return try newTab(paneID: pane.id, kind: .browser, url: browser.currentURL?.absoluteString ?? "")
+            let url = browser.currentURL.flatMap { $0.scheme == "about" ? nil : $0.absoluteString } ?? ""
+            return try newTab(paneID: pane.id, kind: .browser, url: url)
         }
         if let preview = pane.preview {
             return try split(paneID: pane.id, direction: .right, kind: .preview,
@@ -98,10 +116,10 @@ extension AppController {
             if parts.path.isEmpty { parts.path = "/" }
             return parts.string
         }
-        let wantedKey = key(wanted)
+        guard let wantedKey = key(wanted) else { return nil }
         // What the tab shows, or what it was asked to show (a page still loading, or one the server redirected).
         guard let pane = workspace.orderedPanes.first(where: { pane in
-            guard pane.openedBy == requester.id, let browser = pane.browser else { return false }
+            guard pane.openedBy == requester.id, pane.agentTabOrder != nil, let browser = pane.browser else { return false }
             return key(browser.currentURL) == wantedKey || key(browser.requestedURL) == wantedKey
         }), let browser = pane.browser else { return nil }
         try browser.navigate(to: wanted.absoluteString)
@@ -119,10 +137,11 @@ extension AppController {
     /// one, never tabs the user opened).
     func closeOldAgentTabs(openedBy opener: String, keeping kept: String) {
         guard let pane = pane(id: kept), let workspace = workspace(id: pane.workspaceID), let root = workspace.root else { return }
-        let mine = workspace.orderedPanes.filter { $0.openedBy == opener && $0.browser != nil }
+        // Only tabs an agent opened in this run (`agentTabOrder`): never ones `cmds browser open` opened for a person.
+        let mine = workspace.orderedPanes.filter { $0.openedBy == opener && $0.browser != nil && $0.agentTabOrder != nil }
         guard mine.count > Self.maxAgentTabs else { return }
-        // Pane ids grow with creation (`p12` before `p13`): the oldest first.
-        let oldest = mine.sorted { (Int($0.id.dropFirst()) ?? 0) < (Int($1.id.dropFirst()) ?? 0) }
+        // In the order they opened.
+        let oldest = mine.sorted { ($0.agentTabOrder ?? 0) < ($1.agentTabOrder ?? 0) }
         var excess = mine.count - Self.maxAgentTabs
         for candidate in oldest where excess > 0 {
             guard candidate.id != kept, candidate.id != workspace.focusedPaneID, root.isBackgroundTab(candidate.id) else { continue }

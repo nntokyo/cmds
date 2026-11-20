@@ -34,7 +34,11 @@ public enum PageSource {
             if (!fetchAgain) return dom(true);
             response = await fetch(location.href, { credentials: 'include', cache: 'force-cache' });
           }
-          if (!response.ok && !fetchAgain && response.status === 504) return dom(true);
+          // Some engines answer an uncached `only-if-cached` with a made-up 504 instead of failing.
+          if (response.status === 504) {
+            if (!fetchAgain) return dom(true);
+            response = await fetch(location.href, { credentials: 'include', cache: 'force-cache' });
+          }
           // Read at most maxBytes (+1 to tell it was cut), decoded with the page's own encoding (Shift_JIS, EUC-JP…).
           const reader = response.body.getReader();
           const chunks = []; let size = 0;

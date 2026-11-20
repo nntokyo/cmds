@@ -31,7 +31,7 @@ cmds の MCP サーバー（`cmds mcp`。ツール名 `browser_open` / `browser_
 （CLI の `cmds browser open` / `cmds open` / `cmds split` で開いたもの、MCP サーバーの再起動前に開いたものも含む）を閉じられる。
 `close_pane` が断ったペインは自分のターミナルから開いたものではないので、ユーザーに頼まれたときだけ `cmds close-pane <id>` で閉じる。以下は CLI での手順。
 
-- 開く: `B=$(cmds browser open --no-focus <URL>)`。同じペインで別のページへは `cmds browser navigate --pane "$B" <URL>`。
+- 開く: `B=$(cmds browser open --no-focus --reuse <URL>)`（`--reuse`: 同じページを開き直すと前のタブを再利用し、自分が開いたタブを増やしすぎない）。同じペインで別のページへは `cmds browser navigate --pane "$B" <URL>`。
 - 見る: `cmds browser snapshot --pane "$B" -o /tmp/cmds-page.png`（Read ツールで見る）、`cmds browser url --pane "$B"`。
   ページ全体は `--full`、要素だけは `--selector '#id'`、スマホ・タブレット・デスクトップを一度に撮るなら
   `--full --device iphone,ipad,desktop-1440 -o /tmp/shot.png`（`shot-iphone.png` などに分かれて保存される）。
