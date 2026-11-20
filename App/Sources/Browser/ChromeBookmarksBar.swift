@@ -28,6 +28,9 @@ final class ChromeBookmarkStore {
         case noAccess
         /// The file is not Chrome's bookmarks format (or too large).
         case unreadable
+        /// Chrome keeps this profile's bookmarks only encrypted (`EncryptedAccountBookmarks2` and the like), which other
+        /// apps cannot read.
+        case encrypted
     }
 
     /// The last read's problem; nil when it worked, while off or before the first read.
@@ -82,7 +85,10 @@ final class ChromeBookmarkStore {
                     if kind != .notFound { problem = kind }
                 }
             }
-            if found.isEmpty, problem == nil { problem = .notFound }
+            if found.isEmpty, problem == nil {
+                let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+                problem = names.contains { $0.hasPrefix("Encrypted") && $0.contains("Bookmarks") } ? .encrypted : .notFound
+            }
             let file = folder
             let signature = found.map { "\($0.url.lastPathComponent)@\($0.date?.timeIntervalSince1970 ?? 0)" }.joined(separator: ",")
             let unchanged = problem == nil && file == previousFile && signature == previousSignature
@@ -171,6 +177,7 @@ final class ChromeBookmarksBarView: NSView {
     private var otherItems: [ChromeBookmarks.Item] = []
     /// Removed in deinit (the bar of every closed browser pane would stay registered otherwise).
     nonisolated(unsafe) private var observer: NSObjectProtocol?
+    nonisolated(unsafe) private var iconObserver: NSObjectProtocol?
     /// The bookmarks changed while the pane was off screen (a hidden tab or workspace): reloaded when it comes back.
     private var reloadPending = false
     /// Buttons are made for this many bar items at most; the rest are only in the » menu.
@@ -197,6 +204,9 @@ final class ChromeBookmarksBarView: NSView {
                 if self.window == nil { self.reloadPending = true } else { self.reload() }
             }
         }
+        iconObserver = NotificationCenter.default.addObserver(forName: FaviconCache.didChange, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { if self?.window != nil { self?.updateIcons() } }
+        }
         reload()
     }
 
@@ -205,6 +215,22 @@ final class ChromeBookmarksBarView: NSView {
 
     deinit {
         if let observer { NotificationCenter.default.removeObserver(observer) }
+        if let iconObserver { NotificationCenter.default.removeObserver(iconObserver) }
+    }
+
+    /// The icon of a site visited in a browser pane (`FaviconCache`), 12 pt.
+    static func icon(for url: URL) -> NSImage? {
+        guard let host = url.host, let image = FaviconCache.shared.image(forHost: host)?.copy() as? NSImage else { return nil }
+        image.size = NSSize(width: 12, height: 12)
+        return image
+    }
+
+    /// Icons learned since the buttons were made.
+    private func updateIcons() {
+        for (index, button) in buttons.enumerated() {
+            guard case .link(_, let url) = items[index], let icon = Self.icon(for: url) else { continue }
+            button.image = icon
+        }
     }
 
     override func viewDidMoveToWindow() {
@@ -231,6 +257,7 @@ final class ChromeBookmarksBarView: NSView {
             case .link(let title, let url):
                 configure(button, title: title, symbol: "globe")
                 button.toolTip = "\(title)\n\(url.absoluteString)"
+                if let icon = Self.icon(for: url) { button.image = icon }
             case .folder(let title, _):
                 configure(button, title: title, symbol: "folder")
             }
@@ -347,6 +374,7 @@ final class ChromeBookmarksBarView: NSView {
                 entry.target = self
                 entry.representedObject = url
                 entry.toolTip = url.absoluteString
+                if let icon = Self.icon(for: url) { entry.image = icon }
                 entry.image = NSImage(systemSymbolName: "globe", accessibilityDescription: nil)
                 menu.addItem(entry)
             case .folder(let title, let children):

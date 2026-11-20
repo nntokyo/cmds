@@ -492,15 +492,19 @@ final class AppController {
             throw RPCError.invalidParams("cannot load \"\(url.prefix(200))\": not a valid URL")
         }
         let requester = try resolvePane(paneID)
+        let agent = recordOpener && requester.kind == .terminal
+        // An agent opening a page it already has open (also in a split): that tab again.
+        if agent, let reused = try reuseAgentTab(of: requester, url: url, focus: focus) { return reused }
         guard tabs ?? AppSettings.shared.browserOpensTabs, let group = browserTabGroup(for: requester) else {
             return try split(paneID: requester.id, direction: .right, kind: .browser, url: url, focus: focus,
                              recordOpener: recordOpener)
         }
         var info = try split(paneID: group.id, direction: .right, kind: .browser, url: url, focus: focus, asTab: true)
         // The opener is the pane that asked, not the browser tab the page joined.
-        if recordOpener, requester.kind == .terminal, let pane = pane(id: info.id) {
+        if agent, let pane = pane(id: info.id) {
             pane.openedBy = requester.id
             info.openedBy = requester.id
+            closeOldAgentTabs(openedBy: requester.id, keeping: pane.id)
         }
         return info
     }
@@ -516,6 +520,8 @@ final class AppController {
     func browser(paneID: String) throws -> BrowserPane {
         let pane = try resolvePane(paneID)
         guard let browser = pane.browser else { throw RPCError.invalidParams("pane \(pane.id) is not a browser") }
+        // A background tab restored with the session: its page is needed now.
+        browser.loadIfPending()
         return browser
     }
 
@@ -1019,6 +1025,8 @@ final class AppController {
         // Leaves are built in reading order, so their index matches `paneAccounts`.
         var leafIndex = 0
         var accounts: [Int: ClaudeAccount] = [:]
+        // Panes that will be background tabs: browsers among them load their page only when first shown.
+        var background: Set<Int> = []
         func build(_ node: SessionState.Node, in workspace: Workspace) -> SplitNode {
             if case .split = node {} else { leafIndex += 1 }
             switch node {
@@ -1029,7 +1037,8 @@ final class AppController {
             case .browser(let url, let emulation, let responsive):
                 // Checked again: a hand-edited session.json must not reach WebKit with odd values.
                 let pane = makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url,
-                                    emulation: (try? emulation?.validated()) ?? nil)
+                                    emulation: (try? emulation?.validated()) ?? nil,
+                                    deferLoad: background.contains(leafIndex - 1) && responsive == nil)
                 if let responsive = (try? responsive?.validated()) ?? nil { pane.browser?.setResponsive(responsive) }
                 return SplitNode(paneID: pane.id)
             case .preview(let path, let format):
@@ -1063,6 +1072,10 @@ final class AppController {
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
             }) { first, _ in first }
+            background = Set((saved.tabGroups ?? []).flatMap { group -> [Int] in
+                group.paneIndices.enumerated().filter { $0.offset != group.selected }.map(\.element)
+            })
+            if let focused = saved.focusedPaneIndex { background.remove(focused) }
             var root = build(saved.layout, in: workspace)
             let ids = root.paneIDs
             // Tab groups: indices of distinct panes, each pane in one group at most (a hand-edited file may say more).
@@ -1131,7 +1144,7 @@ final class AppController {
     /// `emulation`: a browser's device size, user agent and color scheme, set before its first request.
     private func makePane(kind: PaneKind, in workspace: Workspace, cwd: String?, command: String?, url: String?,
                           file: PreviewTarget? = nil, account: ClaudeAccount? = nil,
-                          emulation: BrowserEmulation? = nil) -> Pane {
+                          emulation: BrowserEmulation? = nil, deferLoad: Bool = false) -> Pane {
         let id = makePaneID()
         let pane: Pane
         switch kind {
@@ -1148,7 +1161,9 @@ final class AppController {
         case .browser:
             let browser = BrowserPane(emulation: emulation ?? BrowserEmulation())
             pane = Pane(id: id, workspaceID: workspace.id, browser: browser)
-            if let url, !url.isEmpty, (try? browser.navigate(to: url)) != nil {} else { browser.showStartPage() }
+            if deferLoad, let url, !url.isEmpty {
+                browser.deferLoad(url)  // a background tab: loads when first shown
+            } else if let url, !url.isEmpty, (try? browser.navigate(to: url)) != nil {} else { browser.showStartPage() }
         case .preview:
             let preview = PreviewPane(path: file?.path ?? NSHomeDirectory(), format: file?.format)
             pane = Pane(id: id, workspaceID: workspace.id, preview: preview)

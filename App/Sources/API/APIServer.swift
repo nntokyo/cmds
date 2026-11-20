@@ -113,6 +113,7 @@ final class APIServer {
                 let pane = try browserPaneID(params)
                 let method = request.method
                 let rendered = try params.bool("rendered") ?? false
+                let fetchAgain = try params.bool("fetch") ?? false
                 let open = try params.bool("open") ?? false
                 Task { @MainActor in
                     await respond(id, to: connection) {
@@ -120,7 +121,7 @@ final class APIServer {
                         if method == "browser.seo" {
                             let report = try await browser.seoReport()
                             if open {
-                                try self.controller.showDeveloperFile(report.markdown,
+                                try self.controller.showDeveloperFile(SEOReport(facts: report.facts, text: .localized).markdown,
                                     name: AppController.developerFileName("seo", for: report.url, extension: "md"),
                                     format: .markdown, besideBrowser: pane, focus: false)
                             }
@@ -131,9 +132,9 @@ final class APIServer {
                             }
                             return value
                         }
-                        let source = try await browser.pageSource(rendered: rendered)
+                        let source = try await browser.pageSource(rendered: rendered, fetchAgain: fetchAgain)
                         if open {
-                            try self.controller.showDeveloperFile(source.source,
+                            try self.controller.showDeveloperFile((source.notCached ? PageSource.notCachedNote : "") + source.source,
                                 name: AppController.developerFileName(rendered ? "dom" : "source", for: source.url, extension: "html"),
                                 format: .source, besideBrowser: pane, focus: false)
                         }
@@ -142,6 +143,7 @@ final class APIServer {
                             "truncated": .bool(source.truncated), "length": .number(Double(source.source.utf8.count)),
                         ]
                         if let status = source.status { result["status"] = .number(Double(status)) }
+                        if source.notCached { result["notCached"] = .bool(true) }
                         return .object(result)
                     }
                 }

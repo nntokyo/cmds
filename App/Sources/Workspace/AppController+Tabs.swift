@@ -32,6 +32,105 @@ extension AppController {
         }
     }
 
+    // MARK: - Tab context menu
+
+    /// A command of a tab's context menu (TabBarView); beeps when it cannot be done.
+    func runTabCommand(_ command: TabCommand, paneID: String) {
+        do {
+            switch command {
+            case .close:
+                try closePane(id: paneID)
+            case .closeOthers, .closeToTheRight:
+                let pane = try resolvePane(paneID)
+                guard let leaf = workspace(id: pane.workspaceID)?.root?.leaf(for: paneID),
+                      let index = leaf.tabs.firstIndex(of: paneID) else { return NSSound.beep() }
+                let closing = command == .closeOthers ? leaf.tabs.filter { $0 != paneID } : Array(leaf.tabs[(index + 1)...])
+                if command == .closeOthers { try focusPane(id: paneID) }
+                for id in closing { try? closePane(id: id) }
+            case .duplicate:
+                try duplicateTab(paneID: paneID)
+            case .reload:
+                try browser(paneID: paneID).reload()
+            case .moveToNewWorkspace:
+                movePaneToNewWorkspaceFromUI(paneID: paneID)
+            }
+        } catch {
+            NSSound.beep()
+        }
+    }
+
+    /// A new tab right after `paneID` showing the same: a browser's page, a preview's file, a files pane's folder, a
+    /// terminal in the same directory (SSH: the same host).
+    @discardableResult
+    func duplicateTab(paneID: String) throws -> PaneInfo {
+        let pane = try resolvePane(paneID)
+        if let browser = pane.browser {
+            return try newTab(paneID: pane.id, kind: .browser, url: browser.currentURL?.absoluteString ?? "")
+        }
+        if let preview = pane.preview {
+            return try split(paneID: pane.id, direction: .right, kind: .preview,
+                             file: PreviewTarget(path: preview.path, format: preview.forcedFormat), asTab: true)
+        }
+        if let files = pane.files {
+            return try split(paneID: pane.id, direction: .right, kind: .files, cwd: files.folder,
+                             filesHost: files.host, asTab: true)
+        }
+        return try split(paneID: pane.id, direction: .right, kind: .terminal, asTab: true)
+    }
+
+    // MARK: - Tabs agents open
+
+    /// Tabs one agent (terminal pane) keeps open in a workspace; the oldest it opened that are not shown close beyond.
+    static let maxAgentTabs = 10
+
+    /// A browser tab `requester` opened before showing the same page (fragment ignored): loaded again and shown
+    /// instead of a new tab, so an agent checking its page again and again does not pile up tabs. nil: none.
+    func reuseAgentTab(of requester: Pane, url: String, focus: Bool) throws -> PaneInfo? {
+        guard let wanted = BrowserPane.url(fromUserInput: url), let workspace = workspace(id: requester.workspaceID) else {
+            return nil
+        }
+        // The same page: scheme and host in any case, an empty path as `/`, no fragment.
+        func key(_ url: URL?) -> String? {
+            guard let url, var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+            parts.fragment = nil
+            parts.scheme = parts.scheme?.lowercased()
+            parts.host = parts.host?.lowercased()
+            if parts.path.isEmpty { parts.path = "/" }
+            return parts.string
+        }
+        let wantedKey = key(wanted)
+        // What the tab shows, or what it was asked to show (a page still loading, or one the server redirected).
+        guard let pane = workspace.orderedPanes.first(where: { pane in
+            guard pane.openedBy == requester.id, let browser = pane.browser else { return false }
+            return key(browser.currentURL) == wantedKey || key(browser.requestedURL) == wantedKey
+        }), let browser = pane.browser else { return nil }
+        try browser.navigate(to: wanted.absoluteString)
+        if focus {
+            try focusPane(id: pane.id)
+        } else if let leaf = workspace.root?.leaf(for: pane.id), leaf.paneID != pane.id,
+                  !(workspace.focusedPaneID.map(leaf.tabs.contains) ?? false) {
+            leaf.selectTab(pane.id)
+            emit(.workspace(id: workspace.id))
+        }
+        return try paneInfo(id: pane.id)
+    }
+
+    /// Closes the oldest background browser tabs opened by `opener` beyond `maxAgentTabs` (never the shown or focused
+    /// one, never tabs the user opened).
+    func closeOldAgentTabs(openedBy opener: String, keeping kept: String) {
+        guard let pane = pane(id: kept), let workspace = workspace(id: pane.workspaceID), let root = workspace.root else { return }
+        let mine = workspace.orderedPanes.filter { $0.openedBy == opener && $0.browser != nil }
+        guard mine.count > Self.maxAgentTabs else { return }
+        // Pane ids grow with creation (`p12` before `p13`): the oldest first.
+        let oldest = mine.sorted { (Int($0.id.dropFirst()) ?? 0) < (Int($1.id.dropFirst()) ?? 0) }
+        var excess = mine.count - Self.maxAgentTabs
+        for candidate in oldest where excess > 0 {
+            guard candidate.id != kept, candidate.id != workspace.focusedPaneID, root.isBackgroundTab(candidate.id) else { continue }
+            try? closePane(id: candidate.id)
+            excess -= 1
+        }
+    }
+
     /// ⌘T: a new tab beside `paneID` (default: the focused pane): a browser tab (start page, address bar focused) for
     /// a browser, else a terminal in the pane's directory. Returns the new pane.
     @discardableResult

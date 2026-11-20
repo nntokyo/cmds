@@ -220,6 +220,7 @@ final class MCPServer {
              description: "The HTML of a cmds browser pane's page: what the server sent (default), or with rendered the DOM as it is now after scripts ran. Long pages are cut (maxChars, default \(MCPServer.defaultSourceChars)).",
              properties: ["pane": browserPane,
                           "rendered": .object(["type": "boolean", "description": "The live DOM instead of the server's HTML."]),
+                          "fetch": .object(["type": "boolean", "description": "When the page is not in the cache, ask the server again (a GET with the page's cookies: avoid on URLs that do something, such as one-time links). Default: the DOM then."]),
                           "maxChars": .object(["type": "integer", "description": .string("Characters returned at most (default \(MCPServer.defaultSourceChars), at most \(MCPServer.maxSourceChars)).")])]),
         Tool(name: "browser_seo",
              description: "Check a cmds browser pane's page for search engines and link previews: title and description length, h1 and heading order, canonical, robots meta and robots.txt, lang, viewport, Open Graph, Twitter card, image alt, links without text, JSON-LD structured data, https and mixed content, thin content, favicon. Returns a score and one line per check (✗ problem, ! warning, i note, ✓ passed). Set open to also show the report to the user in a preview tab.",
@@ -439,10 +440,12 @@ final class MCPServer {
                 }
                 return Int(min(value.rounded(.down), Double(Self.maxSourceChars)))
             }
-            let result = try devToolsCall("browser.source", arguments, ["rendered": rendered ? true : nil])
+            let result = try devToolsCall("browser.source", arguments, ["rendered": rendered ? true : nil,
+                                                                        "fetch": arguments["fetch"]?.boolValue == true ? true : nil])
             let source = result["source"]?.stringValue ?? ""
             let cut = source.count > limit
-            var header = "\(result["url"]?.stringValue ?? "") — \(rendered ? "rendered DOM" : "HTML from the server")"
+            let notCached = result["notCached"]?.boolValue == true
+            var header = "\(result["url"]?.stringValue ?? "") — \(rendered ? "rendered DOM" : notCached ? "DOM (the HTML is not in the cache; fetch: true asks the server)" : "HTML from the server")"
             if let status = result["status"]?.intValue { header += ", HTTP \(status)" }
             if cut || result["truncated"]?.boolValue == true {
                 header += " (first \(min(limit, source.count)) of \(source.count)\(result["truncated"]?.boolValue == true ? "+" : "") characters)"

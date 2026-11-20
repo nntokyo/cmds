@@ -1,12 +1,35 @@
 import AppKit
 import CmdsCore
 
+/// The commands of a tab's context menu.
+enum TabCommand {
+    case close, closeOthers, closeToTheRight, duplicate, reload, moveToNewWorkspace
+}
+
+/// A menu item's command and the tab it is for.
+private final class TabCommandChoice: NSObject {
+    let command: TabCommand
+    let paneID: String
+
+    init(command: TabCommand, paneID: String) {
+        self.command = command
+        self.paneID = paneID
+    }
+}
+
 /// One tab of a tab bar: what the bar draws for a pane of the group.
 struct TabItem: Equatable {
     var paneID: String
     var title: String
     var kind: PaneKind
     var attention: Bool
+    /// A browser page's icon (nil: the kind's symbol).
+    var icon: NSImage? = nil
+
+    static func == (lhs: TabItem, rhs: TabItem) -> Bool {
+        lhs.paneID == rhs.paneID && lhs.title == rhs.title && lhs.kind == rhs.kind && lhs.attention == rhs.attention
+            && lhs.icon === rhs.icon
+    }
 }
 
 /// A place of the split tree that stacks several panes as tabs (`SplitNode.tabs`): the tab bar above the shown pane.
@@ -66,6 +89,8 @@ final class TabBarView: NSView, NSDraggingSource {
     var onSelect: ((String) -> Void)?
     var onClose: ((String) -> Void)?
     var onNewTab: (() -> Void)?
+    /// A command of a tab's context menu.
+    var onTabCommand: ((TabCommand, String) -> Void)?
     /// A tab was dragged out of the window and dropped nowhere.
     var onDraggedOutOfWindow: ((String) -> Void)?
 
@@ -182,8 +207,17 @@ final class TabBarView: NSView, NSDraggingSource {
         let closeShown = showsClose(index)
         if narrow, closeShown { x = rect.minX + 4 }
         let iconRect = NSRect(x: x, y: rect.midY - 7, width: 14, height: 14)
-        drawSymbol(Self.symbol(for: tab.kind), in: iconRect,
-                   color: tab.attention ? .systemOrange : (selected ? .labelColor : .secondaryLabelColor))
+        if let icon = tab.icon {
+            icon.draw(in: iconRect, from: .zero, operation: .sourceOver, fraction: selected ? 1 : 0.85,
+                      respectFlipped: true, hints: [.interpolation: NSImageInterpolation.high])
+            if tab.attention {
+                NSColor.systemOrange.setFill()
+                NSBezierPath(ovalIn: NSRect(x: iconRect.maxX - 4, y: iconRect.minY - 2, width: 6, height: 6)).fill()
+            }
+        } else {
+            drawSymbol(Self.symbol(for: tab.kind), in: iconRect,
+                       color: tab.attention ? .systemOrange : (selected ? .labelColor : .secondaryLabelColor))
+        }
         x = iconRect.maxX + 6
         let textRight = (closeShown ? closeRect(index).minX : rect.maxX - 6) - 4
         let paragraph = NSMutableParagraphStyle()
@@ -307,6 +341,34 @@ final class TabBarView: NSView, NSDraggingSource {
         } else {
             onSelect?(id)
         }
+    }
+
+    // Right-click: the tab's commands.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        guard let index = index(at: convert(event.locationInWindow, from: nil)) else { return nil }
+        let tab = tabs[index]
+        let menu = NSMenu()
+        func add(_ title: String, _ command: TabCommand, enabled: Bool = true) {
+            let item = NSMenuItem(title: title, action: #selector(tabCommandChosen(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = TabCommandChoice(command: command, paneID: tab.paneID)
+            item.isEnabled = enabled
+            menu.addItem(item)
+        }
+        menu.autoenablesItems = false
+        add(String(localized: "Close Tab"), .close)
+        add(String(localized: "Close Other Tabs"), .closeOthers, enabled: tabs.count > 1)
+        add(String(localized: "Close Tabs to the Right"), .closeToTheRight, enabled: index < tabs.count - 1)
+        menu.addItem(.separator())
+        add(String(localized: "Duplicate Tab"), .duplicate)
+        if tab.kind == .browser { add(String(localized: "Reload Page"), .reload) }
+        add(String(localized: "Move to New Workspace"), .moveToNewWorkspace)
+        return menu
+    }
+
+    @objc private func tabCommandChosen(_ sender: NSMenuItem) {
+        guard let choice = sender.representedObject as? TabCommandChoice else { return }
+        onTabCommand?(choice.command, choice.paneID)
     }
 
     override func otherMouseUp(with event: NSEvent) {

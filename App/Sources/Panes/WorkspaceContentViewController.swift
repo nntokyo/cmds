@@ -404,7 +404,7 @@ final class WorkspaceContentViewController: NSViewController {
         let tabs = node.tabs.compactMap { id -> TabItem? in
             guard let pane = workspace.panes[id] else { return nil }
             let title = pane.agentTopic ?? DefaultTitle.localized(pane.title)
-            return TabItem(paneID: id, title: title, kind: pane.kind, attention: pane.attention)
+            return TabItem(paneID: id, title: title, kind: pane.kind, attention: pane.attention, icon: pane.browser?.favicon)
         }
         let active = workspace.id == controller.selectedWorkspaceID && node.tabs.contains(workspace.focusedPaneID ?? "")
         bar.update(tabs: tabs, selected: node.paneID, active: active)
@@ -451,6 +451,7 @@ final class WorkspaceContentViewController: NSViewController {
                 try? self.controller.newTab(paneID: shownID)
             }
             bar.onDraggedOutOfWindow = { [weak self] paneID in self?.controller.movePaneToNewWorkspaceFromUI(paneID: paneID) }
+            bar.onTabCommand = { [weak self] command, paneID in self?.controller.runTabCommand(command, paneID: paneID) }
             tabBars.append(TabBarEntry(workspaceID: workspaceID, node: node, bar: bar))
             updateTabBar(bar, node: node, in: workspace)
             return TabGroupView(shown: shown, bar: bar)

@@ -54,6 +54,18 @@ final class BrowserPane: NSView {
     var consoleDrawer: BrowserConsoleView?
     let consoleHost = NSView()
     var consoleDrawerHeight: NSLayoutConstraint?
+    // Tabs (BrowserPane+Favicon.swift).
+    /// A page not loaded yet: a background tab restored with the session loads when it is first shown (or asked for).
+    var pendingURL: URL?
+    /// The address last asked for (`navigate`): what an agent asked to open, before or whatever the server redirects to.
+    var requestedURL: URL?
+    /// The page's icon for its tab (nil: none found yet, the globe is drawn).
+    var favicon: NSImage?
+    /// The page the icon belongs to (a new page of the same site keeps it until its own is known).
+    var faviconHost: String?
+    var faviconTask: Task<Void, Never>?
+    /// The icon changed (the owner redraws its tab).
+    var onFaviconChange: (() -> Void)?
     /// Chrome's bookmarks under the toolbar (Settings › General).
     let bookmarksBar = ChromeBookmarksBarView()
     private var bookmarksBarHeight: NSLayoutConstraint?
@@ -97,7 +109,7 @@ final class BrowserPane: NSView {
     var findBar: TerminalFindBar?
 
     /// The page shown, or the one that failed to load (the address bar and `browser.get_url` keep it).
-    var currentURL: URL? { loadFailure?.url ?? webView.url }
+    var currentURL: URL? { loadFailure?.url ?? webView.url ?? pendingURL }
     var pageTitle: String { loadFailure != nil ? "" : (webView.title ?? "") }
 
     init(emulation: BrowserEmulation = BrowserEmulation()) {
@@ -131,6 +143,8 @@ final class BrowserPane: NSView {
             NSWorkspace.shared.open(url)
             return
         }
+        pendingURL = nil
+        requestedURL = url
         webView.load(URLRequest(url: url))
         addressField.stringValue = url.absoluteString
     }
@@ -144,6 +158,7 @@ final class BrowserPane: NSView {
     }
 
     func reload() {
+        if pendingURL != nil { return loadIfPending() }
         if loadFailure != nil { return retryFailedLoad() }
         if let responsiveView { responsiveView.reloadAll() } else { webView.reload() }
     }
@@ -371,6 +386,8 @@ final class BrowserPane: NSView {
         onEmulationChange = nil
         onOpenInNewPane = nil
         onOpenInNewTab = nil
+        onFaviconChange = nil
+        faviconTask?.cancel()
         onDeveloperAction = nil
         defaultWatchFolder = nil
     }
@@ -569,7 +586,11 @@ final class BrowserPane: NSView {
                 MainActor.assumeIsolated { self?.updateButtons() }
             },
             webView.observe(\.isLoading) { [weak self] webView, _ in
-                MainActor.assumeIsolated { if !webView.isLoading { self?.scheduleBreakpointRefresh() } }
+                MainActor.assumeIsolated {
+                    guard !webView.isLoading else { return }
+                    self?.scheduleBreakpointRefresh()
+                    self?.refreshFavicon()
+                }
             },
             NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
                 MainActor.assumeIsolated { self?.applyColorScheme() }
@@ -593,6 +614,7 @@ final class BrowserPane: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
+        if window != nil { loadIfPending() }
         guard watch != nil else { return }
         updateWatcher()  // only while on screen; a hidden workspace's panes have no window
         updateWatchButton()

@@ -5,20 +5,22 @@ import Foundation
 extension CLI {
     static let sourceCommand = Command(
         name: "browser source",
-        usage: "browser source [--pane P] [--rendered] [--open] [-o FILE]",
+        usage: "browser source [--pane P] [--rendered] [--fetch] [--open] [-o FILE]",
         summary: "Print the HTML of a browser pane's page.",
         details: """
-            The HTML the server sent (asked again from the page, with its cookies; usually from the cache), or with
-            --rendered the DOM as it is now (after scripts ran). At most \(PageSource.maxBytes / 1024 / 1024) MB (cut
+            The HTML the server sent, from the browser's cache, or with --rendered the DOM as it is now (after scripts
+            ran). A page that is not in the cache gives its DOM (with a note on stderr); --fetch asks the server again
+            instead (a GET with the page's cookies, which repeats what the URL does, e.g. a one-time link). At most \(PageSource.maxBytes / 1024 / 1024) MB (cut
             beyond, with a note on stderr). -o FILE writes it there instead of stdout; --open also shows it in a
             source tab beside the pane (View › Developer › View Page Source).
             \(browserPaneNote)
             """,
-        options: ["pane", "output"], flags: ["rendered", "open"], aliases: ["o": "output"]
+        options: ["pane", "output"], flags: ["rendered", "fetch", "open"], aliases: ["o": "output"]
     ) { ctx in
-        try ctx.args.expectPositionals(0...0, usage: "cmds browser source [--pane P] [--rendered] [--open] [-o FILE]")
+        try ctx.args.expectPositionals(0...0, usage: "cmds browser source [--pane P] [--rendered] [--fetch] [--open] [-o FILE]")
         let result = try devToolsCall(ctx, "browser.source", [
             "rendered": ctx.args.has("rendered") ? true : nil,
+            "fetch": ctx.args.has("fetch") ? true : nil,
             "open": ctx.args.has("open") ? true : nil,
         ])
         if ctx.json { return ctx.printJSON(result) }
@@ -33,6 +35,7 @@ extension CLI {
             print(source, terminator: source.hasSuffix("\n") ? "" : "\n")
         }
         if result["truncated"]?.boolValue == true { printError("(cut at \(PageSource.maxBytes / 1024 / 1024) MB)") }
+        if result["notCached"]?.boolValue == true { printError("(not in the cache: this is the DOM; --fetch asks the server again)") }
     }
 
     static let seoCommand = Command(

@@ -213,6 +213,10 @@ final class Pane {
             let focus = controller.focusedPane === self
             return (try? controller.openBrowser(paneID: self.id, url: url.absoluteString, focus: focus)) != nil
         }
+        browser.onFaviconChange = { [weak self] in
+            guard let self else { return }
+            self.controller?.paneDidChange(self)
+        }
         browser.onDeveloperAction = { [weak self] action in
             guard let self else { return }
             self.controller?.runDeveloperAction(action, paneID: self.id)

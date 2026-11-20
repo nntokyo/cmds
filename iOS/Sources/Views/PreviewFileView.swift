@@ -134,6 +134,7 @@ struct FilePreviewContent: View {
         switch PreviewFormat.forFile(name) {
         case .markdown: page = MarkdownHTML.page(text, title: name)
         case .diff: page = DiffHTML.page(text, title: name)
+        case .source: page = SourceHTML.page(text, title: name)  // never from a file name; kept exhaustive
         case .quickLook: return nil
         }
         return PreviewHTML.forPhoneScreen(page)

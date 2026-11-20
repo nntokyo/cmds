@@ -134,3 +134,50 @@ final class WebDevToolsTests: XCTestCase {
         XCTAssertTrue(markdown.contains("A \\| B"), markdown)
     }
 }
+
+final class FaviconTests: XCTestCase {
+    func testBestIconFirstThenFaviconIco() {
+        let page = URL(string: "https://example.com:8443/a/b")!
+        let urls = Favicon.urls([
+            .init(href: "https://example.com:8443/touch.png", rel: "apple-touch-icon", sizes: "180x180"),
+            .init(href: "/big.png", rel: "icon", sizes: "192x192"),
+            .init(href: "/small.png", rel: "icon", sizes: "16x16"),
+            .init(href: "/icon32.png", rel: "icon", sizes: "32x32"),
+            .init(href: "/logo.svg", rel: "icon", type: "image/svg+xml"),
+            .init(href: "file:///etc/passwd", rel: "icon"),
+            .init(href: "javascript:alert(1)", rel: "icon"),
+        ], page: page).map(\.absoluteString)
+        XCTAssertEqual(urls.first, "https://example.com:8443/icon32.png")
+        XCTAssertEqual(urls[1], "https://example.com:8443/logo.svg")
+        XCTAssertEqual(urls.last, "https://example.com:8443/favicon.ico")
+        XCTAssertFalse(urls.contains { $0.hasPrefix("file:") || $0.hasPrefix("javascript:") }, "\(urls)")
+        XCTAssertTrue(urls.firstIndex(of: "https://example.com:8443/touch.png")! > urls.firstIndex(of: "https://example.com:8443/big.png")!)
+    }
+
+    func testLocalPagesKeepLocalIcons() {
+        let urls = Favicon.urls([.init(href: "icon.png", rel: "icon")], page: URL(string: "file:///Users/me/site/index.html")!)
+        XCTAssertEqual(urls.map(\.absoluteString), ["file:///Users/me/site/icon.png"])
+        XCTAssertEqual(Favicon.urls([], page: URL(string: "about:blank")!), [])
+    }
+}
+
+final class SEOTextTests: XCTestCase {
+    func testAnotherLanguageReachesMessagesAndLabels() {
+        let shouting = SEOText(message: { SEOText.english.message($0).uppercased() }, label: { "«" + SEOText.english.label($0) + "»" })
+        let report = SEOReport(facts: PageFacts(url: "https://x.test/"), text: shouting)
+        XCTAssertTrue(report.checks.contains { $0.message == "NO <TITLE>" })
+        XCTAssertTrue(report.markdown.contains("# «SEO report»"), report.markdown)
+        XCTAssertTrue(report.markdown.contains("## «Problems»"))
+        XCTAssertEqual(SEOReport(facts: PageFacts(url: "https://x.test/")).checks.first { $0.id == "title" }?.message, "no <title>",
+                       "English by default (API, CLI, MCP)")
+    }
+
+    func testReportsCompareWithoutTheirLanguage() throws {
+        let facts = PageFacts(url: "https://x.test/", title: "Some title here")
+        let report = SEOReport(facts: facts)
+        let decoded = try JSONDecoder().decode(SEOReport.self, from: JSONEncoder().encode(report))
+        XCTAssertEqual(decoded, report)
+        let keys = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(report)) as? [String: Any]).keys
+        XCTAssertEqual(Set(keys), ["url", "score", "checks", "facts"], "the language is not part of the JSON")
+    }
+}
