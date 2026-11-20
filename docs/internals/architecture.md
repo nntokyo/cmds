@@ -112,8 +112,9 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   captured the same way and closed; one at a time, at most 4. Unknown params are refused, and the answer's `images`
   tells clients the app knows the new params (an older app ignores them and returns only `png_base64`).
 - **Chrome bookmarks** (`Browser/ChromeBookmarksBar.swift`, parsing and profiles in `CmdsCore/ChromeBookmarks.swift`):
-  `ChromeBookmarkStore` reads `<Chrome>/<profile>/Bookmarks` off the main actor when cmds becomes active or settings
-  change, only when the file's date changed, and posts `didChange`; each browser pane's `ChromeBookmarksBarView`
+  `ChromeBookmarkStore` reads `<Chrome>/<profile>/AccountBookmarks` (account storage of signed-in profiles in newer
+  Chrome) and `Bookmarks` off the main actor when cmds becomes active or settings change, only when a file or its date
+  changed, merges them (account first) and posts `didChange`; each browser pane's `ChromeBookmarksBarView`
   rebuilds its buttons (at most 60; the rest in the » menu), deferred while the pane is off screen. macOS's
   protection of other apps' data makes the files look missing while listing Chrome's folder fails with EPERM: that
   is reported as `noAccess` (Settings offers Full Disk Access). `CMDS_CHROME_FOLDER` replaces Chrome's folder for

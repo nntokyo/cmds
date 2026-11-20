@@ -86,4 +86,16 @@ final class ChromeBookmarksTests: XCTestCase {
         XCTAssertEqual(ChromeBookmarks.bookmarksFile(profile: "../x", chromeFolder: folder).path,
                        folder.appendingPathComponent("Profile 1/Bookmarks").path, "a folder name leaving Chrome's is ignored")
     }
+
+    func testAccountAndLocalBookmarksMerge() throws {
+        let account = ChromeBookmarks.Tree(bar: [.link(title: "A", url: URL(string: "https://a.example/")!)],
+                                           other: [.link(title: "O", url: URL(string: "https://o.example/")!)])
+        let local = ChromeBookmarks.Tree(bar: [.link(title: "L", url: URL(string: "https://l.example/")!)])
+        let merged = ChromeBookmarks.merged([account, local])
+        XCTAssertEqual(merged.bar.map(\.title), ["A", "L"], "account bookmarks first, as Chrome shows them")
+        XCTAssertEqual(merged.other.map(\.title), ["O"])
+        XCTAssertEqual(ChromeBookmarks.fileNames, ["AccountBookmarks", "Bookmarks"])
+        let folder = URL(fileURLWithPath: "/tmp/chrome-test-\(UUID().uuidString)")
+        XCTAssertEqual(ChromeBookmarks.profileFolder(profile: "Profile 4", chromeFolder: folder).lastPathComponent, "Profile 4")
+    }
 }

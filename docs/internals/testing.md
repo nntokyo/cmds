@@ -79,7 +79,7 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   (also with the screen locked; transparent background, so composite it on a dark or light colour to view it).
 - Launch the binary directly; `open` does not pass the environment reliably.
 - Tabs and Chrome bookmarks: `CMDS_CHROME_FOLDER=/tmp/x/chrome` points the bookmarks bar at a fake Chrome folder
-  (`Local State` with `profile.last_used` / `info_cache`, `<profile>/Bookmarks` with `roots.bookmark_bar` / `other` /
+  (`Local State` with `profile.last_used` / `info_cache`, `<profile>/Bookmarks` and/or `AccountBookmarks` with `roots.bookmark_bar` / `other` /
   `synced`). Build groups with `cmds tab`, `cmds browser open` and `cmds pane move --beside P --tab`, check
   `cmds ls` / `PaneInfo.tabs` / `background` after closing, swapping and moving tabs (the focused pane is never a
   background tab), and `tabGroups` in session.json across a relaunch. Without the variable, a Debug build is usually

@@ -33,7 +33,8 @@ final class ChromeBookmarkStore {
     /// The last read's problem; nil when it worked, while off or before the first read.
     private(set) var problem: Problem?
     private var loadedFile: URL?
-    private var loadedDate: Date?
+    /// The bookmark files read and their dates (`AccountBookmarks@…,Bookmarks@…`).
+    private var loadedSignature: String?
     private var reading = false
     private var observers: [NSObjectProtocol] = []
 
@@ -49,14 +50,14 @@ final class ChromeBookmarkStore {
         refresh()
     }
 
-    /// Reads the bookmarks again when the setting, the profile or the file's date changed.
+    /// Reads the bookmarks again when the setting, the profile or a bookmark file (or its date) changed.
     func refresh() {
         guard AppSettings.shared.chromeBookmarks else {
             if tree != nil || loadedFile != nil || problem != nil {
                 tree = nil
                 problem = nil
                 loadedFile = nil
-                loadedDate = nil
+                loadedSignature = nil
                 NotificationCenter.default.post(name: Self.didChange, object: self)
             }
             return
@@ -65,31 +66,40 @@ final class ChromeBookmarkStore {
         reading = true
         let profile = AppSettings.shared.chromeProfile
         let previousFile = loadedFile
-        let previousDate = loadedDate
+        let previousSignature = loadedSignature
         Task.detached(priority: .utility) {
-            let file = ChromeBookmarks.bookmarksFile(profile: profile, chromeFolder: Self.chromeFolder)
-            let attributes: [FileAttributeKey: Any]?
+            // Every bookmark file of the profile (AccountBookmarks, Bookmarks); the dates of those found tell a change.
+            let folder = ChromeBookmarks.profileFolder(profile: profile, chromeFolder: Self.chromeFolder)
+            let files = ChromeBookmarks.fileNames.map { folder.appendingPathComponent($0) }
             var problem: Problem?
-            do {
-                attributes = try FileManager.default.attributesOfItem(atPath: file.path)
-            } catch {
-                attributes = nil
-                problem = Self.problem(error)
+            var found: [(url: URL, date: Date?, size: Int)] = []
+            for url in files {
+                do {
+                    let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+                    found.append((url, attributes[.modificationDate] as? Date, (attributes[.size] as? NSNumber)?.intValue ?? 0))
+                } catch {
+                    let kind = Self.problem(error)
+                    if kind != .notFound { problem = kind }
+                }
             }
-            let date = attributes?[.modificationDate] as? Date
-            let size = (attributes?[.size] as? NSNumber)?.intValue ?? 0
-            let unchanged = problem == nil && file == previousFile && date == previousDate
+            if found.isEmpty, problem == nil { problem = .notFound }
+            let file = folder
+            let signature = found.map { "\($0.url.lastPathComponent)@\($0.date?.timeIntervalSince1970 ?? 0)" }.joined(separator: ",")
+            let unchanged = problem == nil && file == previousFile && signature == previousSignature
             var read: ChromeBookmarks.Tree?
             if !unchanged, problem == nil {
-                if size > ChromeBookmarks.maxFileSize {
-                    problem = .unreadable
-                } else {
+                var trees: [ChromeBookmarks.Tree] = []
+                for entry in found {
+                    guard entry.size <= ChromeBookmarks.maxFileSize else { continue }
                     do {
-                        read = ChromeBookmarks.parse(try Data(contentsOf: file))
-                        if read == nil { problem = .unreadable }
+                        if let tree = ChromeBookmarks.parse(try Data(contentsOf: entry.url)) { trees.append(tree) }
                     } catch {
-                        problem = Self.problem(error)
+                        let kind = Self.problem(error)
+                        if kind == .noAccess { problem = .noAccess }
                     }
+                }
+                if problem == nil {
+                    if trees.isEmpty { problem = .unreadable } else { read = ChromeBookmarks.merged(trees) }
                 }
             }
             // macOS's protection of other apps' data reports the files inside as missing; listing the folder itself
@@ -113,7 +123,7 @@ final class ChromeBookmarkStore {
                 guard case .some(let read) = tree else { return }
                 // A file that could not be read is tried again next time.
                 store.loadedFile = problem == nil ? file : nil
-                store.loadedDate = problem == nil ? date : nil
+                store.loadedSignature = problem == nil ? signature : nil
                 if read != store.tree || problem != store.problem {
                     store.tree = read
                     store.problem = problem

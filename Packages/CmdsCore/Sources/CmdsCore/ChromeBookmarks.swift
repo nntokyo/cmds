@@ -1,7 +1,8 @@
 import Foundation
 
 /// Google Chrome's bookmarks, read from its profile folder for the bookmarks bar of browser panes (Settings › General).
-/// Chrome keeps them in `<profile>/Bookmarks` (JSON: `roots.bookmark_bar` / `other` / `synced`, each a folder of
+/// Chrome keeps them in `<profile>/Bookmarks` and, for bookmarks saved in the Google Account (newer Chrome, signed in
+/// without sync), `<profile>/AccountBookmarks`, both JSON: `roots.bookmark_bar` / `other` / `synced`, each a folder of
 /// `url` and `folder` nodes) and its profiles in `Local State` (`profile.last_used`, `profile.info_cache`). Read only;
 /// cmds never writes there.
 public enum ChromeBookmarks {
@@ -107,13 +108,26 @@ public enum ChromeBookmarks {
         !name.isEmpty && name.count <= 255 && name != "." && name != ".." && !name.contains("/") && !name.contains("\0")
     }
 
-    /// The `Bookmarks` file of `profile` (nil: the one Chrome used last, else `Default`) under `chromeFolder`.
-    public static func bookmarksFile(profile: String?, chromeFolder: URL = defaultChromeFolder()) -> URL {
+    /// The folder of `profile` (nil: the one Chrome used last, else `Default`) under `chromeFolder`.
+    public static func profileFolder(profile: String?, chromeFolder: URL = defaultChromeFolder()) -> URL {
         var directory = profile.flatMap { isProfileDirectory($0) ? $0 : nil }
         if directory == nil, let data = try? Data(contentsOf: chromeFolder.appendingPathComponent("Local State")) {
             directory = profiles(localState: data).lastUsed
         }
         return chromeFolder.appendingPathComponent(directory ?? "Default", isDirectory: true)
-            .appendingPathComponent("Bookmarks")
+    }
+
+    /// The bookmark files of a profile folder, in the order the bar shows them: `AccountBookmarks` (bookmarks saved
+    /// in the Google Account, which signed-in profiles of newer Chrome versions use) and `Bookmarks` (on this Mac).
+    public static let fileNames = ["AccountBookmarks", "Bookmarks"]
+
+    /// The `Bookmarks` file of `profile` (nil: the one Chrome used last, else `Default`) under `chromeFolder`.
+    public static func bookmarksFile(profile: String?, chromeFolder: URL = defaultChromeFolder()) -> URL {
+        profileFolder(profile: profile, chromeFolder: chromeFolder).appendingPathComponent("Bookmarks")
+    }
+
+    /// Several files' bookmarks as one bar (account bookmarks first, as Chrome shows them), each root in order.
+    public static func merged(_ trees: [Tree]) -> Tree {
+        Tree(bar: trees.flatMap(\.bar), other: trees.flatMap(\.other), mobile: trees.flatMap(\.mobile))
     }
 }

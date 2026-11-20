@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.29.1] - 2026-11-20
+
+Mac only; the iPhone/iPad app is unchanged.
+
+### Fixed
+
+- Chrome bookmarks bar: bookmarks saved in the Google Account (`AccountBookmarks`, what signed-in profiles of newer
+  Chrome versions use) are shown too, before those kept on the Mac. Such profiles showed "No Chrome bookmarks found".
+
 ## [0.29.0] - 2026-11-20
 
 Mac only; the iPhone/iPad app is unchanged (it shows the tab that is shown on the Mac).
