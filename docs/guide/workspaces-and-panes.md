@@ -357,6 +357,30 @@ cmds browser watch --off
   is back) or cannot be watched; the tooltip and the menu say why.
 - Per pane, not kept across relaunches. AI agents can turn it on with the MCP tool `browser_watch`.
 
+### Developer tools
+
+The **</>** button in a browser pane's toolbar and **View › Developer** have three tools for web development:
+
+- **View Page Source** (⌥⌘U): the HTML the server sent for the page (asked again from the page with its cookies,
+  usually from the cache) in a new tab beside the pane, with line numbers and coloured tags, attributes, strings and
+  comments. `cmds browser source --rendered` gives the DOM after scripts ran instead.
+- **Console** (⌥⌘C): a drawer at the bottom of the pane with the page's console messages, uncaught errors and
+  unhandled promise rejections, coloured by level (the same record as `cmds browser console`, from the start of
+  each page), a level filter and Clear. The line at the bottom runs JavaScript in the page (Return; ↑ / ↓ go through
+  earlier lines) and prints the result.
+- **SEO Report**: checks what the page declares for search engines and link previews and shows a report (score,
+  problems, warnings, notes, what passed, the page's title, description, Open Graph, headings…) in a tab:
+  title and description length (wide characters such as Japanese count twice, as in search results), one h1 and
+  heading levels in order, canonical, robots meta tag (noindex) and robots.txt (the whole site disallowed, sitemaps),
+  `lang`, viewport, Open Graph (og:title / description / image) and Twitter card, image alt, links without text,
+  JSON-LD structured data (types, invalid blocks), https and mixed content, thin content, favicon, charset and the
+  HTTP status. The score is 100 less 15 per problem and 5 per warning. It checks the page as loaded in the pane; it
+  does not crawl the site or measure speed.
+
+The source and report files are kept in the support folder (`Developer/`, one per page, replaced when opened again).
+From scripts and agents: `cmds browser source`, `cmds browser seo`, `cmds browser console --show`, and the MCP tools
+`browser_source`, `browser_seo` and `browser_console` ([ai-agents.md](ai-agents.md#browser-devtools)).
+
 ### Screenshots
 
 `cmds browser snapshot` captures what the pane shows; it can also capture more without scrolling or resizing the

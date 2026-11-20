@@ -108,6 +108,43 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.controller.browserPageAction(paneID: pane, action) }
                 }
+            case "browser.source", "browser.seo":
+                // Page scripts (BrowserPane+WebDev.swift); `open: true` also shows the result in a preview tab.
+                let pane = try browserPaneID(params)
+                let method = request.method
+                let rendered = try params.bool("rendered") ?? false
+                let open = try params.bool("open") ?? false
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        let browser = try self.controller.browser(paneID: pane)
+                        if method == "browser.seo" {
+                            let report = try await browser.seoReport()
+                            if open {
+                                try self.controller.showDeveloperFile(report.markdown,
+                                    name: AppController.developerFileName("seo", for: report.url, extension: "md"),
+                                    format: .markdown, besideBrowser: pane, focus: false)
+                            }
+                            var value = try JSONValue.from(report)
+                            if case .object(var object) = value {
+                                object["text"] = .string(report.text)
+                                value = .object(object)
+                            }
+                            return value
+                        }
+                        let source = try await browser.pageSource(rendered: rendered)
+                        if open {
+                            try self.controller.showDeveloperFile(source.source,
+                                name: AppController.developerFileName(rendered ? "dom" : "source", for: source.url, extension: "html"),
+                                format: .source, besideBrowser: pane, focus: false)
+                        }
+                        var result: [String: JSONValue] = [
+                            "url": .string(source.url), "source": .string(source.source), "rendered": .bool(source.rendered),
+                            "truncated": .bool(source.truncated), "length": .number(Double(source.source.utf8.count)),
+                        ]
+                        if let status = source.status { result["status"] = .number(Double(status)) }
+                        return .object(result)
+                    }
+                }
             case "browser.find":
                 // WebKit's find in page from the current match (BrowserPane+Find.swift, #338).
                 let pane = try browserPaneID(params)
@@ -474,7 +511,7 @@ final class APIServer {
             let direction = try splitDirection(params)
             let format = try params.string("format").map { raw -> PreviewFormat in
                 guard let format = PreviewFormat(rawValue: raw == "quicklook" ? "quickLook" : raw) else {
-                    throw RPCError.invalidParams("format must be \"markdown\", \"diff\" or \"quicklook\"")
+                    throw RPCError.invalidParams("format must be \"markdown\", \"diff\", \"source\" or \"quicklook\"")
                 }
                 return format
             }
@@ -538,8 +575,10 @@ final class APIServer {
             return .object(result)
         case "browser.console":
             let request = try BrowserConsoleRequest(params: params.value)
-            return try controller.browser(paneID: try browserPaneID(params))
-                .console(level: request.level, since: request.since, limit: request.limit, clear: request.clear)
+            let browser = try controller.browser(paneID: try browserPaneID(params))
+            // `show`: open (true) or close (false) the pane's console drawer.
+            if let show = try params.bool("show"), show != browser.isConsoleOpen { browser.toggleConsole() }
+            return browser.console(level: request.level, since: request.since, limit: request.limit, clear: request.clear)
         case "browser.set_responsive":
             return try controller.browserSetResponsive(paneID: try browserPaneID(params),
                                                        change: try BrowserResponsiveChange(params: params.value))

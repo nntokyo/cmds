@@ -45,6 +45,15 @@ final class BrowserPane: NSView {
     var onOpenInNewPane: ((URL) -> Bool)?
     /// Opens a page in a new tab beside this pane, in the background (a ⌘-click on a Chrome bookmark).
     var onOpenInNewTab: ((URL) -> Void)?
+    // Developer tools (BrowserPane+WebDev.swift).
+    let developerButton = BrowserPane.toolbarButton("chevron.left.forwardslash.chevron.right",
+                                                    label: String(localized: "Developer"))
+    /// The page source or SEO report asked for (the owner opens it in a tab beside the pane).
+    var onDeveloperAction: ((BrowserDeveloperAction) -> Void)?
+    /// The console drawer while it is open, in `consoleHost` under the page.
+    var consoleDrawer: BrowserConsoleView?
+    let consoleHost = NSView()
+    var consoleDrawerHeight: NSLayoutConstraint?
     /// Chrome's bookmarks under the toolbar (Settings › General).
     let bookmarksBar = ChromeBookmarksBarView()
     private var bookmarksBarHeight: NSLayoutConstraint?
@@ -362,6 +371,7 @@ final class BrowserPane: NSView {
         onEmulationChange = nil
         onOpenInNewPane = nil
         onOpenInNewTab = nil
+        onDeveloperAction = nil
         defaultWatchFolder = nil
     }
 
@@ -487,7 +497,10 @@ final class BrowserPane: NSView {
         addressField.action = #selector(addressSubmitted)
         addressField.onFocus = { [weak self] in self?.onFocus?() }
 
-        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, addressField, breakpointLabel, deviceButton])
+        developerButton.target = self
+        developerButton.action = #selector(developerButtonClicked(_:))
+        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, addressField, breakpointLabel,
+                                          deviceButton, developerButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 6
         toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
@@ -506,8 +519,12 @@ final class BrowserPane: NSView {
         addSubview(toolbar)
         addSubview(bookmarksBar)
         addSubview(viewportHost)
+        consoleHost.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(consoleHost)
         let barHeight = bookmarksBar.heightAnchor.constraint(equalToConstant: 0)
         bookmarksBarHeight = barHeight
+        let consoleHeight = consoleHost.heightAnchor.constraint(equalToConstant: 0)
+        consoleDrawerHeight = consoleHeight
         NSLayoutConstraint.activate([
             toolbar.leadingAnchor.constraint(equalTo: leadingAnchor),
             toolbar.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -520,7 +537,11 @@ final class BrowserPane: NSView {
             viewportHost.leadingAnchor.constraint(equalTo: leadingAnchor),
             viewportHost.trailingAnchor.constraint(equalTo: trailingAnchor),
             viewportHost.topAnchor.constraint(equalTo: bookmarksBar.bottomAnchor),
-            viewportHost.bottomAnchor.constraint(equalTo: bottomAnchor),
+            viewportHost.bottomAnchor.constraint(equalTo: consoleHost.topAnchor),
+            consoleHost.leadingAnchor.constraint(equalTo: leadingAnchor),
+            consoleHost.trailingAnchor.constraint(equalTo: trailingAnchor),
+            consoleHost.bottomAnchor.constraint(equalTo: bottomAnchor),
+            consoleHeight,
         ])
         updateBookmarksBar()
         updateButtons()

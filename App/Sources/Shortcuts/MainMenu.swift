@@ -152,6 +152,11 @@ enum MainMenu {
         menu.addItem(item("Reload on File Changes", #selector(CommandRouter.browserToggleWatch(_:)), "", target: router))
         menu.addItem(item("Back", #selector(CommandRouter.browserBack(_:)), "[", target: router))
         menu.addItem(item("Forward", #selector(CommandRouter.browserForward(_:)), "]", target: router))
+        let developer = NSMenu(title: String(localized: "Developer"))
+        developer.addItem(item("View Page Source", #selector(CommandRouter.browserViewSource(_:)), "u", [.command, .option], target: router))
+        developer.addItem(item("Show Console", #selector(CommandRouter.browserToggleConsole(_:)), "c", [.command, .option], target: router))
+        developer.addItem(item("SEO Report", #selector(CommandRouter.browserSEOReport(_:)), "", target: router))
+        menu.addItem(submenu(developer))
         menu.addItem(.separator())
         menu.addItem(item("Enter Full Screen", #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control]))
         return menu

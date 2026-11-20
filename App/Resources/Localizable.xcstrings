@@ -1278,6 +1278,16 @@
         }
       }
     },
+    "(%lld older messages dropped)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "（古いメッセージ%lld件は省略）"
+          }
+        }
+      }
+    },
     "(iOS Sync is off)": {
       "localizations": {
         "ja": {
@@ -1788,6 +1798,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld件すべて ⏎"
+          }
+        }
+      }
+    },
+    "All Levels": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのレベル"
           }
         }
       }
@@ -3151,6 +3171,16 @@
         }
       }
     },
+    "Clear Console": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンソールを消去"
+          }
+        }
+      }
+    },
     "Clear Finished": {
       "localizations": {
         "ja": {
@@ -3556,6 +3586,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@に接続中…"
+          }
+        }
+      }
+    },
+    "Console": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンソール"
           }
         }
       }
@@ -4210,6 +4250,16 @@
         }
       }
     },
+    "Developer": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開発"
+          }
+        }
+      }
+    },
     "Device Size": {
       "localizations": {
         "ja": {
@@ -4568,6 +4618,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ホストを入力してください。"
+          }
+        }
+      }
+    },
+    "Errors": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エラー"
           }
         }
       }
@@ -5245,6 +5305,16 @@
         }
       }
     },
+    "Hide Console": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンソールを隠す"
+          }
+        }
+      }
+    },
     "Hide Others": {
       "localizations": {
         "ja": {
@@ -5768,6 +5838,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "JARVIS（アニメーション）"
+          }
+        }
+      }
+    },
+    "JavaScript (Return runs it in the page)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JavaScript（Returnでページ内で実行）"
           }
         }
       }
@@ -7242,6 +7322,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”を開けるAppがありません。"
+          }
+        }
+      }
+    },
+    "No console messages.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンソールメッセージはありません。"
           }
         }
       }
@@ -9282,6 +9372,16 @@
         }
       }
     },
+    "SEO Report": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SEOレポート"
+          }
+        }
+      }
+    },
     "SFTP protocol error: %@": {
       "localizations": {
         "ja": {
@@ -9919,6 +10019,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chromeのブックマークを表示"
+          }
+        }
+      }
+    },
+    "Show Console": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンソールを表示"
           }
         }
       }
@@ -12590,6 +12700,16 @@
         }
       }
     },
+    "View Page Source": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページのソースを表示"
+          }
+        }
+      }
+    },
     "Voice:": {
       "comment": "Settings › Assistant",
       "localizations": {
@@ -12717,6 +12837,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "メモリが不足したら通知"
+          }
+        }
+      }
+    },
+    "Warnings and Errors": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "警告とエラー"
           }
         }
       }

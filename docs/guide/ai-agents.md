@@ -142,7 +142,9 @@ status:
 | `browser_set_viewport` | Show the page at a device size (`device`: a preset such as `iphone-se`, `WIDTHxHEIGHT` or `off`; `rotate`), with a user agent and `colorScheme` (`light` / `dark` / `system`), to check responsive layouts ([device sizes](workspaces-and-panes.md#device-sizes-and-color-scheme)) |
 | `browser_responsive` | The page at phone, tablet and desktop size side by side in one pane (`url` opens a new pane, else `pane`; `devices`, `syncScroll`, `off`). `browser_snapshot` of such a pane returns one image per frame ([responsive view](workspaces-and-panes.md#responsive-view)) |
 | `browser_watch` | Reload the page whenever files in a folder change (`dir`, absolute; default the workspace's folder), e.g. a `file://` page or a dev server without hot reload; `remote` reloads non-local pages too, `off` stops ([guide](workspaces-and-panes.md#reload-on-file-changes)) |
-| `browser_console` | Console messages, uncaught errors and unhandled promise rejections of the page (`level`, `limit`, `clear`) ([Browser DevTools](#browser-devtools)) |
+| `browser_console` | Console messages, uncaught errors and unhandled promise rejections of the page (`level`, `limit`, `clear`; `show` opens the console drawer for the user) ([Browser DevTools](#browser-devtools)) |
+| `browser_source` | The page's HTML as the server sent it, or with `rendered` the DOM now (cut at `maxChars`, default 100,000) ([Developer tools](workspaces-and-panes.md#developer-tools)) |
+| `browser_seo` | SEO check of the page: score and one line per check (✗ problem, ! warning, i note, ✓ passed); `open` also shows the report to the user in a tab |
 | `browser_snapshot_tree` | The page as a compact tree of roles and names with refs (`- button "Sign in" [ref=e3]`; `selector` to start lower) |
 | `browser_click` / `browser_fill` | Click, or fill a field / select / checkbox, by `ref` or `selector` |
 | `browser_wait_for` | Wait for a `selector` or `text` to be visible (`timeout` seconds, default 5, 0 checks once); an error when it is not |

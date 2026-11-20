@@ -42,7 +42,8 @@ final class MCPServer {
         browser_* tools instead of Chrome or another browser (no Chrome extension, no `open <url>`), so the user sees the \
         page beside the terminal. Use Chrome only when the user asks for it, when the page needs the user's Chrome \
         sign-ins or saved passwords (cmds browser panes do not share them), or for what browser_eval cannot do (file \
-        uploads, native dialogs). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
+        uploads, native dialogs). For front-end work, browser_console, browser_source and browser_seo give the page's \
+        console and errors, its HTML and an SEO check. Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
         server or another long-running command in a terminal pane beside yours with terminal_split, read its output \
         with terminal_read and type into it with terminal_send (only panes opened from your terminal); list_ports shows \
         the ports the workspaces listen on. Before a build, test run or other heavy job, check system_stats: at advice \
@@ -166,6 +167,10 @@ final class MCPServer {
         .object(["type": "string", "description": .string(description)])
     }
 
+    /// `browser_source`: characters returned by default and at most.
+    static let defaultSourceChars = 100_000
+    static let maxSourceChars = 1_000_000
+
     private static let browserPane = string("Browser pane id. Default: the last browser pane this server opened, else the focused browser pane of the workspace.")
 
     static let tools: [Tool] = [
@@ -208,8 +213,18 @@ final class MCPServer {
                 "level": .object(["type": "string", "enum": ["debug", "log", "info", "warn", "error"],
                                   "description": "Only this level and more severe ones."]),
                 "limit": .object(["type": "integer", "description": "Only the newest this many."]),
+                "show": .object(["type": "boolean", "description": "Open (true) or close (false) the console drawer at the bottom of the pane, to show the user."]),
                 "clear": .object(["type": "boolean", "description": "Empty the record after reading it."]),
              ]),
+        Tool(name: "browser_source",
+             description: "The HTML of a cmds browser pane's page: what the server sent (default), or with rendered the DOM as it is now after scripts ran. Long pages are cut (maxChars, default \(MCPServer.defaultSourceChars)).",
+             properties: ["pane": browserPane,
+                          "rendered": .object(["type": "boolean", "description": "The live DOM instead of the server's HTML."]),
+                          "maxChars": .object(["type": "integer", "description": .string("Characters returned at most (default \(MCPServer.defaultSourceChars), at most \(MCPServer.maxSourceChars)).")])]),
+        Tool(name: "browser_seo",
+             description: "Check a cmds browser pane's page for search engines and link previews: title and description length, h1 and heading order, canonical, robots meta and robots.txt, lang, viewport, Open Graph, Twitter card, image alt, links without text, JSON-LD structured data, https and mixed content, thin content, favicon. Returns a score and one line per check (✗ problem, ! warning, i note, ✓ passed). Set open to also show the report to the user in a preview tab.",
+             properties: ["pane": browserPane,
+                          "open": .object(["type": "boolean", "description": "Also show the report in a preview tab beside the pane."])]),
         Tool(name: "browser_snapshot_tree",
              description: "The page of a cmds browser pane as a compact tree of roles and names (links, buttons, form fields, headings, images, landmarks), one line each with a ref, e.g. `- button \"Sign in\" [ref=e3]`. Use the refs with browser_click and browser_fill. Cheaper than a screenshot for finding what to act on.",
              properties: ["pane": browserPane, "selector": string("Start at this element (CSS selector) instead of the body.")]),
@@ -408,11 +423,32 @@ final class MCPServer {
             return [Self.text(BrowserEmulation(json: result).summary)]
         case "browser_console":
             let request = try toolArguments { try BrowserConsoleRequest(params: arguments) }
-            let result = try devToolsCall("browser.console", arguments, request.params)
+            var params = request.params
+            if let show = arguments["show"]?.boolValue { params["show"] = .bool(show) }
+            let result = try devToolsCall("browser.console", arguments, params)
             let entries = (try? result["entries"]?.decode([ConsoleEntry].self)) ?? []
             var lines = entries.map { $0.line() }
             if let dropped = result["dropped"]?.intValue, dropped > 0 { lines.insert("(\(dropped) older messages dropped)", at: 0) }
             return [Self.text(lines.isEmpty ? "No console messages." : lines.joined(separator: "\n"))]
+        case "browser_source":
+            let rendered = arguments["rendered"]?.boolValue ?? false
+            let limit = try toolArguments { () -> Int in
+                guard let raw = arguments["maxChars"], raw != .null else { return Self.defaultSourceChars }
+                guard let value = raw.intValue, value > 0 else { throw RPCError.invalidParams("maxChars must be a positive integer") }
+                return min(value, Self.maxSourceChars)
+            }
+            let result = try devToolsCall("browser.source", arguments, ["rendered": rendered ? true : nil])
+            let source = result["source"]?.stringValue ?? ""
+            let cut = source.count > limit
+            var header = "\(result["url"]?.stringValue ?? "") — \(rendered ? "rendered DOM" : "HTML from the server")"
+            if let status = result["status"]?.intValue { header += ", HTTP \(status)" }
+            if cut || result["truncated"]?.boolValue == true {
+                header += " (first \(min(limit, source.count)) of \(source.count)\(result["truncated"]?.boolValue == true ? "+" : "") characters)"
+            }
+            return [Self.text(header + "\n\n" + String(source.prefix(limit)))]
+        case "browser_seo":
+            let result = try devToolsCall("browser.seo", arguments, ["open": arguments["open"]?.boolValue == true ? true : nil])
+            return [Self.text(result["text"]?.stringValue ?? "No result.")]
         case "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for":
             let method = "browser." + name.dropFirst("browser_".count)
             let action = try toolArguments { try BrowserPageAction(method: method, params: arguments) }

@@ -18,6 +18,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Browser panes open new pages as tabs (on by default, Settings › General › Open new pages in tabs): a
   `target="_blank"` link becomes a tab of its pane, and `cmds browser open` or an agent's `browser_open` a tab of the
   workspace's browser pane, instead of a new split each time.
+- Developer tools in browser panes (the toolbar's **</>** button, View › Developer): **View Page Source** (⌥⌘U) in a
+  tab with line numbers and coloured markup; a **console drawer** (⌥⌘C) with the page's messages and errors by level
+  and a JavaScript line; an **SEO report** (title, description, headings, canonical, robots and robots.txt, Open Graph,
+  alt, structured data, https…) with a score. Also `cmds browser source`, `cmds browser seo`,
+  `cmds browser console --show`, `browser.source` / `browser.seo`, and the MCP tools `browser_source` and
+  `browser_seo` (`browser_console` takes `show`).
 - Google Chrome's bookmarks bar in browser panes (Settings › General › Show Chrome bookmarks, Chrome profile): links
   load in the pane, ⌘-click opens a tab, folders are menus with Open All in Tabs. Read only; Chrome's sign-ins and
   passwords are not shared. When macOS refuses to let cmds read Chrome's data, Settings explains how to allow it (Full

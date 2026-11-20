@@ -29,7 +29,8 @@ extension AppController {
                                                   emulation: emulation, responsive: responsive))
             case .preview(let path, let format):
                 defer { next += 1 }
-                return .pane(WorkspaceBundle.Pane(kind: .preview, path: path, format: format))
+                // `source` is newer than bundle version 1: older cmds would refuse the bundle.
+                return .pane(WorkspaceBundle.Pane(kind: .preview, path: path, format: format == PreviewFormat.source.rawValue ? nil : format))
             case .files(let path, _, _, let host):
                 defer { next += 1 }
                 return .pane(WorkspaceBundle.Pane(kind: .files, host: host, path: path))

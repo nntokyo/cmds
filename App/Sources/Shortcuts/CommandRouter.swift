@@ -95,6 +95,17 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     @objc func splitRight(_ sender: Any?) { _ = try? controller.split(direction: .right) }
     @objc func splitDown(_ sender: Any?) { _ = try? controller.split(direction: .down) }
+    // View › Developer (BrowserPane+WebDev.swift).
+    @objc func browserViewSource(_ sender: Any?) {
+        guard let pane = controller.focusedPane, pane.browser != nil else { return NSSound.beep() }
+        controller.runDeveloperAction(.source, paneID: pane.id)
+    }
+    @objc func browserToggleConsole(_ sender: Any?) { focusedBrowser?.toggleConsole() }
+    @objc func browserSEOReport(_ sender: Any?) {
+        guard let pane = controller.focusedPane, pane.browser != nil else { return NSSound.beep() }
+        controller.runDeveloperAction(.seo, paneID: pane.id)
+    }
+
     /// ⌘T: a new tab beside the focused pane (a browser tab in a browser, else a terminal).
     @objc func newTab(_ sender: Any?) { _ = try? controller.newTab() }
     @objc func nextTab(_ sender: Any?) { controller.selectAdjacentTab(offset: 1) }
@@ -518,6 +529,11 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(filesNewFolder(_:)), #selector(filesEnclosingFolder(_:)), #selector(filesGoToFolder(_:)),
              #selector(filesOpenTerminal(_:)):
             return focusedFiles != nil
+        case #selector(browserViewSource(_:)), #selector(browserSEOReport(_:)):
+            return focusedBrowser != nil
+        case #selector(browserToggleConsole(_:)):
+            menuItem.title = focusedBrowser?.isConsoleOpen == true ? String(localized: "Hide Console") : String(localized: "Show Console")
+            return focusedBrowser != nil
         case #selector(nextTab(_:)), #selector(previousTab(_:)):
             return focusedPaneIsTab
         case #selector(closePane(_:)):

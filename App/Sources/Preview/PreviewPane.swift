@@ -130,7 +130,7 @@ final class PreviewPane: NSView {
         }
         if !existed { onStateChange?() }
         switch renderMode {
-        case .markdown, .diff, .text:
+        case .markdown, .diff, .text, .source:
             renderHTML(keepScroll: keepScroll)
         case .image:
             // In-process (unlike Quick Look's remote view): animated GIFs play, and snapshots/tests can see it.
@@ -155,12 +155,13 @@ final class PreviewPane: NSView {
         view.previewItem = url as NSURL
     }
 
-    private enum RenderMode { case markdown, diff, text, image, quickLook }
+    private enum RenderMode { case markdown, diff, text, source, image, quickLook }
 
     private var renderMode: RenderMode {
         switch format {
         case .markdown: return .markdown
         case .diff: return .diff
+        case .source: return .source
         case .quickLook:
             // Quick Look shows only an icon for text without a known type (no extension, `.env`, `Makefile`…).
             let ext = (path as NSString).pathExtension
@@ -181,6 +182,7 @@ final class PreviewPane: NSView {
         switch mode {
         case .markdown: html = MarkdownHTML.page(source.text, title: title)
         case .diff: html = DiffHTML.page(source.text, title: title)
+        case .source: html = SourceHTML.page(source.text, title: title)
         default:
             html = PreviewHTML.page(title: title, bodyClass: "markdown",
                                     body: "<pre><code>" + PreviewHTML.escape(source.text) + "</code></pre>")

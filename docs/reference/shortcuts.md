@@ -53,6 +53,9 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Close pane (a tab: Close Tab) | ⌘W | File |
 | Open browser split | ⇧⌘B | File |
 | Open a Chrome bookmark in a new tab | ⌘-click it in the bookmarks bar | – |
+| View page source (browser pane) | ⌥⌘U | View › Developer |
+| Show / hide the console drawer (browser pane) | ⌥⌘C | View › Developer |
+| SEO report of the page | – | View › Developer |
 | Open in Preview… (file picker) | ⇧⌘O | File |
 | Preview a file path shown in a terminal | ⌘-click the path | – |
 | New files pane (lists the focused pane's folder; an SSH pane's remote folder on its host) | ⇧⌘E | File |

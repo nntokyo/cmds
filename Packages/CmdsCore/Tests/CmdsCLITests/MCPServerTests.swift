@@ -94,7 +94,7 @@ final class MCPServerTests: XCTestCase {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
-                        "browser_console", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
+                        "browser_console", "browser_source", "browser_seo", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
                         "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
                         "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
@@ -264,6 +264,31 @@ final class MCPServerTests: XCTestCase {
         failure = CLIError.failure("method not found: browser.console")
         XCTAssertEqual(text(callTool(server, "browser_console", #"{"pane":"p4"}"#)), "this cmds app has no browser.console; update cmds")
         failure = nil
+    }
+
+    /// Web development tools: the page source (cut to maxChars) and the SEO report's text.
+    func testSourceAndSEO() {
+        let server = server()
+        replies["browser.source"] = .object(["url": "https://x.test/", "source": .string(String(repeating: "a", count: 50)),
+                                             "rendered": false, "truncated": false, "length": 50, "status": 200])
+        let source = text(callTool(server, "browser_source", #"{"pane":"p4","maxChars":10}"#)) ?? ""
+        XCTAssertTrue(source.hasPrefix("https://x.test/ — HTML from the server, HTTP 200 (first 10 of 50 characters)"), source)
+        XCTAssertTrue(source.hasSuffix("\n\n" + String(repeating: "a", count: 10)), source)
+        XCTAssertNil(requests.last?.params["rendered"] ?? nil)
+        _ = callTool(server, "browser_source", #"{"pane":"p4","rendered":true}"#)
+        XCTAssertEqual(requests.last?.params["rendered"] ?? nil, .bool(true))
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_source", #"{"pane":"p4","maxChars":0}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)
+
+        let report = SEOReport(facts: PageFacts(url: "https://x.test/", title: "Hello"))
+        var value = (try? JSONValue.from(report)) ?? .null
+        if case .object(var object) = value { object["text"] = .string(report.text); value = .object(object) }
+        replies["browser.seo"] = value
+        let seo = text(callTool(server, "browser_seo", #"{"pane":"p4","open":true}"#)) ?? ""
+        XCTAssertTrue(seo.hasPrefix("SEO "), seo)
+        XCTAssertTrue(seo.contains("✗ h1: no <h1>"), seo)
+        XCTAssertEqual(requests.last?.params["open"] ?? nil, .bool(true))
     }
 
     /// browser_watch (#252): on unless off, a relative dir is refused before anything is sent.

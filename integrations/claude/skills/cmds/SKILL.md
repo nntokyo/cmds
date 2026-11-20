@@ -52,6 +52,10 @@ cmds の MCP サーバー（`cmds mcp`。ツール名 `browser_open` / `browser_
   `cmds browser fill --pane "$B" e4 値`、`cmds browser click --pane "$B" e7`（CSS セレクタも可）、表示を待つのは
   `cmds browser wait-for --pane "$B" --text "保存しました"`。MCP では `browser_console` / `browser_snapshot_tree` /
   `browser_click` / `browser_fill` / `browser_wait_for`。厳しい CSP のページでも使える。
+- ページの HTML を見る: `cmds browser source --pane "$B"`（サーバーが返した HTML。`--rendered` でスクリプト実行後の DOM、
+  `--open` でユーザーにもソースのタブで見せる）。SEO を確認する: `cmds browser seo --pane "$B"`（title・description・見出し・
+  canonical・robots・OGP・alt・構造化データなどを点数と ✗ / ! / i / ✓ の一覧で。失敗があると終了コード 1）。MCP では
+  `browser_source` / `browser_seo`。ユーザーにコンソールを見せるときは `browser_console` に `show: true`。
 - 使い終わったら自分が開いたブラウザペインを閉じる（`cmds close-pane "$B"`）。
 
 Chrome を使うのは次のときだけ:

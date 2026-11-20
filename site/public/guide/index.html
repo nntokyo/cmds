@@ -145,6 +145,7 @@
       <ul>
         <li><kbd>⇧⌘B</kbd> でターミナルの右にブラウザを開きます。<kbd>⌘L</kbd> でアドレスバー、<kbd>⌘R</kbd> で再読み込み、<kbd>⌘[</kbd> / <kbd>⌘]</kbd> で戻る・進む。</li>
         <li>新しいウインドウで開くリンク、<code>cmds browser open</code>、エージェントの <code>browser_open</code> は、分割を増やさずにブラウザペインの<strong>タブ</strong>で開きます（設定 › 一般 › 新しいページをタブで開く。オフにすると従来どおり分割）。</li>
+        <li><strong>開発ツール</strong>：ツールバーの <strong>&lt;/&gt;</strong> ボタンか 表示 › 開発 から。<strong>ページのソースを表示</strong>（<kbd>⌥⌘U</kbd>）でサーバーが返した HTML を行番号と色分けで新しいタブに、<strong>コンソール</strong>（<kbd>⌥⌘C</kbd>）でページのログ・エラーをレベル別に表示し JavaScript を実行、<strong>SEO レポート</strong>で title・description（全角は 2 文字分）・h1 と見出しの順序・canonical・robots と robots.txt・lang・viewport・OGP・Twitter カード・画像の alt・構造化データ・https などを点数付きで確認できます。<code>cmds browser source</code> / <code>cmds browser seo</code>、MCP の <code>browser_source</code> / <code>browser_seo</code> / <code>browser_console</code> でエージェントからも。</li>
         <li><strong>Chrome のブックマーク</strong>：Google Chrome を使っていれば、アドレスバーの下に Chrome のブックマークバーが出ます。クリックでそのペインに、<kbd>⌘</kbd>-クリックで新しいタブに開き、フォルダはメニューで開きます（すべてをタブで開く も）。読み取りのみで、Chrome のログイン情報やパスワードは共有しません。macOS が読み込みを許可しないときは、設定 › 一般 の案内からフルディスクアクセスで cmds をオンにします。表示とプロファイルは設定 › 一般 で選べます。</li>
         <li><kbd>⇧⌘O</kbd>（ファイル › プレビューで開く…）、またはターミナルに表示されたパスの <kbd>⌘</kbd>-クリックで、ファイルをプレビューペインに表示。画像、PDF、動画、Office、テキストは Quick Look、Markdown は整形表示、diff は色付きで表示します。</li>
         <li>ファイルが変更されると自動で再読み込みされます。エージェントが書いたレポートや画像をそのまま確認できます。</li>
@@ -387,6 +388,7 @@ cmds schedule history   # 実行履歴</code></pre>
             <tr><td>次 / 前のワークスペース</td><td><kbd>⇧⌘]</kbd> / <kbd>⇧⌘[</kbd>、<kbd>⌃Tab</kbd> / <kbd>⌃⇧Tab</kbd></td></tr>
             <tr><td>ワークスペース名を変更</td><td><kbd>⇧⌘R</kbd></td></tr>
             <tr><td>右に分割 / 下に分割</td><td><kbd>⌘D</kbd> / <kbd>⇧⌘D</kbd></td></tr>
+            <tr><td>ページのソース / コンソール（ブラウザペイン）</td><td><kbd>⌥⌘U</kbd> / <kbd>⌥⌘C</kbd></td></tr>
             <tr><td>新規タブ / 次のタブ / 前のタブ</td><td><kbd>⌘T</kbd> / <kbd>⌥⌘]</kbd> / <kbd>⌥⌘[</kbd></td></tr>
             <tr><td>ペイン間の移動</td><td><kbd>⌥⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>
             <tr><td>隣のペインと入れ替え</td><td><kbd>⌥⇧⌘←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd></td></tr>

@@ -5,6 +5,8 @@ public enum PreviewFormat: String, Sendable {
     case markdown
     case diff
     case quickLook
+    /// Source code with line numbers (`SourceHTML`): a browser pane's page source.
+    case source
 
     /// From the file name: `.md`/`.markdown` → markdown, `.diff`/`.patch` → diff, anything else Quick Look.
     public static func forFile(_ path: String) -> PreviewFormat {
@@ -57,14 +59,14 @@ public enum PreviewHTML {
             in: head, with: #"<head><meta name="viewport" content="width=device-width, initial-scale=1">"#)
     }
 
-    public static func page(title: String, bodyClass: String, body: String) -> String {
+    public static func page(title: String, bodyClass: String, body: String, extraCSS: String = "") -> String {
         """
         <!DOCTYPE html>
         <html><head><meta charset="utf-8">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src * data: blob:; style-src 'unsafe-inline'; media-src *">
         <meta name="color-scheme" content="light dark">
         <title>\(escape(title))</title>
-        <style>\(css)</style>
+        <style>\(css)\(extraCSS)</style>
         </head><body class="\(bodyClass)">
         \(body)
         </body></html>
