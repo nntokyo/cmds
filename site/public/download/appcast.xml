@@ -7,28 +7,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.28.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.28.1</link>
-      <sparkle:version>45</sparkle:version>
-      <sparkle:shortVersionString>0.28.1</sparkle:shortVersionString>
+      <title>cmds 0.29.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.29.0</link>
+      <sparkle:version>46</sparkle:version>
+      <sparkle:shortVersionString>0.29.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Tue, 17 Nov 2026 01:35:58 GMT</pubDate>
+      <pubDate>Fri, 20 Nov 2026 11:11:26 GMT</pubDate>
       <description><![CDATA[
-<h3>修正</h3>
+<h3>新機能</h3>
 <ul>
-<li>アシスタント：「ワークスペースはいくつ？」（エージェントやセッションの数も）に、実際のワークスペースから答えるようにしました。ワークスペースの数、エージェントが動いている数、そのうちあなたを待っている数を答えます。これまでは内蔵モデルに回り、数えられませんでした。</li>
+<li>タブ：レイアウトのどこにでも、ターミナル・ブラウザ・プレビュー・ファイル一覧をタブで重ねられます。ペイン › 新規タブ（⌘T）、次／前のタブ（⌥⌘] / ⌥⌘[）、⌘W・×・中クリックで閉じる。タブはドラッグで別のタブバーやペインの上端に移せます。見えていないタブも動き続け、セッションと一緒に復元されます。</li>
+<li>ブラウザのページをタブで開く（設定 › 一般、標準でオン）：新しいウインドウを開くリンク、<code>cmds browser open</code>、エージェントの <code>browser_open</code> が分割の代わりにタブになります。</li>
+<li>Google Chrome のブックマークバー（設定 › 一般でオン／オフとプロファイル。読み取りのみ）。⌘-クリックで新しいタブに開きます。</li>
+<li>Web 開発ツール（ツールバーの &lt;/&gt;、表示 › 開発）：ページのソースを表示（⌥⌘U）、コンソール（⌥⌘C、JavaScript の実行も）、SEO レポート。MCP の <code>browser_source</code>・<code>browser_seo</code>、<code>cmds browser source</code>／<code>seo</code> でエージェントからも使えます。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
-<h3>Fixed</h3>
+<h3>Added</h3>
 <ul>
-<li>Assistant: "how many workspaces" (also agents and sessions) is answered from the workspaces: how many there are, how many run an agent and how many of those wait for you. It went to the on-device model, which could not count them.</li>
+<li>Tabs: stack terminals, browsers, previews and files panes as tabs in any place of the layout. Pane › New Tab (⌘T), next / previous tab (⌥⌘] / ⌥⌘[), close with ⌘W, × or a middle click; drag tabs onto another tab bar or a pane's top edge. Tabs you don't see keep running and come back with the session.</li>
+<li>Browser pages open as tabs (Settings › General, on by default): links that open a new window, <code>cmds browser open</code> and agents' <code>browser_open</code> add tabs instead of splits.</li>
+<li>Google Chrome's bookmarks bar in browser panes (Settings › General: on/off and profile; read only). ⌘-click opens a new tab.</li>
+<li>Web developer tools (the toolbar's &lt;/&gt;, View › Developer): View Page Source (⌥⌘U), a console (⌥⌘C, runs JavaScript too) and an SEO report. Agents get them through MCP <code>browser_source</code> / <code>browser_seo</code> and <code>cmds browser source</code> / <code>seo</code>.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.28.1/cmds-0.28.1.dmg" length="17142287" type="application/octet-stream" sparkle:edSignature="hcqm7BxT4kG1zZrePzhnPQ5oBPziravNnl/kZ1Wg0jFe0jO2NJYnGpJZv7GQgGCev2f6t785bqrAgE4bU8wgDQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.29.0/cmds-0.29.0.dmg" length="17615554" type="application/octet-stream" sparkle:edSignature="8gb/gtMn0GYPBxgq1IND/A26xwzFRPQUFywu9Oc2PYC4A3RPRfBohYmOlUuOR7cb1P934agkL1wOi5k/hL9vAQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: YVeGyubC5HQGMN4ZaXZrOMEakFV0e8+6x4MFI3TjBn9yWbMe8082DX5WnsoqSJ1YLMPA/apy686csEjhSL8+Cg==
-length: 2088
+edSignature: 8F3l0Jslw00Wsr4rXsc/hArXvpd3T9NzYPYsIau7CLpgqopT9IZEiW4Xlpfql1+phIO+SLLATSvDuorZX6CEBw==
+length: 3696
 -->
