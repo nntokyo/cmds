@@ -103,6 +103,10 @@ targets:
         LSMinimumSystemVersion: "14.0"
         NSPrincipalClass: NSApplication
         NSHighResolutionCapable: true
+        # Browser panes load plain-http pages (intranet sites, dev servers on a LAN name). Only WebKit's content is
+        # exempt from App Transport Security; the app's own connections (updates, sync, APIs) stay https-only.
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoadsInWebContent: true
         NSLocalNetworkUsageDescription: cmds syncs terminals to the iOS companion over the local network.
         NSBonjourServices: [_cmds._tcp]
         NSBluetoothAlwaysUsageDescription: cmds lets the iOS companion connect over Bluetooth when Wi‑Fi is off. The connection stays end-to-end encrypted.

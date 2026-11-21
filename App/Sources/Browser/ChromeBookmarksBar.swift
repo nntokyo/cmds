@@ -11,6 +11,18 @@ final class ChromeBookmarkStore {
 
     /// The bookmarks shown; nil when off, when Chrome or its bookmarks are missing, or before the first read.
     private(set) var tree: ChromeBookmarks.Tree?
+    /// Chrome's icons of the bookmarks (`ChromeFavicons`), by address; decoded when first drawn.
+    private var iconData: [String: Data] = [:]
+    private var icons: [String: NSImage] = [:]
+
+    /// Chrome's icon for a bookmark's address, 64 px at most.
+    func icon(for url: URL) -> NSImage? {
+        let key = url.absoluteString
+        if let image = icons[key] { return image }
+        guard let data = iconData[key], let image = FaviconCache.decode(data) else { return nil }
+        icons[key] = image
+        return image
+    }
 
     /// Chrome's folder; `CMDS_CHROME_FOLDER` replaces it for tests (docs/internals/testing.md).
     nonisolated static var chromeFolder: URL {
@@ -121,6 +133,19 @@ final class ChromeBookmarkStore {
                 }
                 if trees.isEmpty { problem = readProblem ?? .unreadable } else { read = ChromeBookmarks.merged(trees) }
             }
+            // Chrome's icons for the bookmarks (only when the bookmarks were read again).
+            var iconData: [String: Data] = [:]
+            if let read {
+                func links(_ items: [ChromeBookmarks.Item]) -> [String] {
+                    items.flatMap { item -> [String] in
+                        switch item {
+                        case .link(_, let url): return [url.absoluteString]
+                        case .folder(_, let children): return links(children)
+                        }
+                    }
+                }
+                iconData = ChromeFavicons.icons(profileFolder: folder, urls: links(read.bar + read.other + read.mobile))
+            }
             // macOS's protection of other apps' data reports the files inside as missing; listing the folder itself
             // is refused (EPERM).
             if problem == .notFound {
@@ -145,8 +170,10 @@ final class ChromeBookmarkStore {
                 // A file that could not be read is tried again next time.
                 store.loadedFile = finalProblem == nil && complete ? file : nil
                 store.loadedSignature = finalProblem == nil && complete ? signature : nil
-                if read != store.tree || finalProblem != store.problem {
+                if read != store.tree || finalProblem != store.problem || !iconData.isEmpty {
                     store.tree = read
+                    store.iconData = iconData
+                    store.icons = [:]
                     store.problem = finalProblem
                     NotificationCenter.default.post(name: Self.didChange, object: store)
                 }
@@ -235,9 +262,9 @@ final class ChromeBookmarksBarView: NSView {
 
     /// The icon of a site visited in a browser pane (`FaviconCache`), 12 pt.
     static func icon(for url: URL) -> NSImage? {
-        guard let site = BrowserPane.faviconSite(url), let image = FaviconCache.shared.image(forSite: site)?.copy() as? NSImage else {
-            return nil
-        }
+        let known = ChromeBookmarkStore.shared.icon(for: url)
+            ?? BrowserPane.faviconSite(url).flatMap { FaviconCache.shared.image(forSite: $0) }
+        guard let image = known?.copy() as? NSImage else { return nil }
         image.size = NSSize(width: 12, height: 12)
         return image
     }

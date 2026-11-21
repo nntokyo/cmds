@@ -78,6 +78,20 @@ extension BrowserPane {
                 .flatMap { try? $0.decode([Favicon.Candidate].self) } ?? []
             for url in Favicon.urls(candidates, page: page) {
                 guard !Task.isCancelled else { return }
+                // Plain http on the page's own site: the page fetches it (the app may not).
+                if Favicon.fetchedByPage(url, page: page) {
+                    let result = try? await self.runPageScript(Favicon.fetchScript, ["url": url.absoluteString,
+                                                                                    "maxBytes": Favicon.maxBytes],
+                                                               until: Date(timeIntervalSinceNow: 5))
+                    guard !Task.isCancelled else { return }
+                    if let base64 = result?["data"]?.stringValue, let data = Data(base64Encoded: base64),
+                       let image = FaviconCache.decode(data), self.webView.url.flatMap(Self.faviconSite) == site {
+                        FaviconCache.shared.remember(image, forSite: site)
+                        self.setFavicon(image, site: site)
+                        return
+                    }
+                    continue
+                }
                 if let image = await FaviconCache.shared.image(for: url) {
                     guard !Task.isCancelled, self.webView.url.flatMap(Self.faviconSite) == site else { return }
                     FaviconCache.shared.remember(image, forSite: site)
@@ -188,7 +202,7 @@ final class FaviconCache {
     }
 
     /// A thumbnail of at most `pixels` (ICO, PNG, JPEG, GIF, WebP through ImageIO; SVG through NSImage).
-    nonisolated private static func decode(_ data: Data) -> NSImage? {
+    nonisolated static func decode(_ data: Data) -> NSImage? {
         if let source = CGImageSourceCreateWithData(data as CFData, nil),
            let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                kCGImageSourceCreateThumbnailFromImageAlways: true,

@@ -174,6 +174,16 @@ final class FaviconTests: XCTestCase {
         XCTAssertTrue(urls.contains("http://[::1]:3000/favicon.ico"), "\(urls)")
     }
 
+    func testPlainHTTPIconsOfTheSiteAreFetchedByThePage() {
+        let page = URL(string: "http://intranet.example/app")!
+        XCTAssertTrue(Favicon.fetchedByPage(URL(string: "http://intranet.example/favicon.ico")!, page: page))
+        XCTAssertFalse(Favicon.fetchedByPage(URL(string: "http://other.example/favicon.ico")!, page: page), "another site")
+        XCTAssertFalse(Favicon.fetchedByPage(URL(string: "https://intranet.example/favicon.ico")!, page: page), "https: the app")
+        XCTAssertFalse(Favicon.fetchedByPage(URL(string: "http://localhost:3000/f.ico")!, page: URL(string: "http://localhost:3000/")!),
+                       "local addresses: the app may fetch them")
+        XCTAssertTrue(Favicon.fetchScript.contains("/^image\\//i"), Favicon.fetchScript)
+    }
+
     func testLocalPagesKeepLocalIcons() {
         let urls = Favicon.urls([.init(href: "icon.png", rel: "icon")], page: URL(string: "file:///Users/me/site/index.html")!)
         XCTAssertEqual(urls.map(\.absoluteString), ["file:///Users/me/site/icon.png"])

@@ -33,6 +33,35 @@ public enum Favicon {
                        sizes: l.getAttribute('sizes'), type: l.getAttribute('type') }));
         """
 
+    /// An icon the app cannot download itself (App Transport Security refuses plain `http` to names other than local
+    /// ones), which the page fetches instead (`fetchScript`): plain `http`, the page's own site, not a local address.
+    public static func fetchedByPage(_ url: URL, page: URL) -> Bool {
+        guard url.scheme?.lowercased() == "http", page.scheme?.lowercased() == "http",
+              let host = url.host?.lowercased(), host == page.host?.lowercased(), url.port == page.port else { return false }
+        let local = host == "localhost" || host.hasSuffix(".localhost") || host.hasSuffix(".local")
+            || host.allSatisfy { $0.isNumber || $0 == "." } || host.contains(":")
+        return !local
+    }
+
+    /// `callAsyncJavaScript` body: the icon at `url` (the page's own site) as base64, at most `maxBytes`, without
+    /// cookies; null when it is missing, larger or not an image.
+    public static let fetchScript = """
+        const response = await fetch(url, { credentials: 'omit', cache: 'force-cache', redirect: 'error' });
+        if (!response.ok || !/^image\\//i.test(response.headers.get('content-type') || 'image/x-icon')) return null;
+        const reader = response.body.getReader();
+        const chunks = []; let size = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          size += value.length;
+          if (size > maxBytes) { try { reader.cancel(); } catch (e) {} return null; }
+          chunks.push(value);
+        }
+        let binary = '';
+        for (const chunk of chunks) for (let i = 0; i < chunk.length; i += 0x8000) binary += String.fromCharCode(...chunk.subarray(i, i + 0x8000));
+        return { data: btoa(binary) };
+        """
+
     /// The icon URLs to try for `page`, best first: an icon of the wanted size or just above, an SVG, any other icon,
     /// Apple touch icons, then `/favicon.ico`. Only http, https and data URLs (no `file:` from a remote page); an icon
     /// on another site only on the web's usual ports (80, 443), so a page cannot make cmds knock on other services.
