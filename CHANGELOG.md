@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-11-22
+
+Mac only; the iPhone/iPad app is unchanged.
+
 ### Added
 
 - Tabs show the page's icon (favicon); the Chrome bookmarks bar shows the icons of sites visited in browser panes.
