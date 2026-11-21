@@ -7,7 +7,7 @@ import CmdsCore
 extension BrowserPane {
     /// `browser.source`: the HTML the server sent (or with `rendered` the DOM now), capped at `PageSource.maxBytes`.
     func pageSource(rendered: Bool, fetchAgain: Bool = false) async throws
-        -> (url: String, source: String, rendered: Bool, truncated: Bool, status: Int?, notCached: Bool) {
+        -> (url: String, source: String, rendered: Bool, truncated: Bool, status: Int?, notCached: Bool, contentType: String?, charset: String?) {
         // A local page: the file itself (WebKit's fetch cannot read file: URLs).
         if !rendered, let url = webView.url, url.isFileURL,
            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
@@ -16,7 +16,7 @@ extension BrowserPane {
             defer { try? handle.close() }
             let data = (try? handle.read(upToCount: PageSource.maxBytes + 1)) ?? Data()
             let text = String(decoding: data.prefix(PageSource.maxBytes), as: UTF8.self)
-            return (url.absoluteString, text, false, data.count > PageSource.maxBytes, nil, false)
+            return (url.absoluteString, text, false, data.count > PageSource.maxBytes, nil, false, nil, "UTF-8")
         }
         let result = try await runPageScript(PageSource.script, ["rendered": rendered, "fetchAgain": fetchAgain,
                                                                  "maxBytes": PageSource.maxBytes])
@@ -26,14 +26,19 @@ extension BrowserPane {
         let capped = PageSource.capped(source)
         return (object["url"]?.stringValue ?? currentURL?.absoluteString ?? "", capped.source,
                 object["rendered"]?.boolValue ?? rendered, capped.truncated, object["status"]?.intValue,
-                object["notCached"]?.boolValue ?? false)
+                object["notCached"]?.boolValue ?? false, object["contentType"]?.stringValue, object["charset"]?.stringValue)
     }
 
     /// `browser.seo`.
-    func seoReport() async throws -> SEOReport {
+    /// `crawl`: also this many linked pages of the site (at most `SEOAudit.maxCrawl`; 0: none).
+    func seoReport(crawl: Int = 0) async throws -> SEOReport {
         let result = try await runPageScript(SEOAudit.script, [:])
         guard let facts = try? result.decode(PageFacts.self) else { throw RPCError(code: 500, message: "the page gave no facts") }
-        return SEOReport(facts: facts)
+        guard crawl > 0 else { return SEOReport(facts: facts) }
+        let found = try await runPageScript(SEOAudit.crawlScript,
+                                            ["max": min(crawl, SEOAudit.maxCrawl), "disallowed": facts.robotsTxt?.disallowed ?? []],
+                                            until: Date(timeIntervalSinceNow: 150))
+        return SEOReport(facts: facts, pages: (try? found.decode([CrawlPage].self)) ?? [])
     }
 
     // MARK: - Console drawer
@@ -105,8 +110,14 @@ enum BrowserDeveloperAction {
 @MainActor
 final class BrowserConsoleView: NSView, NSTextFieldDelegate {
     static let preferredHeight: CGFloat = 220
-    /// The height the user dragged the drawer to (shared by every pane; this run only).
-    static var lastHeight: CGFloat = preferredHeight
+    /// The height the user dragged the drawer to (shared by every pane, remembered across launches).
+    static var lastHeight: CGFloat {
+        get {
+            let stored = AppSettings.shared.defaults.double(forKey: "BrowserConsoleHeight")
+            return stored > 0 ? CGFloat(stored) : preferredHeight
+        }
+        set { AppSettings.shared.defaults.set(Double(newValue), forKey: "BrowserConsoleHeight") }
+    }
     static let minimumHeight: CGFloat = 90
 
     /// `height` within what the pane leaves for the page (at least 150 pt of page).
@@ -119,6 +130,7 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
     private let scrollView = NSScrollView()
     private let input = NSTextField()
     private let levelPopup = NSPopUpButton()
+    private let filterField = NSSearchField()
     /// Lines of evaluated input and their results, by the console sequence number they follow.
     private var evaluations: [(afterSeq: Int, input: String, result: String, failed: Bool)] = []
     /// Counts every evaluation (the list is capped, so its count alone cannot tell a new one).
@@ -151,7 +163,17 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
         let close = BrowserPane.toolbarButton("xmark", label: String(localized: "Hide Console"))
         close.target = self
         close.action = #selector(closeClicked)
-        let header = NSStackView(views: [title, levelPopup, NSView(), clear, close])
+        filterField.placeholderString = String(localized: "Filter", comment: "Console drawer: text filter")
+        filterField.controlSize = .small
+        filterField.font = .systemFont(ofSize: 11)
+        filterField.target = self
+        filterField.action = #selector(levelChanged)
+        filterField.sendsSearchStringImmediately = true
+        filterField.widthAnchor.constraint(equalToConstant: 160).isActive = true
+        let copy = BrowserPane.toolbarButton("doc.on.doc", label: String(localized: "Copy Console", comment: "Console drawer: copy the shown lines"))
+        copy.target = self
+        copy.action = #selector(copyClicked)
+        let header = NSStackView(views: [title, levelPopup, filterField, NSView(), copy, clear, close])
         header.orientation = .horizontal
         header.spacing = 6
         header.edgeInsets = NSEdgeInsets(top: 2, left: 8, bottom: 2, right: 6)
@@ -241,8 +263,11 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
     /// Redraws when the buffer, the filter or the evaluations changed.
     func refresh() {
         guard let pane else { return }
-        let entries = pane.consoleBuffer.entries(level: minimumLevel)
-        let signature = "\(entries.last?.seq ?? 0)|\(entries.count)|\(evaluationCount)|\(pane.consoleBuffer.dropped)|\(minimumLevel?.rawValue ?? "")"
+        let filter = filterField.stringValue.trimmingCharacters(in: .whitespaces)
+        let entries = pane.consoleBuffer.entries(level: minimumLevel).filter {
+            filter.isEmpty || $0.text.localizedCaseInsensitiveContains(filter) || ($0.location ?? "").localizedCaseInsensitiveContains(filter)
+        }
+        let signature = "\(entries.last?.seq ?? 0)|\(entries.count)|\(evaluationCount)|\(pane.consoleBuffer.dropped)|\(minimumLevel?.rawValue ?? "")|\(filter)"
         guard signature != shownSignature else { return }
         shownSignature = signature
         let atBottom = scrollView.verticalScroller.map { $0.floatValue > 0.98 } ?? true
@@ -283,6 +308,12 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
     }
 
     @objc private func levelChanged() { refresh() }
+
+    /// Copies the lines shown (with the filter) as plain text.
+    @objc private func copyClicked() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(textView.string, forType: .string)
+    }
 
     @objc private func clearClicked() {
         pane?.consoleBuffer.clear()

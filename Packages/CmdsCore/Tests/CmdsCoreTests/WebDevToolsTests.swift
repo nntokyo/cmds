@@ -211,3 +211,56 @@ final class SEOTextTests: XCTestCase {
         XCTAssertEqual(Set(keys), ["url", "score", "checks", "facts"], "the language is not part of the JSON")
     }
 }
+
+final class SEOMoreTests: XCTestCase {
+    func testVitalsHreflangAndSitemap() {
+        var facts = PageFacts(url: "https://x.test/a", title: "A good page title about things")
+        facts.vitals = .init(lcp: 4500, fcp: 900, ttfb: 2500, cls: 0.15, transferBytes: 6_000_000, domNodes: 3500)
+        facts.hreflang = 2
+        facts.hreflangSelf = false
+        facts.sitemap = .init(url: "https://x.test/sitemap.xml", status: 200, listsPage: false)
+        let byID = Dictionary(SEOReport(facts: facts).checks.map { ($0.id, $0.status) }) { a, _ in a }
+        XCTAssertEqual(byID["lcp"], .fail)
+        XCTAssertEqual(byID["cls"], .warn)
+        XCTAssertEqual(byID["ttfb"], .warn)
+        XCTAssertEqual(byID["dom-size"], .warn)
+        XCTAssertEqual(byID["page-weight"], .warn)
+        XCTAssertEqual(byID["hreflang"], .warn)
+        XCTAssertEqual(byID["sitemap"], .info)
+        facts.vitals = .init(lcp: 1200, cls: 0.01, domNodes: 300)
+        facts.sitemap?.listsPage = true
+        let good = Dictionary(SEOReport(facts: facts).checks.map { ($0.id, $0.status) }) { a, _ in a }
+        XCTAssertEqual(good["lcp"], .pass)
+        XCTAssertEqual(good["cls"], .pass)
+        XCTAssertNil(good["dom-size"])
+        XCTAssertEqual(good["sitemap"], .pass)
+    }
+
+    func testCrawlChecks() {
+        let page = PageFacts(url: "https://x.test/", title: "Home", description: "Same")
+        let pages = [
+            CrawlPage(url: "https://x.test/a", status: 200, title: "Home", description: "Same", h1: 1),
+            CrawlPage(url: "https://x.test/b", status: 200, title: nil, description: nil, h1: 0, noindex: true),
+            CrawlPage(url: "https://x.test/c", status: 404),
+        ]
+        let report = SEOReport(facts: page, pages: pages)
+        let byID = Dictionary(report.checks.map { ($0.id, $0) }) { a, _ in a }
+        XCTAssertEqual(byID["site-errors"]?.status, .fail)
+        XCTAssertEqual(byID["site-titles"]?.message, "2 pages share a title with another page")
+        XCTAssertEqual(byID["site-descriptions"]?.status, .warn)
+        XCTAssertEqual(byID["site-title"]?.status, .warn)
+        XCTAssertEqual(byID["site-noindex"]?.status, .info)
+        XCTAssertEqual(byID["site"]?.message, "3 linked pages checked")
+        XCTAssertTrue(report.markdown.contains("## Linked pages"))
+        XCTAssertTrue(SEOReport(facts: page).checks.allSatisfy { !$0.id.hasPrefix("site") }, "no crawl, no site checks")
+        let decoded = try? JSONDecoder().decode(SEOReport.self, from: JSONEncoder().encode(report))
+        XCTAssertEqual(decoded?.pages, pages)
+    }
+
+    func testSourceHeaderLineCannotEndTheComment() {
+        let line = PageSource.headerLine(url: "https://x.test/--><script>", status: 200, contentType: "text/html", charset: "UTF-8",
+                                         rendered: false)
+        XCTAssertTrue(line.hasPrefix("<!-- cmds: "))
+        XCTAssertEqual(line.components(separatedBy: "-->").count, 2, line)
+    }
+}
