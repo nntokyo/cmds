@@ -88,11 +88,21 @@ browser, preview, files), title and an orange icon when it needs attention.
   window. Dropped on a tab bar it joins that group at the mark (or moves within its own); dropped on the strip along
   the top of a pane without tabs, the two become a tab group.
 - Tabs that are not shown keep running: a terminal's programs, a browser's page. Focusing such a pane (`cmds focus`,
-  the command palette, Latest Attention) shows its tab.
+  the command palette, Latest Attention) shows its tab. After a relaunch, browser tabs that are not shown load their
+  page only when first shown (or when a command needs it: `cmds browser eval` and the like wait for it to load), so
+  many tabs do not slow the start.
+- Browser tabs show the page's icon (its `<link rel="icon">`, else `/favicon.ico`; cmds downloads it without cookies,
+  at most 1 MB, an icon on another site only from the usual web ports; icons over plain `http` show only for local and
+  IP addresses).
+- **Right-click a tab** for Close Tab, Close Other Tabs, Close Tabs to the Right, Duplicate Tab (the same page, file,
+  folder or directory), Reload Page and Move to New Workspace.
 - **Browser pages open in tabs** (on by default; Settings › General › Open new pages in tabs): a link that opens a new
   window (`target="_blank"`) becomes a tab of its browser pane, and `cmds browser open` or an agent's `browser_open`
   becomes a tab of the workspace's browser pane (the one on screen first) instead of a new split. Without a browser
-  pane they still split. Turned off, every new page gets a split, as before.
+  pane they still split. Turned off, every new page gets a split, as before. An agent's `browser_open` (or
+  `cmds browser open --reuse`) opening a page it already has open gets that tab again (reloaded), and keeps at most 10
+  tabs opened that way: beyond, the oldest that are not shown close. Tabs you open, and agent tabs where you typed an
+  address, never close by themselves.
 - From scripts: `cmds tab [--pane P] [--browser URL] [--cwd DIR] [--no-focus]` opens a tab, `cmds pane move <pane>
   --beside P --tab` makes a pane a tab of P's group ([CLI](../reference/cli.md)). `cmds ls` lists every tab of a
   group; in `--json`, a tab's pane has `tabs` (the group in order) and `background: true` when it is not shown.
@@ -264,6 +274,8 @@ are not shared (sign in to sites in the pane itself). `javascript:` bookmarklets
 
 - **Settings › General › Show Chrome bookmarks** turns the bar off; **Chrome profile** picks a profile (default: the
   one Chrome used last).
+- When Chrome keeps a profile's bookmarks only encrypted (it can, for bookmarks saved in the Google Account), cmds
+  cannot read them; Settings says so.
 - macOS keeps apps from reading other apps' data: when it refuses, Settings says so and **Open Privacy Settings…**
   leads to Privacy & Security › Full Disk Access, where turning cmds on lets it read the bookmarks (come back to cmds
   afterwards).
@@ -362,12 +374,14 @@ cmds browser watch --off
 
 The **</>** button in a browser pane's toolbar and **View › Developer** have three tools for web development:
 
-- **View Page Source** (⌥⌘U): the HTML the server sent for the page (asked again from the page with its cookies,
-  usually from the cache) in a new tab beside the pane, with line numbers and coloured tags, attributes, strings and
-  comments. `cmds browser source --rendered` gives the DOM after scripts ran instead.
-- **Console** (⌥⌘C): a drawer at the bottom of the pane with the page's console messages, uncaught errors and
-  unhandled promise rejections, coloured by level (the same record as `cmds browser console`, from the start of
-  each page), a level filter and Clear. The line at the bottom runs JavaScript in the page (Return; ↑ / ↓ go through
+- **View Page Source** (⌥⌘U): the HTML the server sent for the page, from the browser's cache (decoded with the page's
+  encoding), in a new tab beside the pane, with line numbers and coloured tags, attributes, strings and comments. A
+  page that is not in the cache shows its DOM after scripts ran, with a note in the first line: cmds does not ask the
+  server again by itself, since that would repeat what the URL does (one-time links); `cmds browser source --fetch`
+  does. A local page (`file://`) shows its file. `--rendered` always gives the DOM.
+- **Console** (⌥⌘C): a drawer at the bottom of the pane (drag its top edge to resize) with the page's console
+  messages, uncaught errors and unhandled promise rejections, coloured by level (the same record as
+  `cmds browser console`, from the start of each page), a level filter and Clear. The line at the bottom runs JavaScript in the page (Return; ↑ / ↓ go through
   earlier lines) and prints the result.
 - **SEO Report**: checks what the page declares for search engines and link previews and shows a report (score,
   problems, warnings, notes, what passed, the page's title, description, Open Graph, headings…) in a tab:
@@ -375,7 +389,8 @@ The **</>** button in a browser pane's toolbar and **View › Developer** have t
   heading levels in order, canonical, robots meta tag (noindex) and robots.txt (the whole site disallowed, sitemaps),
   `lang`, viewport, Open Graph (og:title / description / image) and Twitter card, image alt, links without text,
   JSON-LD structured data (types, invalid blocks), https and mixed content, thin content, favicon, charset and the
-  HTTP status. The score is 100 less 15 per problem and 5 per warning. It checks the page as loaded in the pane; it
+  HTTP status. The score is 100 less 15 per problem and 5 per warning. The report tab is in the app's language;
+  `cmds browser seo` and MCP answer in English. It checks the page as loaded in the pane; it
   does not crawl the site or measure speed.
 
 The source and report files are kept in the support folder (`Developer/`, one per page, replaced when opened again).

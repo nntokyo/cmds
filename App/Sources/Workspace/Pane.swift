@@ -23,6 +23,9 @@ final class Pane {
 
     var title: String
     var workingDirectory: String?
+    /// When an agent opened this browser tab (`AppController.closeOldAgentTabs` closes the oldest); nil: restored or
+    /// not an agent's.
+    var agentTabOrder: Int?
     private(set) var attention = false
     private(set) var attentionDate: Date?
     /// Set while the app tears the pane down, so surface close callbacks are ignored.
@@ -212,6 +215,15 @@ final class Pane {
             guard let self, let controller = self.controller else { return false }
             let focus = controller.focusedPane === self
             return (try? controller.openBrowser(paneID: self.id, url: url.absoluteString, focus: focus)) != nil
+        }
+        browser.onUserNavigated = { [weak self] in
+            guard let self, self.openedBy != nil else { return }
+            self.openedBy = nil
+            self.controller?.scheduleSave()
+        }
+        browser.onFaviconChange = { [weak self] in
+            guard let self else { return }
+            self.controller?.paneDidChange(self)
         }
         browser.onDeveloperAction = { [weak self] action in
             guard let self else { return }

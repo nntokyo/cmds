@@ -7,6 +7,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Tabs show the page's icon (favicon); the Chrome bookmarks bar shows the icons of sites visited in browser panes.
+- Right-click a tab: Close Tab, Close Other Tabs, Close Tabs to the Right, Duplicate Tab, Reload Page, Move to New
+  Workspace.
+- The console drawer can be resized by dragging its top edge.
+- View Page Source of a local page (`file://`) shows the file.
+- `cmds browser source --fetch` (`browser.source` `fetch`, MCP `browser_source` `fetch`).
+
+### Changed
+
+- Agents' browser tabs (MCP `browser_open`, `cmds browser open --reuse`): opening a page an agent already has open
+  reuses its tab (reloaded), and an agent keeps at most 10 such tabs (its oldest background ones close; tabs you open,
+  or where you typed an address, are never closed for you).
+- After a relaunch, browser tabs that are not shown load their page only when first shown.
+- View Page Source no longer asks the server again: it shows the cached HTML, or the DOM with a note when the page is
+  not cached (`--fetch` asks the server), so one-time links are not repeated.
+- The SEO report tab is in the app's language (Japanese too); the CLI and MCP keep English.
+- Settings › General says when Chrome keeps a profile's bookmarks only encrypted.
+
+### Fixed
+
+- The iPhone/iPad app's source failed to build since 0.29.0 (the new preview format); the released app was not
+  affected.
+
 ## [0.29.1] - 2026-11-20
 
 Mac only; the iPhone/iPad app is unchanged.

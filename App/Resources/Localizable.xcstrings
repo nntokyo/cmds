@@ -800,12 +800,68 @@
         }
       }
     },
+    "%lld (%lld internal, %lld external, %lld nofollow)": {
+      "comment": "SEO report",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld (%2$lld internal, %3$lld external, %4$lld nofollow)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld（内部%2$lld、外部%3$lld、nofollow %4$lld）"
+          }
+        }
+      }
+    },
+    "%lld (%lld without alt)": {
+      "comment": "SEO report",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld (%2$lld without alt)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld（altなし%2$lld）"
+          }
+        }
+      }
+    },
+    "%lld <h1> headings (one is usual)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<h1>が%lld個あります（通常は1つ）"
+          }
+        }
+      }
+    },
     "%lld AI agent sessions are running in cmds. Quitting ends them; you can resume them later from the saved sessions.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "cmds の中で AI エージェントのセッションが %lld 件動いています。終了すると中断されます（保存されたセッションから後で再開できます）。"
+          }
+        }
+      }
+    },
+    "%lld JSON-LD blocks are not valid JSON": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JSON-LDのブロック%lld個が正しいJSONではありません"
           }
         }
       }
@@ -845,6 +901,68 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld件を編集中"
+          }
+        }
+      }
+    },
+    "%lld characters": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld文字"
+          }
+        }
+      }
+    },
+    "%lld characters, width %lld (aim for %lld–%lld; wide characters count 2)": {
+      "comment": "SEO report",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld characters, width %2$lld (aim for %3$lld–%4$lld; wide characters count 2)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld文字、幅%2$lld（目安は%3$lld〜%4$lld。全角は2として数えます）"
+          }
+        }
+      }
+    },
+    "%lld characters, width %lld (aim for %lld–%lld; wide characters count 2): %@": {
+      "comment": "SEO report",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld characters, width %2$lld (aim for %3$lld–%4$lld; wide characters count 2): %5$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld文字、幅%2$lld（目安は%3$lld〜%4$lld。全角は2として数えます）：%5$@"
+          }
+        }
+      }
+    },
+    "%lld characters: %@": {
+      "comment": "SEO report",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld characters: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld文字：%2$@"
           }
         }
       }
@@ -911,6 +1029,28 @@
         }
       }
     },
+    "%lld headings in order": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見出し%lld個、順序どおり"
+          }
+        }
+      }
+    },
+    "%lld http: resources on an https page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "httpsのページにhttp:のリソースが%lld個あります"
+          }
+        }
+      }
+    },
     "%lld items": {
       "localizations": {
         "en": {
@@ -968,6 +1108,17 @@
         }
       }
     },
+    "%lld links without text or label": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストもラベルもないリンクが%lld個あります"
+          }
+        }
+      }
+    },
     "%lld min ago": {
       "comment": "age of agent figures",
       "localizations": {
@@ -1006,6 +1157,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "対応待ち %1$lld・作業中 %2$lld"
+          }
+        }
+      }
+    },
+    "%lld of %lld images without alt": {
+      "comment": "SEO report",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld of %2$lld images without alt"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像%2$lld個のうち%1$lld個にaltがありません"
           }
         }
       }
@@ -1145,6 +1313,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "入力待ち%1$lld件: %2$@。"
+          }
+        }
+      }
+    },
+    "%lld words of text (thin pages rank poorly)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本文は%lld語相当（内容の薄いページは評価が上がりにくい）"
           }
         }
       }
@@ -1349,6 +1528,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "7日間の上限"
+          }
+        }
+      }
+    },
+    "<meta name=\"robots\"> asks not to follow the links (%@)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<meta name=\"robots\">がリンクをたどらないよう求めています（%@）"
+          }
+        }
+      }
+    },
+    "<meta name=\"robots\"> asks search engines not to index the page (%@)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<meta name=\"robots\">が検索エンジンにインデックスしないよう求めています（%@）"
           }
         }
       }
@@ -2974,6 +3175,17 @@
         }
       }
     },
+    "Chrome keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from Chrome.": {
+      "comment": "Settings › General › Chrome bookmarks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chromeはこのプロファイルのブックマークを暗号化して保存しているため、cmdsは読めません。別のプロファイルを選ぶか、Chromeから書き出してください。"
+          }
+        }
+      }
+    },
     "Chrome profile:": {
       "comment": "Settings › General › Browser",
       "localizations": {
@@ -3263,11 +3475,23 @@
       }
     },
     "Close": {
+      "comment": "Tab context menu",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "閉じる"
+          }
+        }
+      }
+    },
+    "Close %lld tabs?": {
+      "comment": "Tab context menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld個のタブを閉じますか？"
           }
         }
       }
@@ -3278,6 +3502,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "閉じる（Esc）"
+          }
+        }
+      }
+    },
+    "Close Other Tabs": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "他のタブを閉じる"
           }
         }
       }
@@ -3298,6 +3532,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "タブを閉じる"
+          }
+        }
+      }
+    },
+    "Close Tabs to the Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右側のタブを閉じる"
           }
         }
       }
@@ -4240,6 +4484,17 @@
         }
       }
     },
+    "Description": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "説明"
+          }
+        }
+      }
+    },
     "Desktops": {
       "localizations": {
         "ja": {
@@ -4486,6 +4741,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "ドラッグしてペインを移動"
+          }
+        }
+      }
+    },
+    "Duplicate Tab": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タブを複製"
           }
         }
       }
@@ -5263,6 +5528,17 @@
         }
       }
     },
+    "Headings": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見出し"
+          }
+        }
+      }
+    },
     "Heaviest:": {
       "comment": "workspace usage tooltip, before its top processes",
       "localizations": {
@@ -5524,6 +5800,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "対象外：.git、node_modules、ビルドフォルダ、ドットファイル"
+          }
+        }
+      }
+    },
+    "Images": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像"
           }
         }
       }
@@ -6033,6 +6320,7 @@
       }
     },
     "Language": {
+      "comment": "SEO report",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -6301,6 +6589,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "別の場所にリンク"
+          }
+        }
+      }
+    },
+    "Links": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンク"
           }
         }
       }
@@ -7611,6 +7910,17 @@
         }
       }
     },
+    "Notes": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "参考"
+          }
+        }
+      }
+    },
     "Nothing to sync": {
       "localizations": {
         "ja": {
@@ -8051,6 +8361,17 @@
         }
       }
     },
+    "Page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページ"
+          }
+        }
+      }
+    },
     "Pair iPhone/iPad": {
       "localizations": {
         "ja": {
@@ -8128,6 +8449,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペイン："
+          }
+        }
+      }
+    },
+    "Passed": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "問題なし"
           }
         }
       }
@@ -8401,6 +8733,17 @@
         }
       }
     },
+    "Problems": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "問題"
+          }
+        }
+      }
+    },
     "Processes started from cmds terminals that still run after their pane or workspace was closed. Click to see and stop them.": {
       "localizations": {
         "ja": {
@@ -8417,6 +8760,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ターミナルで実行中のプログラムは終了します。ワークスペースとペインは再起動後に復元されます。"
+          }
+        }
+      }
+    },
+    "Programs running in their terminals will be ended.": {
+      "comment": "Tab context menu",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルで実行中のプログラムは終了します。"
           }
         }
       }
@@ -10752,6 +11106,17 @@
         }
       }
     },
+    "Structured data": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "構造化データ"
+          }
+        }
+      }
+    },
     "Style:": {
       "comment": "Settings › Assistant",
       "localizations": {
@@ -12266,6 +12631,17 @@
         }
       }
     },
+    "Title": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイトル"
+          }
+        }
+      }
+    },
     "Title:": {
       "localizations": {
         "ja": {
@@ -12841,6 +13217,17 @@
         }
       }
     },
+    "Warnings": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "警告"
+          }
+        }
+      }
+    },
     "Warnings and Errors": {
       "localizations": {
         "ja": {
@@ -13082,6 +13469,17 @@
         }
       }
     },
+    "Words": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "語数"
+          }
+        }
+      }
+    },
     "Working": {
       "comment": "sidebar agent state: the agent is busy",
       "localizations": {
@@ -13307,6 +13705,17 @@
         }
       }
     },
+    "a JSON-LD block is not valid JSON": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JSON-LDのブロック1個が正しいJSONではありません"
+          }
+        }
+      }
+    },
     "a closed pane": {
       "localizations": {
         "ja": {
@@ -13344,6 +13753,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "agy のステータスラインが PATH 経由、または存在しない場所の cmds を実行しています。クリックして 設定 › エージェント を開き、「更新」を選んでください。"
+          }
+        }
+      }
+    },
+    "all %lld images have alt": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像%lld個すべてにaltがあります"
           }
         }
       }
@@ -13620,6 +14040,17 @@
         }
       }
     },
+    "heading levels skipped: %@": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見出しのレベルが飛んでいます：%@"
+          }
+        }
+      }
+    },
     "host, user@host or ~/.ssh/config alias": {
       "localizations": {
         "ja": {
@@ -13647,6 +14078,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "あと%@"
+          }
+        }
+      }
+    },
+    "indexable (%@)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インデックス可（%@）"
+          }
+        }
+      }
+    },
+    "indexable (no robots meta tag)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インデックス可（robotsメタタグなし）"
           }
         }
       }
@@ -13768,6 +14221,17 @@
         }
       }
     },
+    "missing %@ (link previews)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@がありません（リンクのプレビュー用）"
+          }
+        }
+      }
+    },
     "moved": {
       "localizations": {
         "ja": {
@@ -13794,6 +14258,127 @@
           "stringUnit": {
             "state": "translated",
             "value": "新しいブランチ（例：fix-login）"
+          }
+        }
+      }
+    },
+    "no <h1>": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<h1>がありません"
+          }
+        }
+      }
+    },
+    "no <link rel=\"canonical\">": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<link rel=\"canonical\">がありません"
+          }
+        }
+      }
+    },
+    "no <link rel=\"icon\">": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<link rel=\"icon\">がありません"
+          }
+        }
+      }
+    },
+    "no <meta charset>": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<meta charset>がありません"
+          }
+        }
+      }
+    },
+    "no <meta name=\"description\">": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<meta name=\"description\">がありません"
+          }
+        }
+      }
+    },
+    "no <meta name=\"viewport\"> (the page is not set up for phones)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<meta name=\"viewport\">がありません（スマートフォン向けに設定されていません）"
+          }
+        }
+      }
+    },
+    "no <title>": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<title>がありません"
+          }
+        }
+      }
+    },
+    "no JSON-LD structured data": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JSON-LDの構造化データがありません"
+          }
+        }
+      }
+    },
+    "no lang attribute on <html>": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<html>にlang属性がありません"
+          }
+        }
+      }
+    },
+    "no robots.txt (everything may be crawled)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "robots.txtがありません（すべてクロール可）"
+          }
+        }
+      }
+    },
+    "no twitter:card": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "twitter:cardがありません"
           }
         }
       }
@@ -13847,6 +14432,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "未サインイン"
+          }
+        }
+      }
+    },
+    "og:title, og:description and og:image set": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "og:title・og:description・og:imageが設定されています"
+          }
+        }
+      }
+    },
+    "one <h1>: %@": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<h1>は1つ：%@"
+          }
+        }
+      }
+    },
+    "points to another host: %@": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "別のホストを指しています：%@"
           }
         }
       }
@@ -13912,6 +14530,50 @@
         }
       }
     },
+    "robots.txt disallows the whole site for every crawler": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "robots.txtがすべてのクローラーにサイト全体を禁止しています"
+          }
+        }
+      }
+    },
+    "robots.txt has no Sitemap: line": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "robots.txtにSitemap:の行がありません"
+          }
+        }
+      }
+    },
+    "robots.txt names %lld sitemaps": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "robots.txtにサイトマップが%lld個あります"
+          }
+        }
+      }
+    },
+    "robots.txt names a sitemap": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "robots.txtにサイトマップが1個あります"
+          }
+        }
+      }
+    },
     "same sign-in as %@": {
       "comment": "account menu: two accounts are one Claude account",
       "localizations": {
@@ -13929,6 +14591,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmds top --leftoverで一覧"
+          }
+        }
+      }
+    },
+    "served over http, not https": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "httpsではなくhttpで配信されています"
           }
         }
       }
@@ -13971,6 +14644,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "切り替え中…"
+          }
+        }
+      }
+    },
+    "the page answered HTTP %lld": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページがHTTP %lldを返しました"
           }
         }
       }

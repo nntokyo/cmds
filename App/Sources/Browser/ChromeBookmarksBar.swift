@@ -28,6 +28,9 @@ final class ChromeBookmarkStore {
         case noAccess
         /// The file is not Chrome's bookmarks format (or too large).
         case unreadable
+        /// Chrome keeps this profile's bookmarks only encrypted (`EncryptedAccountBookmarks2` and the like), which other
+        /// apps cannot read.
+        case encrypted
     }
 
     /// The last read's problem; nil when it worked, while off or before the first read.
@@ -72,6 +75,9 @@ final class ChromeBookmarkStore {
             let folder = ChromeBookmarks.profileFolder(profile: profile, chromeFolder: Self.chromeFolder)
             let files = ChromeBookmarks.fileNames.map { folder.appendingPathComponent($0) }
             var problem: Problem?
+            // A file that could not be checked or read: the others are shown, and everything is read again next time.
+            var incomplete = false
+            var statProblem: Problem?
             var found: [(url: URL, date: Date?, size: Int)] = []
             for url in files {
                 do {
@@ -79,28 +85,41 @@ final class ChromeBookmarkStore {
                     found.append((url, attributes[.modificationDate] as? Date, (attributes[.size] as? NSNumber)?.intValue ?? 0))
                 } catch {
                     let kind = Self.problem(error)
-                    if kind != .notFound { problem = kind }
+                    if kind != .notFound {
+                        statProblem = kind
+                        incomplete = true
+                    }
                 }
             }
-            if found.isEmpty, problem == nil { problem = .notFound }
+            if found.isEmpty { problem = statProblem }
+            if found.isEmpty, problem == nil {
+                let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+                problem = names.contains { $0.hasPrefix("Encrypted") && $0.contains("Bookmarks") } ? .encrypted : .notFound
+            }
             let file = folder
             let signature = found.map { "\($0.url.lastPathComponent)@\($0.date?.timeIntervalSince1970 ?? 0)" }.joined(separator: ",")
             let unchanged = problem == nil && file == previousFile && signature == previousSignature
             var read: ChromeBookmarks.Tree?
             if !unchanged, problem == nil {
                 var trees: [ChromeBookmarks.Tree] = []
+                var readProblem: Problem?
                 for entry in found {
-                    guard entry.size <= ChromeBookmarks.maxFileSize else { continue }
+                    guard entry.size <= ChromeBookmarks.maxFileSize else {
+                        incomplete = true
+                        continue
+                    }
                     do {
-                        if let tree = ChromeBookmarks.parse(try Data(contentsOf: entry.url)) { trees.append(tree) }
+                        if let tree = ChromeBookmarks.parse(try Data(contentsOf: entry.url)) {
+                            trees.append(tree)
+                        } else {
+                            incomplete = true  // Chrome may be writing it: tried again
+                        }
                     } catch {
-                        let kind = Self.problem(error)
-                        if kind == .noAccess { problem = .noAccess }
+                        incomplete = true
+                        if Self.problem(error) == .noAccess { readProblem = .noAccess }
                     }
                 }
-                if problem == nil {
-                    if trees.isEmpty { problem = .unreadable } else { read = ChromeBookmarks.merged(trees) }
-                }
+                if trees.isEmpty { problem = readProblem ?? .unreadable } else { read = ChromeBookmarks.merged(trees) }
             }
             // macOS's protection of other apps' data reports the files inside as missing; listing the folder itself
             // is refused (EPERM).
@@ -112,6 +131,8 @@ final class ChromeBookmarkStore {
                 }
             }
             let tree: ChromeBookmarks.Tree?? = unchanged ? .none : .some(read)
+            let finalProblem = problem
+            let complete = !incomplete
             await MainActor.run {
                 let store = ChromeBookmarkStore.shared
                 store.reading = false
@@ -122,11 +143,11 @@ final class ChromeBookmarkStore {
                 }
                 guard case .some(let read) = tree else { return }
                 // A file that could not be read is tried again next time.
-                store.loadedFile = problem == nil ? file : nil
-                store.loadedSignature = problem == nil ? signature : nil
-                if read != store.tree || problem != store.problem {
+                store.loadedFile = finalProblem == nil && complete ? file : nil
+                store.loadedSignature = finalProblem == nil && complete ? signature : nil
+                if read != store.tree || finalProblem != store.problem {
                     store.tree = read
-                    store.problem = problem
+                    store.problem = finalProblem
                     NotificationCenter.default.post(name: Self.didChange, object: store)
                 }
             }
@@ -171,6 +192,7 @@ final class ChromeBookmarksBarView: NSView {
     private var otherItems: [ChromeBookmarks.Item] = []
     /// Removed in deinit (the bar of every closed browser pane would stay registered otherwise).
     nonisolated(unsafe) private var observer: NSObjectProtocol?
+    nonisolated(unsafe) private var iconObserver: NSObjectProtocol?
     /// The bookmarks changed while the pane was off screen (a hidden tab or workspace): reloaded when it comes back.
     private var reloadPending = false
     /// Buttons are made for this many bar items at most; the rest are only in the » menu.
@@ -197,6 +219,9 @@ final class ChromeBookmarksBarView: NSView {
                 if self.window == nil { self.reloadPending = true } else { self.reload() }
             }
         }
+        iconObserver = NotificationCenter.default.addObserver(forName: FaviconCache.didChange, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { if self?.window != nil { self?.updateIcons() } }
+        }
         reload()
     }
 
@@ -205,11 +230,30 @@ final class ChromeBookmarksBarView: NSView {
 
     deinit {
         if let observer { NotificationCenter.default.removeObserver(observer) }
+        if let iconObserver { NotificationCenter.default.removeObserver(iconObserver) }
+    }
+
+    /// The icon of a site visited in a browser pane (`FaviconCache`), 12 pt.
+    static func icon(for url: URL) -> NSImage? {
+        guard let site = BrowserPane.faviconSite(url), let image = FaviconCache.shared.image(forSite: site)?.copy() as? NSImage else {
+            return nil
+        }
+        image.size = NSSize(width: 12, height: 12)
+        return image
+    }
+
+    /// Icons learned since the buttons were made.
+    private func updateIcons() {
+        for (index, button) in buttons.enumerated() {
+            guard case .link(_, let url) = items[index], let icon = Self.icon(for: url) else { continue }
+            button.image = icon
+        }
     }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window != nil, reloadPending { reload() }
+        guard window != nil else { return }
+        if reloadPending { reload() } else { updateIcons() }  // icons learned while the pane was hidden
     }
 
     override var isFlipped: Bool { true }
@@ -231,6 +275,7 @@ final class ChromeBookmarksBarView: NSView {
             case .link(let title, let url):
                 configure(button, title: title, symbol: "globe")
                 button.toolTip = "\(title)\n\(url.absoluteString)"
+                if let icon = Self.icon(for: url) { button.image = icon }
             case .folder(let title, _):
                 configure(button, title: title, symbol: "folder")
             }
@@ -347,7 +392,7 @@ final class ChromeBookmarksBarView: NSView {
                 entry.target = self
                 entry.representedObject = url
                 entry.toolTip = url.absoluteString
-                entry.image = NSImage(systemSymbolName: "globe", accessibilityDescription: nil)
+                entry.image = Self.icon(for: url) ?? NSImage(systemSymbolName: "globe", accessibilityDescription: nil)
                 menu.addItem(entry)
             case .folder(let title, let children):
                 let entry = NSMenuItem(title: title, action: nil, keyEquivalent: "")

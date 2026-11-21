@@ -277,6 +277,15 @@ final class MCPServerTests: XCTestCase {
         XCTAssertNil(requests.last?.params["rendered"] ?? nil)
         _ = callTool(server, "browser_source", #"{"pane":"p4","rendered":true}"#)
         XCTAssertEqual(requests.last?.params["rendered"] ?? nil, .bool(true))
+        XCTAssertNil(requests.last?.params["fetch"] ?? nil)
+        replies["browser.source"] = .object(["url": "https://x.test/", "source": "<html>", "rendered": true, "notCached": true,
+                                             "truncated": false, "length": 6])
+        let notCached = text(callTool(server, "browser_source", #"{"pane":"p4"}"#)) ?? ""
+        XCTAssertTrue(notCached.contains("not in the cache"), notCached)
+        _ = callTool(server, "browser_source", #"{"pane":"p4","fetch":true}"#)
+        XCTAssertEqual(requests.last?.params["fetch"] ?? nil, .bool(true))
+        XCTAssertNotEqual(callTool(server, "browser_source", #"{"pane":"p4","maxChars":1e20}"#)?["isError"], .bool(true),
+                          "a huge maxChars is clamped, not a crash")
         let count = requests.count
         XCTAssertEqual(callTool(server, "browser_source", #"{"pane":"p4","maxChars":0}"#)?["isError"], .bool(true))
         XCTAssertEqual(requests.count, count)

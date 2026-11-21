@@ -135,7 +135,7 @@ status:
 
 | Tool | Does |
 |---|---|
-| `browser_open` | Open a URL in a new tab of the workspace's browser pane (a browser split to the right of the agent's terminal when there is none, or with tabs turned off), without taking the focus; returns the pane id |
+| `browser_open` | Open a URL in a new tab of the workspace's browser pane (a browser split to the right of the agent's terminal when there is none, or with tabs turned off), without taking the focus; returns the pane id. The same page opened again reuses its tab; at most 10 tabs per agent (the oldest hidden ones close) |
 | `browser_navigate`, `browser_url` | Load a URL; the URL and title |
 | `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs); `timeout` seconds (default 30, at most 300), after which a page that stopped responding is reloaded |
 | `browser_snapshot` | A PNG of the visible page, returned as an image (also when its workspace is not shown). `fullPage`, `selector` (one element), `device` or `devices` (e.g. `["iphone", "ipad", "desktop-1440"]`: one image per size, each after a line naming it) |
@@ -143,7 +143,7 @@ status:
 | `browser_responsive` | The page at phone, tablet and desktop size side by side in one pane (`url` opens a new pane, else `pane`; `devices`, `syncScroll`, `off`). `browser_snapshot` of such a pane returns one image per frame ([responsive view](workspaces-and-panes.md#responsive-view)) |
 | `browser_watch` | Reload the page whenever files in a folder change (`dir`, absolute; default the workspace's folder), e.g. a `file://` page or a dev server without hot reload; `remote` reloads non-local pages too, `off` stops ([guide](workspaces-and-panes.md#reload-on-file-changes)) |
 | `browser_console` | Console messages, uncaught errors and unhandled promise rejections of the page (`level`, `limit`, `clear`; `show` opens the console drawer for the user) ([Browser DevTools](#browser-devtools)) |
-| `browser_source` | The page's HTML as the server sent it, or with `rendered` the DOM now (cut at `maxChars`, default 100,000) ([Developer tools](workspaces-and-panes.md#developer-tools)) |
+| `browser_source` | The page's HTML as the server sent it, from the cache (not cached: the DOM, unless `fetch` asks the server again), or with `rendered` the DOM now (cut at `maxChars`, default 100,000) ([Developer tools](workspaces-and-panes.md#developer-tools)) |
 | `browser_seo` | SEO check of the page: score and one line per check (✗ problem, ! warning, i note, ✓ passed); `open` also shows the report to the user in a tab |
 | `browser_snapshot_tree` | The page as a compact tree of roles and names with refs (`- button "Sign in" [ref=e3]`; `selector` to start lower) |
 | `browser_click` / `browser_fill` | Click, or fill a field / select / checkbox, by `ref` or `selector` |

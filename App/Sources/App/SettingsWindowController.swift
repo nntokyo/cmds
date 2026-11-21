@@ -604,6 +604,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             chromeProblemNote.stringValue = String(localized: "No Chrome bookmarks found for this profile.", comment: "Settings › General › Chrome bookmarks")
         case .unreadable:
             chromeProblemNote.stringValue = String(localized: "Chrome's bookmarks file could not be read.", comment: "Settings › General › Chrome bookmarks")
+        case .encrypted:
+            chromeProblemNote.stringValue = String(localized: "Chrome keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from Chrome.", comment: "Settings › General › Chrome bookmarks")
         case nil:
             chromeProblemNote.stringValue = ""
         }

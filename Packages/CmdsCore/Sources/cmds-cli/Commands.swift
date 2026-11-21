@@ -505,17 +505,20 @@ extension CLI {
             ])
             ctx.printResult(result, field: "id")
         },
-        Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] <url>",
+        Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] [--reuse] <url>",
                 summary: "Open a page in a new browser tab of the workspace, or a browser split to the right of a pane (default: the current one).",
                 details: """
                     With Settings › General › Open new pages in tabs (on by default) the page becomes a tab of the
                     workspace's browser pane; without one, or with the setting off, a split. --no-focus keeps the
-                    keyboard in the current pane. Prints the new pane id.
+                    keyboard in the current pane. --reuse (for agents): a page this terminal opened before is loaded
+                    again in its tab, and beyond 10 tabs opened this way the oldest ones in the background close.
+                    Prints the pane id.
                     """,
-                options: ["pane"], flags: ["no-focus"]) { ctx in
-            try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] [--no-focus] <url>")
+                options: ["pane"], flags: ["no-focus", "reuse"]) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] [--no-focus] [--reuse] <url>")
             let result = try ctx.call("browser.open", ["pane": ctx.pane.json, "url": .string(ctx.args.positionals[0]),
-                                                       "focus": ctx.args.has("no-focus") ? false : nil])
+                                                       "focus": ctx.args.has("no-focus") ? false : nil,
+                                                       "reuse": ctx.args.has("reuse") ? true : nil])
             ctx.printResult(result, field: "id")
         },
         Command(name: "browser navigate", usage: "browser navigate [--pane P] <url>",

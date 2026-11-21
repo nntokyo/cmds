@@ -13,20 +13,32 @@ public enum PageSource {
     /// At most this much source is returned (the rest is cut, `truncated`).
     public static let maxBytes = 5 * 1024 * 1024
 
-    /// `callAsyncJavaScript` body. Arguments `rendered` (Bool), `maxBytes` (Int). Returns `{url, source, rendered, status?,
-    /// contentType?}`.
+    /// `callAsyncJavaScript` body. Arguments `rendered` (Bool), `fetchAgain` (Bool: ask the server when the page is not
+    /// in the cache), `maxBytes` (Int). Returns `{url, source, rendered, notCached?, status?, contentType?}`.
+
+    /// The first line of a source view that shows the DOM because the HTML was not in the cache.
+    public static let notCachedNote = "<!-- cmds: the HTML of this page is not in the cache, so this is the DOM after scripts ran. `cmds browser source --fetch` asks the server again (a GET, which may repeat what the URL does). -->\n"
     public static let script = """
-        const dom = () => {
+        const dom = (notCached) => {
           const doctype = document.doctype ? '<!DOCTYPE ' + document.doctype.name + '>\\n' : '';
-          return { url: location.href, source: doctype + document.documentElement.outerHTML, rendered: true };
+          return { url: location.href, source: doctype + document.documentElement.outerHTML, rendered: true, notCached: !!notCached };
         };
         // Pages that are no HTML (images, video, PDF in the pane): their DOM.
         if (rendered || !/^(https?|file):$/.test(location.protocol) || !/html|xml/i.test(document.contentType || '')) return dom();
         try {
-          // From the cache when it has the page, else asked again (a GET with the page's cookies).
+          // From the cache; only with `fetch` asked again (a GET with the page's cookies, which may repeat what the URL
+          // does). Not in the cache: the DOM, marked `notCached`.
           let response;
           try { response = await fetch(location.href, { credentials: 'include', cache: 'only-if-cached', mode: 'same-origin' }); }
-          catch (e) { response = await fetch(location.href, { credentials: 'include', cache: 'force-cache' }); }
+          catch (e) {
+            if (!fetchAgain) return dom(true);
+            response = await fetch(location.href, { credentials: 'include', cache: 'force-cache' });
+          }
+          // Some engines answer an uncached `only-if-cached` with a made-up 504 instead of failing.
+          if (response.status === 504) {
+            if (!fetchAgain) return dom(true);
+            response = await fetch(location.href, { credentials: 'include', cache: 'force-cache' });
+          }
           // Read at most maxBytes (+1 to tell it was cut), decoded with the page's own encoding (Shift_JIS, EUC-JP…).
           const reader = response.body.getReader();
           const chunks = []; let size = 0;
@@ -315,9 +327,20 @@ public struct SEOReport: Codable, Equatable, Sendable {
     public var checks: [SEOCheck]
     public var facts: PageFacts
 
-    public init(facts: PageFacts) {
+    /// The labels of `markdown` (English unless the app passes its own).
+    private var words: SEOText = .english
+
+    private enum CodingKeys: String, CodingKey { case url, score, checks, facts }
+
+    public static func == (lhs: SEOReport, rhs: SEOReport) -> Bool {
+        lhs.url == rhs.url && lhs.score == rhs.score && lhs.checks == rhs.checks && lhs.facts == rhs.facts
+    }
+
+    /// `text`: the language of the messages and of `markdown` (the API and CLI keep English).
+    public init(facts: PageFacts, text: SEOText = .english) {
+        words = text
         url = facts.url
-        checks = SEOAudit.checks(facts).enumerated().sorted { lhs, rhs in
+        checks = SEOAudit.checks(facts, text: text).enumerated().sorted { lhs, rhs in
             lhs.element.status == rhs.element.status ? lhs.offset < rhs.offset : lhs.element.status < rhs.element.status
         }.map(\.element)
         let failures = checks.filter { $0.status == .fail }.count
@@ -333,18 +356,20 @@ public struct SEOReport: Codable, Equatable, Sendable {
 
     /// The report shown in a preview pane.
     public var markdown: String {
-        var lines = ["# SEO report", "", "**\(score)/100** · \(code(url))", ""]
-        let groups: [(SEOCheck.Status, String)] = [(.fail, "Problems"), (.warn, "Warnings"), (.info, "Notes"), (.pass, "Passed")]
+        let label = words.label
+        var lines = ["# \(label(.report))", "", "**\(score)/100** · \(code(url))", ""]
+        let groups: [(SEOCheck.Status, String)] = [(.fail, label(.problems)), (.warn, label(.warnings)), (.info, label(.notes)),
+                                                   (.pass, label(.passed))]
         for (status, heading) in groups {
             let found = checks.filter { $0.status == status }
             guard !found.isEmpty else { continue }
             lines += ["## \(heading)", ""] + found.map { "- **\($0.id)** — \(markdownEscaped($0.message))" } + [""]
         }
-        lines += ["## Page", "", "| | |", "|---|---|"]
+        lines += ["## \(label(.page))", "", "| | |", "|---|---|"]
         // Text values escaped, addresses as code (shown exactly, never a link).
         var rows: [(String, String?)] = [
-            ("Title", facts.title.map(markdownEscaped)), ("Description", facts.description.map(markdownEscaped)),
-            ("Canonical", facts.canonical.map(code)), ("Robots", facts.robots.map(code)), ("Language", facts.lang.map(code)),
+            (label(.title), facts.title.map(markdownEscaped)), (label(.description), facts.description.map(markdownEscaped)),
+            ("Canonical", facts.canonical.map(code)), ("Robots", facts.robots.map(code)), (label(.language), facts.lang.map(code)),
             ("Viewport", facts.viewport.map(code)),
         ]
         for key in ["title", "description", "image", "url", "type"] {
@@ -353,17 +378,18 @@ public struct SEOReport: Codable, Equatable, Sendable {
         }
         rows += [
             ("Twitter card", facts.twitterCard.map(code)),
-            ("Structured data", facts.structuredDataTypes.isEmpty ? nil : markdownEscaped(facts.structuredDataTypes.joined(separator: ", "))),
-            ("Links", "\(facts.links) (\(facts.internalLinks) internal, \(facts.externalLinks) external, \(facts.nofollowLinks) nofollow)"),
-            ("Images", "\(facts.images) (\(facts.imagesWithoutAlt) without alt)"),
-            ("Words", String(facts.wordCount)),
+            (label(.structuredData), facts.structuredDataTypes.isEmpty ? nil : markdownEscaped(facts.structuredDataTypes.joined(separator: ", "))),
+            (label(.links), words.message(.linkCounts(total: facts.links, internal: facts.internalLinks,
+                                                     external: facts.externalLinks, nofollow: facts.nofollowLinks))),
+            (label(.images), words.message(.imageCounts(total: facts.images, withoutAlt: facts.imagesWithoutAlt))),
+            (label(.words), String(facts.wordCount)),
         ]
         for (name, value) in rows {
             lines.append("| \(name) | \(value ?? "—") |")
         }
         if !facts.headings.isEmpty {
             // Flat: indenting by level would turn deep headings into a code block.
-            lines += ["", "## Headings", ""]
+            lines += ["", "## \(label(.headings))", ""]
             lines += facts.headings.prefix(SEOAudit.maxHeadings).map { "- **h\($0.level)** \(markdownEscaped($0.text))" }
         }
         return lines.joined(separator: "\n") + "\n"
@@ -390,6 +416,112 @@ public struct SEOReport: Codable, Equatable, Sendable {
     }
 }
 
+/// What a check says, rendered by `SEOText` (English in CmdsCore; the app has Japanese).
+public enum SEOMessage: Sendable {
+    case httpStatus(Int)
+    case titleMissing, titleLength(characters: Int, width: Int, range: ClosedRange<Int>, title: String),
+         titleOK(characters: Int, title: String)
+    case descriptionMissing, descriptionLength(characters: Int, width: Int, range: ClosedRange<Int>), descriptionOK(characters: Int)
+    case h1Missing, h1OK(String), h1Many(Int)
+    case headingsSkipped(String), headingsOK(Int)
+    case robotsNoindex(String), robotsNofollow(String), robotsIndexable(String?)
+    case robotsTxtDisallowsAll, robotsTxtSitemaps(Int), robotsTxtNoSitemap, robotsTxtMissing
+    case canonicalOtherHost(String), canonicalMissing
+    case langMissing, viewportMissing
+    case openGraphOK, openGraphMissing(String), twitterCardMissing
+    case altMissing(missing: Int, images: Int, examples: String), altOK(Int)
+    case linksEmpty(Int)
+    case structuredDataInvalid(Int), structuredDataMissing
+    case httpOnly, mixedContent(Int)
+    case thinContent(Int)
+    case faviconMissing, charsetMissing
+    /// A value shown as it is (the canonical URL, the language…).
+    case value(String)
+    case linkCounts(total: Int, internal: Int, external: Int, nofollow: Int), imageCounts(total: Int, withoutAlt: Int)
+}
+
+/// Headings and row names of the SEO report.
+public enum SEOLabel: Sendable {
+    case report, problems, warnings, notes, passed, page, title, description, language, structuredData, links, images, words,
+         headings
+}
+
+/// The words of the SEO check: `english` here (API, CLI, MCP); the app passes a localized one for its report tab.
+public struct SEOText: Sendable {
+    public var message: @Sendable (SEOMessage) -> String
+    public var label: @Sendable (SEOLabel) -> String
+
+    public init(message: @escaping @Sendable (SEOMessage) -> String, label: @escaping @Sendable (SEOLabel) -> String) {
+        self.message = message
+        self.label = label
+    }
+
+    public static let english = SEOText(message: { message in
+        switch message {
+        case .httpStatus(let status): return "the page answered HTTP \(status)"
+        case .titleMissing: return "no <title>"
+        case .titleLength(let characters, let width, let range, let title):
+            return "\(characters) characters, width \(width) (aim for \(range.lowerBound)–\(range.upperBound); wide characters count 2): \(title)"
+        case .titleOK(let characters, let title): return "\(characters) characters: \(title)"
+        case .descriptionMissing: return "no <meta name=\"description\">"
+        case .descriptionLength(let characters, let width, let range):
+            return "\(characters) characters, width \(width) (aim for \(range.lowerBound)–\(range.upperBound); wide characters count 2)"
+        case .descriptionOK(let characters): return "\(characters) characters"
+        case .h1Missing: return "no <h1>"
+        case .h1OK(let text): return "one <h1>: \(text)"
+        case .h1Many(let count): return "\(count) <h1> headings (one is usual)"
+        case .headingsSkipped(let skips): return "heading levels skipped: \(skips)"
+        case .headingsOK(let count): return "\(count) headings in order"
+        case .robotsNoindex(let robots): return "<meta name=\"robots\"> asks search engines not to index the page (\(robots))"
+        case .robotsNofollow(let robots): return "<meta name=\"robots\"> asks not to follow the links (\(robots))"
+        case .robotsIndexable(let robots): return robots.map { "indexable (\($0))" } ?? "indexable (no robots meta tag)"
+        case .robotsTxtDisallowsAll: return "robots.txt disallows the whole site for every crawler"
+        case .robotsTxtSitemaps(let count): return "robots.txt names \(count) sitemap\(count == 1 ? "" : "s")"
+        case .robotsTxtNoSitemap: return "robots.txt has no Sitemap: line"
+        case .robotsTxtMissing: return "no robots.txt (everything may be crawled)"
+        case .canonicalOtherHost(let canonical): return "points to another host: \(canonical)"
+        case .canonicalMissing: return "no <link rel=\"canonical\">"
+        case .langMissing: return "no lang attribute on <html>"
+        case .viewportMissing: return "no <meta name=\"viewport\"> (the page is not set up for phones)"
+        case .openGraphOK: return "og:title, og:description and og:image set"
+        case .openGraphMissing(let keys): return "missing \(keys) (link previews)"
+        case .twitterCardMissing: return "no twitter:card"
+        case .altMissing(let missing, let images, let examples):
+            return "\(missing) of \(images) images without alt" + (examples.isEmpty ? "" : ": \(examples)")
+        case .altOK(let images): return "all \(images) images have alt"
+        case .linksEmpty(let count): return "\(count) links without text or label"
+        case .structuredDataInvalid(let count): return "\(count) JSON-LD block\(count == 1 ? " is" : "s are") not valid JSON"
+        case .structuredDataMissing: return "no JSON-LD structured data"
+        case .httpOnly: return "served over http, not https"
+        case .mixedContent(let count): return "\(count) http: resources on an https page"
+        case .thinContent(let words): return "\(words) words of text (thin pages rank poorly)"
+        case .faviconMissing: return "no <link rel=\"icon\">"
+        case .charsetMissing: return "no <meta charset>"
+        case .value(let value): return value
+        case .linkCounts(let total, let inside, let outside, let nofollow):
+            return "\(total) (\(inside) internal, \(outside) external, \(nofollow) nofollow)"
+        case .imageCounts(let total, let withoutAlt): return "\(total) (\(withoutAlt) without alt)"
+        }
+    }, label: { label in
+        switch label {
+        case .report: return "SEO report"
+        case .problems: return "Problems"
+        case .warnings: return "Warnings"
+        case .notes: return "Notes"
+        case .passed: return "Passed"
+        case .page: return "Page"
+        case .title: return "Title"
+        case .description: return "Description"
+        case .language: return "Language"
+        case .structuredData: return "Structured data"
+        case .links: return "Links"
+        case .images: return "Images"
+        case .words: return "Words"
+        case .headings: return "Headings"
+        }
+    })
+}
+
 public enum SEOAudit {
     /// In display width (`displayWidth`): what search results show before cutting, about 60 Latin or 30 Japanese
     /// characters for a title.
@@ -411,41 +543,43 @@ public enum SEOAudit {
     public static let maxHeadings = 60
 
     /// The checks for `facts`, in a fixed order (`SEOReport` sorts them).
-    public static func checks(_ facts: PageFacts) -> [SEOCheck] {
+    public static func checks(_ facts: PageFacts, text: SEOText = .english) -> [SEOCheck] {
         var checks: [SEOCheck] = []
-        func add(_ id: String, _ status: SEOCheck.Status, _ message: String) { checks.append(SEOCheck(id, status, message)) }
+        func add(_ id: String, _ status: SEOCheck.Status, _ message: SEOMessage) {
+            checks.append(SEOCheck(id, status, text.message(message)))
+        }
         let url = URL(string: facts.url)
         let host = url?.host?.lowercased() ?? ""
         let local = host == "localhost" || host.hasSuffix(".localhost") || host == "127.0.0.1" || host == "::1"
             || url?.scheme == "file"
 
         if let status = facts.status, status >= 400 {
-            add("status", .fail, "the page answered HTTP \(status)")
+            add("status", .fail, .httpStatus(status))
         }
 
         let title = facts.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if title.isEmpty {
-            add("title", .fail, "no <title>")
+            add("title", .fail, .titleMissing)
         } else if !titleRange.contains(displayWidth(title)) {
-            add("title", .warn, "\(title.count) characters, width \(displayWidth(title)) (aim for \(titleRange.lowerBound)–\(titleRange.upperBound); wide characters count 2): \(title)")
+            add("title", .warn, .titleLength(characters: title.count, width: displayWidth(title), range: titleRange, title: title))
         } else {
-            add("title", .pass, "\(title.count) characters: \(title)")
+            add("title", .pass, .titleOK(characters: title.count, title: title))
         }
 
         let description = facts.description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if description.isEmpty {
-            add("description", .warn, "no <meta name=\"description\">")
+            add("description", .warn, .descriptionMissing)
         } else if !descriptionRange.contains(displayWidth(description)) {
-            add("description", .warn, "\(description.count) characters, width \(displayWidth(description)) (aim for \(descriptionRange.lowerBound)–\(descriptionRange.upperBound); wide characters count 2)")
+            add("description", .warn, .descriptionLength(characters: description.count, width: displayWidth(description), range: descriptionRange))
         } else {
-            add("description", .pass, "\(description.count) characters")
+            add("description", .pass, .descriptionOK(characters: description.count))
         }
 
         let h1 = facts.headings.filter { $0.level == 1 }
         switch h1.count {
-        case 0: add("h1", .fail, "no <h1>")
-        case 1: add("h1", .pass, "one <h1>: \(h1[0].text)")
-        default: add("h1", .warn, "\(h1.count) <h1> headings (one is usual)")
+        case 0: add("h1", .fail, .h1Missing)
+        case 1: add("h1", .pass, .h1OK(h1[0].text))
+        default: add("h1", .warn, .h1Many(h1.count))
         }
         var previous = 0
         var skips: [String] = []
@@ -454,9 +588,9 @@ public enum SEOAudit {
             previous = heading.level
         }
         if !skips.isEmpty {
-            add("headings", .warn, "heading levels skipped: " + skips.prefix(5).joined(separator: ", "))
+            add("headings", .warn, .headingsSkipped(skips.prefix(5).joined(separator: ", ")))
         } else if !facts.headings.isEmpty {
-            add("headings", .pass, "\(facts.headings.count) headings in order")
+            add("headings", .pass, .headingsOK(facts.headings.count))
         }
 
         let robots = facts.robots ?? ""
@@ -467,78 +601,77 @@ public enum SEOAudit {
                 ? String(token.split(separator: ":")[1]) : token
         })
         if directives.contains("noindex") || directives.contains("none") {
-            add("robots", .fail, "<meta name=\"robots\"> asks search engines not to index the page (\(robots))")
+            add("robots", .fail, .robotsNoindex(robots))
         } else if directives.contains("nofollow") {
-            add("robots", .warn, "<meta name=\"robots\"> asks not to follow the links (\(robots))")
+            add("robots", .warn, .robotsNofollow(robots))
         } else {
-            add("robots", .pass, robots.isEmpty ? "indexable (no robots meta tag)" : "indexable (\(robots))")
+            add("robots", .pass, .robotsIndexable(robots.isEmpty ? nil : robots))
         }
         if let txt = facts.robotsTxt, txt.status != 0 {
             if txt.status == 200, txt.disallowsAll {
-                add("robots.txt", .fail, "robots.txt disallows the whole site for every crawler")
+                add("robots.txt", .fail, .robotsTxtDisallowsAll)
             } else if txt.status == 200 {
                 add("robots.txt", txt.sitemaps > 0 ? .pass : .info,
-                    txt.sitemaps > 0 ? "robots.txt names \(txt.sitemaps) sitemap\(txt.sitemaps == 1 ? "" : "s")"
-                        : "robots.txt has no Sitemap: line")
+                    txt.sitemaps > 0 ? .robotsTxtSitemaps(txt.sitemaps) : .robotsTxtNoSitemap)
             } else if txt.status == 404 {
-                add("robots.txt", .info, "no robots.txt (everything may be crawled)")
+                add("robots.txt", .info, .robotsTxtMissing)
             }
         }
 
         if let canonical = facts.canonical?.trimmingCharacters(in: .whitespaces), !canonical.isEmpty {
             let target = URL(string: canonical, relativeTo: url)?.absoluteURL
             if target?.host?.lowercased() != host, target?.host != nil {
-                add("canonical", .info, "points to another host: \(canonical)")
+                add("canonical", .info, .canonicalOtherHost(canonical))
             } else {
-                add("canonical", .pass, canonical)
+                add("canonical", .pass, .value(canonical))
             }
         } else {
-            add("canonical", .warn, "no <link rel=\"canonical\">")
+            add("canonical", .warn, .canonicalMissing)
         }
 
-        if (facts.lang ?? "").isEmpty { add("lang", .warn, "no lang attribute on <html>") } else { add("lang", .pass, facts.lang!) }
+        if (facts.lang ?? "").isEmpty { add("lang", .warn, .langMissing) } else { add("lang", .pass, .value(facts.lang!)) }
         if (facts.viewport ?? "").isEmpty {
-            add("viewport", .fail, "no <meta name=\"viewport\"> (the page is not set up for phones)")
+            add("viewport", .fail, .viewportMissing)
         } else {
-            add("viewport", .pass, facts.viewport!)
+            add("viewport", .pass, .value(facts.viewport!))
         }
 
         let ogMissing = ["title", "description", "image"].filter { (facts.openGraph[$0] ?? "").isEmpty }
         if ogMissing.isEmpty {
-            add("open-graph", .pass, "og:title, og:description and og:image set")
+            add("open-graph", .pass, .openGraphOK)
         } else {
-            add("open-graph", .warn, "missing " + ogMissing.map { "og:\($0)" }.joined(separator: ", ") + " (link previews)")
+            add("open-graph", .warn, .openGraphMissing(ogMissing.map { "og:\($0)" }.joined(separator: ", ")))
         }
-        if (facts.twitterCard ?? "").isEmpty { add("twitter-card", .info, "no twitter:card") }
+        if (facts.twitterCard ?? "").isEmpty { add("twitter-card", .info, .twitterCardMissing) }
 
         if facts.imagesWithoutAlt > 0 {
             let examples = facts.imagesWithoutAltExamples.prefix(3).joined(separator: ", ")
-            add("alt", .warn, "\(facts.imagesWithoutAlt) of \(facts.images) images without alt" + (examples.isEmpty ? "" : ": \(examples)"))
+            add("alt", .warn, .altMissing(missing: facts.imagesWithoutAlt, images: facts.images, examples: examples))
         } else if facts.images > 0 {
-            add("alt", .pass, "all \(facts.images) images have alt")
+            add("alt", .pass, .altOK(facts.images))
         }
-        if facts.emptyLinks > 0 { add("links", .warn, "\(facts.emptyLinks) links without text or label") }
+        if facts.emptyLinks > 0 { add("links", .warn, .linksEmpty(facts.emptyLinks)) }
 
         if facts.structuredDataErrors > 0 {
-            add("structured-data", .warn, "\(facts.structuredDataErrors) JSON-LD block\(facts.structuredDataErrors == 1 ? " is" : "s are") not valid JSON")
+            add("structured-data", .warn, .structuredDataInvalid(facts.structuredDataErrors))
         } else if facts.structuredDataTypes.isEmpty {
-            add("structured-data", .info, "no JSON-LD structured data")
+            add("structured-data", .info, .structuredDataMissing)
         } else {
-            add("structured-data", .pass, facts.structuredDataTypes.joined(separator: ", "))
+            add("structured-data", .pass, .value(facts.structuredDataTypes.joined(separator: ", ")))
         }
 
         if url?.scheme == "http", !local {
-            add("https", .warn, "served over http, not https")
+            add("https", .warn, .httpOnly)
         } else if facts.mixedContent > 0 {
-            add("https", .warn, "\(facts.mixedContent) http: resources on an https page")
+            add("https", .warn, .mixedContent(facts.mixedContent))
         } else if url?.scheme == "https" {
-            add("https", .pass, "https")
+            add("https", .pass, .value("https"))
         }
         if facts.wordCount < thinContentWords {
-            add("content", .info, "\(facts.wordCount) words of text (thin pages rank poorly)")
+            add("content", .info, .thinContent(facts.wordCount))
         }
-        if !facts.favicon { add("favicon", .info, "no <link rel=\"icon\">") }
-        if (facts.charset ?? "").isEmpty { add("charset", .info, "no <meta charset>") }
+        if !facts.favicon { add("favicon", .info, .faviconMissing) }
+        if (facts.charset ?? "").isEmpty { add("charset", .info, .charsetMissing) }
         return checks
     }
 

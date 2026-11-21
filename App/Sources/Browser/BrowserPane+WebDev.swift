@@ -6,14 +6,27 @@ import CmdsCore
 // preview tab, the console drawer, and the SEO report. Scripts and checks in CmdsCore (WebDevTools.swift).
 extension BrowserPane {
     /// `browser.source`: the HTML the server sent (or with `rendered` the DOM now), capped at `PageSource.maxBytes`.
-    func pageSource(rendered: Bool) async throws -> (url: String, source: String, rendered: Bool, truncated: Bool, status: Int?) {
-        let result = try await runPageScript(PageSource.script, ["rendered": rendered, "maxBytes": PageSource.maxBytes])
+    func pageSource(rendered: Bool, fetchAgain: Bool = false) async throws
+        -> (url: String, source: String, rendered: Bool, truncated: Bool, status: Int?, notCached: Bool) {
+        // A local page: the file itself (WebKit's fetch cannot read file: URLs).
+        if !rendered, let url = webView.url, url.isFileURL,
+           let attributes = try? FileManager.default.attributesOfItem(atPath: url.path),
+           attributes[.type] as? FileAttributeType == .typeRegular,
+           let handle = FileHandle(forReadingAtPath: url.path) {
+            defer { try? handle.close() }
+            let data = (try? handle.read(upToCount: PageSource.maxBytes + 1)) ?? Data()
+            let text = String(decoding: data.prefix(PageSource.maxBytes), as: UTF8.self)
+            return (url.absoluteString, text, false, data.count > PageSource.maxBytes, nil, false)
+        }
+        let result = try await runPageScript(PageSource.script, ["rendered": rendered, "fetchAgain": fetchAgain,
+                                                                 "maxBytes": PageSource.maxBytes])
         guard case .object(let object) = result, let source = object["source"]?.stringValue else {
             throw RPCError(code: 500, message: "the page gave no source")
         }
         let capped = PageSource.capped(source)
         return (object["url"]?.stringValue ?? currentURL?.absoluteString ?? "", capped.source,
-                object["rendered"]?.boolValue ?? rendered, capped.truncated, object["status"]?.intValue)
+                object["rendered"]?.boolValue ?? rendered, capped.truncated, object["status"]?.intValue,
+                object["notCached"]?.boolValue ?? false)
     }
 
     /// `browser.seo`.
@@ -48,7 +61,7 @@ extension BrowserPane {
                 drawer.topAnchor.constraint(equalTo: consoleHost.topAnchor),
                 drawer.bottomAnchor.constraint(equalTo: consoleHost.bottomAnchor),
             ])
-            consoleDrawerHeight?.constant = min(BrowserConsoleView.preferredHeight, max(bounds.height * 0.45, 120))
+            consoleDrawerHeight?.constant = BrowserConsoleView.clampedHeight(BrowserConsoleView.lastHeight, in: bounds.height)
             drawer.refresh()
             if focus { drawer.focusInput() }
         }
@@ -92,6 +105,14 @@ enum BrowserDeveloperAction {
 @MainActor
 final class BrowserConsoleView: NSView, NSTextFieldDelegate {
     static let preferredHeight: CGFloat = 220
+    /// The height the user dragged the drawer to (shared by every pane; this run only).
+    static var lastHeight: CGFloat = preferredHeight
+    static let minimumHeight: CGFloat = 90
+
+    /// `height` within what the pane leaves for the page (at least 150 pt of page).
+    static func clampedHeight(_ height: CGFloat, in paneHeight: CGFloat) -> CGFloat {
+        max(minimumHeight, min(height, paneHeight - 150))
+    }
 
     private weak var pane: BrowserPane?
     private let textView = NSTextView()
@@ -164,8 +185,8 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
         inputRow.spacing = 4
         inputRow.edgeInsets = NSEdgeInsets(top: 3, left: 8, bottom: 3, right: 8)
 
-        let separator = NSBox()
-        separator.boxType = .separator
+        let separator = ConsoleResizeHandle()
+        separator.onDrag = { [weak self] delta in self?.resize(by: delta) }
         let stack = NSStackView(views: [separator, header, scrollView, inputRow])
         stack.orientation = .vertical
         stack.spacing = 0
@@ -186,6 +207,14 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
+
+    /// Dragging the top edge: up makes the drawer taller.
+    private func resize(by delta: CGFloat) {
+        guard let pane, let constraint = pane.consoleDrawerHeight else { return }
+        let height = Self.clampedHeight(constraint.constant + delta, in: pane.bounds.height)
+        constraint.constant = height
+        Self.lastHeight = height
+    }
 
     func focusInput() {
         window?.makeFirstResponder(input)
@@ -314,4 +343,39 @@ final class BrowserConsoleView: NSView, NSTextFieldDelegate {
         }
         return false
     }
+}
+
+/// The top edge of the console drawer: a line that resizes the drawer when dragged.
+@MainActor
+private final class ConsoleResizeHandle: NSView {
+    var onDrag: ((CGFloat) -> Void)?
+    private var lastY: CGFloat?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        heightAnchor.constraint(equalToConstant: 5).isActive = true
+        setAccessibilityElement(true)
+        setAccessibilityRole(.splitter)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor(calibratedWhite: 0.25, alpha: 1).setFill()
+        NSRect(x: 0, y: bounds.midY - 0.5, width: bounds.width, height: 1).fill()
+    }
+
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .resizeUpDown) }
+
+    override func mouseDown(with event: NSEvent) { lastY = event.locationInWindow.y }
+
+    override func mouseDragged(with event: NSEvent) {
+        guard let lastY else { return }
+        // Window coordinates grow upwards: moving up makes the drawer taller.
+        onDrag?(event.locationInWindow.y - lastY)
+        self.lastY = event.locationInWindow.y
+    }
+
+    override func mouseUp(with event: NSEvent) { lastY = nil }
 }

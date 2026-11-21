@@ -219,6 +219,10 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   the views like a split does: containers of background tabs leave the window (terminals keep running, as in a hidden
   workspace). The tab bar selects on mouse up so a drag can start from any tab; drops on a bar or on the top strip of
   a pane are `PaneDrop.tab`. A swap exchanges tab slots (a pane taking a background slot stays in the background).
+  Restored background browser tabs get `BrowserPane.deferLoad` (`pendingURL`, loaded in `viewDidMoveToWindow` or by
+  `AppController.browser(paneID:)`); tab icons come from `Favicon` candidates through `FaviconCache` (in memory, by
+  URL and host, also for the bookmarks bar). Agents' tabs: `reuseAgentTab` (same page, by `currentURL` or
+  `requestedURL`) and `closeOldAgentTabs` (`maxAgentTabs`).
   `browser.open` (`openBrowser`) adds the page as a tab of the requesting browser or the workspace's browser
   (`browserTabGroup`) unless `AppSettings.browserOpensTabs` is off.
 - **Attention / notification ring**: a pane lights up (colored ring border) when its program sends OSC 9/777,
