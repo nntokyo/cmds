@@ -144,7 +144,7 @@ status:
 | `browser_watch` | Reload the page whenever files in a folder change (`dir`, absolute; default the workspace's folder), e.g. a `file://` page or a dev server without hot reload; `remote` reloads non-local pages too, `off` stops ([guide](workspaces-and-panes.md#reload-on-file-changes)) |
 | `browser_console` | Console messages, uncaught errors and unhandled promise rejections of the page (`level`, `limit`, `clear`; `show` opens the console drawer for the user) ([Browser DevTools](#browser-devtools)) |
 | `browser_source` | The page's HTML as the server sent it, from the cache (not cached: the DOM, unless `fetch` asks the server again), or with `rendered` the DOM now (cut at `maxChars`, default 100,000) ([Developer tools](workspaces-and-panes.md#developer-tools)) |
-| `browser_seo` | SEO check of the page: score and one line per check (✗ problem, ! warning, i note, ✓ passed); `open` also shows the report to the user in a tab |
+| `browser_seo` | SEO check of the page: score and one line per check (✗ problem, ! warning, i note, ✓ passed); `crawl` (1–50) also checks linked pages of the site; `open` also shows the report to the user in a tab |
 | `browser_snapshot_tree` | The page as a compact tree of roles and names with refs (`- button "Sign in" [ref=e3]`; `selector` to start lower) |
 | `browser_click` / `browser_fill` | Click, or fill a field / select / checkbox, by `ref` or `selector` |
 | `browser_wait_for` | Wait for a `selector` or `text` to be visible (`timeout` seconds, default 5, 0 checks once); an error when it is not |
@@ -349,6 +349,43 @@ the widget and the phone. agy reports them only while an interactive session run
 The last figures are kept across restarts (`antigravity-limits.json` in the support directory) until their windows
 reset, dimmed after an hour without a report. Antigravity has no notification or state hooks in cmds yet: its state
 comes from the status-line reports and the terminal title like other agents.
+
+## Growing the harness
+
+Claude Code leaves a lot in `~/.claude` — session logs, auto-memory, CLAUDE.md, skills — that is rarely read back.
+`cmds harness` (and **Window › Claude Harness**, which runs it in a terminal split below the focused pane) turns it into
+improvements of your setup, after DeNA's "geni harness-kun"
+([engineering.dena.com](https://engineering.dena.com/blog/2026/07/claude-code-harness-app/)):
+
+```sh
+cmds harness report --open        # sessions, prompts, models, memory, skills, MCP servers (last 30 days)
+cmds harness suggest --open       # an improved CLAUDE.md for this project from your recent prompts and memory
+cmds harness suggest --global     # the same for ~/.claude/CLAUDE.md, from every project
+cmds harness skill --open         # a skill (SKILL.md) from this project's auto-memory
+cmds harness review --open        # what you did yesterday, what is open, a TODO list, harness ideas
+```
+
+- **Nothing is applied by itself.** `suggest` prints the diff (and shows it with `--open`) and asks before replacing
+  CLAUDE.md; `skill` asks before installing into `~/.claude/skills/NAME/`. `--yes` answers yes (for scripts).
+- **Only those two writes.** `report` and `review` only read `~/.claude`; proposals, reports and reviews go to cmds'
+  support folder (`Harness/`). A file that is replaced is backed up first (`Harness/backups/`) and written through a
+  temporary file. A CLAUDE.md that is a symbolic link (dotfiles) is updated where it leads, which is said first; a link
+  to something that is not a Markdown file is neither read nor written, and with `--yes` nothing outside the project
+  (or `~/.claude`) is written.
+- **What goes to Claude**: your own prompts of the period (newest first, one line each, at most 40,000 characters,
+  shared between projects; not shell output, background-task notifications or compaction summaries), memory notes and
+  the current CLAUDE.md (your own file, which Claude Code sends anyway). Prompts and memory have what looks like a
+  secret masked: API keys and tokens (Anthropic, OpenAI, GitHub, GitLab, Slack, AWS, Google, Stripe, Hugging Face,
+  npm), JWTs, bearer and basic credentials, passwords in URLs, webhooks, private keys, values of `*_PASSWORD`,
+  `*_TOKEN`, `*_SECRET`, `*_API_KEY` settings and random-looking runs; projects appear by their path below your home
+  folder. It runs `claude -p` with your Claude Code sign-in in an empty folder, without tools, your settings, hooks,
+  MCP servers or a saved session (`--model`, default sonnet).
+- **Checks before applying**: a proposal with new lines that look like a secret or hold `[REDACTED]` is not applied. A
+  skill's front matter keeps only `name` and `description` (no `allowed-tools`, model or hooks). Lines that download
+  and run code, decode and run, skip permissions, use sudo, ssh or `rm -rf`, mention keys, tell Claude to ignore its
+  instructions or link elsewhere are listed before the question; `--yes` then refuses.
+- **Every morning**: a schedule (Window › Schedules…) that starts a workspace running
+  `cmds harness review --open --language Japanese` puts yesterday's review on screen.
 
 ## Usage and limits
 

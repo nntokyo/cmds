@@ -53,6 +53,26 @@ extension SEOText {
         case .thinContent(let words): return String(localized: "\(words) words of text (thin pages rank poorly)", comment: "SEO report")
         case .faviconMissing: return String(localized: "no <link rel=\"icon\">", comment: "SEO report")
         case .charsetMissing: return String(localized: "no <meta charset>", comment: "SEO report")
+        case .hreflangNoSelf: return String(localized: "the hreflang alternates do not include this page", comment: "SEO report")
+        case .sitemapStatus(let status): return String(localized: "the sitemap robots.txt names answered HTTP \(status)", comment: "SEO report")
+        case .sitemapMissingPage: return String(localized: "the sitemap does not list this page", comment: "SEO report")
+        case .sitemapListsPage: return String(localized: "the sitemap lists this page", comment: "SEO report")
+        case .lcp(let ms): return String(localized: "Largest Contentful Paint \(ms) ms (good: 2500 or less)", comment: "SEO report")
+        case .cls(let value): return String(localized: "Cumulative Layout Shift \(value) (good: 0.1 or less)", comment: "SEO report")
+        case .ttfb(let ms): return String(localized: "the server answered after \(ms) ms", comment: "SEO report")
+        case .domSize(let nodes): return String(localized: "\(nodes) elements on the page", comment: "SEO report")
+        case .pageWeight(let kb): return String(localized: "\(kb) KB transferred", comment: "SEO report")
+        case .crawlDuplicateTitles(let count): return String(localized: "\(count) pages share a title with another page", comment: "SEO report")
+        case .crawlDuplicateDescriptions(let count):
+            return String(localized: "\(count) pages share a description with another page", comment: "SEO report")
+        case .crawlMissing(let count, let what):
+            let thing = what == "a description" ? String(localized: "a description", comment: "SEO report: pages without …") : what
+            return String(localized: "\(count) pages without \(thing)", comment: "SEO report")
+        case .crawlNoindex(let count): return String(localized: "\(count) pages ask not to be indexed", comment: "SEO report")
+        case .crawlErrors(let count): return String(localized: "\(count) pages answered with an error", comment: "SEO report")
+        case .crawlOK(let count): return String(localized: "\(count) linked pages checked", comment: "SEO report")
+        case .crawlNothing:
+            return String(localized: "No links to other pages of this site to check (or robots.txt disallows them)", comment: "SEO report")
         case .value(let value): return value
         case .linkCounts(let total, let inside, let outside, let nofollow):
             return String(localized: "\(total) (\(inside) internal, \(outside) external, \(nofollow) nofollow)", comment: "SEO report")
@@ -74,6 +94,7 @@ extension SEOText {
         case .images: return String(localized: "Images", comment: "SEO report")
         case .words: return String(localized: "Words", comment: "SEO report")
         case .headings: return String(localized: "Headings", comment: "SEO report")
+        case .pages: return String(localized: "Linked pages", comment: "SEO report")
         }
     })
 }

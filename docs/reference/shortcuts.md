@@ -39,6 +39,8 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Split down | ⇧⌘D | Pane |
 | New tab beside the focused pane (browser tab in a browser, else a terminal) | ⌘T | Pane |
 | Next / previous tab of the focused pane | ⌥⌘] / ⌥⌘[ | Pane |
+| Move the focused tab left / right | ⌃⇧⌘[ / ⌃⇧⌘] | Pane |
+| All tabs of a group (when they do not fit) | click ⌄ next to + | – |
 | Show a tab / close it | click it / its × or a middle click | – |
 | Make a pane a tab of another | drag its grip or tab onto a tab bar, or onto the top strip of a pane | – |
 | Focus pane left / right / up / down | ⌥⌘← / ⌥⌘→ / ⌥⌘↑ / ⌥⌘↓ | Pane |

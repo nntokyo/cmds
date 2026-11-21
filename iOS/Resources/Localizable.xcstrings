@@ -466,6 +466,16 @@
         }
       }
     },
+    "A background tab on the Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macで背後にあるタブ"
+          }
+        }
+      }
+    },
     "Active on Mac" : {
       "localizations" : {
         "ja" : {

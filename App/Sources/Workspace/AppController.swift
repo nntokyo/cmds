@@ -530,7 +530,8 @@ final class AppController {
     func browser(paneID: String) throws -> BrowserPane {
         let pane = try resolvePane(paneID)
         guard let browser = pane.browser else { throw RPCError.invalidParams("pane \(pane.id) is not a browser") }
-        // A background tab restored with the session: its page is needed now.
+        // A background tab restored with the session (or suspended): its page is needed now.
+        browser.lastUsed = Date()
         browser.loadIfPending()
         return browser
     }
@@ -998,7 +999,8 @@ final class AppController {
                 guard let opener = workspace.panes[id]?.openedBy, let openerIndex = root.paneIDs.firstIndex(of: opener) else {
                     return nil
                 }
-                return SessionState.PaneOpener(paneIndex: index, openerIndex: openerIndex)
+                return SessionState.PaneOpener(paneIndex: index, openerIndex: openerIndex,
+                                               agentTab: workspace.panes[id]?.agentTabOrder)
             }
             let paneIDs = root.paneIDs
             let tabGroups = root.tabGroups.compactMap { group -> SessionState.TabGroup? in
@@ -1128,6 +1130,10 @@ final class AppController {
                     continue
                 }
                 pane.openedBy = opener
+                if let order = entry.agentTab, pane.browser != nil {
+                    pane.agentTabOrder = order
+                    Self.agentTabCounter = max(Self.agentTabCounter, order)
+                }
             }
         }
         return restored

@@ -404,7 +404,9 @@ final class WorkspaceContentViewController: NSViewController {
         let tabs = node.tabs.compactMap { id -> TabItem? in
             guard let pane = workspace.panes[id] else { return nil }
             let title = pane.agentTopic ?? DefaultTitle.localized(pane.title)
-            return TabItem(paneID: id, title: title, kind: pane.kind, attention: pane.attention, icon: pane.browser?.favicon)
+            let detail = pane.url ?? pane.preview?.path ?? pane.files?.folder ?? pane.workingDirectory
+            return TabItem(paneID: id, title: title, kind: pane.kind, attention: pane.attention, icon: pane.browser?.favicon,
+                           detail: detail.map { $0.hasPrefix("/") ? ($0 as NSString).abbreviatingWithTildeInPath : $0 })
         }
         let active = workspace.id == controller.selectedWorkspaceID && node.tabs.contains(workspace.focusedPaneID ?? "")
         bar.update(tabs: tabs, selected: node.paneID, active: active)
@@ -418,6 +420,11 @@ final class WorkspaceContentViewController: NSViewController {
             else { continue }
             updateTabBar(bar, node: node, in: workspace)
         }
+    }
+
+    /// The tab bar of the group holding `paneID`, on screen (tests: `debug.tab_bar`).
+    func tabBar(forPane paneID: String) -> TabBarView? {
+        tabBars.first { $0.node?.tabs.contains(paneID) == true && $0.bar?.window != nil }?.bar
     }
 
     /// The tab bar under `point` (this view's flipped coordinates) and the tab group's shown pane.

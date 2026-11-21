@@ -2,7 +2,7 @@
 # Runs the CI jobs of .github/workflows/ci.yml on this Mac (docs/internals/ci.md), for when GitHub Actions is
 # unavailable or out of minutes, or to check a change before pushing it.
 #
-#   scripts/ci/run-local.sh                  # every job: site, links, strings, core, ssh
+#   scripts/ci/run-local.sh                  # every job: site, links, strings, core, ssh, ios
 #   scripts/ci/run-local.sh site strings     # only these jobs
 #   scripts/ci/run-local.sh --release site   # site job with the release DMG check (network)
 #   scripts/ci/run-local.sh --post 69        # every job, then the summary as a comment on PR 69
@@ -24,12 +24,12 @@ while [ $# -gt 0 ]; do
     --release) release=--release ;;
     --post) post=${2:?--post needs a PR number}; shift ;;
     -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
-    site|links|strings|core|ssh) jobs="$jobs $1" ;;
+    site|links|strings|core|ssh|ios) jobs="$jobs $1" ;;
     *) echo "unknown job or option: $1" >&2; exit 2 ;;
   esac
   shift
 done
-[ -n "$jobs" ] || jobs="site links strings core ssh"
+[ -n "$jobs" ] || jobs="site links strings core ssh ios"
 
 wait_for_room() { # heavy jobs: memory pressure normal and at most one other Swift/Xcode build
   waited=0
@@ -62,6 +62,9 @@ run_job() {
       ;;
     core) wait_for_room && (cd Packages/CmdsCore && swift test) ;;
     ssh) wait_for_room && (cd Packages/CmdsSSH && swift test) ;;
+    # The iOS companion compiles against CmdsCore (#373: a CmdsCore change once broke it unnoticed). No signing.
+    ios) wait_for_room && xcodegen generate >/dev/null && xcodebuild -scheme CmdsCompanion \
+           -destination 'generic/platform=iOS Simulator' -derivedDataPath build/ci-ios CODE_SIGNING_ALLOWED=NO build ;;
   esac > "$log" 2>&1
   status=$?
   secs=$(( $(date +%s) - start ))

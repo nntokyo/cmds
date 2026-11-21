@@ -225,7 +225,8 @@ final class MCPServer {
         Tool(name: "browser_seo",
              description: "Check a cmds browser pane's page for search engines and link previews: title and description length, h1 and heading order, canonical, robots meta and robots.txt, lang, viewport, Open Graph, Twitter card, image alt, links without text, JSON-LD structured data, https and mixed content, thin content, favicon. Returns a score and one line per check (✗ problem, ! warning, i note, ✓ passed). Set open to also show the report to the user in a preview tab.",
              properties: ["pane": browserPane,
-                          "open": .object(["type": "boolean", "description": "Also show the report in a preview tab beside the pane."])]),
+                          "open": .object(["type": "boolean", "description": "Also show the report in a preview tab beside the pane."]),
+                          "crawl": .object(["type": "integer", "description": .string("Also check up to this many linked pages of the same site (1–\(SEOAudit.maxCrawl)): duplicate titles and descriptions, missing ones, noindex, errors.")])]),
         Tool(name: "browser_snapshot_tree",
              description: "The page of a cmds browser pane as a compact tree of roles and names (links, buttons, form fields, headings, images, landmarks), one line each with a ref, e.g. `- button \"Sign in\" [ref=e3]`. Use the refs with browser_click and browser_fill. Cheaper than a screenshot for finding what to act on.",
              properties: ["pane": browserPane, "selector": string("Start at this element (CSS selector) instead of the body.")]),
@@ -452,7 +453,18 @@ final class MCPServer {
             }
             return [Self.text(header + "\n\n" + String(source.prefix(limit)))]
         case "browser_seo":
-            let result = try devToolsCall("browser.seo", arguments, ["open": arguments["open"]?.boolValue == true ? true : nil])
+            let crawl = try toolArguments { () -> Int? in
+                guard let raw = arguments["crawl"], raw != .null else { return nil }
+                guard case .number(let value) = raw, value.isFinite, value >= 1, value <= Double(SEOAudit.maxCrawl) else {
+                    throw RPCError.invalidParams("crawl must be 1 to \(SEOAudit.maxCrawl)")
+                }
+                return Int(value)
+            }
+            let result = try newMethod("browser.seo") {
+                try browserCall("browser.seo", arguments, ["open": arguments["open"]?.boolValue == true ? true : nil,
+                                                           "crawl": crawl.map { .number(Double($0)) }],
+                                timeout: crawl == nil ? Self.pageTimeout : 200)
+            }
             return [Self.text(result["text"]?.stringValue ?? "No result.")]
         case "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for":
             let method = "browser." + name.dropFirst("browser_".count)

@@ -7,6 +7,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Tabs: an overflow menu (⌄) for tabs that do not fit, tooltips with the page address or path, Pane › Move Tab Left /
+  Right (⌃⇧⌘[ / ⌃⇧⌘]) (#374).
+- Background browser tabs unused for 30 minutes are suspended (unloaded until shown; Settings › General › Suspend
+  background tabs); never pages with unsaved input or playing media (#375).
+- Bookmarks bar from Microsoft Edge, Brave, Vivaldi, Arc or Safari (Settings › General › Bookmarks from), and every
+  Chrome bookmark's icon from Chrome's icon database (#376, #377).
+- Developer tools: a text filter and Copy in the console (height remembered), a header line in source tabs (address,
+  HTTP status, content type, encoding), SEO loading measures (LCP, CLS, time to first byte, size, elements), hreflang
+  and sitemap checks, and `cmds browser seo --crawl N` for up to 50 linked pages (#380).
+- iPhone: the pane selector shows the Mac's tab groups (#378).
+- Claude harness: `cmds harness report|suggest|skill|review` and Window › Claude Harness read what `~/.claude` holds
+  (sessions, memory, CLAUDE.md, skills, MCP servers) and propose an improved CLAUDE.md, a skill from memory and a daily
+  review through `claude -p` (no tools, isolated, secrets masked); applied only after you saw the diff, with a backup.
+  A skill keeps only its name and description in the front matter, and lines that run code, skip permissions or reach
+  other places are pointed out before applying (`--yes` then refuses).
+- Browser: a "Not Secure" icon before the address of plain-http pages on the internet.
+
+### Changed
+
+- Duplicate Tab keeps the pane's settings (device size, responsive view, file watch, Claude account, hidden files,
+  Follow Terminal) (#379).
+- Agents' tab reuse and cap go on after a relaunch (#375).
+
+### Fixed
+
+- Browser panes could not load plain-http pages other than local ones (App Transport Security); WebKit's content is
+  now exempt, the app's own connections stay https-only. Plain-http sites get their favicon too (#376).
+- Settings › General said nothing when a Chrome profile's account bookmarks are only encrypted but local ones exist
+  (#377).
+- Suspended tabs now free their page's process and never come from a form, a load error or a page with a pop-up,
+  a code editor or changed fields in frames; Reload Tab on a suspended tab loads it.
+- SEO crawl: links that sign out or delete, `download` and `nofollow` links are not followed; robots.txt `*`, `$` and
+  `Allow` rules, page encodings, redirects, sitemap indexes and gzip sitemaps are understood; files that are not HTML
+  no longer count as pages without a title.
+- Favicons are not fetched from this Mac or the local network for internet pages (also not through a redirect).
+
 ## [0.30.0] - 2026-11-22
 
 Mac only; the iPhone/iPad app is unchanged.

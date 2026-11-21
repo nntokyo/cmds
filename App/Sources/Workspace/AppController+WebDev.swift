@@ -51,15 +51,17 @@ extension AppController {
     func showPageSource(paneID: String, rendered: Bool = false) async throws {
         let source = try await readyBrowser(paneID: paneID).pageSource(rendered: rendered)
         let name = Self.developerFileName(rendered ? "dom" : "source", for: source.url, extension: "html")
-        try showDeveloperFile((source.notCached ? PageSource.notCachedNote : "") + source.source, name: name, format: .source,
-                              besideBrowser: paneID)
+        let header = source.notCached ? PageSource.notCachedNote
+            : PageSource.headerLine(url: source.url, status: source.status, contentType: source.contentType,
+                                    charset: source.charset, rendered: source.rendered)
+        try showDeveloperFile(header + source.source, name: name, format: .source, besideBrowser: paneID)
     }
 
     /// View › Developer › SEO Report.
-    func showSEOReport(paneID: String) async throws {
-        let report = try await readyBrowser(paneID: paneID).seoReport()
+    func showSEOReport(paneID: String, crawl: Int = 0) async throws {
+        let report = try await readyBrowser(paneID: paneID).seoReport(crawl: crawl)
         let name = Self.developerFileName("seo", for: report.url, extension: "md")
-        try showDeveloperFile(SEOReport(facts: report.facts, text: .localized).markdown, name: name, format: .markdown,
+        try showDeveloperFile(SEOReport(facts: report.facts, pages: report.pages, text: .localized).markdown, name: name, format: .markdown,
                               besideBrowser: paneID)
     }
 

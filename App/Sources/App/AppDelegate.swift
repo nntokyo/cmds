@@ -49,6 +49,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             controller.createWorkspace()
         }
+        // Background browser tabs unused for a while are unloaded (#375).
+        controller.startTabSuspension()
         // Before the schedules start: those waiting for Codex's limit read it.
         controller.restoreAgentLimits()
         // agy's status line pointing at an old or missing cmds (#310): told once.

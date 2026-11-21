@@ -28,8 +28,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let mcpCheckbox = NSButton(checkboxWithTitle: String(localized: "Register cmds’ MCP server with your agents", comment: "Settings › Agents"), target: nil, action: nil)
     private let memoryWarningCheckbox = NSButton(checkboxWithTitle: String(localized: "Warn when memory is short"), target: nil, action: nil)
     private let browserTabsCheckbox = NSButton(checkboxWithTitle: String(localized: "Open new pages in tabs", comment: "Settings › General › Browser"), target: nil, action: nil)
-    private let chromeBookmarksCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Chrome bookmarks", comment: "Settings › General › Browser"), target: nil, action: nil)
+    private let chromeBookmarksCheckbox = NSButton(checkboxWithTitle: String(localized: "Show a bookmarks bar", comment: "Settings › General › Browser"), target: nil, action: nil)
+    private let bookmarkSourcePopup = NSPopUpButton()
     private let chromeProfilePopup = NSPopUpButton()
+    private let suspendTabsPopup = NSPopUpButton()
     /// Why Chrome's bookmarks cannot be shown (empty when they can), and the button to Privacy & Security.
     private let chromeProblemNote = SettingsWindowController.note("")
     private let chromeAccessButton = NSButton(title: String(localized: "Open Privacy Settings…", comment: "Settings › General › Chrome bookmarks without access"), target: nil, action: nil)
@@ -175,6 +177,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         chromeBookmarksCheckbox.action = #selector(chromeBookmarksToggled)
         chromeProfilePopup.target = self
         chromeProfilePopup.action = #selector(chromeProfileChanged)
+        bookmarkSourcePopup.target = self
+        bookmarkSourcePopup.action = #selector(bookmarkSourceChanged)
+        for minutes in TabSuspension.choices {
+            suspendTabsPopup.addItem(withTitle: minutes == 0 ? String(localized: "Never", comment: "Settings › General › Suspend background tabs")
+                : String(localized: "After \(minutes) minutes", comment: "Settings › General › Suspend background tabs"))
+            suspendTabsPopup.lastItem?.representedObject = minutes
+        }
+        suspendTabsPopup.target = self
+        suspendTabsPopup.action = #selector(suspendTabsChanged)
         chromeAccessButton.bezelStyle = .rounded
         chromeAccessButton.target = self
         chromeAccessButton.action = #selector(openFullDiskAccess)
@@ -210,9 +221,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
             [NSGridCell.emptyContentView, browserTabsCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Links that open a new window, `cmds browser open` and agents' browser_open add a tab to the workspace's browser instead of a split. ⌘T opens a tab beside any pane.", comment: "Settings › General › Browser"))],
+            [Self.label(String(localized: "Suspend background tabs:", comment: "Settings › General › Browser")), suspendTabsPopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.", comment: "Settings › General › Browser"))],
             [NSGridCell.emptyContentView, chromeBookmarksCheckbox],
-            [Self.label(String(localized: "Chrome profile:", comment: "Settings › General › Browser")), chromeProfilePopup],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "A bar of Google Chrome's bookmarks under the address bar (read only; ⌘-click opens a new tab). Chrome's sign-ins and passwords are not shared.", comment: "Settings › General › Browser"))],
+            [Self.label(String(localized: "Bookmarks from:", comment: "Settings › General › Browser")), bookmarkSourcePopup],
+            [Self.label(String(localized: "Profile:", comment: "Settings › General › Browser bookmarks")), chromeProfilePopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "A bar of your browser's bookmarks under the address bar (read only; ⌘-click opens a new tab). Its sign-ins and passwords are not shared.", comment: "Settings › General › Browser"))],
             [NSGridCell.emptyContentView, chromeProblemNote],
             [NSGridCell.emptyContentView, chromeAccessButton],
             [Self.header(String(localized: "Memory")), NSGridCell.emptyContentView],
@@ -264,7 +278,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let tabs = NSTabViewController()
         tabs.tabStyle = .toolbar
         for (tab, title, symbol, rows, headers) in [
-            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 16]),
+            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 19]),
             (.sidebar, String(localized: "Sidebar"), "sidebar.left", sidebar, []),
             (.agents, String(localized: "Agents"), "sparkles", agents, []),
             (.menuBar, String(localized: "Menu Bar"), "menubar.rectangle", menuBar, []),
@@ -470,6 +484,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         inspectableCheckbox.state = settings.browserInspectable ? .on : .off
         memoryWarningCheckbox.state = settings.memoryWarning ? .on : .off
         browserTabsCheckbox.state = settings.browserOpensTabs ? .on : .off
+        // A value set with `defaults` that is not a choice: shown as itself, not as "Never".
+        let minutes = settings.suspendTabsMinutes
+        if suspendTabsPopup.indexOfItem(withRepresentedObject: minutes) < 0 {
+            suspendTabsPopup.addItem(withTitle: String(localized: "After \(minutes) minutes", comment: "Settings › General › Suspend background tabs"))
+            suspendTabsPopup.lastItem?.representedObject = minutes
+        }
+        suspendTabsPopup.selectItem(at: max(0, suspendTabsPopup.indexOfItem(withRepresentedObject: minutes)))
         chromeBookmarksCheckbox.state = settings.chromeBookmarks ? .on : .off
         fillChromeProfiles()
         refreshChromeProblem()
@@ -586,6 +607,30 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         settings.browserOpensTabs = browserTabsCheckbox.state == .on
     }
 
+    @objc private func suspendTabsChanged() {
+        settings.suspendTabsMinutes = suspendTabsPopup.selectedItem?.representedObject as? Int ?? TabSuspension.defaultMinutes
+    }
+
+    @objc private func bookmarkSourceChanged() {
+        guard let raw = bookmarkSourcePopup.selectedItem?.representedObject as? String,
+              let source = BookmarkSource(rawValue: raw), source != settings.bookmarkSource else { return }
+        settings.chromeProfile = nil  // another browser's profiles
+        settings.bookmarkSource = source
+    }
+
+    /// The browsers found on this Mac (and the chosen one).
+    private func fillBookmarkSources() {
+        bookmarkSourcePopup.removeAllItems()
+        let chosen = settings.bookmarkSource
+        for source in BookmarkSource.allCases
+        where source == chosen || FileManager.default.fileExists(atPath: ChromeBookmarkStore.sourceFolder(source).path) {
+            bookmarkSourcePopup.addItem(withTitle: source.name)
+            bookmarkSourcePopup.lastItem?.representedObject = source.rawValue
+        }
+        bookmarkSourcePopup.selectItem(at: max(0, bookmarkSourcePopup.indexOfItem(withRepresentedObject: chosen.rawValue)))
+        bookmarkSourcePopup.isEnabled = settings.chromeBookmarks
+    }
+
     @objc private func chromeBookmarksToggled() {
         settings.chromeBookmarks = chromeBookmarksCheckbox.state == .on
     }
@@ -597,15 +642,18 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// The note under the profile: why no bookmarks show; the button only when macOS refused access.
     private func refreshChromeProblem() {
         let problem = settings.chromeBookmarks ? ChromeBookmarkStore.shared.problem : nil
+        let browser = settings.bookmarkSource.name
         switch problem {
         case .noAccess:
-            chromeProblemNote.stringValue = String(localized: "macOS keeps other apps from reading Chrome's data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds.", comment: "Settings › General › Chrome bookmarks")
+            chromeProblemNote.stringValue = String(localized: "macOS keeps other apps from reading \(browser)'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds. That access is for the whole app, including the programs you run in its terminals.", comment: "Settings › General › Browser bookmarks")
         case .notFound:
-            chromeProblemNote.stringValue = String(localized: "No Chrome bookmarks found for this profile.", comment: "Settings › General › Chrome bookmarks")
+            chromeProblemNote.stringValue = String(localized: "No bookmarks of \(browser) found (for this profile).", comment: "Settings › General › Browser bookmarks")
         case .unreadable:
-            chromeProblemNote.stringValue = String(localized: "Chrome's bookmarks file could not be read.", comment: "Settings › General › Chrome bookmarks")
+            chromeProblemNote.stringValue = String(localized: "\(browser)'s bookmarks file could not be read.", comment: "Settings › General › Browser bookmarks")
         case .encrypted:
-            chromeProblemNote.stringValue = String(localized: "Chrome keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from Chrome.", comment: "Settings › General › Chrome bookmarks")
+            chromeProblemNote.stringValue = String(localized: "\(browser) keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from the browser.", comment: "Settings › General › Browser bookmarks")
+        case .partlyEncrypted:
+            chromeProblemNote.stringValue = String(localized: "The bookmarks saved in your account are kept encrypted by \(browser) and are not shown; those on this Mac are.", comment: "Settings › General › Browser bookmarks")
         case nil:
             chromeProblemNote.stringValue = ""
         }
@@ -624,7 +672,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     /// "Last used" and Chrome's profiles; disabled without Chrome or with the bar off.
     private func fillChromeProfiles() {
-        let (profiles, lastUsed) = ChromeBookmarkStore.profiles()
+        fillBookmarkSources()
+        let (profiles, lastUsed) = ChromeBookmarkStore.profiles(settings.bookmarkSource)
         chromeProfilePopup.removeAllItems()
         let lastName = profiles.first { $0.directory == lastUsed }?.name
         chromeProfilePopup.addItem(withTitle: lastName.map { String(localized: "Last used (\($0))", comment: "Settings › General › Chrome profile") }

@@ -136,6 +136,27 @@ final class WebDevToolsTests: XCTestCase {
 }
 
 final class FaviconTests: XCTestCase {
+    func testPrivateHosts() {
+        for host in ["localhost", "app.localhost", "mac.local", "127.0.0.1", "10.1.2.3", "172.20.0.1", "192.168.1.1",
+                     "169.254.1.1", "0.0.0.0", "100.100.1.1", "[::1]", "::1", "fd00::1", "fe80::1", "::ffff:192.168.0.1"] {
+            XCTAssertTrue(Favicon.isPrivateHost(host), host)
+        }
+        for host in ["example.com", "8.8.8.8", "172.32.0.1", "2001:db8::1", "1.2.3.4", nil, ""] as [String?] {
+            XCTAssertFalse(Favicon.isPrivateHost(host), host ?? "nil")
+        }
+    }
+
+    func testInternetPagesDoNotPointIconsAtTheLocalNetwork() {
+        let page = URL(string: "https://example.com/")!
+        let candidates = [Favicon.Candidate(href: "http://192.168.1.1/favicon.ico", rel: "icon", sizes: nil, type: nil),
+                          Favicon.Candidate(href: "https://cdn.example.net/i.png", rel: "icon", sizes: nil, type: nil)]
+        let urls = Favicon.urls(candidates, page: page).map(\.absoluteString)
+        XCTAssertFalse(urls.contains("http://192.168.1.1/favicon.ico"))
+        XCTAssertTrue(urls.contains("https://cdn.example.net/i.png"))
+        let local = Favicon.urls(candidates, page: URL(string: "http://localhost:3000/")!).map(\.absoluteString)
+        XCTAssertTrue(local.contains("http://192.168.1.1/favicon.ico"), "a local page may")
+    }
+
     func testBestIconFirstThenFaviconIco() {
         let page = URL(string: "https://example.com:8443/a/b")!
         let urls = Favicon.urls([
@@ -174,6 +195,16 @@ final class FaviconTests: XCTestCase {
         XCTAssertTrue(urls.contains("http://[::1]:3000/favicon.ico"), "\(urls)")
     }
 
+    func testPlainHTTPIconsOfTheSiteAreFetchedByThePage() {
+        let page = URL(string: "http://intranet.example/app")!
+        XCTAssertTrue(Favicon.fetchedByPage(URL(string: "http://intranet.example/favicon.ico")!, page: page))
+        XCTAssertFalse(Favicon.fetchedByPage(URL(string: "http://other.example/favicon.ico")!, page: page), "another site")
+        XCTAssertFalse(Favicon.fetchedByPage(URL(string: "https://intranet.example/favicon.ico")!, page: page), "https: the app")
+        XCTAssertFalse(Favicon.fetchedByPage(URL(string: "http://localhost:3000/f.ico")!, page: URL(string: "http://localhost:3000/")!),
+                       "local addresses: the app may fetch them")
+        XCTAssertTrue(Favicon.fetchScript.contains("/^image\\//i"), Favicon.fetchScript)
+    }
+
     func testLocalPagesKeepLocalIcons() {
         let urls = Favicon.urls([.init(href: "icon.png", rel: "icon")], page: URL(string: "file:///Users/me/site/index.html")!)
         XCTAssertEqual(urls.map(\.absoluteString), ["file:///Users/me/site/icon.png"])
@@ -199,5 +230,69 @@ final class SEOTextTests: XCTestCase {
         XCTAssertEqual(decoded, report)
         let keys = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(report)) as? [String: Any]).keys
         XCTAssertEqual(Set(keys), ["url", "score", "checks", "facts"], "the language is not part of the JSON")
+    }
+}
+
+final class SEOMoreTests: XCTestCase {
+    func testVitalsHreflangAndSitemap() {
+        var facts = PageFacts(url: "https://x.test/a", title: "A good page title about things")
+        facts.vitals = .init(lcp: 4500, fcp: 900, ttfb: 2500, cls: 0.15, transferBytes: 6_000_000, domNodes: 3500)
+        facts.hreflang = 2
+        facts.hreflangSelf = false
+        facts.sitemap = .init(url: "https://x.test/sitemap.xml", status: 200, listsPage: false)
+        let byID = Dictionary(SEOReport(facts: facts).checks.map { ($0.id, $0.status) }) { a, _ in a }
+        XCTAssertEqual(byID["lcp"], .fail)
+        XCTAssertEqual(byID["cls"], .warn)
+        XCTAssertEqual(byID["ttfb"], .warn)
+        XCTAssertEqual(byID["dom-size"], .warn)
+        XCTAssertEqual(byID["page-weight"], .warn)
+        XCTAssertEqual(byID["hreflang"], .warn)
+        XCTAssertEqual(byID["sitemap"], .info)
+        facts.vitals = .init(lcp: 1200, cls: 0.01, domNodes: 300)
+        facts.sitemap?.listsPage = true
+        let good = Dictionary(SEOReport(facts: facts).checks.map { ($0.id, $0.status) }) { a, _ in a }
+        XCTAssertEqual(good["lcp"], .pass)
+        XCTAssertEqual(good["cls"], .pass)
+        XCTAssertNil(good["dom-size"])
+        XCTAssertEqual(good["sitemap"], .pass)
+    }
+
+    func testCrawlChecks() {
+        let page = PageFacts(url: "https://x.test/", title: "Home", description: "Same")
+        let pages = [
+            CrawlPage(url: "https://x.test/a", status: 200, title: "Home", description: "Same", h1: 1),
+            CrawlPage(url: "https://x.test/b", status: 200, title: nil, description: nil, h1: 0, noindex: true),
+            CrawlPage(url: "https://x.test/c", status: 404),
+        ]
+        let report = SEOReport(facts: page, pages: pages)
+        let byID = Dictionary(report.checks.map { ($0.id, $0) }) { a, _ in a }
+        XCTAssertEqual(byID["site-errors"]?.status, .fail)
+        XCTAssertEqual(byID["site-titles"]?.message, "2 pages share a title with another page")
+        XCTAssertEqual(byID["site-descriptions"]?.status, .warn)
+        XCTAssertEqual(byID["site-title"]?.status, .warn)
+        XCTAssertEqual(byID["site-noindex"]?.status, .info)
+        XCTAssertEqual(byID["site"]?.message, "3 linked pages checked")
+        XCTAssertTrue(report.markdown.contains("## Linked pages"))
+        XCTAssertTrue(SEOReport(facts: page).checks.allSatisfy { !$0.id.hasPrefix("site") }, "no crawl, no site checks")
+        let decoded = try? JSONDecoder().decode(SEOReport.self, from: JSONEncoder().encode(report))
+        XCTAssertEqual(decoded?.pages, pages)
+    }
+
+    func testSourceHeaderLineCannotEndTheComment() {
+        let line = PageSource.headerLine(url: "https://x.test/--><script>", status: 200, contentType: "text/html", charset: "UTF-8",
+                                         rendered: false)
+        XCTAssertTrue(line.hasPrefix("<!-- cmds: "))
+        XCTAssertEqual(line.components(separatedBy: "-->").count, 2, line)
+        for type in ["text/html; x=--->y", "a---", "-", "x-"] {
+            let line = PageSource.headerLine(url: "u", status: nil, contentType: type, charset: nil, rendered: true)
+            XCTAssertEqual(line.components(separatedBy: "-->").count, 2, line)
+            XCTAssertFalse(line.dropFirst(4).dropLast(4).contains("--"), line)
+        }
+    }
+
+    func testCrawlThatFoundNothingSaysSo() {
+        let page = PageFacts(url: "https://x.test/", title: "T")
+        XCTAssertEqual(SEOReport(facts: page, pages: []).checks.first { $0.id == "site" }?.status, .info)
+        XCTAssertNil(SEOReport(facts: page).checks.first { $0.id == "site" })
     }
 }

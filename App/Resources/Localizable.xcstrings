@@ -614,6 +614,17 @@
         }
       }
     },
+    "%@ keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from the browser.": {
+      "comment": "Settings › General › Browser bookmarks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@はこのプロファイルのブックマークを暗号化して保存しているため、cmdsは読めません。別のプロファイルを選ぶか、ブラウザから書き出してください。"
+          }
+        }
+      }
+    },
     "%@ limit": {
       "comment": "agent usage limit of a window (1h limit)",
       "localizations": {
@@ -711,6 +722,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ — %2$@"
+          }
+        }
+      }
+    },
+    "%@'s bookmarks file could not be read.": {
+      "comment": "Settings › General › Browser bookmarks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@のブックマークファイルを読み込めませんでした。"
           }
         }
       }
@@ -866,6 +888,17 @@
         }
       }
     },
+    "%lld KB transferred": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "転送量%lld KB"
+          }
+        }
+      }
+    },
     "%lld agents, nothing needs you.": {
       "comment": "assistant: spoken status",
       "localizations": {
@@ -1008,6 +1041,17 @@
         }
       }
     },
+    "%lld elements on the page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページの要素数%lld"
+          }
+        }
+      }
+    },
     "%lld failed": {
       "localizations": {
         "ja": {
@@ -1104,6 +1148,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "残存プロセス%1$lld個 · %2$@"
+          }
+        }
+      }
+    },
+    "%lld linked pages checked": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンク先のページを%lld件確認しました"
           }
         }
       }
@@ -1207,6 +1262,67 @@
           "stringUnit": {
             "state": "translated",
             "value": "選択肢は%1$lld個、1番は「%2$@」です。"
+          }
+        }
+      }
+    },
+    "%lld pages answered with an error": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のページがエラーを返しました"
+          }
+        }
+      }
+    },
+    "%lld pages ask not to be indexed": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のページがインデックスしないよう求めています"
+          }
+        }
+      }
+    },
+    "%lld pages share a description with another page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のページの説明がほかのページと重複しています"
+          }
+        }
+      }
+    },
+    "%lld pages share a title with another page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld件のページのタイトルがほかのページと重複しています"
+          }
+        }
+      }
+    },
+    "%lld pages without %@": {
+      "comment": "SEO report",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$lld pages without %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@がないページが%1$lld件あります"
           }
         }
       }
@@ -1576,11 +1692,23 @@
     },
     "A bar of Google Chrome's bookmarks under the address bar (read only; ⌘-click opens a new tab). Chrome's sign-ins and passwords are not shared.": {
       "comment": "Settings › General › Browser",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "アドレスバーの下にGoogle Chromeのブックマークを表示します（読み取りのみ。⌘-クリックで新規タブに開きます）。Chromeのログイン情報やパスワードは共有されません。"
+          }
+        }
+      }
+    },
+    "A bar of your browser's bookmarks under the address bar (read only; ⌘-click opens a new tab). Its sign-ins and passwords are not shared.": {
+      "comment": "Settings › General › Browser",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アドレスバーの下にブラウザのブックマークを表示します（読み取りのみ。⌘-クリックで新規タブに開きます）。ブラウザのログイン情報やパスワードは共有されません。"
           }
         }
       }
@@ -1930,6 +2058,17 @@
         }
       }
     },
+    "After %lld minutes": {
+      "comment": "Settings › General › Suspend background tabs",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld分後"
+          }
+        }
+      }
+    },
     "Agent Session": {
       "localizations": {
         "ja": {
@@ -2009,6 +2148,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "すべてのレベル"
+          }
+        }
+      }
+    },
+    "All Tabs": {
+      "comment": "Tab bar: the overflow menu's button",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのタブ"
           }
         }
       }
@@ -2540,6 +2690,17 @@
         }
       }
     },
+    "Bookmarks from:": {
+      "comment": "Settings › General › Browser",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブックマークの読み込み元："
+          }
+        }
+      }
+    },
     "Both Ways": {
       "localizations": {
         "ja": {
@@ -2617,6 +2778,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ブラウザの拡大率:"
+          }
+        }
+      }
+    },
+    "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.": {
+      "comment": "Settings › General › Browser",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その時間表示も操作もされていないブラウザのタブは、メモリを節約するためにページを解放し、表示したときに読み込み直します。未保存の入力や再生中のメディアがあるページは対象外です。"
           }
         }
       }
@@ -3177,6 +3349,7 @@
     },
     "Chrome keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from Chrome.": {
       "comment": "Settings › General › Chrome bookmarks",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3188,6 +3361,7 @@
     },
     "Chrome profile:": {
       "comment": "Settings › General › Browser",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3199,6 +3373,7 @@
     },
     "Chrome's bookmarks file could not be read.": {
       "comment": "Settings › General › Chrome bookmarks",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3297,6 +3472,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude Code のサブエージェントを、各ワークスペースの下にカードで表示します（現在の操作つき）。SubagentStart / SubagentStop フックが必要です。"
+          }
+        }
+      }
+    },
+    "Claude Harness": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claudeハーネス"
           }
         }
       }
@@ -4040,6 +4225,17 @@
         }
       }
     },
+    "Copy Console": {
+      "comment": "Console drawer: copy the shown lines",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コンソールをコピー"
+          }
+        }
+      }
+    },
     "Copy Path": {
       "localizations": {
         "ja": {
@@ -4340,6 +4536,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsで作成"
+          }
+        }
+      }
+    },
+    "Cumulative Layout Shift %@ (good: 0.1 or less)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cumulative Layout Shift %@（良好：0.1以下）"
           }
         }
       }
@@ -5114,6 +5321,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ペイン全体"
+          }
+        }
+      }
+    },
+    "Filter": {
+      "comment": "Console drawer: text filter",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "絞り込み"
           }
         }
       }
@@ -6341,6 +6559,17 @@
         }
       }
     },
+    "Largest Contentful Paint %lld ms (good: 2500 or less)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Largest Contentful Paint %lldミリ秒（良好：2500以下）"
+          }
+        }
+      }
+    },
     "Last Result": {
       "localizations": {
         "ja": {
@@ -6589,6 +6818,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "別の場所にリンク"
+          }
+        }
+      }
+    },
+    "Linked pages": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リンク先のページ"
           }
         }
       }
@@ -7034,6 +7274,26 @@
         }
       }
     },
+    "Move Tab Left": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タブを左へ移動"
+          }
+        }
+      }
+    },
+    "Move Tab Right": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タブを右へ移動"
+          }
+        }
+      }
+    },
     "Move Tile Down": {
       "localizations": {
         "ja": {
@@ -7279,6 +7539,7 @@
       }
     },
     "Never": {
+      "comment": "Settings › General › Suspend background tabs",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -7532,6 +7793,7 @@
     },
     "No Chrome bookmarks found for this profile.": {
       "comment": "Settings › General › Chrome bookmarks",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -7625,6 +7887,17 @@
         }
       }
     },
+    "No bookmarks of %@ found (for this profile).": {
+      "comment": "Settings › General › Browser bookmarks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@のブックマークが（このプロファイルに）見つかりません。"
+          }
+        }
+      }
+    },
     "No console messages.": {
       "localizations": {
         "ja": {
@@ -7641,6 +7914,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "残存プロセスはありません。"
+          }
+        }
+      }
+    },
+    "No links to other pages of this site to check (or robots.txt disallows them)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックできる同じサイト内のほかのページへのリンクがありません（または robots.txt で禁止されています）"
           }
         }
       }
@@ -7775,6 +8059,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "後で"
+          }
+        }
+      }
+    },
+    "Not Secure: this page is not encrypted, so what you type here can be read on the way": {
+      "comment": "Browser toolbar: icon before the address of an http page",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保護されていない通信：このページは暗号化されていないため、入力した内容が途中で読み取られるおそれがあります"
           }
         }
       }
@@ -8361,6 +8656,16 @@
         }
       }
     },
+    "Overview": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "概要"
+          }
+        }
+      }
+    },
     "Page": {
       "comment": "SEO report",
       "localizations": {
@@ -8750,6 +9055,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsのターミナルから起動し、ペインやワークスペースを閉じた後も動いているプロセスです。クリックすると一覧を表示して終了できます。"
+          }
+        }
+      }
+    },
+    "Profile:": {
+      "comment": "Settings › General › Browser bookmarks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイル："
           }
         }
       }
@@ -9549,6 +9865,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finderに表示 — %@"
+          }
+        }
+      }
+    },
+    "Review Yesterday": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "昨日の振り返り"
           }
         }
       }
@@ -10368,6 +10694,7 @@
     },
     "Show Chrome bookmarks": {
       "comment": "Settings › General › Browser",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -10423,6 +10750,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "サブエージェントを表示"
+          }
+        }
+      }
+    },
+    "Show a bookmarks bar": {
+      "comment": "Settings › General › Browser",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブックマークバーを表示"
           }
         }
       }
@@ -10604,6 +10942,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サイズ:"
+          }
+        }
+      }
+    },
+    "Skill from Memory": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモリからスキルを作成"
           }
         }
       }
@@ -11169,6 +11517,27 @@
         }
       }
     },
+    "Suggest CLAUDE.md Changes": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CLAUDE.mdの改善案"
+          }
+        }
+      }
+    },
+    "Suspend background tabs:": {
+      "comment": "Settings › General › Browser",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "背後のタブを休止："
+          }
+        }
+      }
+    },
     "Swap %@ in use.": {
       "comment": "memory warning notification",
       "localizations": {
@@ -11611,6 +11980,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "アシスタントは一時停止中です。cmds のメニューバーから聞き取りを再開してください。"
+          }
+        }
+      }
+    },
+    "The bookmarks saved in your account are kept encrypted by %@ and are not shown; those on this Mac are.": {
+      "comment": "Settings › General › Browser bookmarks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントに保存されたブックマークは%@が暗号化して保存しているため表示できません。このMacのブックマークは表示しています。"
           }
         }
       }
@@ -13726,6 +14106,17 @@
         }
       }
     },
+    "a description": {
+      "comment": "SEO report: pages without …",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "説明"
+          }
+        }
+      }
+    },
     "a folder in the repository": {
       "localizations": {
         "ja": {
@@ -14190,8 +14581,20 @@
         }
       }
     },
+    "macOS keeps other apps from reading %@'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds. That access is for the whole app, including the programs you run in its terminals.": {
+      "comment": "Settings › General › Browser bookmarks",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOSはほかのアプリによる%@のデータの読み込みを制限しています。ブックマークを表示するには、プライバシーとセキュリティ › フルディスクアクセスでcmdsをオンにしてから、cmdsに戻ってください。このアクセス権はアプリ全体に与えられ、ターミナルで実行するプログラムにも及びます。"
+          }
+        }
+      }
+    },
     "macOS keeps other apps from reading Chrome's data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds.": {
       "comment": "Settings › General › Chrome bookmarks",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -14648,6 +15051,17 @@
         }
       }
     },
+    "the hreflang alternates do not include this page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hreflangの代替ページにこのページが含まれていません"
+          }
+        }
+      }
+    },
     "the page answered HTTP %lld": {
       "comment": "SEO report",
       "localizations": {
@@ -14666,6 +15080,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "SSHペインです。"
+          }
+        }
+      }
+    },
+    "the server answered after %lld ms": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーバーの応答まで%lldミリ秒"
+          }
+        }
+      }
+    },
+    "the sitemap does not list this page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイトマップにこのページがありません"
+          }
+        }
+      }
+    },
+    "the sitemap lists this page": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サイトマップにこのページがあります"
+          }
+        }
+      }
+    },
+    "the sitemap robots.txt names answered HTTP %lld": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "robots.txtのサイトマップがHTTP %lldを返しました"
           }
         }
       }

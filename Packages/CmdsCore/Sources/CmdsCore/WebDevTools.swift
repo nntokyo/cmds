@@ -16,6 +16,17 @@ public enum PageSource {
     /// `callAsyncJavaScript` body. Arguments `rendered` (Bool), `fetchAgain` (Bool: ask the server when the page is not
     /// in the cache), `maxBytes` (Int). Returns `{url, source, rendered, notCached?, status?, contentType?}`.
 
+    /// The first line of a source view: what was shown (`url`, HTTP status, content type, encoding), as an HTML comment
+    /// (`--` in the values is broken up so the comment cannot end early).
+    public static func headerLine(url: String, status: Int?, contentType: String?, charset: String?, rendered: Bool) -> String {
+        let parts = [url, status.map { "HTTP \($0)" }, contentType, charset.map { "decoded as \($0)" },
+                     rendered ? "DOM after scripts" : "from the cache"].compactMap { $0 }
+        var text = parts.joined(separator: " · ")
+        while text.contains("--") { text = text.replacingOccurrences(of: "--", with: "- -") }
+        if text.hasSuffix("-") { text += " " }
+        return "<!-- cmds: " + text + " -->\n"
+    }
+
     /// The first line of a source view that shows the DOM because the HTML was not in the cache.
     public static let notCachedNote = "<!-- cmds: the HTML of this page is not in the cache, so this is the DOM after scripts ran. `cmds browser source --fetch` asks the server again (a GET, which may repeat what the URL does). -->\n"
     public static let script = """
@@ -53,7 +64,7 @@ public enum PageSource {
           let decoder;
           try { decoder = new TextDecoder(document.characterSet || 'utf-8'); } catch (e) { decoder = new TextDecoder('utf-8'); }
           return { url: location.href, source: decoder.decode(bytes), rendered: false, status: response.status,
-                   contentType: response.headers.get('content-type') };
+                   contentType: response.headers.get('content-type'), charset: document.characterSet };
         } catch (e) {
           return dom();
         }
@@ -200,11 +211,18 @@ public struct PageFacts: Codable, Equatable, Sendable {
         public var disallowsAll: Bool
         /// `Sitemap:` lines.
         public var sitemaps: Int
+        /// The `Disallow:` paths of the `*` group (at most 200): the crawl (`SEOAudit.crawlScript`) skips them…
+        public var disallowed: [String]?
+        /// …unless an `Allow:` path of the group matches longer.
+        public var allowed: [String]?
 
-        public init(status: Int, disallowsAll: Bool = false, sitemaps: Int = 0) {
+        public init(status: Int, disallowsAll: Bool = false, sitemaps: Int = 0, disallowed: [String]? = nil,
+                    allowed: [String]? = nil) {
             self.status = status
             self.disallowsAll = disallowsAll
             self.sitemaps = sitemaps
+            self.disallowed = disallowed
+            self.allowed = allowed
         }
     }
 
@@ -242,6 +260,45 @@ public struct PageFacts: Codable, Equatable, Sendable {
     /// `http:` resources on an `https:` page.
     public var mixedContent: Int
     public var robotsTxt: RobotsTxt?
+    /// Loading measures (`PerformanceObserver`, navigation and resource timing); nil fields: not reported by WebKit.
+    public var vitals: Vitals?
+    /// With `hreflang` alternates: whether one of them is this page.
+    public var hreflangSelf: Bool?
+    /// The first sitemap robots.txt names (on the page's own site): its status and whether it lists this page.
+    public var sitemap: SitemapCheck?
+
+    public struct Vitals: Codable, Equatable, Sendable {
+        /// Largest Contentful Paint, First Contentful Paint, time to first byte (ms); Cumulative Layout Shift.
+        public var lcp: Double?
+        public var fcp: Double?
+        public var ttfb: Double?
+        public var cls: Double?
+        /// Bytes transferred for the page and its resources (cross-site resources without timing headers count 0).
+        public var transferBytes: Int?
+        public var domNodes: Int?
+
+        public init(lcp: Double? = nil, fcp: Double? = nil, ttfb: Double? = nil, cls: Double? = nil,
+                    transferBytes: Int? = nil, domNodes: Int? = nil) {
+            self.lcp = lcp
+            self.fcp = fcp
+            self.ttfb = ttfb
+            self.cls = cls
+            self.transferBytes = transferBytes
+            self.domNodes = domNodes
+        }
+    }
+
+    public struct SitemapCheck: Codable, Equatable, Sendable {
+        public var url: String
+        public var status: Int
+        public var listsPage: Bool
+
+        public init(url: String, status: Int, listsPage: Bool) {
+            self.url = url
+            self.status = status
+            self.listsPage = listsPage
+        }
+    }
 
     public init(url: String, title: String? = nil, description: String? = nil, canonical: String? = nil,
                 robots: String? = nil, lang: String? = nil, viewport: String? = nil, charset: String? = nil,
@@ -320,27 +377,56 @@ public struct SEOCheck: Codable, Equatable, Sendable {
     }
 }
 
+/// One page of the crawl (`browser.seo` with `crawl`): what its HTML declares, without running it.
+public struct CrawlPage: Codable, Equatable, Sendable {
+    public var url: String
+    /// HTTP status (0: no answer, a timeout, or not HTML).
+    public var status: Int
+    public var title: String?
+    public var description: String?
+    public var h1: Int
+    public var canonical: String?
+    public var noindex: Bool
+
+    public init(url: String, status: Int, title: String? = nil, description: String? = nil, h1: Int = 0,
+                canonical: String? = nil, noindex: Bool = false) {
+        self.url = url
+        self.status = status
+        self.title = title
+        self.description = description
+        self.h1 = h1
+        self.canonical = canonical
+        self.noindex = noindex
+    }
+}
+
 /// `browser.seo`: the checks, worst first, and a score (100 less 15 per failure and 5 per warning).
 public struct SEOReport: Codable, Equatable, Sendable {
     public var url: String
     public var score: Int
     public var checks: [SEOCheck]
     public var facts: PageFacts
+    /// The crawl's pages (`crawl`), the page itself not included; nil without a crawl.
+    public var pages: [CrawlPage]?
 
     /// The labels of `markdown` (English unless the app passes its own).
     private var words: SEOText = .english
 
-    private enum CodingKeys: String, CodingKey { case url, score, checks, facts }
+    private enum CodingKeys: String, CodingKey { case url, score, checks, facts, pages }
 
     public static func == (lhs: SEOReport, rhs: SEOReport) -> Bool {
         lhs.url == rhs.url && lhs.score == rhs.score && lhs.checks == rhs.checks && lhs.facts == rhs.facts
+            && lhs.pages == rhs.pages
     }
 
-    /// `text`: the language of the messages and of `markdown` (the API and CLI keep English).
-    public init(facts: PageFacts, text: SEOText = .english) {
+    /// `text`: the language of the messages and of `markdown` (the API and CLI keep English). `pages`: a crawl of the
+    /// site's linked pages, checked together with this one.
+    public init(facts: PageFacts, pages: [CrawlPage]? = nil, text: SEOText = .english) {
         words = text
         url = facts.url
-        checks = SEOAudit.checks(facts, text: text).enumerated().sorted { lhs, rhs in
+        self.pages = pages
+        checks = (SEOAudit.checks(facts, text: text) + SEOAudit.crawlChecks(page: facts, pages: pages, text: text))
+            .enumerated().sorted { lhs, rhs in
             lhs.element.status == rhs.element.status ? lhs.offset < rhs.offset : lhs.element.status < rhs.element.status
         }.map(\.element)
         let failures = checks.filter { $0.status == .fail }.count
@@ -386,6 +472,14 @@ public struct SEOReport: Codable, Equatable, Sendable {
         ]
         for (name, value) in rows {
             lines.append("| \(name) | \(value ?? "—") |")
+        }
+        if let pages, !pages.isEmpty {
+            lines += ["", "## \(label(.pages))", "", "| | | |", "|---|---|---|"]
+            for page in pages {
+                let status = page.status == 0 ? "—" : String(page.status)
+                let title = page.title.map(markdownEscaped) ?? "—"
+                lines.append("| \(status) | \(code(page.url)) | \(title)\(page.noindex ? " · noindex" : "") |")
+            }
         }
         if !facts.headings.isEmpty {
             // Flat: indenting by level would turn deep headings into a code block.
@@ -435,6 +529,11 @@ public enum SEOMessage: Sendable {
     case httpOnly, mixedContent(Int)
     case thinContent(Int)
     case faviconMissing, charsetMissing
+    case hreflangNoSelf, sitemapStatus(Int), sitemapMissingPage, sitemapListsPage
+    case lcp(Int), cls(String), ttfb(Int), domSize(Int), pageWeight(Int)
+    /// The crawl (`SEOAudit.crawlChecks`).
+    case crawlDuplicateTitles(Int), crawlDuplicateDescriptions(Int), crawlMissing(count: Int, what: String),
+         crawlNoindex(Int), crawlErrors(Int), crawlOK(Int), crawlNothing
     /// A value shown as it is (the canonical URL, the language…).
     case value(String)
     case linkCounts(total: Int, internal: Int, external: Int, nofollow: Int), imageCounts(total: Int, withoutAlt: Int)
@@ -443,7 +542,7 @@ public enum SEOMessage: Sendable {
 /// Headings and row names of the SEO report.
 public enum SEOLabel: Sendable {
     case report, problems, warnings, notes, passed, page, title, description, language, structuredData, links, images, words,
-         headings
+         headings, pages
 }
 
 /// The words of the SEO check: `english` here (API, CLI, MCP); the app passes a localized one for its report tab.
@@ -497,6 +596,22 @@ public struct SEOText: Sendable {
         case .thinContent(let words): return "\(words) words of text (thin pages rank poorly)"
         case .faviconMissing: return "no <link rel=\"icon\">"
         case .charsetMissing: return "no <meta charset>"
+        case .hreflangNoSelf: return "the hreflang alternates do not include this page"
+        case .sitemapStatus(let status): return "the sitemap robots.txt names answered HTTP \(status)"
+        case .sitemapMissingPage: return "the sitemap does not list this page"
+        case .sitemapListsPage: return "the sitemap lists this page"
+        case .lcp(let ms): return "Largest Contentful Paint \(ms) ms (good: 2500 or less)"
+        case .cls(let value): return "Cumulative Layout Shift \(value) (good: 0.1 or less)"
+        case .ttfb(let ms): return "the server answered after \(ms) ms"
+        case .domSize(let nodes): return "\(nodes) elements on the page"
+        case .pageWeight(let kb): return "\(kb) KB transferred"
+        case .crawlDuplicateTitles(let count): return "\(count) pages share a title with another page"
+        case .crawlDuplicateDescriptions(let count): return "\(count) pages share a description with another page"
+        case .crawlMissing(let count, let what): return count == 1 ? "1 page without \(what)" : "\(count) pages without \(what)"
+        case .crawlNoindex(let count): return count == 1 ? "1 page asks not to be indexed" : "\(count) pages ask not to be indexed"
+        case .crawlErrors(let count): return count == 1 ? "1 page answered with an error" : "\(count) pages answered with an error"
+        case .crawlOK(let count): return count == 1 ? "1 linked page checked" : "\(count) linked pages checked"
+        case .crawlNothing: return "No links to other pages of this site to check (or robots.txt disallows them)"
         case .value(let value): return value
         case .linkCounts(let total, let inside, let outside, let nofollow):
             return "\(total) (\(inside) internal, \(outside) external, \(nofollow) nofollow)"
@@ -518,6 +633,7 @@ public struct SEOText: Sendable {
         case .images: return "Images"
         case .words: return "Words"
         case .headings: return "Headings"
+        case .pages: return "Linked pages"
         }
     })
 }
@@ -672,8 +788,134 @@ public enum SEOAudit {
         }
         if !facts.favicon { add("favicon", .info, .faviconMissing) }
         if (facts.charset ?? "").isEmpty { add("charset", .info, .charsetMissing) }
+
+        if facts.hreflang > 0, facts.hreflangSelf == false { add("hreflang", .warn, .hreflangNoSelf) }
+        if let sitemap = facts.sitemap {
+            if sitemap.status != 200 {
+                add("sitemap", .warn, .sitemapStatus(sitemap.status))
+            } else if !sitemap.listsPage {
+                add("sitemap", .info, .sitemapMissingPage)
+            } else {
+                add("sitemap", .pass, .sitemapListsPage)
+            }
+        }
+        if let vitals = facts.vitals {
+            if let lcp = vitals.lcp {
+                add("lcp", lcp > 4000 ? .fail : lcp > 2500 ? .warn : .pass, .lcp(Int(lcp)))
+            }
+            if let cls = vitals.cls {
+                add("cls", cls > 0.25 ? .fail : cls > 0.1 ? .warn : .pass, .cls(String(format: "%.3f", cls)))
+            }
+            if let ttfb = vitals.ttfb, ttfb > 1800 { add("ttfb", .warn, .ttfb(Int(ttfb))) }
+            if let nodes = vitals.domNodes, nodes > 1500 { add("dom-size", nodes > 3000 ? .warn : .info, .domSize(nodes)) }
+            if let bytes = vitals.transferBytes, bytes > 5_000_000 { add("page-weight", .warn, .pageWeight(bytes / 1024)) }
+        }
         return checks
     }
+
+    /// Checks over the page and its crawl: duplicate titles or descriptions, pages without them or an h1, noindex pages,
+    /// errors. Nothing without a crawl (`pages` nil); a note when it found no page to check.
+    public static func crawlChecks(page: PageFacts, pages: [CrawlPage]?, text: SEOText = .english) -> [SEOCheck] {
+        guard let pages else { return [] }
+        var checks: [SEOCheck] = []
+        func add(_ id: String, _ status: SEOCheck.Status, _ message: SEOMessage) {
+            checks.append(SEOCheck(id, status, text.message(message)))
+        }
+        guard !pages.isEmpty else {
+            add("site", .info, .crawlNothing)
+            return checks
+        }
+        let ok = pages.filter { (200..<300).contains($0.status) }
+        let all = ok + [CrawlPage(url: page.url, status: 200, title: page.title, description: page.description)]
+        func duplicates(_ key: (CrawlPage) -> String?) -> Int {
+            let values = all.compactMap { key($0)?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            let counts = Dictionary(values.map { ($0, 1) }, uniquingKeysWith: +)
+            return counts.values.filter { $0 > 1 }.reduce(0, +)
+        }
+        let errors = pages.filter { $0.status >= 400 }.count
+        if errors > 0 { add("site-errors", .fail, .crawlErrors(errors)) }
+        let titles = duplicates(\.title)
+        if titles > 0 { add("site-titles", .warn, .crawlDuplicateTitles(titles)) }
+        let descriptions = duplicates(\.description)
+        if descriptions > 0 { add("site-descriptions", .warn, .crawlDuplicateDescriptions(descriptions)) }
+        let noTitle = ok.filter { ($0.title ?? "").isEmpty }.count
+        if noTitle > 0 { add("site-title", .warn, .crawlMissing(count: noTitle, what: "<title>")) }
+        let noDescription = ok.filter { ($0.description ?? "").isEmpty }.count
+        if noDescription > 0 { add("site-description", .info, .crawlMissing(count: noDescription, what: "a description")) }
+        let noH1 = ok.filter { $0.h1 == 0 }.count
+        if noH1 > 0 { add("site-h1", .info, .crawlMissing(count: noH1, what: "<h1>")) }
+        let noindex = ok.filter(\.noindex).count
+        if noindex > 0 { add("site-noindex", .info, .crawlNoindex(noindex)) }
+        add("site", .pass, .crawlOK(pages.count))
+        return checks
+    }
+
+    /// At most this many linked pages are crawled.
+    public static let maxCrawl = 50
+
+    /// `callAsyncJavaScript` body: up to `max` links of the page on its own site (not disallowed by robots.txt's `*`
+    /// group: `disallowed`), each fetched without cookies (8 s, 2 MB), parsed without running it. Returns `[CrawlPage]`.
+    public static let crawlScript = """
+        // robots.txt rules of the `*` group: `*` and `$` patterns, the longest match wins, Allow over Disallow on a tie.
+        const rule = (p) => { try { return new RegExp('^' + p.replace(/[.+?^{}()|[\\]\\\\]/g, '\\\\$&').replace(/\\*/g, '.*')); } catch (e) { return null; } };
+        const rules = [...(disallowed || []).map(p => ({ p, allow: false })), ...(allowed || []).map(p => ({ p, allow: true }))]
+          .filter(r => r.p).map(r => ({ ...r, re: rule(r.p) })).filter(r => r.re);
+        const blocked = (u) => {
+          const path = u.pathname + u.search;
+          let best = null;
+          for (const r of rules) if (r.re.test(path) && (!best || r.p.length > best.p.length || (r.p.length === best.p.length && r.allow))) best = r;
+          return best ? !best.allow : false;
+        };
+        // Links that do something rather than show a page (sign out, delete…) or that are marked not to follow.
+        const action = /(^|[\\/_.?&=-])(log-?out|log-?off|sign-?out|delete|destroy|remove|unsubscribe|revoke|disconnect|deactivate|cancel|reset|purge)([\\/_.?&=-]|$)/i;
+        const seen = new Set([location.href.split('#')[0]]);
+        const queue = [];
+        for (const a of document.querySelectorAll('a[href]')) {
+          if (!(a instanceof HTMLAnchorElement) || a.hasAttribute('download') || a.hasAttribute('data-method')
+              || /(^|\\s)nofollow(\\s|$)/i.test(a.getAttribute('rel') || '')) continue;
+          let u; try { u = new URL(a.getAttribute('href'), location.href); } catch (e) { continue; }
+          if (u.origin !== location.origin || !/^https?:$/.test(u.protocol)) continue;
+          u.hash = '';
+          if (seen.has(u.href) || blocked(u) || action.test(u.pathname + u.search)) continue;
+          seen.add(u.href); queue.push(u.href);
+          if (queue.length >= max) break;
+        }
+        const cut = (s) => s == null ? null : String(s).trim().slice(0, 300) || null;
+        const one = async (url) => {
+          const abort = new AbortController();
+          const timer = setTimeout(() => abort.abort(), 8000);
+          try {
+            const r = await fetch(url, { credentials: 'omit', redirect: 'follow', signal: abort.signal });
+            const type = r.headers.get('content-type') || '';
+            // Not HTML: not a page (an error still counts); its download stops here.
+            if (!/html/i.test(type)) { abort.abort(); return { url, status: r.status >= 400 ? r.status : 0, h1: 0, noindex: false }; }
+            const reader = r.body.getReader(); const parts = []; let size = 0;
+            while (size < 2000000) { const { done, value } = await reader.read(); if (done) break; parts.push(value); size += value.length; }
+            try { reader.cancel(); } catch (e) {}
+            const all = new Uint8Array(Math.min(size, 2000000)); let offset = 0;
+            for (const p of parts) { const take = p.subarray(0, all.length - offset); all.set(take, offset); offset += take.length; if (offset >= all.length) break; }
+            // The encoding: the header's charset, else a <meta> in the first 2 KB, else UTF-8.
+            let label = (type.match(/charset=["']?([\\w.:-]+)/i) || [])[1];
+            if (!label) label = (new TextDecoder('latin1').decode(all.subarray(0, 2048)).match(/<meta[^>]+charset=["']?([\\w.:-]+)/i) || [])[1];
+            let decoder; try { decoder = new TextDecoder(label || 'utf-8'); } catch (e) { decoder = new TextDecoder(); }
+            const doc = new DOMParser().parseFromString(decoder.decode(all), 'text/html');
+            const meta = (s) => { const e = doc.querySelector(s); return e ? (e.getAttribute('content') || '').trim() : null; };
+            const robots = [meta('meta[name="robots" i]'), meta('meta[name="googlebot" i]')].filter(Boolean).join(',').toLowerCase();
+            const canonical = doc.querySelector('link[rel="canonical" i]');
+            // Redirected: the page it ended at (two links to one page are one page).
+            const final = r.redirected && r.url ? r.url.split('#')[0] : url;
+            return { url: final, status: r.status, title: cut(doc.title), description: cut(meta('meta[name="description" i]')),
+                     h1: doc.querySelectorAll('h1').length, canonical: canonical ? cut(canonical.getAttribute('href')) : null,
+                     noindex: /(^|[,\\s])(noindex|none)([,\\s]|$)/.test(robots) };
+          } catch (e) {
+            return { url, status: 0, h1: 0, noindex: false };
+          } finally { clearTimeout(timer); }
+        };
+        const results = [];
+        for (let i = 0; i < queue.length; i += 4) results.push(...await Promise.all(queue.slice(i, i + 4).map(one)));
+        const pages = new Set([location.href.split('#')[0]]);
+        return results.filter(p => p.status === 0 || p.status >= 400 || !pages.has(p.url) && pages.add(p.url));
+        """
 
     /// `callAsyncJavaScript` body: returns `PageFacts` as JSON. Fetches `/robots.txt` of http(s) pages (same origin).
     public static let script = """
@@ -720,7 +962,7 @@ public enum SEOAudit {
         }
         let status = null;
         try { const nav = performance.getEntriesByType('navigation')[0]; if (nav && nav.responseStatus) status = nav.responseStatus; } catch (e) {}
-        let robotsTxt = null;
+        let robotsTxt = null, sitemap = null;
         if (/^https?:$/.test(location.protocol)) {
           // A server that does not answer skips the check (5 s), not the whole report.
           const abort = new AbortController();
@@ -731,23 +973,75 @@ public enum SEOAudit {
               ? (await r.text()).slice(0, 500000) : '';
             // Groups: consecutive User-agent lines, then their rules. The `*` group disallowing `/` (with no Allow)
             // shuts out every crawler without a group of its own.
-            let agents = [], inRules = false, starDisallowsAll = false, starAllows = false, sitemaps = 0;
+            let agents = [], inRules = false, starDisallowsAll = false, starAllows = false, sitemaps = 0, firstSitemap = null;
+            const disallowed = [], allowed = [];
             for (const raw of body.split(/\\r?\\n/)) {
               const line = raw.replace(/#.*/, '').trim();
               const m = line.match(/^([A-Za-z-]+)\\s*:\\s*(.*)$/); if (!m) continue;
               const key = m[1].toLowerCase(), value = m[2].trim();
               if (key === 'user-agent') { if (inRules) { agents = []; inRules = false; } agents.push(value); continue; }
-              if (key === 'sitemap') { sitemaps++; continue; }
+              if (key === 'sitemap') { sitemaps++; if (!firstSitemap) firstSitemap = value; continue; }
               if (key !== 'allow' && key !== 'disallow') continue;
               inRules = true;
               if (!agents.includes('*')) continue;
               if (key === 'disallow' && value === '/') starDisallowsAll = true;
-              if (key === 'allow' && value !== '') starAllows = true;
+              if (key === 'disallow' && value !== '' && disallowed.length < 200) disallowed.push(value);
+              if (key === 'allow' && value !== '') { starAllows = true; if (allowed.length < 200) allowed.push(value); }
             }
-            robotsTxt = { status: r.status, disallowsAll: starDisallowsAll && !starAllows, sitemaps };
+            robotsTxt = { status: r.status, disallowsAll: starDisallowsAll && !starAllows, sitemaps, disallowed, allowed };
+            // The first sitemap, on this site only (5 s, 5 MB; gzip unpacked): does it list this page? A sitemap index:
+            // its first five sitemaps on this site.
+            if (firstSitemap) {
+              try {
+                const read = async (url) => {
+                  const s = await fetch(url, { credentials: 'omit', redirect: 'follow', signal: abort.signal });
+                  if (!s.ok || !s.body) return { status: s.status, text: '' };
+                  let stream = s.body;
+                  if (/\\.gz$/i.test(new URL(url).pathname) && !/xml|text/i.test(s.headers.get('content-type') || '')
+                      && typeof DecompressionStream !== 'undefined') stream = stream.pipeThrough(new DecompressionStream('gzip'));
+                  const reader = stream.getReader(); let size = 0; const parts = [];
+                  while (size < 5000000) { const { done, value } = await reader.read(); if (done) break; parts.push(value); size += value.length; }
+                  try { reader.cancel(); } catch (e) {}
+                  const all = new Uint8Array(Math.min(size, 5000000)); let offset = 0;
+                  for (const p of parts) { const take = p.subarray(0, all.length - offset); all.set(take, offset); offset += take.length; if (offset >= all.length) break; }
+                  return { status: s.status, text: new TextDecoder().decode(all) };
+                };
+                const locs = (text) => [...text.matchAll(/<loc>\\s*(?:<!\\[CDATA\\[)?\\s*([^<\\]]*?)\\s*(?:\\]\\]>)?\\s*<\\/loc>/gi)]
+                  .map(m => m[1].replace(/&amp;/g, '&').trim());
+                const sm = new URL(firstSitemap, location.href);
+                if (sm.origin === location.origin) {
+                  const first = await read(sm.href);
+                  let listed = locs(first.text);
+                  if (/<sitemapindex/i.test(first.text)) {
+                    const children = listed.filter(u => { try { return new URL(u).origin === location.origin; } catch (e) { return false; } }).slice(0, 5);
+                    listed = [];
+                    for (const child of children) { try { listed.push(...locs((await read(child)).text)); } catch (e) {} }
+                  }
+                  const page = location.href.split('#')[0];
+                  const forms = [page, page.endsWith('/') ? page.slice(0, -1) : page + '/'];
+                  sitemap = { url: sm.href, status: first.status, listsPage: listed.some(u => forms.includes(u)) };
+                }
+              } catch (e) {}
+            }
           } catch (e) { robotsTxt = { status: 0, disallowsAll: false, sitemaps: 0 }; }
           clearTimeout(timer);
         }
+        // Loading measures (what WebKit reports; 300 ms for buffered entries).
+        const vitals = await new Promise(resolve => {
+          let lcp = null, cls = 0, clsSeen = false;
+          try { new PerformanceObserver(l => { for (const e of l.getEntries()) lcp = e.startTime; }).observe({ type: 'largest-contentful-paint', buffered: true }); } catch (e) {}
+          try { new PerformanceObserver(l => { for (const e of l.getEntries()) { clsSeen = true; if (!e.hadRecentInput) cls += e.value; } }).observe({ type: 'layout-shift', buffered: true }); } catch (e) {}
+          setTimeout(() => {
+            const nav = performance.getEntriesByType('navigation')[0];
+            const fcpEntry = performance.getEntriesByType('paint').find(e => e.name === 'first-contentful-paint');
+            const transfer = (nav ? nav.transferSize || 0 : 0) + performance.getEntriesByType('resource').reduce((n, e) => n + (e.transferSize || 0), 0);
+            resolve({ lcp, cls: clsSeen ? cls : null, fcp: fcpEntry ? fcpEntry.startTime : null,
+                      ttfb: nav && nav.responseStart > 0 ? nav.responseStart : null, transferBytes: transfer || null,
+                      domNodes: document.getElementsByTagName('*').length });
+          }, 300);
+        });
+        const alternates = [...document.querySelectorAll('link[rel="alternate" i][hreflang]')].map(l => l.href.split('#')[0]);
+        const hreflangSelf = alternates.length ? alternates.includes(location.href.split('#')[0]) : null;
         // Japanese, Chinese and Korean have no spaces: two of their characters count as a word.
         const bodyText = document.body ? document.body.innerText : '';
         const cjk = (bodyText.match(/[\\u3040-\\u30ff\\u3400-\\u9fff\\uf900-\\ufaff\\uac00-\\ud7af]/g) || []).length;
@@ -763,7 +1057,8 @@ public enum SEOAudit {
           links: links.length, internalLinks: internal, externalLinks: external, nofollowLinks: nofollow, emptyLinks: empty,
           structuredDataTypes: types.slice(0, 30), structuredDataErrors: ldErrors,
           hreflang: document.querySelectorAll('link[rel="alternate" i][hreflang]').length,
-          favicon: !!document.querySelector('link[rel~="icon" i]'), wordCount: words, status, mixedContent: mixed, robotsTxt
+          favicon: !!document.querySelector('link[rel~="icon" i]'), wordCount: words, status, mixedContent: mixed, robotsTxt,
+          vitals, hreflangSelf, sitemap
         };
         """
 }

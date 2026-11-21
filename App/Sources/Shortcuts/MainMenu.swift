@@ -170,6 +170,8 @@ enum MainMenu {
         menu.addItem(item("New Tab", #selector(CommandRouter.newTab(_:)), "t", target: router))
         menu.addItem(item("Next Tab", #selector(CommandRouter.nextTab(_:)), "]", [.command, .option], target: router))
         menu.addItem(item("Previous Tab", #selector(CommandRouter.previousTab(_:)), "[", [.command, .option], target: router))
+        menu.addItem(item("Move Tab Left", #selector(CommandRouter.moveTabLeft(_:)), "{", [.command, .control], target: router))
+        menu.addItem(item("Move Tab Right", #selector(CommandRouter.moveTabRight(_:)), "}", [.command, .control], target: router))
         menu.addItem(.separator())
         let arrows: [(String.LocalizationValue, Int, Selector)] = [
             ("Focus Left", NSLeftArrowFunctionKey, #selector(CommandRouter.focusLeft(_:))),
@@ -260,6 +262,12 @@ enum MainMenu {
         menu.addItem(item("Zoom", #selector(NSWindow.performZoom(_:)), ""))
         menu.addItem(.separator())
         menu.addItem(item("Schedules…", #selector(SchedulesWindowController.showSchedules(_:)), "", target: SchedulesWindowController.shared))
+        let harness = NSMenu(title: String(localized: "Claude Harness"))
+        harness.addItem(item("Overview", #selector(CommandRouter.harnessOverview(_:)), "", target: router))
+        harness.addItem(item("Suggest CLAUDE.md Changes", #selector(CommandRouter.harnessSuggest(_:)), "", target: router))
+        harness.addItem(item("Skill from Memory", #selector(CommandRouter.harnessSkill(_:)), "", target: router))
+        harness.addItem(item("Review Yesterday", #selector(CommandRouter.harnessReview(_:)), "", target: router))
+        menu.addItem(submenu(harness))
         menu.addItem(item("Transfers", #selector(CommandRouter.showTransfers(_:)), "t", [.command, .option], target: router))
         menu.addItem(.separator())
         menu.addItem(item("Bring All to Front", #selector(NSApplication.arrangeInFront(_:)), "", target: NSApp))

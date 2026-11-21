@@ -111,6 +111,10 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   `RenderOnlyWindow` outside the screen) loads the pane's URL, waits for `didFinish` (30 s limit) and 600 ms, is
   captured the same way and closed; one at a time, at most 4. Unknown params are refused, and the answer's `images`
   tells clients the app knows the new params (an older app ignores them and returns only `png_base64`).
+- **Claude harness** (`CmdsCore/ClaudeHarness.swift`, `cmds-cli/HarnessCommands.swift`; Window › Claude Harness runs
+  the CLI in a split): scans `~/.claude/projects/*/*.jsonl` (first 20 MB of each) and `memory/`, builds digests of the
+  user's prompts with `redact`, runs `claude -p` with `--tools ""` and the assistant's isolation arguments, writes to
+  `<support>/Harness`, and replaces files only after a confirmation with `applyFile` (backup, atomic write).
 - **Chrome bookmarks** (`Browser/ChromeBookmarksBar.swift`, parsing and profiles in `CmdsCore/ChromeBookmarks.swift`):
   `ChromeBookmarkStore` reads `<Chrome>/<profile>/AccountBookmarks` (account storage of signed-in profiles in newer
   Chrome) and `Bookmarks` off the main actor when cmds becomes active or settings change, only when a file or its date

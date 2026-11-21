@@ -114,14 +114,18 @@ final class APIServer {
                 let method = request.method
                 let rendered = try params.bool("rendered") ?? false
                 let fetchAgain = try params.bool("fetch") ?? false
+                let crawl = try params.int("crawl") ?? 0
+                guard (0...SEOAudit.maxCrawl).contains(crawl) else {
+                    throw RPCError.invalidParams("crawl must be 0 to \(SEOAudit.maxCrawl)")
+                }
                 let open = try params.bool("open") ?? false
                 Task { @MainActor in
                     await respond(id, to: connection) {
                         let browser = try await self.controller.readyBrowser(paneID: pane)
                         if method == "browser.seo" {
-                            let report = try await browser.seoReport()
+                            let report = try await browser.seoReport(crawl: crawl)
                             if open {
-                                try self.controller.showDeveloperFile(SEOReport(facts: report.facts, text: .localized).markdown,
+                                try self.controller.showDeveloperFile(SEOReport(facts: report.facts, pages: report.pages, text: .localized).markdown,
                                     name: AppController.developerFileName("seo", for: report.url, extension: "md"),
                                     format: .markdown, besideBrowser: pane, focus: false)
                             }
@@ -134,7 +138,10 @@ final class APIServer {
                         }
                         let source = try await browser.pageSource(rendered: rendered, fetchAgain: fetchAgain)
                         if open {
-                            try self.controller.showDeveloperFile((source.notCached ? PageSource.notCachedNote : "") + source.source,
+                            let header = source.notCached ? PageSource.notCachedNote
+                                : PageSource.headerLine(url: source.url, status: source.status, contentType: source.contentType,
+                                                        charset: source.charset, rendered: source.rendered)
+                            try self.controller.showDeveloperFile(header + source.source,
                                 name: AppController.developerFileName(rendered ? "dom" : "source", for: source.url, extension: "html"),
                                 format: .source, besideBrowser: pane, focus: false)
                         }
@@ -255,6 +262,9 @@ final class APIServer {
             case "debug.pane_drag":
                 // Tests only: drop a pane on a pane's edge or centre, a sidebar row or outside the window (#218).
                 connection.reply(id: id, result: try PaneDragDebug.perform(params.value, controller: controller))
+            case "debug.tab_bar":
+                // Tests only: a tab bar driven with synthesized mouse events (TabBar+Debug.swift).
+                connection.reply(id: id, result: try TabBarDebug.perform(params.value, controller: controller))
             case "debug.menubar_reply":
                 // Tests only: the menu bar's reply panel (MenuBarReplyPanel+Debug.swift, #213).
                 connection.reply(id: id, result: try MenuBarReplyPanel.debugPerform(params.value, controller: controller))

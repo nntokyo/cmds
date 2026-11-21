@@ -32,6 +32,52 @@ extension AppController {
         }
     }
 
+    // MARK: - Suspending idle tabs (#375)
+
+    private static var suspensionTimer: Timer?
+
+    /// Checks every minute for background browser tabs to suspend (Settings › General › Suspend background tabs).
+    func startTabSuspension() {
+        guard Self.suspensionTimer == nil else { return }
+        Self.suspensionTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            MainActor.assumeIsolated { AppController.shared.suspendIdleTabs() }
+        }
+    }
+
+    /// Suspends background tabs of the shown workspace (not hidden workspaces: agents work there) idle longer than the
+    /// setting, after asking each page that it has no unsaved input and plays nothing.
+    func suspendIdleTabs() {
+        let minutes = AppSettings.shared.suspendTabsMinutes
+        guard minutes > 0 else { return }
+        let now = Date()
+        for workspace in workspaces where workspace.id == selectedWorkspaceID {
+            guard let root = workspace.root else { continue }
+            for group in root.tabGroups {
+                for id in group.tabs where id != group.paneID && id != workspace.focusedPaneID {
+                    guard let browser = workspace.panes[id]?.browser else { continue }
+                    let candidate = TabSuspension.Candidate(
+                        hiddenFor: browser.hiddenSince.map { now.timeIntervalSince($0) } ?? 0,
+                        unusedFor: now.timeIntervalSince(browser.lastUsed), loading: browser.webView.isLoading,
+                        scheme: browser.webView.url?.scheme,
+                        busy: browser.responsive != nil || browser.watch != nil || browser.isConsoleOpen,
+                        alreadySuspended: browser.pendingURL != nil)
+                    guard TabSuspension.eligible(candidate, minutes: minutes), browser.canSuspend else { continue }
+                    let used = browser.lastUsed
+                    Task { @MainActor [weak browser] in
+                        guard let browser else { return }
+                        // No answer (a stuck page, an error) keeps the tab.
+                        guard let state = try? await browser.runPageScript(TabSuspension.script, [:],
+                                                                           until: Date(timeIntervalSinceNow: 3)),
+                              state["dirty"]?.boolValue == false, state["playing"]?.boolValue == false,
+                              // Shown, used by a command or navigating meanwhile: keep it.
+                              browser.window == nil, browser.lastUsed == used, browser.canSuspend else { return }
+                        browser.suspend()
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Tab context menu
 
     /// A command of a tab's context menu (TabBarView); beeps when it cannot be done.
@@ -67,7 +113,9 @@ extension AppController {
             case .duplicate:
                 try duplicateTab(paneID: paneID)
             case .reload:
-                try browser(paneID: paneID).reload()
+                // Not `browser(paneID:)`: it would start a suspended tab's load, which reload would then cut short.
+                guard let browser = try resolvePane(paneID).browser else { return NSSound.beep() }
+                browser.reload()
             case .moveToNewWorkspace:
                 movePaneToNewWorkspaceFromUI(paneID: paneID)
             }
@@ -76,24 +124,35 @@ extension AppController {
         }
     }
 
-    /// A new tab right after `paneID` showing the same: a browser's page, a preview's file, a files pane's folder, a
-    /// terminal in the same directory (SSH: the same host).
+    /// A new tab right after `paneID` showing the same, with the same settings: a browser's page (device size, color
+    /// scheme, responsive view, reload on file changes), a preview's file, a files pane's folder (hidden files, Follow
+    /// Terminal), a terminal in the same directory (SSH: the same host; the same Claude account).
     @discardableResult
     func duplicateTab(paneID: String) throws -> PaneInfo {
         let pane = try resolvePane(paneID)
         if let browser = pane.browser {
             let url = browser.currentURL.flatMap { $0.scheme == "about" ? nil : $0.absoluteString } ?? ""
-            return try newTab(paneID: pane.id, kind: .browser, url: url)
+            let info = try newTab(paneID: pane.id, kind: .browser, url: url)
+            if let copy = self.pane(id: info.id)?.browser {
+                if !browser.emulation.isDefault { copy.setEmulation(browser.emulation) }
+                if let responsive = browser.responsive { copy.setResponsive(responsive) }
+                if let watch = browser.watch { copy.setWatch(watch) }
+            }
+            return try paneInfo(id: info.id)
         }
         if let preview = pane.preview {
             return try split(paneID: pane.id, direction: .right, kind: .preview,
                              file: PreviewTarget(path: preview.path, format: preview.forcedFormat), asTab: true)
         }
         if let files = pane.files {
-            return try split(paneID: pane.id, direction: .right, kind: .files, cwd: files.folder,
-                             filesHost: files.host, asTab: true)
+            let info = try split(paneID: pane.id, direction: .right, kind: .files, cwd: files.folder,
+                                 filesHost: files.host, asTab: true)
+            self.pane(id: info.id)?.files?.restore(showHidden: files.showHidden, followsTerminal: files.followsTerminal)
+            return try paneInfo(id: info.id)
         }
-        return try split(paneID: pane.id, direction: .right, kind: .terminal, asTab: true)
+        // A local terminal keeps its Claude account (its shell gets the account's CLAUDE_CONFIG_DIR).
+        let account = pane.ssh == nil ? pane.claudeAccount.flatMap { claudeAccounts.account(named: $0) } : nil
+        return try split(paneID: pane.id, direction: .right, kind: .terminal, account: account, asTab: true)
     }
 
     // MARK: - Tabs agents open
@@ -180,6 +239,15 @@ extension AppController {
         guard let workspace = selectedWorkspace, let focused = workspace.focusedPaneID,
               let next = workspace.root?.leaf(for: focused)?.tab(offset: offset) else { return NSSound.beep() }
         try? focusPane(id: next)
+    }
+
+    /// Pane › Move Tab Left / Right (⌃⇧⌘[ / ⌃⇧⌘]): the focused tab one place along its bar (beeps at the ends).
+    func moveFocusedTab(by offset: Int) {
+        guard let workspace = selectedWorkspace, let id = workspace.focusedPaneID,
+              let leaf = workspace.root?.leaf(for: id), leaf.isTabGroup, let index = leaf.tabs.firstIndex(of: id),
+              leaf.tabs.indices.contains(index + offset) else { return NSSound.beep() }
+        leaf.moveTab(id, to: index + offset)
+        emit(.workspace(id: workspace.id))
     }
 
     /// Moves `paneID` into the tab group of `targetID` (a pane dropped on a tab bar or on the top strip of a pane,

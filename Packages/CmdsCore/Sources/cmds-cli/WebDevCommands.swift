@@ -40,21 +40,27 @@ extension CLI {
 
     static let seoCommand = Command(
         name: "browser seo",
-        usage: "browser seo [--pane P] [--open]",
+        usage: "browser seo [--pane P] [--crawl N] [--open]",
         summary: "Check what a browser pane's page declares for search engines and link previews.",
         details: """
             Title and description length, h1 and heading order, canonical, robots meta tag and robots.txt, lang and
             viewport, Open Graph and Twitter card, image alt, links without text, JSON-LD structured data, https and
-            mixed content, word count, favicon. Prints a score (100 less 15 per problem and 5 per warning) and one line
+            mixed content, word count, favicon, hreflang, the sitemap, and loading (LCP, CLS, time to first byte, page size,
+            elements). --crawl N (at most \(SEOAudit.maxCrawl)) also fetches up to N linked pages of the same site
+            (without cookies, skipping what robots.txt disallows) and checks duplicate titles and descriptions, missing
+            titles, h1 and descriptions, noindex pages and errors. Prints a score (100 less 15 per problem and 5 per warning) and one line
             per check: ✗ problem, ! warning, i note, ✓ passed. Exit status 1 when a check failed. --open also shows the
             report in a preview tab beside the pane (View › Developer › SEO Report); --json gives the checks and the
             page facts.
             \(browserPaneNote)
             """,
-        options: ["pane"], flags: ["open"]
+        options: ["pane", "crawl"], flags: ["open"]
     ) { ctx in
-        try ctx.args.expectPositionals(0...0, usage: "cmds browser seo [--pane P] [--open]")
-        let result = try devToolsCall(ctx, "browser.seo", ["open": ctx.args.has("open") ? true : nil])
+        try ctx.args.expectPositionals(0...0, usage: "cmds browser seo [--pane P] [--crawl N] [--open]")
+        let crawl = try ctx.args.int("crawl")
+        if let crawl, !(1...SEOAudit.maxCrawl).contains(crawl) { throw CLIError.usage("--crawl must be 1 to \(SEOAudit.maxCrawl)") }
+        let result = try devToolsCall(ctx, "browser.seo", ["open": ctx.args.has("open") ? true : nil,
+                                                           "crawl": crawl.map { .number(Double($0)) }], timeout: 200)
         if ctx.json {
             ctx.printJSON(result)
         } else {

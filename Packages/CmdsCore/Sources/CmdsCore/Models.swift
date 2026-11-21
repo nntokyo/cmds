@@ -43,11 +43,13 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var tabs: [String]?
     /// A tab of a group that is not the one shown (not on screen; `WorkspaceInfo.layout` has the shown one).
     public var background: Bool?
+    /// A browser tab whose page was unloaded to save memory (loads again when shown or used).
+    public var suspended: Bool?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
                 workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
                 remote: RemoteInfo? = nil, file: String? = nil, account: String? = nil, openedBy: String? = nil,
-                tabs: [String]? = nil, background: Bool? = nil) {
+                tabs: [String]? = nil, background: Bool? = nil, suspended: Bool? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -62,6 +64,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.openedBy = openedBy
         self.tabs = tabs
         self.background = background
+        self.suspended = suspended
     }
 }
 

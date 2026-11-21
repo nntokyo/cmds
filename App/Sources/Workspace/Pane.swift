@@ -324,7 +324,8 @@ final class Pane {
         return PaneInfo(id: id, kind: kind, title: title, focused: focused, attention: attention,
                         workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
                         file: preview?.path, account: claudeAccount, openedBy: openedBy,
-                        tabs: group?.tabs, background: group.map { $0.paneID != id ? true : nil } ?? nil)
+                        tabs: group?.tabs, background: group.map { $0.paneID != id ? true : nil } ?? nil,
+                        suspended: browser?.isSuspended == true ? true : nil)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.

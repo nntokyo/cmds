@@ -81,7 +81,10 @@ browser, preview, files), title and an orange icon when it needs attention.
 - **Pane › New Tab** (⌘T) adds a tab beside the focused pane: a browser tab (start page, address bar focused) in a
   browser pane, else a terminal in the pane's directory. The **+** at the end of the tab bar does the same, as does a
   double-click on its empty part.
-- Click a tab to show it; **Pane › Next Tab / Previous Tab** (⌥⌘] / ⌥⌘[) go round the tabs of the focused pane.
+- Click a tab to show it; **Pane › Next Tab / Previous Tab** (⌥⌘] / ⌥⌘[) go round the tabs of the focused pane;
+  **Move Tab Left / Right** (⌃⇧⌘[ / ⌃⇧⌘]) move it along the bar. A tab's tooltip names its page address, file, folder or
+  directory. Tabs are at least 40 pt wide: those that do not fit go into the **⌄** menu next to +, with the shown tab
+  always in view.
 - ⌘W closes the focused tab (**File › Close Tab**), as do the × on a tab and a middle click; the next tab is shown.
   The last tab left is a plain pane again (no tab bar).
 - **Drag a tab** like a pane's grip ([Moving panes](#moving-panes)): onto a pane's edge, a sidebar row or out of the
@@ -92,17 +95,26 @@ browser, preview, files), title and an orange icon when it needs attention.
   page only when first shown (or when a command needs it: `cmds browser eval` and the like wait for it to load), so
   many tabs do not slow the start.
 - Browser tabs show the page's icon (its `<link rel="icon">`, else `/favicon.ico`; cmds downloads it without cookies,
-  at most 1 MB, an icon on another site only from the usual web ports; icons over plain `http` show only for local and
-  IP addresses).
-- **Right-click a tab** for Close Tab, Close Other Tabs, Close Tabs to the Right, Duplicate Tab (the same page, file,
-  folder or directory), Reload Page and Move to New Workspace.
+  at most 1 MB, an icon on another site only from the usual web ports; a plain-`http` site's icon on its own site is
+  fetched by the page).
+- **Right-click a tab** for Close Tab, Close Other Tabs, Close Tabs to the Right (both ask first when they would end
+  several terminals), Duplicate Tab (the same page with its device size, responsive view and file watch; the same
+  file; the same folder with its hidden-files and Follow Terminal settings; a terminal in the same directory with the
+  same Claude account), Reload Page and Move to New Workspace.
+- **Suspended tabs** (Settings › General › Suspend background tabs; after 30 minutes by default, or never): a browser
+  tab not shown and not used for that long is unloaded to save memory (its web view and process are replaced) and
+  loads again when shown or used (back / forward history is lost). Never a page with changed form fields (also in
+  same-site frames and shadow DOM), focused editable text, a code or rich-text editor (Monaco, CodeMirror, Jupyter…)
+  or playing media, nor one that is the answer to a form, still loading or showing a load error, has a pop-up open, or
+  has the responsive view, file watch or console open; tabs of a workspace that is not shown are left alone.
+  `PaneInfo.suspended` tells.
 - **Browser pages open in tabs** (on by default; Settings › General › Open new pages in tabs): a link that opens a new
   window (`target="_blank"`) becomes a tab of its browser pane, and `cmds browser open` or an agent's `browser_open`
   becomes a tab of the workspace's browser pane (the one on screen first) instead of a new split. Without a browser
   pane they still split. Turned off, every new page gets a split, as before. An agent's `browser_open` (or
   `cmds browser open --reuse`) opening a page it already has open gets that tab again (reloaded), and keeps at most 10
   tabs opened that way: beyond, the oldest that are not shown close. Tabs you open, and agent tabs where you typed an
-  address, never close by themselves.
+  address, never close by themselves. This bookkeeping is kept across a relaunch.
 - From scripts: `cmds tab [--pane P] [--browser URL] [--cwd DIR] [--no-focus]` opens a tab, `cmds pane move <pane>
   --beside P --tab` makes a pane a tab of P's group ([CLI](../reference/cli.md)). `cmds ls` lists every tab of a
   group; in `--json`, a tab's pane has `tabs` (the group in order) and `background: true` when it is not shown.
@@ -239,7 +251,10 @@ for coding agents: [ai-agents.md](ai-agents.md#attention-how-a-pane-lights-up).
 
 ## Browser panes
 
-**File › Open Browser Split** (⇧⌘B) opens a WebKit browser to the right of the focused pane with the address bar
+Browser panes load web pages over https and plain http (WebKit's content is exempt from App Transport Security; the
+app's own connections stay https-only); an orange open lock before the address marks a plain-http page on the internet
+(not this Mac or the local network), where what you type is not encrypted. Tab icons of internet pages are never
+fetched from this Mac or the local network, also not through a redirect. **File › Open Browser Split** (⇧⌘B) opens a WebKit browser to the right of the focused pane with the address bar
 focused. ⌘L focuses the address bar, ⌘R reloads, ⌘[ / ⌘] go back / forward. From a terminal:
 
 ```sh
@@ -264,21 +279,27 @@ cmds browser find 'Sign in'                          # select the next match on 
 
 ### Chrome bookmarks
 
-When Google Chrome is installed, a bar under the address bar shows Chrome's bookmarks bar: a click loads the bookmark
+A bar under the address bar shows your browser's bookmarks bar (**Settings › General › Bookmarks from**: Google Chrome
+by default; Microsoft Edge, Brave, Vivaldi and Arc read the same way from their folders, Safari its
+`~/Library/Safari/Bookmarks.plist` with the Favorites bar as the bar and the Bookmarks menu as Other Bookmarks). For
+Chrome: a click loads the bookmark
 in the pane, ⌘-click opens it in a new tab in the background, folders open a menu (with **Open All in Tabs**). What
 does not fit is in the » menu; Chrome's Other and Mobile bookmarks are in **Other Bookmarks** at the right. cmds only
 reads Chrome's bookmark files (`~/Library/Application Support/Google/Chrome/<profile>/AccountBookmarks`, the bookmarks
 saved in your Google Account, then `Bookmarks`, those on this Mac), again whenever you
 come back to cmds after changing them in Chrome; it never writes there, and Chrome's sign-ins, cookies and passwords
 are not shared (sign in to sites in the pane itself). `javascript:` bookmarklets and `chrome://` pages are left out.
+Bookmarks show their icons from Chrome's own icon database (`<profile>/Favicons`, copied and read read-only) or, for
+sites visited in a browser pane, the icon found there.
 
 - **Settings › General › Show Chrome bookmarks** turns the bar off; **Chrome profile** picks a profile (default: the
   one Chrome used last).
 - When Chrome keeps a profile's bookmarks only encrypted (it can, for bookmarks saved in the Google Account), cmds
-  cannot read them; Settings says so.
+  cannot read them; Settings says so, also when it shows the bookmarks on this Mac but not the account's.
 - macOS keeps apps from reading other apps' data: when it refuses, Settings says so and **Open Privacy Settings…**
   leads to Privacy & Security › Full Disk Access, where turning cmds on lets it read the bookmarks (come back to cmds
-  afterwards).
+  afterwards). Full Disk Access is for the whole app: the programs you run in its terminals get it too, so turn it on
+  only if that is fine with you (or keep the bar off).
 
 ### Pages that do not load, sign-in and crashes
 
@@ -375,13 +396,14 @@ cmds browser watch --off
 The **</>** button in a browser pane's toolbar and **View › Developer** have three tools for web development:
 
 - **View Page Source** (⌥⌘U): the HTML the server sent for the page, from the browser's cache (decoded with the page's
-  encoding), in a new tab beside the pane, with line numbers and coloured tags, attributes, strings and comments. A
+  encoding; the first line names the address, HTTP status, content type and encoding), in a new tab beside the pane,
+  with line numbers and coloured tags, attributes, strings and comments. A
   page that is not in the cache shows its DOM after scripts ran, with a note in the first line: cmds does not ask the
   server again by itself, since that would repeat what the URL does (one-time links); `cmds browser source --fetch`
   does. A local page (`file://`) shows its file. `--rendered` always gives the DOM.
-- **Console** (⌥⌘C): a drawer at the bottom of the pane (drag its top edge to resize) with the page's console
-  messages, uncaught errors and unhandled promise rejections, coloured by level (the same record as
-  `cmds browser console`, from the start of each page), a level filter and Clear. The line at the bottom runs JavaScript in the page (Return; ↑ / ↓ go through
+- **Console** (⌥⌘C): a drawer at the bottom of the pane (drag its top edge to resize; the height is remembered) with
+  the page's console messages, uncaught errors and unhandled promise rejections, coloured by level (the same record as
+  `cmds browser console`, from the start of each page), a level filter, a text filter, Copy and Clear. The line at the bottom runs JavaScript in the page (Return; ↑ / ↓ go through
   earlier lines) and prints the result.
 - **SEO Report**: checks what the page declares for search engines and link previews and shows a report (score,
   problems, warnings, notes, what passed, the page's title, description, Open Graph, headings…) in a tab:
@@ -389,7 +411,12 @@ The **</>** button in a browser pane's toolbar and **View › Developer** have t
   heading levels in order, canonical, robots meta tag (noindex) and robots.txt (the whole site disallowed, sitemaps),
   `lang`, viewport, Open Graph (og:title / description / image) and Twitter card, image alt, links without text,
   JSON-LD structured data (types, invalid blocks), https and mixed content, thin content, favicon, charset and the
-  HTTP status. The score is 100 less 15 per problem and 5 per warning. The report tab is in the app's language;
+  HTTP status, hreflang alternates that leave this page out, whether the sitemap robots.txt names lists the page, and
+  loading: Largest Contentful Paint, Cumulative Layout Shift, time to first byte, the bytes transferred and the number
+  of elements. `cmds browser seo --crawl N` (MCP `crawl`, at most 50) also fetches up to N linked pages of the same site
+  — without cookies, skipping what robots.txt disallows, 8 s and 2 MB each — and reports duplicate titles and
+  descriptions, pages without a title, description or h1, noindex pages and errors. The score is 100 less 15 per
+  problem and 5 per warning. The report tab is in the app's language;
   `cmds browser seo` and MCP answer in English. It checks the page as loaded in the pane; it
   does not crawl the site or measure speed.
 
