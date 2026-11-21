@@ -57,6 +57,9 @@ struct SessionState: Codable {
     struct PaneOpener: Codable {
         var paneIndex: Int
         var openerIndex: Int
+        /// A browser tab an agent opened (`Pane.agentTabOrder`: its place in the order agents' tabs opened), so reuse
+        /// and the cap of agents' tabs go on after a relaunch. Added later: older sessions lack it.
+        var agentTab: Int? = nil
     }
 
     /// The schedule tag of the pane at `paneIndex` (reading order of `layout`).

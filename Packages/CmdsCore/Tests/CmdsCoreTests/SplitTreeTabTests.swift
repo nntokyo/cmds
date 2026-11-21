@@ -142,3 +142,23 @@ final class SplitTreeTabTests: XCTestCase {
         }
     }
 }
+
+final class TabSuspensionTests: XCTestCase {
+    private func tab(hidden: TimeInterval = 3600, unused: TimeInterval = 3600, loading: Bool = false, scheme: String? = "https",
+                     busy: Bool = false, suspended: Bool = false) -> TabSuspension.Candidate {
+        .init(hiddenFor: hidden, unusedFor: unused, loading: loading, scheme: scheme, busy: busy, alreadySuspended: suspended)
+    }
+
+    func testOnlyIdleLoadedPagesAreSuspended() {
+        XCTAssertTrue(TabSuspension.eligible(tab(), minutes: 30))
+        XCTAssertFalse(TabSuspension.eligible(tab(), minutes: 0), "off")
+        XCTAssertFalse(TabSuspension.eligible(tab(hidden: 60), minutes: 30), "shown recently")
+        XCTAssertFalse(TabSuspension.eligible(tab(unused: 60), minutes: 30), "an agent used it recently")
+        XCTAssertFalse(TabSuspension.eligible(tab(loading: true), minutes: 30))
+        XCTAssertFalse(TabSuspension.eligible(tab(scheme: "about"), minutes: 30))
+        XCTAssertFalse(TabSuspension.eligible(tab(scheme: nil), minutes: 30))
+        XCTAssertFalse(TabSuspension.eligible(tab(busy: true), minutes: 30), "responsive view, watch or console")
+        XCTAssertFalse(TabSuspension.eligible(tab(suspended: true), minutes: 30))
+        XCTAssertTrue(TabSuspension.eligible(tab(scheme: "FILE"), minutes: 30))
+    }
+}

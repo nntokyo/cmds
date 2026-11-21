@@ -30,6 +30,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let browserTabsCheckbox = NSButton(checkboxWithTitle: String(localized: "Open new pages in tabs", comment: "Settings › General › Browser"), target: nil, action: nil)
     private let chromeBookmarksCheckbox = NSButton(checkboxWithTitle: String(localized: "Show Chrome bookmarks", comment: "Settings › General › Browser"), target: nil, action: nil)
     private let chromeProfilePopup = NSPopUpButton()
+    private let suspendTabsPopup = NSPopUpButton()
     /// Why Chrome's bookmarks cannot be shown (empty when they can), and the button to Privacy & Security.
     private let chromeProblemNote = SettingsWindowController.note("")
     private let chromeAccessButton = NSButton(title: String(localized: "Open Privacy Settings…", comment: "Settings › General › Chrome bookmarks without access"), target: nil, action: nil)
@@ -175,6 +176,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         chromeBookmarksCheckbox.action = #selector(chromeBookmarksToggled)
         chromeProfilePopup.target = self
         chromeProfilePopup.action = #selector(chromeProfileChanged)
+        for minutes in TabSuspension.choices {
+            suspendTabsPopup.addItem(withTitle: minutes == 0 ? String(localized: "Never", comment: "Settings › General › Suspend background tabs")
+                : String(localized: "After \(minutes) minutes", comment: "Settings › General › Suspend background tabs"))
+            suspendTabsPopup.lastItem?.representedObject = minutes
+        }
+        suspendTabsPopup.target = self
+        suspendTabsPopup.action = #selector(suspendTabsChanged)
         chromeAccessButton.bezelStyle = .rounded
         chromeAccessButton.target = self
         chromeAccessButton.action = #selector(openFullDiskAccess)
@@ -210,6 +218,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
             [NSGridCell.emptyContentView, browserTabsCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Links that open a new window, `cmds browser open` and agents' browser_open add a tab to the workspace's browser instead of a split. ⌘T opens a tab beside any pane.", comment: "Settings › General › Browser"))],
+            [Self.label(String(localized: "Suspend background tabs:", comment: "Settings › General › Browser")), suspendTabsPopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.", comment: "Settings › General › Browser"))],
             [NSGridCell.emptyContentView, chromeBookmarksCheckbox],
             [Self.label(String(localized: "Chrome profile:", comment: "Settings › General › Browser")), chromeProfilePopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "A bar of Google Chrome's bookmarks under the address bar (read only; ⌘-click opens a new tab). Chrome's sign-ins and passwords are not shared.", comment: "Settings › General › Browser"))],
@@ -264,7 +274,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let tabs = NSTabViewController()
         tabs.tabStyle = .toolbar
         for (tab, title, symbol, rows, headers) in [
-            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 16]),
+            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 18]),
             (.sidebar, String(localized: "Sidebar"), "sidebar.left", sidebar, []),
             (.agents, String(localized: "Agents"), "sparkles", agents, []),
             (.menuBar, String(localized: "Menu Bar"), "menubar.rectangle", menuBar, []),
@@ -470,6 +480,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         inspectableCheckbox.state = settings.browserInspectable ? .on : .off
         memoryWarningCheckbox.state = settings.memoryWarning ? .on : .off
         browserTabsCheckbox.state = settings.browserOpensTabs ? .on : .off
+        suspendTabsPopup.selectItem(at: max(0, suspendTabsPopup.indexOfItem(withRepresentedObject: settings.suspendTabsMinutes)))
         chromeBookmarksCheckbox.state = settings.chromeBookmarks ? .on : .off
         fillChromeProfiles()
         refreshChromeProblem()
@@ -584,6 +595,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func browserTabsToggled() {
         settings.browserOpensTabs = browserTabsCheckbox.state == .on
+    }
+
+    @objc private func suspendTabsChanged() {
+        settings.suspendTabsMinutes = suspendTabsPopup.selectedItem?.representedObject as? Int ?? TabSuspension.defaultMinutes
     }
 
     @objc private func chromeBookmarksToggled() {

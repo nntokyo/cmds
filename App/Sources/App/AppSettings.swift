@@ -114,9 +114,10 @@ final class AppSettings: NSObject {
     static let browserOpensTabsKey = "BrowserOpensTabs"
     static let chromeBookmarksKey = "BrowserChromeBookmarks"
     static let chromeProfileKey = "BrowserChromeProfile"
+    static let suspendTabsKey = "BrowserSuspendTabsMinutes"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
                                showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey,
-                               browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey] + MenuBarOption.allCases.map(\.rawValue)
+                               browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey, suspendTabsKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -244,6 +245,18 @@ final class AppSettings: NSObject {
     var chromeProfile: String? {
         get { defaults.string(forKey: Self.chromeProfileKey).flatMap { $0.isEmpty ? nil : $0 } }
         set { set(newValue, forKey: Self.chromeProfileKey) }
+    }
+
+    /// Browser tabs not shown and not used for this many minutes are unloaded until shown again (Settings › General,
+    /// #375); 0 = never. Default `TabSuspension.defaultMinutes`.
+    var suspendTabsMinutes: Int {
+        get {
+            guard let value = (defaults.object(forKey: Self.suspendTabsKey) as? NSNumber)?.intValue else {
+                return TabSuspension.defaultMinutes
+            }
+            return max(0, min(value, 24 * 60))
+        }
+        set { set(newValue == TabSuspension.defaultMinutes ? nil : newValue, forKey: Self.suspendTabsKey) }
     }
 
     /// An on-by-default switch (Settings › Sidebar, Settings › Menu Bar); only "off" is stored.

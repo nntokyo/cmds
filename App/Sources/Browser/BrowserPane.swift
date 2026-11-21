@@ -57,6 +57,13 @@ final class BrowserPane: NSView {
     // Tabs (BrowserPane+Favicon.swift).
     /// A page not loaded yet: a background tab restored with the session loads when it is first shown (or asked for).
     var pendingURL: URL?
+    /// Since when the pane is out of the window (a background tab or a hidden workspace); nil while on screen. A new
+    /// pane starts outside one.
+    var hiddenSince: Date? = Date()
+    /// Last shown, clicked or used by a command (`AppController.browser(paneID:)`).
+    var lastUsed = Date()
+    /// The page was unloaded to save memory (`suspend`): its title is kept for the tab.
+    var suspendedTitle: String?
     /// `loadIfPending` started the page and no command waited for it yet (`waitForPendingLoad`).
     var loadingFromPending = false
     /// The address last asked for (`navigate`): what an agent asked to open, before or whatever the server redirects to.
@@ -113,8 +120,9 @@ final class BrowserPane: NSView {
     var findBar: TerminalFindBar?
 
     /// The page shown, or the one that failed to load (the address bar and `browser.get_url` keep it).
-    var currentURL: URL? { loadFailure?.url ?? webView.url ?? pendingURL }
-    var pageTitle: String { loadFailure != nil ? "" : (webView.title ?? "") }
+    /// A page not loaded yet (restored or suspended) is the one shown in the address bar, the API and the session.
+    var currentURL: URL? { pendingURL ?? loadFailure?.url ?? webView.url }
+    var pageTitle: String { suspendedTitle ?? (loadFailure != nil ? "" : (webView.title ?? "")) }
 
     init(emulation: BrowserEmulation = BrowserEmulation()) {
         webView = Self.makeWebView(configuration: Self.webViewConfiguration(websiteDataStore: .default()))
@@ -619,7 +627,13 @@ final class BrowserPane: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if window != nil { loadIfPending() }
+        if window != nil {
+            hiddenSince = nil
+            lastUsed = Date()
+            loadIfPending()
+        } else if hiddenSince == nil {
+            hiddenSince = Date()
+        }
         guard watch != nil else { return }
         updateWatcher()  // only while on screen; a hidden workspace's panes have no window
         updateWatchButton()

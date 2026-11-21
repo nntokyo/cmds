@@ -22,6 +22,7 @@ extension BrowserPane {
     func loadIfPending() {
         guard let url = pendingURL else { return }
         pendingURL = nil
+        suspendedTitle = nil
         loadingFromPending = true
         webView.load(URLRequest(url: url))
     }
@@ -37,6 +38,18 @@ extension BrowserPane {
         loadingFromPending = false
     }
 
+    /// Unloads the page to save memory (a background tab unused for a while, #375): it loads again when shown or asked
+    /// for. Back / forward history and the page's state are lost, so only pages without unsaved input are suspended.
+    func suspend() {
+        guard pendingURL == nil, let url = webView.url else { return }
+        suspendedTitle = webView.title
+        pendingURL = url
+        webView.load(URLRequest(url: URL(string: "about:blank")!))
+        stateDidChange()
+    }
+
+    var isSuspended: Bool { pendingURL != nil && suspendedTitle != nil }
+
     // MARK: - Favicon
 
     /// The site an icon belongs to: scheme, host and port (`http://localhost:5173`), or a local page's folder.
@@ -49,6 +62,7 @@ extension BrowserPane {
 
     /// Looks up the page's icon after a load (its `<link rel="icon">`s, then `/favicon.ico`), from the cache when known.
     func refreshFavicon() {
+        guard pendingURL == nil else { return }  // suspended: the blank page has no icon, keep the page's
         guard let page = webView.url, let scheme = page.scheme?.lowercased(), ["http", "https", "file"].contains(scheme),
               let site = Self.faviconSite(page) else {
             setFavicon(nil, site: nil)

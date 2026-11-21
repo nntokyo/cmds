@@ -32,6 +32,50 @@ extension AppController {
         }
     }
 
+    // MARK: - Suspending idle tabs (#375)
+
+    private static var suspensionTimer: Timer?
+
+    /// Checks every minute for background browser tabs to suspend (Settings › General › Suspend background tabs).
+    func startTabSuspension() {
+        guard Self.suspensionTimer == nil else { return }
+        Self.suspensionTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            MainActor.assumeIsolated { AppController.shared.suspendIdleTabs() }
+        }
+    }
+
+    /// Suspends background tabs (not hidden workspaces: agents work there) idle longer than the setting, after asking
+    /// each page that it has no unsaved input and plays nothing.
+    func suspendIdleTabs() {
+        let minutes = AppSettings.shared.suspendTabsMinutes
+        guard minutes > 0 else { return }
+        let now = Date()
+        for workspace in workspaces {
+            guard let root = workspace.root else { continue }
+            for group in root.tabGroups {
+                for id in group.tabs where id != group.paneID && id != workspace.focusedPaneID {
+                    guard let browser = workspace.panes[id]?.browser else { continue }
+                    let candidate = TabSuspension.Candidate(
+                        hiddenFor: browser.hiddenSince.map { now.timeIntervalSince($0) } ?? 0,
+                        unusedFor: now.timeIntervalSince(browser.lastUsed), loading: browser.webView.isLoading,
+                        scheme: browser.webView.url?.scheme,
+                        busy: browser.responsive != nil || browser.watch != nil || browser.isConsoleOpen,
+                        alreadySuspended: browser.pendingURL != nil)
+                    guard TabSuspension.eligible(candidate, minutes: minutes) else { continue }
+                    Task { @MainActor [weak browser] in
+                        guard let browser else { return }
+                        // No answer (a stuck page, an error) keeps the tab.
+                        guard let state = try? await browser.runPageScript(TabSuspension.script, [:],
+                                                                           until: Date(timeIntervalSinceNow: 3)),
+                              state["dirty"]?.boolValue == false, state["playing"]?.boolValue == false,
+                              browser.window == nil else { return }
+                        browser.suspend()
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Tab context menu
 
     /// A command of a tab's context menu (TabBarView); beeps when it cannot be done.
