@@ -76,24 +76,35 @@ extension AppController {
         }
     }
 
-    /// A new tab right after `paneID` showing the same: a browser's page, a preview's file, a files pane's folder, a
-    /// terminal in the same directory (SSH: the same host).
+    /// A new tab right after `paneID` showing the same, with the same settings: a browser's page (device size, color
+    /// scheme, responsive view, reload on file changes), a preview's file, a files pane's folder (hidden files, Follow
+    /// Terminal), a terminal in the same directory (SSH: the same host; the same Claude account).
     @discardableResult
     func duplicateTab(paneID: String) throws -> PaneInfo {
         let pane = try resolvePane(paneID)
         if let browser = pane.browser {
             let url = browser.currentURL.flatMap { $0.scheme == "about" ? nil : $0.absoluteString } ?? ""
-            return try newTab(paneID: pane.id, kind: .browser, url: url)
+            let info = try newTab(paneID: pane.id, kind: .browser, url: url)
+            if let copy = self.pane(id: info.id)?.browser {
+                if !browser.emulation.isDefault { copy.setEmulation(browser.emulation) }
+                if let responsive = browser.responsive { copy.setResponsive(responsive) }
+                if let watch = browser.watch { copy.setWatch(watch) }
+            }
+            return try paneInfo(id: info.id)
         }
         if let preview = pane.preview {
             return try split(paneID: pane.id, direction: .right, kind: .preview,
                              file: PreviewTarget(path: preview.path, format: preview.forcedFormat), asTab: true)
         }
         if let files = pane.files {
-            return try split(paneID: pane.id, direction: .right, kind: .files, cwd: files.folder,
-                             filesHost: files.host, asTab: true)
+            let info = try split(paneID: pane.id, direction: .right, kind: .files, cwd: files.folder,
+                                 filesHost: files.host, asTab: true)
+            self.pane(id: info.id)?.files?.restore(showHidden: files.showHidden, followsTerminal: files.followsTerminal)
+            return try paneInfo(id: info.id)
         }
-        return try split(paneID: pane.id, direction: .right, kind: .terminal, asTab: true)
+        // A local terminal keeps its Claude account (its shell gets the account's CLAUDE_CONFIG_DIR).
+        let account = pane.ssh == nil ? pane.claudeAccount.flatMap { claudeAccounts.account(named: $0) } : nil
+        return try split(paneID: pane.id, direction: .right, kind: .terminal, account: account, asTab: true)
     }
 
     // MARK: - Tabs agents open

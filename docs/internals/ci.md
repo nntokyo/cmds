@@ -11,9 +11,11 @@ Run on every pull request, on pushes to `master` and by hand (Actions › CI ›
 |---|---|---|
 | Website and update feed | ubuntu-latest | `scripts/ci/site_check.py --release`: every page in `site/public` is well-formed HTML; `appcast.xml` has a valid feed signature for `SUPublicEDKey` (so a hand-edited feed fails), one item, and an enclosure on the GitHub release `vX.Y.Z`; every download and release link and the byte count on the pages name the appcast's version; the release DMG has the enclosure's length and Sparkle signature, and its SHA-256 is the one on the pages. Then `scripts/check-links.py` (Markdown links, `docs/…` mentions) |
 | Swift packages and String Catalogs | macos-latest | every `.xcstrings` compiles (`xcstringstool`); `Packages/CmdsCore`: `swift test` (the library, the CLI and their tests); `Packages/CmdsSSH`: `swift test` (its end-to-end part needs a throwaway sshd and is skipped) |
+| iOS companion builds | macos-latest | `xcodegen generate`, then `CmdsCompanion` built for the iOS Simulator without signing (`scripts/ci/run-local.sh ios`), so a CmdsCore change cannot break the iPhone app unnoticed (#373) |
 
-Not covered by Actions: the Mac app and the iOS companion (they need GhosttyKit built with Zig,
-[release.md](release.md#one-time-setup-maintainer)), signing, notarization and UI tests. Build them locally
+Not covered by Actions: the Mac app (it needs GhosttyKit built with Zig,
+[release.md](release.md#one-time-setup-maintainer)), signing, notarization, UI tests and running the iOS companion
+(it is only built: it does not use GhosttyKit). Build them locally
 ([testing.md](testing.md)) when a change touches the apps.
 
 The Ed25519 check is plain Python (`scripts/ci/ed25519.py`), so neither the runner nor a Mac needs Sparkle's tools
@@ -59,7 +61,7 @@ The DMG itself is downloaded from the GitHub release (Firebase Hosting refuses D
 
 When Actions is out of minutes, disabled or down, or a run hangs in the queue:
 
-- **Checks**: `scripts/ci/run-local.sh` runs the same jobs on this Mac (`site`, `links`, `strings`, `core`, `ssh`;
+- **Checks**: `scripts/ci/run-local.sh` runs the same jobs on this Mac (`site`, `links`, `strings`, `core`, `ssh`, `ios`;
   name some to run only those, `--release` adds the release DMG check). The Swift jobs run one after another, only
   while memory pressure is normal and fewer than two other Swift/Xcode builds run; they wait up to 10 minutes
   otherwise ([testing.md](testing.md#machine-load)). Logs and `summary.md` go to `build/ci/`. `--post N` puts the

@@ -45,3 +45,17 @@ jobs:
       - name: CmdsSSH (unit tests)
         working-directory: Packages/CmdsSSH
         run: swift test
+
+  ios:
+    name: iOS companion builds
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: xcodebuild -version && xcrun --sdk iphonesimulator --show-sdk-version
+      - name: XcodeGen
+        run: brew install xcodegen
+      # The companion compiles against CmdsCore, which the Mac app changes most (#373). No signing, no simulator run.
+      - name: Build CmdsCompanion for the iOS Simulator
+        run: scripts/ci/run-local.sh ios
