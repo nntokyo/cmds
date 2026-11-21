@@ -350,6 +350,33 @@ The last figures are kept across restarts (`antigravity-limits.json` in the supp
 reset, dimmed after an hour without a report. Antigravity has no notification or state hooks in cmds yet: its state
 comes from the status-line reports and the terminal title like other agents.
 
+## Growing the harness
+
+Claude Code leaves a lot in `~/.claude` — session logs, auto-memory, CLAUDE.md, skills — that is rarely read back.
+`cmds harness` (and **Window › Claude Harness**, which runs it in a terminal split below the focused pane) turns it into
+improvements of your setup, after DeNA's "geni harness-kun"
+([engineering.dena.com](https://engineering.dena.com/blog/2026/07/claude-code-harness-app/)):
+
+```sh
+cmds harness report --open        # sessions, prompts, models, memory, skills, MCP servers (last 30 days)
+cmds harness suggest --open       # an improved CLAUDE.md for this project from your recent prompts and memory
+cmds harness suggest --global     # the same for ~/.claude/CLAUDE.md, from every project
+cmds harness skill --open         # a skill (SKILL.md) from this project's auto-memory
+cmds harness review --open        # what you did yesterday, what is open, a TODO list, harness ideas
+```
+
+- **Nothing is applied by itself.** `suggest` prints the diff (and shows it with `--open`) and asks before replacing
+  CLAUDE.md; `skill` asks before installing into `~/.claude/skills/NAME/`. `--yes` answers yes (for scripts).
+- **`~/.claude` is only read.** Proposals, reports and reviews go to cmds' support folder (`Harness/`); a file that is
+  replaced is backed up first (`Harness/backups/`) and written through a temporary file.
+- **What goes to Claude**: your own prompts of the period (one line each, at most 40,000 characters), memory notes and
+  the current CLAUDE.md, with what looks like a secret masked (API keys and tokens, bearer tokens, private keys,
+  `password=` values, long hex or base64). It runs `claude -p` with your Claude Code sign-in but without tools, your
+  settings, hooks, MCP servers or a saved session (`--model`, default sonnet). A proposal that still contains something
+  secret-looking is not applied.
+- **Every morning**: a schedule (Window › Schedules…) that starts a workspace running
+  `cmds harness review --open --language Japanese` puts yesterday's review on screen.
+
 ## Usage and limits
 
 The sidebar shows, per workspace, the agent of its focused (else most recently active) pane — model, context %, cost

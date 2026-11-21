@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   HTTP status, content type, encoding), SEO loading measures (LCP, CLS, time to first byte, size, elements), hreflang
   and sitemap checks, and `cmds browser seo --crawl N` for up to 50 linked pages (#380).
 - iPhone: the pane selector shows the Mac's tab groups (#378).
+- Claude harness: `cmds harness report|suggest|skill|review` and Window › Claude Harness read what `~/.claude` holds
+  (sessions, memory, CLAUDE.md, skills, MCP servers) and propose an improved CLAUDE.md, a skill from memory and a daily
+  review through `claude -p` (no tools, isolated, secrets masked); applied only after you saw the diff, with a backup.
 
 ### Changed
 

@@ -95,6 +95,22 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
 
     @objc func splitRight(_ sender: Any?) { _ = try? controller.split(direction: .right) }
     @objc func splitDown(_ sender: Any?) { _ = try? controller.split(direction: .down) }
+    // Window › Claude Harness (`cmds harness`, CmdsCore/ClaudeHarness.swift): each runs in a terminal split below the
+    // focused pane, in its directory, so its progress, the diff and the question before applying show there.
+    @objc func harnessOverview(_ sender: Any?) { runHarness("report --open") }
+    @objc func harnessSuggest(_ sender: Any?) { runHarness("suggest --open") }
+    @objc func harnessSkill(_ sender: Any?) { runHarness("skill --open") }
+    @objc func harnessReview(_ sender: Any?) {
+        let language = Locale.preferredLanguages.first?.hasPrefix("ja") == true ? " --language Japanese" : ""
+        runHarness("review --open" + language)
+    }
+
+    private func runHarness(_ arguments: String) {
+        let command = "cmds harness \(arguments); echo; exec \"${SHELL:-/bin/zsh}\" -l"
+        if controller.focusedPane == nil { controller.createWorkspace(title: "Harness") }
+        guard (try? controller.split(direction: .down, kind: .terminal, command: command)) != nil else { return NSSound.beep() }
+    }
+
     // View › Developer (BrowserPane+WebDev.swift).
     @objc func browserViewSource(_ sender: Any?) {
         guard let pane = controller.focusedPane, pane.browser != nil else { return NSSound.beep() }
