@@ -367,13 +367,23 @@ cmds harness review --open        # what you did yesterday, what is open, a TODO
 
 - **Nothing is applied by itself.** `suggest` prints the diff (and shows it with `--open`) and asks before replacing
   CLAUDE.md; `skill` asks before installing into `~/.claude/skills/NAME/`. `--yes` answers yes (for scripts).
-- **`~/.claude` is only read.** Proposals, reports and reviews go to cmds' support folder (`Harness/`); a file that is
-  replaced is backed up first (`Harness/backups/`) and written through a temporary file.
-- **What goes to Claude**: your own prompts of the period (one line each, at most 40,000 characters), memory notes and
-  the current CLAUDE.md, with what looks like a secret masked (API keys and tokens, bearer tokens, private keys,
-  `password=` values, long hex or base64). It runs `claude -p` with your Claude Code sign-in but without tools, your
-  settings, hooks, MCP servers or a saved session (`--model`, default sonnet). A proposal that still contains something
-  secret-looking is not applied.
+- **Only those two writes.** `report` and `review` only read `~/.claude`; proposals, reports and reviews go to cmds'
+  support folder (`Harness/`). A file that is replaced is backed up first (`Harness/backups/`) and written through a
+  temporary file. A CLAUDE.md that is a symbolic link (dotfiles) is updated where it leads, which is said first; a link
+  to something that is not a Markdown file is neither read nor written, and with `--yes` nothing outside the project
+  (or `~/.claude`) is written.
+- **What goes to Claude**: your own prompts of the period (newest first, one line each, at most 40,000 characters,
+  shared between projects; not shell output, background-task notifications or compaction summaries), memory notes and
+  the current CLAUDE.md (your own file, which Claude Code sends anyway). Prompts and memory have what looks like a
+  secret masked: API keys and tokens (Anthropic, OpenAI, GitHub, GitLab, Slack, AWS, Google, Stripe, Hugging Face,
+  npm), JWTs, bearer and basic credentials, passwords in URLs, webhooks, private keys, values of `*_PASSWORD`,
+  `*_TOKEN`, `*_SECRET`, `*_API_KEY` settings and random-looking runs; projects appear by their path below your home
+  folder. It runs `claude -p` with your Claude Code sign-in in an empty folder, without tools, your settings, hooks,
+  MCP servers or a saved session (`--model`, default sonnet).
+- **Checks before applying**: a proposal with new lines that look like a secret or hold `[REDACTED]` is not applied. A
+  skill's front matter keeps only `name` and `description` (no `allowed-tools`, model or hooks). Lines that download
+  and run code, decode and run, skip permissions, use sudo, ssh or `rm -rf`, mention keys, tell Claude to ignore its
+  instructions or link elsewhere are listed before the question; `--yes` then refuses.
 - **Every morning**: a schedule (Window › Schedules…) that starts a workspace running
   `cmds harness review --open --language Japanese` puts yesterday's review on screen.
 

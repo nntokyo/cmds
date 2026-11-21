@@ -22,6 +22,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Claude harness: `cmds harness report|suggest|skill|review` and Window › Claude Harness read what `~/.claude` holds
   (sessions, memory, CLAUDE.md, skills, MCP servers) and propose an improved CLAUDE.md, a skill from memory and a daily
   review through `claude -p` (no tools, isolated, secrets masked); applied only after you saw the diff, with a backup.
+  A skill keeps only its name and description in the front matter, and lines that run code, skip permissions or reach
+  other places are pointed out before applying (`--yes` then refuses).
+- Browser: a "Not Secure" icon before the address of plain-http pages on the internet.
 
 ### Changed
 
@@ -35,6 +38,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   now exempt, the app's own connections stay https-only. Plain-http sites get their favicon too (#376).
 - Settings › General said nothing when a Chrome profile's account bookmarks are only encrypted but local ones exist
   (#377).
+- Suspended tabs now free their page's process and never come from a form, a load error or a page with a pop-up,
+  a code editor or changed fields in frames; Reload Tab on a suspended tab loads it.
+- SEO crawl: links that sign out or delete, `download` and `nofollow` links are not followed; robots.txt `*`, `$` and
+  `Allow` rules, page encodings, redirects, sitemap indexes and gzip sitemaps are understood; files that are not HTML
+  no longer count as pages without a title.
+- Favicons are not fetched from this Mac or the local network for internet pages (also not through a redirect).
 
 ## [0.30.0] - 2026-11-22
 

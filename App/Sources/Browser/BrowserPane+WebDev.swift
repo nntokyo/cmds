@@ -36,7 +36,8 @@ extension BrowserPane {
         guard let facts = try? result.decode(PageFacts.self) else { throw RPCError(code: 500, message: "the page gave no facts") }
         guard crawl > 0 else { return SEOReport(facts: facts) }
         let found = try await runPageScript(SEOAudit.crawlScript,
-                                            ["max": min(crawl, SEOAudit.maxCrawl), "disallowed": facts.robotsTxt?.disallowed ?? []],
+                                            ["max": min(crawl, SEOAudit.maxCrawl), "disallowed": facts.robotsTxt?.disallowed ?? [],
+                                             "allowed": facts.robotsTxt?.allowed ?? []],
                                             until: Date(timeIntervalSinceNow: 150))
         return SEOReport(facts: facts, pages: (try? found.decode([CrawlPage].self)) ?? [])
     }

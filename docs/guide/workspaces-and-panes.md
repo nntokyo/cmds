@@ -102,9 +102,11 @@ browser, preview, files), title and an orange icon when it needs attention.
   file; the same folder with its hidden-files and Follow Terminal settings; a terminal in the same directory with the
   same Claude account), Reload Page and Move to New Workspace.
 - **Suspended tabs** (Settings › General › Suspend background tabs; after 30 minutes by default, or never): a browser
-  tab not shown and not used for that long is unloaded to save memory and loads again when shown or used (back /
-  forward history is lost). Never a page with changed form fields, focused editable text or playing media, nor one
-  with the responsive view, file watch or console open; tabs of a workspace that is not shown are left alone.
+  tab not shown and not used for that long is unloaded to save memory (its web view and process are replaced) and
+  loads again when shown or used (back / forward history is lost). Never a page with changed form fields (also in
+  same-site frames and shadow DOM), focused editable text, a code or rich-text editor (Monaco, CodeMirror, Jupyter…)
+  or playing media, nor one that is the answer to a form, still loading or showing a load error, has a pop-up open, or
+  has the responsive view, file watch or console open; tabs of a workspace that is not shown are left alone.
   `PaneInfo.suspended` tells.
 - **Browser pages open in tabs** (on by default; Settings › General › Open new pages in tabs): a link that opens a new
   window (`target="_blank"`) becomes a tab of its browser pane, and `cmds browser open` or an agent's `browser_open`
@@ -250,7 +252,9 @@ for coding agents: [ai-agents.md](ai-agents.md#attention-how-a-pane-lights-up).
 ## Browser panes
 
 Browser panes load web pages over https and plain http (WebKit's content is exempt from App Transport Security; the
-app's own connections stay https-only). **File › Open Browser Split** (⇧⌘B) opens a WebKit browser to the right of the focused pane with the address bar
+app's own connections stay https-only); an orange open lock before the address marks a plain-http page on the internet
+(not this Mac or the local network), where what you type is not encrypted. Tab icons of internet pages are never
+fetched from this Mac or the local network, also not through a redirect. **File › Open Browser Split** (⇧⌘B) opens a WebKit browser to the right of the focused pane with the address bar
 focused. ⌘L focuses the address bar, ⌘R reloads, ⌘[ / ⌘] go back / forward. From a terminal:
 
 ```sh
@@ -294,7 +298,8 @@ sites visited in a browser pane, the icon found there.
   cannot read them; Settings says so, also when it shows the bookmarks on this Mac but not the account's.
 - macOS keeps apps from reading other apps' data: when it refuses, Settings says so and **Open Privacy Settings…**
   leads to Privacy & Security › Full Disk Access, where turning cmds on lets it read the bookmarks (come back to cmds
-  afterwards).
+  afterwards). Full Disk Access is for the whole app: the programs you run in its terminals get it too, so turn it on
+  only if that is fine with you (or keep the bar off).
 
 ### Pages that do not load, sign-in and crashes
 

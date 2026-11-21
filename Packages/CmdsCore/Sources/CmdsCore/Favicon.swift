@@ -65,6 +65,27 @@ public enum Favicon {
     /// The icon URLs to try for `page`, best first: an icon of the wanted size or just above, an SVG, any other icon,
     /// Apple touch icons, then `/favicon.ico`. Only http, https and data URLs (no `file:` from a remote page); an icon
     /// on another site only on the web's usual ports (80, 443), so a page cannot make cmds knock on other services.
+    /// This Mac or the local network: `localhost`, `*.local`, loopback, private, link-local and unspecified IPv4 and
+    /// IPv6 addresses. A page on the internet may not make the app fetch from there (an icon's address or a redirect).
+    public static func isPrivateHost(_ host: String?) -> Bool {
+        guard var host = host?.lowercased(), !host.isEmpty else { return false }
+        if host.hasPrefix("["), host.hasSuffix("]") { host = String(host.dropFirst().dropLast()) }
+        if host == "localhost" || host.hasSuffix(".localhost") || host.hasSuffix(".local") || host.hasSuffix(".internal") { return true }
+        let octets = host.split(separator: ".", omittingEmptySubsequences: false).map { Int($0) }
+        if octets.count == 4, octets.allSatisfy({ $0.map { (0...255).contains($0) } ?? false }) {
+            let a = octets[0]!, b = octets[1]!
+            return a == 0 || a == 10 || a == 127 || (a == 169 && b == 254) || (a == 172 && (16...31).contains(b))
+                || (a == 192 && b == 168) || (a == 100 && (64...127).contains(b))
+        }
+        if host.contains(":") {
+            if host == "::" || host == "::1" { return true }
+            if host.hasPrefix("::ffff:") { return isPrivateHost(String(host.dropFirst(7))) }
+            let first = host.split(separator: ":").first.flatMap { UInt16($0, radix: 16) } ?? 0
+            return (first & 0xfe00) == 0xfc00 || (first & 0xffc0) == 0xfe80
+        }
+        return false
+    }
+
     public static func urls(_ candidates: [Candidate], page: URL) -> [URL] {
         func score(_ candidate: Candidate) -> Int {
             let rel = candidate.rel
@@ -87,6 +108,8 @@ public enum Favicon {
         func allowed(_ url: URL) -> Bool {
             guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return true }
             if origin(url) == origin(page) { return true }
+            // An internet page pointing at this Mac or the local network: not fetched.
+            if isPrivateHost(url.host), !isPrivateHost(page.host) { return false }
             return url.port == nil || url.port == 80 || url.port == 443
         }
         var seen = Set<String>()

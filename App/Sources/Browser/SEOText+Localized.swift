@@ -71,6 +71,8 @@ extension SEOText {
         case .crawlNoindex(let count): return String(localized: "\(count) pages ask not to be indexed", comment: "SEO report")
         case .crawlErrors(let count): return String(localized: "\(count) pages answered with an error", comment: "SEO report")
         case .crawlOK(let count): return String(localized: "\(count) linked pages checked", comment: "SEO report")
+        case .crawlNothing:
+            return String(localized: "No links to other pages of this site to check (or robots.txt disallows them)", comment: "SEO report")
         case .value(let value): return value
         case .linkCounts(let total, let inside, let outside, let nofollow):
             return String(localized: "\(total) (\(inside) internal, \(outside) external, \(nofollow) nofollow)", comment: "SEO report")

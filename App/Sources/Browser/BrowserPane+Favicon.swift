@@ -18,13 +18,17 @@ extension BrowserPane {
         stateDidChange()
     }
 
-    /// Loads the page remembered by `deferLoad`, once.
+    /// Loads the page remembered by `deferLoad` (or `suspend`), once.
     func loadIfPending() {
         guard let url = pendingURL else { return }
         pendingURL = nil
         suspendedTitle = nil
         loadingFromPending = true
-        webView.load(URLRequest(url: url))
+        if url.isFileURL {
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        } else {
+            webView.load(URLRequest(url: url))
+        }
     }
 
     /// After `loadIfPending` started the page for a command: waits until it has loaded (at most 20 s), so scripts and
@@ -38,13 +42,22 @@ extension BrowserPane {
         loadingFromPending = false
     }
 
-    /// Unloads the page to save memory (a background tab unused for a while, #375): it loads again when shown or asked
-    /// for. Back / forward history and the page's state are lost, so only pages without unsaved input are suspended.
+    /// Whether the tab may be suspended now, apart from its idle time and the page's answer: nothing loading or failed,
+    /// no pop-up open, not a form's answer, not already suspended.
+    var canSuspend: Bool {
+        pendingURL == nil && loadFailure == nil && !webView.isLoading && !loadedFromForm && !pageDelegate.hasPopups
+            && webView.url != nil
+    }
+
+    /// Unloads the page to save memory (a background tab unused for a while, #375): the web view and its process are
+    /// replaced by an empty one, and the page loads again when shown or asked for. Back / forward history and the
+    /// page's state are lost, so only pages without unsaved input are suspended.
     func suspend() {
-        guard pendingURL == nil, let url = webView.url else { return }
-        suspendedTitle = webView.title
+        guard canSuspend, let url = webView.url else { return }
+        let title = webView.title
+        replaceWebView()
+        suspendedTitle = title
         pendingURL = url
-        webView.load(URLRequest(url: URL(string: "about:blank")!))
         stateDidChange()
     }
 
@@ -186,7 +199,7 @@ final class FaviconCache {
             var request = URLRequest(url: url)
             request.setValue("image/*", forHTTPHeaderField: "Accept")
             do {
-                let (bytes, response) = try await session.bytes(for: request)
+                let (bytes, response) = try await session.bytes(for: request, delegate: FaviconRedirects(from: url))
                 guard let http = response as? HTTPURLResponse else { return .failed }
                 guard (200..<300).contains(http.statusCode) else { return (400..<500).contains(http.statusCode) ? .missing : .failed }
                 if http.expectedContentLength > Int64(Favicon.maxBytes) { return .missing }
@@ -199,6 +212,18 @@ final class FaviconCache {
             }
         }
         return decode(data).map(Outcome.image) ?? .missing
+    }
+
+    /// Follows a redirect to this Mac or the local network only from an icon there (`Favicon.isPrivateHost`).
+    private final class FaviconRedirects: NSObject, URLSessionTaskDelegate, Sendable {
+        let fromPrivate: Bool
+        init(from url: URL) { fromPrivate = Favicon.isPrivateHost(url.host) }
+
+        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+                        newRequest request: URLRequest) async -> URLRequest? {
+            guard let url = request.url, ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+            return fromPrivate || !Favicon.isPrivateHost(url.host) ? request : nil
+        }
     }
 
     /// A thumbnail of at most `pixels` (ICO, PNG, JPEG, GIF, WebP through ImageIO; SVG through NSImage).

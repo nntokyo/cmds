@@ -81,10 +81,13 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
 - `debug.tab_bar {pane, action?, index?, choose?, width?}` (DEBUG builds) drives the tab bar of `pane`'s group with
   synthesized mouse events through its own handlers: `state` (default), `click`, `middleClick`, `close` (the ×),
   `menu` (the context menu's titles; `choose` runs one — Close Other Tabs over terminals opens a modal alert), `overflow`
-  (the ⌄ menu; `choose` shows a tab), `resize {width}`. Returns the tabs, titles, shown and visible range, which have an
+  (the ⌄ menu; `choose` shows a tab), `resize {width}`, `suspension {run?}` (each browser tab's hidden / unused
+  seconds, `canSuspend`, `fromForm`, `suspended`; `run: true` checks and suspends now). Returns the tabs, titles, shown and visible range, which have an
   icon, and the focused pane. Dragging still needs a real mouse.
 - Tab suspension: `defaults write <suite> BrowserSuspendTabsMinutes -int 1`, open two browser tabs, wait two minutes:
-  the background one reports `suspended` and loads again when focused; a page with a changed field stays.
+  the background one reports `suspended` (in `workspace.list` once suspended; `debug.tab_bar … suspension` shows why
+  not) and
+  loads again when focused with a fresh history; a page with a changed field, a code editor or a form's answer stays.
 - Tabs and Chrome bookmarks: `CMDS_CHROME_FOLDER=/tmp/x/chrome` points the bookmarks bar at a fake Chrome folder
   (`Local State` with `profile.last_used` / `info_cache`, `<profile>/Bookmarks` and/or `AccountBookmarks` with `roots.bookmark_bar` / `other` /
   `synced`). Build groups with `cmds tab`, `cmds browser open` and `cmds pane move --beside P --tab`, check

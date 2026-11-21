@@ -7918,6 +7918,17 @@
         }
       }
     },
+    "No links to other pages of this site to check (or robots.txt disallows them)": {
+      "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "チェックできる同じサイト内のほかのページへのリンクがありません（または robots.txt で禁止されています）"
+          }
+        }
+      }
+    },
     "No paired devices.": {
       "localizations": {
         "ja": {
@@ -8048,6 +8059,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "後で"
+          }
+        }
+      }
+    },
+    "Not Secure: this page is not encrypted, so what you type here can be read on the way": {
+      "comment": "Browser toolbar: icon before the address of an http page",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保護されていない通信：このページは暗号化されていないため、入力した内容が途中で読み取られるおそれがあります"
           }
         }
       }
@@ -14559,13 +14581,13 @@
         }
       }
     },
-    "macOS keeps other apps from reading %@'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds.": {
+    "macOS keeps other apps from reading %@'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds. That access is for the whole app, including the programs you run in its terminals.": {
       "comment": "Settings › General › Browser bookmarks",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOSはほかのアプリによる%@のデータの読み込みを制限しています。ブックマークを表示するには、プライバシーとセキュリティ › フルディスクアクセスでcmdsをオンにしてから、cmdsに戻ってください。"
+            "value": "macOSはほかのアプリによる%@のデータの読み込みを制限しています。ブックマークを表示するには、プライバシーとセキュリティ › フルディスクアクセスでcmdsをオンにしてから、cmdsに戻ってください。このアクセス権はアプリ全体に与えられ、ターミナルで実行するプログラムにも及びます。"
           }
         }
       }

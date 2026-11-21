@@ -484,7 +484,13 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         inspectableCheckbox.state = settings.browserInspectable ? .on : .off
         memoryWarningCheckbox.state = settings.memoryWarning ? .on : .off
         browserTabsCheckbox.state = settings.browserOpensTabs ? .on : .off
-        suspendTabsPopup.selectItem(at: max(0, suspendTabsPopup.indexOfItem(withRepresentedObject: settings.suspendTabsMinutes)))
+        // A value set with `defaults` that is not a choice: shown as itself, not as "Never".
+        let minutes = settings.suspendTabsMinutes
+        if suspendTabsPopup.indexOfItem(withRepresentedObject: minutes) < 0 {
+            suspendTabsPopup.addItem(withTitle: String(localized: "After \(minutes) minutes", comment: "Settings › General › Suspend background tabs"))
+            suspendTabsPopup.lastItem?.representedObject = minutes
+        }
+        suspendTabsPopup.selectItem(at: max(0, suspendTabsPopup.indexOfItem(withRepresentedObject: minutes)))
         chromeBookmarksCheckbox.state = settings.chromeBookmarks ? .on : .off
         fillChromeProfiles()
         refreshChromeProblem()
@@ -639,7 +645,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let browser = settings.bookmarkSource.name
         switch problem {
         case .noAccess:
-            chromeProblemNote.stringValue = String(localized: "macOS keeps other apps from reading \(browser)'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds.", comment: "Settings › General › Browser bookmarks")
+            chromeProblemNote.stringValue = String(localized: "macOS keeps other apps from reading \(browser)'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds. That access is for the whole app, including the programs you run in its terminals.", comment: "Settings › General › Browser bookmarks")
         case .notFound:
             chromeProblemNote.stringValue = String(localized: "No bookmarks of \(browser) found (for this profile).", comment: "Settings › General › Browser bookmarks")
         case .unreadable:

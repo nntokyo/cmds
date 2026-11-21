@@ -44,13 +44,13 @@ extension AppController {
         }
     }
 
-    /// Suspends background tabs (not hidden workspaces: agents work there) idle longer than the setting, after asking
-    /// each page that it has no unsaved input and plays nothing.
+    /// Suspends background tabs of the shown workspace (not hidden workspaces: agents work there) idle longer than the
+    /// setting, after asking each page that it has no unsaved input and plays nothing.
     func suspendIdleTabs() {
         let minutes = AppSettings.shared.suspendTabsMinutes
         guard minutes > 0 else { return }
         let now = Date()
-        for workspace in workspaces {
+        for workspace in workspaces where workspace.id == selectedWorkspaceID {
             guard let root = workspace.root else { continue }
             for group in root.tabGroups {
                 for id in group.tabs where id != group.paneID && id != workspace.focusedPaneID {
@@ -61,14 +61,16 @@ extension AppController {
                         scheme: browser.webView.url?.scheme,
                         busy: browser.responsive != nil || browser.watch != nil || browser.isConsoleOpen,
                         alreadySuspended: browser.pendingURL != nil)
-                    guard TabSuspension.eligible(candidate, minutes: minutes) else { continue }
+                    guard TabSuspension.eligible(candidate, minutes: minutes), browser.canSuspend else { continue }
+                    let used = browser.lastUsed
                     Task { @MainActor [weak browser] in
                         guard let browser else { return }
                         // No answer (a stuck page, an error) keeps the tab.
                         guard let state = try? await browser.runPageScript(TabSuspension.script, [:],
                                                                            until: Date(timeIntervalSinceNow: 3)),
                               state["dirty"]?.boolValue == false, state["playing"]?.boolValue == false,
-                              browser.window == nil else { return }
+                              // Shown, used by a command or navigating meanwhile: keep it.
+                              browser.window == nil, browser.lastUsed == used, browser.canSuspend else { return }
                         browser.suspend()
                     }
                 }
@@ -111,7 +113,9 @@ extension AppController {
             case .duplicate:
                 try duplicateTab(paneID: paneID)
             case .reload:
-                try browser(paneID: paneID).reload()
+                // Not `browser(paneID:)`: it would start a suspended tab's load, which reload would then cut short.
+                guard let browser = try resolvePane(paneID).browser else { return NSSound.beep() }
+                browser.reload()
             case .moveToNewWorkspace:
                 movePaneToNewWorkspaceFromUI(paneID: paneID)
             }

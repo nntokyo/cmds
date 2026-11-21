@@ -136,6 +136,27 @@ final class WebDevToolsTests: XCTestCase {
 }
 
 final class FaviconTests: XCTestCase {
+    func testPrivateHosts() {
+        for host in ["localhost", "app.localhost", "mac.local", "127.0.0.1", "10.1.2.3", "172.20.0.1", "192.168.1.1",
+                     "169.254.1.1", "0.0.0.0", "100.100.1.1", "[::1]", "::1", "fd00::1", "fe80::1", "::ffff:192.168.0.1"] {
+            XCTAssertTrue(Favicon.isPrivateHost(host), host)
+        }
+        for host in ["example.com", "8.8.8.8", "172.32.0.1", "2001:db8::1", "1.2.3.4", nil, ""] as [String?] {
+            XCTAssertFalse(Favicon.isPrivateHost(host), host ?? "nil")
+        }
+    }
+
+    func testInternetPagesDoNotPointIconsAtTheLocalNetwork() {
+        let page = URL(string: "https://example.com/")!
+        let candidates = [Favicon.Candidate(href: "http://192.168.1.1/favicon.ico", rel: "icon", sizes: nil, type: nil),
+                          Favicon.Candidate(href: "https://cdn.example.net/i.png", rel: "icon", sizes: nil, type: nil)]
+        let urls = Favicon.urls(candidates, page: page).map(\.absoluteString)
+        XCTAssertFalse(urls.contains("http://192.168.1.1/favicon.ico"))
+        XCTAssertTrue(urls.contains("https://cdn.example.net/i.png"))
+        let local = Favicon.urls(candidates, page: URL(string: "http://localhost:3000/")!).map(\.absoluteString)
+        XCTAssertTrue(local.contains("http://192.168.1.1/favicon.ico"), "a local page may")
+    }
+
     func testBestIconFirstThenFaviconIco() {
         let page = URL(string: "https://example.com:8443/a/b")!
         let urls = Favicon.urls([
@@ -262,5 +283,16 @@ final class SEOMoreTests: XCTestCase {
                                          rendered: false)
         XCTAssertTrue(line.hasPrefix("<!-- cmds: "))
         XCTAssertEqual(line.components(separatedBy: "-->").count, 2, line)
+        for type in ["text/html; x=--->y", "a---", "-", "x-"] {
+            let line = PageSource.headerLine(url: "u", status: nil, contentType: type, charset: nil, rendered: true)
+            XCTAssertEqual(line.components(separatedBy: "-->").count, 2, line)
+            XCTAssertFalse(line.dropFirst(4).dropLast(4).contains("--"), line)
+        }
+    }
+
+    func testCrawlThatFoundNothingSaysSo() {
+        let page = PageFacts(url: "https://x.test/", title: "T")
+        XCTAssertEqual(SEOReport(facts: page, pages: []).checks.first { $0.id == "site" }?.status, .info)
+        XCTAssertNil(SEOReport(facts: page).checks.first { $0.id == "site" })
     }
 }

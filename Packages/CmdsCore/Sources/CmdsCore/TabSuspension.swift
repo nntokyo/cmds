@@ -37,9 +37,13 @@ public enum TabSuspension {
         return tab.hiddenFor >= limit && tab.unusedFor >= limit
     }
 
-    /// `callAsyncJavaScript` body: `{dirty, playing}`: a form field changed from its default (or a focused editable
-    /// element with text), audio or video playing. Any error keeps the tab (the caller treats no answer as "keep").
+    /// `callAsyncJavaScript` body: `{dirty, playing}`. Dirty: a form field changed from its default, a focused editable
+    /// element with text, or a code or rich-text editor that keeps its text in scripts (Monaco, CodeMirror, ProseMirror,
+    /// Jupyter…), looked for in the page, its open shadow roots and its same-site frames. Playing: audio or video.
+    /// Any error keeps the tab (the caller treats no answer as "keep").
     public static let script = """
+        const editors = '.monaco-editor, .CodeMirror, .cm-editor, .ProseMirror, .ql-editor, .jp-Notebook, .ace_editor, '
+          + '[role="textbox"][contenteditable], trix-editor, .tox-edit-area, .ck-editor__editable';
         const changed = (e) => {
           const type = (e.type || '').toLowerCase();
           if (['hidden', 'submit', 'button', 'reset', 'image', 'file'].includes(type)) return false;
@@ -47,10 +51,27 @@ public enum TabSuspension {
           if (type === 'checkbox' || type === 'radio') return e.checked !== e.defaultChecked;
           return e.value !== e.defaultValue;
         };
-        const dirty = [...document.querySelectorAll('input, textarea, select')].some(changed)
-          || [...document.querySelectorAll('[contenteditable]:not([contenteditable="false"])')]
-               .some(e => (e.textContent || '').trim().length > 0 && e.contains(document.activeElement));
-        const playing = [...document.querySelectorAll('video, audio')].some(m => !m.paused && !m.ended);
+        const roots = [];
+        const collect = (root, depth) => {
+          if (!root || depth > 4 || roots.length > 200) return;
+          roots.push(root);
+          for (const e of root.querySelectorAll('*')) { if (e.shadowRoot) collect(e.shadowRoot, depth + 1); }
+          for (const f of root.querySelectorAll('iframe, frame')) {
+            let d = null;
+            try { d = f.contentDocument; } catch (e) {}
+            if (d) collect(d, depth + 1);
+          }
+        };
+        collect(document, 0);
+        let dirty = false, playing = false;
+        for (const root of roots) {
+          const active = root.activeElement || document.activeElement;
+          if ([...root.querySelectorAll('input, textarea, select')].some(changed)
+              || [...root.querySelectorAll('[contenteditable]:not([contenteditable="false"])')]
+                   .some(e => (e.textContent || '').trim().length > 0 && active && e.contains(active))
+              || root.querySelector(editors)) dirty = true;
+          if ([...root.querySelectorAll('video, audio')].some(m => !m.paused && !m.ended)) playing = true;
+        }
         return { dirty, playing };
         """
 }

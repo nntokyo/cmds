@@ -35,6 +35,9 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
         webView.navigationDelegate = nil
     }
 
+    /// Pop-up windows the page opened are open (a sign-in in progress).
+    var hasPopups: Bool { !popups.isEmpty }
+
     /// The pane closes: dialogs answered, pop-ups closed.
     func tearDown() {
         for sheet in sheets { sheet.cancel() }
@@ -205,6 +208,10 @@ final class BrowserPageDelegate: NSObject, WKUIDelegate, WKNavigationDelegate {
             case .linkActivated, .backForward, .formSubmitted, .formResubmitted: pane?.requestedURL = nil
             default: break
             }
+            // A page that came from a form (a POST's answer) is not suspended: loading its address again would not
+            // give it back.
+            pane?.loadedFromForm = [.formSubmitted, .formResubmitted].contains(navigationAction.navigationType)
+                || navigationAction.request.httpMethod?.uppercased() == "POST"
         }
         decisionHandler(navigationAction.shouldPerformDownload ? .download : .allow)
     }

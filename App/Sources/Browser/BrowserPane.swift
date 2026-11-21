@@ -17,6 +17,18 @@ final class BrowserPane: NSView {
     private let backButton = BrowserPane.toolbarButton("chevron.left", label: String(localized: "Back"))
     private let forwardButton = BrowserPane.toolbarButton("chevron.right", label: String(localized: "Forward"))
     private let reloadButton = BrowserPane.toolbarButton("arrow.clockwise", label: String(localized: "Reload"))
+    /// Before the address: the page is plain http on the internet (what is typed there can be read on the way).
+    private let notSecureIcon: NSImageView = {
+        let label = String(localized: "Not Secure: this page is not encrypted, so what you type here can be read on the way",
+                           comment: "Browser toolbar: icon before the address of an http page")
+        let view = NSImageView(image: NSImage(systemSymbolName: "lock.open.trianglebadge.exclamationmark", accessibilityDescription: label)
+                               ?? NSImage(systemSymbolName: "lock.open", accessibilityDescription: label) ?? NSImage())
+        view.contentTintColor = .systemOrange
+        view.toolTip = label
+        view.isHidden = true
+        view.setContentHuggingPriority(.required, for: .horizontal)
+        return view
+    }()
     private var observations: [NSKeyValueObservation] = []
     /// Settings default the page zoom was last set to.
     private var appliedDefaultZoom = AppSettings.shared.browserZoom
@@ -64,6 +76,8 @@ final class BrowserPane: NSView {
     var lastUsed = Date()
     /// The page was unloaded to save memory (`suspend`): its title is kept for the tab.
     var suspendedTitle: String?
+    /// The shown page is the answer to a form (`BrowserPageDelegate`): not suspended.
+    var loadedFromForm = false
     /// `loadIfPending` started the page and no command waited for it yet (`waitForPendingLoad`).
     var loadingFromPending = false
     /// The address last asked for (`navigate`): what an agent asked to open, before or whatever the server redirects to.
@@ -156,6 +170,8 @@ final class BrowserPane: NSView {
             return
         }
         pendingURL = nil
+        suspendedTitle = nil
+        lastUsed = Date()
         requestedURL = url
         webView.load(URLRequest(url: url))
         addressField.stringValue = url.absoluteString
@@ -271,8 +287,22 @@ final class BrowserPane: NSView {
     /// is detached before its process is killed, so the crash handling (`webContentProcessDidTerminate`) does not
     /// reload the page a second time or show its notice.
     private func replaceStuckWebView() {
+        let url = webView.url ?? lastCommittedURL
+        replaceWebView()
+        if let url, url.isFileURL {
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        } else if let url, Self.isWebPage(url) {
+            webView.load(URLRequest(url: url))
+        } else {
+            showStartPage()
+        }
+        stateDidChange()
+    }
+
+    /// A new, empty web view in place of the current one (see `replaceStuckWebView`); its process and history go.
+    /// Also how a suspended tab frees its page's memory (`suspend`).
+    func replaceWebView() {
         let old = webView
-        let url = old.url ?? lastCommittedURL
         let responsiveSettings = responsive
         if responsiveSettings != nil { setResponsive(nil) }
         pageDelegate.tearDown()  // pop-ups share the stuck process
@@ -295,14 +325,6 @@ final class BrowserPane: NSView {
         layoutWebView()
         if let responsiveSettings { setResponsive(responsiveSettings) }
         clearLoadFailure()
-        if let url, url.isFileURL {
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
-        } else if let url, Self.isWebPage(url) {
-            webView.load(URLRequest(url: url))
-        } else {
-            showStartPage()
-        }
-        stateDidChange()
     }
 
     /// For pages whose Content Security Policy refuses eval and the Function constructors (no 'unsafe-eval', #88):
@@ -529,7 +551,7 @@ final class BrowserPane: NSView {
 
         developerButton.target = self
         developerButton.action = #selector(developerButtonClicked(_:))
-        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, addressField, breakpointLabel,
+        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, notSecureIcon, addressField, breakpointLabel,
                                           deviceButton, developerButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 6
@@ -617,6 +639,8 @@ final class BrowserPane: NSView {
             let url = currentURL
             addressField.stringValue = url?.scheme == "about" ? "" : (url?.absoluteString ?? "")
         }
+        let shown = currentURL
+        notSecureIcon.isHidden = !(shown?.scheme?.lowercased() == "http" && !Favicon.isPrivateHost(shown?.host))
         updateButtons()
         if watch != nil {
             updateWatcher()  // a page that does not reload (remote) pauses the watcher

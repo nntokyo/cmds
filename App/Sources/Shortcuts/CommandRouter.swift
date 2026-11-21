@@ -105,10 +105,18 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         runHarness("review --open" + language)
     }
 
+    /// Runs `cmds harness …` in a terminal below the focused pane: in its folder on this Mac (the project the command
+    /// looks at) and with its Claude account (whose config folder holds the sessions), else in the home folder.
     private func runHarness(_ arguments: String) {
         let command = "cmds harness \(arguments); echo; exec \"${SHELL:-/bin/zsh}\" -l"
         if controller.focusedPane == nil { controller.createWorkspace(title: "Harness") }
-        guard (try? controller.split(direction: .down, kind: .terminal, command: command)) != nil else { return NSSound.beep() }
+        let pane = controller.focusedPane
+        let local = pane.map { $0.ssh == nil && $0.files?.host == nil && $0.browser == nil } ?? false
+        let cwd = local ? pane?.workingDirectory : nil
+        let account = local && pane?.files == nil
+            ? pane?.claudeAccount.flatMap { controller.claudeAccounts.account(named: $0) } : nil
+        guard (try? controller.split(direction: .down, kind: .terminal, cwd: cwd ?? NSHomeDirectory(), command: command,
+                                     account: account)) != nil else { return NSSound.beep() }
     }
 
     // View › Developer (BrowserPane+WebDev.swift).

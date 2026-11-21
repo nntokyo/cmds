@@ -21,7 +21,10 @@ public enum PageSource {
     public static func headerLine(url: String, status: Int?, contentType: String?, charset: String?, rendered: Bool) -> String {
         let parts = [url, status.map { "HTTP \($0)" }, contentType, charset.map { "decoded as \($0)" },
                      rendered ? "DOM after scripts" : "from the cache"].compactMap { $0 }
-        return "<!-- cmds: " + parts.joined(separator: " · ").replacingOccurrences(of: "--", with: "- -") + " -->\n"
+        var text = parts.joined(separator: " · ")
+        while text.contains("--") { text = text.replacingOccurrences(of: "--", with: "- -") }
+        if text.hasSuffix("-") { text += " " }
+        return "<!-- cmds: " + text + " -->\n"
     }
 
     /// The first line of a source view that shows the DOM because the HTML was not in the cache.
@@ -208,14 +211,18 @@ public struct PageFacts: Codable, Equatable, Sendable {
         public var disallowsAll: Bool
         /// `Sitemap:` lines.
         public var sitemaps: Int
-        /// The `Disallow:` paths of the `*` group (at most 200): the crawl (`SEOAudit.crawlScript`) skips them.
+        /// The `Disallow:` paths of the `*` group (at most 200): the crawl (`SEOAudit.crawlScript`) skips them…
         public var disallowed: [String]?
+        /// …unless an `Allow:` path of the group matches longer.
+        public var allowed: [String]?
 
-        public init(status: Int, disallowsAll: Bool = false, sitemaps: Int = 0, disallowed: [String]? = nil) {
+        public init(status: Int, disallowsAll: Bool = false, sitemaps: Int = 0, disallowed: [String]? = nil,
+                    allowed: [String]? = nil) {
             self.status = status
             self.disallowsAll = disallowsAll
             self.sitemaps = sitemaps
             self.disallowed = disallowed
+            self.allowed = allowed
         }
     }
 
@@ -418,7 +425,7 @@ public struct SEOReport: Codable, Equatable, Sendable {
         words = text
         url = facts.url
         self.pages = pages
-        checks = (SEOAudit.checks(facts, text: text) + SEOAudit.crawlChecks(page: facts, pages: pages ?? [], text: text))
+        checks = (SEOAudit.checks(facts, text: text) + SEOAudit.crawlChecks(page: facts, pages: pages, text: text))
             .enumerated().sorted { lhs, rhs in
             lhs.element.status == rhs.element.status ? lhs.offset < rhs.offset : lhs.element.status < rhs.element.status
         }.map(\.element)
@@ -526,7 +533,7 @@ public enum SEOMessage: Sendable {
     case lcp(Int), cls(String), ttfb(Int), domSize(Int), pageWeight(Int)
     /// The crawl (`SEOAudit.crawlChecks`).
     case crawlDuplicateTitles(Int), crawlDuplicateDescriptions(Int), crawlMissing(count: Int, what: String),
-         crawlNoindex(Int), crawlErrors(Int), crawlOK(Int)
+         crawlNoindex(Int), crawlErrors(Int), crawlOK(Int), crawlNothing
     /// A value shown as it is (the canonical URL, the language…).
     case value(String)
     case linkCounts(total: Int, internal: Int, external: Int, nofollow: Int), imageCounts(total: Int, withoutAlt: Int)
@@ -604,6 +611,7 @@ public struct SEOText: Sendable {
         case .crawlNoindex(let count): return count == 1 ? "1 page asks not to be indexed" : "\(count) pages ask not to be indexed"
         case .crawlErrors(let count): return count == 1 ? "1 page answered with an error" : "\(count) pages answered with an error"
         case .crawlOK(let count): return count == 1 ? "1 linked page checked" : "\(count) linked pages checked"
+        case .crawlNothing: return "No links to other pages of this site to check (or robots.txt disallows them)"
         case .value(let value): return value
         case .linkCounts(let total, let inside, let outside, let nofollow):
             return "\(total) (\(inside) internal, \(outside) external, \(nofollow) nofollow)"
@@ -806,12 +814,16 @@ public enum SEOAudit {
     }
 
     /// Checks over the page and its crawl: duplicate titles or descriptions, pages without them or an h1, noindex pages,
-    /// errors. Nothing without a crawl.
-    public static func crawlChecks(page: PageFacts, pages: [CrawlPage], text: SEOText = .english) -> [SEOCheck] {
-        guard !pages.isEmpty else { return [] }
+    /// errors. Nothing without a crawl (`pages` nil); a note when it found no page to check.
+    public static func crawlChecks(page: PageFacts, pages: [CrawlPage]?, text: SEOText = .english) -> [SEOCheck] {
+        guard let pages else { return [] }
         var checks: [SEOCheck] = []
         func add(_ id: String, _ status: SEOCheck.Status, _ message: SEOMessage) {
             checks.append(SEOCheck(id, status, text.message(message)))
+        }
+        guard !pages.isEmpty else {
+            add("site", .info, .crawlNothing)
+            return checks
         }
         let ok = pages.filter { (200..<300).contains($0.status) }
         let all = ok + [CrawlPage(url: page.url, status: 200, title: page.title, description: page.description)]
@@ -844,33 +856,56 @@ public enum SEOAudit {
     /// `callAsyncJavaScript` body: up to `max` links of the page on its own site (not disallowed by robots.txt's `*`
     /// group: `disallowed`), each fetched without cookies (8 s, 2 MB), parsed without running it. Returns `[CrawlPage]`.
     public static let crawlScript = """
+        // robots.txt rules of the `*` group: `*` and `$` patterns, the longest match wins, Allow over Disallow on a tie.
+        const rule = (p) => { try { return new RegExp('^' + p.replace(/[.+?^{}()|[\\]\\\\]/g, '\\\\$&').replace(/\\*/g, '.*')); } catch (e) { return null; } };
+        const rules = [...(disallowed || []).map(p => ({ p, allow: false })), ...(allowed || []).map(p => ({ p, allow: true }))]
+          .filter(r => r.p).map(r => ({ ...r, re: rule(r.p) })).filter(r => r.re);
+        const blocked = (u) => {
+          const path = u.pathname + u.search;
+          let best = null;
+          for (const r of rules) if (r.re.test(path) && (!best || r.p.length > best.p.length || (r.p.length === best.p.length && r.allow))) best = r;
+          return best ? !best.allow : false;
+        };
+        // Links that do something rather than show a page (sign out, delete…) or that are marked not to follow.
+        const action = /(^|[\\/_.?&=-])(log-?out|log-?off|sign-?out|delete|destroy|remove|unsubscribe|revoke|disconnect|deactivate|cancel|reset|purge)([\\/_.?&=-]|$)/i;
         const seen = new Set([location.href.split('#')[0]]);
         const queue = [];
         for (const a of document.querySelectorAll('a[href]')) {
-          let u; try { u = new URL(a.href, location.href); } catch (e) { continue; }
+          if (!(a instanceof HTMLAnchorElement) || a.hasAttribute('download') || a.hasAttribute('data-method')
+              || /(^|\\s)nofollow(\\s|$)/i.test(a.getAttribute('rel') || '')) continue;
+          let u; try { u = new URL(a.getAttribute('href'), location.href); } catch (e) { continue; }
           if (u.origin !== location.origin || !/^https?:$/.test(u.protocol)) continue;
           u.hash = '';
-          if (seen.has(u.href) || (disallowed || []).some(p => p && u.pathname.startsWith(p))) continue;
+          if (seen.has(u.href) || blocked(u) || action.test(u.pathname + u.search)) continue;
           seen.add(u.href); queue.push(u.href);
           if (queue.length >= max) break;
         }
+        const cut = (s) => s == null ? null : String(s).trim().slice(0, 300) || null;
         const one = async (url) => {
           const abort = new AbortController();
           const timer = setTimeout(() => abort.abort(), 8000);
           try {
             const r = await fetch(url, { credentials: 'omit', redirect: 'follow', signal: abort.signal });
-            if (!/html/i.test(r.headers.get('content-type') || '')) return { url, status: r.status, h1: 0, noindex: false };
+            const type = r.headers.get('content-type') || '';
+            // Not HTML: not a page (an error still counts); its download stops here.
+            if (!/html/i.test(type)) { abort.abort(); return { url, status: r.status >= 400 ? r.status : 0, h1: 0, noindex: false }; }
             const reader = r.body.getReader(); const parts = []; let size = 0;
             while (size < 2000000) { const { done, value } = await reader.read(); if (done) break; parts.push(value); size += value.length; }
             try { reader.cancel(); } catch (e) {}
             const all = new Uint8Array(Math.min(size, 2000000)); let offset = 0;
             for (const p of parts) { const take = p.subarray(0, all.length - offset); all.set(take, offset); offset += take.length; if (offset >= all.length) break; }
-            const doc = new DOMParser().parseFromString(new TextDecoder().decode(all), 'text/html');
+            // The encoding: the header's charset, else a <meta> in the first 2 KB, else UTF-8.
+            let label = (type.match(/charset=["']?([\\w.:-]+)/i) || [])[1];
+            if (!label) label = (new TextDecoder('latin1').decode(all.subarray(0, 2048)).match(/<meta[^>]+charset=["']?([\\w.:-]+)/i) || [])[1];
+            let decoder; try { decoder = new TextDecoder(label || 'utf-8'); } catch (e) { decoder = new TextDecoder(); }
+            const doc = new DOMParser().parseFromString(decoder.decode(all), 'text/html');
             const meta = (s) => { const e = doc.querySelector(s); return e ? (e.getAttribute('content') || '').trim() : null; };
             const robots = [meta('meta[name="robots" i]'), meta('meta[name="googlebot" i]')].filter(Boolean).join(',').toLowerCase();
             const canonical = doc.querySelector('link[rel="canonical" i]');
-            return { url, status: r.status, title: (doc.title || '').trim() || null, description: meta('meta[name="description" i]'),
-                     h1: doc.querySelectorAll('h1').length, canonical: canonical ? canonical.getAttribute('href') : null,
+            // Redirected: the page it ended at (two links to one page are one page).
+            const final = r.redirected && r.url ? r.url.split('#')[0] : url;
+            return { url: final, status: r.status, title: cut(doc.title), description: cut(meta('meta[name="description" i]')),
+                     h1: doc.querySelectorAll('h1').length, canonical: canonical ? cut(canonical.getAttribute('href')) : null,
                      noindex: /(^|[,\\s])(noindex|none)([,\\s]|$)/.test(robots) };
           } catch (e) {
             return { url, status: 0, h1: 0, noindex: false };
@@ -878,7 +913,8 @@ public enum SEOAudit {
         };
         const results = [];
         for (let i = 0; i < queue.length; i += 4) results.push(...await Promise.all(queue.slice(i, i + 4).map(one)));
-        return results;
+        const pages = new Set([location.href.split('#')[0]]);
+        return results.filter(p => p.status === 0 || p.status >= 400 || !pages.has(p.url) && pages.add(p.url));
         """
 
     /// `callAsyncJavaScript` body: returns `PageFacts` as JSON. Fetches `/robots.txt` of http(s) pages (same origin).
@@ -938,7 +974,7 @@ public enum SEOAudit {
             // Groups: consecutive User-agent lines, then their rules. The `*` group disallowing `/` (with no Allow)
             // shuts out every crawler without a group of its own.
             let agents = [], inRules = false, starDisallowsAll = false, starAllows = false, sitemaps = 0, firstSitemap = null;
-            const disallowed = [];
+            const disallowed = [], allowed = [];
             for (const raw of body.split(/\\r?\\n/)) {
               const line = raw.replace(/#.*/, '').trim();
               const m = line.match(/^([A-Za-z-]+)\\s*:\\s*(.*)$/); if (!m) continue;
@@ -950,27 +986,40 @@ public enum SEOAudit {
               if (!agents.includes('*')) continue;
               if (key === 'disallow' && value === '/') starDisallowsAll = true;
               if (key === 'disallow' && value !== '' && disallowed.length < 200) disallowed.push(value);
-              if (key === 'allow' && value !== '') starAllows = true;
+              if (key === 'allow' && value !== '') { starAllows = true; if (allowed.length < 200) allowed.push(value); }
             }
-            robotsTxt = { status: r.status, disallowsAll: starDisallowsAll && !starAllows, sitemaps, disallowed };
-            // The first sitemap, on this site only (5 s, 5 MB): does it list this page?
+            robotsTxt = { status: r.status, disallowsAll: starDisallowsAll && !starAllows, sitemaps, disallowed, allowed };
+            // The first sitemap, on this site only (5 s, 5 MB; gzip unpacked): does it list this page? A sitemap index:
+            // its first five sitemaps on this site.
             if (firstSitemap) {
               try {
+                const read = async (url) => {
+                  const s = await fetch(url, { credentials: 'omit', redirect: 'follow', signal: abort.signal });
+                  if (!s.ok || !s.body) return { status: s.status, text: '' };
+                  let stream = s.body;
+                  if (/\\.gz$/i.test(new URL(url).pathname) && !/xml|text/i.test(s.headers.get('content-type') || '')
+                      && typeof DecompressionStream !== 'undefined') stream = stream.pipeThrough(new DecompressionStream('gzip'));
+                  const reader = stream.getReader(); let size = 0; const parts = [];
+                  while (size < 5000000) { const { done, value } = await reader.read(); if (done) break; parts.push(value); size += value.length; }
+                  try { reader.cancel(); } catch (e) {}
+                  const all = new Uint8Array(Math.min(size, 5000000)); let offset = 0;
+                  for (const p of parts) { const take = p.subarray(0, all.length - offset); all.set(take, offset); offset += take.length; if (offset >= all.length) break; }
+                  return { status: s.status, text: new TextDecoder().decode(all) };
+                };
+                const locs = (text) => [...text.matchAll(/<loc>\\s*(?:<!\\[CDATA\\[)?\\s*([^<\\]]*?)\\s*(?:\\]\\]>)?\\s*<\\/loc>/gi)]
+                  .map(m => m[1].replace(/&amp;/g, '&').trim());
                 const sm = new URL(firstSitemap, location.href);
                 if (sm.origin === location.origin) {
-                  const s = await fetch(sm.href, { credentials: 'omit', redirect: 'follow', signal: abort.signal });
-                  let text = '';
-                  if (s.ok) {
-                    const reader = s.body.getReader(); let size = 0; const parts = [];
-                    while (size < 5000000) { const { done, value } = await reader.read(); if (done) break; parts.push(value); size += value.length; }
-                    try { reader.cancel(); } catch (e) {}
-                    const all = new Uint8Array(Math.min(size, 5000000)); let offset = 0;
-                    for (const p of parts) { const take = p.subarray(0, all.length - offset); all.set(take, offset); offset += take.length; if (offset >= all.length) break; }
-                    text = new TextDecoder().decode(all);
+                  const first = await read(sm.href);
+                  let listed = locs(first.text);
+                  if (/<sitemapindex/i.test(first.text)) {
+                    const children = listed.filter(u => { try { return new URL(u).origin === location.origin; } catch (e) { return false; } }).slice(0, 5);
+                    listed = [];
+                    for (const child of children) { try { listed.push(...locs((await read(child)).text)); } catch (e) {} }
                   }
                   const page = location.href.split('#')[0];
-                  const forms = [page, page.endsWith('/') ? page.slice(0, -1) : page + '/'].map(u => u.replace(/&/g, '&amp;'));
-                  sitemap = { url: sm.href, status: s.status, listsPage: forms.some(u => text.includes('>' + u + '<')) };
+                  const forms = [page, page.endsWith('/') ? page.slice(0, -1) : page + '/'];
+                  sitemap = { url: sm.href, status: first.status, listsPage: listed.some(u => forms.includes(u)) };
                 }
               } catch (e) {}
             }
