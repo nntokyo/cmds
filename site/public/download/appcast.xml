@@ -7,28 +7,46 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.29.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.29.1</link>
-      <sparkle:version>47</sparkle:version>
-      <sparkle:shortVersionString>0.29.1</sparkle:shortVersionString>
+      <title>cmds 0.30.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.30.0</link>
+      <sparkle:version>48</sparkle:version>
+      <sparkle:shortVersionString>0.30.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 20 Nov 2026 12:13:55 GMT</pubDate>
+      <pubDate>Sat, 21 Nov 2026 15:26:06 GMT</pubDate>
       <description><![CDATA[
-<h3>修正</h3>
+<h3>新機能</h3>
 <ul>
-<li>Chrome のブックマークバー：Google アカウントに保存されたブックマーク（新しい Chrome でログイン中のプロファイルが使う <code>AccountBookmarks</code>）も表示するようにしました（Mac 上のブックマークより前に並びます）。これまでは「ブックマークが見つかりません」になっていました。</li>
+<li>タブにページのアイコン（ファビコン）を表示します。訪問したサイトのアイコンはChromeのブックマークバーにも出ます。</li>
+<li>タブの右クリックメニュー：閉じる・他のタブを閉じる・右側のタブを閉じる・複製・再読み込み・新しいワークスペースへ移動。</li>
+<li>コンソールの高さを上端のドラッグで変えられます。ファイルから開いたページのソースも表示できます。</li>
+</ul>
+<h3>変更</h3>
+<ul>
+<li>エージェントが開くブラウザのタブ：同じページを開き直すと前のタブを再利用し、1つのエージェントが開いたタブは10個まで（古い非表示のタブから閉じます。ユーザーが開いたタブは閉じません）。</li>
+<li>再起動後、見えていないブラウザのタブは表示したときに読み込みます。</li>
+<li>ページのソースはサーバーに取り直さず、キャッシュのHTML（なければ注記付きでDOM）を表示します。</li>
+<li>SEOレポートが日本語になりました。</li>
 </ul>
 <p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
-<h3>Fixed</h3>
+<h3>Added</h3>
 <ul>
-<li>Chrome bookmarks bar: bookmarks saved in the Google Account (<code>AccountBookmarks</code>, used by signed-in profiles of newer Chrome versions) are shown too, before those kept on the Mac. Such profiles showed "No Chrome bookmarks found".</li>
+<li>Tabs show the page's icon (favicon); the Chrome bookmarks bar shows the icons of visited sites.</li>
+<li>Right-click a tab: Close Tab, Close Other Tabs, Close Tabs to the Right, Duplicate Tab, Reload Page, Move to New Workspace.</li>
+<li>The console drawer resizes by dragging its top edge; View Page Source of a local page shows the file.</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>Agents' browser tabs: opening the same page again reuses its tab, and an agent keeps at most 10 tabs (its oldest background ones close; tabs you open are never closed for you).</li>
+<li>After a relaunch, browser tabs that are not shown load when first shown.</li>
+<li>View Page Source no longer asks the server again: the cached HTML, or the DOM with a note.</li>
+<li>The SEO report tab is in the app's language.</li>
 </ul>
 <p>Mac only; the iPhone/iPad app is unchanged.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.29.1/cmds-0.29.1.dmg" length="17620440" type="application/octet-stream" sparkle:edSignature="5VZpCQoztWDNWngbhlLukaaExr0Uygv6FUMGS9KCrFgpXS5emaVffjuwWVYK6b1lL97dPmnxSwtx3yN65joTBw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.30.0/cmds-0.30.0.dmg" length="17684439" type="application/octet-stream" sparkle:edSignature="MKQj7HMQ4tVfkzABT6aIxa2z+rgk0vW6RhSbWoT4rWZIxgCKA4pyoYhtWVE6AbGCDExUwwfLq4MyzWBGjJOBAg=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: zRc1ka2JaG5OSAV+GSPER1OB8F6jTfPebSeWoO/pmKAf7+PLxMpwRQtwxd04czA6CQSI0RS9MLu4uD1zf4bCCQ==
-length: 2084
+edSignature: brQQ/W15T82NluZg273bK28cDqN4em7hI+g+y4xbqdIf08h+NbAEzd180UhkCoJfGfM/hqsje6ta9uZ0i3tuBw==
+length: 3383
 -->
