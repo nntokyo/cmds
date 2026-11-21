@@ -24,12 +24,13 @@ final class ChromeBookmarkStore {
         return image
     }
 
-    /// Chrome's folder; `CMDS_CHROME_FOLDER` replaces it for tests (docs/internals/testing.md).
-    nonisolated static var chromeFolder: URL {
-        if let override = ProcessInfo.processInfo.environment["CMDS_CHROME_FOLDER"], override.hasPrefix("/") {
+    /// The browser's folder (`BookmarkSource.folder`); `CMDS_CHROME_FOLDER` replaces Chrome's for tests
+    /// (docs/internals/testing.md).
+    nonisolated static func sourceFolder(_ source: BookmarkSource) -> URL {
+        if source == .chrome, let override = ProcessInfo.processInfo.environment["CMDS_CHROME_FOLDER"], override.hasPrefix("/") {
             return URL(fileURLWithPath: override, isDirectory: true)
         }
-        return ChromeBookmarks.defaultChromeFolder()
+        return source.folder()
     }
 
     /// Why there are no bookmarks to show (Settings tells the user).
@@ -43,6 +44,8 @@ final class ChromeBookmarkStore {
         /// Chrome keeps this profile's bookmarks only encrypted (`EncryptedAccountBookmarks2` and the like), which other
         /// apps cannot read.
         case encrypted
+        /// The bookmarks on this Mac are shown, but those saved in the account are kept only encrypted (not shown).
+        case partlyEncrypted
     }
 
     /// The last read's problem; nil when it worked, while off or before the first read.
@@ -80,12 +83,15 @@ final class ChromeBookmarkStore {
         guard !reading else { return }
         reading = true
         let profile = AppSettings.shared.chromeProfile
+        let source = AppSettings.shared.bookmarkSource
         let previousFile = loadedFile
         let previousSignature = loadedSignature
         Task.detached(priority: .utility) {
             // Every bookmark file of the profile (AccountBookmarks, Bookmarks); the dates of those found tell a change.
-            let folder = ChromeBookmarks.profileFolder(profile: profile, chromeFolder: Self.chromeFolder)
-            let files = ChromeBookmarks.fileNames.map { folder.appendingPathComponent($0) }
+            let root = Self.sourceFolder(source)
+            let folder = source.isChromium ? ChromeBookmarks.profileFolder(profile: profile, chromeFolder: root) : root
+            let files = source.isChromium ? ChromeBookmarks.fileNames.map { folder.appendingPathComponent($0) }
+                : [folder.appendingPathComponent("Bookmarks.plist")]
             var problem: Problem?
             // A file that could not be checked or read: the others are shown, and everything is read again next time.
             var incomplete = false
@@ -121,7 +127,8 @@ final class ChromeBookmarkStore {
                         continue
                     }
                     do {
-                        if let tree = ChromeBookmarks.parse(try Data(contentsOf: entry.url)) {
+                        let data = try Data(contentsOf: entry.url)
+                        if let tree = source.isChromium ? ChromeBookmarks.parse(data) : SafariBookmarks.parse(data) {
                             trees.append(tree)
                         } else {
                             incomplete = true  // Chrome may be writing it: tried again
@@ -132,10 +139,16 @@ final class ChromeBookmarkStore {
                     }
                 }
                 if trees.isEmpty { problem = readProblem ?? .unreadable } else { read = ChromeBookmarks.merged(trees) }
+                // Shown, but the account's bookmarks are only encrypted: Settings says so (#377).
+                if read != nil, source.isChromium, !found.contains(where: { $0.url.lastPathComponent == "AccountBookmarks" }),
+                   ((try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [])
+                       .contains(where: { $0.hasPrefix("EncryptedAccountBookmarks") }) {
+                    problem = .partlyEncrypted
+                }
             }
             // Chrome's icons for the bookmarks (only when the bookmarks were read again).
             var iconData: [String: Data] = [:]
-            if let read {
+            if let read, source.isChromium {
                 func links(_ items: [ChromeBookmarks.Item]) -> [String] {
                     items.flatMap { item -> [String] in
                         switch item {
@@ -150,7 +163,7 @@ final class ChromeBookmarkStore {
             // is refused (EPERM).
             if problem == .notFound {
                 do {
-                    _ = try FileManager.default.contentsOfDirectory(atPath: Self.chromeFolder.path)
+                    _ = try FileManager.default.contentsOfDirectory(atPath: root.path)
                 } catch {
                     if Self.problem(error) == .noAccess { problem = .noAccess }
                 }
@@ -162,14 +175,16 @@ final class ChromeBookmarkStore {
                 let store = ChromeBookmarkStore.shared
                 store.reading = false
                 // Turned off while reading.
-                guard AppSettings.shared.chromeBookmarks, AppSettings.shared.chromeProfile == profile else {
+                guard AppSettings.shared.chromeBookmarks, AppSettings.shared.chromeProfile == profile,
+                      AppSettings.shared.bookmarkSource == source else {
                     store.refresh()
                     return
                 }
                 guard case .some(let read) = tree else { return }
                 // A file that could not be read is tried again next time.
-                store.loadedFile = finalProblem == nil && complete ? file : nil
-                store.loadedSignature = finalProblem == nil && complete ? signature : nil
+                let usable = finalProblem == nil || finalProblem == .partlyEncrypted
+                store.loadedFile = usable && complete ? file : nil
+                store.loadedSignature = usable && complete ? signature : nil
                 if read != store.tree || finalProblem != store.problem || !iconData.isEmpty {
                     store.tree = read
                     store.iconData = iconData
@@ -192,9 +207,10 @@ final class ChromeBookmarkStore {
         return .unreadable
     }
 
-    /// Chrome's profiles for Settings (empty without Chrome) and the one it used last.
-    nonisolated static func profiles() -> (profiles: [ChromeBookmarks.Profile], lastUsed: String?) {
-        let localState = chromeFolder.appendingPathComponent("Local State")
+    /// A Chromium browser's profiles for Settings (empty without it, or for Safari) and the one it used last.
+    nonisolated static func profiles(_ source: BookmarkSource) -> (profiles: [ChromeBookmarks.Profile], lastUsed: String?) {
+        guard source.isChromium else { return ([], nil) }
+        let localState = sourceFolder(source).appendingPathComponent("Local State")
         guard let data = try? Data(contentsOf: localState) else { return ([], nil) }
         return ChromeBookmarks.profiles(localState: data)
     }

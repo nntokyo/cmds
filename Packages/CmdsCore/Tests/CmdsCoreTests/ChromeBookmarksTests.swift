@@ -99,3 +99,41 @@ final class ChromeBookmarksTests: XCTestCase {
         XCTAssertEqual(ChromeBookmarks.profileFolder(profile: "Profile 4", chromeFolder: folder).lastPathComponent, "Profile 4")
     }
 }
+
+final class BookmarkSourcesTests: XCTestCase {
+    func testSafariPlist() throws {
+        let plist: [String: Any] = ["Children": [
+            ["Title": "BookmarksBar", "WebBookmarkType": "WebBookmarkTypeList", "Children": [
+                ["WebBookmarkType": "WebBookmarkTypeLeaf", "URLString": "https://a.example/", "URIDictionary": ["title": "A"]],
+                ["WebBookmarkType": "WebBookmarkTypeLeaf", "URLString": "javascript:alert(1)", "URIDictionary": ["title": "JS"]],
+                ["WebBookmarkType": "WebBookmarkTypeList", "Title": "Dev", "Children": [
+                    ["WebBookmarkType": "WebBookmarkTypeLeaf", "URLString": "http://b.example/x", "URIDictionary": [:]],
+                ]],
+            ]],
+            ["Title": "BookmarksMenu", "WebBookmarkType": "WebBookmarkTypeList", "Children": [
+                ["WebBookmarkType": "WebBookmarkTypeLeaf", "URLString": "https://m.example/", "URIDictionary": ["title": "M"]],
+            ]],
+            ["Title": "com.apple.ReadingList", "WebBookmarkType": "WebBookmarkTypeList", "Children": [
+                ["WebBookmarkType": "WebBookmarkTypeLeaf", "URLString": "https://r.example/"],
+            ]],
+        ]]
+        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)
+        let tree = try XCTUnwrap(SafariBookmarks.parse(data))
+        XCTAssertEqual(tree.bar, [
+            .link(title: "A", url: URL(string: "https://a.example/")!),
+            .folder(title: "Dev", items: [.link(title: "b.example", url: URL(string: "http://b.example/x")!)]),
+        ])
+        XCTAssertEqual(tree.other.map(\.title), ["M"], "the Bookmarks menu; no Reading List")
+        XCTAssertNil(SafariBookmarks.parse(Data("not a plist".utf8)))
+    }
+
+    func testFolders() {
+        let home = "/Users/me"
+        XCTAssertEqual(BookmarkSource.chrome.folder(home: home).path, "/Users/me/Library/Application Support/Google/Chrome")
+        XCTAssertEqual(BookmarkSource.brave.folder(home: home).path,
+                       "/Users/me/Library/Application Support/BraveSoftware/Brave-Browser")
+        XCTAssertEqual(BookmarkSource.safari.folder(home: home).path, "/Users/me/Library/Safari")
+        XCTAssertTrue(BookmarkSource.edge.isChromium)
+        XCTAssertFalse(BookmarkSource.safari.isChromium)
+    }
+}

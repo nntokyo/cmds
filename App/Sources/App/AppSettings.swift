@@ -115,9 +115,11 @@ final class AppSettings: NSObject {
     static let chromeBookmarksKey = "BrowserChromeBookmarks"
     static let chromeProfileKey = "BrowserChromeProfile"
     static let suspendTabsKey = "BrowserSuspendTabsMinutes"
+    static let bookmarkSourceKey = "BrowserBookmarksSource"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
                                showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey,
-                               browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey, suspendTabsKey] + MenuBarOption.allCases.map(\.rawValue)
+                               browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey, suspendTabsKey,
+                               bookmarkSourceKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -239,6 +241,12 @@ final class AppSettings: NSObject {
     var chromeBookmarks: Bool {
         get { defaults.object(forKey: Self.chromeBookmarksKey) as? Bool ?? true }
         set { set(newValue ? nil : false, forKey: Self.chromeBookmarksKey) }
+    }
+
+    /// The browser whose bookmarks the bar shows (Settings › General, #377); Google Chrome by default.
+    var bookmarkSource: BookmarkSource {
+        get { defaults.string(forKey: Self.bookmarkSourceKey).flatMap(BookmarkSource.init(rawValue:)) ?? .chrome }
+        set { set(newValue == .chrome ? nil : newValue.rawValue, forKey: Self.bookmarkSourceKey) }
     }
 
     /// The Chrome profile folder whose bookmarks are shown (`Default`, `Profile 1`); nil = the one Chrome used last.
