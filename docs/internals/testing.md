@@ -78,6 +78,13 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   shows its first or last rows, and `snapshot: true` adds `png_base64`, the tab drawn off screen without the toolbar
   (also with the screen locked; transparent background, so composite it on a dark or light colour to view it).
 - Launch the binary directly; `open` does not pass the environment reliably.
+- `debug.tab_bar {pane, action?, index?, choose?, width?}` (DEBUG builds) drives the tab bar of `pane`'s group with
+  synthesized mouse events through its own handlers: `state` (default), `click`, `middleClick`, `close` (the ×),
+  `menu` (the context menu's titles; `choose` runs one — Close Other Tabs over terminals opens a modal alert), `overflow`
+  (the ⌄ menu; `choose` shows a tab), `resize {width}`. Returns the tabs, titles, shown and visible range, which have an
+  icon, and the focused pane. Dragging still needs a real mouse.
+- Tab suspension: `defaults write <suite> BrowserSuspendTabsMinutes -int 1`, open two browser tabs, wait two minutes:
+  the background one reports `suspended` and loads again when focused; a page with a changed field stays.
 - Tabs and Chrome bookmarks: `CMDS_CHROME_FOLDER=/tmp/x/chrome` points the bookmarks bar at a fake Chrome folder
   (`Local State` with `profile.last_used` / `info_cache`, `<profile>/Bookmarks` and/or `AccountBookmarks` with `roots.bookmark_bar` / `other` /
   `synced`). Build groups with `cmds tab`, `cmds browser open` and `cmds pane move --beside P --tab`, check

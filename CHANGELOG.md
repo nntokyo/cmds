@@ -7,6 +7,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Tabs: an overflow menu (⌄) for tabs that do not fit, tooltips with the page address or path, Pane › Move Tab Left /
+  Right (⌃⇧⌘[ / ⌃⇧⌘]) (#374).
+- Background browser tabs unused for 30 minutes are suspended (unloaded until shown; Settings › General › Suspend
+  background tabs); never pages with unsaved input or playing media (#375).
+- Bookmarks bar from Microsoft Edge, Brave, Vivaldi, Arc or Safari (Settings › General › Bookmarks from), and every
+  Chrome bookmark's icon from Chrome's icon database (#376, #377).
+- Developer tools: a text filter and Copy in the console (height remembered), a header line in source tabs (address,
+  HTTP status, content type, encoding), SEO loading measures (LCP, CLS, time to first byte, size, elements), hreflang
+  and sitemap checks, and `cmds browser seo --crawl N` for up to 50 linked pages (#380).
+- iPhone: the pane selector shows the Mac's tab groups (#378).
+
+### Changed
+
+- Duplicate Tab keeps the pane's settings (device size, responsive view, file watch, Claude account, hidden files,
+  Follow Terminal) (#379).
+- Agents' tab reuse and cap go on after a relaunch (#375).
+
+### Fixed
+
+- Browser panes could not load plain-http pages other than local ones (App Transport Security); WebKit's content is
+  now exempt, the app's own connections stay https-only. Plain-http sites get their favicon too (#376).
+- Settings › General said nothing when a Chrome profile's account bookmarks are only encrypted but local ones exist
+  (#377).
+
 ## [0.30.0] - 2026-11-22
 
 Mac only; the iPhone/iPad app is unchanged.
