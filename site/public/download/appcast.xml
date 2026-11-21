@@ -7,46 +7,48 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.30.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.30.0</link>
-      <sparkle:version>48</sparkle:version>
-      <sparkle:shortVersionString>0.30.0</sparkle:shortVersionString>
+      <title>cmds 0.31.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.31.0</link>
+      <sparkle:version>49</sparkle:version>
+      <sparkle:shortVersionString>0.31.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 21 Nov 2026 15:26:06 GMT</pubDate>
+      <pubDate>Sat, 21 Nov 2026 17:11:06 GMT</pubDate>
       <description><![CDATA[
 <h3>新機能</h3>
 <ul>
-<li>タブにページのアイコン（ファビコン）を表示します。訪問したサイトのアイコンはChromeのブックマークバーにも出ます。</li>
-<li>タブの右クリックメニュー：閉じる・他のタブを閉じる・右側のタブを閉じる・複製・再読み込み・新しいワークスペースへ移動。</li>
-<li>コンソールの高さを上端のドラッグで変えられます。ファイルから開いたページのソースも表示できます。</li>
+<li>Claude ハーネス：Window › Claude Harness（または <code>cmds harness</code>）で、~/.claude のセッション・メモリ・CLAUDE.md・スキルから、利用状況の一覧、CLAUDE.md の改善案、メモリからのスキル、前日の振り返りを作ります。差分を見て確認するまで何も変更しません。</li>
+<li>背景のブラウザのタブは、30分使わないと休止してメモリを空けます（表示すると読み込み直します。設定 › 一般）。入力途中のページや再生中のページは休止しません。</li>
+<li>ブックマークバーに Edge・Brave・Vivaldi・Arc・Safari のブックマークも表示できます。Chrome のブックマークはすべてアイコン付きで表示します。</li>
+<li>タブが入りきらないときの一覧メニュー（⌄）、アドレスやパスのツールチップ、タブを左右へ移動（⌃⇧⌘[ / ⌃⇧⌘]）。</li>
+<li>開発者ツール：コンソールの絞り込みとコピー、ソースの見出し行、SEO レポートに読み込み指標（LCP・CLS など）、hreflang とサイトマップのチェック、リンク先のページもまとめて調べる <code>--crawl</code>。</li>
+<li>暗号化されていない http のサイトでは、アドレスの前に注意のアイコンを表示します。</li>
 </ul>
 <h3>変更</h3>
 <ul>
-<li>エージェントが開くブラウザのタブ：同じページを開き直すと前のタブを再利用し、1つのエージェントが開いたタブは10個まで（古い非表示のタブから閉じます。ユーザーが開いたタブは閉じません）。</li>
-<li>再起動後、見えていないブラウザのタブは表示したときに読み込みます。</li>
-<li>ページのソースはサーバーに取り直さず、キャッシュのHTML（なければ注記付きでDOM）を表示します。</li>
-<li>SEOレポートが日本語になりました。</li>
+<li>タブの複製で、デバイスサイズ・ファイル監視・Claude アカウントなどのペインの設定も引き継ぎます。</li>
+<li>ローカル以外の http のページも開けるようになりました。</li>
 </ul>
-<p>この版は Mac のみです。iPhone/iPad アプリは変わりません。</p>
+<p>iPhone/iPad でMacのタブグループを表示する変更は、次の App Store 版で届きます。</p>
 <h3>Added</h3>
 <ul>
-<li>Tabs show the page's icon (favicon); the Chrome bookmarks bar shows the icons of visited sites.</li>
-<li>Right-click a tab: Close Tab, Close Other Tabs, Close Tabs to the Right, Duplicate Tab, Reload Page, Move to New Workspace.</li>
-<li>The console drawer resizes by dragging its top edge; View Page Source of a local page shows the file.</li>
+<li>Claude harness: Window › Claude Harness (or <code>cmds harness</code>) reads the sessions, memory, CLAUDE.md and skills in ~/.claude and makes an overview, an improved CLAUDE.md, a skill from memory and a review of yesterday. Nothing changes until you have seen the diff and said yes.</li>
+<li>Background browser tabs unused for 30 minutes are suspended to free memory and load again when shown (Settings › General); never pages with unsaved input or playing media.</li>
+<li>The bookmarks bar can show Edge, Brave, Vivaldi, Arc or Safari bookmarks; every Chrome bookmark shows its icon.</li>
+<li>An overflow menu (⌄) for tabs that do not fit, tooltips with the address or path, and Move Tab Left / Right (⌃⇧⌘[ / ⌃⇧⌘]).</li>
+<li>Developer tools: console filter and Copy, a header line in source tabs, loading measures (LCP, CLS…), hreflang and sitemap checks in the SEO report, and <code>--crawl</code> for linked pages.</li>
+<li>A "Not Secure" icon before the address of plain-http sites.</li>
 </ul>
 <h3>Changed</h3>
 <ul>
-<li>Agents' browser tabs: opening the same page again reuses its tab, and an agent keeps at most 10 tabs (its oldest background ones close; tabs you open are never closed for you).</li>
-<li>After a relaunch, browser tabs that are not shown load when first shown.</li>
-<li>View Page Source no longer asks the server again: the cached HTML, or the DOM with a note.</li>
-<li>The SEO report tab is in the app's language.</li>
+<li>Duplicate Tab keeps the pane's settings: device size, file watch, Claude account and more.</li>
+<li>Plain-http pages on the internet load too.</li>
 </ul>
-<p>Mac only; the iPhone/iPad app is unchanged.</p>
+<p>Showing the Mac's tab groups on iPhone/iPad comes with the next App Store version.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.30.0/cmds-0.30.0.dmg" length="17684439" type="application/octet-stream" sparkle:edSignature="MKQj7HMQ4tVfkzABT6aIxa2z+rgk0vW6RhSbWoT4rWZIxgCKA4pyoYhtWVE6AbGCDExUwwfLq4MyzWBGjJOBAg=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.31.0/cmds-0.31.0.dmg" length="17967445" type="application/octet-stream" sparkle:edSignature="WG85FXklfW6iZrnZOf/6lwO10JoMk64NXmt+2UB3irkJ5kxR7LwbScmi1p/9tKcrsCH5UUOfm8TzZHCyJ5teCA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: brQQ/W15T82NluZg273bK28cDqN4em7hI+g+y4xbqdIf08h+NbAEzd180UhkCoJfGfM/hqsje6ta9uZ0i3tuBw==
-length: 3383
+edSignature: rG5QSeXV4Tol9L2L5UDV8rGiXcamH6FeqR8jAar5sdIOS5CPSEWCxS6KLYm6cTB17v6YvOweKFWYnp2Q1P2uAw==
+length: 4359
 -->

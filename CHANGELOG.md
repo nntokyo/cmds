@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-11-22
+
+The iPhone/iPad change (#378) comes with the next App Store version of the companion.
+
 ### Added
 
 - Tabs: an overflow menu (⌄) for tabs that do not fit, tooltips with the page address or path, Pane › Move Tab Left /
