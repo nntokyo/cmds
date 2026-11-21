@@ -193,6 +193,15 @@ extension AppController {
         try? focusPane(id: next)
     }
 
+    /// Pane › Move Tab Left / Right (⌃⇧⌘[ / ⌃⇧⌘]): the focused tab one place along its bar (beeps at the ends).
+    func moveFocusedTab(by offset: Int) {
+        guard let workspace = selectedWorkspace, let id = workspace.focusedPaneID,
+              let leaf = workspace.root?.leaf(for: id), leaf.isTabGroup, let index = leaf.tabs.firstIndex(of: id),
+              leaf.tabs.indices.contains(index + offset) else { return NSSound.beep() }
+        leaf.moveTab(id, to: index + offset)
+        emit(.workspace(id: workspace.id))
+    }
+
     /// Moves `paneID` into the tab group of `targetID` (a pane dropped on a tab bar or on the top strip of a pane,
     /// `pane.move` with `tab`) at `index` among its tabs (nil: right after the target), shown and focused. Across
     /// workspaces as `movePane` does; within the group it only reorders.

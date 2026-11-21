@@ -110,6 +110,8 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func newTab(_ sender: Any?) { _ = try? controller.newTab() }
     @objc func nextTab(_ sender: Any?) { controller.selectAdjacentTab(offset: 1) }
     @objc func previousTab(_ sender: Any?) { controller.selectAdjacentTab(offset: -1) }
+    @objc func moveTabLeft(_ sender: Any?) { controller.moveFocusedTab(by: -1) }
+    @objc func moveTabRight(_ sender: Any?) { controller.moveFocusedTab(by: 1) }
 
     /// The focused pane is a tab of a group.
     private var focusedPaneIsTab: Bool {
@@ -534,7 +536,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         case #selector(browserToggleConsole(_:)):
             menuItem.title = focusedBrowser?.isConsoleOpen == true ? String(localized: "Hide Console") : String(localized: "Show Console")
             return focusedBrowser != nil
-        case #selector(nextTab(_:)), #selector(previousTab(_:)):
+        case #selector(nextTab(_:)), #selector(previousTab(_:)), #selector(moveTabLeft(_:)), #selector(moveTabRight(_:)):
             return focusedPaneIsTab
         case #selector(closePane(_:)):
             menuItem.title = focusedPaneIsTab ? String(localized: "Close Tab") : String(localized: "Close Pane")

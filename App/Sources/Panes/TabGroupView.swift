@@ -25,10 +25,12 @@ struct TabItem: Equatable {
     var attention: Bool
     /// A browser page's icon (nil: the kind's symbol).
     var icon: NSImage? = nil
+    /// The second line of the tooltip: a browser's address, a file's or folder's path, a terminal's directory.
+    var detail: String? = nil
 
     static func == (lhs: TabItem, rhs: TabItem) -> Bool {
         lhs.paneID == rhs.paneID && lhs.title == rhs.title && lhs.kind == rhs.kind && lhs.attention == rhs.attention
-            && lhs.icon === rhs.icon
+            && lhs.icon === rhs.icon && lhs.detail == rhs.detail
     }
 }
 
@@ -121,21 +123,65 @@ final class TabBarView: NSView, NSDraggingSource {
         self.tabs = tabs
         selectedID = selected
         self.active = active
+        updateVisibleRange()
         needsDisplay = true
         toolTip = nil
     }
 
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        updateVisibleRange()
+    }
+
     // MARK: Geometry
 
-    /// Every tab fits before the +: wide tabs shrink evenly, down to an icon each (never past the bar).
+    /// Narrowest a tab gets (icon and ×); more tabs than fit go into the overflow menu (⌄).
+    private static let minTabWidth: CGFloat = 40
+    private static let overflowWidth: CGFloat = 26
+
+    /// The tabs drawn: all, or a window around the shown one when they do not fit (the rest in the overflow menu).
+    private(set) var visible: Range<Int> = 0..<0
+
+    private var overflowing: Bool { visible.count < tabs.count }
+
+    private func updateVisibleRange() {
+        let room = max(bounds.width - Self.plusWidth, 0)
+        guard CGFloat(tabs.count) * Self.minTabWidth > room, tabs.count > 1 else {
+            visible = 0..<tabs.count
+            return
+        }
+        let capacity = max(1, min(tabs.count, Int((room - Self.overflowWidth) / Self.minTabWidth)))
+        var first = min(visible.lowerBound, tabs.count - capacity)
+        if let selected = tabs.firstIndex(where: { $0.paneID == selectedID }) {
+            if selected < first { first = selected }
+            if selected >= first + capacity { first = selected - capacity + 1 }
+        }
+        first = max(0, min(first, tabs.count - capacity))
+        visible = first..<(first + capacity)
+    }
+
+    /// The visible tabs share the bar before the + (and ⌄): wide tabs shrink evenly down to `minTabWidth`.
     private var tabWidth: CGFloat {
-        guard !tabs.isEmpty else { return Self.maxTabWidth }
-        let available = max(bounds.width - Self.plusWidth, 0)
-        return max(min(Self.maxTabWidth, (available / CGFloat(tabs.count)).rounded(.down)), 1)
+        guard !visible.isEmpty else { return Self.maxTabWidth }
+        let available = max(bounds.width - Self.plusWidth - (overflowing ? Self.overflowWidth : 0), 0)
+        return max(min(Self.maxTabWidth, (available / CGFloat(visible.count)).rounded(.down)), 1)
     }
 
     private func tabRect(_ index: Int) -> NSRect {
-        NSRect(x: CGFloat(index) * tabWidth, y: 0, width: tabWidth, height: bounds.height)
+        NSRect(x: CGFloat(index - visible.lowerBound) * tabWidth, y: 0, width: tabWidth, height: bounds.height)
+    }
+
+    #if DEBUG
+    /// A tab's frame and its ×'s (`debug.tab_bar`).
+    func debugRects(_ index: Int) -> (tab: NSRect, close: NSRect)? {
+        visible.contains(index) ? (tabRect(index), closeRect(index)) : nil
+    }
+    #endif
+
+    /// The overflow menu's button, after the visible tabs (when they do not all fit).
+    private var overflowRect: NSRect? {
+        guard overflowing else { return nil }
+        return NSRect(x: CGFloat(visible.count) * tabWidth, y: 0, width: Self.overflowWidth, height: bounds.height)
     }
 
     private func closeRect(_ index: Int) -> NSRect {
@@ -145,19 +191,21 @@ final class TabBarView: NSView, NSDraggingSource {
     }
 
     private var plusRect: NSRect {
-        NSRect(x: CGFloat(tabs.count) * tabWidth, y: 0, width: Self.plusWidth, height: bounds.height)
+        NSRect(x: CGFloat(visible.count) * tabWidth + (overflowing ? Self.overflowWidth : 0), y: 0,
+               width: Self.plusWidth, height: bounds.height)
     }
 
     private func index(at point: NSPoint) -> Int? {
-        guard point.x >= 0, point.y >= 0, point.y <= bounds.height, !plusRect.contains(point) else { return nil }
-        let index = Int(point.x / tabWidth)
-        return tabs.indices.contains(index) && tabRect(index).contains(point) ? index : nil
+        guard point.x >= 0, point.y >= 0, point.y <= bounds.height, !plusRect.contains(point),
+              overflowRect?.contains(point) != true else { return nil }
+        let index = Int(point.x / tabWidth) + visible.lowerBound
+        return visible.contains(index) && tabRect(index).contains(point) ? index : nil
     }
 
     /// Where a pane dropped at `point` (this view's coordinates) goes: its index among the tabs (0 = first).
     func insertionIndex(at point: NSPoint) -> Int {
-        let slot = Int(((point.x / tabWidth) + 0.5).rounded(.down))
-        return min(max(slot, 0), tabs.count)
+        let slot = Int(((point.x / tabWidth) + 0.5).rounded(.down)) + visible.lowerBound
+        return min(max(slot, visible.lowerBound), visible.upperBound)
     }
 
     /// Shows (or hides, nil) the insertion mark of a pane dragged over the bar.
@@ -170,7 +218,11 @@ final class TabBarView: NSView, NSDraggingSource {
     override func draw(_ dirtyRect: NSRect) {
         NSColor(calibratedWhite: 0.12, alpha: 1).setFill()
         bounds.fill()
-        for (index, tab) in tabs.enumerated() { drawTab(tab, at: index) }
+        for index in visible where tabs.indices.contains(index) { drawTab(tabs[index], at: index) }
+        if let overflow = overflowRect {
+            let color = hoveredIndex == -2 ? NSColor.labelColor : NSColor.secondaryLabelColor
+            drawSymbol("chevron.down", in: NSRect(x: overflow.midX - 5, y: overflow.midY - 5, width: 10, height: 10), color: color)
+        }
         // +
         let plus = plusRect
         let plusColor = hoveredIndex == -1 ? NSColor.labelColor : NSColor.secondaryLabelColor
@@ -180,7 +232,8 @@ final class TabBarView: NSView, NSDraggingSource {
         NSRect(x: 0, y: bounds.height - 1, width: bounds.width, height: 1).fill()
         if let dropIndex {
             NSColor.controlAccentColor.setFill()
-            NSRect(x: min(CGFloat(dropIndex) * tabWidth, bounds.width - 2) - 1, y: 3, width: 3, height: bounds.height - 6).fill()
+            NSRect(x: min(CGFloat(dropIndex - visible.lowerBound) * tabWidth, bounds.width - 2) - 1, y: 3, width: 3,
+                   height: bounds.height - 6).fill()
         }
     }
 
@@ -293,12 +346,17 @@ final class TabBarView: NSView, NSDraggingSource {
         let point = event.map { convert($0.locationInWindow, from: nil) }
         var index = point.flatMap(index(at:))
         if index == nil, let point, plusRect.contains(point) { index = -1 }
+        if index == nil, let point, overflowRect?.contains(point) == true { index = -2 }
         let close = index.map { $0 >= 0 && tabWidth >= Self.closeSize + 20 && point.map(closeRect($0).contains) == true } ?? false
         if index != hoveredIndex || close != hoveringClose {
             hoveredIndex = index
             hoveringClose = close
             needsDisplay = true
-            toolTip = index.flatMap { tabs.indices.contains($0) ? tabs[$0].title : nil }
+            toolTip = index.flatMap { index -> String? in
+                if index == -2 { return String(localized: "All Tabs", comment: "Tab bar: the overflow menu's button") }
+                guard tabs.indices.contains(index) else { return nil }
+                return [tabs[index].title, tabs[index].detail].compactMap { $0 }.joined(separator: "\n")
+            }
         }
     }
 
@@ -312,7 +370,10 @@ final class TabBarView: NSView, NSDraggingSource {
     // before it starts. So any tab can be dragged, shown or not.
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if plusRect.contains(point) {
+        if let overflow = overflowRect, overflow.contains(point) {
+            pressed = nil
+            showOverflowMenu(below: overflow)
+        } else if plusRect.contains(point) {
             pressed = nil
             onNewTab?()
         } else if let index = index(at: point) {
@@ -366,6 +427,36 @@ final class TabBarView: NSView, NSDraggingSource {
         return menu
     }
 
+    /// Every tab, the shown one checked; choosing one shows it.
+    private func showOverflowMenu(below rect: NSRect) {
+        overflowMenu().popUp(positioning: nil, at: NSPoint(x: rect.minX, y: rect.maxY + 2), in: self)
+    }
+
+    func overflowMenu() -> NSMenu {
+        let menu = NSMenu()
+        for tab in tabs {
+            let item = NSMenuItem(title: tab.title.isEmpty ? Self.defaultTitle(tab.kind) : tab.title,
+                                  action: #selector(overflowTabChosen(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = tab.paneID
+            item.state = tab.paneID == selectedID ? .on : .off
+            item.toolTip = tab.detail
+            if let icon = tab.icon?.copy() as? NSImage {
+                icon.size = NSSize(width: 14, height: 14)
+                item.image = icon
+            } else {
+                item.image = NSImage(systemSymbolName: Self.symbol(for: tab.kind), accessibilityDescription: nil)
+            }
+            menu.addItem(item)
+        }
+        return menu
+    }
+
+    @objc private func overflowTabChosen(_ sender: NSMenuItem) {
+        guard let id = sender.representedObject as? String else { return }
+        onSelect?(id)
+    }
+
     @objc private func tabCommandChosen(_ sender: NSMenuItem) {
         guard let choice = sender.representedObject as? TabCommandChoice else { return }
         onTabCommand?(choice.command, choice.paneID)
@@ -373,7 +464,13 @@ final class TabBarView: NSView, NSDraggingSource {
 
     override func otherMouseUp(with event: NSEvent) {
         // Middle click closes the tab.
-        guard event.buttonNumber == 2, let index = index(at: convert(event.locationInWindow, from: nil)) else { return }
+        guard event.buttonNumber == 2 else { return }
+        middleClicked(at: convert(event.locationInWindow, from: nil))
+    }
+
+    /// A middle click at `point` closes the tab there.
+    func middleClicked(at point: NSPoint) {
+        guard let index = index(at: point) else { return }
         onClose?(tabs[index].paneID)
     }
 

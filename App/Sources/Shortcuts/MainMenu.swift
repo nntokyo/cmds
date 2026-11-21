@@ -170,6 +170,8 @@ enum MainMenu {
         menu.addItem(item("New Tab", #selector(CommandRouter.newTab(_:)), "t", target: router))
         menu.addItem(item("Next Tab", #selector(CommandRouter.nextTab(_:)), "]", [.command, .option], target: router))
         menu.addItem(item("Previous Tab", #selector(CommandRouter.previousTab(_:)), "[", [.command, .option], target: router))
+        menu.addItem(item("Move Tab Left", #selector(CommandRouter.moveTabLeft(_:)), "{", [.command, .control], target: router))
+        menu.addItem(item("Move Tab Right", #selector(CommandRouter.moveTabRight(_:)), "}", [.command, .control], target: router))
         menu.addItem(.separator())
         let arrows: [(String.LocalizationValue, Int, Selector)] = [
             ("Focus Left", NSLeftArrowFunctionKey, #selector(CommandRouter.focusLeft(_:))),

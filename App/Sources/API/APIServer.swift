@@ -255,6 +255,9 @@ final class APIServer {
             case "debug.pane_drag":
                 // Tests only: drop a pane on a pane's edge or centre, a sidebar row or outside the window (#218).
                 connection.reply(id: id, result: try PaneDragDebug.perform(params.value, controller: controller))
+            case "debug.tab_bar":
+                // Tests only: a tab bar driven with synthesized mouse events (TabBar+Debug.swift).
+                connection.reply(id: id, result: try TabBarDebug.perform(params.value, controller: controller))
             case "debug.menubar_reply":
                 // Tests only: the menu bar's reply panel (MenuBarReplyPanel+Debug.swift, #213).
                 connection.reply(id: id, result: try MenuBarReplyPanel.debugPerform(params.value, controller: controller))
