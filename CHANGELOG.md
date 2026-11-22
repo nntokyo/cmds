@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-11-22
+
 ### Added
 
 - Browser login profiles: each named profile keeps its own cookies, storage and sign-ins, panes of the same profile
