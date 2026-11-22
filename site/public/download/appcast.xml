@@ -7,48 +7,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.31.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.31.0</link>
-      <sparkle:version>49</sparkle:version>
-      <sparkle:shortVersionString>0.31.0</sparkle:shortVersionString>
+      <title>cmds 0.32.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.32.0</link>
+      <sparkle:version>50</sparkle:version>
+      <sparkle:shortVersionString>0.32.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Sat, 21 Nov 2026 17:11:06 GMT</pubDate>
+      <pubDate>Sun, 22 Nov 2026 07:54:41 GMT</pubDate>
       <description><![CDATA[
 <h3>新機能</h3>
 <ul>
-<li>Claude ハーネス：Window › Claude Harness（または <code>cmds harness</code>）で、~/.claude のセッション・メモリ・CLAUDE.md・スキルから、利用状況の一覧、CLAUDE.md の改善案、メモリからのスキル、前日の振り返りを作ります。差分を見て確認するまで何も変更しません。</li>
-<li>背景のブラウザのタブは、30分使わないと休止してメモリを空けます（表示すると読み込み直します。設定 › 一般）。入力途中のページや再生中のページは休止しません。</li>
-<li>ブックマークバーに Edge・Brave・Vivaldi・Arc・Safari のブックマークも表示できます。Chrome のブックマークはすべてアイコン付きで表示します。</li>
-<li>タブが入りきらないときの一覧メニュー（⌄）、アドレスやパスのツールチップ、タブを左右へ移動（⌃⇧⌘[ / ⌃⇧⌘]）。</li>
-<li>開発者ツール：コンソールの絞り込みとコピー、ソースの見出し行、SEO レポートに読み込み指標（LCP・CLS など）、hreflang とサイトマップのチェック、リンク先のページもまとめて調べる <code>--crawl</code>。</li>
-<li>暗号化されていない http のサイトでは、アドレスの前に注意のアイコンを表示します。</li>
+<li>ブラウザのログインプロファイル：プロファイルごとに Cookie・ストレージ・ログイン状態を分けて持ち、同じプロファイルのペイン同士は共有します（指定しないペインは従来どおり共通）。アドレスバー左の人型ボタン、<code>cmds browser profile</code> / <code>cmds browser open --profile</code>、エージェントは MCP の <code>browser_profile</code> で設定でき、セッションごとにログインを分けたり共有したりできます。</li>
 </ul>
-<h3>変更</h3>
-<ul>
-<li>タブの複製で、デバイスサイズ・ファイル監視・Claude アカウントなどのペインの設定も引き継ぎます。</li>
-<li>ローカル以外の http のページも開けるようになりました。</li>
-</ul>
-<p>iPhone/iPad でMacのタブグループを表示する変更は、次の App Store 版で届きます。</p>
 <h3>Added</h3>
 <ul>
-<li>Claude harness: Window › Claude Harness (or <code>cmds harness</code>) reads the sessions, memory, CLAUDE.md and skills in ~/.claude and makes an overview, an improved CLAUDE.md, a skill from memory and a review of yesterday. Nothing changes until you have seen the diff and said yes.</li>
-<li>Background browser tabs unused for 30 minutes are suspended to free memory and load again when shown (Settings › General); never pages with unsaved input or playing media.</li>
-<li>The bookmarks bar can show Edge, Brave, Vivaldi, Arc or Safari bookmarks; every Chrome bookmark shows its icon.</li>
-<li>An overflow menu (⌄) for tabs that do not fit, tooltips with the address or path, and Move Tab Left / Right (⌃⇧⌘[ / ⌃⇧⌘]).</li>
-<li>Developer tools: console filter and Copy, a header line in source tabs, loading measures (LCP, CLS…), hreflang and sitemap checks in the SEO report, and <code>--crawl</code> for linked pages.</li>
-<li>A "Not Secure" icon before the address of plain-http sites.</li>
+<li>Browser login profiles: each profile keeps its own cookies, storage and sign-ins, and panes of the same profile share them (panes without one share the default data, as before). Set them with the person button left of the address bar, <code>cmds browser profile</code> / <code>cmds browser open --profile</code>, or the MCP tool <code>browser_profile</code>, so agent sessions can keep their sign-ins apart or share them.</li>
 </ul>
-<h3>Changed</h3>
-<ul>
-<li>Duplicate Tab keeps the pane's settings: device size, file watch, Claude account and more.</li>
-<li>Plain-http pages on the internet load too.</li>
-</ul>
-<p>Showing the Mac's tab groups on iPhone/iPad comes with the next App Store version.</p>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.31.0/cmds-0.31.0.dmg" length="17967445" type="application/octet-stream" sparkle:edSignature="WG85FXklfW6iZrnZOf/6lwO10JoMk64NXmt+2UB3irkJ5kxR7LwbScmi1p/9tKcrsCH5UUOfm8TzZHCyJ5teCA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.32.0/cmds-0.32.0.dmg" length="17992572" type="application/octet-stream" sparkle:edSignature="2r3w3VZfZzZw+dLAmeomHDHxoRxe9lw/XO4JjT5hOX6L902IfQrwMHF9Y9cQTrJFLAbyCxRVcToGvEbbK1UVCA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: rG5QSeXV4Tol9L2L5UDV8rGiXcamH6FeqR8jAar5sdIOS5CPSEWCxS6KLYm6cTB17v6YvOweKFWYnp2Q1P2uAw==
-length: 4359
+edSignature: iVQdnqV6E8VooXuN1i/Vpzsxc23jcfjK8rK34pcpBjh7XOlPR3Db4tQjnaJZ1BXw+iOU8AkcmpUf6csfmrGOAQ==
+length: 2288
 -->
