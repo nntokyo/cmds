@@ -125,6 +125,12 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   page, the file names are numbered, and in a workspace that is not shown (and during `cmds browser snapshot` of it)
   no pop-up or sheet appears. Downloads land in the real ~/Downloads: delete the test files afterwards. Close a pane
   with a pop-up and an open alert (no exception, the pop-up goes).
+- Browser login profiles: serve on 127.0.0.1 a page that sets a cookie from `?set=NAME` and prints `document.cookie`;
+  open it with `cmds browser open --profile A` / `--profile B` / none and check each sees only its own cookie, the
+  same profile in another pane shares it, a terminal's `cmds browser profile` applies to its `cmds browser open`, and
+  after a relaunch panes and cookies come back. `debug.browser {pane}` also returns `profile`, the toolbar button
+  (`profileButton`, `profileButtonFrame`, `profileToolTip`) and `profileMenu`. `cmds mcp` with `CMDS_PANE_ID` set
+  checks `browser_profile` refuses panes not opened from that terminal.
 - Browser load failures, sign-in, crashes and find (#338): serve on 127.0.0.1 a page, a `302` loop to itself, a `401`
   with `WWW-Authenticate: Basic realm="…"` and the same page over TLS with a self-signed certificate (`openssl req
   -x509 …`); navigate to those and to a port nothing listens on. `debug.browser {pane, loadErrorAction?, findAction?,

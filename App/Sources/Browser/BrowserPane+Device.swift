@@ -318,6 +318,13 @@ extension BrowserPane {
             "watchPaths": .array(watchCountedPaths.map { .string($0) }),
             "watchMenu": .array(watchMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),
             "watchToolTip": .string(watchButton.toolTip ?? ""),
+            // Login profiles (BrowserPane+Profile.swift): the toolbar button and its menu.
+            "profile": profile.map { .string($0) } ?? .null,
+            "profileButton": .string(profileButton.title),
+            "profileButtonFrame": .array({ let f = convert(profileButton.frame, from: profileButton.superview)
+                return [f.minX, f.minY, f.width, f.height].map { .number(Double($0)) } }()),
+            "profileToolTip": .string(profileButton.toolTip ?? ""),
+            "profileMenu": .array(profileMenu().items.map { .string(($0.state == .on ? "✓ " : "") + $0.title) }),
         ]
         result.merge(pageDelegate.debugState(answer: answer, text: text)) { _, new in new }  // pop-ups and dialogs (#235)
         if let bitmap = bitmapImageRepForCachingDisplay(in: bounds) {

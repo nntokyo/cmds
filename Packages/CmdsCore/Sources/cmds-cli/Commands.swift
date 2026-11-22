@@ -505,20 +505,30 @@ extension CLI {
             ])
             ctx.printResult(result, field: "id")
         },
-        Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] [--reuse] <url>",
+        Command(name: "browser open", usage: "browser open [--pane P] [--no-focus] [--reuse] [--profile NAME] <url>",
                 summary: "Open a page in a new browser tab of the workspace, or a browser split to the right of a pane (default: the current one).",
                 details: """
                     With Settings › General › Open new pages in tabs (on by default) the page becomes a tab of the
                     workspace's browser pane; without one, or with the setting off, a split. --no-focus keeps the
                     keyboard in the current pane. --reuse (for agents): a page this terminal opened before is loaded
                     again in its tab, and beyond 10 tabs opened this way the oldest ones in the background close.
+                    --profile NAME opens the page in that login profile ("" for the shared default; see
+                    `cmds browser profile`); without it, the pane's profile (a terminal's for the pages it opens).
                     Prints the pane id.
                     """,
-                options: ["pane"], flags: ["no-focus", "reuse"]) { ctx in
-            try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] [--no-focus] [--reuse] <url>")
+                options: ["pane", "profile"], flags: ["no-focus", "reuse"]) { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds browser open [--pane P] [--no-focus] [--reuse] [--profile NAME] <url>")
+            let profile = try ctx.args[option: "profile"].map { raw in
+                JSONValue.string(try usageError { try BrowserProfile.change(raw) } ?? "")
+            }
             let result = try ctx.call("browser.open", ["pane": ctx.pane.json, "url": .string(ctx.args.positionals[0]),
                                                        "focus": ctx.args.has("no-focus") ? false : nil,
-                                                       "reuse": ctx.args.has("reuse") ? true : nil])
+                                                       "reuse": ctx.args.has("reuse") ? true : nil,
+                                                       "profile": profile])
+            if case .string(let wanted)? = profile, !wanted.isEmpty, result["profile"]?.stringValue != wanted {
+                throw CLIError.failure("opened \(result["id"]?.stringValue ?? "the page"), but this cmds app has no login "
+                                       + "profiles (update cmds): the page uses the shared data")
+            }
             ctx.printResult(result, field: "id")
         },
         Command(name: "browser navigate", usage: "browser navigate [--pane P] <url>",
@@ -560,6 +570,7 @@ extension CLI {
         browserDeviceCommand,
         browserResponsiveCommand,
         browserWatchCommand,
+        browserProfileCommand,
         browserFindCommand,
         consoleCommand, treeCommand, clickCommand, fillCommand, waitForCommand, sourceCommand, seoCommand,
     ] + harnessCommands + [

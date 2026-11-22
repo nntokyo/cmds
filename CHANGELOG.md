@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Browser login profiles: each named profile keeps its own cookies, storage and sign-ins, panes of the same profile
+  share them, and panes without one share the default data as before. Set from the person button in the browser
+  toolbar, `cmds browser profile` / `cmds browser open --profile`, or the MCP tools `browser_profile` and
+  `browser_open` (`profile`), so agent sessions can keep their sign-ins apart or share them.
+
 ## [0.31.0] - 2026-11-22
 
 The iPhone/iPad change (#378) comes with the next App Store version of the companion.

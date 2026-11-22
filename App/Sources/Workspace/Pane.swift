@@ -66,6 +66,11 @@ final class Pane {
     /// The account Claude Code runs under here: given when the pane was created (its shell has the account's
     /// `CLAUDE_CONFIG_DIR`), set by a switch, or learned from the status line. Saved in the session.
     var claudeAccount: String?
+    /// Terminal panes: the login profile (`BrowserProfile`) of browser pages opened from here (`browser.open`, the MCP
+    /// server's browser_open); nil for the shared default data. Saved in the session.
+    var browserProfile: String?
+    /// The profile a browser opened from this pane starts with: a browser's own, a terminal's `browserProfile`.
+    var profileForOpenedPages: String? { browser?.profile ?? (kind == .terminal ? browserProfile : nil) }
     /// Limit lines already handled in this pane, per account (`<source>|<account>|…`), until the limit they recorded
     /// ends, at least 5 h: Claude Code keeps showing the line while it waits.
     var seenLimitLines: [String: Date] = [:]
@@ -325,7 +330,7 @@ final class Pane {
                         workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
                         file: preview?.path, account: claudeAccount, openedBy: openedBy,
                         tabs: group?.tabs, background: group.map { $0.paneID != id ? true : nil } ?? nil,
-                        suspended: browser?.isSuspended == true ? true : nil)
+                        suspended: browser?.isSuspended == true ? true : nil, profile: profileForOpenedPages)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.

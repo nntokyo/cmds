@@ -37,6 +37,23 @@ final class BrowserPane: NSView {
     /// Settings changed by the user or the API (the session saves them).
     var onEmulationChange: (() -> Void)?
     var emulation: BrowserEmulation
+    /// The login profile (`BrowserProfile`, docs/guide/workspaces-and-panes.md "Login profiles"): its own cookies,
+    /// storage and sign-ins; nil for the shared default data. Pop-ups and the responsive view's frames use the pane's.
+    /// Changed only by `setProfile`.
+    var profile: String?
+    /// The pane's profile (an icon alone for the shared data); its menu switches profiles.
+    let profileButton: NSButton = {
+        let button = NSButton(title: "", image: NSImage(systemSymbolName: "person.crop.circle",
+                                                        accessibilityDescription: String(localized: "Login Profile")) ?? NSImage(),
+                              target: nil, action: nil)
+        button.bezelStyle = .accessoryBarAction
+        button.imagePosition = .imageLeading
+        button.font = .systemFont(ofSize: 11)
+        button.lineBreakMode = .byTruncatingTail
+        button.setContentHuggingPriority(.required, for: .horizontal)
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return button
+    }()
     /// Page zoom while the page fills the pane; a device size scales the page to fit instead.
     var fillZoom = AppSettings.shared.browserZoom
     /// Holds the web view: the whole area, or a device-sized frame scaled to fit.
@@ -138,9 +155,10 @@ final class BrowserPane: NSView {
     var currentURL: URL? { pendingURL ?? loadFailure?.url ?? webView.url }
     var pageTitle: String { suspendedTitle ?? (loadFailure != nil ? "" : (webView.title ?? "")) }
 
-    init(emulation: BrowserEmulation = BrowserEmulation()) {
-        webView = Self.makeWebView(configuration: Self.webViewConfiguration(websiteDataStore: .default()))
+    init(emulation: BrowserEmulation = BrowserEmulation(), profile: String? = nil) {
+        webView = Self.makeWebView(configuration: Self.webViewConfiguration(websiteDataStore: BrowserProfiles.store(for: profile)))
         self.emulation = emulation
+        self.profile = profile
         super.init(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
@@ -301,7 +319,7 @@ final class BrowserPane: NSView {
 
     /// A new, empty web view in place of the current one (see `replaceStuckWebView`); its process and history go.
     /// Also how a suspended tab frees its page's memory (`suspend`).
-    func replaceWebView() {
+    func replaceWebView(dataStore: WKWebsiteDataStore? = nil) {
         let old = webView
         let responsiveSettings = responsive
         if responsiveSettings != nil { setResponsive(nil) }
@@ -313,7 +331,7 @@ final class BrowserPane: NSView {
         old.removeFromSuperview()
         Self.endWebContentProcess(of: old)
 
-        let configuration = Self.webViewConfiguration(websiteDataStore: old.configuration.websiteDataStore)
+        let configuration = Self.webViewConfiguration(websiteDataStore: dataStore ?? old.configuration.websiteDataStore)
         configuration.userContentController = old.configuration.userContentController  // console and passkey capture
         webView = Self.makeWebView(configuration: configuration)
         webView.customUserAgent = emulation.userAgent
@@ -551,7 +569,11 @@ final class BrowserPane: NSView {
 
         developerButton.target = self
         developerButton.action = #selector(developerButtonClicked(_:))
-        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, notSecureIcon, addressField, breakpointLabel,
+        profileButton.target = self
+        profileButton.action = #selector(profileButtonClicked(_:))
+        updateProfileButton()
+        let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, profileButton, notSecureIcon,
+                                          addressField, breakpointLabel,
                                           deviceButton, developerButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 6
@@ -559,6 +581,7 @@ final class BrowserPane: NSView {
         toolbar.translatesAutoresizingMaskIntoConstraints = false
         // A narrow pane drops the indicator before squeezing the address field.
         toolbar.setVisibilityPriority(.detachOnlyIfNecessary, for: breakpointLabel)
+        profileButton.widthAnchor.constraint(lessThanOrEqualToConstant: 140).isActive = true
         buildDeviceControls()
         viewportHost.translatesAutoresizingMaskIntoConstraints = false
         viewportHost.addSubview(webView)

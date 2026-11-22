@@ -101,6 +101,14 @@ final class APIServer {
                         try await self.controller.exportScrollback(paneID: pane, path: path, ansi: ansi, force: force)
                     }
                 }
+            case "browser.profile_remove":
+                // Deletes sign-ins: local socket only (not in RemoteAPIPolicy.allowedMethods).
+                let profile = try params.required("profile")
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        .object(["profiles": .array(try await self.controller.removeBrowserProfile(profile).map { .string($0) })])
+                    }
+                }
             case "browser.snapshot_tree", "browser.click", "browser.fill", "browser.wait_for":
                 // Page scripts that may wait (wait_for up to a minute): BrowserPane+DevTools.swift, #167.
                 let pane = try browserPaneID(params)
@@ -577,7 +585,12 @@ final class APIServer {
             return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url"),
                                                     focus: try params.bool("focus") ?? true,
                                                     recordOpener: try params.string("pane") != nil,
-                                                    tabs: try params.bool("tab"), reuse: try params.bool("reuse") ?? false))
+                                                    tabs: try params.bool("tab"), reuse: try params.bool("reuse") ?? false,
+                                                    profile: try profileChange(params)))
+        case "browser.profile":
+            // `profile` absent: just reports; "": back to the shared data.
+            return try .from(controller.browserProfile(paneID: try params.string("pane"), change: try profileChange(params),
+                                                       openedBy: try params.string("openedBy")))
         case "browser.navigate":
             try controller.browserNavigate(paneID: try browserPaneID(params), url: try params.required("url"))
         case "browser.get_url":
@@ -667,6 +680,13 @@ final class APIServer {
     /// `direction` of `pane.split` / `pane.open_file` (default right).
     private func splitDirection(_ params: Params) throws -> SplitDirection {
         try params.value("direction", as: SplitDirection.self, invalid: "direction must be \"right\" or \"down\"") ?? .right
+    }
+
+    /// `profile` of `browser.open` / `browser.profile`: absent → nil (unchanged, or the asking pane's); "" → the shared
+    /// data (`.some(nil)`); a name → that profile.
+    private func profileChange(_ params: Params) throws -> String?? {
+        guard let raw = try params.string("profile") else { return nil }
+        return .some(try BrowserProfile.change(raw))
     }
 
     /// `pane` if given; otherwise the focused browser pane of `workspace` (default: selected), else its first browser pane.

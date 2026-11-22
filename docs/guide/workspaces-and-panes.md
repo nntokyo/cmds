@@ -301,6 +301,28 @@ sites visited in a browser pane, the icon found there.
   afterwards). Full Disk Access is for the whole app: the programs you run in its terminals get it too, so turn it on
   only if that is fine with you (or keep the bar off).
 
+### Login profiles
+
+Browser panes share one set of cookies, storage and sign-ins unless you give them a **login profile**: each named
+profile keeps its own, so two panes can be signed in to the same site as different users, and panes with the same
+profile share their sign-ins. Profiles and their sign-ins are kept across relaunches, and Export / Import Workspaces
+keep each pane's profile name (the sign-ins themselves stay on the Mac).
+
+- The person button left of the address bar shows the pane's profile (just the icon for the shared data). Its menu
+  moves the pane to **Shared (Default)**, another profile or a **New Profile…**; the page loads again in that profile
+  (Back / Forward start over). Pop-ups, the responsive view and screenshots use the pane's profile.
+- New tabs and pages opened from a browser pane keep its profile. A terminal pane has a profile too: the one of the
+  pages opened from it by command (`cmds browser open`, an agent's `browser_open`); a new terminal starts with the
+  shared data. Links from other apps, port clicks in the sidebar and a new browser split (⌘⇧B) next to a terminal
+  use the shared data, so your own browsing never lands in a profile an agent chose.
+- `cmds browser profile [--pane P] [NAME | --shared]` shows or sets the profile of a browser pane or of the pages a
+  terminal opens; `cmds browser open --profile NAME <url>` opens one page in a profile; `cmds browser profile --remove
+  NAME` deletes a profile's cookies and storage (refused while a pane uses it). A name is at most 64 characters; `""`
+  (or `--shared`) means the shared data, and a name of spaces alone is refused.
+- Agents set it with the MCP tool `browser_profile` ([AI agents](ai-agents.md#mcp-server)): an agent session that
+  names a profile of its own keeps its sign-ins apart from other sessions'; naming the same profile as another session
+  shares them.
+
 ### Pages that do not load, sign-in and crashes
 
 - When a page cannot be loaded (the server refuses the connection or is not found, too many redirects, an untrusted

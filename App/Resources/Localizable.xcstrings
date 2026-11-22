@@ -6949,6 +6949,36 @@
         }
       }
     },
+    "Login Profile": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログインプロファイル"
+          }
+        }
+      }
+    },
+    "Login profile: %@": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログインプロファイル: %@"
+          }
+        }
+      }
+    },
+    "Login profile: shared (default)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログインプロファイル: 共有（デフォルト）"
+          }
+        }
+      }
+    },
     "MCP server": {
       "comment": "Settings › Agents",
       "localizations": {
@@ -7586,6 +7616,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "新規フォルダ"
+          }
+        }
+      }
+    },
+    "New Login Profile": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規ログインプロファイル"
+          }
+        }
+      }
+    },
+    "New Profile…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新規プロファイル…"
           }
         }
       }
@@ -8677,6 +8727,16 @@
         }
       }
     },
+    "Pages in a profile keep their own cookies and sign-ins. Panes with the same profile share them.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイルのページは、それぞれ専用のCookieとログイン状態を持ちます。同じプロファイルのペイン同士では共有されます。"
+          }
+        }
+      }
+    },
     "Pair iPhone/iPad": {
       "localizations": {
         "ja": {
@@ -9055,6 +9115,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmdsのターミナルから起動し、ペインやワークスペースを閉じた後も動いているプロセスです。クリックすると一覧を表示して終了できます。"
+          }
+        }
+      }
+    },
+    "Profile name": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロファイル名"
           }
         }
       }
@@ -10627,6 +10697,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "共有"
+          }
+        }
+      }
+    },
+    "Shared (Default)": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有（デフォルト）"
           }
         }
       }
@@ -12367,6 +12447,16 @@
         }
       }
     },
+    "The profile name cannot be used.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプロファイル名は使えません。"
+          }
+        }
+      }
+    },
     "The prompt must be at most 8 KB.": {
       "localizations": {
         "ja": {
@@ -13391,6 +13481,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "中継ポートは1024〜65535の範囲で指定してください。"
+          }
+        }
+      }
+    },
+    "Use at most 64 characters, without control characters.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "64文字以内で、制御文字を含めずに入力してください。"
           }
         }
       }

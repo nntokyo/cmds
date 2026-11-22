@@ -11,22 +11,25 @@ import CmdsCore
 extension AppController {
     func exportBundle() throws -> WorkspaceBundle {
         let state = sessionState()
-        func convert(_ node: SessionState.Node, sessions: [Int: AgentSession], next: inout Int) -> WorkspaceBundle.Node {
+        func convert(_ node: SessionState.Node, sessions: [Int: AgentSession], profiles: [Int: String],
+                     next: inout Int) -> WorkspaceBundle.Node {
             switch node {
             case .split(let axis, let ratio, let first, let second):
-                let a = convert(first, sessions: sessions, next: &next)
-                let b = convert(second, sessions: sessions, next: &next)
+                let a = convert(first, sessions: sessions, profiles: profiles, next: &next)
+                let b = convert(second, sessions: sessions, profiles: profiles, next: &next)
                 return .split(axis: axis, ratio: ratio.isFinite ? ratio : 0.5, first: a, second: b)
             case .terminal(let cwd):
                 defer { next += 1 }
-                return .pane(.terminal(cwd: cwd, session: sessions[next]))
+                var pane = WorkspaceBundle.Pane.terminal(cwd: cwd, session: sessions[next])
+                pane.profile = profiles[next]
+                return .pane(pane)
             case .ssh(let host, let remoteCwd):
                 defer { next += 1 }
                 return .pane(.ssh(host: host, remoteCwd: remoteCwd, session: sessions[next]))
             case .browser(let url, let emulation, let responsive):
                 defer { next += 1 }
                 return .pane(WorkspaceBundle.Pane(kind: .browser, url: url.flatMap(WorkspaceBundle.portableURL),
-                                                  emulation: emulation, responsive: responsive))
+                                                  emulation: emulation, responsive: responsive, profile: profiles[next]))
             case .preview(let path, let format):
                 defer { next += 1 }
                 // `source` is newer than bundle version 1: older cmds would refuse the bundle.
@@ -38,8 +41,9 @@ extension AppController {
         }
         let workspaces = state.workspaces.map { saved -> WorkspaceBundle.Workspace in
             let sessions = Dictionary((saved.agentSessions ?? []).map { ($0.paneIndex, $0.session) }) { first, _ in first }
+            let profiles = Dictionary((saved.paneProfiles ?? []).map { ($0.paneIndex, $0.profile) }) { first, _ in first }
             var next = 0
-            let layout = convert(saved.layout, sessions: sessions, next: &next)
+            let layout = convert(saved.layout, sessions: sessions, profiles: profiles, next: &next)
             return WorkspaceBundle.Workspace(title: saved.title, workingDirectory: saved.workingDirectory,
                                              focusedPaneIndex: saved.focusedPaneIndex.flatMap { $0 < next ? $0 : nil },
                                              layout: layout)
@@ -88,15 +92,17 @@ extension SessionState {
     /// The bundle as a session to restore. Local `~` paths are expanded (remote ones are left to the server's shell).
     init(bundle: WorkspaceBundle) {
         func local(_ path: String?) -> String? { path.map { ($0 as NSString).expandingTildeInPath } }
-        func node(_ value: WorkspaceBundle.Node, sessions: inout [PaneAgentSession], next: inout Int) -> Node {
+        func node(_ value: WorkspaceBundle.Node, sessions: inout [PaneAgentSession], profiles: inout [PaneProfile],
+                  next: inout Int) -> Node {
             switch value {
             case .split(let axis, let ratio, let first, let second):
-                let a = node(first, sessions: &sessions, next: &next)
-                let b = node(second, sessions: &sessions, next: &next)
+                let a = node(first, sessions: &sessions, profiles: &profiles, next: &next)
+                let b = node(second, sessions: &sessions, profiles: &profiles, next: &next)
                 return .split(axis: axis, ratio: ratio, first: a, second: b)
             case .pane(let pane):
                 defer { next += 1 }
                 if let session = pane.agentSession { sessions.append(PaneAgentSession(paneIndex: next, session: session)) }
+                if let profile = pane.profile { profiles.append(PaneProfile(paneIndex: next, profile: profile)) }
                 switch pane.kind {
                 case .terminal:
                     if let host = pane.host { return .ssh(host: host, remoteCwd: pane.remoteCwd) }
@@ -113,14 +119,16 @@ extension SessionState {
         }
         workspaces = bundle.workspaces.map { workspace in
             var sessions: [PaneAgentSession] = []
+            var profiles: [PaneProfile] = []
             var next = 0
-            let layout = node(workspace.layout, sessions: &sessions, next: &next)
+            let layout = node(workspace.layout, sessions: &sessions, profiles: &profiles, next: &next)
             let focused = workspace.panes[safe: workspace.focusedPaneIndex ?? 0]
             let isRemote = focused?.kind == .terminal && focused?.host != nil
             return WorkspaceState(title: workspace.title,
                                   workingDirectory: isRemote ? workspace.workingDirectory : local(workspace.workingDirectory),
                                   layout: layout, focusedPaneIndex: workspace.focusedPaneIndex,
-                                  agentSessions: sessions.isEmpty ? nil : sessions)
+                                  agentSessions: sessions.isEmpty ? nil : sessions,
+                                  paneProfiles: profiles.isEmpty ? nil : profiles)
         }
         selectedIndex = bundle.selectedIndex
     }

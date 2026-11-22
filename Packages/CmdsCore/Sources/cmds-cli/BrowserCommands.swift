@@ -169,6 +169,47 @@ extension CLI {
         print(BrowserWatch.summary(result))
     }
 
+    /// `cmds browser profile`: login profiles (docs/guide/workspaces-and-panes.md "Login profiles").
+    static let browserProfileCommand = Command(
+        name: "browser profile",
+        usage: "browser profile [--pane P] [NAME | --shared] | --remove NAME",
+        summary: "Show or set the login profile of a browser pane, or of the pages a terminal opens.",
+        details: """
+            A login profile keeps its own cookies, storage and sign-ins; pages without one share the default data.
+            Panes with the same profile share their sign-ins. The pane (default: the current one) is a browser pane,
+            which then loads its page again in the profile, or a terminal pane, whose `cmds browser open` and agents'
+            browser_open pages use the profile from then on. NAME (at most \(BrowserProfile.maxLength) characters) is
+            created when first used; --shared goes back to the default data. Without either, prints the profile and the
+            existing ones. --remove NAME deletes a profile's cookies and storage (refused while a pane uses it).
+            """,
+        options: ["pane", "remove"], flags: ["shared"]
+    ) { ctx in
+        let usage = "cmds browser profile [--pane P] [NAME | --shared] | --remove NAME"
+        try ctx.args.expectPositionals(0...1, usage: usage)
+        let unsupported = "this cmds app has no login profiles; update cmds"
+        if let name = ctx.args[option: "remove"] {
+            guard ctx.args.positionals.isEmpty, !ctx.args.has("shared") else { throw CLIError.usage(usage) }
+            let result = try callNewMethod(ctx, "browser.profile_remove", ["profile": .string(name)], unsupported: unsupported)
+            if ctx.json { return ctx.printJSON(result) }
+            return print("removed \"\(name)\"")
+        }
+        if ctx.args.has("shared"), !ctx.args.positionals.isEmpty { throw CLIError.usage(usage) }
+        var params: [String: JSONValue?] = ["pane": ctx.pane.json]
+        if ctx.args.has("shared") {
+            params["profile"] = .string("")
+        } else if let raw = ctx.args.positionals.first {
+            guard let name = try usageError({ try BrowserProfile.validated(raw) }) else {
+                throw CLIError.usage("the profile name is empty; use --shared for the default data")
+            }
+            params["profile"] = .string(name)
+        }
+        let result = try callNewMethod(ctx, "browser.profile", params, unsupported: unsupported)
+        if ctx.json { return ctx.printJSON(result) }
+        let state = try result.decode(BrowserProfileState.self)
+        print("\(state.pane): \(BrowserProfile.label(state.profile))")
+        if !state.profiles.isEmpty { print("profiles: " + state.profiles.joined(separator: ", ")) }
+    }
+
     /// `cmds browser find` (#338): WebKit's find in page, as ⌘G in the pane's find bar.
     static let browserFindCommand = Command(
         name: "browser find",

@@ -55,6 +55,21 @@ final class WorkspaceTransferTests: XCTestCase {
         XCTAssertThrowsError(try bundle.validated(), file: file, line: line)
     }
 
+    func testLoginProfilesTravelOnBrowsersAndLocalTerminalsOnly() throws {
+        var browser = WorkspaceBundle.Pane(kind: .browser, url: "https://example.com/", profile: " work ")
+        let pane = try WorkspaceBundle(workspaces: [.init(layout: .pane(browser))]).validated().workspaces[0].panes[0]
+        XCTAssertEqual(pane.profile, "work")
+        var terminal = WorkspaceBundle.Pane.terminal(cwd: "/tmp")
+        terminal.profile = "agent-a"
+        XCTAssertNoThrow(try WorkspaceBundle(workspaces: [.init(layout: .pane(terminal))]).validated())
+        var ssh = WorkspaceBundle.Pane.ssh(host: "server", remoteCwd: nil)
+        ssh.profile = "agent-a"
+        rejects(ssh)
+        rejects(WorkspaceBundle.Pane(kind: .files, path: "/tmp", profile: "work"))
+        browser.profile = "a\u{7}b"
+        rejects(browser)
+    }
+
     func testRejectsBadPanes() {
         rejects(.terminal(cwd: "relative/dir"))
         rejects(.terminal(cwd: "/tmp/a\nb"))
