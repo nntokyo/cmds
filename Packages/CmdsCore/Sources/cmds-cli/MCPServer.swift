@@ -42,7 +42,8 @@ final class MCPServer {
         browser_* tools instead of Chrome or another browser (no Chrome extension, no `open <url>`), so the user sees the \
         page beside the terminal. Use Chrome only when the user asks for it, when the page needs the user's Chrome \
         sign-ins or saved passwords (cmds browser panes do not share them), or for what browser_eval cannot do (file \
-        uploads, native dialogs). For front-end work, browser_console, browser_source and browser_seo give the page's \
+        uploads, native dialogs). To keep this session's sign-ins apart from other sessions' (or share them), set a \
+        login profile with browser_profile. For front-end work, browser_console, browser_source and browser_seo give the page's \
         console and errors, its HTML and an SEO check. Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
         server or another long-running command in a terminal pane beside yours with terminal_split, read its output \
         with terminal_read and type into it with terminal_send (only panes opened from your terminal); list_ports shows \
@@ -176,7 +177,13 @@ final class MCPServer {
     static let tools: [Tool] = [
         Tool(name: "browser_open",
              description: "Open a URL in a new cmds browser pane, without taking the keyboard focus: a new tab of the workspace's browser pane, or a split to the right of your terminal when there is none (or the user turned tabs off). Returns the pane id. Use this instead of Chrome inside cmds.",
-             properties: ["url": string("URL to load (http, https, file).")], required: ["url"]),
+             properties: ["url": string("URL to load (http, https, file)."),
+                          "profile": string("Login profile for the page (its own cookies and sign-ins; see browser_profile): a name, or \"\" for the shared default. Default: the profile set for your terminal.")],
+             required: ["url"]),
+        Tool(name: "browser_profile",
+             description: "Show or set the login profile of cmds browser pages: each named profile keeps its own cookies, storage and sign-ins; pages without one share the default data. Panes with the same profile share their sign-ins, so use a name of your own to keep this session's logins apart, or the same name as another session to share its logins. Without pane: the profile of pages you open from now on (browser_open). With pane (one you opened): moves that browser pane to the profile and loads its page again there. Without profile: just shows the current one and the existing profiles. Use a profile another session or the user made only when the user asks.",
+             properties: ["profile": string("Profile name (at most \(BrowserProfile.maxLength) characters; created when first used), or \"\" for the shared default."),
+                          "pane": string("Browser pane id opened from your terminal. Default: your terminal (pages opened from now on).")]),
         Tool(name: "browser_navigate", description: "Load a URL in a cmds browser pane.",
              properties: ["url": string("URL to load."), "pane": browserPane], required: ["url"]),
         Tool(name: "browser_url", description: "The URL and title of a cmds browser pane.",
@@ -378,11 +385,33 @@ final class MCPServer {
     private func run(_ name: String, _ arguments: JSONValue) throws -> [JSONValue] {
         switch name {
         case "browser_open":
-            let result = try call("browser.open", ["pane": envPane.json, "url": .string(try argument(arguments, "url")),
-                                                   "focus": .bool(false), "reuse": .bool(true)], Self.requestTimeout)
+            var params: [String: JSONValue?] = ["pane": envPane.json, "url": .string(try argument(arguments, "url")),
+                                                "focus": .bool(false), "reuse": .bool(true)]
+            if let profile = arguments["profile"]?.stringValue {
+                params["profile"] = .string(try toolArguments { try BrowserProfile.change(profile) ?? "" })
+            }
+            let result = try call("browser.open", params, Self.requestTimeout)
             let id = try recordOpenedPane(result)
             lastBrowserPane = id
+            if case .string(let wanted)?? = params["profile"], !wanted.isEmpty, result["profile"]?.stringValue != wanted {
+                throw ToolError(message: "Opened browser pane \(id), but this cmds app has no login profiles (update cmds): "
+                                + "the page uses the shared data.")
+            }
             return [Self.text("Opened browser pane \(id).")]
+        case "browser_profile":
+            guard let envPane else { throw ToolError(message: "CMDS_PANE_ID is not set") }
+            let target = nonEmpty(arguments["pane"]?.stringValue) ?? envPane
+            var params: [String: JSONValue?] = ["pane": .string(target), "openedBy": .string(envPane)]
+            if let profile = arguments["profile"]?.stringValue {
+                params["profile"] = .string(try toolArguments { try BrowserProfile.change(profile) ?? "" })
+            }
+            let result = try newMethod("browser.profile") { try call("browser.profile", params, Self.requestTimeout) }
+            let state = try decode(result, as: BrowserProfileState.self, what: "profile")
+            let whose = target == envPane ? "Pages opened from your terminal use" : "\(target) uses"
+            var lines = ["\(whose) the login profile \(BrowserProfile.label(state.profile))."]
+            lines.append(state.profiles.isEmpty ? "No named profiles yet."
+                         : "Profiles: " + state.profiles.map { "\"\($0)\"" }.joined(separator: ", "))
+            return [Self.text(lines.joined(separator: "\n"))]
         case "browser_navigate":
             let url = try argument(arguments, "url")
             try browserCall("browser.navigate", arguments, ["url": .string(url)], timeout: Self.requestTimeout)

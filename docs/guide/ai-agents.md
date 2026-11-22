@@ -135,7 +135,8 @@ status:
 
 | Tool | Does |
 |---|---|
-| `browser_open` | Open a URL in a new tab of the workspace's browser pane (a browser split to the right of the agent's terminal when there is none, or with tabs turned off), without taking the focus; returns the pane id. The same page opened again reuses its tab; at most 10 tabs per agent (the oldest hidden ones close) |
+| `browser_open` | Open a URL in a new tab of the workspace's browser pane (a browser split to the right of the agent's terminal when there is none, or with tabs turned off), without taking the focus; returns the pane id. The same page opened again reuses its tab; at most 10 tabs per agent (the oldest hidden ones close). `profile`: the [login profile](workspaces-and-panes.md#login-profiles) for the page (default: the one set with `browser_profile`) |
+| `browser_profile` | Show or set the [login profile](workspaces-and-panes.md#login-profiles) of the pages the agent opens from now on, or (`pane`) of a browser pane it opened, which loads its page again there; `profile: ""` is the shared default. A profile of its own keeps the session's sign-ins apart; another session's profile name shares its sign-ins |
 | `browser_navigate`, `browser_url` | Load a URL; the URL and title |
 | `browser_eval` | Run JavaScript in the page and return its JSON value (read text, click, fill inputs); `timeout` seconds (default 30, at most 300), after which a page that stopped responding is reloaded |
 | `browser_snapshot` | A PNG of the visible page, returned as an image (also when its workspace is not shown). `fullPage`, `selector` (one element), `device` or `devices` (e.g. `["iphone", "ipad", "desktop-1440"]`: one image per size, each after a line naming it) |

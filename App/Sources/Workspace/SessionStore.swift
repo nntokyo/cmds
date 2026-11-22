@@ -51,6 +51,9 @@ struct SessionState: Codable {
         var worktree: String? = nil
         /// Tab groups (`TabGroup`). Added later: older sessions lack it, older versions ignore it.
         var tabGroups: [TabGroup]? = nil
+        /// Login profile of each browser pane that has one, and of the pages each terminal pane opens
+        /// (`BrowserPane.profile`, `Pane.browserProfile`). Added later: older sessions lack it, older versions ignore it.
+        var paneProfiles: [PaneProfile]? = nil
     }
 
     /// The pane at `paneIndex` was opened from the terminal pane at `openerIndex` (reading order of `layout`).
@@ -66,6 +69,12 @@ struct SessionState: Codable {
     struct PaneTag: Codable {
         var paneIndex: Int
         var tag: String
+    }
+
+    /// The login profile of the pane at `paneIndex` (reading order of `layout`).
+    struct PaneProfile: Codable {
+        var paneIndex: Int
+        var profile: String
     }
 
     /// The Claude account of the pane at `paneIndex` (reading order of `layout`).
@@ -147,7 +156,7 @@ enum SessionStore {
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
         case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners, worktree,
-             tabGroups
+             tabGroups, paneProfiles
     }
 
     init(from decoder: Decoder) throws {
@@ -168,6 +177,9 @@ extension SessionState.WorkspaceState {
         worktree = try? c.decodeIfPresent(String.self, forKey: .worktree)
         let groups = (try? c.decodeIfPresent([Lossy<SessionState.TabGroup>].self, forKey: .tabGroups))?.compactMap(\.value) ?? []
         tabGroups = groups.isEmpty ? nil : groups
+        let profiles = (try? c.decodeIfPresent([Lossy<SessionState.PaneProfile>].self, forKey: .paneProfiles))?
+            .compactMap(\.value) ?? []
+        paneProfiles = profiles.isEmpty ? nil : profiles
     }
 }
 

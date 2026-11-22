@@ -301,7 +301,8 @@ final class AppController {
     func split(paneID: String? = nil, direction: SplitDirection, kind: PaneKind = .terminal,
                url: String? = nil, cwd: String? = nil, command: String? = nil, focus: Bool = true,
                ssh: SSHLaunch? = nil, file: PreviewTarget? = nil, account: ClaudeAccount? = nil,
-               filesHost: String? = nil, recordOpener: Bool = false, asTab: Bool = false) throws -> PaneInfo {
+               filesHost: String? = nil, recordOpener: Bool = false, asTab: Bool = false,
+               profile: String?? = nil) throws -> PaneInfo {
         let source = try resolvePane(paneID)
         if account != nil, kind != .terminal || ssh != nil || (source.ssh != nil && cwd == nil && command == nil) {
             throw RPCError.invalidParams("an account is for local terminal panes (its config directory is on this Mac)")
@@ -327,7 +328,11 @@ final class AppController {
             let localSource = source.ssh == nil && source.files?.isRemote != true ? source.workingDirectory : nil
             let localWorkspace = workspace.isRemote ? nil : workspace.workingDirectory
             let directory = cwd.map { ($0 as NSString).expandingTildeInPath } ?? localSource ?? localWorkspace ?? NSHomeDirectory()
-            pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account)
+            // A browser's login profile: as asked (`.some(nil)`: the shared data), else a source browser's. A terminal's
+            // profile is only for pages opened from it by command (`openBrowser`); a new terminal starts with the shared
+            // data: each session picks its own.
+            pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account,
+                            profile: kind == .browser ? (profile ?? source.browser?.profile) : nil)
         }
         if recordOpener, source.kind == .terminal { pane.openedBy = source.id }
         workspace.zoomedPaneID = nil
@@ -487,27 +492,32 @@ final class AppController {
     /// A page in a browser pane: with `tabs` (default: Settings › General › Open new pages in tabs) a new tab of the browser
     /// pane that asked, else of the workspace's browser tabs; a browser split beside the pane otherwise.
     @discardableResult
+    /// `profile`: the login profile (`.some(nil)`: the shared data); nil: the asking pane's (`Pane.profileForOpenedPages`)
+    /// when the request names it (`recordOpener`: `cmds browser open`, an agent's browser_open), else a browser's own.
+    /// Links from other apps and port clicks thus never land in the profile an agent set for the focused terminal.
     func openBrowser(paneID: String? = nil, url: String, focus: Bool = true, recordOpener: Bool = false,
-                     tabs: Bool? = nil, reuse: Bool = false) throws -> PaneInfo {
+                     tabs: Bool? = nil, reuse: Bool = false, profile: String?? = nil) throws -> PaneInfo {
         // Nothing to load (`http://exa mple.com`): an error, not a blank pane. Empty input opens the start page.
         if !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, BrowserPane.url(fromUserInput: url) == nil {
             throw RPCError.invalidParams("cannot load \"\(url.prefix(200))\": not a valid URL")
         }
         let requester = try resolvePane(paneID)
+        let profile: String? = profile ?? (recordOpener ? requester.profileForOpenedPages : requester.browser?.profile)
         // An agent (`reuse`: MCP browser_open, `cmds browser open --reuse`) opening a page it already has open (also in
         // a split): that tab again; and it keeps at most `maxAgentTabs` tabs.
         let agent = reuse && recordOpener && requester.kind == .terminal
-        if agent, let reused = try reuseAgentTab(of: requester, url: url, focus: focus) { return reused }
+        if agent, let reused = try reuseAgentTab(of: requester, url: url, focus: focus, profile: profile) { return reused }
         guard tabs ?? AppSettings.shared.browserOpensTabs, let group = browserTabGroup(for: requester) else {
             let info = try split(paneID: requester.id, direction: .right, kind: .browser, url: url, focus: focus,
-                                 recordOpener: recordOpener)
+                                 recordOpener: recordOpener, profile: .some(profile))
             if agent {
                 Self.agentTabCounter += 1
                 pane(id: info.id)?.agentTabOrder = Self.agentTabCounter
             }
             return info
         }
-        var info = try split(paneID: group.id, direction: .right, kind: .browser, url: url, focus: focus, asTab: true)
+        var info = try split(paneID: group.id, direction: .right, kind: .browser, url: url, focus: focus, asTab: true,
+                             profile: .some(profile))
         // The opener is the pane that asked, not the browser tab the page joined.
         if agent, let pane = pane(id: info.id) {
             pane.openedBy = requester.id
@@ -991,6 +1001,10 @@ final class AppController {
                 guard let pane = workspace.panes[id], pane.ssh == nil, let account = pane.claudeAccount else { return nil }
                 return SessionState.PaneAccount(paneIndex: index, account: account)
             }
+            let paneProfiles = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneProfile? in
+                guard let pane = workspace.panes[id], pane.ssh == nil, let profile = pane.profileForOpenedPages else { return nil }
+                return SessionState.PaneProfile(paneIndex: index, profile: profile)
+            }
             let paneTags = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneTag? in
                 guard let pane = workspace.panes[id], pane.ssh == nil, let tag = pane.scheduleTag else { return nil }
                 return SessionState.PaneTag(paneIndex: index, tag: tag)
@@ -1017,7 +1031,8 @@ final class AppController {
                 paneTags: paneTags.isEmpty ? nil : paneTags,
                 paneOpeners: paneOpeners.isEmpty ? nil : paneOpeners,
                 worktree: workspace.worktreePath,
-                tabGroups: tabGroups.isEmpty ? nil : tabGroups)
+                tabGroups: tabGroups.isEmpty ? nil : tabGroups,
+                paneProfiles: paneProfiles.isEmpty ? nil : paneProfiles)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -1045,6 +1060,7 @@ final class AppController {
         // Leaves are built in reading order, so their index matches `paneAccounts`.
         var leafIndex = 0
         var accounts: [Int: ClaudeAccount] = [:]
+        var profiles: [Int: String] = [:]
         // Panes that will be background tabs: browsers among them load their page only when first shown.
         var background: Set<Int> = []
         func build(_ node: SessionState.Node, in workspace: Workspace) -> SplitNode {
@@ -1053,12 +1069,13 @@ final class AppController {
             case .terminal(let cwd):
                 let account = accounts[leafIndex - 1]
                 return SplitNode(paneID: makePane(kind: .terminal, in: workspace, cwd: existing(cwd), command: nil, url: nil,
-                                                  account: account).id)
+                                                  account: account, profile: profiles[leafIndex - 1]).id)
             case .browser(let url, let emulation, let responsive):
                 // Checked again: a hand-edited session.json must not reach WebKit with odd values.
                 let pane = makePane(kind: .browser, in: workspace, cwd: nil, command: nil, url: url,
                                     emulation: (try? emulation?.validated()) ?? nil,
-                                    deferLoad: background.contains(leafIndex - 1) && responsive == nil)
+                                    deferLoad: background.contains(leafIndex - 1) && responsive == nil,
+                                    profile: profiles[leafIndex - 1])
                 if let responsive = (try? responsive?.validated()) ?? nil { pane.browser?.setResponsive(responsive) }
                 return SplitNode(paneID: pane.id)
             case .preview(let path, let format):
@@ -1091,6 +1108,10 @@ final class AppController {
             leafIndex = 0
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
+            }) { first, _ in first }
+            // Checked again: a hand-edited session.json must not name odd profiles.
+            profiles = Dictionary((saved.paneProfiles ?? []).compactMap { entry in
+                ((try? BrowserProfile.validated(entry.profile)) ?? nil).map { (entry.paneIndex, $0) }
             }) { first, _ in first }
             background = Set((saved.tabGroups ?? []).flatMap { group -> [Int] in
                 group.paneIndices.enumerated().filter { $0.offset != group.selected }.map(\.element)
@@ -1168,7 +1189,7 @@ final class AppController {
     /// `emulation`: a browser's device size, user agent and color scheme, set before its first request.
     private func makePane(kind: PaneKind, in workspace: Workspace, cwd: String?, command: String?, url: String?,
                           file: PreviewTarget? = nil, account: ClaudeAccount? = nil,
-                          emulation: BrowserEmulation? = nil, deferLoad: Bool = false) -> Pane {
+                          emulation: BrowserEmulation? = nil, deferLoad: Bool = false, profile: String? = nil) -> Pane {
         let id = makePaneID()
         let pane: Pane
         switch kind {
@@ -1181,9 +1202,10 @@ final class AppController {
             let config = TerminalLaunchConfig(workingDirectory: cwd, command: command, environment: environment)
             pane = Pane(id: id, workspaceID: workspace.id, terminal: TerminalEngineProvider.shared.makeSurface(config: config))
             pane.claudeAccount = account?.name
+            pane.browserProfile = profile
             if pane.workingDirectory == nil { pane.workingDirectory = cwd }
         case .browser:
-            let browser = BrowserPane(emulation: emulation ?? BrowserEmulation())
+            let browser = BrowserPane(emulation: emulation ?? BrowserEmulation(), profile: profile)
             pane = Pane(id: id, workspaceID: workspace.id, browser: browser)
             if deferLoad, let url, !url.isEmpty {
                 browser.deferLoad(url)  // a background tab: loads when first shown

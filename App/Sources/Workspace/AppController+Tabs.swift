@@ -162,7 +162,8 @@ extension AppController {
 
     /// A browser tab `requester` opened before showing the same page (fragment ignored): loaded again and shown
     /// instead of a new tab, so an agent checking its page again and again does not pile up tabs. nil: none.
-    func reuseAgentTab(of requester: Pane, url: String, focus: Bool) throws -> PaneInfo? {
+    /// Only a tab of the same login profile `profile` is reused (another profile's would show other sign-ins).
+    func reuseAgentTab(of requester: Pane, url: String, focus: Bool, profile: String?) throws -> PaneInfo? {
         guard let wanted = BrowserPane.url(fromUserInput: url), let workspace = workspace(id: requester.workspaceID) else {
             return nil
         }
@@ -178,7 +179,8 @@ extension AppController {
         guard let wantedKey = key(wanted) else { return nil }
         // What the tab shows, or what it was asked to show (a page still loading, or one the server redirected).
         guard let pane = workspace.orderedPanes.first(where: { pane in
-            guard pane.openedBy == requester.id, pane.agentTabOrder != nil, let browser = pane.browser else { return false }
+            guard pane.openedBy == requester.id, pane.agentTabOrder != nil, let browser = pane.browser,
+                  browser.profile == profile else { return false }
             return key(browser.currentURL) == wantedKey || key(browser.requestedURL) == wantedKey
         }), let browser = pane.browser else { return nil }
         try browser.navigate(to: wanted.absoluteString)

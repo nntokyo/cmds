@@ -132,10 +132,14 @@ public struct WorkspaceBundle: Codable, Equatable, Sendable {
         public var agentSession: AgentSession?
         public var emulation: BrowserEmulation?
         public var responsive: BrowserResponsive?
+        /// Login profile (`BrowserProfile`) of a browser pane, or of the pages a local terminal opens: the name only
+        /// (its sign-ins stay on the Mac). Added later: older cmds ignore it.
+        public var profile: String?
 
         public init(kind: PaneKind, cwd: String? = nil, host: String? = nil, remoteCwd: String? = nil, url: String? = nil,
                     path: String? = nil, format: String? = nil, agentSession: AgentSession? = nil,
-                    emulation: BrowserEmulation? = nil, responsive: BrowserResponsive? = nil) {
+                    emulation: BrowserEmulation? = nil, responsive: BrowserResponsive? = nil, profile: String? = nil) {
+            self.profile = profile
             self.emulation = emulation
             self.responsive = responsive
             self.kind = kind
@@ -282,6 +286,16 @@ extension WorkspaceBundle {
         var pane = pane
         guard pane.kind == .browser || (pane.emulation == nil && pane.responsive == nil) else {
             throw TransferError("\(label): \(pane.kind.rawValue) pane with browser settings")
+        }
+        if let profile = pane.profile {
+            guard pane.kind == .browser || (pane.kind == .terminal && pane.host == nil) else {
+                throw TransferError("\(label): \(pane.kind.rawValue) pane with a login profile")
+            }
+            do {
+                pane.profile = try BrowserProfile.validated(profile)
+            } catch let error as RPCError {
+                throw TransferError("\(label): login profile: \(error.message)")
+            }
         }
         switch pane.kind {
         case .terminal:

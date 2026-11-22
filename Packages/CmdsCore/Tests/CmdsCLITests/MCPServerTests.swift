@@ -93,7 +93,7 @@ final class MCPServerTests: XCTestCase {
     func testToolsAreListedOnlyInsideCmds() {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
-                       ["browser_open", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
+                       ["browser_open", "browser_profile", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
                         "browser_console", "browser_source", "browser_seo", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
                         "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
                         "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
@@ -102,6 +102,52 @@ final class MCPServerTests: XCTestCase {
         let result = callTool(server(inside: false), "browser_open", #"{"url":"http://localhost:3000"}"#)
         XCTAssertEqual(result?["isError"], .bool(true))
         XCTAssertTrue(requests.isEmpty)
+    }
+
+    func testBrowserProfileShowsAndSetsTheTerminalsOrAPanesProfile() {
+        let server = server()
+        replies["browser.profile"] = .object(["pane": "p1", "profiles": .array([])])
+        XCTAssertEqual(text(callTool(server, "browser_profile")),
+                       "Pages opened from your terminal use the login profile shared (default).\nNo named profiles yet.")
+        XCTAssertEqual(requests.last?.method, "browser.profile")
+        XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p1"))
+        XCTAssertEqual(requests.last?.params["openedBy"] ?? nil, .string("p1"))
+        XCTAssertNil(requests.last?.params["profile"] ?? nil)  // just shows
+
+        replies["browser.profile"] = .object(["pane": "p9", "profile": "work", "profiles": .array(["work"])])
+        XCTAssertEqual(text(callTool(server, "browser_profile", #"{"profile":" work ","pane":"p9"}"#)),
+                       "p9 uses the login profile \"work\".\nProfiles: \"work\"")
+        XCTAssertEqual(requests.last?.params["profile"] ?? nil, .string("work"))
+        XCTAssertEqual(requests.last?.params["pane"] ?? nil, .string("p9"))
+
+        _ = callTool(server, "browser_profile", #"{"profile":""}"#)
+        XCTAssertEqual(requests.last?.params["profile"] ?? nil, .string(""))  // back to the shared data
+
+        let count = requests.count
+        let bad = callTool(server, "browser_profile", #"{"profile":"\#(String(repeating: "x", count: 65))"}"#)
+        XCTAssertEqual(bad?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count)  // refused before asking the app
+    }
+
+    func testBrowserOpenPassesTheProfile() {
+        let server = server()
+        replies["browser.open"] = .object(["id": "p9"])
+        _ = callTool(server, "browser_open", #"{"url":"https://example.com","profile":"agent-a"}"#)
+        XCTAssertEqual(requests.last?.params["profile"] ?? nil, .string("agent-a"))
+        _ = callTool(server, "browser_open", #"{"url":"https://example.com"}"#)
+        XCTAssertNil(requests.last?.params["profile"] ?? nil)  // the terminal's
+        XCTAssertEqual(callTool(server, "browser_open", #"{"url":"https://example.com","profile":"   "}"#)?["isError"], .bool(true))
+    }
+
+    func testBrowserOpenSaysWhenTheAppHasNoProfiles() {
+        let server = server()
+        replies["browser.open"] = .object(["id": "p9"])  // an older app: no `profile` in its answer
+        let result = callTool(server, "browser_open", #"{"url":"https://example.com","profile":"agent-a"}"#)
+        XCTAssertEqual(result?["isError"], .bool(true))
+        XCTAssertTrue(text(result)?.contains("no login profiles") == true)
+        replies["browser.open"] = .object(["id": "p9", "profile": "agent-a"])
+        XCTAssertEqual(text(callTool(server, "browser_open", #"{"url":"https://example.com","profile":"agent-a"}"#)),
+                       "Opened browser pane p9.")
     }
 
     func testBrowserOpenSplitsWithoutFocusAndLaterToolsUseThatPane() {

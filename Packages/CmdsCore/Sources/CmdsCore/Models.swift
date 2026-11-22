@@ -45,11 +45,14 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var background: Bool?
     /// A browser tab whose page was unloaded to save memory (loads again when shown or used).
     public var suspended: Bool?
+    /// The login profile (`BrowserProfile`): a browser pane's, or the one pages opened from a terminal pane use; nil
+    /// for the shared default data. Added later: older apps and clients lack it.
+    public var profile: String?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
                 workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
                 remote: RemoteInfo? = nil, file: String? = nil, account: String? = nil, openedBy: String? = nil,
-                tabs: [String]? = nil, background: Bool? = nil, suspended: Bool? = nil) {
+                tabs: [String]? = nil, background: Bool? = nil, suspended: Bool? = nil, profile: String? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -65,6 +68,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.tabs = tabs
         self.background = background
         self.suspended = suspended
+        self.profile = profile
     }
 }
 
