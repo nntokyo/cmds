@@ -156,6 +156,7 @@ enum MainMenu {
         developer.addItem(item("View Page Source", #selector(CommandRouter.browserViewSource(_:)), "u", [.command, .option], target: router))
         developer.addItem(item("Show Console", #selector(CommandRouter.browserToggleConsole(_:)), "c", [.command, .option], target: router))
         developer.addItem(item("SEO Report", #selector(CommandRouter.browserSEOReport(_:)), "", target: router))
+        developer.addItem(item("Point at Element", #selector(CommandRouter.browserPointAtElement(_:)), "c", [.command, .shift], target: router))
         menu.addItem(submenu(developer))
         menu.addItem(.separator())
         menu.addItem(item("Enter Full Screen", #selector(NSWindow.toggleFullScreen(_:)), "f", [.command, .control]))

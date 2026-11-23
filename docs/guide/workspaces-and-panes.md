@@ -446,6 +446,37 @@ The source and report files are kept in the support folder (`Developer/`, one pe
 From scripts and agents: `cmds browser source`, `cmds browser seo`, `cmds browser console --show`, and the MCP tools
 `browser_source`, `browser_seo` and `browser_console` ([ai-agents.md](ai-agents.md#browser-devtools)).
 
+### Point at an element
+
+Tell the coding agent what is wrong with something on the page by pointing at it, instead of describing where it is
+(the idea comes from [FixKit](https://github.com/ostiums/fixkit), which does this for iOS, React Native and Flutter
+apps in the simulator):
+
+1. Click the **scope** button in the browser toolbar, or **View › Developer › Point at Element** (⇧⌘C). The element
+   under the pointer is outlined in red with its name and size.
+2. Click the element. The click is not passed to the page (a button does not fire, a link does not open). Esc, the
+   button again or another page gives up.
+3. Write what is wrong in the field at the bottom of the pane and press Return.
+
+The agent gets your words first, then the page's address, the element (its name, a CSS selector, its box, a few
+computed styles and its opening tag), the components around it and the file and line of its code when the page tells
+them, and a screenshot with the element outlined. The source comes from what dev builds keep: React's records (the
+file and line up to React 18; in React 19 the line that created the element, mapped back to the source file with the
+module's source map, as Vite serves it, else the served module's line, marked as approximate), Vue's component file
+(no line), Svelte's metadata, Angular's dev API, and the attributes of react-dev-inspector, Vue's inspector and
+Astro's dev toolbar. Production builds usually name nothing; the selector,
+text and screenshot still find the element.
+
+- **Which terminal**: the one that opened the browser pane (`cmds browser open`, MCP `browser_open`) while an agent
+  runs there, else the workspace's agent terminal you used last. The prompt is pasted and Return pressed, as a
+  schedule's prompt; an agent at work queues it. A terminal without an agent never gets it (it would run as shell
+  commands), nor one whose agent is asking a question: the prompt goes to the clipboard instead, and the notice says
+  why. The field's placeholder names the terminal before you send.
+- **Screenshots** go to `.cmds/reports/` in that terminal's folder, where the agent can read them without asking;
+  `.cmds/` holds a `.gitignore` that ignores it. Otherwise (no folder, not writable) to the support folder's
+  `Reports/`. The newest 30 are kept. An agent on an SSH server gets the prompt without a screenshot.
+- Not in the responsive view or inside iframes (an iframe is reported as itself).
+
 ### Screenshots
 
 `cmds browser snapshot` captures what the pane shows; it can also capture more without scrolling or resizing the

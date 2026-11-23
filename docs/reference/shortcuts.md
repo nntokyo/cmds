@@ -58,6 +58,7 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | View page source (browser pane) | ⌥⌘U | View › Developer |
 | Show / hide the console drawer (browser pane) | ⌥⌘C | View › Developer |
 | SEO report of the page | – | View › Developer |
+| Point at an element and tell the agent what is wrong (browser pane; again or Esc: give up) | ⇧⌘C | View › Developer |
 | Open in Preview… (file picker) | ⇧⌘O | File |
 | Preview a file path shown in a terminal | ⌘-click the path | – |
 | New files pane (lists the focused pane's folder; an SSH pane's remote folder on its host) | ⇧⌘E | File |

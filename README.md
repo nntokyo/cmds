@@ -19,7 +19,7 @@ over an encrypted connection. Written in Swift and AppKit. GPL-3.0.
 - **Attention ring**: panes light up on OSC 9/777 notifications, the bell or `cmds notify`; ⇧⌘U jumps to the latest.
 - **Tabs**: stack terminals, browsers, previews and files panes as tabs in any place of the layout (⌘T); links and
   agents' pages open as browser tabs instead of new splits.
-- **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`), with phone, tablet and desktop sizes, a breakpoint indicator and light/dark (`cmds browser device`), page source, a console and an SEO report (also for agents through MCP), and Google Chrome's bookmarks bar.
+- **Browser panes**: WebKit next to your terminal, scriptable (`cmds browser eval`, `snapshot`), with phone, tablet and desktop sizes, a breakpoint indicator and light/dark (`cmds browser device`), page source, a console and an SEO report (also for agents through MCP), Point at Element (⇧⌘C: click something on the page, say what is wrong, and the agent in the terminal gets it with the element's source line and a screenshot), and Google Chrome's bookmarks bar.
 - **Preview panes**: images, PDFs, video and Office files (Quick Look), rendered Markdown and coloured diffs, reloaded
   when the file changes; ⌘-click a path in the terminal to open it.
 - **Files panes**: a folder on the Mac or on an SSH host (SFTP with your own ssh, keys and agent) as a list (size,

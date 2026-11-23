@@ -125,6 +125,11 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
         controller.runDeveloperAction(.source, paneID: pane.id)
     }
     @objc func browserToggleConsole(_ sender: Any?) { focusedBrowser?.toggleConsole() }
+    /// ⇧⌘C: pick an element of the page and tell the agent what is wrong with it (again: give up).
+    @objc func browserPointAtElement(_ sender: Any?) {
+        guard let browser = focusedBrowser else { return NSSound.beep() }
+        browser.togglePointing()
+    }
     @objc func browserSEOReport(_ sender: Any?) {
         guard let pane = controller.focusedPane, pane.browser != nil else { return NSSound.beep() }
         controller.runDeveloperAction(.seo, paneID: pane.id)
@@ -556,6 +561,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
              #selector(filesOpenTerminal(_:)):
             return focusedFiles != nil
         case #selector(browserViewSource(_:)), #selector(browserSEOReport(_:)):
+            return focusedBrowser != nil
+        case #selector(browserPointAtElement(_:)):
+            menuItem.state = focusedBrowser?.isPointing == true ? .on : .off
             return focusedBrowser != nil
         case #selector(browserToggleConsole(_:)):
             menuItem.title = focusedBrowser?.isConsoleOpen == true ? String(localized: "Hide Console") : String(localized: "Show Console")

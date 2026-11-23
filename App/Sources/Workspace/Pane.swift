@@ -238,6 +238,16 @@ final class Pane {
             guard let self, let controller = self.controller else { return }
             _ = try? controller.newTab(paneID: self.id, kind: .browser, url: url.absoluteString, focus: false)
         }
+        browser.onPointAtElement = { [weak self] report in
+            guard let self, let controller = self.controller else {
+                return .copied(reason: String(localized: "no terminal"))
+            }
+            return controller.deliverElementPoint(report, fromBrowser: self.id)
+        }
+        browser.pointTargetName = { [weak self] in
+            guard let self, let controller = self.controller else { return nil }
+            return controller.pointTarget(forBrowser: self.id).map(controller.pointTargetName)
+        }
     }
 
     init(id: String, workspaceID: String, preview: PreviewPane) {

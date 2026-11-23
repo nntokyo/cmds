@@ -264,6 +264,13 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await pane.find.debugPerform(params.value) }
                 }
+            case "debug.point":
+                // Tests only: Point at Element in a browser pane (BrowserPane+Point.swift) without the mouse.
+                guard let browser = controller.pane(id: try params.required("pane"))?.browser else {
+                    throw RPCError.invalidParams("not a browser pane")
+                }
+                connection.reply(id: id, result: browser.debugPoint(action: try params.string("action"),
+                                                                    text: try params.string("text")))
             case "debug.palette":
                 // Tests only: the command palette (CommandPalette+Debug.swift).
                 connection.reply(id: id, result: try CommandPalette.debugPerform(params.value, controller: controller))
