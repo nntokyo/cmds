@@ -68,10 +68,13 @@ public struct PointedElement: Codable, Equatable, Sendable {
     /// The components around the element, outermost first.
     public var components: [String]?
     public var source: Source?
+    /// The same-origin frames the element is in, outermost first (`iframe#preview (http://…)`); nil in the page itself.
+    public var frame: String?
 
     public init(tag: String, selector: String, html: String, text: String? = nil, label: String? = nil, rect: Rect,
                 viewportWidth: Double, viewportHeight: Double, scrollX: Double? = nil, scrollY: Double? = nil,
-                styles: [String]? = nil, framework: String? = nil, components: [String]? = nil, source: Source? = nil) {
+                styles: [String]? = nil, framework: String? = nil, components: [String]? = nil, source: Source? = nil,
+                frame: String? = nil) {
         self.tag = tag
         self.selector = selector
         self.html = html
@@ -86,6 +89,7 @@ public struct PointedElement: Codable, Equatable, Sendable {
         self.framework = framework
         self.components = components
         self.source = source
+        self.frame = frame
     }
 
     /// The short name the composer shows: `button "Save changes"`, `img "Logo"`, `div.card`.
@@ -130,6 +134,7 @@ public enum ElementPoint {
             let named = title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
             lines.append("Page: \(url)" + (named.map { " (\"\(capped($0, 80))\")" } ?? ""))
         }
+        if let frame = element.frame, !frame.isEmpty { lines.append("Frame: \(frame)") }
         lines.append("Element: \(element.summary)")
         lines.append("Selector: \(element.selector)")
         if let source = element.source {
@@ -269,12 +274,13 @@ public enum ElementPoint {
           tag.style.cssText = 'position:fixed;font:600 11px/1.4 -apple-system,system-ui,sans-serif;color:#fff;'
             + 'background:#ff3b30;padding:1px 6px;border-radius:4px;white-space:nowrap;display:none;pointer-events:none;';
           root.append(box, tag);
-          const cursor = document.createElement('style');
-          cursor.textContent = '*, *::before, *::after { cursor: crosshair !important; }';
           document.documentElement.append(host);
-          (document.head || document.documentElement).append(cursor);
 
           let current = null, pinned = null, frame = 0, done = false;
+          // Same-origin frames (Storybook's preview, an embedded app) are pointed into: each frame's window gets the
+          // listeners and the cursor; a frame that loads later is hooked when the pointer is over it.
+          const hooked = [];
+          const hookedDocs = new WeakSet();
           const short = (el) => {
             let name = el.tagName.toLowerCase();
             if (el.id) name += '#' + el.id;
@@ -282,8 +288,22 @@ public enum ElementPoint {
             if (classes.length) name += '.' + classes.join('.');
             return name;
           };
-          const place = (el, label) => {
+          // The element's box in the top viewport: its frames' boxes (and borders) added.
+          const rectOf = (el) => {
             const r = el.getBoundingClientRect();
+            let x = r.left, y = r.top, doc = el.ownerDocument;
+            for (let depth = 0; doc && doc !== document && depth < 10; depth++) {
+              const holder = doc.defaultView && doc.defaultView.frameElement;
+              if (!holder) break;
+              const f = holder.getBoundingClientRect();
+              x += f.left + holder.clientLeft;
+              y += f.top + holder.clientTop;
+              doc = holder.ownerDocument;
+            }
+            return { left: x, top: y, width: r.width, height: r.height, bottom: y + r.height };
+          };
+          const place = (el, label) => {
+            const r = rectOf(el);
             Object.assign(box.style, { display: 'block', left: r.left + 'px', top: r.top + 'px',
                                        width: Math.max(r.width, 2) + 'px', height: Math.max(r.height, 2) + 'px' });
             if (!label) { tag.style.display = 'none'; return; }
@@ -293,26 +313,30 @@ public enum ElementPoint {
             tag.style.left = Math.max(0, Math.min(r.left, innerWidth - tag.offsetWidth - 2)) + 'px';
             tag.style.top = (above >= 0 ? above : Math.min(r.bottom + 2, innerHeight - 20)) + 'px';
           };
-          const at = (x, y) => {
-            let el = document.elementFromPoint(x, y);
+          const isFrame = (el) => el && (el.tagName === 'IFRAME' || el.tagName === 'FRAME');
+          const reachable = (holder) => { try { return holder.contentDocument && holder.contentWindow ? holder.contentWindow : null; } catch { return null; } };
+          const at = (x, y, doc) => {
+            let el = doc.elementFromPoint(x, y);
             while (el && el.shadowRoot) {
               const inner = el.shadowRoot.elementFromPoint(x, y);
               if (!inner || inner === el) break;
               el = inner;
             }
-            return el === document.documentElement ? document.body || el : el;
+            return el === doc.documentElement ? doc.body || el : el;
           };
+          const docOf = (e) => (e.view && e.view.document) || (e.target && e.target.ownerDocument) || document;
           const block = (e) => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); };
           const move = (e) => {
-            const el = at(e.clientX, e.clientY);
+            const el = at(e.clientX, e.clientY, docOf(e));
             if (!el) return;
+            if (isFrame(el)) { const win = reachable(el); if (win) hook(win); }
             current = el;
             place(el, short(el));
           };
           const press = (e) => block(e);
           const click = (e) => {
             block(e);
-            const el = at(e.clientX, e.clientY) || current;
+            const el = at(e.clientX, e.clientY, docOf(e)) || current;
             if (el) pick(el);
           };
           const key = (e) => {
@@ -323,9 +347,27 @@ public enum ElementPoint {
           const events = [['pointermove', move], ['mousemove', move], ['pointerdown', press], ['mousedown', press],
                           ['pointerup', press], ['mouseup', press], ['touchstart', press], ['dblclick', press],
                           ['auxclick', press], ['contextmenu', press], ['click', click], ['keydown', key]];
+          function hook(win) {
+            let doc;
+            try { doc = win.document; } catch { return; }
+            if (!doc || hookedDocs.has(doc)) return;
+            hookedDocs.add(doc);
+            const cursor = doc.createElement('style');
+            cursor.textContent = '*, *::before, *::after { cursor: crosshair !important; }';
+            (doc.head || doc.documentElement).append(cursor);
+            for (const [name, handler] of events) win.addEventListener(name, handler, true);
+            hooked.push({ win, cursor });
+            for (const holder of doc.querySelectorAll('iframe, frame')) {
+              const inner = reachable(holder);
+              if (inner && hooked.length < 20) hook(inner);
+            }
+          }
           const stopListening = () => {
-            for (const [name, handler] of events) window.removeEventListener(name, handler, true);
-            cursor.remove();
+            for (const { win, cursor } of hooked) {
+              try { for (const [name, handler] of events) win.removeEventListener(name, handler, true); } catch {}
+              cursor.remove();
+            }
+            hooked.length = 0;
           };
           const clear = () => {
             stopListening();
@@ -348,11 +390,12 @@ public enum ElementPoint {
           };
           const capped = (text, max) => text.length > max ? text.slice(0, max - 1) + '…' : text;
           const selectorOf = (el) => {
-            const unique = (sel) => { try { return document.querySelectorAll(sel).length === 1; } catch { return false; } };
+            const doc = el.ownerDocument;
+            const unique = (sel) => { try { return doc.querySelectorAll(sel).length === 1; } catch { return false; } };
             if (el.id && unique('#' + CSS.escape(el.id))) return '#' + CSS.escape(el.id);
             const parts = [];
             let node = el;
-            while (node && node.nodeType === 1 && node !== document.documentElement && parts.length < 8) {
+            while (node && node.nodeType === 1 && node !== doc.documentElement && parts.length < 8) {
               let part = node.tagName.toLowerCase();
               if (node.id && unique('#' + CSS.escape(node.id))) { parts.unshift('#' + CSS.escape(node.id)); break; }
               const classes = [...node.classList].filter((c) => /^[A-Za-z_-][\\w-]*$/.test(c) && c.length < 40).slice(0, 2);
@@ -369,12 +412,24 @@ public enum ElementPoint {
             }
             return parts.join(' > ');
           };
+          // The frames around the element, outermost first: `iframe#preview (http://…/iframe.html?id=…)`.
+          const frameOf = (el) => {
+            const chain = [];
+            let doc = el.ownerDocument;
+            for (let depth = 0; doc && doc !== document && depth < 10; depth++) {
+              const holder = doc.defaultView && doc.defaultView.frameElement;
+              if (!holder) break;
+              chain.unshift(selectorOf(holder) + ' (' + capped(String(doc.location.href), 200) + ')');
+              doc = holder.ownerDocument;
+            }
+            return chain.length ? chain.join(' › ') : null;
+          };
           const facts = (el) => {
-            const r = el.getBoundingClientRect();
+            const r = rectOf(el);
             const open = (el.outerHTML.match(/^<[^>]*>/) || [''])[0];
             const text = (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim();
             const label = ['aria-label', 'alt', 'title', 'placeholder'].map((n) => el.getAttribute(n)).find((v) => v && v.trim());
-            const style = getComputedStyle(el);
+            const style = (el.ownerDocument.defaultView || window).getComputedStyle(el);
             const styles = ['display', 'position', 'width', 'height', 'margin', 'padding', 'font-size', 'font-weight',
                             'line-height', 'color', 'background-color', 'border-radius', 'opacity']
               .map((n) => [n, style.getPropertyValue(n)])
@@ -387,7 +442,7 @@ public enum ElementPoint {
               text: text ? capped(text, 160) : null, label: label ? capped(label.trim(), 120) : null,
               rect: { x: Math.round(r.left), y: Math.round(r.top), width: Math.round(r.width), height: Math.round(r.height) },
               viewportWidth: innerWidth, viewportHeight: innerHeight, scrollX: Math.round(scrollX), scrollY: Math.round(scrollY),
-              styles,
+              styles, frame: frameOf(el),
             };
           };
           const pick = (el) => {
@@ -403,7 +458,7 @@ public enum ElementPoint {
           };
           const api = { cancel: () => finish(null), clear: () => { finish(null); clear(); } };
           window.__cmdsPoint = api;
-          for (const [name, handler] of events) window.addEventListener(name, handler, true);
+          hook(window);
         });
         """
 
@@ -417,7 +472,17 @@ public enum ElementPoint {
     /// Astro's dev toolbars, Svelte's metadata), then React fibers (`_debugSource` up to React 18, the element's
     /// creation stack in React 19), Vue 3 / Vue 2 component instances and Angular's dev API. Read-only.
     public static let sourceScript = """
-        const el = document.querySelector('[' + \(jsString(markAttribute)) + '="' + CSS.escape(token) + '"]');
+        const mark = '[' + \(jsString(markAttribute)) + '="' + CSS.escape(token) + '"]';
+        // The element may be in a same-origin frame (pickScript points into them).
+        const find = (doc, depth) => {
+          const found = doc.querySelector(mark);
+          if (found || depth > 5) return found;
+          for (const holder of doc.querySelectorAll('iframe, frame')) {
+            try { const inner = holder.contentDocument && find(holder.contentDocument, depth + 1); if (inner) return inner; } catch {}
+          }
+          return null;
+        };
+        const el = find(document, 0);
         if (!el) return null;
         const out = { framework: null, components: [], source: null };
         const int = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : null; };
