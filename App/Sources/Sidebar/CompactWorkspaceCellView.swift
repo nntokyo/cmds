@@ -184,7 +184,7 @@ final class CompactWorkspaceCellView: NSTableCellView {
         if WorkspaceCellView.showsUsage(workspace) {
             lines.append(ResourceFormat.usage(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes))
         }
-        if let note = workspace.notificationText { lines.append(note) }
+        if let note = workspace.notificationText { lines.append(workspace.notificationLevel.decorate(note)) }
         return lines.joined(separator: "\n")
     }
 }

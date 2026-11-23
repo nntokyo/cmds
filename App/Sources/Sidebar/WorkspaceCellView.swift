@@ -332,8 +332,9 @@ final class WorkspaceCellView: NSTableCellView {
         agentKey = nil // reloads (selection changes) redraw the coloured runs for the row's new background
         updateUsage(with: workspace)
         notificationLabel.isHidden = Self.notificationText(workspace) == nil
-        notificationLabel.stringValue = workspace.notificationText ?? ""
-        notificationLabel.textColor = workspace.attention ? .labelColor : .secondaryLabelColor
+        notificationLabel.stringValue = Self.notificationText(workspace) ?? ""
+        notificationColor = Self.notificationColor(workspace)
+        applyNotificationColor()
     }
 
     /// Dot / spinner and the state text. The spinner runs only while the agent works.
@@ -377,8 +378,16 @@ final class WorkspaceCellView: NSTableCellView {
     override var backgroundStyle: NSView.BackgroundStyle {
         didSet {
             applyBadgeColor()
+            applyNotificationColor()
             progressStrip.emphasized = backgroundStyle == .emphasized
         }
+    }
+
+    private var notificationColor = NSColor.secondaryLabelColor
+
+    /// Like the state badge: the level's colour would vanish on an emphasized selection (the ✓ ⚠︎ ✗ stay).
+    private func applyNotificationColor() {
+        notificationLabel.textColor = backgroundStyle == .emphasized ? .alternateSelectedControlTextColor : notificationColor
     }
 
     private func applyBadgeColor() {
@@ -423,9 +432,20 @@ final class WorkspaceCellView: NSTableCellView {
         !workspace.ports.isEmpty && AppSettings.shared.sidebar(.ports)
     }
 
+    /// A success, warning or error in its colour (#174 G21); other text brighter while the ring is lit.
+    @MainActor
+    static func notificationColor(_ workspace: Workspace) -> NSColor {
+        switch workspace.notificationLevel {
+        case .success: return .systemGreen
+        case .warning: return .systemOrange
+        case .error: return .systemRed
+        case .info: return workspace.attention ? .labelColor : .secondaryLabelColor
+        }
+    }
+
     @MainActor
     private static func notificationText(_ workspace: Workspace) -> String? {
-        AppSettings.shared.sidebar(.notification) ? workspace.notificationText : nil
+        AppSettings.shared.sidebar(.notification) ? workspace.notificationText.map(workspace.notificationLevel.decorate) : nil
     }
 
     /// The usage line depends only on structure (a terminal exists), never on sampled values, so new
@@ -524,14 +544,15 @@ final class WorkspaceCellView: NSTableCellView {
     var debugAccountTitle: String? { accountButton.isHidden ? nil : accountButton.attributedTitle.string }
 
     /// For `debug.sidebar_row`: the branch line (nil while hidden), its tooltip, and the row drawn as PNG.
-    func debugRow() -> (branch: String?, branchToolTip: String?, png: Data?) {
+    func debugRow() -> (branch: String?, branchToolTip: String?, notification: String?, png: Data?) {
         layoutSubtreeIfNeeded()
         var png: Data?
         if let rep = bitmapImageRepForCachingDisplay(in: bounds) {
             cacheDisplay(in: bounds, to: rep)
             png = rep.representation(using: .png, properties: [:])
         }
-        return (branchLabel.isHidden ? nil : branchLabel.attributedStringValue.string, branchLabel.toolTip, png)
+        return (branchLabel.isHidden ? nil : branchLabel.attributedStringValue.string, branchLabel.toolTip,
+                notificationLabel.isHidden ? nil : notificationLabel.stringValue, png)
     }
     #endif
 

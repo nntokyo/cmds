@@ -9,6 +9,11 @@ final class PaneContainerView: NSView {
         didSet { if attention != oldValue { updateRing() } }
     }
 
+    /// An error lights the ring red (`NotificationLevel`, #174 G21).
+    var attentionIsError = false {
+        didSet { ring.isError = attentionIsError }
+    }
+
     /// Subtle outline for the focused pane when the workspace shows several panes.
     var showsFocus = false {
         didSet { if showsFocus != oldValue { updateRing() } }
@@ -160,7 +165,11 @@ final class AttentionRingView: NSView {
         didSet { if state != oldValue { apply() } }
     }
 
-    private static let ringColor = NSColor.systemOrange
+    var isError = false {
+        didSet { if isError != oldValue, state == .attention { apply() } }
+    }
+
+    private var ringColor: NSColor { isError ? .systemRed : .systemOrange }
     private static let pulseKey = "cmds.pulse"
 
     override init(frame: NSRect) {
@@ -194,8 +203,8 @@ final class AttentionRingView: NSView {
             layer.shadowOpacity = 0
         case .attention:
             layer.borderWidth = 2.5
-            layer.borderColor = Self.ringColor.cgColor
-            layer.shadowColor = Self.ringColor.cgColor
+            layer.borderColor = ringColor.cgColor
+            layer.shadowColor = ringColor.cgColor
             layer.shadowRadius = 6
             layer.shadowOffset = .zero
             layer.shadowOpacity = 0.9

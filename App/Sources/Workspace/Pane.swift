@@ -334,9 +334,10 @@ final class Pane {
         }
     }
 
-    func setAttention(_ lit: Bool) {
+    func setAttention(_ lit: Bool, level: NotificationLevel = .info) {
         attention = lit
         attentionDate = lit ? Date() : nil
+        container.attentionIsError = lit && level == .error
         container.attention = lit
     }
 

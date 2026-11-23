@@ -109,6 +109,14 @@ func printError(_ message: String) {
 }
 
 /// Reads all of stdin as UTF-8.
+/// `--level` of `cmds notify` / `cmds status`, checked here (an older app would ignore an unknown one); nil when absent.
+func levelOption(_ ctx: Context) throws -> String? {
+    guard let raw = ctx.args[option: "level"] else { return nil }
+    do { return try NotificationLevel.parse(raw).rawValue } catch let error as NotificationLevel.Invalid {
+        throw CLIError.usage(error.description)
+    }
+}
+
 func readStandardInput() -> String {
     String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
 }

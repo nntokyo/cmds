@@ -14,7 +14,7 @@ extension AppController {
         if !missing.isEmpty {
             let text = String(localized: "Not in the Keychain: \(missing.joined(separator: ", "))",
                               comment: "sidebar status when a workspace variable's Keychain item cannot be read; argument: variable names")
-            try? setStatus(workspaceID: workspace.id, text: text)
+            try? setStatus(workspaceID: workspace.id, text: text, level: .warning)
         }
         return variables
     }

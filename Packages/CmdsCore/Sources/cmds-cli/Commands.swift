@@ -456,14 +456,19 @@ extension CLI {
             let text = result["text"]?.stringValue ?? ""
             print(text, terminator: text.hasSuffix("\n") ? "" : "\n")
         },
-        Command(name: "notify", usage: "notify [--title T] [--pane P] <body…>",
+        Command(name: "notify", usage: "notify [--title T] [--pane P] [--level L] <body…>",
                 summary: "Light the pane's attention ring and show the text in the sidebar.",
-                details: "Also posts a macOS notification while cmds is in the background.",
-                options: ["title", "pane"], aliases: ["t": "title"]) { ctx in
-            guard !ctx.args.positionals.isEmpty else { throw CLIError.usage("usage: cmds notify [--title T] <body…>") }
+                details: """
+                    Also posts a macOS notification while cmds is in the background. --level info (default), success,
+                    warning or error: the sidebar text's colour and symbol (✓ ⚠︎ ✗); an error lights the ring red.
+                    """,
+                options: ["title", "pane", "level"], aliases: ["t": "title"]) { ctx in
+            guard !ctx.args.positionals.isEmpty else { throw CLIError.usage("usage: cmds notify [--title T] [--level L] <body…>") }
             let body = ctx.args.positionals == ["-"] ? readStandardInput() : ctx.args.positionals.joined(separator: " ")
-            try ctx.call("notify", ["pane": ctx.pane.json, "title": ctx.args[option: "title"].json,
-                                    "body": .string(body.trimmingCharacters(in: .whitespacesAndNewlines))])
+            var params: [String: JSONValue?] = ["pane": ctx.pane.json, "title": ctx.args[option: "title"].json,
+                                               "body": .string(body.trimmingCharacters(in: .whitespacesAndNewlines))]
+            if let level = try levelOption(ctx) { params["level"] = .string(level) }
+            try ctx.call("notify", params)
         },
         Command(name: "project", usage: "project [show|run] [--workspace W]",
                 summary: "Show or run the workspace's .cmds.json (its commands and pages).",
@@ -524,12 +529,15 @@ extension CLI {
                 print(entry["keychain"]?.stringValue.map { "\(name)  (Keychain: \($0))" } ?? name)
             }
         },
-        Command(name: "status", usage: "status [--workspace W] <text…>",
+        Command(name: "status", usage: "status [--workspace W] [--level L] <text…>",
                 summary: "Set the workspace's sidebar text without ringing (empty text clears it).",
-                options: ["workspace"]) { ctx in
-            guard !ctx.args.positionals.isEmpty else { throw CLIError.usage("usage: cmds status [--workspace W] <text…>") }
-            try ctx.call("sidebar.set_status", ["workspace": ctx.workspace().json,
-                                                "text": .string(ctx.args.positionals.joined(separator: " "))])
+                details: "--level info (default), success, warning or error: the text's colour and symbol (✓ ⚠︎ ✗).",
+                options: ["workspace", "level"]) { ctx in
+            guard !ctx.args.positionals.isEmpty else { throw CLIError.usage("usage: cmds status [--workspace W] [--level L] <text…>") }
+            var params: [String: JSONValue?] = ["workspace": ctx.workspace().json,
+                                               "text": .string(ctx.args.positionals.joined(separator: " "))]
+            if let level = try levelOption(ctx) { params["level"] = .string(level) }
+            try ctx.call("sidebar.set_status", params)
         },
         Command(name: "open", usage: "open [--pane P] [--down] [--no-focus] [--diff] <file|->",
                 summary: "Show a file in a preview pane split to the right of a pane (default: the current one).",
