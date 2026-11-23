@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Pages, appcast signature, download links and the release DMG
         run: python3 -I scripts/ci/site_check.py --release
         env:
@@ -34,7 +34,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: xcodebuild -version && swift --version
       - name: String Catalogs compile
@@ -51,7 +51,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Toolchain
         run: xcodebuild -version && xcrun --sdk iphonesimulator --show-sdk-version
       - name: XcodeGen
