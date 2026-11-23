@@ -17,7 +17,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   source line when the dev build tells them (React, including React 19 through the dev server's source maps; Vue,
   Svelte, Angular, Astro, react-dev-inspector) and a screenshot
   with the element outlined in `.cmds/reports/`. An agent asking a question, or no agent, gets nothing typed: the
-  report goes to the clipboard. The pane's notice then follows the report: working, asking, finished (with the first
+  report goes to the clipboard. Elements inside same-origin iframes (Storybook's preview) are picked themselves. The
+  pane's notice then follows the report: working, asking, finished (with the first
   line of the reply), with Show Terminal. Idea from FixKit (github.com/ostiums/fixkit).
 
 ## [0.32.0] - 2026-11-22

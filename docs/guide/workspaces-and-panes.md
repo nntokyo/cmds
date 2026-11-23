@@ -484,7 +484,10 @@ text and screenshot still find the element.
   `cmds browser point --prompt "…"`. The pane comes forward (the keyboard stays where it is), its ring lights, and
   the notice shows what the agent asks for; your click goes back to the agent with the same facts instead of
   opening the composer. Cancel in the notice, another page or the timeout (2 minutes by default) gives up.
-- Not in the responsive view or inside iframes (an iframe is reported as itself).
+- **Frames**: inside same-origin iframes (Storybook's preview, an embedded app, nested ones too) the element itself is
+  picked; the report adds a `Frame:` line with the iframe's selector and address, and its box is in the page's
+  viewport (where the screenshot outlines it). An iframe from another origin is reported as itself.
+- Not in the responsive view.
 
 ### Screenshots
 

@@ -131,4 +131,16 @@ final class ElementPointTests: XCTestCase {
         XCTAssertFalse(text.contains("Pointed at"))
         XCTAssertEqual(result["element"]?["selector"]?.stringValue, "main > form > button.primary")
     }
+
+    func testFrameLineComesBeforeTheElement() {
+        var inFrame = element()
+        inFrame.frame = "iframe#storybook-preview-iframe (http://localhost:6006/iframe.html?id=button--primary)"
+        let lines = ElementPoint.facts(element: inFrame, url: "http://localhost:6006/", title: nil, screenshot: nil)
+        XCTAssertEqual(Array(lines.prefix(3)), [
+            "Page: http://localhost:6006/",
+            "Frame: iframe#storybook-preview-iframe (http://localhost:6006/iframe.html?id=button--primary)",
+            "Element: button \"Save changes\"",
+        ])
+        XCTAssertFalse(ElementPoint.facts(element: element(), url: nil, title: nil, screenshot: nil).contains { $0.hasPrefix("Frame:") })
+    }
 }
