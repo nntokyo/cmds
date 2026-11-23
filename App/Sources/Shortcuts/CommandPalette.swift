@@ -16,6 +16,8 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
     private let field = NSTextField()
     private let table = NSTableView()
     private let items: [CommandPaletteItem]
+    /// Instead of ranking `items`: the results for each query (Find in All Terminals).
+    private let search: ((String) -> [(item: CommandPaletteItem, result: FuzzyMatch.Result)])?
     private(set) var results: [(item: CommandPaletteItem, result: FuzzyMatch.Result)] = []
     private var closing = false
     /// Rows Page Up / Page Down move.
@@ -49,10 +51,54 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
         return palette
     }
 
-    private init(controller: AppController, parent: NSWindow, items: [CommandPaletteItem], placeholder: String? = nil) {
+    /// Edit › Find › Find in All Terminals (⇧⌘F, #174 G12): the lines of every terminal's scrollback (the newest
+    /// `AllTerminalsSearch.maxLinesPerTerminal`, read now) that contain what is typed, with their workspace and pane.
+    /// Return shows the pane and opens its find bar with the text. Only from the menu: nothing else reads other panes.
+    @discardableResult
+    static func presentTerminalSearch(controller: AppController, over window: NSWindow?, query: String = "") -> CommandPalette? {
+        current?.close()
+        guard let window else { return nil }
+        let palette = CommandPalette(controller: controller, parent: window, items: [],
+                                     placeholder: String(localized: "Find in all terminals", comment: "Find in All Terminals placeholder"),
+                                     search: terminalSearch(controller: controller))
+        current = palette
+        palette.show()
+        if !query.isEmpty { palette.query = query }
+        return palette
+    }
+
+    /// Reads every terminal's scrollback now and answers each query with its hits as palette results.
+    static func terminalSearch(controller: AppController) -> (String) -> [(item: CommandPaletteItem, result: FuzzyMatch.Result)] {
+        var sources: [(key: String, text: String)] = []
+        var places: [String: (pane: Pane, place: String)] = [:]
+        for workspace in controller.workspaces {
+            for pane in workspace.orderedPanes {
+                guard let terminal = pane.terminal else { continue }
+                sources.append((pane.id, terminal.scrollbackText(maxLines: AllTerminalsSearch.maxLinesPerTerminal)))
+                let paneTitle = pane.agentTopic ?? DefaultTitle.localized(pane.title)
+                places[pane.id] = (pane, "\(DefaultTitle.localized(workspace.title)) › \(paneTitle)")
+            }
+        }
+        return { [weak controller] query in
+            AllTerminalsSearch.search(sources, query: query).compactMap { hit in
+                guard let place = places[hit.key] else { return nil }
+                let needle = query.trimmingCharacters(in: .whitespaces)
+                let item = CommandPaletteItem(kind: .line, title: hit.line, detail: place.place) {
+                    guard let controller, controller.pane(id: hit.key) != nil else { return NSSound.beep() }
+                    try? controller.focusPane(id: hit.key)
+                    place.pane.find.open(needle: needle)
+                }
+                return (item, FuzzyMatch.Result(score: 0, positions: hit.positions))
+            }
+        }
+    }
+
+    private init(controller: AppController, parent: NSWindow, items: [CommandPaletteItem], placeholder: String? = nil,
+                 search: ((String) -> [(item: CommandPaletteItem, result: FuzzyMatch.Result)])? = nil) {
         self.controller = controller
         self.parent = parent
         self.items = items
+        self.search = search
         panel = PalettePanel(contentRect: NSRect(x: 0, y: 0, width: 620, height: 400),
                              styleMask: [.borderless], backing: .buffered, defer: false)
         super.init()
@@ -160,7 +206,7 @@ final class CommandPalette: NSObject, NSWindowDelegate, NSTextFieldDelegate, NST
     }
 
     private func filter() {
-        results = FuzzyMatch.rank(items, query: field.stringValue) { $0.candidate }
+        results = search?(field.stringValue) ?? FuzzyMatch.rank(items, query: field.stringValue) { $0.candidate }
         table.reloadData()
         if !results.isEmpty { select(row: 0) }
     }
