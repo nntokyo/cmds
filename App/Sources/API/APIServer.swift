@@ -306,6 +306,12 @@ final class APIServer {
                     throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
                 }
                 connection.reply(id: id, result: ["port": .number(Double(port))])
+            case "debug.project_confirm":
+                // Tests only: confirm the workspace's .cmds.json as Run in Workspace › Run Project Commands would.
+                let workspace = try controller.resolveWorkspace(try params.string("workspace"))
+                let (path, file) = try controller.projectFile(workspace: workspace)
+                AppSettings.shared.confirmedProjectFiles[path] = file.digest
+                connection.reply(id: id, result: ["path": .string(path)])
             case "debug.pull_requests":
                 // Tests only: what the pull request monitor last got per worktree and branch.
                 connection.reply(id: id, result: controller.pullRequests.debugState)
@@ -525,6 +531,10 @@ final class APIServer {
             try controller.selectWorkspace(id: try params.required("id"))
         case "workspace.close":
             try controller.closeWorkspace(id: try params.string("id"))
+        case "project.show":
+            return try controller.projectShow(workspaceID: try params.string("workspace"))
+        case "project.run":
+            return try controller.projectRun(workspaceID: try params.string("workspace"))
         case "workspace.rename":
             try controller.renameWorkspace(id: try params.string("id"), title: try params.required("title"))
 

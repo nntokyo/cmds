@@ -120,10 +120,11 @@ final class AppSettings: NSObject {
     static let suspendTabsKey = "BrowserSuspendTabsMinutes"
     static let bookmarkSourceKey = "BrowserBookmarksSource"
     static let longCommandKey = "LongCommandNotificationSeconds"
+    static let confirmedProjectFilesKey = "ConfirmedProjectFiles"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
                                showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey,
                                browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey, suspendTabsKey,
-                               bookmarkSourceKey, longCommandKey] + MenuBarOption.allCases.map(\.rawValue)
+                               bookmarkSourceKey, longCommandKey, confirmedProjectFilesKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -269,6 +270,13 @@ final class AppSettings: NSObject {
             return max(0, min(value, 24 * 60))
         }
         set { set(newValue == TabSuspension.defaultMinutes ? nil : newValue, forKey: Self.suspendTabsKey) }
+    }
+
+    /// `.cmds.json` files the user confirmed in Workspace › Run Project Commands: path → SHA-256 of the contents
+    /// confirmed (#174 G20). A changed file is asked about again.
+    var confirmedProjectFiles: [String: String] {
+        get { defaults.dictionary(forKey: Self.confirmedProjectFilesKey) as? [String: String] ?? [:] }
+        set { set(newValue.isEmpty ? nil : newValue, forKey: Self.confirmedProjectFilesKey) }
     }
 
     /// A notification when a command that ran at least this many seconds finishes in a pane you are not looking at

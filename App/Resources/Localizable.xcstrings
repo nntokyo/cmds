@@ -374,6 +374,17 @@
         }
       }
     },
+    "%@ asks to run these in new terminals. Run them only if you trust this project.": {
+      "comment": "alert text before running a .cmds.json; argument: its path",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@が、次のものを新しいターミナルで実行しようとしています。信頼できるプロジェクトの場合だけ実行してください。"
+          }
+        }
+      }
+    },
     "%@ asks you something": {
       "comment": "Point at Element notice when the agent needs an answer; argument: the terminal's name",
       "localizations": {
@@ -8178,6 +8189,17 @@
         }
       }
     },
+    "No project commands": {
+      "comment": "alert title: no .cmds.json found or it is invalid",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロジェクトのコマンドがありません"
+          }
+        }
+      }
+    },
     "No session is waiting for you.": {
       "comment": "assistant",
       "localizations": {
@@ -9488,6 +9510,17 @@
         }
       }
     },
+    "Put a .cmds.json in the project with the commands to run and the pages to open, for example:": {
+      "comment": "alert text when no .cmds.json is found; a JSON example follows",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行するコマンドと開くページを書いた.cmds.jsonをプロジェクトに置いてください。例："
+          }
+        }
+      }
+    },
     "Quiet (text only)": {
       "comment": "Settings › Assistant › Style",
       "localizations": {
@@ -10345,6 +10378,17 @@
         }
       }
     },
+    "Run": {
+      "comment": "button: run the project's commands",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実行"
+          }
+        }
+      }
+    },
     "Run Now": {
       "localizations": {
         "ja": {
@@ -10355,12 +10399,33 @@
         }
       }
     },
+    "Run Project Commands": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プロジェクトのコマンドを実行"
+          }
+        }
+      }
+    },
     "Run if at most this late:": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "この時間までの遅れなら実行："
+          }
+        }
+      }
+    },
+    "Run the commands of this project?": {
+      "comment": "alert title before running a .cmds.json the first time",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このプロジェクトのコマンドを実行しますか？"
           }
         }
       }

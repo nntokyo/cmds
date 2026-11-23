@@ -79,6 +79,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     }
 
     /// ⇧⌘P: CommandPalette over the main window.
+    /// Workspace › Run Project Commands: the workspace's `.cmds.json` (AppController+ProjectFile).
+    @objc func runProjectCommands(_ sender: Any?) { controller.runProjectCommandsFromMenu() }
+
     /// ⇧⌘F: Find in All Terminals (CommandPalette.presentTerminalSearch).
     @objc func findInAllTerminals(_ sender: Any?) {
         windowController?.showWindow(nil)
