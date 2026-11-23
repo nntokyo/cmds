@@ -24,6 +24,14 @@ or extra packages. It only verifies; the private key never leaves the maintainer
 Merge a pull request when its checks pass. When they cannot run, run them locally (below) and put the summary on
 the pull request.
 
+A macOS job that shows **cancelled** after about 15 minutes, with no runner and no steps, never started: GitHub had
+no macOS runner free (the run's annotations then mention longer queue times for macOS arm64 runners). It says nothing
+about the change. Check with
+`gh api repos/nntokyo/cmds/actions/runs/<run>/attempts/<n>/jobs --jq '.jobs[] | {name, conclusion, runner_name, steps: (.steps | length)}'`
+(`runner_name` empty, `steps` 0) and run only that job again with `gh run rerun <run> --failed`; merge once it
+passes. A job cancelled after its steps started is a real cancellation (a newer push to the same branch: the
+workflow's `concurrency` stops older runs).
+
 ## Website deploy (from a Mac)
 
 The website is deployed from the maintainer's Mac, never from GitHub Actions, so a deploy does not depend on GitHub
