@@ -38,11 +38,11 @@ extension BrowserPane {
         if isPointing { endPointing() } else { startPointing() }
     }
 
-    /// Lets the user pick an element (nothing for a page that is not a web page, or with the responsive view on: its
-    /// frames are separate pages).
+    /// Lets the user pick an element (nothing for a page that is not a web page). With the responsive view on, in
+    /// whichever of its frames the user clicks.
     /// `takeKeyboard`: the page gets the keyboard (Esc gives up); not when an agent asked (it never moves the keyboard).
     func startPointing(takeKeyboard: Bool = true) {
-        guard responsiveView == nil, loadFailure == nil, pendingURL == nil, Self.isWebPage(webView.url) else {
+        guard loadFailure == nil, pendingURL == nil, Self.isWebPage(webView.url) else {
             return NSSound.beep()
         }
         let token = UUID().uuidString
@@ -53,16 +53,22 @@ extension BrowserPane {
             onFocus?()
             window?.makeFirstResponder(webView)  // Esc in the page gives up
         }
+        let frames = responsiveView?.webViews ?? [webView]
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let picked = try? await self.runPageScript(ElementPoint.pickScript, ["token": token],
-                                                       until: Date(timeIntervalSinceNow: ElementPoint.pickTimeout))
+            let picked = await self.pick(in: frames, token: token)
             guard self.pointToken == token else { return }  // given up or started again meanwhile
-            guard let picked, var element = try? picked.decode(PointedElement.self) else { return self.endPointing() }
+            guard let (frame, value) = picked, var element = try? value.decode(PointedElement.self) else {
+                return self.endPointing()
+            }
             if let info = try? await self.runPageScript(ElementPoint.sourceScript, ["token": token],
-                                                        until: Date(timeIntervalSinceNow: 3), in: .page) {
+                                                        until: Date(timeIntervalSinceNow: 3), in: .page, on: frame) {
                 element.merge(sourceInfo: info)
             }
+            if let target = self.responsiveView?.target(of: frame) {
+                element.device = [target.preset?.name, target.size.description].compactMap { $0 }.joined(separator: " ")
+            }
+            self.pointedFrame = frame
             guard self.pointToken == token else { return }
             if let reply = self.pointAgentReply {
                 self.pointAgentReply = nil
@@ -74,12 +80,39 @@ extension BrowserPane {
         }
     }
 
+    /// Runs the pick in every frame (one, or the responsive view's) and answers with the first frame clicked; the others
+    /// give up. Esc in any frame gives up everywhere (nil). A frame whose script fails (a page still loading) is left out.
+    private func pick(in frames: [WKWebView], token: String) async -> (WKWebView, JSONValue)? {
+        await withTaskGroup(of: (Int, JSONValue?).self) { group in
+            for (index, frame) in frames.enumerated() {
+                group.addTask { @MainActor [weak self] in
+                    let value = try? await self?.runPageScript(ElementPoint.pickScript, ["token": token],
+                                                               until: Date(timeIntervalSinceNow: ElementPoint.pickTimeout),
+                                                               on: frame)
+                    return (index, value)
+                }
+            }
+            var winner: (WKWebView, JSONValue)?
+            var settled = false
+            for await (index, value) in group {
+                guard !settled else { continue }
+                guard let value else { continue }  // the script failed in that frame
+                settled = true
+                if value != .null { winner = (frames[index], value) }
+                for (other, frame) in frames.enumerated() where other != index {
+                    _ = try? await runPageScript(ElementPoint.cancelScript, [:], until: Date(timeIntervalSinceNow: 2), on: frame)
+                }
+            }
+            return winner
+        }
+    }
+
     /// `browser.point`: lets the user pick an element for the agent, with `prompt` (what the agent asks for) in the
     /// notice. Throws a 409 error when the user gives up (Esc, Cancel, another page) and 408 after `timeout` seconds.
     func pointForAgent(prompt: String?, timeout: TimeInterval) async throws -> PointedElement {
         endPointing()  // a pick of the user's own, or another agent's, gives way
-        guard responsiveView == nil, loadFailure == nil, Self.isWebPage(webView.url) else {
-            throw RPCError.invalidParams("the pane shows no web page to point at (or the responsive view is on)")
+        guard loadFailure == nil, Self.isWebPage(webView.url) else {
+            throw RPCError.invalidParams("the pane shows no web page to point at")
         }
         return try await withCheckedThrowingContinuation { continuation in
             let once = AgentPickAnswer(continuation)
@@ -120,6 +153,7 @@ extension BrowserPane {
         pointToken = nil
         pointURL = nil
         pointedElement = nil
+        pointedFrame = nil
         if let composer = pointComposer {
             let hadKeyboard = (window?.firstResponder as? NSView)?.isDescendant(of: composer) == true
             composer.removeFromSuperview()
@@ -127,8 +161,10 @@ extension BrowserPane {
             if hadKeyboard { window?.makeFirstResponder(webView) }
         }
         updatePointButton()
-        Task { [weak self] in
-            _ = try? await self?.runPageScript(ElementPoint.clearScript, [:], until: Date(timeIntervalSinceNow: 2))
+        for frame in responsiveView?.webViews ?? [webView] {
+            Task { [weak self] in
+                _ = try? await self?.runPageScript(ElementPoint.clearScript, [:], until: Date(timeIntervalSinceNow: 2), on: frame)
+            }
         }
     }
 
@@ -162,7 +198,7 @@ extension BrowserPane {
         pointComposer?.isEnabled = false
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let png = try? await self.snapshot()
+            let png = try? await self.pointScreenshot()
             guard self.pointToken == token else { return }
             let report = ElementPointReport(element: element, comment: comment, screenshot: png,
                                             url: self.currentURL?.absoluteString, title: self.pageTitle)
@@ -172,6 +208,20 @@ extension BrowserPane {
             case .sent(let target): self.showNotice(.pointSent(target: target))
             case .copied(let reason): self.showNotice(.pointCopied(reason: reason))
             }
+        }
+    }
+}
+
+extension BrowserPane {
+    /// The page the element was picked in, with its outline: a responsive frame at its device size, else the pane's.
+    func pointScreenshot() async throws -> Data {
+        guard let responsiveView, let frame = pointedFrame, let target = responsiveView.target(of: frame) else {
+            return try await snapshot()
+        }
+        return try await OffscreenRenderHost.rendering(responsiveView) {
+            let configuration = WKSnapshotConfiguration()
+            configuration.snapshotWidth = NSNumber(value: target.size.width)
+            return try await Self.png(of: frame, configuration: configuration)
         }
     }
 }

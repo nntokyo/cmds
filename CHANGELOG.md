@@ -15,11 +15,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Point at Element (⇧⌘C, the scope button in the browser toolbar): click an element of the page, write what is wrong
   with it, and the agent in the terminal gets your words with the element's selector, box, styles, the component and
   source line when the dev build tells them (React, including React 19 through the dev server's source maps; Vue,
-  Svelte, Angular, Astro, react-dev-inspector) and a screenshot
-  with the element outlined in `.cmds/reports/`. An agent asking a question, or no agent, gets nothing typed: the
-  report goes to the clipboard. Elements inside same-origin iframes (Storybook's preview) are picked themselves. The
-  pane's notice then follows the report: working, asking, finished (with the first
-  line of the reply), with Show Terminal. Idea from FixKit (github.com/ostiums/fixkit).
+  Svelte, Angular, Astro, react-dev-inspector) and a screenshot with the element outlined in `.cmds/reports/`. An agent
+  asking a question, or no agent, gets nothing typed: the report goes to the clipboard. Elements inside same-origin
+  iframes (Storybook's preview) and in any frame of the responsive view (named in the report) are picked themselves. The
+  pane's notice then follows the report: working, asking, finished (with the first line of the reply), with Show
+  Terminal. Idea from FixKit (github.com/ostiums/fixkit).
 
 ### Fixed
 
