@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Network requests of browser panes: `cmds browser network` and MCP `browser_network` list the page's fetch and XHR
+  calls with method, status, duration, size and failure (`--failed` for failing API calls; `--resources` adds
+  scripts, styles, images and the document), recorded from the start of each page (#395).
+
 - Agents can ask you to point at an element: MCP `browser_point` and `cmds browser point --prompt "…"` show the
   request in the browser pane and return the element you click (selector, box, styles, components, source line).
 
