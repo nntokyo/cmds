@@ -2274,6 +2274,23 @@
         }
       }
     },
+    "Also changed in %@: %@": {
+      "comment": "sidebar branch tooltip: files another worktree of the same repository changed too; arguments: quoted workspace titles, file list",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Also changed in %1$@: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@でも変更：%2$@"
+          }
+        }
+      }
+    },
     "Always": {
       "localizations": {
         "ja": {

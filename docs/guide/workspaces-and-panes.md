@@ -24,7 +24,9 @@ Each row shows:
 - the git branch and listening ports of the workspace's processes; after a local branch, `±3 ↑1 ↓2`: uncommitted
   paths (changed, staged, untracked; orange) and commits ahead / behind the upstream, from `git status` read at most
   every 15 s per folder in the background (without git's optional locks, so it never holds the index lock against
-  your own git commands; a repository that takes over 2 s is left alone for 5 minutes);
+  your own git commands; a repository that takes over 2 s is left alone for 5 minutes); `⚠︎1` (red) when another
+  worktree of the same repository changed some of the same files, which will conflict when the branches meet (the
+  tooltip names the other workspaces and the files; workspaces in the same worktree never warn each other);
 - the coding agent of its focused pane: model, context and cost of that session
   ([ai-agents.md](ai-agents.md#usage-and-limits)); the account limits are the same for every row and live in the footer;
 - optionally (View › Show CPU and Memory per Workspace, off by default) CPU and memory of its processes (100 % CPU =

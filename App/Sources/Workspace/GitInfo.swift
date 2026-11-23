@@ -41,6 +41,18 @@ enum GitInfo {
         }
     }
 
+    /// The top level of the worktree a directory is in (the directory with the `.git` entry), or nil outside one.
+    static func worktreeRoot(at path: String) -> String? {
+        let fileManager = FileManager.default
+        var directory = URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
+        while true {
+            if fileManager.fileExists(atPath: directory.appendingPathComponent(".git").path) { return directory.path }
+            let parent = directory.deletingLastPathComponent()
+            if parent.path == directory.path { return nil }
+            directory = parent
+        }
+    }
+
     private static func resolveGitFile(_ file: URL, base: URL) -> URL? {
         guard let contents = try? String(contentsOf: file, encoding: .utf8) else { return nil }
         for line in contents.split(whereSeparator: \.isNewline) where line.hasPrefix("gitdir:") {
