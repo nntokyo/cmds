@@ -162,6 +162,8 @@ final class BrowserPane: NSView {
     var onPointAtElement: ((ElementPointReport) -> ElementPointDelivery)?
     /// The name of the terminal a report would go to now (nil: none, it would be copied).
     var pointTargetName: (() -> String?)?
+    /// An agent asked for the pick (`browser.point`): it gets the element (nil: given up) instead of the composer.
+    var pointAgentReply: ((PointedElement?) -> Void)?
 
     /// The page shown, or the one that failed to load (the address bar and `browser.get_url` keep it).
     /// A page not loaded yet (restored or suspended) is the one shown in the address bar, the API and the session.

@@ -140,4 +140,30 @@ extension CLI {
         if ctx.json { return ctx.printJSON(result) }
         print(result["ref"]?.stringValue ?? "")
     }
+
+    static let pointCommand = Command(
+        name: "browser point",
+        usage: "browser point [--pane P] [--prompt TEXT] [--timeout SEC]",
+        summary: "Ask the user to click an element of a browser pane's page and print what it is (selector, source line, box).",
+        details: """
+            Shows the pane (the keyboard stays where it is), lights its ring and shows --prompt (what to click) above
+            the page; the element under the pointer is outlined and the click does not reach the page. Prints the
+            element's facts (--json: {element, url, title, text}). Fails (exit 1) when the user cancels, or after
+            --timeout seconds (default \(Int(ElementPoint.defaultAgentTimeout)), at most \(Int(ElementPoint.maxAgentTimeout))).
+            \(browserPaneNote)
+            """,
+        options: ["pane", "prompt", "timeout"]
+    ) { ctx in
+        try ctx.args.expectPositionals(0...0, usage: "cmds browser point [--pane P] [--prompt TEXT] [--timeout SEC]")
+        var params: [String: JSONValue] = [:]
+        if let prompt = ctx.args[option: "prompt"] { params["prompt"] = .string(prompt) }
+        if let raw = ctx.args[option: "timeout"] {
+            guard let seconds = Double(raw) else { throw CLIError.usage("--timeout expects seconds") }
+            params["timeout"] = .number(seconds)
+        }
+        let request = try usageError { try ElementPoint.AgentRequest(params: .object(params)) }
+        let result = try devToolsCall(ctx, "browser.point", request.params, timeout: request.timeout + 30)
+        if ctx.json { return ctx.printJSON(result) }
+        print(result["text"]?.stringValue ?? "")
+    }
 }

@@ -40,7 +40,8 @@ extension BrowserPane {
 
     /// Lets the user pick an element (nothing for a page that is not a web page, or with the responsive view on: its
     /// frames are separate pages).
-    func startPointing() {
+    /// `takeKeyboard`: the page gets the keyboard (Esc gives up); not when an agent asked (it never moves the keyboard).
+    func startPointing(takeKeyboard: Bool = true) {
         guard responsiveView == nil, loadFailure == nil, pendingURL == nil, Self.isWebPage(webView.url) else {
             return NSSound.beep()
         }
@@ -48,8 +49,10 @@ extension BrowserPane {
         pointToken = token
         pointURL = webView.url
         updatePointButton()
-        onFocus?()
-        window?.makeFirstResponder(webView)  // Esc in the page gives up
+        if takeKeyboard {
+            onFocus?()
+            window?.makeFirstResponder(webView)  // Esc in the page gives up
+        }
         Task { @MainActor [weak self] in
             guard let self else { return }
             let picked = try? await self.runPageScript(ElementPoint.pickScript, ["token": token],
@@ -61,12 +64,58 @@ extension BrowserPane {
                 element.merge(sourceInfo: info)
             }
             guard self.pointToken == token else { return }
-            self.showPointComposer(for: element)
+            if let reply = self.pointAgentReply {
+                self.pointAgentReply = nil
+                self.endPointing()
+                reply(element)
+            } else {
+                self.showPointComposer(for: element)
+            }
+        }
+    }
+
+    /// `browser.point`: lets the user pick an element for the agent, with `prompt` (what the agent asks for) in the
+    /// notice. Throws a 409 error when the user gives up (Esc, Cancel, another page) and 408 after `timeout` seconds.
+    func pointForAgent(prompt: String?, timeout: TimeInterval) async throws -> PointedElement {
+        endPointing()  // a pick of the user's own, or another agent's, gives way
+        guard responsiveView == nil, loadFailure == nil, Self.isWebPage(webView.url) else {
+            throw RPCError.invalidParams("the pane shows no web page to point at (or the responsive view is on)")
+        }
+        return try await withCheckedThrowingContinuation { continuation in
+            let once = AgentPickAnswer(continuation)
+            let answer = once.resume
+            pointAgentReply = { [weak self] element in
+                self?.showNotice(nil)
+                if let element {
+                    answer(.success(element))
+                } else {
+                    answer(.failure(RPCError(code: ElementPoint.cancelledCode, message: "the user did not point at an element")))
+                }
+            }
+            startPointing(takeKeyboard: false)
+            guard isPointing else {
+                pointAgentReply = nil
+                return answer(.failure(RPCError.invalidParams("the page cannot be pointed at")))
+            }
+            showNotice(.agentPointing(prompt: prompt), onCancel: { [weak self] in self?.endPointing() })
+            DispatchQueue.main.asyncAfter(deadline: .now() + timeout) { [weak self] in
+                MainActor.assumeIsolated {
+                    guard !once.answered else { return }
+                    self?.pointAgentReply = nil
+                    self?.endPointing()
+                    self?.showNotice(nil)
+                    answer(.failure(RPCError(code: 408, message: "timed out after \(Int(timeout)) s: no element was pointed at")))
+                }
+            }
         }
     }
 
     /// Gives up: removes the outline and the composer (the page keeps the keyboard if the composer had it).
     func endPointing() {
+        if let reply = pointAgentReply {  // the agent is told it was given up
+            pointAgentReply = nil
+            reply(nil)
+        }
         guard pointToken != nil else { return }
         pointToken = nil
         pointURL = nil
@@ -124,6 +173,20 @@ extension BrowserPane {
             case .copied(let reason): self.showNotice(.pointCopied(reason: reason))
             }
         }
+    }
+}
+
+/// Resumes `browser.point`'s continuation once: the pick, the user giving up or the timeout, whichever comes first.
+@MainActor
+private final class AgentPickAnswer {
+    private var continuation: CheckedContinuation<PointedElement, Error>?
+    var answered: Bool { continuation == nil }
+
+    init(_ continuation: CheckedContinuation<PointedElement, Error>) { self.continuation = continuation }
+
+    func resume(_ result: Result<PointedElement, Error>) {
+        continuation?.resume(with: result)
+        continuation = nil
     }
 }
 

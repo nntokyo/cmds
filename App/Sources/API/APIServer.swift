@@ -116,6 +116,15 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.controller.browserPageAction(paneID: pane, action) }
                 }
+            case "browser.point":
+                // The user picks an element for the agent (BrowserPane+Point.swift); waits up to `timeout` seconds.
+                let pane = try browserPaneID(params)
+                let request = try ElementPoint.AgentRequest(params: params.value)
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        try await self.controller.browserPoint(paneID: pane, prompt: request.prompt, timeout: request.timeout)
+                    }
+                }
             case "browser.source", "browser.seo":
                 // Page scripts (BrowserPane+WebDev.swift); `open: true` also shows the result in a preview tab.
                 let pane = try browserPaneID(params)

@@ -108,4 +108,27 @@ final class ElementPointTests: XCTestCase {
         let date = calendar.date(from: DateComponents(year: 2026, month: 11, day: 24, hour: 15, minute: 30, second: 12))!
         XCTAssertEqual(ElementPoint.screenshotName(at: date, sequence: 3), "point-20261124-153012-3.png")
     }
+
+    func testAgentRequest() throws {
+        let plain = try ElementPoint.AgentRequest(params: nil)
+        XCTAssertNil(plain.prompt)
+        XCTAssertEqual(plain.timeout, ElementPoint.defaultAgentTimeout)
+        let asked = try ElementPoint.AgentRequest(params: .object(["prompt": "  the gap  ", "timeout": 30]))
+        XCTAssertEqual(asked.prompt, "the gap")
+        XCTAssertEqual(asked.timeout, 30)
+        XCTAssertNil(try ElementPoint.AgentRequest(params: .object(["prompt": "   "])).prompt)
+        let long = try ElementPoint.AgentRequest(params: .object(["prompt": .string(String(repeating: "x", count: 500))]))
+        XCTAssertEqual(long.prompt?.count, ElementPoint.maxAgentPromptLength)
+        for bad: JSONValue in [["timeout": 0], ["timeout": 601], ["timeout": "5"], ["prompt": 3]] {
+            XCTAssertThrowsError(try ElementPoint.AgentRequest(params: bad), "\(bad)")
+        }
+    }
+
+    func testAgentResultHasTheFactsWithoutAComment() {
+        let result = ElementPoint.agentResult(element: element(), url: "http://x.test/", title: "X")
+        let text = result["text"]?.stringValue ?? ""
+        XCTAssertTrue(text.hasPrefix("Page: http://x.test/ (\"X\")\nElement: button \"Save changes\""), text)
+        XCTAssertFalse(text.contains("Pointed at"))
+        XCTAssertEqual(result["element"]?["selector"]?.stringValue, "main > form > button.primary")
+    }
 }

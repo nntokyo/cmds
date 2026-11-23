@@ -59,6 +59,25 @@ extension AppController {
         return .sent(to: pointTargetName(target))
     }
 
+    // MARK: - Asked by an agent
+
+    /// `browser.point`: shows the browser pane (a background tab comes forward; the keyboard stays where it is), lights
+    /// its ring with the agent's request, and answers with the element the user clicks (`ElementPoint.agentResult`).
+    func browserPoint(paneID: String, prompt: String?, timeout: TimeInterval) async throws -> JSONValue {
+        let browser = try await readyBrowser(paneID: paneID)
+        let pane = try resolvePane(paneID)
+        if let workspace = workspace(id: pane.workspaceID), let leaf = workspace.root?.leaf(for: pane.id),
+           leaf.paneID != pane.id {
+            leaf.selectTab(pane.id)
+            emit(.workspace(id: workspace.id))
+        }
+        raiseAttention(pane: pane, title: String(localized: "Point at an element", comment: "notification title of browser.point"),
+                       body: prompt ?? String(localized: "The agent asks you to click an element"))
+        defer { clearAttention(pane) }
+        let element = try await browser.pointForAgent(prompt: prompt, timeout: timeout)
+        return ElementPoint.agentResult(element: element, url: browser.currentURL?.absoluteString, title: browser.pageTitle)
+    }
+
     // MARK: - Following a report
 
     /// The agent's state changed: the browser the report came from shows it. Working, asking, then finished once it

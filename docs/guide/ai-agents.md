@@ -149,6 +149,7 @@ status:
 | `browser_snapshot_tree` | The page as a compact tree of roles and names with refs (`- button "Sign in" [ref=e3]`; `selector` to start lower) |
 | `browser_click` / `browser_fill` | Click, or fill a field / select / checkbox, by `ref` or `selector` |
 | `browser_wait_for` | Wait for a `selector` or `text` to be visible (`timeout` seconds, default 5, 0 checks once); an error when it is not |
+| `browser_point` | Ask the user to click an element (`prompt`: what to click; `timeout` seconds, default 120, at most 600) and get it back: selector, text, box, styles, opening tag, components and source line ([Point at an element](workspaces-and-panes.md#point-at-an-element)); an error when the user cancels or time runs out |
 | `open_file` | Show a file (image, PDF, Markdown, diff, …) in a preview pane |
 | `terminal_split` | Open a terminal pane split off the agent's terminal (`direction` `right` / `down`, `cwd`), without taking the focus, and type `command` into its shell (a dev server, a watcher); the pane stays when the command exits. Returns the pane id |
 | `terminal_read` | The visible screen of a terminal pane opened from the agent's terminal, or its last `lines` lines including scrollback (at most 2000) |

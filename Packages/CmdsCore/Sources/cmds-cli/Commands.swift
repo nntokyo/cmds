@@ -572,7 +572,7 @@ extension CLI {
         browserWatchCommand,
         browserProfileCommand,
         browserFindCommand,
-        consoleCommand, treeCommand, clickCommand, fillCommand, waitForCommand, sourceCommand, seoCommand,
+        consoleCommand, treeCommand, clickCommand, fillCommand, waitForCommand, pointCommand, sourceCommand, seoCommand,
     ] + harnessCommands + [
         Command(name: "events", usage: "events",
                 summary: "Stream state changes as JSON lines until interrupted.",
