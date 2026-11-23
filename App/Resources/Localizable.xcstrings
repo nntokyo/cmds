@@ -374,6 +374,17 @@
         }
       }
     },
+    "%@ asks you something": {
+      "comment": "Point at Element notice when the agent needs an answer; argument: the terminal's name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@が質問しています"
+          }
+        }
+      }
+    },
     "%@ could not be set up": {
       "localizations": {
         "ja": {
@@ -396,6 +407,34 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@が失敗しました：%2$@"
+          }
+        }
+      }
+    },
+    "%@ finished": {
+      "comment": "Point at Element notice; argument: the terminal's name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@が作業を終えました"
+          }
+        }
+      }
+    },
+    "%@ finished: %@": {
+      "comment": "Point at Element notice; arguments: the terminal's name, the first line of its reply",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "%1$@ finished: %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@が作業を終えました：%2$@"
           }
         }
       }
@@ -599,6 +638,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@は「%2$@」の作業中です。"
+          }
+        }
+      }
+    },
+    "%@ is working on it…": {
+      "comment": "Point at Element notice while the agent works on the report; argument: the terminal's name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@が対応中…"
           }
         }
       }
@@ -10886,6 +10936,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "サブエージェントを表示"
+          }
+        }
+      }
+    },
+    "Show Terminal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルを表示"
           }
         }
       }

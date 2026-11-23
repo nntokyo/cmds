@@ -110,6 +110,8 @@ final class AppController {
     /// directory; written with the session when `agentHistoryDirty`.
     var agentHistory = AppController.loadAgentHistory()
     var agentHistoryDirty = false
+    /// Point at Element reports being followed, by the terminal they went to (AppController+PointAtElement.swift).
+    var elementPointFollows: [String: ElementPointFollow] = [:]
     /// Drives account switches in progress (AppController+Accounts).
     var accountSwitchTimer: Timer?
     /// Schedules (App/Sources/Schedule): started by the app delegate after session restore.
