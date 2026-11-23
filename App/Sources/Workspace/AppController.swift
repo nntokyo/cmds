@@ -1050,7 +1050,8 @@ final class AppController {
                 paneOpeners: paneOpeners.isEmpty ? nil : paneOpeners,
                 worktree: workspace.worktreePath,
                 tabGroups: tabGroups.isEmpty ? nil : tabGroups,
-                paneProfiles: paneProfiles.isEmpty ? nil : paneProfiles)
+                paneProfiles: paneProfiles.isEmpty ? nil : paneProfiles,
+                environment: workspace.environment.isEmpty ? nil : workspace.environment.lines)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -1123,6 +1124,9 @@ final class AppController {
             let workspace = makeWorkspace()
             workspace.customTitle = saved.title
             workspace.worktreePath = saved.worktree
+            // Line by line: a hand-edited session.json loses only its bad lines.
+            let variables = (saved.environment ?? []).compactMap { try? WorkspaceEnvironment.parse($0).entries.first }
+            workspace.environment = WorkspaceEnvironment(entries: Array(variables.prefix(WorkspaceEnvironment.maxEntries)))
             leafIndex = 0
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
@@ -1232,7 +1236,8 @@ final class AppController {
         let pane: Pane
         switch kind {
         case .terminal:
-            var environment = terminalEnvironment(paneID: id, workspaceID: workspace.id)
+            // The workspace's own variables first (#174 G23): cmds' own (`CMDS_*`, PATH) are set over them.
+            var environment = workspaceVariables(workspace).merging(terminalEnvironment(paneID: id, workspaceID: workspace.id)) { $1 }
             // An account on the default directory is plain `claude` (`ClaudeAccounts.isDefaultConfigDir`, #360).
             if let account, !ClaudeAccounts.isDefaultConfigDir(account.configDir) {
                 environment[ClaudeAccounts.configDirVariable] = ClaudeAccounts.expandedPath(account.configDir)

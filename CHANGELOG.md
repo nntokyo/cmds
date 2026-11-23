@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Workspace › Environment Variables…: variables for the terminals opened in a workspace, saved with the session.
+  Secrets stay in the Keychain (`cmds env secret NAME`), referenced as `keychain:service/account` and read when a
+  terminal opens, never with a Keychain dialog (#410).
+
 - Project commands: a `.cmds.json` lists a project's commands (dev server, test watcher) and pages; Workspace › Run
   Project Commands opens them in terminals and a browser, after showing a new or changed file; `cmds project show|run`
   for scripts and agents runs only a confirmed one (#408).
