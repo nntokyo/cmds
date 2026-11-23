@@ -303,7 +303,8 @@ final class WorkspaceCellView: NSTableCellView {
         hostLabel.isHidden = workspace.sshPanes.isEmpty
         hostLabel.attributedStringValue = Self.hostText(workspace)
         branchLabel.isHidden = !Self.showsBranch(workspace)
-        branchLabel.attributedStringValue = Self.symbolText("arrow.triangle.branch", workspace.gitBranch ?? "")
+        branchLabel.attributedStringValue = Self.branchText(workspace)
+        branchLabel.toolTip = Self.branchToolTip(workspace)
         // A remote path is shown as is (`~` abbreviation is for this Mac's home). The agent's task takes its place
         // (the cwd is then in the task's tooltip).
         directoryLabel.path = directory ?? ""
@@ -506,6 +507,17 @@ final class WorkspaceCellView: NSTableCellView {
     #if DEBUG
     /// For `debug.sidebar_account`: the account button's title, nil while hidden.
     var debugAccountTitle: String? { accountButton.isHidden ? nil : accountButton.attributedTitle.string }
+
+    /// For `debug.sidebar_row`: the branch line (nil while hidden), its tooltip, and the row drawn as PNG.
+    func debugRow() -> (branch: String?, branchToolTip: String?, png: Data?) {
+        layoutSubtreeIfNeeded()
+        var png: Data?
+        if let rep = bitmapImageRepForCachingDisplay(in: bounds) {
+            cacheDisplay(in: bounds, to: rep)
+            png = rep.representation(using: .png, properties: [:])
+        }
+        return (branchLabel.isHidden ? nil : branchLabel.attributedStringValue.string, branchLabel.toolTip, png)
+    }
     #endif
 
     private static func agentText(_ parts: [AgentFormat.Part], stale: Bool, others: Int) -> NSAttributedString {
@@ -594,6 +606,32 @@ final class WorkspaceCellView: NSTableCellView {
                 .font: detailFont, .foregroundColor: NSColor.systemOrange]))
         }
         return text
+    }
+
+    /// `⑂ main  ±3 ↑1 ↓2`: the branch, then uncommitted changes and commits ahead / behind (orange: changes).
+    private static func branchText(_ workspace: Workspace) -> NSAttributedString {
+        let text = NSMutableAttributedString(attributedString: symbolText("arrow.triangle.branch", workspace.gitBranch ?? ""))
+        guard !workspace.isRemote, let summary = workspace.gitSummary, !summary.badge.isEmpty else { return text }
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.lineBreakMode = .byTruncatingTail
+        text.append(NSAttributedString(string: "  " + summary.badge, attributes: [
+            .font: monoFont, .paragraphStyle: paragraph,
+            .foregroundColor: summary.changes > 0 ? NSColor.systemOrange : NSColor.secondaryLabelColor,
+        ]))
+        return text
+    }
+
+    private static func branchToolTip(_ workspace: Workspace) -> String? {
+        guard !workspace.isRemote, let summary = workspace.gitSummary else { return nil }
+        var lines = [String(localized: "Uncommitted changes: \(summary.changes)",
+                            comment: "sidebar branch tooltip; files changed, staged or untracked")]
+        if let upstream = summary.upstream {
+            lines.append(String(localized: "Compared with \(upstream): \(summary.ahead ?? 0) ahead, \(summary.behind ?? 0) behind",
+                                comment: "sidebar branch tooltip; commits ahead / behind the upstream branch"))
+        } else {
+            lines.append(String(localized: "No upstream branch", comment: "sidebar branch tooltip"))
+        }
+        return lines.joined(separator: "\n")
     }
 
     private static func symbolText(_ symbol: String, _ text: String) -> NSAttributedString {

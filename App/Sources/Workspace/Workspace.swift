@@ -18,6 +18,8 @@ final class Workspace {
     /// leaves it. Saved with the session.
     var worktreePath: String?
     var gitBranch: String?
+    /// Changes and ahead / behind of a local repository (MetadataMonitor, the sidebar's branch line).
+    var gitSummary: GitSummary?
     var ports: [Int] = []
     var notificationText: String?
     /// The pane whose notification `notificationText` is (nil for `sidebar.set_status` text) and when it came: typing
@@ -122,7 +124,7 @@ final class Workspace {
                       workingDirectory: workingDirectory, ports: ports, notificationText: notificationText,
                       attention: attention, panes: paneInfos(), layout: root?.layoutNode,
                       cpuPercent: cpuPercent, memoryBytes: memoryBytes, remoteHost: remoteHost,
-                      worktree: createdWorktree?.info)
+                      worktree: createdWorktree?.info, gitSummary: isRemote ? nil : gitSummary)
     }
 
     /// The worktree cmds created that this workspace is in: the one it was created in, else the one its local

@@ -162,11 +162,12 @@ CPU/memory and agent-usage updates do not produce events (they would fire every 
 The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift`, `AgentUsage.swift`,
 `SystemStats.swift`, `KeepAwake.swift`). Unknown keys are ignored; optional fields are omitted when absent.
 
-- `WorkspaceInfo` (also used by events and the sync protocol) = `id`, `title`, `selected`, `gitBranch?`,
-  `workingDirectory?`, `ports`, `notificationText?`, `attention`, `panes` (`[PaneInfo]`), `layout?` (split tree), and
-  optional `cpuPercent` (100 = one core), `memoryBytes` (physical footprint), `remoteHost` (while the focused pane is
-  an SSH pane), `worktree` = `{path, branch, base}` (the git worktree cmds created the workspace in; never for
-  worktrees made otherwise).
+- `WorkspaceInfo` (also used by events and the sync protocol) = `id`, `title`, `selected`, `gitBranch?`, `gitSummary?`
+  (`{changes, ahead?, behind?, upstream?}`: uncommitted paths and commits ahead / behind the upstream of a local
+  repository, read every 15 s at most), `workingDirectory?`, `ports`, `notificationText?`, `attention`, `panes`
+  (`[PaneInfo]`), `layout?` (split tree), and optional `cpuPercent` (100 = one core), `memoryBytes` (physical
+  footprint), `remoteHost` (while the focused pane is an SSH pane), `worktree` = `{path, branch, base}` (the git
+  worktree cmds created the workspace in; never for worktrees made otherwise).
 - `PaneInfo` = `id`, `kind` (`terminal` / `browser` / `preview` / `files`), `title`, `focused`, `attention`,
   `workingDirectory?` (files: the listed folder), `url?` (browser), `file?` (preview: absolute path), `remote?` =
   `{host, connected, branch?}` (SSH panes; files panes on a host, `connected` false until it was listed, e.g. after a

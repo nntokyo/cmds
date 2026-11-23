@@ -938,9 +938,11 @@ final class AppController {
                 continue
             }
             if update.workingDirectory != workspace.workingDirectory { continue } // cwd moved meanwhile
-            if update.gitBranch != workspace.gitBranch || update.ports != workspace.ports {
+            if update.gitBranch != workspace.gitBranch || update.ports != workspace.ports
+                || update.gitSummary != workspace.gitSummary {
                 workspace.gitBranch = update.gitBranch
                 workspace.ports = update.ports
+                workspace.gitSummary = update.gitSummary
                 emit(.workspace(id: workspace.id))
             }
         }

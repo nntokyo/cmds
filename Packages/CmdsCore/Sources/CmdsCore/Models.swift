@@ -118,12 +118,15 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
     /// The worktree cmds created for this workspace (`cmds new --worktree`); nil for any other directory, also for
     /// worktrees made outside cmds.
     public var worktree: WorktreeInfo?
+    /// Uncommitted changes and commits ahead / behind the upstream of the local working directory (#174 G16); nil
+    /// outside a repository, for remote directories, or until read.
+    public var gitSummary: GitSummary?
 
     public init(id: String, title: String, selected: Bool, gitBranch: String? = nil, workingDirectory: String? = nil,
                 ports: [Int] = [], notificationText: String? = nil, attention: Bool = false,
                 panes: [PaneInfo] = [], layout: LayoutNode? = nil,
                 cpuPercent: Double? = nil, memoryBytes: UInt64? = nil, remoteHost: String? = nil,
-                worktree: WorktreeInfo? = nil) {
+                worktree: WorktreeInfo? = nil, gitSummary: GitSummary? = nil) {
         self.id = id
         self.title = title
         self.selected = selected
@@ -138,6 +141,7 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.memoryBytes = memoryBytes
         self.remoteHost = remoteHost
         self.worktree = worktree
+        self.gitSummary = gitSummary
     }
 }
 

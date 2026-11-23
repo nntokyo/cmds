@@ -3970,6 +3970,23 @@
         }
       }
     },
+    "Compared with %@: %lld ahead, %lld behind": {
+      "comment": "sidebar branch tooltip; commits ahead / behind the upstream branch",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Compared with %1$@: %2$lld ahead, %3$lld behind"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@との比較：%2$lld件先行、%3$lld件遅れ"
+          }
+        }
+      }
+    },
     "Comparing… %lld items read": {
       "localizations": {
         "ja": {
@@ -8109,6 +8126,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "転送はありません。SSHホストとの間のコピーと移動がここに表示されます。"
+          }
+        }
+      }
+    },
+    "No upstream branch": {
+      "comment": "sidebar branch tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追跡するブランチなし"
           }
         }
       }
@@ -13470,11 +13498,12 @@
       }
     },
     "Uncommitted changes: %lld": {
+      "comment": "sidebar branch tooltip; files changed, staged or untracked",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "コミットされていない変更：%lld"
+            "value": "未コミットの変更：%lld件"
           }
         }
       }
