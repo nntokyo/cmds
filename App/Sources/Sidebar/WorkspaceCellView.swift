@@ -655,6 +655,10 @@ final class WorkspaceCellView: NSTableCellView {
                                            attributes: [.font: monoFont, .paragraphStyle: paragraph,
                                                         .foregroundColor: NSColor.systemRed]))
         }
+        // A long branch name is cut in its middle, so the badges at the end stay visible.
+        let middle = NSMutableParagraphStyle()
+        middle.lineBreakMode = .byTruncatingMiddle
+        text.addAttribute(.paragraphStyle, value: middle, range: NSRange(location: 0, length: text.length))
         return text
     }
 
