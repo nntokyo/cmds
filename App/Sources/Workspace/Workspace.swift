@@ -122,6 +122,10 @@ final class Workspace {
     var showsSeveralPanes: Bool { (root?.visiblePaneIDs.count ?? 0) > 1 }
     var focusedPane: Pane? { focusedPaneID.flatMap { panes[$0] } }
     var attention: Bool { panes.values.contains { $0.attention } }
+    /// The progress the sidebar shows: a failing pane's, else the newest report (`TerminalProgress.pick`).
+    var progress: TerminalProgress? {
+        TerminalProgress.pick(panes.values.compactMap { pane in pane.progress.map { ($0, pane.progressAt ?? .distantPast) } })
+    }
 
     func info(selected: Bool) -> WorkspaceInfo {
         WorkspaceInfo(id: id, title: title, selected: selected, gitBranch: gitBranch,

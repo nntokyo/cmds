@@ -93,6 +93,12 @@ final class Pane {
     /// the session.
     var openedBy: String?
 
+    /// The program's progress report (OSC 9;4) and when it came; cleared when the program removes it or after
+    /// `TerminalProgress.staleAfter` without an update.
+    private(set) var progress: TerminalProgress?
+    private(set) var progressAt: Date?
+    private var progressExpiry: DispatchWorkItem?
+
     /// Last time the pane took focus (the "other" files pane is the one used most recently).
     var focusedAt = Date.distantPast
 
@@ -340,7 +346,8 @@ final class Pane {
                         workingDirectory: workingDirectory, url: url, agent: agentUsage, remote: remoteInfo,
                         file: preview?.path, account: claudeAccount, openedBy: openedBy,
                         tabs: group?.tabs, background: group.map { $0.paneID != id ? true : nil } ?? nil,
-                        suspended: browser?.isSuspended == true ? true : nil, profile: profileForOpenedPages)
+                        suspended: browser?.isSuspended == true ? true : nil, profile: profileForOpenedPages,
+                        progress: progress)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.
@@ -413,6 +420,25 @@ extension Pane: TerminalSurfaceDelegate {
         if ssh != nil, ssh?.remoteBranch != nil { ssh?.remoteBranch = nil }
         workingDirectory = path
         controller?.paneDidChangeWorkingDirectory(self)
+    }
+
+    func terminalSurface(_ surface: TerminalSurface, didReportProgress progress: TerminalProgress?) {
+        guard surface === terminal else { return }
+        setProgress(progress)
+    }
+
+    func setProgress(_ progress: TerminalProgress?) {
+        progressExpiry?.cancel()
+        progressExpiry = nil
+        let changed = progress != self.progress
+        self.progress = progress
+        progressAt = progress == nil ? nil : Date()
+        if progress != nil {
+            let expiry = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.setProgress(nil) } }
+            progressExpiry = expiry
+            DispatchQueue.main.asyncAfter(deadline: .now() + TerminalProgress.staleAfter, execute: expiry)
+        }
+        if changed { controller?.paneDidChange(self) }
     }
 
     func terminalSurfaceDidRingBell(_ surface: TerminalSurface) {

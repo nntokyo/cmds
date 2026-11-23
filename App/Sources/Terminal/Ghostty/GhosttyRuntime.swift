@@ -287,6 +287,13 @@ final class GhosttyRuntime {
             view.owner?.handleChildExited()
             return true
 
+        case GHOSTTY_ACTION_PROGRESS_REPORT:
+            // OSC 9;4 from the program (#174 G21): the sidebar shows it.
+            let report = action.action.progress_report
+            view.owner?.handleProgress(TerminalProgress.fromGhostty(state: Int(report.state.rawValue),
+                                                                    progress: Int(report.progress)))
+            return true
+
         case GHOSTTY_ACTION_START_SEARCH:
             let needle = action.action.start_search.needle.map { String(cString: $0) }
             view.owner?.handleStartSearch(needle?.isEmpty == false ? needle : nil)
@@ -309,7 +316,7 @@ final class GhosttyRuntime {
         case GHOSTTY_ACTION_COLOR_CHANGE, GHOSTTY_ACTION_RENDERER_HEALTH, GHOSTTY_ACTION_SCROLLBAR,
              GHOSTTY_ACTION_MOUSE_OVER_LINK, GHOSTTY_ACTION_SELECTION_CHANGED, GHOSTTY_ACTION_CONFIG_CHANGE,
              GHOSTTY_ACTION_SIZE_LIMIT, GHOSTTY_ACTION_INITIAL_SIZE, GHOSTTY_ACTION_KEY_SEQUENCE,
-             GHOSTTY_ACTION_KEY_TABLE, GHOSTTY_ACTION_PROGRESS_REPORT, GHOSTTY_ACTION_COMMAND_FINISHED:
+             GHOSTTY_ACTION_KEY_TABLE, GHOSTTY_ACTION_COMMAND_FINISHED:
             // Informational; nothing for the shell to do yet.
             return true
 

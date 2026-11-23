@@ -173,11 +173,12 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
 - `PaneInfo` = `id`, `kind` (`terminal` / `browser` / `preview` / `files`), `title`, `focused`, `attention`,
   `workingDirectory?` (files: the listed folder), `url?` (browser), `file?` (preview: absolute path), `remote?` =
   `{host, connected, branch?}` (SSH panes; files panes on a host, `connected` false until it was listed, e.g. after a
-  relaunch), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude
-  Code runs under), `openedBy?` (panes split off a terminal pane named in the request, terminal panes too since #171: that
-  terminal; kept across a relaunch), `tabs?` (the pane's tab group in tab order, itself included; absent when it is no
-  tab), `background?` (true for a tab that is not shown; `layout` has only the shown tab of each group), `suspended?`
-  (a browser tab whose page was unloaded to save memory).
+  relaunch), `agent?` (`AgentUsage`), `account?` (the Claude account the pane's Claude Code runs under), `openedBy?`
+  (panes split off a terminal pane named in the request, terminal panes too since #171: that terminal; kept across a
+  relaunch), `tabs?` (the pane's tab group in tab order, itself included; absent when it is no tab), `background?` (true
+  for a tab that is not shown; `layout` has only the shown tab of each group), `suspended?` (a browser tab whose page
+  was unloaded to save memory), `progress?` = `{state (normal/error/indeterminate/paused), percent?}` (a terminal
+  program's OSC 9;4 report; gone after 15 s without an update).
 - `TransferInfo` = `id`, `mode` (`copy`/`move`, `save`: the upload of an edited file over the server's file, with
   `sources` the edited copy, or `sync`: `sources[0]` is the left folder, `destination` the right one, with
   `direction` and `trashed`, the extra items moved to the Trash), `state` (`queued`, `running`, `paused`, `waiting`, `done`,
