@@ -79,6 +79,12 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     }
 
     /// ⇧⌘P: CommandPalette over the main window.
+    /// ⇧⌘F: Find in All Terminals (CommandPalette.presentTerminalSearch).
+    @objc func findInAllTerminals(_ sender: Any?) {
+        windowController?.showWindow(nil)
+        CommandPalette.presentTerminalSearch(controller: controller, over: windowController?.window)
+    }
+
     @objc func showCommandPalette(_ sender: Any?) {
         windowController?.showWindow(nil)
         CommandPalette.present(controller: controller, over: windowController?.window)

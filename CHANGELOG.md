@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Edit › Find › Find in All Terminals… (⇧⌘F): the lines of every terminal's scrollback that contain the text, with
+  their workspace and pane; Return shows the pane with its find bar (#404).
+
 - A command that ran 30 s or more (Settings › General › Notify when a command finishes: 10 s to 5 minutes, or never)
   and ends in a pane you are not looking at lights the pane and notifies, saying when it failed (shell integration).
 

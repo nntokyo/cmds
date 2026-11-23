@@ -153,6 +153,8 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   does, `query` filters, `run {index?}` runs a result as Return does, `close`; returns the results (kind, title,
   detail, shortcut, score), the selected row, the selected workspace and focused pane. Menu commands are collected
   when it opens; in an instance that is not the active app, those that need a key window are missing.
+  `terminals {query, run?}` runs Find in All Terminals (⇧⌘F) without showing the panel: its hits (title, detail,
+  positions) for `query`, and with `run` (an index) that hit's action (the pane is focused, its find bar opens).
 - `debug.menubar_reply {action?, workspace?, number?, text?, key?, snapshot?}` (DEBUG builds, #213): `open`
   (default; `workspace`) opens the menu bar's reply panel as choosing the workspace in the menu does, but without
   taking the keyboard; `state`, `pick {number}` (an option, as its button or 1–9), `reply {text}` (as Return in the

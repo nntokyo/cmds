@@ -6,6 +6,8 @@ import CmdsCore
 struct CommandPaletteItem {
     enum Kind: String {
         case workspace, pane, command, session, port
+        /// A line of a terminal's scrollback (Find in All Terminals).
+        case line
 
         var label: String {
             switch self {
@@ -14,6 +16,7 @@ struct CommandPaletteItem {
             case .command: String(localized: "Command")
             case .session: String(localized: "Agent Session")
             case .port: String(localized: "Port")
+            case .line: String(localized: "Terminal")
             }
         }
 
@@ -24,6 +27,7 @@ struct CommandPaletteItem {
             case .command: "command"
             case .session: "clock.arrow.circlepath"
             case .port: "network"
+            case .line: "terminal"
             }
         }
     }

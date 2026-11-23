@@ -91,6 +91,8 @@ enum MainMenu {
         find.addItem(item("Find…", #selector(CommandRouter.find(_:)), "f", target: router))
         find.addItem(item("Find Next", #selector(CommandRouter.findNext(_:)), "g", target: router))
         find.addItem(item("Find Previous", #selector(CommandRouter.findPrevious(_:)), "g", [.command, .shift], target: router))
+        find.addItem(.separator())
+        find.addItem(item("Find in All Terminals…", #selector(CommandRouter.findInAllTerminals(_:)), "f", [.command, .shift], target: router))
         menu.addItem(submenu(find))
         return menu
     }

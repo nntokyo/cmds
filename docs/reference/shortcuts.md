@@ -52,6 +52,7 @@ Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts a
 | Find in the terminal (find bar; Esc closes) | ⌘F | Edit › Find |
 | Export the focused terminal's scrollback to a file | – | Pane › Export Scrollback… |
 | Next / previous hit (also Return / ⇧Return in the find bar) | ⌘G / ⇧⌘G | Edit › Find |
+| Find in all terminals (lines of every scrollback; Return shows the pane with its find bar) | ⇧⌘F | Edit › Find |
 | Close pane (a tab: Close Tab) | ⌘W | File |
 | Open browser split | ⇧⌘B | File |
 | Open a Chrome bookmark in a new tab | ⌘-click it in the bookmarks bar | – |

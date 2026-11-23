@@ -11,6 +11,11 @@ public enum FuzzyMatch {
         public var score: Int
         /// Matched characters, as offsets into the candidate's `Character`s, ascending.
         public var positions: [Int]
+
+        public init(score: Int, positions: [Int]) {
+            self.score = score
+            self.positions = positions
+        }
     }
 
     /// A candidate prepared once (folded characters, word starts) and matched against many queries.

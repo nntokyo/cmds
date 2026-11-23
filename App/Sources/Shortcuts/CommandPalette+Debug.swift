@@ -10,6 +10,22 @@ extension CommandPalette {
     /// workspace and focused pane.
     static func debugPerform(_ params: JSONValue?, controller: AppController) throws -> JSONValue {
         let action = params?["action"]?.stringValue ?? "open"
+        // Find in All Terminals without showing the panel: the hits for `query`, and with `run` (an index) that
+        // hit's action (the pane is focused and its find bar opens with the text).
+        if action == "terminals" {
+            let results = terminalSearch(controller: controller)(params?["query"]?.stringValue ?? "")
+            if let index = params?["run"]?.intValue {
+                guard let entry = results[safe: index] else { throw RPCError.invalidParams("no result \(index)") }
+                entry.item.run()
+            }
+            return .object([
+                "results": .array(results.prefix(100).map { entry in
+                    .object(["title": .string(entry.item.title), "detail": .string(entry.item.detail),
+                             "positions": .array(entry.result.positions.map { .number(Double($0)) })])
+                }),
+                "focusedPane": controller.focusedPane.map { .string($0.id) } ?? .null,
+            ])
+        }
         switch action {
         case "open":
             if current == nil { present(controller: controller, over: controller.window) }

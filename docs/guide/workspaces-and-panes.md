@@ -173,6 +173,13 @@ scrollback and the screen; the count shows the selected hit and the total (`3/12
   leaves the keyboard in the bar.
 - A Ghostty keybinding for `start_search` or `search_selection` in your Ghostty config opens the same bar.
 
+**Edit › Find › Find in All Terminals…** (⇧⌘F) searches every terminal at once:
+- It reads the newest 5000 lines of each terminal's scrollback when it opens.
+- It lists the lines that contain what you type (case and accents ignored, newest first per terminal, at most 300),
+  with their workspace and pane, in the command palette's panel.
+- Return (or a double click) shows that pane and opens its find bar with the text.
+- Only from the menu: no API, CLI or MCP tool reads other panes this way.
+
 ## Exporting the scrollback
 
 **Pane › Export Scrollback…** writes the focused terminal's whole scrollback and screen to a file you pick, as plain

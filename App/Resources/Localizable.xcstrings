@@ -5527,6 +5527,27 @@
         }
       }
     },
+    "Find in All Terminals…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのターミナルを検索…"
+          }
+        }
+      }
+    },
+    "Find in all terminals": {
+      "comment": "Find in All Terminals placeholder",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのターミナルを検索"
+          }
+        }
+      }
+    },
     "Find…": {
       "localizations": {
         "ja": {
