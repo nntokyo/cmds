@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Sidebar: the branch's pull request and its checks from your GitHub CLI (`#405 ✓`, `✗`, `●`, `merged`), asked at
+  most every 2 minutes per branch in GitHub repositories (Settings › Sidebar › Pull request and checks; #406).
+
 - Edit › Find › Find in All Terminals… (⇧⌘F): the lines of every terminal's scrollback that contain the text, with
   their workspace and pane; Return shows the pane with its find bar (#404).
 

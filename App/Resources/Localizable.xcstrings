@@ -1709,6 +1709,23 @@
         }
       }
     },
+    ": checks %lld passed, %lld failed, %lld running": {
+      "comment": "sidebar branch tooltip, after the pull request",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": ": checks %1$lld passed, %2$lld failed, %3$lld running"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "：チェック 成功%1$lld件、失敗%2$lld件、実行中%3$lld件"
+          }
+        }
+      }
+    },
     "<meta name=\"robots\"> asks not to follow the links (%@)": {
       "comment": "SEO report",
       "localizations": {
@@ -9432,6 +9449,34 @@
         }
       }
     },
+    "Pull request #%lld (%@)": {
+      "comment": "sidebar branch tooltip",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Pull request #%1$lld (%2$@)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プルリクエスト #%1$lld（%2$@）"
+          }
+        }
+      }
+    },
+    "Pull request and checks (GitHub CLI)": {
+      "comment": "Settings › Sidebar › Show in each workspace",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プルリクエストとチェック（GitHub CLI）"
+          }
+        }
+      }
+    },
     "Push to talk (hold the shortcut)": {
       "comment": "Settings › Assistant › Listening: only while the shortcut is held",
       "localizations": {
@@ -14602,6 +14647,17 @@
         }
       }
     },
+    "closed": {
+      "comment": "pull request state in the sidebar tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クローズ"
+          }
+        }
+      }
+    },
     "cmds adds its status line and hooks to this account’s settings.json when they are missing. They tell cmds the session, its usage and its state: without them the account’s workspaces have no account button and cannot be switched. Other settings stay, and the previous file is kept next to it. Sessions started afterwards use it.": {
       "localizations": {
         "ja": {
@@ -14834,6 +14890,17 @@
         }
       }
     },
+    "draft": {
+      "comment": "pull request state in the sidebar tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラフト"
+          }
+        }
+      }
+    },
     "failed: %@": {
       "localizations": {
         "ja": {
@@ -15033,6 +15100,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "macOSはほかのアプリによるChromeのデータの読み込みを制限しています。ブックマークを表示するには、プライバシーとセキュリティ › フルディスクアクセスでcmdsをオンにしてから、cmdsに戻ってください。"
+          }
+        }
+      }
+    },
+    "merged": {
+      "comment": "pull request state in the sidebar tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マージ済み"
           }
         }
       }
@@ -15310,6 +15388,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "<h1>は1つ：%@"
+          }
+        }
+      }
+    },
+    "open": {
+      "comment": "pull request state in the sidebar tooltip",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オープン"
           }
         }
       }

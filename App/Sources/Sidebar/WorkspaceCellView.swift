@@ -635,6 +635,19 @@ final class WorkspaceCellView: NSTableCellView {
                 .foregroundColor: summary.changes > 0 ? NSColor.systemOrange : NSColor.secondaryLabelColor,
             ]))
         }
+        if AppSettings.shared.sidebar(.pullRequest), let pr = workspace.pullRequest {
+            let color: NSColor
+            switch (pr.state, pr.checks) {
+            case (.merged, _): color = .systemPurple
+            case (.closed, _): color = .tertiaryLabelColor
+            case (_, .failing?): color = .systemRed
+            case (_, .pending?): color = .systemOrange
+            case (_, .passing?): color = .systemGreen
+            default: color = .secondaryLabelColor
+            }
+            text.append(NSAttributedString(string: "  " + pr.badge, attributes: [
+                .font: monoFont, .paragraphStyle: paragraph, .foregroundColor: color]))
+        }
         // Files another worktree of the repository changed too: they will conflict when the branches meet.
         let shared = Set(workspace.gitOverlaps.flatMap(\.files)).count
         if shared > 0 {
@@ -642,6 +655,10 @@ final class WorkspaceCellView: NSTableCellView {
                                            attributes: [.font: monoFont, .paragraphStyle: paragraph,
                                                         .foregroundColor: NSColor.systemRed]))
         }
+        // A long branch name is cut in its middle, so the badges at the end stay visible.
+        let middle = NSMutableParagraphStyle()
+        middle.lineBreakMode = .byTruncatingMiddle
+        text.addAttribute(.paragraphStyle, value: middle, range: NSRange(location: 0, length: text.length))
         return text
     }
 
@@ -658,6 +675,21 @@ final class WorkspaceCellView: NSTableCellView {
     private static func branchToolTip(_ workspace: Workspace) -> String? {
         guard !workspace.isRemote, let summary = workspace.gitSummary else { return nil }
         var lines: [String] = []
+        if AppSettings.shared.sidebar(.pullRequest), let pr = workspace.pullRequest {
+            let state: String
+            switch pr.state {
+            case .open: state = String(localized: "open", comment: "pull request state in the sidebar tooltip")
+            case .draft: state = String(localized: "draft", comment: "pull request state in the sidebar tooltip")
+            case .merged: state = String(localized: "merged", comment: "pull request state in the sidebar tooltip")
+            case .closed: state = String(localized: "closed", comment: "pull request state in the sidebar tooltip")
+            }
+            var line = String(localized: "Pull request #\(pr.number) (\(state))", comment: "sidebar branch tooltip")
+            if pr.passed + pr.failed + pr.pending > 0 {
+                line += String(localized: ": checks \(pr.passed) passed, \(pr.failed) failed, \(pr.pending) running",
+                               comment: "sidebar branch tooltip, after the pull request")
+            }
+            lines.append(line)
+        }
         for overlap in workspace.gitOverlaps {
             let title = overlap.workspaces.map { "“\(workspace.gitOverlapTitles[$0] ?? $0)”" }.joined(separator: ", ")
             var files = overlap.files.joined(separator: ", ")

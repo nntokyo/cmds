@@ -22,6 +22,8 @@ final class Workspace {
     var gitSummary: GitSummary?
     /// Files this workspace's worktree changed that another worktree of the same repository changed too (#174 G18).
     var gitOverlaps: [GitOverlap] = []
+    /// The branch's pull request and checks (PullRequestMonitor).
+    var pullRequest: PullRequestSummary?
     /// The other workspaces' titles for `gitOverlaps` (the sidebar's tooltip), by id.
     var gitOverlapTitles: [String: String] = [:]
     var ports: [Int] = []
@@ -133,7 +135,8 @@ final class Workspace {
                       attention: attention, panes: paneInfos(), layout: root?.layoutNode,
                       cpuPercent: cpuPercent, memoryBytes: memoryBytes, remoteHost: remoteHost,
                       worktree: createdWorktree?.info, gitSummary: isRemote ? nil : gitSummary,
-                      gitOverlaps: isRemote || gitOverlaps.isEmpty ? nil : gitOverlaps)
+                      gitOverlaps: isRemote || gitOverlaps.isEmpty ? nil : gitOverlaps,
+                      pullRequest: isRemote ? nil : pullRequest)
     }
 
     /// The worktree cmds created that this workspace is in: the one it was created in, else the one its local

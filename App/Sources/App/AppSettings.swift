@@ -67,6 +67,8 @@ enum MenuBarOption: String, OnByDefaultOption {
 /// The workspace title, its state badge and the agent's task always show.
 enum SidebarItem: String, OnByDefaultOption {
     case branch = "SidebarShowsBranch"
+    /// After the branch: its pull request and checks, from the GitHub CLI (#174 G16).
+    case pullRequest = "SidebarShowsPullRequest"
     case directory = "SidebarShowsDirectory"
     case ports = "SidebarShowsPorts"
     /// The agent's model, context and cost lines.
@@ -77,12 +79,13 @@ enum SidebarItem: String, OnByDefaultOption {
     /// Footer: CPU and memory.
     case footerSystem = "SidebarFooterSystem"
 
-    static let rowItems: [SidebarItem] = [.branch, .directory, .ports, .agentUsage, .notification]
+    static let rowItems: [SidebarItem] = [.branch, .pullRequest, .directory, .ports, .agentUsage, .notification]
     static let footerItems: [SidebarItem] = [.footerLimits, .footerSystem]
 
     var title: String {
         switch self {
         case .branch: return String(localized: "Git branch", comment: "Settings › Sidebar › Show in each workspace")
+        case .pullRequest: return String(localized: "Pull request and checks (GitHub CLI)", comment: "Settings › Sidebar › Show in each workspace")
         case .directory: return String(localized: "Directory", comment: "Settings › Sidebar › Show in each workspace")
         case .ports: return String(localized: "Listening ports", comment: "Settings › Sidebar › Show in each workspace")
         case .agentUsage: return String(localized: "Agent model, context and cost", comment: "Settings › Sidebar › Show in each workspace")

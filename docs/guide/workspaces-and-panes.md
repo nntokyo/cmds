@@ -30,7 +30,11 @@ Each row shows:
   every 15 s per folder in the background (without git's optional locks, so it never holds the index lock against
   your own git commands; a repository that takes over 2 s is left alone for 5 minutes); `⚠︎1` (red) when another
   worktree of the same repository changed some of the same files, which will conflict when the branches meet (the
-  tooltip names the other workspaces and the files; workspaces in the same worktree never warn each other);
+  tooltip names the other workspaces and the files; workspaces in the same worktree never warn each other); and the
+  branch's pull request from your GitHub CLI: `#405 ✓` (checks passed, green), `✗` (one failed, red), `●` (running,
+  orange), `merged`, `closed`, with the counts in the tooltip. Asked with `gh pr view` only in repositories with a
+  GitHub remote, not for main, master, develop or trunk, at most every 2 minutes per branch (10 minutes after a failure
+  such as not being signed in); nothing without `gh` (Settings › Sidebar › Pull request and checks);
 - the coding agent of its focused pane: model, context and cost of that session
   ([ai-agents.md](ai-agents.md#usage-and-limits)); the account limits are the same for every row and live in the footer;
 - optionally (View › Show CPU and Memory per Workspace, off by default) CPU and memory of its processes (100 % CPU =

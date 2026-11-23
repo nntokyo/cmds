@@ -306,6 +306,9 @@ final class APIServer {
                     throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
                 }
                 connection.reply(id: id, result: ["port": .number(Double(port))])
+            case "debug.pull_requests":
+                // Tests only: what the pull request monitor last got per worktree and branch.
+                connection.reply(id: id, result: controller.pullRequests.debugState)
             case "debug.sidebar_row":
                 // Tests only: a workspace's sidebar row (expanded sidebar): its branch line, tooltip and picture.
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))
