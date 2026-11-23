@@ -575,6 +575,17 @@
         }
       }
     },
+    "%@ is waiting for an answer": {
+      "comment": "Point at Element: the agent's terminal asks a question; argument: its name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@が回答を待っています"
+          }
+        }
+      }
+    },
     "%@ is working on %@.": {
       "comment": "assistant: spoken status of a workspace; topic = the agent's task",
       "localizations": {
@@ -2440,6 +2451,7 @@
     },
     "Ask the assistant ${request}": {
       "comment": "Shortcuts action summary",
+      "extractionState": "stale",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -4185,6 +4197,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションを“%1$@”で続けます（切り替え前：“%2$@”）。"
+          }
+        }
+      }
+    },
+    "Copied the report: %@": {
+      "comment": "Point at Element notice when no agent terminal took the report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "レポートをコピーしました：%@"
           }
         }
       }
@@ -8997,6 +9020,17 @@
         }
       }
     },
+    "Point at Element": {
+      "comment": "Browser toolbar and View › Developer: pick an element of the page and tell the agent what is wrong with it",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要素を指して伝える"
+          }
+        }
+      }
+    },
     "Pop-up": {
       "localizations": {
         "ja": {
@@ -10326,6 +10360,17 @@
         }
       }
     },
+    "Send": {
+      "comment": "Point at Element composer: send to the agent",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "送信"
+          }
+        }
+      }
+    },
     "Send Control-C": {
       "comment": "menu bar reply panel: key bar button (VoiceOver, tooltip)",
       "localizations": {
@@ -10421,6 +10466,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "送信 ⏎"
+          }
+        }
+      }
+    },
+    "Sent to %@": {
+      "comment": "Point at Element notice; the argument is the terminal's name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に送信しました"
           }
         }
       }
@@ -13789,6 +13845,28 @@
         }
       }
     },
+    "What is wrong? Return copies it (no agent in this workspace)": {
+      "comment": "Point at Element composer placeholder without an agent terminal",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どこがおかしいですか？ Returnでコピー（このワークスペースにエージェントがいません）"
+          }
+        }
+      }
+    },
+    "What is wrong? Return sends it to %@": {
+      "comment": "Point at Element composer placeholder; the argument is the terminal's name",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "どこがおかしいですか？ Returnで%@に送信"
+          }
+        }
+      }
+    },
     "When": {
       "localizations": {
         "ja": {
@@ -14853,6 +14931,16 @@
         }
       }
     },
+    "no agent runs in a terminal of this workspace": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースのターミナルでエージェントが動いていません"
+          }
+        }
+      }
+    },
     "no lang attribute on <html>": {
       "comment": "SEO report",
       "localizations": {
@@ -14871,6 +14959,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "robots.txtがありません（すべてクロール可）"
+          }
+        }
+      }
+    },
+    "no terminal": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルがありません"
           }
         }
       }
@@ -15224,6 +15322,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "robots.txtのサイトマップがHTTP %lldを返しました"
+          }
+        }
+      }
+    },
+    "the terminal could not take it": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ターミナルに送れませんでした"
           }
         }
       }

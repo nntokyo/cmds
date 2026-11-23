@@ -121,15 +121,17 @@ extension BrowserPane {
     /// it throws become clean API errors (404 for a missing element or ref, else invalid params). Without `deadline`,
     /// a page that has not answered after `BrowserEval.defaultTimeout` gets a 408 error, and a stuck one is reloaded
     /// (`scriptTimedOut`); with one, `PageScriptTimeout` is thrown.
+    /// `world`: cmds' own (default; the page cannot see or change its scripts) or `.page` (to read what the page's
+    /// own scripts keep on its elements, `ElementPoint.sourceScript`).
     func runPageScript(_ body: String, _ arguments: [String: Any],
-                               until deadline: Date? = nil) async throws -> JSONValue {
+                       until deadline: Date? = nil, in world: WKContentWorld = .defaultClient) async throws -> JSONValue {
         // `value` is an argument of fill, so the result has another name.
         let wrapped = "const __cmdsResult = await (async () => {\n\(body)\n})();\n"
             + "return __cmdsResult === undefined ? null : JSON.stringify(__cmdsResult);"
         let raw: Any?
         do {
             let until = deadline ?? Date(timeIntervalSinceNow: BrowserEval.defaultTimeout)
-            raw = try await webView.callScript(wrapped, arguments: arguments, in: .defaultClient, until: until)
+            raw = try await webView.callScript(wrapped, arguments: arguments, in: world, until: until)
         } catch is PageScriptTimeout {
             if deadline != nil { throw PageScriptTimeout() }
             throw await scriptTimedOut(after: BrowserEval.defaultTimeout)

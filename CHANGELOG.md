@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Point at Element (⇧⌘C, the scope button in the browser toolbar): click an element of the page, write what is wrong
+  with it, and the agent in the terminal gets your words with the element's selector, box, styles, the component and
+  source line when the dev build tells them (React, Vue, Svelte, Angular, Astro, react-dev-inspector) and a screenshot
+  with the element outlined in `.cmds/reports/`. An agent asking a question, or no agent, gets nothing typed: the
+  report goes to the clipboard. Idea from FixKit (github.com/ostiums/fixkit).
+
 ## [0.32.0] - 2026-11-22
 
 ### Added

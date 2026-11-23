@@ -9,6 +9,10 @@ final class BrowserNoticeView: NSVisualEffectView {
         case failed(name: String, reason: String)
         /// The page asked for a passkey (#336): `page` opens in Safari.
         case passkey(host: String, page: URL)
+        /// Point at Element: the report was typed into the agent's terminal named `target`.
+        case pointSent(target: String)
+        /// Point at Element: no terminal could take it; the prompt is on the clipboard.
+        case pointCopied(reason: String)
     }
 
     var onCancel: (() -> Void)?
@@ -55,6 +59,17 @@ final class BrowserNoticeView: NSVisualEffectView {
             text = String(localized: "\(host) asks for a passkey. Browser panes cannot use passkeys yet.",
                           comment: "browser pane notice; host is the site, e.g. github.com")
             buttons.append(button(String(localized: "Open in Safari"), #selector(openInSafariClicked), primary: true))
+            buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .pointSent(let target):
+            symbol = "paperplane"
+            tint = .systemGreen
+            text = String(localized: "Sent to \(target)", comment: "Point at Element notice; the argument is the terminal's name")
+            buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .pointCopied(let reason):
+            symbol = "doc.on.clipboard"
+            tint = .systemOrange
+            text = String(localized: "Copied the report: \(reason)",
+                          comment: "Point at Element notice when no agent terminal took the report")
             buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
         }
         let icon = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage())

@@ -149,6 +149,19 @@ final class BrowserPane: NSView {
     var lastCrashReload: Date?
     // Find in page (BrowserPane+Find.swift, #338).
     var findBar: TerminalFindBar?
+    // Point at Element (BrowserPane+Point.swift).
+    let pointButton = BrowserPane.toolbarButton("scope", label: BrowserPane.pointTitle)
+    /// The pick in progress or the element being commented on: the token the page marks it with; nil: not pointing.
+    var pointToken: String?
+    /// The page the pick started on (another page ends it).
+    var pointURL: URL?
+    /// The picked element while the composer is open.
+    var pointedElement: PointedElement?
+    var pointComposer: ElementComposerBar?
+    /// Sends a report to the agent in the terminal (the owner finds it); answers where it went.
+    var onPointAtElement: ((ElementPointReport) -> ElementPointDelivery)?
+    /// The name of the terminal a report would go to now (nil: none, it would be copied).
+    var pointTargetName: (() -> String?)?
 
     /// The page shown, or the one that failed to load (the address bar and `browser.get_url` keep it).
     /// A page not loaded yet (restored or suspended) is the one shown in the address bar, the API and the session.
@@ -442,6 +455,8 @@ final class BrowserPane: NSView {
         onUserNavigated = nil
         faviconTask?.cancel()
         onDeveloperAction = nil
+        onPointAtElement = nil
+        pointTargetName = nil
         defaultWatchFolder = nil
     }
 
@@ -474,10 +489,13 @@ final class BrowserPane: NSView {
             banner.trailingAnchor.constraint(lessThanOrEqualTo: viewportHost.trailingAnchor, constant: -inset),
             banner.bottomAnchor.constraint(equalTo: viewportHost.bottomAnchor, constant: -inset),
         ])
-        if case .finished = state {
+        switch state {
+        case .finished, .pointSent, .pointCopied:  // they go by themselves
             let hide = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.showNotice(nil) } }
             noticeHide = hide
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.noticeTime, execute: hide)
+        default:
+            break
         }
     }
 
@@ -569,12 +587,14 @@ final class BrowserPane: NSView {
 
         developerButton.target = self
         developerButton.action = #selector(developerButtonClicked(_:))
+        pointButton.target = self
+        pointButton.action = #selector(pointButtonClicked(_:))
         profileButton.target = self
         profileButton.action = #selector(profileButtonClicked(_:))
         updateProfileButton()
         let toolbar = NSStackView(views: [backButton, forwardButton, reloadButton, watchButton, profileButton, notSecureIcon,
                                           addressField, breakpointLabel,
-                                          deviceButton, developerButton])
+                                          deviceButton, pointButton, developerButton])
         toolbar.orientation = .horizontal
         toolbar.spacing = 6
         toolbar.edgeInsets = NSEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
@@ -658,6 +678,7 @@ final class BrowserPane: NSView {
 
     func stateDidChange() {
         if let url = webView.url, loadFailure == nil { lastCommittedURL = url }
+        if pointToken != nil, webView.url != pointURL { endPointing() }  // the element is gone with its page
         if window?.firstResponder !== addressField.currentEditor() {
             let url = currentURL
             addressField.stringValue = url?.scheme == "about" ? "" : (url?.absoluteString ?? "")
