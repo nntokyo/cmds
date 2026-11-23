@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Project commands: a `.cmds.json` lists a project's commands (dev server, test watcher) and pages; Workspace › Run
+  Project Commands opens them in terminals and a browser, after showing a new or changed file; `cmds project show|run`
+  for scripts and agents runs only a confirmed one (#408).
+
 - Sidebar: the branch's pull request and its checks from your GitHub CLI (`#405 ✓`, `✗`, `●`, `merged`), asked at
   most every 2 minutes per branch in GitHub repositories (Settings › Sidebar › Pull request and checks; #406).
 

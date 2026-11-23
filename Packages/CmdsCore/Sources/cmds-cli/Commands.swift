@@ -465,6 +465,30 @@ extension CLI {
             try ctx.call("notify", ["pane": ctx.pane.json, "title": ctx.args[option: "title"].json,
                                     "body": .string(body.trimmingCharacters(in: .whitespacesAndNewlines))])
         },
+        Command(name: "project", usage: "project [show|run] [--workspace W]",
+                summary: "Show or run the workspace's .cmds.json (its commands and pages).",
+                details: """
+                    The project file is .cmds.json in the workspace's folder or a parent, up to the repository's top level.
+                    `show` (default) prints what it runs and whether it was confirmed; `run` opens a terminal per command
+                    and the pages, only for a file confirmed in cmds (Workspace › Run Project Commands shows a new or
+                    changed one first), so a script cannot run commands nobody saw. --json: the API's answer.
+                    """,
+                options: ["workspace"]) { ctx in
+            try ctx.args.expectPositionals(0...1, usage: "cmds project [show|run] [--workspace W]")
+            let action = ctx.args.positionals.first ?? "show"
+            guard ["show", "run"].contains(action) else { throw CLIError.usage("usage: cmds project [show|run] [--workspace W]") }
+            let result = try callNewMethod(ctx, "project.\(action)", ["workspace": ctx.workspace().json])
+            if ctx.json { return ctx.printJSON(result) }
+            if action == "show" {
+                print(result["path"]?.stringValue ?? "")
+                for line in result["lines"]?.arrayValue ?? [] { print("  " + (line.stringValue ?? "")) }
+                print(result["confirmed"]?.boolValue == true ? "confirmed" : "not confirmed: Workspace › Run Project Commands in cmds")
+            } else {
+                for entry in result["opened"]?.arrayValue ?? [] {
+                    print("\(entry["pane"]?.stringValue ?? "")  \(entry["title"]?.stringValue ?? entry["url"]?.stringValue ?? "")")
+                }
+            }
+        },
         Command(name: "status", usage: "status [--workspace W] <text…>",
                 summary: "Set the workspace's sidebar text without ringing (empty text clears it).",
                 options: ["workspace"]) { ctx in

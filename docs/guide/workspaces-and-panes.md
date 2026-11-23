@@ -161,6 +161,30 @@ The moved pane takes the keyboard and its workspace is shown (`--no-focus` keeps
 in the workspaces involved. Programs in a moved terminal keep the `CMDS_WORKSPACE_ID` they started with; `cmds` and
 `cmds mcp` there use the workspace the pane is in now, and their ports, CPU and memory count for that workspace.
 
+## Project commands (.cmds.json)
+
+A `.cmds.json` in a project lists what starting work on it takes. It goes in the folder or a parent, up to the
+repository's top level:
+
+```json
+{
+  "commands": [
+    {"title": "Dev server", "run": "npm run dev"},
+    {"title": "Tests", "run": "npm test -- --watch", "split": "down"}
+  ],
+  "open": ["http://localhost:5173"]
+}
+```
+
+**Workspace › Run Project Commands** opens a terminal per command in the project folder: `split` is `right`
+(default), `down` or `tab`, each beside the one before. The shell stays when a command ends. The pages (http or https)
+then open in a browser beside them. At most 8 commands and 4 pages.
+
+- **Asked first**: the first time, and whenever the file changes, cmds shows everything it would run and runs it only
+  after **Run**. What you confirmed is remembered by the file's path and contents.
+- From scripts and agents, `cmds project show` prints the file and whether it is confirmed, and `cmds project run` runs
+  it only once you have confirmed it in the app, so nothing runs that nobody saw.
+
 ## Finding text in a terminal
 
 **Edit › Find › Find…** (⌘F) in a terminal pane opens a find bar in its top-right corner. Type to search the

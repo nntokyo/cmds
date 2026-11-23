@@ -239,6 +239,7 @@ enum MainMenu {
     private static func workspaceMenu(_ router: CommandRouter) -> NSMenu {
         let menu = NSMenu(title: String(localized: "Workspace"))
         menu.addItem(item("Rename Workspace…", #selector(CommandRouter.renameWorkspace(_:)), "r", [.command, .shift], target: router))
+        menu.addItem(item("Run Project Commands", #selector(CommandRouter.runProjectCommands(_:)), "", target: router))
         menu.addItem(.separator())
         menu.addItem(item("Next Workspace", #selector(CommandRouter.nextWorkspace(_:)), "}", target: router))
         menu.addItem(item("Previous Workspace", #selector(CommandRouter.previousWorkspace(_:)), "{", target: router))
