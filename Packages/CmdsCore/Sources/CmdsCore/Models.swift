@@ -128,12 +128,16 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
     /// Other workspaces of the same repository, in another worktree, that changed some of the same files (#174 G18);
     /// nil when there are none.
     public var gitOverlaps: [GitOverlap]?
+    /// The pull request of the branch and its checks, from the GitHub CLI (#174 G16); nil when there is none or it
+    /// is not asked (not GitHub, no `gh`, main branches, turned off).
+    public var pullRequest: PullRequestSummary?
 
     public init(id: String, title: String, selected: Bool, gitBranch: String? = nil, workingDirectory: String? = nil,
                 ports: [Int] = [], notificationText: String? = nil, attention: Bool = false,
                 panes: [PaneInfo] = [], layout: LayoutNode? = nil,
                 cpuPercent: Double? = nil, memoryBytes: UInt64? = nil, remoteHost: String? = nil,
-                worktree: WorktreeInfo? = nil, gitSummary: GitSummary? = nil, gitOverlaps: [GitOverlap]? = nil) {
+                worktree: WorktreeInfo? = nil, gitSummary: GitSummary? = nil, gitOverlaps: [GitOverlap]? = nil,
+                pullRequest: PullRequestSummary? = nil) {
         self.id = id
         self.title = title
         self.selected = selected
@@ -150,6 +154,7 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.worktree = worktree
         self.gitSummary = gitSummary
         self.gitOverlaps = gitOverlaps
+        self.pullRequest = pullRequest
     }
 }
 

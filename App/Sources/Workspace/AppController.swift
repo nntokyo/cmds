@@ -110,6 +110,8 @@ final class AppController {
     /// directory; written with the session when `agentHistoryDirty`.
     var agentHistory = AppController.loadAgentHistory()
     var agentHistoryDirty = false
+    /// The pull request of each workspace's branch (#174 G16).
+    lazy var pullRequests = PullRequestMonitor(controller: self)
     /// Point at Element reports being followed, by the terminal they went to (AppController+PointAtElement.swift).
     var elementPointFollows: [String: ElementPointFollow] = [:]
     /// Drives account switches in progress (AppController+Accounts).
@@ -947,6 +949,7 @@ final class AppController {
                 emit(.workspace(id: workspace.id))
             }
         }
+        pullRequests.update(workspaces)
         // The other workspaces' titles for the overlap tooltips (titles change without a scan).
         for workspace in workspaces where !workspace.gitOverlaps.isEmpty || !workspace.gitOverlapTitles.isEmpty {
             let titles = Dictionary(workspace.gitOverlaps.flatMap(\.workspaces).compactMap { id in
