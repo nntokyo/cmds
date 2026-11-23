@@ -5262,6 +5262,27 @@
         }
       }
     },
+    "Environment Variables": {
+      "comment": "title of the workspace environment variables editor",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "環境変数"
+          }
+        }
+      }
+    },
+    "Environment Variables…": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "環境変数…"
+          }
+        }
+      }
+    },
     "Errors": {
       "localizations": {
         "ja": {
@@ -8417,6 +8438,17 @@
         }
       }
     },
+    "Not in the Keychain: %@": {
+      "comment": "sidebar status when a workspace variable's Keychain item cannot be read; argument: variable names",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keychain から読めません: %@"
+          }
+        }
+      }
+    },
     "Not shared": {
       "localizations": {
         "ja": {
@@ -8607,6 +8639,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "1回、%@"
+          }
+        }
+      }
+    },
+    "One NAME=value per line, for the terminals opened in this workspace from now on. Do not write a secret here: run cmds env secret NAME in a terminal of the workspace to keep it in the Keychain.": {
+      "comment": "workspace environment variables editor: how to write them",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1行に1つずつ NAME=value の形で書きます。このワークスペースでこれから開くターミナルに渡されます。秘密の値はここに書かず、ワークスペースのターミナルで cmds env secret NAME を実行して Keychain に保存してください。"
           }
         }
       }

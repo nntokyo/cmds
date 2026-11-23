@@ -489,6 +489,41 @@ extension CLI {
                 }
             }
         },
+        Command(name: "env", usage: "env [--workspace W] | env secret [--delete] <NAME>",
+                summary: "List the workspace's environment variables, or keep a secret one in the Keychain.",
+                details: """
+                    Terminals opened in the workspace get its variables. Set plain ones in cmds with Workspace ›
+                    Environment Variables…. `env secret NAME` reads the value from standard input (typed without echo
+                    in a terminal), keeps it as cmds' own Keychain item and sets NAME in the workspace to it; the value is
+                    never written to a file. --delete removes the item and the variable. `env` lists the names only.
+                    --json: the API's answer.
+                    """,
+                options: ["workspace"], flags: ["delete"]) { ctx in
+            let usage = "cmds env [--workspace W] | cmds env secret [--delete] <NAME>"
+            let result: JSONValue
+            if ctx.args.positionals.first == "secret" {
+                try ctx.args.expectPositionals(2...2, usage: usage)
+                let name = ctx.args.positionals[1]
+                var value = ""
+                if !ctx.args.has("delete") {
+                    value = isatty(STDIN_FILENO) == 1
+                        ? String(cString: getpass("\(name): "))
+                        : String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
+                    value = value.trimmingCharacters(in: .newlines)
+                    guard !value.isEmpty else { throw CLIError.usage("no value given (use --delete to remove \(name))") }
+                }
+                result = try callNewMethod(ctx, "workspace.set_secret",
+                                           ["workspace": ctx.workspace().json, "name": .string(name), "value": .string(value)])
+            } else {
+                try ctx.args.expectPositionals(0...0, usage: usage)
+                result = try callNewMethod(ctx, "workspace.env", ["workspace": ctx.workspace().json])
+            }
+            if ctx.json { return ctx.printJSON(result) }
+            for entry in result["variables"]?.arrayValue ?? [] {
+                let name = entry["name"]?.stringValue ?? ""
+                print(entry["keychain"]?.stringValue.map { "\(name)  (Keychain: \($0))" } ?? name)
+            }
+        },
         Command(name: "status", usage: "status [--workspace W] <text…>",
                 summary: "Set the workspace's sidebar text without ringing (empty text clears it).",
                 options: ["workspace"]) { ctx in

@@ -185,6 +185,27 @@ then open in a browser beside them. At most 8 commands and 4 pages.
 - From scripts and agents, `cmds project show` prints the file and whether it is confirmed, and `cmds project run` runs
   it only once you have confirmed it in the app, so nothing runs that nobody saw.
 
+## Workspace environment variables
+
+**Workspace › Environment Variables…** sets variables for the terminals opened in the workspace from then on (already
+open ones keep theirs), one `NAME=value` per line. They are saved with the session; cmds' own `CMDS_*` variables
+cannot be changed. SSH panes do not get them.
+
+Keep secrets out of that list. In a terminal of the workspace run:
+
+```sh
+cmds env secret OPENAI_API_KEY      # type the value (not shown); or: pass it on standard input
+```
+
+cmds keeps the value as its own item in your login Keychain (service `cmds.env`, one item per name) and adds
+`OPENAI_API_KEY=keychain:cmds.env/OPENAI_API_KEY` to the workspace; each new terminal reads it then. The value is
+never written to a file. `cmds env secret --delete NAME` removes the item and the variable; `cmds env` lists the names.
+
+You can also name an item you already have, as `NAME=keychain:service` or `NAME=keychain:service/account`
+(a generic password). cmds never shows a Keychain dialog while opening a terminal: an item it may not read (one
+another app made, unless you add cmds to its access list in Keychain Access) is left out, and the sidebar says
+"Not in the Keychain: NAME".
+
 ## Finding text in a terminal
 
 **Edit › Find › Find…** (⌘F) in a terminal pane opens a find bar in its top-right corner. Type to search the

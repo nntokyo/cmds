@@ -18,6 +18,9 @@ final class Workspace {
     /// leaves it. Saved with the session.
     var worktreePath: String?
     var gitBranch: String?
+    /// Variables for the terminals opened in this workspace (Workspace › Environment Variables…, #174 G23). Saved
+    /// with the session.
+    var environment = WorkspaceEnvironment()
     /// Changes and ahead / behind of a local repository (MetadataMonitor, the sidebar's branch line).
     var gitSummary: GitSummary?
     /// Files this workspace's worktree changed that another worktree of the same repository changed too (#174 G18).

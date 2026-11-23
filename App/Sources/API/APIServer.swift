@@ -312,6 +312,11 @@ final class APIServer {
                 let (path, file) = try controller.projectFile(workspace: workspace)
                 AppSettings.shared.confirmedProjectFiles[path] = file.digest
                 connection.reply(id: id, result: ["path": .string(path)])
+            case "debug.workspace_env":
+                // Tests only: set a workspace's variables as Save in Workspace › Environment Variables… would.
+                let workspace = try controller.resolveWorkspace(try params.string("workspace"))
+                try controller.setWorkspaceEnvironment(try params.required("text"), workspace: workspace)
+                connection.reply(id: id, result: try controller.workspaceEnvironmentInfo(workspaceID: workspace.id))
             case "debug.pull_requests":
                 // Tests only: what the pull request monitor last got per worktree and branch.
                 connection.reply(id: id, result: controller.pullRequests.debugState)
@@ -535,6 +540,11 @@ final class APIServer {
             return try controller.projectShow(workspaceID: try params.string("workspace"))
         case "project.run":
             return try controller.projectRun(workspaceID: try params.string("workspace"))
+        case "workspace.env":
+            return try controller.workspaceEnvironmentInfo(workspaceID: try params.string("workspace"))
+        case "workspace.set_secret":
+            return try controller.setSecret(name: try params.required("name"), value: try params.string("value") ?? "",
+                                            workspaceID: try params.string("workspace"))
         case "workspace.rename":
             try controller.renameWorkspace(id: try params.string("id"), title: try params.required("title"))
 
