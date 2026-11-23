@@ -119,7 +119,13 @@ public enum ElementPoint {
     /// `screenshot`: the path to show the agent (relative to its folder when inside it).
     public static func prompt(comment: String, element: PointedElement, url: String?, title: String?,
                               screenshot: String?) -> String {
-        var lines = [comment.trimmingCharacters(in: .whitespacesAndNewlines), "", "[Pointed at in the cmds browser]"]
+        ([comment.trimmingCharacters(in: .whitespacesAndNewlines), "", "[Pointed at in the cmds browser]"]
+            + facts(element: element, url: url, title: title, screenshot: screenshot)).joined(separator: "\n")
+    }
+
+    /// The element's facts, one per line: page, element, selector, source, components, box, styles, HTML, screenshot.
+    public static func facts(element: PointedElement, url: String?, title: String?, screenshot: String?) -> [String] {
+        var lines: [String] = []
         if let url, !url.isEmpty {
             let named = title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
             lines.append("Page: \(url)" + (named.map { " (\"\(capped($0, 80))\")" } ?? ""))
@@ -150,8 +156,56 @@ public enum ElementPoint {
         if let styles = element.styles, !styles.isEmpty { lines.append("Styles: \(styles.joined(separator: "; "))") }
         if !element.html.isEmpty { lines.append("HTML: \(element.html)") }
         if let screenshot { lines.append("Screenshot (element outlined in red): \(screenshot)") }
-        return lines.joined(separator: "\n")
+        return lines
     }
+
+    // MARK: - Asked by an agent (`browser.point`)
+
+    /// How long `browser.point` waits for the user's click by default, and at most (seconds).
+    public static let defaultAgentTimeout: Double = 120
+    public static let maxAgentTimeout: Double = 600
+    /// The request shown to the user is cut to this length.
+    public static let maxAgentPromptLength = 300
+
+    /// `browser.point` parameters: `prompt` (what the agent asks the user to click, optional) and `timeout` (seconds).
+    public struct AgentRequest: Equatable, Sendable {
+        public var prompt: String?
+        public var timeout: Double
+
+        public init(params: JSONValue?) throws {
+            if let raw = params?["prompt"], raw != .null {
+                guard let text = raw.stringValue else { throw RPCError.invalidParams("prompt must be a string") }
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                prompt = trimmed.isEmpty ? nil : ElementPoint.capped(trimmed, ElementPoint.maxAgentPromptLength)
+            }
+            timeout = ElementPoint.defaultAgentTimeout
+            if let raw = params?["timeout"], raw != .null {
+                guard case .number(let seconds) = raw, seconds.isFinite, seconds >= 1,
+                      seconds <= ElementPoint.maxAgentTimeout else {
+                    throw RPCError.invalidParams("timeout must be 1 to \(Int(ElementPoint.maxAgentTimeout)) seconds")
+                }
+                timeout = seconds
+            }
+        }
+
+        public var params: [String: JSONValue?] {
+            ["prompt": prompt.map(JSONValue.string), "timeout": .number(timeout)]
+        }
+    }
+
+    /// The answer of `browser.point`: `{element, url, title, text}` (`text`: the facts, one per line).
+    public static func agentResult(element: PointedElement, url: String?, title: String?) -> JSONValue {
+        let encoded = (try? JSONEncoder().encode(element)).flatMap { try? JSONDecoder().decode(JSONValue.self, from: $0) }
+        return .object([
+            "element": encoded ?? .null,
+            "url": url.map(JSONValue.string) ?? .null,
+            "title": title.map(JSONValue.string) ?? .null,
+            "text": .string(facts(element: element, url: url, title: title, screenshot: nil).joined(separator: "\n")),
+        ])
+    }
+
+    /// The error when the user gave up (Esc, Cancel, another page); 408 is the timeout.
+    public static let cancelledCode = 409
 
     /// A source location as the agent can open it: a dev server URL becomes its path (`http://localhost:5173/src/App.tsx?t=1`
     /// → `src/App.tsx`), webpack's `webpack-internal:///(app-pages-browser)/./src/page.tsx` → `src/page.tsx`, Vite's

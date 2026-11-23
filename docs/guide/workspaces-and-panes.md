@@ -480,6 +480,10 @@ text and screenshot still find the element.
 - **Screenshots** go to `.cmds/reports/` in that terminal's folder, where the agent can read them without asking;
   `.cmds/` holds a `.gitignore` that ignores it. Otherwise (no folder, not writable) to the support folder's
   `Reports/`. The newest 30 are kept. An agent on an SSH server gets the prompt without a screenshot.
+- **Asked by an agent**: an agent that needs to know which element you mean calls `browser_point` (MCP) or
+  `cmds browser point --prompt "…"`. The pane comes forward (the keyboard stays where it is), its ring lights, and
+  the notice shows what the agent asks for; your click goes back to the agent with the same facts instead of
+  opening the composer. Cancel in the notice, another page or the timeout (2 minutes by default) gives up.
 - Not in the responsive view or inside iframes (an iframe is reported as itself).
 
 ### Screenshots

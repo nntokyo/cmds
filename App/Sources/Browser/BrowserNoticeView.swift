@@ -19,6 +19,8 @@ final class BrowserNoticeView: NSVisualEffectView {
         case pointAsking(target: String)
         /// Point at Element: the agent finished its turn; `summary` is the first line of its reply when known.
         case pointDone(target: String, summary: String?)
+        /// `browser.point`: an agent waits for the user to click an element; `prompt` is what it asks for.
+        case agentPointing(prompt: String?)
     }
 
     /// Point at Element notices: "Show Terminal" focuses the agent's terminal.
@@ -102,6 +104,14 @@ final class BrowserNoticeView: NSVisualEffectView {
                 ?? String(localized: "\(target) finished", comment: "Point at Element notice; argument: the terminal's name")
             buttons.append(button(String(localized: "Show Terminal"), #selector(showTerminalClicked)))
             buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .agentPointing(let prompt):
+            symbol = "scope"
+            tint = .systemRed
+            text = prompt.map { String(localized: "The agent asks: \($0) — click the element",
+                                       comment: "browser.point notice; argument: the agent's request") }
+                ?? String(localized: "The agent asks you to click an element",
+                          comment: "browser.point notice without a request text")
+            buttons.append(button(String(localized: "Cancel"), #selector(cancelClicked)))
         }
         let icon = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 13, weight: .medium)

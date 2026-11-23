@@ -95,7 +95,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_profile", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
                         "browser_console", "browser_source", "browser_seo", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
-                        "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
+                        "browser_point", "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
                         "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
@@ -309,6 +309,29 @@ final class MCPServerTests: XCTestCase {
         XCTAssertTrue(text(timedOut)?.contains("timed out") == true)
         failure = CLIError.failure("method not found: browser.console")
         XCTAssertEqual(text(callTool(server, "browser_console", #"{"pane":"p4"}"#)), "this cmds app has no browser.console; update cmds")
+        failure = nil
+    }
+
+    /// browser_point: the prompt and timeout reach the app; its facts are the answer; a cancel is a tool error.
+    func testBrowserPoint() {
+        let server = server()
+        replies["browser.point"] = .object(["text": "Element: button \"Save\"\nSelector: #save", "element": .object([:])])
+        XCTAssertEqual(text(callTool(server, "browser_point", #"{"pane":"p4","prompt":"the wrong button","timeout":30}"#)),
+                       "Element: button \"Save\"\nSelector: #save")
+        XCTAssertEqual(requests.last?.method, "browser.point")
+        XCTAssertEqual(requests.last?.params["prompt"] ?? nil, .string("the wrong button"))
+        XCTAssertEqual(requests.last?.params["timeout"] ?? nil, .number(30))
+
+        let count = requests.count
+        XCTAssertEqual(callTool(server, "browser_point", #"{"pane":"p4","timeout":0}"#)?["isError"], .bool(true))
+        XCTAssertEqual(callTool(server, "browser_point", #"{"pane":"p4","prompt":5}"#)?["isError"], .bool(true))
+        XCTAssertEqual(requests.count, count, "bad arguments never reach the app")
+
+        failure = CLIError.failure("the user did not point at an element")
+        let cancelled = callTool(server, "browser_point", #"{"pane":"p4"}"#)
+        XCTAssertEqual(cancelled?["isError"], .bool(true))
+        XCTAssertTrue(text(cancelled)?.contains("did not point") == true)
+        XCTAssertEqual(requests.last?.params["timeout"] ?? nil, .number(ElementPoint.defaultAgentTimeout))
         failure = nil
     }
 

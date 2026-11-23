@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Agents can ask you to point at an element: MCP `browser_point` and `cmds browser point --prompt "…"` show the
+  request in the browser pane and return the element you click (selector, box, styles, components, source line).
+
 - Point at Element (⇧⌘C, the scope button in the browser toolbar): click an element of the page, write what is wrong
   with it, and the agent in the terminal gets your words with the element's selector, box, styles, the component and
   source line when the dev build tells them (React, including React 19 through the dev server's source maps; Vue,

@@ -9081,6 +9081,17 @@
         }
       }
     },
+    "Point at an element": {
+      "comment": "notification title of browser.point",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要素を指してください"
+          }
+        }
+      }
+    },
     "Pop-up": {
       "localizations": {
         "ja": {
@@ -12093,6 +12104,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "アカウントが上限に達したままでした。"
+          }
+        }
+      }
+    },
+    "The agent asks you to click an element": {
+      "comment": "browser.point notice without a request text",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントが要素のクリックを求めています"
+          }
+        }
+      }
+    },
+    "The agent asks: %@ — click the element": {
+      "comment": "browser.point notice; argument: the agent's request",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "エージェントからの依頼：%@ — 要素をクリックしてください"
           }
         }
       }

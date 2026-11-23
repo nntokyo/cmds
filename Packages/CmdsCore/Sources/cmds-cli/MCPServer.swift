@@ -44,7 +44,8 @@ final class MCPServer {
         sign-ins or saved passwords (cmds browser panes do not share them), or for what browser_eval cannot do (file \
         uploads, native dialogs). To keep this session's sign-ins apart from other sessions' (or share them), set a \
         login profile with browser_profile. For front-end work, browser_console, browser_source and browser_seo give the page's \
-        console and errors, its HTML and an SEO check. Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
+        console and errors, its HTML and an SEO check. When it is unclear which element of a page the user means, ask them \
+        to click it with browser_point (you get its selector and source line). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
         server or another long-running command in a terminal pane beside yours with terminal_split, read its output \
         with terminal_read and type into it with terminal_send (only panes opened from your terminal); list_ports shows \
         the ports the workspaces listen on. Before a build, test run or other heavy job, check system_stats: at advice \
@@ -250,6 +251,11 @@ final class MCPServer {
              description: "Wait until an element matching a CSS selector, or some text, is visible in a cmds browser pane's page. Errors after timeout seconds.",
              properties: ["pane": browserPane, "selector": string("CSS selector."), "text": string("Visible text, instead of selector."),
                           "timeout": .object(["type": "number", "description": .string("Seconds (default \(Int(PageScripts.defaultWaitTimeout)), at most \(Int(PageScripts.maxWaitTimeout))).")])]),
+        Tool(name: "browser_point",
+             description: "Ask the user to click an element of a cmds browser pane's page, when you need to know which one they mean (\"this button\", \"that gap\"). The pane is shown with your prompt above the page; the element under the pointer is outlined and the click does not reach the page. Returns the element: CSS selector, text, box, styles, opening tag, the components around it and its source file and line when the dev build tells (React, Vue, Svelte, Angular, Astro). Errors when the user cancels or after timeout seconds.",
+             properties: ["pane": browserPane,
+                          "prompt": string("What to click, shown to the user, e.g. \"the button that looks wrong\"."),
+                          "timeout": .object(["type": "number", "description": .string("Seconds to wait (default \(Int(ElementPoint.defaultAgentTimeout)), at most \(Int(ElementPoint.maxAgentTimeout))).")])]),
         Tool(name: "browser_responsive",
              description: "Show a page at several sizes side by side in one cmds browser pane (default phone, tablet and desktop: \(BrowserResponsive.defaultDevices.joined(separator: ", "))). With url it opens a new browser pane beside your terminal (no focus) and returns its id; otherwise it acts on a browser pane. Navigation and scrolling stay in step across the frames. browser_snapshot of such a pane returns one image per frame. Each frame is its own WebKit process: use off when done.",
              properties: [
@@ -510,6 +516,12 @@ final class MCPServer {
             case .waitFor:
                 return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
             }
+        case "browser_point":
+            let request = try toolArguments { try ElementPoint.AgentRequest(params: arguments) }
+            let result = try newMethod("browser.point") {
+                try browserCall("browser.point", arguments, request.params, timeout: request.timeout + 30)
+            }
+            return [Self.text(result["text"]?.stringValue ?? "No element.")]
         case "browser_watch":
             var change = try toolArguments { try BrowserWatchChange(params: arguments) }
             if !change.off { change.turnsOn = true }
