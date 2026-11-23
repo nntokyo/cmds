@@ -25,6 +25,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - `cmds-remote.sh` (version 2) on macOS servers: a hook, notification or command could fail with "app not reachable"
   when the app answered and closed the connection before the script finished sending (python3 transport, ENOTCONN).
+- In terminals of a second copy of cmds (a newer download, a Debug build), `cmds`, its hooks and `cmds mcp` ran the
+  installed CLI of `/Applications/cmds.app`, which login shells put first on `PATH`; the CLI now hands off to the
+  app's own (`CMDS_CLI_PATH`). Takes effect once the installed CLI has this change.
 
 ## [0.32.0] - 2026-11-22
 
