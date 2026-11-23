@@ -32,6 +32,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let bookmarkSourcePopup = NSPopUpButton()
     private let chromeProfilePopup = NSPopUpButton()
     private let suspendTabsPopup = NSPopUpButton()
+    private let longCommandPopup = NSPopUpButton()
     /// Why Chrome's bookmarks cannot be shown (empty when they can), and the button to Privacy & Security.
     private let chromeProblemNote = SettingsWindowController.note("")
     private let chromeAccessButton = NSButton(title: String(localized: "Open Privacy Settings…", comment: "Settings › General › Chrome bookmarks without access"), target: nil, action: nil)
@@ -186,6 +187,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         }
         suspendTabsPopup.target = self
         suspendTabsPopup.action = #selector(suspendTabsChanged)
+        for seconds in LongCommand.choices {
+            longCommandPopup.addItem(withTitle: Self.longCommandTitle(seconds))
+            longCommandPopup.lastItem?.representedObject = seconds
+        }
+        longCommandPopup.target = self
+        longCommandPopup.action = #selector(longCommandChanged)
         chromeAccessButton.bezelStyle = .rounded
         chromeAccessButton.target = self
         chromeAccessButton.action = #selector(openFullDiskAccess)
@@ -214,6 +221,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [Self.label(String(localized: "Font:")), fontPopup],
             [Self.label(String(localized: "Size:")), sizeRow],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Layered over your Ghostty config. View › Bigger / Smaller / Actual Size (⌘+ / ⌘− / ⌘0) change only the focused pane."))],
+            [Self.label(String(localized: "Notify when a command finishes:", comment: "Settings › General › Terminal")), longCommandPopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "When a command that ran at least that long ends in a pane you are not looking at (a build, tests, a deploy): the pane's ring, the sidebar and, with cmds in the background, a notification; failures say so. Needs the shell integration (on by default for zsh, bash and fish). Not in panes where a coding agent runs: its hooks notify.", comment: "Settings › General › Terminal"))],
             [Self.header(String(localized: "Browser and Preview")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Browser page zoom:")), browserZoomPopup],
             [Self.label(String(localized: "Preview zoom:")), previewZoomPopup],
@@ -491,6 +500,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             suspendTabsPopup.lastItem?.representedObject = minutes
         }
         suspendTabsPopup.selectItem(at: max(0, suspendTabsPopup.indexOfItem(withRepresentedObject: minutes)))
+        let seconds = settings.longCommandSeconds
+        if longCommandPopup.indexOfItem(withRepresentedObject: seconds) < 0 {
+            longCommandPopup.addItem(withTitle: Self.longCommandTitle(seconds))
+            longCommandPopup.lastItem?.representedObject = seconds
+        }
+        longCommandPopup.selectItem(at: max(0, longCommandPopup.indexOfItem(withRepresentedObject: seconds)))
         chromeBookmarksCheckbox.state = settings.chromeBookmarks ? .on : .off
         fillChromeProfiles()
         refreshChromeProblem()
@@ -605,6 +620,19 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func browserTabsToggled() {
         settings.browserOpensTabs = browserTabsCheckbox.state == .on
+    }
+
+    @objc private func longCommandChanged() {
+        settings.longCommandSeconds = longCommandPopup.selectedItem?.representedObject as? Int ?? LongCommand.defaultSeconds
+    }
+
+    private static func longCommandTitle(_ seconds: Int) -> String {
+        guard seconds > 0 else { return String(localized: "Never", comment: "Settings › General › Notify when a command finishes") }
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .full
+        formatter.allowedUnits = [.hour, .minute, .second]
+        let span = formatter.string(from: TimeInterval(seconds)) ?? "\(seconds) s"
+        return String(localized: "After \(span) or more", comment: "Settings › General › Notify when a command finishes; argument like 30 seconds")
     }
 
     @objc private func suspendTabsChanged() {

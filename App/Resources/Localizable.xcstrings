@@ -2119,6 +2119,17 @@
         }
       }
     },
+    "After %@ or more": {
+      "comment": "Settings › General › Notify when a command finishes; argument like 30 seconds",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@以上かかったとき"
+          }
+        }
+      }
+    },
     "After %lld minutes": {
       "comment": "Settings › General › Suspend background tabs",
       "localizations": {
@@ -3897,6 +3908,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "コマンドパレット…"
+          }
+        }
+      }
+    },
+    "Command failed (exit %lld)": {
+      "comment": "notification title when a long command ends with an error",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドが失敗しました（終了コード %lld）"
+          }
+        }
+      }
+    },
+    "Command finished": {
+      "comment": "notification title when a long command ends",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドが終了しました"
           }
         }
       }
@@ -7677,12 +7710,12 @@
       }
     },
     "Never": {
-      "comment": "Settings › General › Suspend background tabs",
+      "comment": "Settings › General › Notify when a command finishes\nSettings › General › Suspend background tabs",
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "再開しない"
+            "value": "しない"
           }
         }
       }
@@ -8421,6 +8454,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "3秒後にフォーカス中のペインに通知"
+          }
+        }
+      }
+    },
+    "Notify when a command finishes:": {
+      "comment": "Settings › General › Terminal",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドの終了を通知："
           }
         }
       }
@@ -14059,6 +14103,17 @@
         }
       }
     },
+    "When a command that ran at least that long ends in a pane you are not looking at (a build, tests, a deploy): the pane's ring, the sidebar and, with cmds in the background, a notification; failures say so. Needs the shell integration (on by default for zsh, bash and fish). Not in panes where a coding agent runs: its hooks notify.": {
+      "comment": "Settings › General › Terminal",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "見ていないペインで、この時間以上かかったコマンド（ビルド、テスト、デプロイなど）が終わったときに、ペインのリングとサイドバー、cmdsが裏にあるときは通知で知らせます。失敗したときはそう表示します。シェル統合が必要です（zsh、bash、fishでは最初から有効）。コーディングエージェントが動いているペインでは知らせません（エージェントのフックが知らせます）。"
+          }
+        }
+      }
+    },
     "When a run fails, is skipped or missed": {
       "localizations": {
         "ja": {
@@ -14473,6 +14528,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」のペイン"
+          }
+        }
+      }
+    },
+    "after %@ in %@": {
+      "comment": "notification body of a long command; arguments: duration, pane title",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "after %1$@ in %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@で%1$@かかりました"
           }
         }
       }

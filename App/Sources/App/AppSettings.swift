@@ -116,10 +116,11 @@ final class AppSettings: NSObject {
     static let chromeProfileKey = "BrowserChromeProfile"
     static let suspendTabsKey = "BrowserSuspendTabsMinutes"
     static let bookmarkSourceKey = "BrowserBookmarksSource"
+    static let longCommandKey = "LongCommandNotificationSeconds"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
                                showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey,
                                browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey, suspendTabsKey,
-                               bookmarkSourceKey] + MenuBarOption.allCases.map(\.rawValue)
+                               bookmarkSourceKey, longCommandKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -265,6 +266,18 @@ final class AppSettings: NSObject {
             return max(0, min(value, 24 * 60))
         }
         set { set(newValue == TabSuspension.defaultMinutes ? nil : newValue, forKey: Self.suspendTabsKey) }
+    }
+
+    /// A notification when a command that ran at least this many seconds finishes in a pane you are not looking at
+    /// (Settings › General › Terminal); 0 = never. Default `LongCommand.defaultSeconds`.
+    var longCommandSeconds: Int {
+        get {
+            guard let value = (defaults.object(forKey: Self.longCommandKey) as? NSNumber)?.intValue else {
+                return LongCommand.defaultSeconds
+            }
+            return max(0, min(value, 24 * 3600))
+        }
+        set { set(newValue == LongCommand.defaultSeconds ? nil : newValue, forKey: Self.longCommandKey) }
     }
 
     /// An on-by-default switch (Settings › Sidebar, Settings › Menu Bar); only "off" is stored.

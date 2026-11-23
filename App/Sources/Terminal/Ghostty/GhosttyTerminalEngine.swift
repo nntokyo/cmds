@@ -359,6 +359,15 @@ final class GhosttyTerminalSurface: TerminalSurface {
         }
     }
 
+    func handleCommandFinished(exitCode: Int?, duration: TimeInterval) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, !self.closed else { return }
+                self.delegate?.terminalSurface(self, commandFinishedWithExitCode: exitCode, duration: duration)
+            }
+        }
+    }
+
     func handleProgress(_ progress: TerminalProgress?) {
         DispatchQueue.main.async { [weak self] in
             MainActor.assumeIsolated {

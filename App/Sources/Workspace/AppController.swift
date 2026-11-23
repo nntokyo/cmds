@@ -1186,6 +1186,26 @@ final class AppController {
 
     private var isWindowKey: Bool { NSApp.isActive && window?.isKeyWindow == true }
 
+    /// A command ended in `pane` (shell integration): a long one in a pane you are not looking at lights its ring and
+    /// notifies, as a program's own notification would (`LongCommand`).
+    func paneCommandFinished(_ pane: Pane, exitCode: Int?, duration: TimeInterval) {
+        guard LongCommand.notifies(duration: duration, threshold: AppSettings.shared.longCommandSeconds,
+                                   visible: isVisiblyFocused(pane), agentRunning: pane.agentActivity != .none) else { return }
+        let formatter = DateComponentsFormatter()
+        formatter.unitsStyle = .abbreviated
+        formatter.allowedUnits = duration >= 3600 ? [.hour, .minute] : [.minute, .second]
+        let span = formatter.string(from: duration.rounded()) ?? "\(Int(duration)) s"
+        let title: String
+        if let exitCode, exitCode != 0 {
+            title = String(localized: "Command failed (exit \(exitCode))", comment: "notification title when a long command ends with an error")
+        } else {
+            title = String(localized: "Command finished", comment: "notification title when a long command ends")
+        }
+        raiseAttention(pane: pane, title: title,
+                       body: String(localized: "after \(span) in \(DefaultTitle.localized(pane.title))",
+                                    comment: "notification body of a long command; arguments: duration, pane title"))
+    }
+
     private func isVisiblyFocused(_ pane: Pane) -> Bool {
         isWindowKey && pane.workspaceID == selectedWorkspaceID && focusedPane === pane
     }
