@@ -32,8 +32,9 @@ public struct PointedElement: Codable, Equatable, Sendable {
         public var file: String
         public var line: Int?
         public var column: Int?
-        /// `attribute` (a dev tool wrote it into the DOM), `framework` (the framework's own record) or `stack` (the
-        /// line of the served module that created the element; with a transpiler it can differ from the source file).
+        /// `attribute` (a dev tool wrote it into the DOM), `framework` (the framework's own record), `sourcemap` (the
+        /// creation stack's line mapped back with the module's source map) or `stack` (the line of the served module
+        /// that created the element, no source map found; with a transpiler it can differ from the source file).
         public var via: String?
 
         public init(file: String, line: Int? = nil, column: Int? = nil, via: String? = nil) {
@@ -456,6 +457,59 @@ public enum ElementPoint {
             }
           }
         } catch {}
+        // A line from a stack is the served module's: with the module's source map (dev servers such as Vite inline
+        // one) it becomes the source file's line.
+        const mapped = async (src) => {
+          if (!src || src.via !== 'stack' || !src.line || !/^https?:/.test(src.file)) return src;
+          try {
+            const url = new URL(src.file, location.href);
+            if (url.origin !== location.origin) return src;
+            const code = await (await fetch(url.href, { cache: 'force-cache' })).text();
+            const at = code.lastIndexOf('sourceMappingURL=');
+            if (at < 0) return src;
+            const ref = code.slice(at + 17).split(/\\s/)[0];
+            let map;
+            if (ref.startsWith('data:')) {
+              const body = ref.slice(ref.indexOf(',') + 1);
+              const text = ref.includes(';base64,')
+                ? new TextDecoder().decode(Uint8Array.from(atob(body), (c) => c.charCodeAt(0))) : decodeURIComponent(body);
+              map = JSON.parse(text);
+            } else {
+              const mapURL = new URL(ref, url);
+              if (mapURL.origin !== location.origin) return src;
+              map = await (await fetch(mapURL.href, { cache: 'force-cache' })).json();
+            }
+            const digits = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+            const lines = String(map.mappings || '').split(';');
+            if (src.line > lines.length) return src;
+            const column = (src.column || 1) - 1;
+            let source = 0, line = 0, col = 0, best = null;
+            for (let i = 0; i < src.line; i++) {
+              let generated = 0;
+              for (const segment of lines[i].split(',')) {
+                if (!segment) continue;
+                const values = [];
+                let shift = 0, value = 0;
+                for (const ch of segment) {
+                  const digit = digits.indexOf(ch);
+                  value += (digit & 31) << shift;
+                  if (digit & 32) { shift += 5; continue; }
+                  values.push(value & 1 ? -(value >> 1) : value >> 1);
+                  value = 0; shift = 0;
+                }
+                generated += values[0];
+                if (values.length >= 4) { source += values[1]; line += values[2]; col += values[3]; }
+                if (i === src.line - 1 && values.length >= 4 && generated <= column) best = { source, line, col };
+              }
+            }
+            if (!best || !map.sources || !map.sources[best.source]) return src;
+            let file = map.sources[best.source];
+            if (map.sourceRoot) file = map.sourceRoot.replace(/\\/?$/, '/') + file;
+            if (!/^(\\/|[a-z][a-z0-9+.-]*:)/i.test(file)) file = new URL(file, url).href;
+            return { file, line: best.line + 1, column: best.col + 1, via: 'sourcemap' };
+          } catch { return src; }
+        };
+        out.source = await mapped(out.source);
         if (out.components.length > 8) out.components = out.components.slice(-8);
         return out;
         """

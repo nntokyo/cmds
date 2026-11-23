@@ -461,9 +461,10 @@ apps in the simulator):
 The agent gets your words first, then the page's address, the element (its name, a CSS selector, its box, a few
 computed styles and its opening tag), the components around it and the file and line of its code when the page tells
 them, and a screenshot with the element outlined. The source comes from what dev builds keep: React's records (the
-file and line up to React 18; in React 19 the line of the served module that created the element, which a transpiler
-may shift slightly), Vue's component file, Svelte's metadata, Angular's dev API, and the attributes of
-react-dev-inspector, Vue's inspector and Astro's dev toolbar. Production builds usually name nothing; the selector,
+file and line up to React 18; in React 19 the line that created the element, mapped back to the source file with the
+module's source map, as Vite serves it, else the served module's line, marked as approximate), Vue's component file
+(no line), Svelte's metadata, Angular's dev API, and the attributes of react-dev-inspector, Vue's inspector and
+Astro's dev toolbar. Production builds usually name nothing; the selector,
 text and screenshot still find the element.
 
 - **Which terminal**: the one that opened the browser pane (`cmds browser open`, MCP `browser_open`) while an agent

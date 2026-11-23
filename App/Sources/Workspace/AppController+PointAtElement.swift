@@ -17,7 +17,16 @@ extension AppController {
     }
 
     /// The name a terminal is shown by in the composer and the notice.
-    func pointTargetName(_ pane: Pane) -> String { pane.agentTopic ?? DefaultTitle.localized(pane.title) }
+    /// The terminal's task, else its title without the agent's status glyph (`✳ Claude Code` → `Claude Code`).
+    func pointTargetName(_ pane: Pane) -> String {
+        if let topic = pane.agentTopic, !topic.isEmpty { return topic }
+        let title = pane.title.trimmingCharacters(in: .whitespaces)
+        if AgentTitle.parse(title).glyph != nil {
+            let rest = title.dropFirst().trimmingCharacters(in: .whitespaces)
+            if !rest.isEmpty { return rest }
+        }
+        return DefaultTitle.localized(pane.title)
+    }
 
     /// Saves the screenshot, types the prompt into the agent's terminal (a paste, then Return a moment later, as a
     /// schedule's prompt) and answers where it went. An agent asking a question is not typed into (the prompt would
