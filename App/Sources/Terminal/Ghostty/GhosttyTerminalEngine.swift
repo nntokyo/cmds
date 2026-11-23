@@ -359,6 +359,15 @@ final class GhosttyTerminalSurface: TerminalSurface {
         }
     }
 
+    func handleProgress(_ progress: TerminalProgress?) {
+        DispatchQueue.main.async { [weak self] in
+            MainActor.assumeIsolated {
+                guard let self, !self.closed else { return }
+                self.delegate?.terminalSurface(self, didReportProgress: progress)
+            }
+        }
+    }
+
     func handleNotification(title: String, body: String) {
         DispatchQueue.main.async { [weak self] in
             MainActor.assumeIsolated {

@@ -21,6 +21,10 @@ Each row shows:
 - the [agent state](#agent-state) and the agent's task — Claude Code's terminal title without its spinner glyph, e.g.
   `Working  自走型売上基盤の対応` — or else the working directory. Long paths keep their last components
   (`…/projects/my-app`); the full directory is in the tooltip;
+- a thin bar along the row's bottom while a program reports its progress (OSC 9;4, as builds, package managers and
+  installers send it to Windows Terminal or Ghostty): the accent colour for the percent done, red for a failure, a
+  sliding segment while how far is unknown, dimmed while paused; a failing pane's report first, else the newest. It goes
+  when the program removes it or after 15 s without an update;
 - the git branch and listening ports of the workspace's processes; after a local branch, `±3 ↑1 ↓2`: uncommitted
   paths (changed, staged, untracked; orange) and commits ahead / behind the upstream, from `git status` read at most
   every 15 s per folder in the background (without git's optional locks, so it never holds the index lock against

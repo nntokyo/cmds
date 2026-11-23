@@ -61,6 +61,8 @@ final class WorkspaceCellView: NSTableCellView {
     private var agentKey: String?
     private var agentTooltip: String?
     private let notificationLabel = NSTextField(wrappingLabelWithString: "")
+    /// The workspace's progress report (OSC 9;4) along the row's bottom edge.
+    private let progressStrip = ProgressStripView()
     private let stack = NSStackView()
     /// What `usageLabel` currently shows; samples that change nothing visible skip the update.
     private var usageKey: String?
@@ -194,6 +196,14 @@ final class WorkspaceCellView: NSTableCellView {
         addSubview(stack)
         // The × sits over the ⌘N hint (shown instead of it while hovering), so nothing moves.
         addSubview(closeButton)
+        progressStrip.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(progressStrip)
+        NSLayoutConstraint.activate([
+            progressStrip.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
+            progressStrip.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
+            progressStrip.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
+            progressStrip.heightAnchor.constraint(equalToConstant: ProgressStripView.height),
+        ])
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: Self.horizontalInset),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -Self.horizontalInset),
@@ -303,6 +313,8 @@ final class WorkspaceCellView: NSTableCellView {
         hostLabel.isHidden = workspace.sshPanes.isEmpty
         hostLabel.attributedStringValue = Self.hostText(workspace)
         branchLabel.isHidden = !Self.showsBranch(workspace)
+        progressStrip.progress = workspace.progress
+        progressStrip.toolTip = workspace.progress.map(Self.progressToolTip)
         branchLabel.attributedStringValue = Self.branchText(workspace)
         branchLabel.toolTip = Self.branchToolTip(workspace)
         // A remote path is shown as is (`~` abbreviation is for this Mac's home). The agent's task takes its place
@@ -363,7 +375,10 @@ final class WorkspaceCellView: NSTableCellView {
 
     /// On an emphasized (accent) selection the state colours would vanish: use the label colour there.
     override var backgroundStyle: NSView.BackgroundStyle {
-        didSet { applyBadgeColor() }
+        didSet {
+            applyBadgeColor()
+            progressStrip.emphasized = backgroundStyle == .emphasized
+        }
     }
 
     private func applyBadgeColor() {
@@ -628,6 +643,16 @@ final class WorkspaceCellView: NSTableCellView {
                                                         .foregroundColor: NSColor.systemRed]))
         }
         return text
+    }
+
+    private static func progressToolTip(_ progress: TerminalProgress) -> String {
+        let percent = progress.percent.map { "\($0)%" } ?? ""
+        switch progress.state {
+        case .normal: return String(localized: "Progress: \(percent)", comment: "sidebar progress bar tooltip; argument like 42%")
+        case .error: return String(localized: "Failed", comment: "sidebar progress bar tooltip: the program reported an error")
+        case .indeterminate: return String(localized: "Working…", comment: "sidebar progress bar tooltip: progress unknown")
+        case .paused: return String(localized: "Paused at \(percent)", comment: "sidebar progress bar tooltip; argument like 42%")
+        }
     }
 
     private static func branchToolTip(_ workspace: Workspace) -> String? {

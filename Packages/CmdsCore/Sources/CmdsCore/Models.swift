@@ -48,11 +48,14 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     /// The login profile (`BrowserProfile`): a browser pane's, or the one pages opened from a terminal pane use; nil
     /// for the shared default data. Added later: older apps and clients lack it.
     public var profile: String?
+    /// Terminal panes: the running program's progress report (OSC 9;4); nil when there is none.
+    public var progress: TerminalProgress?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
                 workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
                 remote: RemoteInfo? = nil, file: String? = nil, account: String? = nil, openedBy: String? = nil,
-                tabs: [String]? = nil, background: Bool? = nil, suspended: Bool? = nil, profile: String? = nil) {
+                tabs: [String]? = nil, background: Bool? = nil, suspended: Bool? = nil, profile: String? = nil,
+                progress: TerminalProgress? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -69,6 +72,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.background = background
         self.suspended = suspended
         self.profile = profile
+        self.progress = progress
     }
 }
 

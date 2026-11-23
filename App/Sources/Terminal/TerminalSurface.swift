@@ -39,6 +39,8 @@ protocol TerminalSurfaceDelegate: AnyObject {
     /// libghostty's search counted its hits (`total`, nil while unknown) or selected one (`selected`: 0 is the first
     /// one selected, at the bottom; nil when none is).
     func terminalSurface(_ surface: TerminalSurface, searchDidUpdate total: Int?, selected: Int?)
+    /// The program reported its progress (OSC 9;4); nil: the report was removed.
+    func terminalSurface(_ surface: TerminalSurface, didReportProgress progress: TerminalProgress?)
 }
 
 extension TerminalSurfaceDelegate {
@@ -47,6 +49,7 @@ extension TerminalSurfaceDelegate {
     func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool { false }
     func terminalSurface(_ surface: TerminalSurface, didRequestSearch needle: String?) {}
     func terminalSurface(_ surface: TerminalSurface, searchDidUpdate total: Int?, selected: Int?) {}
+    func terminalSurface(_ surface: TerminalSurface, didReportProgress progress: TerminalProgress?) {}
 }
 
 @MainActor

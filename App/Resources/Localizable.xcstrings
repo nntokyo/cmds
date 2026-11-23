@@ -5333,6 +5333,7 @@
       }
     },
     "Failed": {
+      "comment": "sidebar progress bar tooltip: the program reported an error",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -9010,6 +9011,17 @@
         }
       }
     },
+    "Paused at %@": {
+      "comment": "sidebar progress bar tooltip; argument like 42%",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@で一時停止"
+          }
+        }
+      }
+    },
     "Paused while %@ uses the microphone": {
       "comment": "menu bar item: assistant, disabled",
       "localizations": {
@@ -9297,6 +9309,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "ターミナルで実行中のプログラムは終了します。"
+          }
+        }
+      }
+    },
+    "Progress: %@": {
+      "comment": "sidebar progress bar tooltip; argument like 42%",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "進捗：%@"
           }
         }
       }
@@ -14189,7 +14212,7 @@
       }
     },
     "Working…": {
-      "comment": "subagent without a current tool call",
+      "comment": "sidebar progress bar tooltip: progress unknown\nsubagent without a current tool call",
       "localizations": {
         "ja": {
           "stringUnit": {

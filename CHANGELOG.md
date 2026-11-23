@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Sidebar: a thin progress bar under a workspace while a program in it reports progress (OSC 9;4): the percent done,
+  red on failure, sliding while unknown; also `progress` in the API's pane info (#401).
+
 - Sidebar: after a local workspace's branch, `±3 ↑1 ↓2` shows uncommitted paths (orange) and commits ahead / behind
   the upstream, with a tooltip; also `gitSummary` in the API's workspace info (#397).
 - Sidebar: `⚠︎N` (red) when another worktree of the same repository changed some of the same files, with the other
