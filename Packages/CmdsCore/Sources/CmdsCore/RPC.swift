@@ -58,6 +58,12 @@ public enum CmdsEnv {
     public static let socketPath = "CMDS_SOCKET_PATH"
     public static let workspaceID = "CMDS_WORKSPACE_ID"
     public static let paneID = "CMDS_PANE_ID"
+    /// The bundled CLI of the app that opened the terminal. Another `cmds` found first on `PATH` (login shells put
+    /// `/usr/local/bin` ahead of the bundle) runs this one instead (`CLIHandoff`), so the CLI, hooks and `cmds mcp`
+    /// always match the app that opened the terminal.
+    public static let cliPath = "CMDS_CLI_PATH"
+    /// Set by `CLIHandoff` on the CLI it runs, so a handoff never repeats.
+    public static let cliHandoff = "CMDS_CLI_HANDOFF"
     /// Isolated (test) instance: replaces `~/Library/Application Support/cmds` (`cmds-dev` for Debug; session.json,
     /// sync-devices.json, cmds.sock). Terminals of such an instance inherit it, so their CLI follows.
     public static let supportDirectory = "CMDS_SUPPORT_DIR"

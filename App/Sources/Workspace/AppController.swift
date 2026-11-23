@@ -1226,6 +1226,8 @@ final class AppController {
     private func terminalEnvironment(paneID: String, workspaceID: String) -> [String: String] {
         var environment = [CmdsEnv.socketPath: socketPath, CmdsEnv.workspaceID: workspaceID, CmdsEnv.paneID: paneID]
         environment["PATH"] = BundledCLI.terminalPATH  // bundled `cmds` CLI first
+        // Login shells put /usr/local/bin first: a `cmds` found there hands off to this app's own (CLIHandoff).
+        environment[CmdsEnv.cliPath] = BundledCLI.executablePath
         // Isolated instance: hand terminals the resolved directory (a relative CMDS_SUPPORT_DIR would point
         // the CLI elsewhere after `cd`, and it takes precedence over CMDS_SOCKET_PATH).
         if let supportDirectory = CmdsEnv.supportDirectoryOverride() {
