@@ -8,6 +8,7 @@ struct WorkspaceMetadata: Sendable, Equatable {
     var gitBranch: String?
     var ports: [Int]
     var gitSummary: GitSummary? = nil
+    var gitOverlaps: [GitOverlap] = []
 }
 
 /// `git status` per working directory for the sidebar (#174 G16), on the metadata queue only. A folder is read at
@@ -20,20 +21,22 @@ final class GitSummaryCache: @unchecked Sendable {
 
     private struct Entry {
         var summary: GitSummary?
+        var paths: Set<String> = []
         var readAt: Date
         var slowUntil: Date?
     }
     private var entries: [String: Entry] = [:]
 
-    /// The summary of `directory` (a repository's folder: `branch` is not nil), read again when due.
-    func summary(of directory: String, branch: String?, now: Date = Date()) -> GitSummary? {
+    /// The summary of `directory` (a repository's folder: `branch` is not nil) and its changed paths, read again when
+    /// due.
+    func summary(of directory: String, branch: String?, now: Date = Date()) -> (summary: GitSummary, paths: Set<String>)? {
         guard branch != nil else {
             entries[directory] = nil
             return nil
         }
         if let entry = entries[directory] {
-            if let slow = entry.slowUntil, now < slow { return entry.summary }
-            if now.timeIntervalSince(entry.readAt) < Self.interval { return entry.summary }
+            let due = !(entry.slowUntil.map { now < $0 } ?? false) && now.timeIntervalSince(entry.readAt) >= Self.interval
+            if !due { return entry.summary.map { ($0, entry.paths) } }
         }
         guard let git = Git.executable else { return nil }
         var environment = ProcessInfo.processInfo.environment
@@ -41,11 +44,14 @@ final class GitSummaryCache: @unchecked Sendable {
         environment["GIT_TERMINAL_PROMPT"] = "0"
         let output = CommandOutput.run(git, ["-C", directory] + GitSummary.statusArguments, environment: environment,
                                        timeout: Self.timeout)
-        let summary = output.flatMap(GitSummary.parse)
+        let parsed = output.flatMap(GitSummary.parseWithPaths)
         let slow = output == nil ? now.addingTimeInterval(Self.backoff) : nil
-        entries[directory] = Entry(summary: summary ?? (slow != nil ? entries[directory]?.summary : nil), readAt: now,
-                                   slowUntil: slow)
-        return entries[directory]?.summary
+        let previous = entries[directory]
+        let entry = Entry(summary: parsed?.summary ?? (slow != nil ? previous?.summary : nil),
+                          paths: parsed.map { Set($0.paths) } ?? (slow != nil ? previous?.paths ?? [] : []),
+                          readAt: now, slowUntil: slow)
+        entries[directory] = entry
+        return entry.summary.map { ($0, entry.paths) }
     }
 
     /// Forgets folders no workspace shows any more.
@@ -126,13 +132,21 @@ final class MetadataMonitor {
             let system = systemSampler.sample()
             let scanned = DispatchTime.now().uptimeNanoseconds
             var result: [String: WorkspaceMetadata] = [:]
+            var checkouts: [GitOverlap.Checkout] = []
             for (id, cwd) in directories {
                 let branch = cwd.flatMap(GitInfo.branch(at:))
                 // Only while the sidebar shows the branch line: nothing else reads it.
-                let summary = showsBranch ? cwd.flatMap { gitSummaries.summary(of: $0, branch: branch) } : nil
+                let read = showsBranch ? cwd.flatMap { gitSummaries.summary(of: $0, branch: branch) } : nil
                 result[id] = WorkspaceMetadata(workingDirectory: cwd, gitBranch: branch, ports: scan.ports[id] ?? [],
-                                               gitSummary: summary)
+                                               gitSummary: read?.summary)
+                if let cwd, let read, !read.paths.isEmpty, let project = GitInfo.projectRoot(at: cwd),
+                   let worktree = GitInfo.worktreeRoot(at: cwd) {
+                    // Real paths: a cwd under /tmp and git's /private/tmp in a worktree's `.git` file are one folder.
+                    checkouts.append(.init(workspace: id, project: CLIHandoff.resolvedPath(project),
+                                           worktree: CLIHandoff.resolvedPath(worktree), paths: read.paths))
+                }
             }
+            for (id, overlaps) in GitOverlap.find(checkouts) { result[id]?.gitOverlaps = overlaps }
             gitSummaries.keep(only: Set(directories.values.compactMap { $0 }))
             let finished = DispatchTime.now().uptimeNanoseconds
             metadataLog.debug("""

@@ -121,12 +121,15 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
     /// Uncommitted changes and commits ahead / behind the upstream of the local working directory (#174 G16); nil
     /// outside a repository, for remote directories, or until read.
     public var gitSummary: GitSummary?
+    /// Other workspaces of the same repository, in another worktree, that changed some of the same files (#174 G18);
+    /// nil when there are none.
+    public var gitOverlaps: [GitOverlap]?
 
     public init(id: String, title: String, selected: Bool, gitBranch: String? = nil, workingDirectory: String? = nil,
                 ports: [Int] = [], notificationText: String? = nil, attention: Bool = false,
                 panes: [PaneInfo] = [], layout: LayoutNode? = nil,
                 cpuPercent: Double? = nil, memoryBytes: UInt64? = nil, remoteHost: String? = nil,
-                worktree: WorktreeInfo? = nil, gitSummary: GitSummary? = nil) {
+                worktree: WorktreeInfo? = nil, gitSummary: GitSummary? = nil, gitOverlaps: [GitOverlap]? = nil) {
         self.id = id
         self.title = title
         self.selected = selected
@@ -142,6 +145,7 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.remoteHost = remoteHost
         self.worktree = worktree
         self.gitSummary = gitSummary
+        self.gitOverlaps = gitOverlaps
     }
 }
 

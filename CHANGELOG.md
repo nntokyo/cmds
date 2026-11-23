@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Sidebar: after a local workspace's branch, `±3 ↑1 ↓2` shows uncommitted paths (orange) and commits ahead / behind
   the upstream, with a tooltip; also `gitSummary` in the API's workspace info (#397).
+- Sidebar: `⚠︎N` (red) when another worktree of the same repository changed some of the same files, with the other
+  workspaces and the files in the tooltip, so agents in separate worktrees can be stopped before their branches
+  conflict; also `gitOverlaps` in the API's workspace info (#399).
 
 - Network requests of browser panes: `cmds browser network` and MCP `browser_network` list the page's fetch and XHR
   calls with method, status, duration, size and failure (`--failed` for failing API calls; `--resources` adds

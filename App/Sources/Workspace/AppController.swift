@@ -939,10 +939,21 @@ final class AppController {
             }
             if update.workingDirectory != workspace.workingDirectory { continue } // cwd moved meanwhile
             if update.gitBranch != workspace.gitBranch || update.ports != workspace.ports
-                || update.gitSummary != workspace.gitSummary {
+                || update.gitSummary != workspace.gitSummary || update.gitOverlaps != workspace.gitOverlaps {
                 workspace.gitBranch = update.gitBranch
                 workspace.ports = update.ports
                 workspace.gitSummary = update.gitSummary
+                workspace.gitOverlaps = update.gitOverlaps
+                emit(.workspace(id: workspace.id))
+            }
+        }
+        // The other workspaces' titles for the overlap tooltips (titles change without a scan).
+        for workspace in workspaces where !workspace.gitOverlaps.isEmpty || !workspace.gitOverlapTitles.isEmpty {
+            let titles = Dictionary(workspace.gitOverlaps.flatMap(\.workspaces).compactMap { id in
+                self.workspace(id: id).map { (id, DefaultTitle.localized($0.title)) }
+            }, uniquingKeysWith: { first, _ in first })
+            if titles != workspace.gitOverlapTitles {
+                workspace.gitOverlapTitles = titles
                 emit(.workspace(id: workspace.id))
             }
         }

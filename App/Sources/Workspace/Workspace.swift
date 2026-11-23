@@ -20,6 +20,10 @@ final class Workspace {
     var gitBranch: String?
     /// Changes and ahead / behind of a local repository (MetadataMonitor, the sidebar's branch line).
     var gitSummary: GitSummary?
+    /// Files this workspace's worktree changed that another worktree of the same repository changed too (#174 G18).
+    var gitOverlaps: [GitOverlap] = []
+    /// The other workspaces' titles for `gitOverlaps` (the sidebar's tooltip), by id.
+    var gitOverlapTitles: [String: String] = [:]
     var ports: [Int] = []
     var notificationText: String?
     /// The pane whose notification `notificationText` is (nil for `sidebar.set_status` text) and when it came: typing
@@ -124,7 +128,8 @@ final class Workspace {
                       workingDirectory: workingDirectory, ports: ports, notificationText: notificationText,
                       attention: attention, panes: paneInfos(), layout: root?.layoutNode,
                       cpuPercent: cpuPercent, memoryBytes: memoryBytes, remoteHost: remoteHost,
-                      worktree: createdWorktree?.info, gitSummary: isRemote ? nil : gitSummary)
+                      worktree: createdWorktree?.info, gitSummary: isRemote ? nil : gitSummary,
+                      gitOverlaps: isRemote || gitOverlaps.isEmpty ? nil : gitOverlaps)
     }
 
     /// The worktree cmds created that this workspace is in: the one it was created in, else the one its local

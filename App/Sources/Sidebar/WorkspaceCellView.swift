@@ -611,19 +611,36 @@ final class WorkspaceCellView: NSTableCellView {
     /// `⑂ main  ±3 ↑1 ↓2`: the branch, then uncommitted changes and commits ahead / behind (orange: changes).
     private static func branchText(_ workspace: Workspace) -> NSAttributedString {
         let text = NSMutableAttributedString(attributedString: symbolText("arrow.triangle.branch", workspace.gitBranch ?? ""))
-        guard !workspace.isRemote, let summary = workspace.gitSummary, !summary.badge.isEmpty else { return text }
+        guard !workspace.isRemote else { return text }
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineBreakMode = .byTruncatingTail
-        text.append(NSAttributedString(string: "  " + summary.badge, attributes: [
-            .font: monoFont, .paragraphStyle: paragraph,
-            .foregroundColor: summary.changes > 0 ? NSColor.systemOrange : NSColor.secondaryLabelColor,
-        ]))
+        if let summary = workspace.gitSummary, !summary.badge.isEmpty {
+            text.append(NSAttributedString(string: "  " + summary.badge, attributes: [
+                .font: monoFont, .paragraphStyle: paragraph,
+                .foregroundColor: summary.changes > 0 ? NSColor.systemOrange : NSColor.secondaryLabelColor,
+            ]))
+        }
+        // Files another worktree of the repository changed too: they will conflict when the branches meet.
+        let shared = Set(workspace.gitOverlaps.flatMap(\.files)).count
+        if shared > 0 {
+            text.append(NSAttributedString(string: "  ⚠︎\(max(shared, workspace.gitOverlaps.map(\.count).max() ?? 0))",
+                                           attributes: [.font: monoFont, .paragraphStyle: paragraph,
+                                                        .foregroundColor: NSColor.systemRed]))
+        }
         return text
     }
 
     private static func branchToolTip(_ workspace: Workspace) -> String? {
         guard !workspace.isRemote, let summary = workspace.gitSummary else { return nil }
-        var lines = [String(localized: "Uncommitted changes: \(summary.changes)",
+        var lines: [String] = []
+        for overlap in workspace.gitOverlaps {
+            let title = overlap.workspaces.map { "“\(workspace.gitOverlapTitles[$0] ?? $0)”" }.joined(separator: ", ")
+            var files = overlap.files.joined(separator: ", ")
+            if overlap.count > overlap.files.count { files += " (+\(overlap.count - overlap.files.count))" }
+            lines.append(String(localized: "Also changed in \(title): \(files)",
+                                comment: "sidebar branch tooltip: files another worktree of the same repository changed too; arguments: quoted workspace titles, file list"))
+        }
+        lines += [String(localized: "Uncommitted changes: \(summary.changes)",
                             comment: "sidebar branch tooltip; files changed, staged or untracked")]
         if let upstream = summary.upstream {
             lines.append(String(localized: "Compared with \(upstream): \(summary.ahead ?? 0) ahead, \(summary.behind ?? 0) behind",
