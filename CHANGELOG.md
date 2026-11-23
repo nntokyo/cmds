@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   report goes to the clipboard. The pane's notice then follows the report: working, asking, finished (with the first
   line of the reply), with Show Terminal. Idea from FixKit (github.com/ostiums/fixkit).
 
+### Fixed
+
+- `cmds-remote.sh` (version 2) on macOS servers: a hook, notification or command could fail with "app not reachable"
+  when the app answered and closed the connection before the script finished sending (python3 transport, ENOTCONN).
+
 ## [0.32.0] - 2026-11-22
 
 ### Added

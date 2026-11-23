@@ -33,7 +33,7 @@ public enum RemoteHelperScript {
 # Exit codes: 0 ok, 1 request failed, 2 usage, 3 app not reachable.
 # Part of cmds (GPL-3.0). Safe to delete; nothing else is installed.
 
-CMDS_REMOTE_VERSION=1
+CMDS_REMOTE_VERSION=2
 timeout=5
 
 usage() {
@@ -85,10 +85,17 @@ s = socket.socket(socket.AF_UNIX)
 s.settimeout(float(sys.argv[2]))
 s.connect(sys.argv[1])
 s.sendall(sys.stdin.buffer.read())
-s.shutdown(socket.SHUT_WR)
+# The app can answer and close before this side shuts down; macOS then raises ENOTCONN here (and may on recv).
+try:
+    s.shutdown(socket.SHUT_WR)
+except OSError:
+    pass
 b = b""
 while not b.endswith(b"\n"):
-    d = s.recv(65536)
+    try:
+        d = s.recv(65536)
+    except OSError:
+        break
     if not d:
         break
     b += d
