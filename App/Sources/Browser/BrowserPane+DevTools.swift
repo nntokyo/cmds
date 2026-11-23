@@ -15,6 +15,11 @@ extension BrowserPane {
                                               injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .defaultClient))
         controller.addUserScript(WKUserScript(source: ConsoleCapture.hook(eventName: consoleEventName),
                                               injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
+        controller.add(NetworkMessageHandler(self), contentWorld: .defaultClient, name: NetworkCapture.handlerName)
+        controller.addUserScript(WKUserScript(source: NetworkCapture.listener(eventName: networkEventName),
+                                              injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .defaultClient))
+        controller.addUserScript(WKUserScript(source: NetworkCapture.hook(eventName: networkEventName),
+                                              injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         controller.add(PasskeyMessageHandler(self), contentWorld: .defaultClient, name: PasskeyRequestCapture.handlerName)
         controller.addUserScript(WKUserScript(source: PasskeyRequestCapture.listener(eventName: passkeyEventName),
                                               injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .defaultClient))
@@ -44,6 +49,19 @@ extension BrowserPane {
             if let entry = ConsoleEntry(message: message) { consoleBuffer.append(entry) }
         }
         consoleDrawer?.setNeedsRefresh()
+    }
+
+    func receiveNetwork(_ records: [[String: Any]]) {
+        for record in records {
+            if let entry = NetworkEntry(message: record) { networkBuffer.append(entry) }
+        }
+    }
+
+    /// `browser.network`.
+    func network(_ request: BrowserNetworkRequest) -> JSONValue {
+        let result = networkBuffer.json(request)
+        if request.clear { networkBuffer.clear() }
+        return result
     }
 
     /// `browser.console`.
@@ -157,6 +175,18 @@ private final class ConsoleMessageHandler: NSObject, WKScriptMessageHandler {
     func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let batch = message.body as? [[String: Any]] else { return }
         MainActor.assumeIsolated { pane?.receiveConsole(batch) }
+    }
+}
+
+/// Receives the network listener's batches without the content controller keeping the pane alive.
+private final class NetworkMessageHandler: NSObject, WKScriptMessageHandler {
+    weak var pane: BrowserPane?
+
+    init(_ pane: BrowserPane) { self.pane = pane }
+
+    func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.frameInfo.isMainFrame, let batch = message.body as? [[String: Any]] else { return }
+        MainActor.assumeIsolated { pane?.receiveNetwork(batch) }
     }
 }
 

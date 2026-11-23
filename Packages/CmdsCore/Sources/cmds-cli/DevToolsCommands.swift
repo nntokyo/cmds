@@ -166,4 +166,33 @@ extension CLI {
         if ctx.json { return ctx.printJSON(result) }
         print(result["text"]?.stringValue ?? "")
     }
+
+    static let networkCommand = Command(
+        name: "browser network",
+        usage: "browser network [--pane P] [--failed] [--resources] [--since N] [--limit N] [--clear]",
+        summary: "Print a browser pane's fetch and XHR requests (method, status, time, size, failure).",
+        details: """
+            cmds records them from the start of every page (the last \(NetworkBuffer.defaultCapacity)), as the page sees
+            them: fetch and XMLHttpRequest with their status; --resources adds scripts, styles, images and the document
+            from Resource Timing (no status). --failed keeps requests without an answer and 4xx/5xx ones; --since N those
+            after seq N (--json gives `last`); --limit the newest N; --clear empties the record after printing. Main
+            frame only. WebKit gives no network API: requests the page does not make itself (service workers, preloads
+            a page script never reads) may be missing.
+            \(browserPaneNote)
+            """,
+        options: ["pane", "since", "limit"], flags: ["failed", "resources", "clear"]
+    ) { ctx in
+        try ctx.args.expectPositionals(0...0, usage: "cmds browser network [--pane P] [--failed] [--resources] [--since N] [--limit N] [--clear]")
+        var params: [String: JSONValue] = [:]
+        if ctx.args.has("failed") { params["failed"] = .bool(true) }
+        if ctx.args.has("resources") { params["resources"] = .bool(true) }
+        if ctx.args.has("clear") { params["clear"] = .bool(true) }
+        if let since = try ctx.args.int("since") { params["since"] = .number(Double(since)) }
+        if let limit = try ctx.args.int("limit") { params["limit"] = .number(Double(limit)) }
+        let request = try usageError { try BrowserNetworkRequest(params: .object(params)) }
+        let result = try devToolsCall(ctx, "browser.network", request.params)
+        if ctx.json { return ctx.printJSON(result) }
+        let entries = (try? result["entries"]?.decode([NetworkEntry].self)) ?? []
+        for entry in entries { print(entry.line()) }
+    }
 }

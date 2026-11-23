@@ -43,8 +43,8 @@ final class MCPServer {
         page beside the terminal. Use Chrome only when the user asks for it, when the page needs the user's Chrome \
         sign-ins or saved passwords (cmds browser panes do not share them), or for what browser_eval cannot do (file \
         uploads, native dialogs). To keep this session's sign-ins apart from other sessions' (or share them), set a \
-        login profile with browser_profile. For front-end work, browser_console, browser_source and browser_seo give the page's \
-        console and errors, its HTML and an SEO check. When it is unclear which element of a page the user means, ask them \
+        login profile with browser_profile. For front-end work, browser_console, browser_network, browser_source and browser_seo give the \
+        page's console and errors, its fetch/XHR requests (failing API calls), its HTML and an SEO check. When it is unclear which element of a page the user means, ask them \
         to click it with browser_point (you get its selector and source line). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
         server or another long-running command in a terminal pane beside yours with terminal_split, read its output \
         with terminal_read and type into it with terminal_send (only panes opened from your terminal); list_ports shows \
@@ -251,6 +251,13 @@ final class MCPServer {
              description: "Wait until an element matching a CSS selector, or some text, is visible in a cmds browser pane's page. Errors after timeout seconds.",
              properties: ["pane": browserPane, "selector": string("CSS selector."), "text": string("Visible text, instead of selector."),
                           "timeout": .object(["type": "number", "description": .string("Seconds (default \(Int(PageScripts.defaultWaitTimeout)), at most \(Int(PageScripts.maxWaitTimeout))).")])]),
+        Tool(name: "browser_network",
+             description: "List a cmds browser pane's network requests as the page made them: fetch and XHR with method, status, duration, size and failure (recorded from the start of each page, the last \(NetworkBuffer.defaultCapacity)). Use it to see failing API calls (failed: true) or what a page loaded (resources: true adds scripts, styles, images and the document, without status).",
+             properties: ["pane": browserPane,
+                          "failed": .object(["type": "boolean", "description": "Only requests without an answer or with a 4xx/5xx status."]),
+                          "resources": .object(["type": "boolean", "description": "Also scripts, styles, images and the document (Resource Timing, no status)."]),
+                          "limit": .object(["type": "number", "description": "The newest that many."]),
+                          "clear": .object(["type": "boolean", "description": "Empty the record after reading it."])]),
         Tool(name: "browser_point",
              description: "Ask the user to click an element of a cmds browser pane's page, when you need to know which one they mean (\"this button\", \"that gap\"). The pane is shown with your prompt above the page; the element under the pointer is outlined and the click does not reach the page. Returns the element: CSS selector, text, box, styles, opening tag, the components around it and its source file and line when the dev build tells (React, Vue, Svelte, Angular, Astro). Errors when the user cancels or after timeout seconds.",
              properties: ["pane": browserPane,
@@ -516,6 +523,14 @@ final class MCPServer {
             case .waitFor:
                 return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
             }
+        case "browser_network":
+            let request = try toolArguments { try BrowserNetworkRequest(params: arguments) }
+            let result = try devToolsCall("browser.network", arguments, request.params)
+            let entries = (try? result["entries"]?.decode([NetworkEntry].self)) ?? []
+            if entries.isEmpty { return [Self.text(request.failed ? "No failed requests." : "No requests recorded.")] }
+            var text = entries.map { $0.line() }.joined(separator: "\n")
+            if let dropped = result["dropped"]?.intValue, dropped > 0 { text += "\n(\(dropped) older requests dropped)" }
+            return [Self.text(text)]
         case "browser_point":
             let request = try toolArguments { try ElementPoint.AgentRequest(params: arguments) }
             let result = try newMethod("browser.point") {

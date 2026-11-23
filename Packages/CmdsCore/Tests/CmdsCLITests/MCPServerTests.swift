@@ -95,7 +95,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_profile", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
                         "browser_console", "browser_source", "browser_seo", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
-                        "browser_point", "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
+                        "browser_network", "browser_point", "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
                         "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
@@ -310,6 +310,22 @@ final class MCPServerTests: XCTestCase {
         failure = CLIError.failure("method not found: browser.console")
         XCTAssertEqual(text(callTool(server, "browser_console", #"{"pane":"p4"}"#)), "this cmds app has no browser.console; update cmds")
         failure = nil
+    }
+
+    /// browser_network: the filters reach the app; the entries come back as lines; nothing recorded says so.
+    func testBrowserNetwork() {
+        let server = server()
+        replies["browser.network"] = .object(["entries": .array([.object([
+            "seq": 3, "kind": "fetch", "method": "GET", "url": "http://x.test/api", "status": 404, "duration": 12, "time": 0,
+        ])]), "dropped": 0, "last": 3])
+        let text = self.text(callTool(server, "browser_network", #"{"pane":"p4","failed":true,"limit":5}"#)) ?? ""
+        XCTAssertTrue(text.contains("GET   404    12 ms  fetch    http://x.test/api"), text)
+        XCTAssertEqual(requests.last?.method, "browser.network")
+        XCTAssertEqual(requests.last?.params["failed"] ?? nil, .bool(true))
+        XCTAssertEqual(requests.last?.params["limit"] ?? nil, .number(5))
+        replies["browser.network"] = .object(["entries": .array([]), "dropped": 0, "last": 0])
+        XCTAssertEqual(self.text(callTool(server, "browser_network", #"{"pane":"p4","failed":true}"#)), "No failed requests.")
+        XCTAssertEqual(callTool(server, "browser_network", #"{"pane":"p4","limit":-2}"#)?["isError"], .bool(true))
     }
 
     /// browser_point: the prompt and timeout reach the app; its facts are the answer; a cancel is a tool error.
