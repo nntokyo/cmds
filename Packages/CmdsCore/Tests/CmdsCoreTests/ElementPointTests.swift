@@ -143,4 +143,12 @@ final class ElementPointTests: XCTestCase {
         ])
         XCTAssertFalse(ElementPoint.facts(element: element(), url: nil, title: nil, screenshot: nil).contains { $0.hasPrefix("Frame:") })
     }
+
+    func testDeviceLineInTheResponsiveView() {
+        var onPhone = element()
+        onPhone.device = "iPhone 16 393×852"
+        let lines = ElementPoint.facts(element: onPhone, url: "http://x.test/", title: nil, screenshot: nil)
+        XCTAssertEqual(lines[1], "Device: iPhone 16 393×852 (responsive view)")
+        XCTAssertTrue(lines[2].hasPrefix("Element: "))
+    }
 }

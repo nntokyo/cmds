@@ -70,6 +70,8 @@ public struct PointedElement: Codable, Equatable, Sendable {
     public var source: Source?
     /// The same-origin frames the element is in, outermost first (`iframe#preview (http://…)`); nil in the page itself.
     public var frame: String?
+    /// The responsive view's device the element was picked in (`iPhone 390×844`); nil outside the responsive view.
+    public var device: String?
 
     public init(tag: String, selector: String, html: String, text: String? = nil, label: String? = nil, rect: Rect,
                 viewportWidth: Double, viewportHeight: Double, scrollX: Double? = nil, scrollY: Double? = nil,
@@ -134,6 +136,7 @@ public enum ElementPoint {
             let named = title.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
             lines.append("Page: \(url)" + (named.map { " (\"\(capped($0, 80))\")" } ?? ""))
         }
+        if let device = element.device, !device.isEmpty { lines.append("Device: \(device) (responsive view)") }
         if let frame = element.frame, !frame.isEmpty { lines.append("Frame: \(frame)") }
         lines.append("Element: \(element.summary)")
         lines.append("Selector: \(element.selector)")

@@ -55,6 +55,11 @@ final class ResponsiveView: NSView {
     private lazy var scrollHandler = WeakScriptHandler(self)
 
     var webViews: [WKWebView] { frames.map(\.webView) }
+
+    /// The device of the frame showing `webView` (Point at Element).
+    func target(of webView: WKWebView) -> BrowserSnapshotRequest.Target? {
+        frames.first { $0.webView === webView }?.target
+    }
     var targets: [BrowserSnapshotRequest.Target] { frames.map(\.target) }
 
     /// `pageDelegate`: the pane's (pop-ups, dialogs, uploads and downloads also from the other frames, #235).

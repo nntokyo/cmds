@@ -16,6 +16,7 @@ extension BrowserPane {
 
     /// Shows the page in the frames of `settings` (validated), or once again for nil.
     func setResponsive(_ settings: BrowserResponsive?) {
+        endPointing()  // the frames the pick runs in change
         if let view = responsiveView, let settings, view.settings.devices == settings.devices {
             guard view.settings != settings else { return }
             view.setSyncScroll(settings.scrollSynced)

@@ -487,7 +487,8 @@ text and screenshot still find the element.
 - **Frames**: inside same-origin iframes (Storybook's preview, an embedded app, nested ones too) the element itself is
   picked; the report adds a `Frame:` line with the iframe's selector and address, and its box is in the page's
   viewport (where the screenshot outlines it). An iframe from another origin is reported as itself.
-- Not in the responsive view.
+- **Responsive view**: the pick runs in every frame, and the frame you click in is the one reported. A `Device:` line
+  names it (`iPhone 16 393×852`), and its screenshot is taken at that device's size. Esc in any frame gives up.
 
 ### Screenshots
 

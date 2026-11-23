@@ -123,15 +123,17 @@ extension BrowserPane {
     /// (`scriptTimedOut`); with one, `PageScriptTimeout` is thrown.
     /// `world`: cmds' own (default; the page cannot see or change its scripts) or `.page` (to read what the page's
     /// own scripts keep on its elements, `ElementPoint.sourceScript`).
+    /// `frame`: another web view of the pane (a responsive view's frame) instead of `webView`.
     func runPageScript(_ body: String, _ arguments: [String: Any],
-                       until deadline: Date? = nil, in world: WKContentWorld = .defaultClient) async throws -> JSONValue {
+                       until deadline: Date? = nil, in world: WKContentWorld = .defaultClient,
+                       on frame: WKWebView? = nil) async throws -> JSONValue {
         // `value` is an argument of fill, so the result has another name.
         let wrapped = "const __cmdsResult = await (async () => {\n\(body)\n})();\n"
             + "return __cmdsResult === undefined ? null : JSON.stringify(__cmdsResult);"
         let raw: Any?
         do {
             let until = deadline ?? Date(timeIntervalSinceNow: BrowserEval.defaultTimeout)
-            raw = try await webView.callScript(wrapped, arguments: arguments, in: world, until: until)
+            raw = try await (frame ?? webView).callScript(wrapped, arguments: arguments, in: world, until: until)
         } catch is PageScriptTimeout {
             if deadline != nil { throw PageScriptTimeout() }
             throw await scriptTimedOut(after: BrowserEval.defaultTimeout)

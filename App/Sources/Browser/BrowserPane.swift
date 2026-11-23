@@ -157,6 +157,8 @@ final class BrowserPane: NSView {
     var pointURL: URL?
     /// The picked element while the composer is open.
     var pointedElement: PointedElement?
+    /// The web view the element was picked in: `webView`, or a frame of the responsive view.
+    var pointedFrame: WKWebView?
     var pointComposer: ElementComposerBar?
     /// Sends a report to the agent in the terminal (the owner finds it); answers where it went.
     var onPointAtElement: ((ElementPointReport) -> ElementPointDelivery)?
