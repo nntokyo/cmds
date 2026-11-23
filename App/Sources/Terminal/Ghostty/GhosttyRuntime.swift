@@ -287,6 +287,13 @@ final class GhosttyRuntime {
             view.owner?.handleChildExited()
             return true
 
+        case GHOSTTY_ACTION_COMMAND_FINISHED:
+            // The shell integration's end of a command: a long one in a pane you do not look at notifies.
+            let finished = action.action.command_finished
+            let result = LongCommand.finish(exitCode: Int(finished.exit_code), nanoseconds: finished.duration)
+            view.owner?.handleCommandFinished(exitCode: result.exitCode, duration: result.duration)
+            return true
+
         case GHOSTTY_ACTION_PROGRESS_REPORT:
             // OSC 9;4 from the program (#174 G21): the sidebar shows it.
             let report = action.action.progress_report
@@ -316,7 +323,7 @@ final class GhosttyRuntime {
         case GHOSTTY_ACTION_COLOR_CHANGE, GHOSTTY_ACTION_RENDERER_HEALTH, GHOSTTY_ACTION_SCROLLBAR,
              GHOSTTY_ACTION_MOUSE_OVER_LINK, GHOSTTY_ACTION_SELECTION_CHANGED, GHOSTTY_ACTION_CONFIG_CHANGE,
              GHOSTTY_ACTION_SIZE_LIMIT, GHOSTTY_ACTION_INITIAL_SIZE, GHOSTTY_ACTION_KEY_SEQUENCE,
-             GHOSTTY_ACTION_KEY_TABLE, GHOSTTY_ACTION_COMMAND_FINISHED:
+             GHOSTTY_ACTION_KEY_TABLE:
             // Informational; nothing for the shell to do yet.
             return true
 

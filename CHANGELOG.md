@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A command that ran 30 s or more (Settings › General › Notify when a command finishes: 10 s to 5 minutes, or never)
+  and ends in a pane you are not looking at lights the pane and notifies, saying when it failed (shell integration).
+
 - Sidebar: a thin progress bar under a workspace while a program in it reports progress (OSC 9;4): the percent done,
   red on failure, sliding while unknown; also `progress` in the API's pane info (#401).
 
@@ -36,6 +39,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Japanese: "Never" in Settings › General › Suspend background tabs and in a schedule's notifications read "再開しない"
+  (do not resume); it is "しない".
 - `cmds-remote.sh` (version 2) on macOS servers: a hook, notification or command could fail with "app not reachable"
   when the app answered and closed the connection before the script finished sending (python3 transport, ENOTCONN).
 - In terminals of a second copy of cmds (a newer download, a Debug build), `cmds`, its hooks and `cmds mcp` ran the

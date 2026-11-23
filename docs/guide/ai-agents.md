@@ -14,6 +14,9 @@ Any of these lights the pane's ring (unless it is the pane you are looking at), 
 iOS companion connected, notifies the phone (unless that pane is open on the phone):
 
 - an OSC 9 / OSC 777 desktop notification from the program,
+- a command that ran 30 s or more ending while you are not looking at the pane (Settings › General › Notify when a
+  command finishes; the shell integration's command marks; "Command failed (exit 1)" when it did; not in panes where an
+  agent runs),
 - the terminal bell (sidebar text "Bell"),
 - `cmds notify [--title T] <text>` (e.g. from an agent's hook).
 

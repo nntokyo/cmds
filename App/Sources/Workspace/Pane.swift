@@ -441,6 +441,11 @@ extension Pane: TerminalSurfaceDelegate {
         if changed { controller?.paneDidChange(self) }
     }
 
+    func terminalSurface(_ surface: TerminalSurface, commandFinishedWithExitCode exitCode: Int?, duration: TimeInterval) {
+        guard surface === terminal else { return }
+        controller?.paneCommandFinished(self, exitCode: exitCode, duration: duration)
+    }
+
     func terminalSurfaceDidRingBell(_ surface: TerminalSurface) {
         controller?.raiseAttention(pane: self, title: nil, body: String(localized: "Bell"))
     }

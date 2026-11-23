@@ -39,6 +39,9 @@ protocol TerminalSurfaceDelegate: AnyObject {
     /// libghostty's search counted its hits (`total`, nil while unknown) or selected one (`selected`: 0 is the first
     /// one selected, at the bottom; nil when none is).
     func terminalSurface(_ surface: TerminalSurface, searchDidUpdate total: Int?, selected: Int?)
+    /// The shell integration reported the end of a command (OSC 133;D): its exit code (nil: none given) and how long
+    /// it ran.
+    func terminalSurface(_ surface: TerminalSurface, commandFinishedWithExitCode exitCode: Int?, duration: TimeInterval)
     /// The program reported its progress (OSC 9;4); nil: the report was removed.
     func terminalSurface(_ surface: TerminalSurface, didReportProgress progress: TerminalProgress?)
 }
@@ -50,6 +53,7 @@ extension TerminalSurfaceDelegate {
     func terminalSurface(_ surface: TerminalSurface, didRequestSearch needle: String?) {}
     func terminalSurface(_ surface: TerminalSurface, searchDidUpdate total: Int?, selected: Int?) {}
     func terminalSurface(_ surface: TerminalSurface, didReportProgress progress: TerminalProgress?) {}
+    func terminalSurface(_ surface: TerminalSurface, commandFinishedWithExitCode exitCode: Int?, duration: TimeInterval) {}
 }
 
 @MainActor
