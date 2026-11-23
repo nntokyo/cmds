@@ -21,7 +21,10 @@ Each row shows:
 - the [agent state](#agent-state) and the agent's task — Claude Code's terminal title without its spinner glyph, e.g.
   `Working  自走型売上基盤の対応` — or else the working directory. Long paths keep their last components
   (`…/projects/my-app`); the full directory is in the tooltip;
-- the git branch and listening ports of the workspace's processes;
+- the git branch and listening ports of the workspace's processes; after a local branch, `±3 ↑1 ↓2`: uncommitted
+  paths (changed, staged, untracked; orange) and commits ahead / behind the upstream, from `git status` read at most
+  every 15 s per folder in the background (without git's optional locks, so it never holds the index lock against
+  your own git commands; a repository that takes over 2 s is left alone for 5 minutes);
 - the coding agent of its focused pane: model, context and cost of that session
   ([ai-agents.md](ai-agents.md#usage-and-limits)); the account limits are the same for every row and live in the footer;
 - optionally (View › Show CPU and Memory per Workspace, off by default) CPU and memory of its processes (100 % CPU =

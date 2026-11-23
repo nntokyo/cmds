@@ -636,6 +636,13 @@ final class SidebarViewController: NSViewController {
     /// The row's × and the context menu: asks first while an agent is still around in the workspace, and offers to
     /// remove a worktree cmds created for it (WorktreeCloseAlert).
     #if DEBUG
+    /// For `debug.sidebar_row`: the workspace row's branch line, tooltip and picture.
+    func debugRow(workspaceID: String) -> (branch: String?, branchToolTip: String?, png: Data?)? {
+        guard let row = rows.firstIndex(where: { $0.workspaceID == workspaceID }),
+              let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: true) as? WorkspaceCellView else { return nil }
+        return cell.debugRow()
+    }
+
     /// For `debug.sidebar_port`: clicks port `index` in the workspace's row (expanded sidebar). Returns the port opened.
     func debugClickPort(workspaceID: String, index: Int) -> Int? {
         guard let row = rows.firstIndex(where: { $0.workspaceID == workspaceID }),

@@ -306,6 +306,18 @@ final class APIServer {
                     throw RPCError.notFound("no such port shown in the sidebar row of \(workspace.id)")
                 }
                 connection.reply(id: id, result: ["port": .number(Double(port))])
+            case "debug.sidebar_row":
+                // Tests only: a workspace's sidebar row (expanded sidebar): its branch line, tooltip and picture.
+                let workspace = try controller.resolveWorkspace(try params.string("workspace"))
+                let sidebar = (controller.window?.windowController as? MainWindowController)?.sidebar
+                guard let shown = sidebar?.debugRow(workspaceID: workspace.id) else {
+                    throw RPCError.notFound("no sidebar row for \(workspace.id)")
+                }
+                connection.reply(id: id, result: .object([
+                    "branch": shown.branch.map(JSONValue.string) ?? .null,
+                    "branchToolTip": shown.branchToolTip.map(JSONValue.string) ?? .null,
+                    "png_base64": shown.png.map { .string($0.base64EncodedString()) } ?? .null,
+                ]))
             case "debug.sidebar_account":
                 // Tests only (#284): the sidebar row's Claude account button and menu; `choose` picks an account,
                 // `cancel` cancels a switch that waits, for `pane` (default: the row's; #296).

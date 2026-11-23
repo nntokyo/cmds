@@ -7,6 +7,51 @@ struct WorkspaceMetadata: Sendable, Equatable {
     var workingDirectory: String?
     var gitBranch: String?
     var ports: [Int]
+    var gitSummary: GitSummary? = nil
+}
+
+/// `git status` per working directory for the sidebar (#174 G16), on the metadata queue only. A folder is read at
+/// most every `interval`; a repository whose status does not answer within `timeout` is left alone for `backoff`.
+/// git runs without optional locks, so it never holds the index lock against the user's own git commands.
+final class GitSummaryCache: @unchecked Sendable {
+    static let interval: TimeInterval = 15
+    static let timeout: TimeInterval = 2
+    static let backoff: TimeInterval = 300
+
+    private struct Entry {
+        var summary: GitSummary?
+        var readAt: Date
+        var slowUntil: Date?
+    }
+    private var entries: [String: Entry] = [:]
+
+    /// The summary of `directory` (a repository's folder: `branch` is not nil), read again when due.
+    func summary(of directory: String, branch: String?, now: Date = Date()) -> GitSummary? {
+        guard branch != nil else {
+            entries[directory] = nil
+            return nil
+        }
+        if let entry = entries[directory] {
+            if let slow = entry.slowUntil, now < slow { return entry.summary }
+            if now.timeIntervalSince(entry.readAt) < Self.interval { return entry.summary }
+        }
+        guard let git = Git.executable else { return nil }
+        var environment = ProcessInfo.processInfo.environment
+        environment["GIT_OPTIONAL_LOCKS"] = "0"
+        environment["GIT_TERMINAL_PROMPT"] = "0"
+        let output = CommandOutput.run(git, ["-C", directory] + GitSummary.statusArguments, environment: environment,
+                                       timeout: Self.timeout)
+        let summary = output.flatMap(GitSummary.parse)
+        let slow = output == nil ? now.addingTimeInterval(Self.backoff) : nil
+        entries[directory] = Entry(summary: summary ?? (slow != nil ? entries[directory]?.summary : nil), readAt: now,
+                                   slowUntil: slow)
+        return entries[directory]?.summary
+    }
+
+    /// Forgets folders no workspace shows any more.
+    func keep(only directories: Set<String>) {
+        entries = entries.filter { directories.contains($0.key) }
+    }
 }
 
 private let metadataLog = Logger(subsystem: "tokyo.n-n.cmds", category: "metadata")
@@ -19,6 +64,7 @@ final class MetadataMonitor {
     private let scanner: ProcessScanner
     private let systemSampler = SystemSampler()
     private let codexWatcher = CodexSessionWatcher()
+    private let gitSummaries = GitSummaryCache()
     private let queue = DispatchQueue(label: "cmds.metadata", qos: .utility)
     private var timer: Timer?
     private var scanning = false
@@ -70,6 +116,8 @@ final class MetadataMonitor {
         let scanner = scanner
         let systemSampler = systemSampler
         let codexWatcher = codexWatcher
+        let gitSummaries = gitSummaries
+        let showsBranch = AppSettings.shared.sidebar(.branch)
         queue.async { [weak self] in
             let started = DispatchTime.now().uptimeNanoseconds
             let scan = scanner.scan(foregroundGroups: foregroundGroups, paneGroups: paneGroups,
@@ -79,9 +127,13 @@ final class MetadataMonitor {
             let scanned = DispatchTime.now().uptimeNanoseconds
             var result: [String: WorkspaceMetadata] = [:]
             for (id, cwd) in directories {
-                result[id] = WorkspaceMetadata(workingDirectory: cwd, gitBranch: cwd.flatMap(GitInfo.branch(at:)),
-                                               ports: scan.ports[id] ?? [])
+                let branch = cwd.flatMap(GitInfo.branch(at:))
+                // Only while the sidebar shows the branch line: nothing else reads it.
+                let summary = showsBranch ? cwd.flatMap { gitSummaries.summary(of: $0, branch: branch) } : nil
+                result[id] = WorkspaceMetadata(workingDirectory: cwd, gitBranch: branch, ports: scan.ports[id] ?? [],
+                                               gitSummary: summary)
             }
+            gitSummaries.keep(only: Set(directories.values.compactMap { $0 }))
             let finished = DispatchTime.now().uptimeNanoseconds
             metadataLog.debug("""
                 scan: \(scan.listedProcesses, privacy: .public) pids, \(scan.workspaceProcesses, privacy: .public) \
