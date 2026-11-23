@@ -13,7 +13,16 @@ final class BrowserNoticeView: NSVisualEffectView {
         case pointSent(target: String)
         /// Point at Element: no terminal could take it; the prompt is on the clipboard.
         case pointCopied(reason: String)
+        /// Point at Element: the agent `target` works on the report.
+        case pointWorking(target: String)
+        /// Point at Element: the agent asks a question while on the report.
+        case pointAsking(target: String)
+        /// Point at Element: the agent finished its turn; `summary` is the first line of its reply when known.
+        case pointDone(target: String, summary: String?)
     }
+
+    /// Point at Element notices: "Show Terminal" focuses the agent's terminal.
+    var onShowTerminal: (() -> Void)?
 
     var onCancel: (() -> Void)?
     var onDismiss: (() -> Void)?
@@ -71,6 +80,28 @@ final class BrowserNoticeView: NSVisualEffectView {
             text = String(localized: "Copied the report: \(reason)",
                           comment: "Point at Element notice when no agent terminal took the report")
             buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .pointWorking(let target):
+            symbol = "hammer"
+            tint = .controlAccentColor
+            text = String(localized: "\(target) is working on it…",
+                          comment: "Point at Element notice while the agent works on the report; argument: the terminal's name")
+            buttons.append(button(String(localized: "Show Terminal"), #selector(showTerminalClicked)))
+            buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .pointAsking(let target):
+            symbol = "questionmark.bubble"
+            tint = .systemOrange
+            text = String(localized: "\(target) asks you something",
+                          comment: "Point at Element notice when the agent needs an answer; argument: the terminal's name")
+            buttons.append(button(String(localized: "Show Terminal"), #selector(showTerminalClicked), primary: true))
+            buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .pointDone(let target, let summary):
+            symbol = "checkmark.circle"
+            tint = .systemGreen
+            text = summary.map { String(localized: "\(target) finished: \($0)",
+                                        comment: "Point at Element notice; arguments: the terminal's name, the first line of its reply") }
+                ?? String(localized: "\(target) finished", comment: "Point at Element notice; argument: the terminal's name")
+            buttons.append(button(String(localized: "Show Terminal"), #selector(showTerminalClicked)))
+            buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
         }
         let icon = NSImageView(image: NSImage(systemSymbolName: symbol, accessibilityDescription: nil) ?? NSImage())
         icon.symbolConfiguration = .init(pointSize: 13, weight: .medium)
@@ -114,6 +145,11 @@ final class BrowserNoticeView: NSVisualEffectView {
     }
 
     @objc private func cancelClicked() { onCancel?() }
+
+    @objc private func showTerminalClicked() {
+        onShowTerminal?()
+        onDismiss?()
+    }
     @objc private func dismissClicked() { onDismiss?() }
 
     @objc private func openInSafariClicked() {

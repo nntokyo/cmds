@@ -468,7 +468,8 @@ final class BrowserPane: NSView {
     /// The notice at the bottom of the page area: a download or a passkey request (nil: removes it; the top would cover
     /// the address bar).
     /// `onCancel` stops a running download.
-    func showNotice(_ state: BrowserNoticeView.State?, onCancel: (() -> Void)? = nil) {
+    /// `onShowTerminal`: the Point at Element notices' "Show Terminal".
+    func showNotice(_ state: BrowserNoticeView.State?, onCancel: (() -> Void)? = nil, onShowTerminal: (() -> Void)? = nil) {
         noticeHide?.cancel()
         noticeHide = nil
         noticeBanner?.removeFromSuperview()
@@ -480,6 +481,7 @@ final class BrowserPane: NSView {
             onCancel?()
             self?.removeNotice(banner)
         }
+        banner.onShowTerminal = onShowTerminal
         noticeBanner = banner
         banner.translatesAutoresizingMaskIntoConstraints = false
         addSubview(banner)  // above the page and the responsive view
@@ -490,7 +492,7 @@ final class BrowserPane: NSView {
             banner.bottomAnchor.constraint(equalTo: viewportHost.bottomAnchor, constant: -inset),
         ])
         switch state {
-        case .finished, .pointSent, .pointCopied:  // they go by themselves
+        case .finished, .pointSent, .pointCopied:  // they go by themselves (a finished report's notice stays)
             let hide = DispatchWorkItem { [weak self] in MainActor.assumeIsolated { self?.showNotice(nil) } }
             noticeHide = hide
             DispatchQueue.main.asyncAfter(deadline: .now() + Self.noticeTime, execute: hide)

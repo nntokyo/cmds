@@ -149,6 +149,7 @@ extension AppController {
         guard activity != pane.agentActivity else { return }
         pane.agentActivity = activity
         if activity != .none { pane.agentEverSeen = true }
+        followElementPoint(pane, activity: activity)
         if emitChange { emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id)) }
     }
 

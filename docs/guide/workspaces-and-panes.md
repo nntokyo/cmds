@@ -472,6 +472,11 @@ text and screenshot still find the element.
   schedule's prompt; an agent at work queues it. A terminal without an agent never gets it (it would run as shell
   commands), nor one whose agent is asking a question: the prompt goes to the clipboard instead, and the notice says
   why. The field's placeholder names the terminal before you send.
+- **Progress**: the notice at the bottom of the browser pane follows the report: "working on it" while the agent
+  works, "asks you something" when it waits for an answer, then "finished" with the first line of its reply (that
+  one stays until you dismiss it). **Show Terminal** goes to the agent. A report sent while the agent is busy waits in
+  its queue; the end of the earlier task does not count as the report's. A report the agent does not start on within
+  2 minutes is no longer followed.
 - **Screenshots** go to `.cmds/reports/` in that terminal's folder, where the agent can read them without asking;
   `.cmds/` holds a `.gitignore` that ignores it. Otherwise (no folder, not writable) to the support folder's
   `Reports/`. The newest 30 are kept. An agent on an SSH server gets the prompt without a screenshot.

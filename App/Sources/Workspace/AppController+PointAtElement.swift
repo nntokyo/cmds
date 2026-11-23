@@ -55,7 +55,66 @@ extension AppController {
         DispatchQueue.main.asyncAfter(deadline: .now() + ScheduleRunTiming.enterDelay) { [weak self] in
             MainActor.assumeIsolated { try? self?.typeText(paneID: id, text: "\r") }
         }
+        elementPointFollows[target.id] = ElementPointFollow(browserPaneID: paneID, sentAt: Date(), sawWork: false)
         return .sent(to: pointTargetName(target))
+    }
+
+    // MARK: - Following a report
+
+    /// The agent's state changed: the browser the report came from shows it. Working, asking, then finished once it
+    /// worked after the report (`ElementPointFollow.sawWork`): an agent busy when the report came queues it, so the end
+    /// of its earlier turn does not count. A report nobody started on within
+    /// `ElementPointFollow.startWindow` is forgotten; a newer report from the same terminal replaces the follow.
+    func followElementPoint(_ pane: Pane, activity: AgentActivity) {
+        guard var follow = elementPointFollows[pane.id] else { return }
+        let now = Date()
+        guard let browser = self.pane(id: follow.browserPaneID)?.browser,
+              follow.sawWork || now.timeIntervalSince(follow.sentAt) < ElementPointFollow.startWindow else {
+            elementPointFollows[pane.id] = nil
+            return
+        }
+        let name = pointTargetName(pane)
+        let showTerminal: () -> Void = { [weak self] in try? self?.focusPane(id: pane.id) }
+        switch activity {
+        case .busy:
+            follow.sawWork = true
+            elementPointFollows[pane.id] = follow
+            browser.showNotice(.pointWorking(target: name), onShowTerminal: showTerminal)
+        case .needsInput:
+            follow.sawWork = true
+            elementPointFollows[pane.id] = follow
+            browser.showNotice(.pointAsking(target: name), onShowTerminal: showTerminal)
+        case .idle:
+            // A queued report can start without the agent looking idle in between: its prompt hook says it did.
+            let promptHook = pane.agentSignals.workingHookAt.map { $0 > follow.sentAt.addingTimeInterval(1) } ?? false
+            guard follow.sawWork || promptHook else { return }
+            elementPointFollows[pane.id] = nil
+            // The Stop hook's reply text is recorded right after the state changes.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let self, let browser = self.pane(id: follow.browserPaneID)?.browser else { return }
+                    browser.showNotice(.pointDone(target: name, summary: self.replySummary(of: pane, since: follow.sentAt)),
+                                       onShowTerminal: showTerminal)
+                }
+            }
+        case .none:
+            elementPointFollows[pane.id] = nil
+            if follow.sawWork { browser.showNotice(nil) }
+        }
+    }
+
+    /// The first line of the agent's last reply, when its Stop notification came after the report.
+    private func replySummary(of pane: Pane, since date: Date) -> String? {
+        guard let workspace = workspace(id: pane.workspaceID), workspace.notificationPaneID == pane.id,
+              let text = workspace.notificationText, (workspace.notificationDate ?? .distantPast) >= date else { return nil }
+        var line = text.split(whereSeparator: \.isNewline).first.map(String.init)?
+            .trimmingCharacters(in: .whitespaces) ?? ""
+        // The notification's title ("Claude Code: …") is the notice's own start already.
+        for title in [pointTargetName(pane), "Claude Code", "Codex"] where line.hasPrefix(title + ": ") {
+            line = String(line.dropFirst(title.count + 2))
+            break
+        }
+        return line.isEmpty ? nil : (line.count > 120 ? String(line.prefix(119)) + "…" : line)
     }
 
     /// Writes the screenshot where the agent can read it without asking: `.cmds/reports/` in its terminal's folder
@@ -105,4 +164,15 @@ extension AppController {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(text, forType: .string)
     }
+}
+
+/// A report typed into an agent's terminal, followed until the agent finished with it.
+struct ElementPointFollow {
+    /// The browser pane the report came from (its notice shows the progress).
+    var browserPaneID: String
+    var sentAt: Date
+    /// The agent became busy (or asked) after the report arrived.
+    var sawWork: Bool
+    /// An agent that never starts within this time is not followed.
+    static let startWindow: TimeInterval = 120
 }
