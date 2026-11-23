@@ -46,7 +46,7 @@ extension AppController {
         } else {
             category = continueAtResetTime(pane) != nil ? Self.accountLimitLaterCategory : nil
         }
-        raiseAttention(pane: pane, title: Self.accountLimitTitle, body: body, category: category)
+        raiseAttention(pane: pane, title: Self.accountLimitTitle, body: body, category: category, level: .warning)
     }
 
     /// The title of the notifications about a limit.
@@ -214,7 +214,8 @@ extension AppController {
             change.phase = .offered(problem: .didNotQuit)
             pane.accountSwitch = change
             updateResumeBanner(pane)
-            raiseAttention(pane: pane, title: Self.accountLimitTitle, body: AccountSwitchProblem.didNotQuit.localized)
+            raiseAttention(pane: pane, title: Self.accountLimitTitle, body: AccountSwitchProblem.didNotQuit.localized,
+                           level: .warning)
         }
     }
 

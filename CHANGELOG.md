@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Notification levels: sidebar text is green with `✓` for a success, orange with `⚠︎` for a warning and red with `✗`
+  for an error, whose pane ring is red too. A long command that failed is an error and one that succeeded a success;
+  `cmds notify --level`, `cmds status --level` and MCP `set_status` choose one (#412).
+
 - Workspace › Environment Variables…: variables for the terminals opened in a workspace, saved with the session.
   Secrets stay in the Keychain (`cmds env secret NAME`), referenced as `keychain:service/account` and read when a
   terminal opens, never with a Keychain dialog (#410).

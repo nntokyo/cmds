@@ -287,10 +287,11 @@ final class AppController {
     }
 
     /// Sets the sidebar notification text without lighting the ring.
-    func setStatus(workspaceID: String?, text: String) throws {
+    func setStatus(workspaceID: String?, text: String, level: NotificationLevel = .info) throws {
         let workspace = try resolveWorkspace(workspaceID)
         workspace.clearNotificationText()
         workspace.notificationText = text.isEmpty ? nil : text
+        workspace.notificationLevel = text.isEmpty ? .info : level
         emit(.workspace(id: workspace.id))
     }
 
@@ -475,8 +476,8 @@ final class AppController {
 
     /// Lights the pane's ring (unless it is the focused pane in the key window), updates the sidebar
     /// text and posts a macOS notification while the app is inactive.
-    func notify(paneID: String?, title: String?, body: String) throws {
-        raiseAttention(pane: try resolvePane(paneID), title: title, body: body)
+    func notify(paneID: String?, title: String?, body: String, level: NotificationLevel = .info) throws {
+        raiseAttention(pane: try resolvePane(paneID), title: title, body: body, level: level)
     }
 
     func toggleZoom(paneID: String? = nil) throws {
@@ -909,15 +910,17 @@ final class AppController {
     }
 
     /// `category`: the macOS notification's category (its actions, e.g. `accountNotificationCategory`).
-    func raiseAttention(pane: Pane, title: String?, body: String, category: String? = nil) {
+    func raiseAttention(pane: Pane, title: String?, body: String, category: String? = nil,
+                        level: NotificationLevel = .info) {
         guard let workspace = workspace(id: pane.workspaceID) else { return }
         let text = [title, body].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: ": ")
         workspace.notificationText = text.isEmpty ? nil : text
         workspace.notificationPaneID = text.isEmpty ? nil : pane.id
         workspace.notificationDate = Date()
+        workspace.notificationLevel = level
         emit(.notification(workspaceID: workspace.id, paneID: pane.id, title: title, body: body))
         if !isVisiblyFocused(pane) {
-            pane.setAttention(true)
+            pane.setAttention(true, level: level)
             updateDockBadge()
             if !NSApp.isActive {
                 postUserNotification(pane: pane, workspace: workspace, title: title, body: body, category: category)
@@ -1203,14 +1206,16 @@ final class AppController {
         formatter.allowedUnits = duration >= 3600 ? [.hour, .minute] : [.minute, .second]
         let span = formatter.string(from: duration.rounded()) ?? "\(Int(duration)) s"
         let title: String
-        if let exitCode, exitCode != 0 {
+        let failed = exitCode.map { $0 != 0 } ?? false
+        if let exitCode, failed {
             title = String(localized: "Command failed (exit \(exitCode))", comment: "notification title when a long command ends with an error")
         } else {
             title = String(localized: "Command finished", comment: "notification title when a long command ends")
         }
         raiseAttention(pane: pane, title: title,
                        body: String(localized: "after \(span) in \(DefaultTitle.localized(pane.title))",
-                                    comment: "notification body of a long command; arguments: duration, pane title"))
+                                    comment: "notification body of a long command; arguments: duration, pane title"),
+                       level: failed ? .error : (exitCode == nil ? .info : .success))
     }
 
     private func isVisiblyFocused(_ pane: Pane) -> Bool {

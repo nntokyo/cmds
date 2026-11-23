@@ -323,7 +323,10 @@ final class MCPServer {
              properties: ["pane": string("Pane id returned by browser_open, open_file, terminal_split or the cmds CLI.")], required: ["pane"]),
         Tool(name: "set_status",
              description: "Show a short progress text in the cmds sidebar for your workspace, without notifying the user (empty text clears it).",
-             properties: ["text": string("Status text, e.g. \"Running tests (3/10)\".")], required: ["text"]),
+             properties: ["text": string("Status text, e.g. \"Running tests (3/10)\"."),
+                          "level": .object(["type": "string", "enum": .array(NotificationLevel.allCases.map { .string($0.rawValue) }),
+                                            "description": "success, warning or error colour the text and add ✓ ⚠︎ ✗ (e.g. tests failed: error). Default: info."])],
+             required: ["text"]),
     ]
 
     private struct ToolError: Error { let message: String }
@@ -691,7 +694,13 @@ final class MCPServer {
             return [Self.text("Closed \(pane).")]
         case "set_status":
             let text = try argument(arguments, "text", allowEmpty: true)
-            try call("sidebar.set_status", ["workspace": currentWorkspace().json, "text": .string(text)], Self.requestTimeout)
+            var params: [String: JSONValue?] = ["workspace": currentWorkspace().json, "text": .string(text)]
+            if let raw = arguments["level"]?.stringValue {
+                do { params["level"] = .string(try NotificationLevel.parse(raw).rawValue) } catch let error as NotificationLevel.Invalid {
+                    throw ToolError(message: error.description)
+                }
+            }
+            try call("sidebar.set_status", params, Self.requestTimeout)
             return [Self.text(text.isEmpty ? "Cleared the status." : "Status set.")]
         default:
             throw ToolError(message: "unknown tool: \(name)")

@@ -330,6 +330,7 @@ final class APIServer {
                 connection.reply(id: id, result: .object([
                     "branch": shown.branch.map(JSONValue.string) ?? .null,
                     "branchToolTip": shown.branchToolTip.map(JSONValue.string) ?? .null,
+                    "notification": shown.notification.map(JSONValue.string) ?? .null,
                     "png_base64": shown.png.map { .string($0.base64EncodedString()) } ?? .null,
                 ]))
             case "debug.sidebar_account":
@@ -628,9 +629,11 @@ final class APIServer {
                                                             openedBy: try params.string("openedBy")))]
 
         case "notify":
-            try controller.notify(paneID: try params.string("pane"), title: try params.string("title"), body: try params.required("body"))
+            try controller.notify(paneID: try params.string("pane"), title: try params.string("title"), body: try params.required("body"),
+                                  level: try notificationLevel(params))
         case "sidebar.set_status":
-            try controller.setStatus(workspaceID: try params.string("workspace"), text: try params.required("text"))
+            try controller.setStatus(workspaceID: try params.string("workspace"), text: try params.required("text"),
+                                     level: try notificationLevel(params))
 
         case "browser.open":
             return try .from(controller.openBrowser(paneID: try params.string("pane"), url: try params.required("url"),
@@ -734,6 +737,13 @@ final class APIServer {
     /// `direction` of `pane.split` / `pane.open_file` (default right).
     private func splitDirection(_ params: Params) throws -> SplitDirection {
         try params.value("direction", as: SplitDirection.self, invalid: "direction must be \"right\" or \"down\"") ?? .right
+    }
+
+    /// `level` of `notify` / `sidebar.set_status` (#174 G21): info (default), success, warning or error.
+    private func notificationLevel(_ params: Params) throws -> NotificationLevel {
+        do { return try NotificationLevel.parse(try params.string("level")) } catch let error as NotificationLevel.Invalid {
+            throw RPCError.invalidParams(error.description)
+        }
     }
 
     /// `profile` of `browser.open` / `browser.profile`: absent → nil (unchanged, or the asking pane's); "" → the shared

@@ -35,6 +35,8 @@ final class Workspace {
     /// in that pane or its agent working again clears it.
     var notificationPaneID: String?
     var notificationDate: Date?
+    /// How `notificationText` reads: its colour and symbol in the sidebar (#174 G21).
+    var notificationLevel = NotificationLevel.info
 
     /// CPU of the processes in this workspace's terminals (100 = one core); nil until sampled.
     private(set) var cpuPercent: Double?
@@ -63,6 +65,7 @@ final class Workspace {
         notificationText = nil
         notificationPaneID = nil
         notificationDate = nil
+        notificationLevel = .info
     }
 
     /// `:3000  :5173` (sidebar row and rail tooltip).
@@ -139,7 +142,8 @@ final class Workspace {
                       cpuPercent: cpuPercent, memoryBytes: memoryBytes, remoteHost: remoteHost,
                       worktree: createdWorktree?.info, gitSummary: isRemote ? nil : gitSummary,
                       gitOverlaps: isRemote || gitOverlaps.isEmpty ? nil : gitOverlaps,
-                      pullRequest: isRemote ? nil : pullRequest)
+                      pullRequest: isRemote ? nil : pullRequest,
+                      notificationLevel: notificationText == nil || notificationLevel == .info ? nil : notificationLevel)
     }
 
     /// The worktree cmds created that this workspace is in: the one it was created in, else the one its local

@@ -163,7 +163,7 @@ status:
 | `system_stats` | Memory pressure, memory and swap used, CPU, and `advice: ok` or `advice: wait` (pressure warning or worse) for heavy jobs ([below](#memory-before-heavy-jobs)) |
 | `list_processes` | Processes of the agent's terminal and the panes opened from it (memory, CPU, command), plus leftovers: processes whose pane or workspace was closed but which still run. No tool stops them: that is for the user (`cmds kill`, the sidebar's leftover row); in panes it opened, the agent sends Ctrl-C with `terminal_send` |
 | `close_pane` | Close a pane opened from the agent's terminal: by this server, an earlier one or the CLI (`cmds browser open`, `cmds open`, `cmds split`); refuses others |
-| `set_status` | Sidebar status text for the agent's workspace |
+| `set_status` | Sidebar status text for the agent's workspace; `level` `success`, `warning` or `error` colours it (e.g. tests failed) |
 
 The browser tools use the last browser pane the server opened unless given `pane`. cmds remembers which terminal pane
 each pane was opened from over the API (also across a relaunch), so `close_pane` works after the MCP server restarted and

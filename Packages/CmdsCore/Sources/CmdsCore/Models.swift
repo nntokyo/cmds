@@ -107,6 +107,8 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
     public var ports: [Int]
     /// Latest notification text shown in the sidebar.
     public var notificationText: String?
+    /// How `notificationText` reads (#174 G21); nil for `info`.
+    public var notificationLevel: NotificationLevel?
     public var attention: Bool
     public var panes: [PaneInfo]
     public var layout: LayoutNode?
@@ -137,7 +139,7 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
                 panes: [PaneInfo] = [], layout: LayoutNode? = nil,
                 cpuPercent: Double? = nil, memoryBytes: UInt64? = nil, remoteHost: String? = nil,
                 worktree: WorktreeInfo? = nil, gitSummary: GitSummary? = nil, gitOverlaps: [GitOverlap]? = nil,
-                pullRequest: PullRequestSummary? = nil) {
+                pullRequest: PullRequestSummary? = nil, notificationLevel: NotificationLevel? = nil) {
         self.id = id
         self.title = title
         self.selected = selected
@@ -145,6 +147,7 @@ public struct WorkspaceInfo: Codable, Equatable, Sendable, Identifiable {
         self.workingDirectory = workingDirectory
         self.ports = ports
         self.notificationText = notificationText
+        self.notificationLevel = notificationLevel
         self.attention = attention
         self.panes = panes
         self.layout = layout

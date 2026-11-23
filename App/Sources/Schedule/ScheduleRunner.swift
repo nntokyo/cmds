@@ -559,13 +559,14 @@ final class ScheduleRunner {
         if run.state.isProblem {
             let body = ScheduleText.outcome(run)
             if let paneID = run.pane, let pane = controller.pane(id: paneID), !pane.isClosing {
-                controller.raiseAttention(pane: pane, title: title, body: body)
+                controller.raiseAttention(pane: pane, title: title, body: body, level: run.state == .failed ? .error : .warning)
             } else {
                 postNotification(title: title, body: body)
             }
         } else if run.state == .succeeded, policy == .always {
             if let workspace = run.workspace, controller.workspace(id: workspace) != nil {
-                try? controller.setStatus(workspaceID: workspace, text: "\(title): \(ScheduleText.outcome(run))")
+                try? controller.setStatus(workspaceID: workspace, text: "\(title): \(ScheduleText.outcome(run))",
+                                              level: .success)
             } else {
                 postNotification(title: title, body: ScheduleText.outcome(run))
             }

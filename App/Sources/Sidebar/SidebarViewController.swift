@@ -637,7 +637,7 @@ final class SidebarViewController: NSViewController {
     /// remove a worktree cmds created for it (WorktreeCloseAlert).
     #if DEBUG
     /// For `debug.sidebar_row`: the workspace row's branch line, tooltip and picture.
-    func debugRow(workspaceID: String) -> (branch: String?, branchToolTip: String?, png: Data?)? {
+    func debugRow(workspaceID: String) -> (branch: String?, branchToolTip: String?, notification: String?, png: Data?)? {
         guard let row = rows.firstIndex(where: { $0.workspaceID == workspaceID }),
               let cell = tableView.view(atColumn: 0, row: row, makeIfNecessary: true) as? WorkspaceCellView else { return nil }
         return cell.debugRow()

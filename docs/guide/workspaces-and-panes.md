@@ -314,6 +314,18 @@ Focusing the pane clears the ring; typing in the pane, or its agent working agai
 also clears the notification text. **Pane › Jump to Latest Attention** (⇧⌘U) goes to the most recent one. Setting this up
 for coding agents: [ai-agents.md](ai-agents.md#attention-how-a-pane-lights-up).
 
+Notification text has a level that shows at a glance which workspace needs you:
+
+| Level | Sidebar text | Ring | Set by |
+|---|---|---|---|
+| info | grey (brighter while the ring is lit) | orange | default: bells, programs' notifications, agents |
+| success | green, `✓` | orange | a long command that ended with exit 0, a schedule run with "always" |
+| warning | orange, `⚠︎` | orange | a Claude account limit, a skipped or missed schedule run, an unreadable Keychain secret |
+| error | red, `✗` | red | a long command that failed, a failed schedule run |
+
+Scripts and agents choose one with `cmds notify --level error …` or `cmds status --level success …` (MCP `set_status`
+takes `level` too); the API reports it as `notificationLevel` of a workspace.
+
 ## Browser panes
 
 Browser panes load web pages over https and plain http (WebKit's content is exempt from App Transport Security; the
