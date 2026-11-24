@@ -188,12 +188,7 @@ struct WorkspaceRow: View {
                     }
                 }
                 if let branch = workspace.gitBranch {
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrow.triangle.branch")
-                        Text(branch).lineLimit(1)
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    BranchLine(branch: branch, workspace: workspace)
                 }
                 if let cwd = workspace.workingDirectory {
                     Text(cwd)
@@ -222,14 +217,88 @@ struct WorkspaceRow: View {
                     WorkspaceUsageLine(cpuPercent: workspace.cpuPercent, memoryBytes: workspace.memoryBytes)
                 }
                 if let note = workspace.notificationText, !note.isEmpty {
-                    Text(note)
+                    let level = workspace.notificationLevel ?? .info
+                    Text(level.decorate(note))
                         .font(.caption)
-                        .foregroundStyle(attention ? Color.orange : Color.secondary)
+                        .foregroundStyle(Self.color(of: level, attention: attention))
                         .lineLimit(2)
                 }
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// As in the Mac's sidebar (#174 G21): success green, warning orange, error red, else orange while it needs you.
+    static func color(of level: NotificationLevel, attention: Bool) -> Color {
+        switch level {
+        case .success: return .green
+        case .warning: return .orange
+        case .error: return .red
+        case .info: return attention ? .orange : .secondary
+        }
+    }
+}
+
+/// The branch with what the Mac's sidebar shows after it (#174 G25): changes and commits ahead / behind (`±3 ↑1 ↓2`),
+/// the pull request and its checks (`#405 ✓`), and `⚠︎N` files another worktree changed too. A long branch name is
+/// cut in its middle so they stay visible.
+struct BranchLine: View {
+    let branch: String
+    let workspace: WorkspaceInfo
+
+    var body: some View {
+        HStack(spacing: 6) {
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.triangle.branch")
+                Text(branch).lineLimit(1).truncationMode(.middle)
+            }
+            .foregroundStyle(.secondary)
+            .layoutPriority(0)
+            if let summary = workspace.gitSummary, !summary.badge.isEmpty {
+                Text(verbatim: summary.badge)
+                    .foregroundStyle(summary.changes > 0 ? Color.orange : Color.secondary)
+                    .accessibilityLabel(Self.summaryLabel(summary))
+                    .fixedSize()
+            }
+            if let pr = workspace.pullRequest {
+                Text(verbatim: pr.badge)
+                    .foregroundStyle(Self.color(of: pr))
+                    .fixedSize()
+            }
+            if let shared = Self.sharedFiles(workspace.gitOverlaps ?? []) {
+                Text(verbatim: "⚠︎\(shared)")
+                    .foregroundStyle(.red)
+                    .accessibilityLabel(String(localized: "\(shared) files also changed in another worktree"))
+                    .fixedSize()
+            }
+        }
+        .font(.caption.monospacedDigit())
+    }
+
+    /// Files another worktree changed too, as the Mac counts them; nil when none.
+    static func sharedFiles(_ overlaps: [GitOverlap]) -> Int? {
+        let listed = Set(overlaps.flatMap(\.files)).count
+        guard listed > 0 else { return nil }
+        return max(listed, overlaps.map(\.count).max() ?? 0)
+    }
+
+    static func color(of pr: PullRequestSummary) -> Color {
+        switch (pr.state, pr.checks) {
+        case (.merged, _): return .purple
+        case (.closed, _): return .secondary
+        case (_, .failing?): return .red
+        case (_, .pending?): return .orange
+        case (_, .passing?): return .green
+        default: return .secondary
+        }
+    }
+
+    static func summaryLabel(_ summary: GitSummary) -> String {
+        var parts: [String] = []
+        if summary.changes > 0 { parts.append(String(localized: "\(summary.changes) changed files")) }
+        if let ahead = summary.ahead, ahead > 0 { parts.append(String(localized: "\(ahead) commits ahead")) }
+        if let behind = summary.behind, behind > 0 { parts.append(String(localized: "\(behind) commits behind")) }
+        return parts.joined(separator: ", ")
     }
 }
 

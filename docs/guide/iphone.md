@@ -52,7 +52,11 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
 - **Workspaces**: the same list as the Mac's sidebar with directory, branch, attention, CPU and memory, and the coding
   agent of each workspace, with the Claude account its pane runs under (`@work`) and, while that account is at a limit,
   when it resets (Mac 0.11.0 or later). The bottom bar shows the Mac's CPU, memory and memory pressure and each agent's account
-  limits. Long-press a workspace for **Show on Mac**.
+  limits. Long-press a workspace for **Show on Mac**. After the branch the row shows what the Mac's sidebar does: changed
+  files and commits ahead / behind (`±3 ↑1 ↓2`, orange while there are changes), the pull request and its checks
+  (`#405 ✓` green, `✗` red, `●` running) and `⚠︎2` in red for files another worktree changed too. Notification text
+  has the Mac's colour and symbol: `✓` success in green, `⚠︎` warning in orange, `✗` error in red (with a cmds release
+  after 0.32.0 on the Mac).
 - **Panes**: each terminal's live screen, with pinch to zoom; it follows the cursor row. Colours and bold, italic,
   underlined or inverse text are shown as on the Mac (with a cmds release after 0.12.0 on the Mac; earlier ones send
   plain text), also in the earlier output above the screen. Swipe down for earlier output

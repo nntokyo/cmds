@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone and iPad: the workspace list shows changes and commits ahead / behind, the pull request and its checks, files
+  another worktree changed too, and notification text in its level's colour and symbol, as the Mac's sidebar (#418).
+
 - SSH panes: ⌘-click on the server's `http://localhost:5173` opens the page in a browser pane through a port forward
   you started (`ssh -L`, or `LocalForward`), never this Mac's own localhost; without one the sidebar shows the
   `ssh -N -L` command to start (#416).

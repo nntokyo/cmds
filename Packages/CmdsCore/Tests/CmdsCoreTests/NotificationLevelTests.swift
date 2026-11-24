@@ -24,5 +24,7 @@ final class NotificationLevelTests: XCTestCase {
         let error = WorkspaceInfo(id: "w1", title: "t", selected: true, notificationText: "x", notificationLevel: .error)
         let decoded = try JSONDecoder().decode(WorkspaceInfo.self, from: try JSONEncoder().encode(error))
         XCTAssertEqual(decoded.notificationLevel, .error)
+        let future = try JSONDecoder().decode([NotificationLevel].self, from: Data(#"["critical","warning"]"#.utf8))
+        XCTAssertEqual(future, [.info, .warning], "a level from a newer Mac")
     }
 }
