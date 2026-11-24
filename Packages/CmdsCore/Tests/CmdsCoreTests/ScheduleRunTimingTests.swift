@@ -144,6 +144,23 @@ final class ScheduleRunTimingTests: XCTestCase {
         XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 60, expect: session), .skip(.otherProgram))
     }
 
+    /// #45 phase 5: the session a continue run would resume already runs in the foreground.
+    func testTheSessionToResumeAlreadyRunning() {
+        let resume = T.Expectation(agent: .claude, sessionID: "abc", startsAgent: true, ownsPane: false)
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: agent("abc"), elapsed: 1, expect: resume), .useRunningAgent)
+        var remembered = agent(nil)  // its usage report got old; the same process reported "abc" before
+        remembered.rememberedSessionID = "abc"
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: remembered, elapsed: 1, expect: resume), .useRunningAgent)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: remembered, elapsed: 1,
+                              expect: T.Expectation(agent: .claude, sessionID: "abc")), .paste, "pasted into it once idle")
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: agent("other"), elapsed: 1, expect: resume), .skip(.differentSession))
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: agent(nil), elapsed: 1, expect: resume), .skip(.agentRunning),
+                       "a Claude Code that never reported this session (started later) is left alone")
+        var wrongAgent = codex()
+        wrongAgent.sessionID = "abc"
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: wrongAgent, elapsed: 1, expect: resume), .skip(.notClaude))
+    }
+
     func testShellWaitsForAQueuedResumeOrSwitch() {
         var o = shell
         o.resumeQueued = true
@@ -157,7 +174,7 @@ final class ScheduleRunTimingTests: XCTestCase {
         var o = shell
         o.agentOnTerminal = true // backgrounded Claude Code
         XCTAssertEqual(T.step(state: .waitingForPane, observation: o, elapsed: 1, expect: owned), .skip(.agentRunning))
-        XCTAssertEqual(T.step(state: .waitingForPane, observation: agent(), elapsed: 1, expect: session), .skip(.agentRunning))
+        XCTAssertEqual(T.step(state: .waitingForPane, observation: agent(nil), elapsed: 1, expect: session), .skip(.agentRunning))
         // `sleep 60` in the user's pane: left alone after a short grace.
         o = T.Observation()
         o.foreground = .other

@@ -154,6 +154,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `debug.close_alert` | `id?` | `{"worktree": null}` when closing the workspace from the sidebar does not ask about a worktree, else `{"worktree", "text", "buttons"}` (the alert, not shown); DEBUG builds only, for tests |
 | `debug.pane_drag` | `pane`, and `target` (a pane on screen) with `zone?` (`left`/`right`/`top`/`bottom`/`center`), or `row` (a workspace id: its sidebar row), or `outside: true` | `{"state": {"workspace", "inWindow", "focused", "frame"?, "grip", "grid"?, "firstResponder"?}, "dropTarget"?, "side"?, "highlight"?}`: drops the pane as a drag of its grip would (#218); without a target only reports; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
 | `debug.schedule_clock` | `offset` (seconds), `wake?`, `capture?` | `{"now", "notifications"}`: moves the schedule runner's clock by `offset` (a simulated sleep) and checks what fell due; `wake: true` also notes a wake at that time (missed runs then say "the Mac was asleep"); `capture: true` keeps schedule notifications in `notifications` instead of showing them. DEBUG builds only, for tests |
+| `debug.drop_agent_usage` | `pane` | `{session}`: drops the pane's agent usage as an old report without a pid does (the pane keeps its remembered session); DEBUG builds only, for tests |
 | `debug.schedule_run_now_notice` | `id` | Runs the schedule as **Run Now** on its missed notification does; DEBUG builds only, for tests |
 
 ## Events

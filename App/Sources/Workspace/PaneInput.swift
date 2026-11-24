@@ -138,6 +138,14 @@ enum PaneProcessProbe {
         return info
     }
 
+    /// When the process started (the foreground group's leader: the agent its shell started).
+    static func startDate(of pid: pid_t) -> Date? {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
+        return Date(timeIntervalSince1970: Double(info.startMicroseconds) / 1_000_000)
+    }
+
     private static func kinfo(_ pid: pid_t) -> kinfo_proc? {
         var info = kinfo_proc()
         var size = MemoryLayout<kinfo_proc>.stride
