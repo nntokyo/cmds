@@ -571,11 +571,15 @@ final class AppController {
     func readyBrowser(paneID: String) async throws -> BrowserPane {
         let browser = try browser(paneID: paneID)
         await browser.waitForPendingLoad()
+        await browser.keepRenderingForAgent()
         return browser
     }
 
     func browserNavigate(paneID: String, url: String) throws {
-        try browser(paneID: paneID).navigate(to: url)
+        let browser = try browser(paneID: paneID)
+        try browser.navigate(to: url)
+        // The page loads and draws although the pane is not on screen.
+        Task { await browser.keepRenderingForAgent() }
     }
 
     /// `error`: why the page shown did not load, in English (#338).
