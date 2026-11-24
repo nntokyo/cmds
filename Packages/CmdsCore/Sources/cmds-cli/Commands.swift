@@ -83,7 +83,7 @@ extension CLI {
             let titles = workspaceTitles(workspaces)
             print(Format.agents(list, titles: titles, currentPane: ctx.envPane), terminator: "")
         },
-        Command(name: "sessions", usage: "sessions [--pane P | --recent]",
+        Command(name: "sessions", usage: "sessions [--pane P | --recent | --notes]",
                 summary: "List the AI agent sessions remembered per pane (resumable after cmds restarts).",
                 details: """
                     One line per terminal pane: state (offered = from before the restart, waiting = resume queued until
@@ -91,9 +91,21 @@ extension CLI {
                     command `cmds resume` types into the pane. See docs/guide/ai-agents.md "Resuming sessions".
                     --recent lists the recent sessions of all panes instead (File › Recent Agent Sessions, newest
                     first; also after the agent exited or its pane closed), with the pane holding each, if any.
+                    --notes shows, per local Claude Code session, what it would be told if cmds restarted now with
+                    Resume Always (continue when cut off, scheduled jobs to create again; from its transcript); nothing is
+                    typed.
                     """,
-                options: ["pane"], flags: ["recent"]) { ctx in
-            try ctx.args.expectPositionals(0...0, usage: "cmds sessions [--pane P | --recent]")
+                options: ["pane"], flags: ["recent", "notes"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds sessions [--pane P | --recent | --notes]")
+            if ctx.args.has("notes") {
+                let result = try callNewMethod(ctx, "agent.resume_notes", ["pane": ctx.args[option: "pane"].json])
+                if ctx.json { return ctx.printJSON(result) }
+                for entry in result["sessions"]?.arrayValue ?? [] {
+                    let head = "\(entry["pane"]?.stringValue ?? "")  \(entry["sessionID"]?.stringValue?.prefix(8) ?? "")"
+                    print("\(head)  " + (entry["note"]?.stringValue ?? "(nothing: idle, no scheduled jobs)"))
+                }
+                return
+            }
             if ctx.args.has("recent") {
                 if ctx.args[option: "pane"] != nil { throw CLIError.usage("give either --pane or --recent") }
                 let result = try ctx.call("agent.history")

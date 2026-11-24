@@ -358,7 +358,8 @@ The script copies `session.json`, `schedules.json`, `claude-accounts.json` and `
 identity) to a temporary folder and restores them in an isolated instance of the Debug build. Agent sessions are only
 offered, never typed (`CMDS_AGENT_RESUME=ask`), and sync is off. It prints each workspace with its panes and their login profiles,
 for the running app (read only, through its socket) and for the copy, then the agent sessions the copy offers to resume
-(those marked "cut off while working" would be told to continue with Resume Always; the copy only offers, in Ask mode)
+(those marked "cut off while working" would be told to continue with Resume Always; the copy only offers, in Ask mode),
+what each would be told after the restart (`cmds sessions --notes`: continue, and the scheduled jobs to create again),
 and its schedules. The two lists should
 match: a workspace, pane or profile that differs means the update would change what people work in, for example
 sign-ins that would have to be entered again (CHANGELOG #438). The instance stops and the copy is deleted at the end.

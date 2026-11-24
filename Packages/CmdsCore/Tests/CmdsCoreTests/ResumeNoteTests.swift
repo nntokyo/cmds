@@ -34,6 +34,10 @@ final class ResumeNoteTests: XCTestCase {
         XCTAssertEqual(jobs, [ResumeNote.Job(kind: .cron("3-58/5 * * * *"), prompt: "run PROCESS.md"),
                               ResumeNote.Job(kind: .loop, prompt: "<<autonomous-loop-dynamic>>")],
                        "cancelled, expired and durable jobs are left out")
+        let again = lines + [use("t8", "CronCreate", #"{"cron":"3-58/5 * * * *","prompt":"run PROCESS.md"}"#, ago: 600),
+                             result("t8", "Scheduled recurring job 99cc8800 (3-58/5 * * * *). Session-only.", ago: 600)]
+        XCTAssertEqual(ResumeNote.jobs(transcriptLines: again, now: now).filter { $0.kind != .loop }.count, 1,
+                       "made again after an earlier restart: once")
         let stopped = lines + [use("t7", "ScheduleWakeup", #"{"stop":true}"#, ago: 60)]
         XCTAssertFalse(ResumeNote.jobs(transcriptLines: stopped, now: now).contains { $0.kind == .loop }, "the loop was stopped")
     }
