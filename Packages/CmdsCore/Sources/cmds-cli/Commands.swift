@@ -6,7 +6,14 @@ extension CLI {
         Command(name: "ping", usage: "ping", summary: "Check that the app is reachable.") { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds ping")
             let result = try ctx.call("system.ping")
-            ctx.json ? ctx.printJSON(result) : print("pong")
+            if ctx.json { return ctx.printJSON(result) }
+            if result["busy"]?.boolValue == true {
+                // The app runs but its main thread hangs (its watchdog answered).
+                let seconds = result["mainBlockedSeconds"]?.intValue ?? 0
+                let report = result["hangReport"]?.stringValue.map { "; sample: \($0)" } ?? ""
+                throw CLIError(message: "cmds is running but not responding (main thread blocked for \(seconds) s\(report))", code: .failure)
+            }
+            print("pong")
         },
         Command(name: "quit", usage: "quit", summary: "Quit the app without the running-agents confirmation (for scripted updates).") { ctx in
             try ctx.args.expectPositionals(0...0, usage: "cmds quit")

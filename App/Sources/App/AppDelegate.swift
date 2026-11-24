@@ -61,6 +61,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AntigravitySetup.noticeIfNeeded()
         // After the restore: a catch-up run may need the session's pane.
         controller.scheduleRunner.start()
+        // A hung main thread is sampled into <support dir>/hangs, and pings say it is busy.
+        HangWatchdog.shared.start(supportDirectory: CmdsEnv.supportDirectoryURL())
         metadataMonitor = MetadataMonitor(controller: controller)
         metadataMonitor.start()
         apiServer = APIServer(controller: controller)

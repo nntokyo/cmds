@@ -44,7 +44,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 
 | Method | Params | Result |
 |---|---|---|
-| `system.ping` | – | `{"pong": true}` |
+| `system.ping` | – | `{"pong": true}`. While the app's main thread has not answered for 5 s or more (a hang), answered from the socket's own thread: `{"pong": true, "busy": true, "mainBlockedSeconds", "hangReport"}` (`hangReport`: the latest sample, see [Hangs](../internals/architecture.md#hangs)) |
 | `system.identify` | – | `{"version", "build", "pid", "socketPath", "cliPath"}` |
 | `system.stats` | – | `{"system": SystemStats, "workspaces": [{"id", "cpuPercent", "memoryBytes"}], "agentLimits"?: [AgentLimits], "keepAwake": KeepAwakeStatus}` (`system` is omitted until two samples exist, ~1 s after launch; workspace fields until sampled or without processes; `agentLimits` while any is known; `keepAwake` = `idleAssertion`, `displayAssertion`, `lidCloseDisabled` (system `SleepDisabled`), `lidCloseByCmds`, `lidCloseAvailable`, `onBattery`, see [Keeping the Mac awake](../internals/architecture.md#keeping-the-mac-awake)) |
 | `system.processes` | `limit?` (1–500, default 20), `workspace?`, `pane?`, `leftover?` (bool: only leftovers) | `{"processes": [ProcessEntry], "total", "totalMemoryBytes"}`: processes started from cmds terminals (also after their pane or workspace closed), heaviest first; `total` and `totalMemoryBytes` before the limit. From the 2-s scan, nothing is spawned. Local socket only (#193) |
@@ -154,6 +154,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `debug.close_alert` | `id?` | `{"worktree": null}` when closing the workspace from the sidebar does not ask about a worktree, else `{"worktree", "text", "buttons"}` (the alert, not shown); DEBUG builds only, for tests |
 | `debug.pane_drag` | `pane`, and `target` (a pane on screen) with `zone?` (`left`/`right`/`top`/`bottom`/`center`), or `row` (a workspace id: its sidebar row), or `outside: true` | `{"state": {"workspace", "inWindow", "focused", "frame"?, "grip", "grid"?, "firstResponder"?}, "dropTarget"?, "side"?, "highlight"?}`: drops the pane as a drag of its grip would (#218); without a target only reports; DEBUG builds only, for tests ([testing.md](../internals/testing.md#isolated-instances)) |
 | `debug.schedule_clock` | `offset` (seconds), `wake?`, `capture?` | `{"now", "notifications"}`: moves the schedule runner's clock by `offset` (a simulated sleep) and checks what fell due; `wake: true` also notes a wake at that time (missed runs then say "the Mac was asleep"); `capture: true` keeps schedule notifications in `notifications` instead of showing them. DEBUG builds only, for tests |
+| `debug.block_main` | `seconds` (1–120) | Replies, then holds the main thread that long, as a hang would (`HangWatchdog`); DEBUG builds only, for tests |
 | `debug.drop_agent_usage` | `pane` | `{session}`: drops the pane's agent usage as an old report without a pid does (the pane keeps its remembered session); DEBUG builds only, for tests |
 | `debug.schedule_run_now_notice` | `id` | Runs the schedule as **Run Now** on its missed notification does; DEBUG builds only, for tests |
 

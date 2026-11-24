@@ -7,6 +7,7 @@ description: cmds（ネイティブ macOS のターミナルワークスペー�
 
 cmds のターミナルでは `cmds` CLI が PATH にあり、`CMDS_PANE_ID` / `CMDS_WORKSPACE_ID` が自分のペインを指す。
 まず `[ -n "$CMDS_PANE_ID" ] && cmds ping` で使えるか確かめる。失敗したらこのスキルは使わない。
+「cmds is running but not responding」と出たら cmds は固まっている（再起動はせず、表示された sample のパスを添えてユーザーに知らせる）。
 
 ## 守ること
 

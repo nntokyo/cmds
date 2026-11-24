@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Hangs are recorded: when cmds' main thread stops answering for 30 s, a sample of every thread goes to
+  `<support dir>/hangs` (with `hangs.log`), and meanwhile `cmds ping` says "running but not responding" instead of
+  timing out (#430).
+
 - Schedules: a missed run says why, "the Mac was asleep" or "cmds was not running", and its notification has
   **Run Now** (#426).
 
