@@ -114,10 +114,29 @@ extension CLI {
             try setScheduleEnabled(ctx, false)
         },
         Command(name: "schedule remove", usage: "schedule remove <id>",
-                summary: "Remove a schedule. Its active run is cancelled; its history is kept.") { ctx in
+                summary: "Remove a schedule. Its active run is cancelled; its history is kept; `cmds schedule restore` brings it back.") { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds schedule remove <id>")
-            let result = try ctx.call("schedule.remove", ["id": .string(ctx.args.positionals[0])])
+            let id = ctx.args.positionals[0]
+            let result = try ctx.call("schedule.remove", ["id": .string(id), "pane": ctx.envPane.json])
             if ctx.json { return ctx.printJSON(result) }
+            print("removed \(id) (cmds schedule restore \(id) brings it back for \(Int(ScheduleTrash.retention / 86400)) days)")
+        },
+        Command(name: "schedule deleted", usage: "schedule deleted [--json]",
+                summary: "Recently deleted schedules (\(Int(ScheduleTrash.retention / 86400)) days): removed ones, and ones dropped because the file had them broken.",
+                details: """
+                    Each line: id, name, when and why it left, and what it did. --json gives each schedule as it was
+                    stored (folder, prompt, command), also one that can no longer be read.
+                    """) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds schedule deleted [--json]")
+            let result = try ctx.call("schedule.deleted")
+            if ctx.json { return ctx.printJSON(result) }
+            print(Format.deletedSchedules(try perform { try result.decode(DeletedScheduleList.self) }), terminator: "")
+        },
+        Command(name: "schedule restore", usage: "schedule restore <id>",
+                summary: "Put a deleted schedule back (under a new id if its id is taken).") { ctx in
+            try ctx.args.expectPositionals(1...1, usage: "cmds schedule restore <id>")
+            let result = try ctx.call("schedule.restore", ["id": .string(ctx.args.positionals[0])])
+            try printEntry(result, ctx)
         },
         Command(name: "schedule run", usage: "schedule run <id>", summary: "Run a schedule now (also when it is off).") { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds schedule run <id>")
@@ -567,6 +586,30 @@ extension Format {
     }
 
     /// `cmds schedule history`.
+    /// `s1a2b3c4d  Daily report  removed 2026-11-24 09:12 by p12  every weekdays 09:00 → start ~/src/app`; a dropped one
+    /// says why, and what it did when it can still be read.
+    static func deletedSchedules(_ list: DeletedScheduleList, timeZone: TimeZone = .current) -> String {
+        guard !list.deleted.isEmpty else { return "no deleted schedules\n" }
+        return list.deleted.map { entry in
+            var line = "\(entry.id ?? "?")  \(oneLine(entry.name ?? "(no name)"))  "
+            line += entry.reason == .removed ? "removed" : "dropped"
+            line += " " + scheduleTime(entry.deletedAt, timeZone: timeZone)
+            switch entry.removedBy {
+            case .api(let pane?)?: line += " by \(pane)"
+            case .api(nil)?: line += " by the API"
+            case .app?: line += " in the window"
+            case nil: break
+            }
+            if let problem = entry.problem { line += " (\(oneLine(problem)))" }
+            if let schedule = entry.decoded {
+                line += "  " + scheduleTrigger(schedule.trigger, timeZone: timeZone) + " → " + scheduleAction(schedule.action)
+            } else {
+                line += "  (cannot be restored; --json shows it)"
+            }
+            return line + "\n"
+        }.joined()
+    }
+
     static func scheduleHistory(_ runs: [ScheduleRun], timeZone: TimeZone = .current) -> String {
         guard !runs.isEmpty else { return "no runs yet\n" }
         return runs.map { "\($0.scheduleID)  \(oneLine($0.scheduleName))  " + scheduleRun($0, timeZone: timeZone) + "\n" }.joined()

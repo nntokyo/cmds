@@ -130,6 +130,21 @@ in the support folder (`~/Library/Application Support/cmds`, readable by you onl
 there in plain text; they are never logged and never sent to the iPhone (it gets only a summary, see above). A damaged file is renamed to
 `schedules.json.corrupt-<time>` and kept; a file written by a newer cmds is shown but not changed.
 
+### Recently deleted
+
+A removed schedule is not gone at once: `schedules-deleted.json` keeps it for 30 days (at most 100), as it was, with
+when and by whom it was removed (the window, or the pane whose agent ran `cmds schedule remove`). So does a schedule
+that cmds had to drop while reading `schedules.json` (it was invalid or could not be read), with the reason.
+
+```sh
+cmds schedule deleted          # id, name, removed/dropped when and by whom, what it did
+cmds schedule deleted --json   # each schedule as it was stored: folder, prompt, command
+cmds schedule restore s1a2b3c4d # put it back (a new id if its id was taken); a passed one-time schedule comes back done
+```
+
+A dropped schedule that cannot be read cannot be restored, but `--json` still shows its folder and prompt, so you
+can add it again with `cmds schedule add`.
+
 Going back to an older cmds: as long as your schedules only start workspaces and continue Claude Code sessions once,
 cmds 0.6 keeps running them. Once one types into a pane, continues Codex, follows Codex's limit or repeats, the file
 says so (`version` 2) and cmds 0.6 shows the schedules but runs and changes none of them. Pane tags live in

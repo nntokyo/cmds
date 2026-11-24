@@ -383,7 +383,9 @@ CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/
 - **Store**: `<support dir>/schedules.json` and `schedule-runs.json`, loaded through `StoredFile` (a damaged file is
   moved aside, never overwritten; a read error or a `version` above `ScheduleFile.currentVersion` makes the runner read
   only), written atomically with mode 600. Decoding is lenient: a schedule that fails to decode or validate is
-  dropped, not the file. The version written is the lowest that runs every schedule (`Schedule.requiredVersion`):
+  dropped, not the file; each dropped element is kept as it was, with why, in `schedules-deleted.json`
+  (`ScheduleTrash`, ScheduleRunner+Trash.swift, #449), as is every removed schedule (with `removedBy`): 30 days, at
+  most 100, newest first; `schedule.deleted` / `schedule.restore`. The version written is the lowest that runs every schedule (`Schedule.requiredVersion`):
   1 for phase-1 schedules, 2 once one uses `sendText`, Codex, `codexLimitReset` or `repeats`, so an older cmds opens
   such a file read only instead of running a repeating trigger once or dropping what it cannot decode.
   `schedule-runs.json` stays at version 1 (unknown reason codes decode as `other`).

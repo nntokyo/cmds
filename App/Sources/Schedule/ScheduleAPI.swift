@@ -33,8 +33,13 @@ enum ScheduleAPI {
             }
             return try .from(runner.entry(schedule))
         case "schedule.remove":
-            try runner.remove(id: try params.required("id"))
+            try runner.remove(id: try params.required("id"), by: .api(pane: try params.string("pane")))
             return nil
+        case "schedule.deleted":
+            return try .from(runner.deletedList())
+        case "schedule.restore":
+            let schedule = try runner.restore(id: try params.required("id"))
+            return try .from(runner.entry(schedule))
         case "schedule.run":
             return ["run": try .from(try runner.runNow(id: try params.required("id")))]
         case "schedule.skip":

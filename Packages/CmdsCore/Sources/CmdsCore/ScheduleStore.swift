@@ -15,7 +15,9 @@ public struct ScheduleFile: Codable, Equatable, Sendable {
     public var version: Int
     public var schedules: [Schedule]
     /// Schedules dropped while decoding (not encoded).
-    public var dropped = 0
+    public var dropped: Int { droppedElements.count }
+    /// What was dropped, as it was in the file, and why (not encoded): kept in `schedules-deleted.json`.
+    public var droppedElements: [(json: JSONValue, problem: String)] = []
 
     /// Written by a newer cmds: read only (never saved over).
     public var isFromNewerVersion: Bool { version > Self.currentVersion }
@@ -36,11 +38,26 @@ public struct ScheduleFile: Codable, Equatable, Sendable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         version = c.lenientInt(.version) ?? 1
         let raw = try c.decodeIfPresent([LossyElement<Schedule>].self, forKey: .schedules) ?? []
+        let json = (try? c.decodeIfPresent([JSONValue].self, forKey: .schedules)) ?? []
         var seen = Set<String>()
-        schedules = raw.compactMap(\.value).filter {
-            ScheduleValidation.problems($0.draft).isEmpty && seen.insert($0.id).inserted
-        }.map(\.withoutPaneID)
-        dropped = raw.count - schedules.count
+        schedules = []
+        for (index, element) in raw.enumerated() {
+            let problem: String?
+            if let schedule = element.value {
+                let problems = ScheduleValidation.problems(schedule.draft)
+                if !problems.isEmpty {
+                    problem = problems.map(\.english).joined(separator: "; ")
+                } else if !seen.insert(schedule.id).inserted {
+                    problem = "duplicate id \(schedule.id)"
+                } else {
+                    schedules.append(schedule.withoutPaneID)
+                    problem = nil
+                }
+            } else {
+                problem = element.error ?? "cannot be read"
+            }
+            if let problem, index < json.count { droppedElements.append((json[index], problem)) }
+        }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -80,7 +97,23 @@ public struct ScheduleRunsFile: Codable, Equatable, Sendable {
 
 private struct LossyElement<Value: Decodable>: Decodable {
     var value: Value?
-    init(from decoder: Decoder) throws { value = try? Value(from: decoder) }
+    /// Why it could not be decoded (`value` nil).
+    var error: String?
+    init(from decoder: Decoder) throws {
+        do { value = try Value(from: decoder) } catch { self.error = Self.describe(error, below: decoder.codingPath.count) }
+    }
+
+    /// `trigger.type: unknown trigger type weird` (the path inside the element).
+    private static func describe(_ error: Error, below depth: Int) -> String {
+        switch error {
+        case DecodingError.keyNotFound(let key, _): return "missing \(key.stringValue)"
+        case DecodingError.dataCorrupted(let context), DecodingError.typeMismatch(_, let context),
+             DecodingError.valueNotFound(_, let context):
+            let path = context.codingPath.dropFirst(depth).map(\.stringValue).joined(separator: ".")
+            return path.isEmpty ? context.debugDescription : "\(path): \(context.debugDescription)"
+        default: return "cannot be read"
+        }
+    }
 }
 
 /// The schedule files in the support directory (`CMDS_SUPPORT_DIR` for an isolated instance). Loaded through

@@ -406,7 +406,7 @@ final class SchedulesWindowController: NSWindowController, NSWindowDelegate, NST
         alert.addButton(withTitle: String(localized: "Cancel"))
         alert.beginSheetModal(for: window) { [weak self] response in
             guard response == .alertFirstButtonReturn, let self else { return }
-            do { try self.runner.remove(id: entry.schedule.id) } catch { self.showError(error) }
+            do { try self.runner.remove(id: entry.schedule.id, by: .app) } catch { self.showError(error) }
         }
     }
 

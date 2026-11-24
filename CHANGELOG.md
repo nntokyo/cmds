@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Recently deleted schedules: a removed schedule, and one dropped because `schedules.json` had it invalid or
+  unreadable, is kept for 30 days as it was (folder, prompt, command), with when, why and which pane removed it.
+  `cmds schedule deleted [--json]` lists them, `cmds schedule restore <id>` puts one back (#449).
+
 ## [0.33.0] - 2026-11-24
 
 ### Added
