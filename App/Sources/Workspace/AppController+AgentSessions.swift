@@ -111,7 +111,10 @@ extension AppController {
             pane.agentSessionSavedAt = entry.session.lastSeen
             pane.resumeOffer = entry.session
             if mode == .always { pane.resumeRequestedAt = Date() }
-            if entry.interrupted == true {
+            // As saved; from an older cmds (no mark), as the transcript's last turn says (a local Claude Code session).
+            let cutOff = entry.interrupted ?? (entry.session.agent == .claude && entry.session.host == nil
+                ? ClaudeTurnState.cutOff(sessionID: entry.session.sessionID, configDir: entry.session.configDir) ?? false : false)
+            if cutOff {
                 pane.resumeInterrupted = true
                 // Resume Always: nobody may be there to say "continue" (cmds updated while agents worked).
                 pane.continueAfterResume = mode == .always
@@ -146,7 +149,8 @@ extension AppController {
                     continue
                 }
                 entries.append(AgentSessionEntry(workspace: workspace.id, pane: pane.id, state: state, session: session,
-                                                 command: AgentResume.typedCommand(for: session)))
+                                                 command: AgentResume.typedCommand(for: session),
+                                                 interrupted: pane.resumeInterrupted ? true : nil))
             }
         }
         return AgentSessionList(mode: AgentResumeSettings.mode, sessions: entries)

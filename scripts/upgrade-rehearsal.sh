@@ -1,7 +1,8 @@
 #!/bin/bash
 # Upgrade rehearsal: restores a COPY of the running cmds' session with this checkout's Debug build, in an isolated
 # instance, and shows what each workspace and pane comes back as (kind and login profile) next to the running app.
-# The running cmds and its files are only read. Agent sessions are never resumed in the copy (CMDS_AGENT_RESUME=never),
+# The running cmds and its files are only read. Agent sessions are never resumed in the copy (CMDS_AGENT_RESUME=ask: offered,
+# never typed),
 # sync is off, and only session.json, schedules.json, claude-accounts.json and browser-profiles.json are copied (no
 # keys, no sync identity). docs/internals/testing.md "Upgrade rehearsal".
 #
@@ -35,7 +36,7 @@ done
 chmod 600 "$dir"/*.json
 
 unset CMDS_PANE_ID CMDS_WORKSPACE_ID CMDS_SOCKET_PATH
-CMDS_AGENT_RESUME=never CMDS_SUPPORT_DIR="$dir" CMDS_SYNC_DISABLED=1 "$app/Contents/MacOS/cmds" >/dev/null 2>&1 &
+CMDS_AGENT_RESUME=ask CMDS_SUPPORT_DIR="$dir" CMDS_SYNC_DISABLED=1 "$app/Contents/MacOS/cmds" >/dev/null 2>&1 &
 pid=$!
 disown "$pid"
 cleanup() {
@@ -64,6 +65,8 @@ if "$cli" --socket "$live/cmds.sock" ls --json >/dev/null 2>&1; then "$cli" --so
 else echo "  (not reachable)"; fi
 echo "This build, restoring a copy of its session ($dir):"
 "$cli" --socket "$dir/cmds.sock" ls --json | summary
+echo "Agent sessions it would resume (\"cut off while working\": told to continue with Resume Always):"
+"$cli" --socket "$dir/cmds.sock" sessions | sed -n '2,$p' | grep -v '^ *\$ ' | sed 's/^/  /'
 echo "Schedules in the copy:"
 "$cli" --socket "$dir/cmds.sock" schedule list | sed 's/^/  /'
 if $keep; then echo "Kept: $dir (the instance stops now)"; fi

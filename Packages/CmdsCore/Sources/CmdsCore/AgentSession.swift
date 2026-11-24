@@ -118,13 +118,17 @@ public struct AgentSessionEntry: Codable, Equatable, Sendable {
     public var session: AgentSession
     /// The command that resuming types into the pane.
     public var command: String?
+    /// Its agent was cut off while working when cmds quit: with Resume Always it is told to continue once resumed.
+    public var interrupted: Bool?
 
-    public init(workspace: String, pane: String, state: AgentSessionState, session: AgentSession, command: String?) {
+    public init(workspace: String, pane: String, state: AgentSessionState, session: AgentSession, command: String?,
+                interrupted: Bool? = nil) {
         self.workspace = workspace
         self.pane = pane
         self.state = state
         self.session = session
         self.command = command
+        self.interrupted = interrupted
     }
 }
 

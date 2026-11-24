@@ -355,9 +355,11 @@ scripts/upgrade-rehearsal.sh            # --keep leaves the copy; --app for anot
 ```
 
 The script copies `session.json`, `schedules.json`, `claude-accounts.json` and `browser-profiles.json` (no keys, no sync
-identity) to a temporary folder and restores them in an isolated instance of the Debug build. Agent sessions are not
-resumed (`CMDS_AGENT_RESUME=never`) and sync is off. It prints each workspace with its panes and their login profiles,
-for the running app (read only, through its socket) and for the copy, then the copy's schedules. The two lists should
+identity) to a temporary folder and restores them in an isolated instance of the Debug build. Agent sessions are only
+offered, never typed (`CMDS_AGENT_RESUME=ask`), and sync is off. It prints each workspace with its panes and their login profiles,
+for the running app (read only, through its socket) and for the copy, then the agent sessions the copy offers to resume
+(those marked "cut off while working" would be told to continue with Resume Always; the copy only offers, in Ask mode)
+and its schedules. The two lists should
 match: a workspace, pane or profile that differs means the update would change what people work in, for example
 sign-ins that would have to be entered again (CHANGELOG #438). The instance stops and the copy is deleted at the end.
 
