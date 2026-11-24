@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-11-25
+
 ### Added
 
 - `cmds schedule from-session [--apply]` (API `schedule.session_jobs`): moves a Claude Code session's recurring
@@ -17,8 +19,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Schedules that repeat every N minutes or hours (`cmds schedule add --every 5m`, **Repeatedly** in the editor; 5
   minutes to 7 days, counted from midnight when the interval divides a day). Unlike a Claude Code `CronCreate` job
   they outlive restarts: a time missed while the Mac slept runs once when it is back, and a skipped (agent busy) or
-  missed run sends no notification. The note a resumed session gets about lost CronCreate jobs points at `cmds schedule from-session`. Files
-  with one are `schedules.json` version 3; an older cmds opens them read only (#456).
+  missed run sends no notification. The note a resumed session gets about lost CronCreate jobs points at
+  `cmds schedule from-session`. Files with one are `schedules.json` version 3; an older cmds opens them read only (#456).
 - `cmds doctor` (API `app.doctor`): what is degraded in the running cmds, with what to do — an update waiting for a
   restart, Resume Agent Sessions and Open at login, schedules that cannot run or were dropped, hangs in the last
   24 h, memory pressure, Bluetooth sync failing, and Claude Code sessions whose CronCreate jobs are not moved to
@@ -1235,7 +1237,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.33.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.34.0...master
+[0.34.0]: https://github.com/nntokyo/cmds/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/nntokyo/cmds/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/nntokyo/cmds/compare/v0.31.0...v0.32.0
 [0.31.0]: https://github.com/nntokyo/cmds/compare/v0.30.0...v0.31.0
