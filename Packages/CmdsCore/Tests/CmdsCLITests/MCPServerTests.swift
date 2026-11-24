@@ -95,7 +95,7 @@ final class MCPServerTests: XCTestCase {
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_profile", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
                         "browser_console", "browser_source", "browser_seo", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
-                        "browser_network", "browser_point", "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "list_panes",
+                        "browser_network", "browser_point", "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "terminal_wait", "list_panes",
                         "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
 
@@ -511,6 +511,32 @@ final class MCPServerTests: XCTestCase {
         _ = callTool(server, "terminal_send", #"{"pane":"p9","text":"","enter":true}"#)  // just Return
         XCTAssertEqual(requests.last?.params["text"] ?? nil, .string("\n"))
         XCTAssertEqual(callTool(server, "terminal_send", #"{"pane":"p9","text":""}"#)?["isError"], .bool(true))
+    }
+
+    func testTerminalWaitWaitsForTheCommandTypedLast() throws {
+        openers["p9"] = "p1"
+        paneKinds["p9"] = .terminal
+        replies["pane.send_text"] = .object(["commandSeq": .number(4)])
+        replies["pane.read_text"] = .object(["text": "PASS 12 tests"])
+        replies["pane.wait_command"] = .object(["seq": .number(5), "exitCode": .number(1), "seconds": .number(12.34),
+                                                "finishedAt": .number(0)])
+        let server = server()
+        _ = callTool(server, "terminal_send", #"{"pane":"p9","text":"npm test","enter":true}"#)
+        let done = try XCTUnwrap(text(callTool(server, "terminal_wait", #"{"pane":"p9","lines":5}"#)))
+        XCTAssertEqual(done, "The command finished: exit 1 after 12.3 s. Last lines:\nPASS 12 tests")
+        let wait = try XCTUnwrap(requests.first { $0.method == "pane.wait_command" })
+        XCTAssertEqual(wait.params["after"] ?? nil, .number(4), "the command typed after 4 had finished, even if it is over")
+        XCTAssertEqual(wait.params["openedBy"] ?? nil, .string("p1"))
+        XCTAssertEqual(wait.params["timeout"] ?? nil, .number(MCPServer.terminalWaitDefault))
+        XCTAssertEqual(requests.last?.params["scrollback"] ?? nil, .number(5))
+
+        requests.removeAll()
+        replies["pane.wait_command"] = .object(["timedOut": .bool(true), "seq": .number(5)])
+        let running = try XCTUnwrap(text(callTool(server, "terminal_wait", #"{"pane":"p9","timeout":99999}"#)))
+        XCTAssertTrue(running.hasPrefix("Still running after 600 s"), running)
+        XCTAssertEqual(requests.first { $0.method == "pane.wait_command" }?.params["after"] ?? nil, .number(5),
+                       "the next one after the one reported")
+        XCTAssertEqual(callTool(server, "terminal_wait", #"{"pane":"p1"}"#)?["isError"], .bool(true), "its own terminal")
     }
 
     func testTerminalReadAndSendRefuseOtherPanesAndTheirOwn() throws {
