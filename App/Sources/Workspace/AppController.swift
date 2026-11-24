@@ -399,6 +399,21 @@ final class AppController {
         try terminal(for: paneID).sendText(text)
     }
 
+    /// `pane.wait_command`: the next command to finish in a terminal pane after the `after`-th (default: the last one
+    /// finished so far, so a command running now), as `FinishedCommand` JSON, or `{timedOut: true}` after `timeout`.
+    /// With `openedBy` (MCP terminal_wait) only a pane opened from that terminal.
+    func waitForCommand(paneID: String?, after: Int?, timeout: TimeInterval, openedBy: String?) async throws -> JSONValue {
+        try checkOpener(paneID, openedBy)
+        let pane = try resolvePane(paneID)
+        guard pane.terminal != nil else { throw RPCError.invalidParams("pane \(pane.id) is not a terminal") }
+        let since = after ?? pane.lastCommand?.seq ?? 0
+        guard let finished = await pane.waitForCommand(after: since, timeout: timeout) else {
+            if pane.isClosing { throw RPCError.notFound("pane \(pane.id) closed") }
+            return .object(["timedOut": .bool(true), "seq": .number(Double(pane.lastCommand?.seq ?? 0))])
+        }
+        return try JSONValue.from(finished)
+    }
+
     /// `openedBy` given: the pane must have been opened from that pane (`Pane.openedBy`), never be it.
     private func checkOpener(_ paneID: String?, _ openedBy: String?) throws {
         guard let openedBy else { return }

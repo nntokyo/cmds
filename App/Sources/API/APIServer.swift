@@ -89,6 +89,17 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.worktreeRequest(method, params) }
                 }
+            case "pane.wait_command":
+                // Waits without holding the main actor (Pane.waitForCommand).
+                let paneParam = try params.string("pane")
+                let openedBy = try params.string("openedBy")
+                let after = try params.int("after")
+                let timeout = min(max(try params.double("timeout") ?? FinishedCommand.defaultTimeout, 0), FinishedCommand.maxTimeout)
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        try await self.controller.waitForCommand(paneID: paneParam, after: after, timeout: timeout, openedBy: openedBy)
+                    }
+                }
             case "pane.export":
                 // #253: read in chunks with the main actor free between them (AppController.exportScrollback). Not in
                 // RemoteAPIPolicy.allowedMethods: SSH panes' sockets cannot write files on this Mac.
@@ -660,6 +671,8 @@ final class APIServer {
         case "pane.send_text":
             try controller.sendText(paneID: try params.string("pane"), text: try params.required("text"),
                                     openedBy: try params.string("openedBy"))
+            // The commands finished so far: `pane.wait_command` with `after` waits for the one just typed.
+            return ["commandSeq": .number(Double(try controller.resolvePane(try params.string("pane")).lastCommand?.seq ?? 0))]
         case "pane.read_text":
             return ["text": .string(try controller.readText(paneID: try params.string("pane"), scrollback: try params.int("scrollback"),
                                                             openedBy: try params.string("openedBy")))]
@@ -987,6 +1000,14 @@ struct Params {
         case nil, .null?: return nil
         case .number(let number)? where number >= 0 && number == number.rounded() && number < 1e9: return Int(number)
         default: throw RPCError.invalidParams("\(key) must be a non-negative integer")
+        }
+    }
+
+    func double(_ key: String) throws -> Double? {
+        switch value?[key] {
+        case nil, .null?: return nil
+        case .number(let number)? where number >= 0 && number.isFinite: return number
+        default: throw RPCError.invalidParams("\(key) must be a non-negative number")
         }
     }
 }

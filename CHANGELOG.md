@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Waiting for a command in a terminal pane: `cmds wait` (exits with the command's exit code) and MCP `terminal_wait`
+  (exit code, duration and the last lines) wait until the command typed into a pane finishes, from the shell
+  integration, so agents no longer read the pane over and over; panes report their `lastCommand` (#422).
+
 - iPhone and iPad: a browser pane showing a page only the Mac can load (its localhost) shows a picture the Mac takes,
   as the pane shows it or at iPhone, iPad and desktop sizes (loaded again off screen on the Mac), to check a dev
   server's layouts from the phone (#420).

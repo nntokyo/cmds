@@ -56,7 +56,8 @@ bundled in a Debug build, #247); `--socket PATH` overrides all of them.
 | `cmds tab [--pane P] [--browser URL] [--cwd DIR] [--no-focus]` | Open a tab beside a pane (default: the current one): a browser tab in a browser pane or with `--browser`, else a terminal (in `--cwd`, default the pane's directory). Prints the new pane id. See [Tabs](../guide/workspaces-and-panes.md#tabs) |
 | `cmds pane move <pane> [--to WS] [--beside P [--tab]] [--side left\|right\|top\|bottom] [--new-workspace] [--no-focus]` | Move a pane: `--beside P` on `--side` (default right) of pane P (in P's workspace, also within its own), with `--tab` into P's tab group instead, `--to WS` (id, 1-based index or title) into that workspace beside its focused pane, `--new-workspace` into a new workspace after its own (a pane alone in its workspace stays). What runs in it keeps running (same pane id, processes, scrollback, page); a workspace left without panes closes. `--no-focus` keeps the keyboard and the shown workspace. Prints the workspace the pane is in now (`--json`: `{pane, workspace}`). See [Moving panes](../guide/workspaces-and-panes.md#moving-panes) |
 | `cmds pane swap <a> <b>` | Swap the places of two panes, in one workspace or across two |
-| `cmds send [--pane P] [--enter] <text…\|->` | Type text into a terminal (`-` reads stdin; `--enter`/`-e` appends Return) |
+| `cmds send [--pane P] [--enter] <text…\|->` | Type text into a terminal (`-` reads stdin; `--enter`/`-e` appends Return). `--json`: `{"commandSeq"}` for `cmds wait --after` |
+| `cmds wait [--pane P] [--after N] [--timeout S]` | Wait until a command finishes in a terminal pane (shell integration): prints `exit 1 after 12.3 s` and exits with that code; `--after N` waits for one after the pane's N-th finished command (`commandSeq` of `cmds send --json`), so one that already ended is not missed; after `--timeout` (default 600 s) exits 124 |
 | `cmds read [--pane P] [--scrollback N \| -n N]` | Print the screen, or the last N lines including scrollback |
 | `cmds pane export [--pane P] [--ansi] [--force] <file>` | Write a terminal pane's whole scrollback and screen to a file (#253): plain text with wrapped lines joined, or with `--ansi` the colours as ANSI escape codes. Mode 0600; an existing file only with `--force`; relative paths resolved against the current directory. Read in chunks while the pane runs; prints `wrote N rows to FILE (B bytes)` and how many rows the scrollback limit dropped meanwhile, if any ([guide](../guide/workspaces-and-panes.md#exporting-the-scrollback)) |
 | `cmds notify [--title T] [--pane P] [--level L] <body…>` | Light the attention ring + sidebar text (+ macOS notification when cmds is in the background). `--level` `info` (default), `success`, `warning` or `error` colours the text and adds `✓` `⚠︎` `✗`; `error` lights the ring red |
@@ -142,6 +143,7 @@ cmds browser eval 'document.title'
 cmds browser snapshot -o /tmp/page.png
 cmds send --pane p2 --enter 'make test'
 cmds read --pane p2 --scrollback 200 | tail -20
+n=$(cmds send --pane p2 --enter --json 'make test' | jq .commandSeq); cmds wait --pane p2 --after "$n" && echo passed
 long-task; cmds notify --title "long-task" "finished with $?"
 cmds schedule add --name "Continue after reset" --after-limit work --continue
 cmds schedule add --name "Morning tests" --every weekdays --time 09:00 \
