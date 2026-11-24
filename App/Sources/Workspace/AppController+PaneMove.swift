@@ -89,6 +89,9 @@ extension AppController {
         guard source.panes.count > 1 else { return source.id }
         let sourceWasSelected = source.id == selectedWorkspaceID
         let destination = makeWorkspace()
+        // The moved pane keeps its sign-ins: the new workspace browses as the one it came from.
+        destination.separateSignIns = source.separateSignIns
+        destination.browserProfile = source.browserProfile
         detach(pane, from: source)
         destination.root = SplitNode(paneID: pane.id)
         attach(pane, to: destination, from: source)

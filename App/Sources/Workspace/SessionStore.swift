@@ -59,6 +59,8 @@ struct SessionState: Codable {
         var environment: [String]? = nil
         /// `Workspace.browserProfile`. Added later: older sessions lack it, older versions ignore it.
         var browserProfile: String? = nil
+        /// `Workspace.separateSignIns`. Absent (a workspace saved before it existed): false, its sign-ins stay as they were.
+        var separateSignIns: Bool? = nil
     }
 
     /// The pane at `paneIndex` was opened from the terminal pane at `openerIndex` (reading order of `layout`).
@@ -161,7 +163,7 @@ enum SessionStore {
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
         case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners, worktree,
-             tabGroups, paneProfiles, environment, browserProfile
+             tabGroups, paneProfiles, environment, browserProfile, separateSignIns
     }
 
     init(from decoder: Decoder) throws {
@@ -187,6 +189,7 @@ extension SessionState.WorkspaceState {
         paneProfiles = profiles.isEmpty ? nil : profiles
         environment = try? c.decodeIfPresent([String].self, forKey: .environment)
         browserProfile = (try? c.decodeIfPresent(String.self, forKey: .browserProfile)).flatMap { try? BrowserProfile.validated($0) }
+        separateSignIns = try? c.decodeIfPresent(Bool.self, forKey: .separateSignIns)
     }
 }
 

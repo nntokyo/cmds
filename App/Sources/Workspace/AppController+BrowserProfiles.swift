@@ -33,8 +33,14 @@ extension AppController {
     /// The workspace's own login profile for a browser pane nobody chose one for (`WorkspaceProfile`); nil with
     /// Settings › General › Browser › Separate sign-ins per workspace off (the shared data). Named once, from the
     /// project folder, and kept with the workspace.
-    func workspaceBrowserProfile(for workspaceID: String) -> String? {
+    /// `explicitly`: the user switched (Use This Workspace's Profile): from then on also a workspace from before uses it.
+    func workspaceBrowserProfile(for workspaceID: String, explicitly: Bool = false) -> String? {
         guard AppSettings.shared.workspaceProfiles, let workspace = workspace(id: workspaceID) else { return nil }
+        if explicitly, !workspace.separateSignIns {
+            workspace.separateSignIns = true
+            scheduleSave()
+        }
+        guard workspace.separateSignIns else { return nil }
         if let name = workspace.browserProfile { return name }
         let folder = workspace.localWorkingDirectory.map { GitInfo.projectRoot(at: $0) ?? $0 }
         let name = WorkspaceProfile.name(folder: folder, title: DefaultTitle.localized(workspace.title))

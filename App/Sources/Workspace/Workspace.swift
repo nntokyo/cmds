@@ -24,6 +24,10 @@ final class Workspace {
     /// This workspace's own login profile (`WorkspaceProfile`), named when its first browser pane opens. Saved with the
     /// session, so the name stays when the folder changes.
     var browserProfile: String?
+    /// Browser panes opened here default to `browserProfile` (a workspace created with this version, or switched on
+    /// with Use This Workspace's Profile). Workspaces from before keep their sign-ins: false, so they go on with the
+    /// profile they used (the shared data unless chosen) and nobody has to sign in again. Saved with the session.
+    var separateSignIns = true
     /// Changes and ahead / behind of a local repository (MetadataMonitor, the sidebar's branch line).
     var gitSummary: GitSummary?
     /// Files this workspace's worktree changed that another worktree of the same repository changed too (#174 G18).

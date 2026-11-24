@@ -177,7 +177,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         browserTabsCheckbox.action = #selector(browserTabsToggled)
         workspaceProfilesCheckbox.target = self
         workspaceProfilesCheckbox.action = #selector(workspaceProfilesToggled)
-        workspaceProfilesCheckbox.toolTip = String(localized: "New browser panes in a workspace use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Panes already open and profiles you chose stay as they are.")
+        workspaceProfilesCheckbox.toolTip = String(localized: "Browser panes in a workspace created from now on use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Existing workspaces keep the sign-ins they use.")
         chromeBookmarksCheckbox.target = self
         chromeBookmarksCheckbox.action = #selector(chromeBookmarksToggled)
         chromeProfilePopup.target = self

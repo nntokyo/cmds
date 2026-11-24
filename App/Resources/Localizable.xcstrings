@@ -2900,6 +2900,16 @@
         }
       }
     },
+    "Browser panes in a workspace created from now on use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Existing workspaces keep the sign-ins they use.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これから作るワークスペースでは、ブラウザのペインがそのワークスペース専用のログインのプロファイルを使います。あるワークスペースのログイン（X・Amazon など）が別のワークスペースで使われることはありません。既存のワークスペースは今のログインをそのまま使います。"
+          }
+        }
+      }
+    },
     "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.": {
       "comment": "Settings › General › Browser",
       "localizations": {
@@ -7977,16 +7987,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "新規ワークツリーワークスペース…"
-          }
-        }
-      }
-    },
-    "New browser panes in a workspace use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Panes already open and profiles you chose stay as they are.": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ワークスペースで新しく開くブラウザのペインは、そのワークスペース専用のログインのプロファイルを使います。あるワークスペースのログイン（X・Amazon など）が別のワークスペースで使われることはありません。すでに開いているペインと、選んだプロファイルはそのままです。"
           }
         }
       }
