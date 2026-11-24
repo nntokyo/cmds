@@ -50,12 +50,14 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
     public var profile: String?
     /// Terminal panes: the running program's progress report (OSC 9;4); nil when there is none.
     public var progress: TerminalProgress?
+    /// Terminal panes with the shell integration: the last command that finished (OSC 133;D); nil before the first.
+    public var lastCommand: FinishedCommand?
 
     public init(id: String, kind: PaneKind, title: String, focused: Bool, attention: Bool,
                 workingDirectory: String? = nil, url: String? = nil, agent: AgentUsage? = nil,
                 remote: RemoteInfo? = nil, file: String? = nil, account: String? = nil, openedBy: String? = nil,
                 tabs: [String]? = nil, background: Bool? = nil, suspended: Bool? = nil, profile: String? = nil,
-                progress: TerminalProgress? = nil) {
+                progress: TerminalProgress? = nil, lastCommand: FinishedCommand? = nil) {
         self.id = id
         self.kind = kind
         self.title = title
@@ -73,6 +75,7 @@ public struct PaneInfo: Codable, Equatable, Sendable, Identifiable {
         self.suspended = suspended
         self.profile = profile
         self.progress = progress
+        self.lastCommand = lastCommand
     }
 }
 

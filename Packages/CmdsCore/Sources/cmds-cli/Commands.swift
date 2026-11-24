@@ -441,7 +441,33 @@ extension CLI {
             guard !ctx.args.positionals.isEmpty else { throw CLIError.usage("usage: cmds send [--pane P] [--enter] <text…|->") }
             var text = ctx.args.positionals == ["-"] ? readStandardInput() : ctx.args.positionals.joined(separator: " ")
             if ctx.args.has("enter") { text += "\n" }
-            try ctx.call("pane.send_text", ["pane": ctx.pane.json, "text": .string(text)])
+            let result = try ctx.call("pane.send_text", ["pane": ctx.pane.json, "text": .string(text)])
+            if ctx.json { ctx.printJSON(result) }
+        },
+        Command(name: "wait", usage: "wait [--pane P] [--after N] [--timeout S]",
+                summary: "Wait until a command finishes in a terminal pane; exit with its exit code.",
+                details: """
+                    Waits for the next command to finish in the pane (shell integration, OSC 133;D), or, with --after N, for
+                    one after its N-th finished command (N: `commandSeq` printed by `cmds send --json`), so a command that
+                    already ended is not missed. Prints its exit code and duration and exits with that code (0 when the
+                    shell gave none); after --timeout (default 600 s, at most 3600) it says so and exits 124.
+                    --json: the API's answer.
+                    """,
+                options: ["pane", "after", "timeout"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds wait [--pane P] [--after N] [--timeout S]")
+            let timeout = Double(try ctx.args.int("timeout") ?? Int(FinishedCommand.defaultTimeout))
+            let result = try ctx.call("pane.wait_command", [
+                "pane": ctx.pane.json, "after": try ctx.args.int("after").map { .number(Double($0)) },
+                "timeout": .number(timeout),
+            ], timeout: min(timeout, FinishedCommand.maxTimeout) + 15)
+            if ctx.json { ctx.printJSON(result) }
+            if result["timedOut"]?.boolValue == true {
+                if !ctx.json { print("still running after \(Int(timeout)) s") }
+                exit(124)
+            }
+            let finished = try perform { try result.decode(FinishedCommand.self) }
+            if !ctx.json { print(finished.summary) }
+            exit(Int32(truncatingIfNeeded: finished.exitCode ?? 0))
         },
         Command(name: "read", usage: "read [--pane P] [--scrollback N]",
                 summary: "Print a terminal pane's visible text, or the last N lines including scrollback.",

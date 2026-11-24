@@ -98,6 +98,9 @@ final class Pane {
     private(set) var progress: TerminalProgress?
     private(set) var progressAt: Date?
     private var progressExpiry: DispatchWorkItem?
+    /// The last command that finished (shell integration, OSC 133;D) and those waiting for the next one.
+    private(set) var lastCommand: FinishedCommand?
+    private var commandWaiters: [(FinishedCommand?) -> Void] = []
 
     /// Last time the pane took focus (the "other" files pane is the one used most recently).
     var focusedAt = Date.distantPast
@@ -348,12 +351,15 @@ final class Pane {
                         file: preview?.path, account: claudeAccount, openedBy: openedBy,
                         tabs: group?.tabs, background: group.map { $0.paneID != id ? true : nil } ?? nil,
                         suspended: browser?.isSuspended == true ? true : nil, profile: profileForOpenedPages,
-                        progress: progress)
+                        progress: progress, lastCommand: lastCommand)
     }
 
     /// Releases the underlying surface without triggering `terminalSurfaceDidClose` handling.
     func tearDown() {
         isClosing = true
+        let waiting = commandWaiters
+        commandWaiters = []
+        for waiter in waiting { waiter(nil) }  // the pane is gone: no command will finish
         if kind == .terminal { find.reset() }
         container.removeFromSuperview()
         if let terminal {
@@ -444,7 +450,28 @@ extension Pane: TerminalSurfaceDelegate {
 
     func terminalSurface(_ surface: TerminalSurface, commandFinishedWithExitCode exitCode: Int?, duration: TimeInterval) {
         guard surface === terminal else { return }
+        let finished = FinishedCommand(seq: (lastCommand?.seq ?? 0) + 1, exitCode: exitCode, seconds: duration,
+                                       finishedAt: Date())
+        lastCommand = finished
+        let waiting = commandWaiters
+        commandWaiters = []
+        for waiter in waiting { waiter(finished) }
         controller?.paneCommandFinished(self, exitCode: exitCode, duration: duration)
+    }
+
+    /// Waits for a command after `after` to finish (`pane.wait_command`); nil after `timeout` or when the pane closes.
+    func waitForCommand(after: Int, timeout: TimeInterval) async -> FinishedCommand? {
+        if let lastCommand, lastCommand.seq > after { return lastCommand }
+        return await withCheckedContinuation { continuation in
+            var resumed = false
+            let finish: (FinishedCommand?) -> Void = { command in
+                guard !resumed else { return }
+                resumed = true
+                continuation.resume(returning: command)
+            }
+            commandWaiters.append(finish)
+            DispatchQueue.main.asyncAfter(deadline: .now() + timeout) { finish(nil) }
+        }
     }
 
     func terminalSurfaceDidRingBell(_ surface: TerminalSurface) {

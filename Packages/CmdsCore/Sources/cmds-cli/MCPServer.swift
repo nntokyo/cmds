@@ -10,7 +10,7 @@ extension CLI {
         details: """
             Register it with your agent (e.g. `claude mcp add cmds -- cmds mcp`); the agent starts it. Tools are offered
             only inside a cmds terminal (CMDS_PANE_ID set). Panes open without taking the keyboard focus;
-            terminal_read, terminal_send and close_pane act only on panes opened from that terminal (by this server or
+            terminal_read, terminal_send, terminal_wait and close_pane act only on panes opened from that terminal (by this server or
             the cmds CLI). See docs/guide/ai-agents.md.
             """
     ) { ctx in
@@ -33,6 +33,9 @@ final class MCPServer {
     static let pageTimeout: TimeInterval = 120
     /// terminal_read returns at most this many lines.
     static let maxReadLines = 2000
+    /// terminal_wait: seconds by default and at most (an MCP call should not hang for long; call again to go on).
+    static let terminalWaitDefault: TimeInterval = 120
+    static let terminalWaitMax: TimeInterval = 600
     /// Snapshots at other sizes load the page once per size.
     static let devicesTimeout: TimeInterval = 300
 
@@ -47,7 +50,8 @@ final class MCPServer {
         page's console and errors, its fetch/XHR requests (failing API calls), its HTML and an SEO check. When it is unclear which element of a page the user means, ask them \
         to click it with browser_point (you get its selector and source line). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
         server or another long-running command in a terminal pane beside yours with terminal_split, read its output \
-        with terminal_read and type into it with terminal_send (only panes opened from your terminal); list_ports shows \
+        with terminal_read and type into it with terminal_send (only panes opened from your terminal); after typing a \
+        command (tests, a build), wait for it with terminal_wait rather than reading the pane again and again; list_ports shows \
         the ports the workspaces listen on. Before a build, test run or other heavy job, check system_stats: at advice \
         wait the Mac is short of memory, so do not start another one. Close the panes you opened when you are done (close_pane; it also closes \
         panes opened from your terminal with the cmds CLI, such as `cmds browser open`, `cmds open` or `cmds split`).
@@ -65,6 +69,9 @@ final class MCPServer {
     /// Panes this server opened, oldest first. close_pane accepts these, and panes the app says were opened from our
     /// terminal pane (`pane.close` with `openedBy`; #165).
     private(set) var openedPanes: [String] = []
+    /// Per pane: the commands finished before the last terminal_send / terminal_split command (`pane.send_text`'s
+    /// `commandSeq`), so terminal_wait waits for the one typed then, even when it already finished.
+    private var commandSeqAtSend: [String: Int] = [:]
     /// The browser pane browser_* tools use when no pane is given: the last one this server opened.
     private var lastBrowserPane: String?
 
@@ -306,6 +313,13 @@ final class MCPServer {
                 "text": string("Text to type. Control characters are typed as is."),
                 "enter": .object(["type": "boolean", "description": "Press Return after the text (run it). Default: false."]),
              ], required: ["pane", "text"]),
+        Tool(name: "terminal_wait",
+             description: "Wait until the command you typed with terminal_send (or terminal_split's command) finishes in a terminal pane opened from your terminal, instead of reading it over and over: returns its exit code, how long it ran and the last lines. Needs the shell integration in that pane (zsh, bash and fish in cmds have it). After the timeout it says the command is still running; call it again to keep waiting.",
+             properties: [
+                "pane": string("Pane id returned by terminal_split or `cmds split`."),
+                "timeout": .object(["type": "integer", "description": .string("Seconds to wait (default \(Int(terminalWaitDefault)), at most \(Int(terminalWaitMax))).")]),
+                "lines": .object(["type": "integer", "description": .string("Last lines to return with the result (default 30, at most \(maxReadLines)).")]),
+             ], required: ["pane"]),
         Tool(name: "list_panes",
              description: "The panes of your workspace: id, kind, title, directory or URL, and which is yours and which were opened from your terminal (those you may read, type into and close).",
              properties: [:]),
@@ -606,8 +620,9 @@ final class MCPServer {
             guard let command = nonEmpty(arguments["command"]?.stringValue) else {
                 return [Self.text("Opened terminal pane \(id).")]
             }
-            try call("pane.send_text", ["pane": .string(id), "text": .string(command + "\n"), "openedBy": envPane.json],
-                     Self.requestTimeout)
+            let sent = try call("pane.send_text", ["pane": .string(id), "text": .string(command + "\n"), "openedBy": envPane.json],
+                                Self.requestTimeout)
+            commandSeqAtSend[id] = sent["commandSeq"]?.intValue
             return [Self.text("Opened terminal pane \(id) running: \(command)")]
         case "terminal_read":
             let pane = try ownTerminalPane(try argument(arguments, "pane"), for: .read)
@@ -626,9 +641,34 @@ final class MCPServer {
             let enter = arguments["enter"]?.boolValue == true
             var text = try argument(arguments, "text", allowEmpty: enter)
             if enter { text += "\n" }
-            try call("pane.send_text", ["pane": .string(pane), "text": .string(text), "openedBy": envPane.json],
-                     Self.requestTimeout)
+            let sent = try call("pane.send_text", ["pane": .string(pane), "text": .string(text), "openedBy": envPane.json],
+                                Self.requestTimeout)
+            if enter { commandSeqAtSend[pane] = sent["commandSeq"]?.intValue }
             return [Self.text("Typed into \(pane).")]
+        case "terminal_wait":
+            let pane = try ownTerminalPane(try argument(arguments, "pane"), for: .wait)
+            var timeout = Self.terminalWaitDefault
+            if let value = arguments["timeout"], value != .null {
+                guard let seconds = value.intValue, seconds > 0 else { throw ToolError(message: "timeout must be a positive number") }
+                timeout = min(Double(seconds), Self.terminalWaitMax)
+            }
+            var lines = 30
+            if let value = arguments["lines"], value != .null {
+                guard let count = value.intValue, count > 0 else { throw ToolError(message: "lines must be a positive number") }
+                lines = min(count, Self.maxReadLines)
+            }
+            let result = try call("pane.wait_command", [
+                "pane": .string(pane), "openedBy": envPane.json, "timeout": .number(timeout),
+                "after": commandSeqAtSend[pane].map { .number(Double($0)) },
+            ], timeout + 15)
+            let text = try call("pane.read_text", ["pane": .string(pane), "openedBy": envPane.json,
+                                                   "scrollback": .number(Double(lines))], Self.requestTimeout)["text"]?.stringValue ?? ""
+            if result["timedOut"]?.boolValue == true {
+                return [Self.text("Still running after \(Int(timeout)) s (call terminal_wait again to keep waiting). Last lines:\n\(text)")]
+            }
+            commandSeqAtSend[pane] = result["seq"]?.intValue
+            let finished = try? result.decode(FinishedCommand.self)
+            return [Self.text("The command finished: \(finished?.summary ?? "done"). Last lines:\n\(text)")]
         case "list_panes":
             let panes = try workspacePanes()
             let lines = panes.map { pane -> String in
@@ -709,10 +749,16 @@ final class MCPServer {
 
     /// What terminal_read and terminal_send do to a pane (`ownTerminalPane`'s refusals name it).
     private enum TerminalAccess {
-        case read, send
+        case read, send, wait
 
-        var tool: String { self == .read ? "terminal_read" : "terminal_send" }
-        var verb: String { self == .read ? "read" : "type into" }
+        var tool: String {
+            switch self {
+            case .read: return "terminal_read"
+            case .send: return "terminal_send"
+            case .wait: return "terminal_wait"
+            }
+        }
+        var verb: String { self == .send ? "type into" : self == .read ? "read" : "wait for" }
     }
 
     /// `pane` if it is a terminal pane opened from our terminal (`PaneInfo.openedBy`, #165), checked here as well

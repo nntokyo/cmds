@@ -158,6 +158,7 @@ status:
 | `terminal_split` | Open a terminal pane split off the agent's terminal (`direction` `right` / `down`, `cwd`), without taking the focus, and type `command` into its shell (a dev server, a watcher); the pane stays when the command exits. Returns the pane id |
 | `terminal_read` | The visible screen of a terminal pane opened from the agent's terminal, or its last `lines` lines including scrollback (at most 2000) |
 | `terminal_send` | Type `text` into such a pane (`enter: true` presses Return; `"\u0003"` is Ctrl-C) |
+| `terminal_wait` | Wait until the command typed with `terminal_send` (or `terminal_split`'s) finishes in such a pane: its exit code, how long it ran and the last `lines` lines (default 30). `timeout` 120 s by default, at most 600; then it says the command is still running. Needs the shell integration in that pane |
 | `list_panes` | The panes of the agent's workspace, marking its own and those opened from it |
 | `list_ports` | Ports the workspaces' processes listen on, with their workspace (open one with `browser_open`) |
 | `system_stats` | Memory pressure, memory and swap used, CPU, and `advice: ok` or `advice: wait` (pressure warning or worse) for heavy jobs ([below](#memory-before-heavy-jobs)) |
