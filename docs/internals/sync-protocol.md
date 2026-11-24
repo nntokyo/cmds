@@ -141,7 +141,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"files"` (see "Files panes"), `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"), `"schedules"` (see "Schedules"), `"filesBrowse"` (see "Files panes"). The Mac lists what it answers in `welcome.features`. |
+| `hello` | `protocolVersion:Int, deviceName:String, deviceID?:String, pairingCode?:String, token?:String, features?:[String]` | First message, sent only after the TLS handshake passed the pin check. The token saved with that pin, or the 6-digit code while pairing. `features`: optional additions the phone understands (`SyncFeature`): `"preview"` (see "Preview panes"), `"files"` (see "Files panes"), `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"), `"schedules"` (see "Schedules"), `"filesBrowse"` (see "Files panes"), `"pageSnapshots"` (see "Pictures of pages"). The Mac lists what it answers in `welcome.features`. |
 | `subscribe` | `paneIDs:[String]` | Replaces the streamed set. Mac sends a full `screen` for each new pane. `[]` stops streaming. |
 | `requestScreen` | `paneID` | Ask for a full `screen` (after a diff gap). |
 | `input` | `paneID, text` | Typed/pasted text, sent as-is (no newline translation). |
@@ -149,7 +149,7 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 | `selectWorkspace` | `id` | Switch the Mac to that workspace. |
 | `focusPane` | `id` | Focus a pane on the Mac. |
 | `ping` | `nonce?:Int` | Phone pings every 10 s; reconnects if nothing received for 30 s. |
-| `requestFile` | `paneID, path?` | Optional (feature `preview`). The file shown in that preview pane; with `path` (feature `filesBrowse`) that file of a files pane, see "Files panes". Answered with `file` pieces or `error` (`notFound`: no such pane / file missing; `badRequest`: not a preview pane, feature not announced, a request already running). Older Macs answer `error{badRequest}` (unknown type). |
+| `requestFile` | `paneID, path?, snapshot?` | Optional (feature `preview`). The file shown in that preview pane; with `path` (feature `filesBrowse`) that file of a files pane, see "Files panes"; with `snapshot` (feature `pageSnapshots`) a picture of a browser pane's page, see "Pictures of pages". Answered with `file` pieces or `error` (`notFound`: no such pane / file missing; `badRequest`: not a preview pane, feature not announced, a request already running). Older Macs answer `error{badRequest}` (unknown type). |
 | `requestListing` | `paneID, path?` | Optional (Macs whose `welcome.features` has `"filesBrowse"`). A folder of a files pane: `path` (absolute) or, absent, the folder the pane shows. Answered with `listing`, also on failure. See "Files panes". |
 | `requestScrollback` | `paneID, lines:Int` | Optional (Macs whose `welcome.features` has `"scrollback"`). Up to `lines` rows above the pane's screen (1…1000, `SyncScrollback.maxLines`). Answered with a full `screen` and right after it `scrollback` under the same `seq`, or `error` (`notFound`: no such pane; `badRequest`: not a terminal pane, or not subscribed). Within 0.5 s of the previous answer for that pane, or while output keeps the screen moving, it is answered later (one waiting request per pane; a newer one replaces it). Older Macs answer `error{badRequest}` (unknown type). See "Scrollback". |
 
@@ -157,14 +157,14 @@ Mac should answer `error{badRequest}`). Optional fields are omitted when nil.
 
 | type | fields | notes |
 |---|---|---|
-| `welcome` | `protocolVersion, macName, token, features?:[String]` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. `features`: optional requests this Mac answers (`SyncFeature`): `"scrollback"`, `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"), `"schedules"` (see "Schedules"), `"filesBrowse"` (see "Files panes"); absent from older Macs. |
+| `welcome` | `protocolVersion, macName, token, features?:[String]` | Auth OK. Phone stores `token` together with the pinned fingerprint in the Keychain per Mac. `features`: optional requests this Mac answers (`SyncFeature`): `"scrollback"`, `"scrollbackStream"` (see "Scrollback"), `"styles"` (see "Styles"), `"schedules"` (see "Schedules"), `"filesBrowse"` (see "Files panes"), `"pageSnapshots"` (see "Pictures of pages"); absent from older Macs. |
 | `error` | `code:SyncErrorCode, message` | Codes: `unsupportedVersion pairingRequired invalidPairingCode invalidToken rateLimited notAuthenticated badRequest notFound internal`. After auth errors (`isAuthFailure`) the Mac closes the socket. |
 | `state` | `workspaces:[WorkspaceInfo], system?:SystemStats, agentLimits?:[AgentLimits], accountLimits?:[{name, resetsAt, estimated}]` | `accountLimits` = the Mac's Claude accounts (Settings › Agents › Claude accounts) at a limit now, with its end (epoch s); `name` matches `PaneInfo.account`; names only; omitted when none is limited or by older Macs (#112). `agentLimits` = latest account limits per coding agent (`{agent: claude/codex/other, limits:[{id: five_hour/seven_day/spend/…, usedPercent, resetsAt? (epoch s), windowMinutes?, usedUSD?, limitUSD?, period?}], plan?, updatedAt}`), omitted when none is known or by older Macs; panes running an agent carry `PaneInfo.agent?` (`AgentUsage`, see [reference/api.md](../reference/api.md#types)). Agent figures alone change at the same ≤ 2 s cadence as CPU/memory. Full snapshot (CmdsCore `WorkspaceInfo`/`PaneInfo`/`LayoutNode`). Sent after `welcome` and on any change; changes of CPU/memory figures alone are pushed at most every 2 s and only while a phone is connected. `WorkspaceInfo.cpuPercent?` (processes of the workspace, 100 = one core) and `memoryBytes?` (physical footprint). `system` = `{cpuPercent (0–100, all cores), memoryUsedBytes, memoryTotalBytes, memoryPressure? (1 normal, 2 warning, 4 critical)}`; absent from Macs that predate it. |
 | `screen` | `paneID, seq:UInt64, rows, cols, lines:[String], cursorRow?, cursorCol?, scrolledOff?:[String], historyReset?:Bool, styles?:[{row, runs}]` | Full visible screen, i.e. the Mac's viewport (the rows above it: `requestScrollback`). Trailing spaces may be trimmed. Cursor nil = hidden. `scrolledOff` / `historyReset`: phones with `"scrollbackStream"` only, see "Scrollback". `styles`: phones with `"styles"` only, the rows that have colours or attributes, see "Styles"; `scrolledOffStyles?:[{row, runs}]` the same for `scrolledOff`. |
 | `screenDiff` | `paneID, seq, baseSeq, changes:[{row,text,runs?}], cursorRow?, cursorCol?, scrolledOff?, historyReset?, scrolledOffStyles?` | Only when rows/cols unchanged. Applies to the screen with `seq == baseSeq`; cursor is absolute. `scrolledOff` / `historyReset` / `scrolledOffStyles` as in `screen`. `runs`: phones with `"styles"` only; a row changes when its text or its runs change, and a changed row without `runs` is plain. |
 | `notification` | `paneID?, workspaceID, title, body` | Pane raised attention (agent waiting, OSC 9/777…). Phone posts a local notification. |
 | `pong` | `nonce?` | Echo of `ping.nonce`. |
-| `file` | `paneID, name, mime, size:Int, offset:Int, data:base64, truncated?:Bool, path?` | Answer to `requestFile`: bytes `offset ..< offset+len(data)` of the `size`-byte file, in pieces of ≤ 2 MiB (`SyncFile.chunkBytes`, so a frame stays under 4 MiB), in order; complete when the pieces reach `size` (an empty file is one piece with `size` 0). `truncated: true` (no data): over `SyncFile.maxBytes` (10 MB) or unreadable. `path`: the `requestFile.path` answered (files panes), in every piece. |
+| `file` | `paneID, name, mime, size:Int, offset:Int, data:base64, truncated?:Bool, path?` | Answer to `requestFile`: bytes `offset ..< offset+len(data)` of the `size`-byte file, in pieces of ≤ 2 MiB (`SyncFile.chunkBytes`, so a frame stays under 4 MiB), in order; complete when the pieces reach `size` (an empty file is one piece with `size` 0). `truncated: true` (no data): over `SyncFile.maxBytes` (10 MB) or unreadable. `path`: the `requestFile.path` answered (files panes), in every piece; `snapshot`: the `requestFile.snapshot` answered (pictures of pages). |
 | `listing` | `paneID, path, entries:[{name, kind, linksToFolder?, size?, modified?}], truncated?:Bool, error?` | Phones with `"filesBrowse"` only: answer to `requestListing`. See "Files panes". |
 | `schedules` | `schedules:[{id, name, enabled, trigger?, action:{type, agent?, to?}, nextFireAt?, activeRun?, lastRun?}], runs:[ScheduleRun], readOnly?:Bool` | Phones with `"schedules"` only: the Mac's schedules, read only. Sent after `welcome` and `state`, and on change at most once per second. See "Schedules". |
 | `scrollback` | `paneID, seq, lines:[String], styles?:[{row, runs}]` | Answer to `requestScrollback`, sent right after the full `screen` with the same `seq`: the rows above that screen, oldest first, the last one directly above its first row. One entry per displayed row (soft wraps kept, trailing spaces trimmed); empty when there are none. `styles`: phones with `"styles"` only, see "Styles". |
@@ -227,6 +227,23 @@ own place). Code: `CmdsCore/Sync/SyncListing.swift` (messages, `SyncListing`), `
   `PaneInfo.workingDirectory` is absolute (else without one), matches answers by `path`, and keeps the folders gone
   into per pane; at the top it starts over when the Mac pane shows another folder.
 - **Older phones** never send these. **Older Macs** do not list the feature; the phone then shows the folder's path.
+
+### Pictures of pages
+
+A browser pane showing a page the phone cannot load itself (the Mac's `localhost`, a file) is shown on the phone as a
+picture the Mac takes (#174 G25). With `"pageSnapshots"` (`SyncFeature.pageSnapshots`) in both `hello.features` and
+`welcome.features`:
+
+- `requestFile {paneID, snapshot}` with `snapshot` one of `SyncPageSnapshot.choices`: `"pane"` (the page as the pane
+  shows it; a responsive pane's frames side by side in one picture) or a device preset (`"iphone"`, `"ipad"`,
+  `"desktop-1440"`), for which the Mac loads the pane's URL again in an off-screen web view of that size (same cookies
+  and storage, not the pane's in-page state; the pane itself does not change).
+- The answer is a PNG named `<snapshot>.png` in `file` pieces like any file (10 MB cap, `truncated` beyond), each
+  carrying `snapshot`; or `error` (`notFound`: no such pane; `badRequest`: not a browser pane, no web page, unknown
+  size, feature not announced, a file already being sent). One file at a time per connection, shared with preview and
+  files panes.
+- A paired phone can already read and type into every terminal, so a picture of a page gives it nothing more.
+- **Older phones** never ask; with **older Macs** the pane says the page is the Mac's only.
 
 ## Scrollback
 

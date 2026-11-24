@@ -173,8 +173,10 @@ private struct FileTextView: View {
 }
 
 /// Image fitted to the view; pinch to zoom, double-tap to reset.
-private struct ZoomableImage: View {
+struct ZoomableImage: View {
     let image: UIImage
+    /// What VoiceOver says (default "Image").
+    var label: String?
     @State private var zoom: CGFloat = 1
     @GestureState private var pinch: CGFloat = 1
 
@@ -194,7 +196,7 @@ private struct ZoomableImage: View {
                 .onEnded { value in zoom = min(8, max(1, zoom * value.magnification)) }
         )
         .onTapGesture(count: 2) { withAnimation(.snappy) { zoom = 1 } }
-        .accessibilityLabel("Image")
+        .accessibilityLabel(label ?? String(localized: "Image"))
     }
 }
 

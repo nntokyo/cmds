@@ -26,6 +26,24 @@ public enum SyncFeature {
     /// (`requestListing` → `listing`, `requestFile` with `path` → `file`, #26 phase 4; SyncListing.swift). Phones
     /// without it never send these; with a Mac without it the phone shows the folder's path only.
     public static let filesBrowse = "filesBrowse"
+    /// Phone (`hello.features`) and Mac (`welcome.features`): the phone asks for a picture of a browser pane's page
+    /// (`requestFile` with `snapshot` → `file` pieces of a PNG, #174 G25), for pages it cannot load itself (the Mac's
+    /// localhost). Phones without it never ask; with a Mac without it the pane says the page is the Mac's only.
+    public static let pageSnapshots = "pageSnapshots"
+}
+
+/// Pictures of a browser pane's page sent to the phone (`SyncFeature.pageSnapshots`).
+public enum SyncPageSnapshot {
+    /// The page as the pane shows it (a responsive pane: its frames side by side).
+    public static let asShown = "pane"
+    /// What the phone offers: as shown, then phone, tablet and desktop sizes (loaded again off screen on the Mac).
+    public static let choices = [asShown] + DevicePreset.responsiveSet.map(\.id)
+
+    /// A `requestFile.snapshot` the Mac answers.
+    public static func isValid(_ value: String) -> Bool { value == asShown || DevicePreset.named(value) != nil }
+
+    /// The file name of the picture (`iphone.png`).
+    public static func fileName(_ value: String) -> String { "\(value).png" }
 }
 
 /// Sending the file of a preview pane to the phone in `file` messages (`requestFile`).

@@ -312,6 +312,16 @@ final class APIServer {
                 let (path, file) = try controller.projectFile(workspace: workspace)
                 AppSettings.shared.confirmedProjectFiles[path] = file.digest
                 connection.reply(id: id, result: ["path": .string(path)])
+            case "debug.page_snapshot":
+                // Tests only: the picture a phone gets for `requestFile` with `snapshot` (off screen).
+                let paneID: String = try params.required("pane")
+                let size = try params.string("size") ?? SyncPageSnapshot.asShown
+                Task { @MainActor in
+                    await respond(id, to: connection) {
+                        let png = try await self.controller.pageSnapshot(paneID: paneID, size: size)
+                        return ["png_base64": .string(png.base64EncodedString())]
+                    }
+                }
             case "debug.open_link":
                 // Tests only: a ⌘-click on `link` in a terminal pane (no click, no window brought forward).
                 let pane = try controller.resolvePane(try params.required("pane"))

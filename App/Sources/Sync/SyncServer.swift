@@ -79,6 +79,8 @@ final class SyncServer {
         var sendingFile = false
         /// `hello.features` has `SyncFeature.filesBrowse`: may list folders of files panes (SyncServer+Files).
         var browsesFiles = false
+        /// `hello.features` has `SyncFeature.pageSnapshots`: may ask for pictures of browser panes' pages.
+        var snapshotsPages = false
         /// A `requestListing` is being read (one at a time per phone); the latest one asked for meanwhile waits.
         var readingListing = false
         var pendingListing: ClientMessage.RequestListing?
@@ -622,7 +624,9 @@ final class SyncServer {
         case .focusPane(let focus):
             perform(client) { try AppController.shared.focusPane(id: focus.id) }
         case .requestFile(let request):
-            if let path = request.path {
+            if let snapshot = request.snapshot {
+                sendPageSnapshot(paneID: request.paneID, snapshot: snapshot, to: client)
+            } else if let path = request.path {
                 sendBrowsedFile(paneID: request.paneID, path: path, to: client)
             } else {
                 sendFile(paneID: request.paneID, to: client)
@@ -758,9 +762,10 @@ final class SyncServer {
             client.drawsStyles = hello.features?.contains(SyncFeature.styles) == true
             client.wantsSchedules = SyncSchedules.isWanted(by: hello)
             client.browsesFiles = hello.features?.contains(SyncFeature.filesBrowse) == true
+            client.snapshotsPages = hello.features?.contains(SyncFeature.pageSnapshots) == true
             send(.welcome(.init(macName: macName, token: plainToken,
                                 features: [SyncFeature.scrollback, SyncFeature.scrollbackStream, SyncFeature.styles,
-                                           SyncFeature.schedules, SyncFeature.filesBrowse])),
+                                           SyncFeature.schedules, SyncFeature.filesBrowse, SyncFeature.pageSnapshots])),
                  to: client)
             send(.state(currentState(for: client)), to: client)
             if client.wantsSchedules { sendSchedules(to: client) }

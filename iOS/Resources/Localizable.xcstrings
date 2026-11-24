@@ -516,6 +516,16 @@
         }
       }
     },
+    "A picture taken by the Mac: this page is served by the Mac and the phone cannot load it." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac が撮った画像です。このページは Mac が配信しているため、iPhone では読み込めません。"
+          }
+        }
+      }
+    },
     "Active on Mac" : {
       "localizations" : {
         "ja" : {
@@ -593,6 +603,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "承認"
+          }
+        }
+      }
+    },
+    "As on Mac" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac と同じ"
           }
         }
       }
@@ -694,6 +714,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ブラウザ"
+          }
+        }
+      }
+    },
+    "Could not take a picture of the page" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ページの画像を撮れませんでした"
           }
         }
       }
@@ -1034,6 +1064,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "デモデータ"
+          }
+        }
+      }
+    },
+    "Desktop" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "デスクトップ"
           }
         }
       }
@@ -1935,6 +1975,16 @@
         }
       }
     },
+    "Picture of the page, %lld × %lld pixels" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ページの画像、%lld × %lld ピクセル"
+          }
+        }
+      }
+    },
     "Point the camera at the QR code in cmds › Pair iPhone/iPad… on your Mac." : {
       "localizations" : {
         "ja" : {
@@ -2152,6 +2202,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "今すぐ実行"
+          }
+        }
+      }
+    },
+    "Size" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "サイズ"
           }
         }
       }
@@ -2486,6 +2546,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "タブ"
+          }
+        }
+      }
+    },
+    "Take a New Picture" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "撮り直す"
           }
         }
       }
