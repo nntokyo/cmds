@@ -418,6 +418,22 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     }
     #endif
 
+    #if DEBUG
+    /// Tests only (`debug.offscreen_snapshot`): a tab drawn off screen without showing Settings (nothing on the screen
+    /// changes, unlike `debug.show_settings`).
+    func debugOffscreenSnapshot(tab: SettingsTab) -> Data? {
+        refresh()
+        guard let tabs = tabController,
+              let index = tabs.tabViewItems.firstIndex(where: { ($0.identifier as? String) == tab.rawValue }) else { return nil }
+        tabs.selectedTabViewItemIndex = index
+        fitScrollHeight()
+        guard let view = tabs.tabView.selectedTabViewItem?.view else { return nil }
+        // A scrolled tab: its whole document, not just the visible part.
+        let content = (view as? NSScrollView)?.documentView ?? view
+        return OffscreenSnapshot.png(of: content)
+    }
+    #endif
+
     /// Opens Settings on a tab (the menu bar item's "Menu Bar Settings…").
     func show(tab: SettingsTab) {
         showSettings(nil)

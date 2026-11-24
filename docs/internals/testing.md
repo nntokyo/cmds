@@ -73,7 +73,11 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   change it from outside: `defaults write tokyo.n-n.cmds.isolated.<hash> TerminalFontSize -float 20` (keys:
   `TerminalFontFamily`, `TerminalFontSize`, `SidebarTextSize` small/medium/large, `BrowserPageZoom`,
   `PreviewPageZoom`). `defaults delete` the suite afterwards. DEBUG builds open the window with
-  `cmds rpc debug.show_settings` (→ `{"window"}`, its window number for `screencapture -l`). `{"tab": "assistant"}`
+  `cmds rpc debug.show_settings` (→ `{"window"}`, its window number for `screencapture -l`). To check a layout without
+  anything on the screen changing, prefer `cmds rpc debug.offscreen_snapshot '{"what": "settings", "tab": "agents"}'`
+  or `{"what": "schedule_editor", "schedule": {…a Schedule…}}` (none: a new schedule): the window is built and drawn
+  off screen in the light appearance, never shown; `png_base64` is the picture and `windowsShown` the number of this
+  instance's windows on screen besides the main one (stays 0). `{"tab": "assistant"}`
   picks a tab; the Assistant tab scrolls (at most 540 pt, less on a small screen, #264): `scroll: "top"|"bottom"`
   shows its first or last rows, and `snapshot: true` adds `png_base64`, the tab drawn off screen without the toolbar
   (also with the screen locked; transparent background, so composite it on a dark or light colour to view it).

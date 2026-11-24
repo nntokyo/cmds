@@ -30,6 +30,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   unreadable, is kept for 30 days as it was (folder, prompt, command), with when, why and which pane removed it.
   `cmds schedule deleted [--json]` lists them, `cmds schedule restore <id>` puts one back (#449).
 
+### Fixed
+
+- Schedule editor: the "Notify 1 minute before" box is off for an interval under an hour, which gets no notice.
+- Settings › Agents (Japanese): full-width colons after "サブエージェントの表示" and "MCP サーバー", like the other labels.
+
 ## [0.33.0] - 2026-11-24
 
 ### Added

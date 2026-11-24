@@ -73,6 +73,15 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    #if DEBUG
+    /// Tests only (`debug.offscreen_snapshot`): the editor for `schedule` drawn off screen as a PNG; the window is never
+    /// shown, so nothing on the screen changes.
+    static func debugSnapshot(of schedule: Schedule?) -> Data? {
+        let editor = ScheduleEditorController(schedule: schedule)
+        return editor.window?.contentView.flatMap(OffscreenSnapshot.png(of:))
+    }
+    #endif
+
     func begin(on parent: NSWindow) {
         guard let window else { return }
         parent.beginSheet(window)
@@ -561,6 +570,12 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         promptView.textColor = promptView.isEditable ? .labelColor : .disabledControlTextColor
         lateField.isEnabled = latePopup.indexOfSelectedItem == 1
         let (draft, parseProblems) = draft()
+        // An interval under an hour gets no notice (ScheduleNotice): the box would promise one.
+        if case .interval(let every, _)? = draft?.trigger {
+            warnBox.isEnabled = every >= ScheduleNotice.minIntervalWithNotice
+        } else {
+            warnBox.isEnabled = true
+        }
         if lateField.isEnabled, lateField.stringValue.isEmpty, let draft,
            case .runIfWithin(let seconds) = ScheduleLatePolicy.defaultPolicy(for: draft.trigger) {
             lateField.placeholderString = ScheduleLatePolicy.minutesText(seconds)

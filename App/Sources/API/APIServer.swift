@@ -479,6 +479,27 @@ final class APIServer {
                     result["topProcesses"] = .array(controller.topProcessLines(workspaceID: workspaceID).map { .string($0) })
                 }
                 connection.reply(id: id, result: .object(result))
+            case "debug.offscreen_snapshot":
+                // Tests only: a window drawn off screen, never shown (nothing on the screen changes). `what`:
+                // `settings` (with `tab`), or `schedule_editor` (with `schedule`, a Schedule; none: a new one).
+                let png: Data?
+                switch try params.string("what") {
+                case "settings":
+                    guard let tab = try params.string("tab").flatMap(SettingsTab.init(rawValue:)) else {
+                        throw RPCError.invalidParams("tab must be a Settings tab")
+                    }
+                    png = SettingsWindowController.shared.debugOffscreenSnapshot(tab: tab)
+                case "schedule_editor":
+                    let schedule = try params.value?["schedule"].map { try $0.decode(Schedule.self) }
+                    png = ScheduleEditorController.debugSnapshot(of: schedule)
+                default:
+                    throw RPCError.invalidParams("what must be settings or schedule_editor")
+                }
+                guard let png else { throw RPCError.invalidParams("nothing to draw") }
+                // `windowsShown`: windows of this instance on screen besides the main one (should stay 0).
+                let shown = NSApp.windows.filter { $0.isVisible && $0 !== self.controller.window }.count
+                connection.reply(id: id, result: ["png_base64": .string(png.base64EncodedString()),
+                                                  "windowsShown": .number(Double(shown))])
             case "debug.show_settings":
                 // Tests only: opens cmds › Settings… (screenshots without UI scripting).
                 if let tab = try params.string("tab").flatMap(SettingsTab.init(rawValue:)) {

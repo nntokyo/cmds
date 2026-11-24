@@ -7314,7 +7314,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "MCP サーバー:"
+            "value": "MCP サーバー："
           }
         }
       }
@@ -11520,7 +11520,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サブエージェントの表示:"
+            "value": "サブエージェントの表示："
           }
         }
       }
