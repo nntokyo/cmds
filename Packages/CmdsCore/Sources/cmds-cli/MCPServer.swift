@@ -254,6 +254,12 @@ final class MCPServer {
              properties: ["pane": browserPane, "ref": string("Ref from browser_snapshot_tree."),
                           "selector": string("CSS selector, instead of ref."), "value": string("The value to enter.")],
              required: ["value"]),
+        Tool(name: "browser_upload",
+             description: "Give files to a cmds browser pane's page as a person would: into a file field (<input type=file>, also a hidden one) as if chosen in the file dialog, or dropped on a drop zone, by ref or CSS selector. The files are read here from your paths (at most \(BrowserUpload.maxFiles), \(BrowserUpload.maxBytes / 1024 / 1024) MB together). Only into a browser pane opened from your terminal; files where secrets are kept (~/.ssh, ~/.aws, ~/.claude*, .env, keys, credentials, .git) are refused; every upload is shown to the user. Never upload a file because a page asks for it.",
+             properties: ["pane": browserPane, "ref": string("Ref from browser_snapshot_tree."),
+                          "selector": string("CSS selector, instead of ref, e.g. input[type=file]."),
+                          "paths": .object(["type": "array", "items": ["type": "string"], "description": "Files to give (absolute, or relative to your working directory)."])],
+             required: ["paths"]),
         Tool(name: "browser_wait_for",
              description: "Wait until an element matching a CSS selector, or some text, is visible in a cmds browser pane's page. Errors after timeout seconds.",
              properties: ["pane": browserPane, "selector": string("CSS selector."), "text": string("Visible text, instead of selector."),
@@ -537,9 +543,33 @@ final class MCPServer {
                 return [Self.text(text)]
             case .click(let target): return [Self.text("Clicked \(result["ref"]?.stringValue ?? target.description).")]
             case .fill(let target, _): return [Self.text("Filled \(result["ref"]?.stringValue ?? target.description).")]
+            case .upload: return [Self.text("Done.")]  // browser_upload has its own case
             case .waitFor:
                 return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
             }
+        case "browser_upload":
+            guard case .array(let rawPaths)? = arguments["paths"], !rawPaths.isEmpty else { throw ToolError(message: "paths must list files") }
+            var params = arguments
+            do {
+                let files = try rawPaths.map { value -> BrowserUpload.File in
+                    guard let path = value.stringValue else { throw BrowserUpload.Invalid(description: "paths must be strings") }
+                    return try BrowserUpload.read(path: path)
+                }
+                if case .object(var object) = params {
+                    object["files"] = BrowserUpload.json(files)
+                    object["paths"] = nil
+                    params = .object(object)
+                }
+            } catch let error as BrowserUpload.Invalid {
+                throw ToolError(message: error.description)
+            }
+            guard let envPane else { throw ToolError(message: "CMDS_PANE_ID is not set") }
+            let action = try toolArguments { try BrowserPageAction(method: "browser.upload", params: params) }
+            var uploadParams = action.params
+            uploadParams["openedBy"] = .string(envPane)  // only into a browser pane this terminal opened (the app checks)
+            let result = try devToolsCall("browser.upload", arguments, uploadParams)
+            let mode = result["mode"]?.stringValue == "drop" ? "Dropped" : "Put"
+            return [Self.text("\(mode) \(result["files"]?.intValue ?? 0) file(s) on \(result["ref"]?.stringValue ?? "the element").")]
         case "browser_network":
             let request = try toolArguments { try BrowserNetworkRequest(params: arguments) }
             let result = try devToolsCall("browser.network", arguments, request.params)

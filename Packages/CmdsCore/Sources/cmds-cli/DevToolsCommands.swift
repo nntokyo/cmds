@@ -117,6 +117,40 @@ extension CLI {
         print("filled \(result["ref"]?.stringValue ?? target.description)")
     }
 
+    static let uploadCommand = Command(
+        name: "browser upload",
+        usage: "browser upload [--pane P] <ref|selector> <file…>",
+        summary: "Give files to a browser pane's page: into a file field as if chosen, or dropped on a drop zone.",
+        details: """
+            An <input type=file> (also a hidden one) gets the files as if chosen in the file dialog (`input` and `change`
+            events); any other element gets them dropped (`dragenter`, `dragover`, `drop`). The files are read here, with
+            your rights, and sent to cmds: at most \(BrowserUpload.maxFiles), \(BrowserUpload.maxBytes / 1024 / 1024) MB together.
+            \(browserPaneNote)
+            """,
+        options: ["pane"]
+    ) { ctx in
+        let usage = "cmds browser upload [--pane P] <ref|selector> <file…>"
+        guard ctx.args.positionals.count >= 2 else { throw CLIError.usage("usage: " + usage) }
+        // Files go only to a browser pane this terminal opened (the app checks it).
+        guard let opener = ctx.envPane else { throw CLIError(message: "run it in a cmds terminal: files go only to a browser pane it opened", code: .failure) }
+        let target = try usageError { try ElementTarget.parse(ctx.args.positionals[0]) }
+        let files: [BrowserUpload.File]
+        do {
+            files = try ctx.args.positionals.dropFirst().map { try BrowserUpload.read(path: $0) }
+        } catch let error as BrowserUpload.Invalid {
+            throw CLIError(message: error.description, code: .failure)
+        }
+        let action = try usageError {
+            try BrowserPageAction(method: "browser.upload", params: .object(target.params.compactMapValues { $0 }.merging(["files": BrowserUpload.json(files)]) { $1 }))
+        }
+        var params = action.params
+        params["openedBy"] = .string(opener)
+        let result = try devToolsCall(ctx, action.method, params)
+        if ctx.json { return ctx.printJSON(result) }
+        let mode = result["mode"]?.stringValue == "drop" ? "dropped" : "put"
+        print("\(mode) \(result["files"]?.intValue ?? files.count) file(s) on \(result["ref"]?.stringValue ?? target.description)")
+    }
+
     static let waitForCommand = Command(
         name: "browser wait-for",
         usage: "browser wait-for [--pane P] (--selector S | --text T) [--timeout SEC]",

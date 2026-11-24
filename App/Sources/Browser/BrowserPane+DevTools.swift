@@ -91,6 +91,13 @@ extension BrowserPane {
         try await runPageScript(PageScripts.click, Self.arguments(target))
     }
 
+    /// `browser.upload`: the files into a file field, or dropped on a drop zone.
+    func upload(_ target: ElementTarget, files: [BrowserUpload.File]) async throws -> JSONValue {
+        var arguments = Self.arguments(target)
+        arguments["files"] = files.map { ["name": $0.name, "type": $0.type, "data": $0.data.base64EncodedString()] }
+        return try await runPageScript(PageScripts.upload, arguments)
+    }
+
     /// `browser.fill`.
     func fill(_ target: ElementTarget, value: String) async throws -> JSONValue {
         var arguments = Self.arguments(target)

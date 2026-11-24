@@ -132,6 +132,17 @@ final class APIServer {
                         .object(["profiles": .array(try await self.controller.removeBrowserProfile(profile).map { .string($0) })])
                     }
                 }
+            case "browser.upload":
+                // Only into a browser pane the caller's terminal opened (`openedBy`), and every upload is noted and shown
+                // (AppController.browserUpload): a page cannot have an agent send files to a page it did not open.
+                let pane = try browserPaneID(params)
+                guard let opener = try params.string("openedBy") else {
+                    throw RPCError(code: 403, message: "browser.upload needs openedBy: the terminal pane that opened the browser pane")
+                }
+                let action = try BrowserPageAction(method: request.method, params: params.value)
+                Task { @MainActor in
+                    await respond(id, to: connection) { try await self.controller.browserUpload(paneID: pane, action, openedBy: opener) }
+                }
             case "browser.snapshot_tree", "browser.click", "browser.fill", "browser.wait_for":
                 // Page scripts that may wait (wait_for up to a minute): BrowserPane+DevTools.swift, #167.
                 let pane = try browserPaneID(params)

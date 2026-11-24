@@ -279,6 +279,8 @@ public enum BrowserPageAction: Equatable, Sendable {
     case tree(selector: String?, maxNodes: Int)
     case click(ElementTarget)
     case fill(ElementTarget, value: String)
+    /// Files for an `<input type=file>` (as if chosen) or a drop zone (as if dropped); `BrowserUpload`.
+    case upload(ElementTarget, files: [BrowserUpload.File])
     /// Exactly one of `selector` and `text`; `timeout` in seconds (0: checks once).
     case waitFor(selector: String?, text: String?, timeout: Double)
 
@@ -300,6 +302,8 @@ public enum BrowserPageAction: Equatable, Sendable {
             guard case .string(let value)? = params?["value"] else { throw RPCError.invalidParams("value must be a string") }
             guard value.count <= Self.maxValueLength else { throw RPCError.invalidParams("value is too long") }
             self = .fill(try ElementTarget(params: params), value: value)
+        case "browser.upload":
+            self = .upload(try ElementTarget(params: params), files: try BrowserUpload.files(params: params))
         case "browser.wait_for":
             let selector = params?["selector"]?.stringValue, text = params?["text"]?.stringValue
             guard (selector == nil) != (text == nil), !(selector ?? text ?? "").isEmpty else {
@@ -322,6 +326,7 @@ public enum BrowserPageAction: Equatable, Sendable {
         case .tree: "browser.snapshot_tree"
         case .click: "browser.click"
         case .fill: "browser.fill"
+        case .upload: "browser.upload"
         case .waitFor: "browser.wait_for"
         }
     }
@@ -334,6 +339,7 @@ public enum BrowserPageAction: Equatable, Sendable {
             return result
         case .click(let target): return target.params
         case .fill(let target, let value): return target.params.merging(["value": .string(value)]) { $1 }
+        case .upload(let target, let files): return target.params.merging(["files": BrowserUpload.json(files)]) { $1 }
         case .waitFor(let selector, let text, let timeout):
             var result: [String: JSONValue?] = ["timeout": .number(timeout)]
             if let selector { result["selector"] = .string(selector) }
@@ -612,6 +618,34 @@ public enum PageScripts {
         element.dispatchEvent(new InputEvent('input', { bubbles: true, composed: true, inputType: 'insertText', data: value }));
         element.dispatchEvent(new Event('change', { bubbles: true }));
         return { ref: refOf(element), value: element.isContentEditable ? element.textContent : element.value };
+        """
+
+    /// Puts `files` (`[{name, type, data}]`, data in base64) into an `<input type=file>` as if the user chose them (its
+    /// `files`, then `input` and `change`), or drops them on any other element (`dragenter`, `dragover`, `drop` with a
+    /// DataTransfer), the way drop zones read them. Arguments: `ref`, `selector`, `files`.
+    public static let upload = common + """
+        const element = resolve(ref, selector);
+        const transfer = new DataTransfer();
+        for (const file of files) {
+          const binary = atob(file.data);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          transfer.items.add(new File([bytes], file.name, { type: file.type, lastModified: Date.now() }));
+        }
+        if (element.localName === 'input' && element.type === 'file') {
+          if (element.disabled) throw new Error((ref || selector) + ' is disabled');
+          if (!element.multiple && files.length > 1) throw new Error((ref || selector) + ' takes one file');
+          element.files = transfer.files;
+          element.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+          element.dispatchEvent(new Event('change', { bubbles: true }));
+          return { ref: refOf(element), mode: 'input', files: element.files.length };
+        }
+        element.scrollIntoView({ block: 'center' });
+        const rect = element.getBoundingClientRect();
+        const at = { bubbles: true, cancelable: true, composed: true, dataTransfer: transfer,
+                     clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 };
+        for (const type of ['dragenter', 'dragover', 'drop']) element.dispatchEvent(new DragEvent(type, at));
+        return { ref: refOf(element), mode: 'drop', files: files.length };
         """
 
     /// Waits until a visible element matches `selector`, or visible text contains `text`. Arguments: `selector`,

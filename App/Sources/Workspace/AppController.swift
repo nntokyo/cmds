@@ -1,7 +1,10 @@
 import AppKit
 import Combine
 import CmdsCore
+import os
 import UserNotifications
+
+private let uploadLog = Logger(subsystem: "tokyo.n-n.cmds", category: "upload")
 
 extension Notification.Name {
     /// Mirrors `AppController.changes`; `userInfo` has `"change"` (`StateChange`) and,
@@ -414,6 +417,49 @@ final class AppController {
         return try JSONValue.from(finished)
     }
 
+    /// `browser.upload`: only into a browser pane `openedBy`'s terminal opened; noted in `<support dir>/uploads.log` and
+    /// shown in the workspace's sidebar text (file names, sizes, the page's origin).
+    func browserUpload(paneID: String, _ action: BrowserPageAction, openedBy: String) async throws -> JSONValue {
+        guard case .upload(_, let files) = action else { throw RPCError.invalidParams("not an upload") }
+        let pane = try resolvePane(paneID)
+        guard pane.id != openedBy, pane.openedBy == openedBy, resolvePaneIfTerminal(openedBy) else {
+            throw RPCError(code: 403, message: "pane \(pane.id) was not opened from terminal pane \(openedBy): files go only to a browser pane your terminal opened")
+        }
+        let result = try await browserPageAction(paneID: paneID, action)
+        let origin = browser(of: pane)?.currentURL.flatMap(Self.origin(of:)) ?? "(no page)"
+        let names = files.map { "\($0.name) (\(ByteCountFormatter.string(fromByteCount: Int64($0.data.count), countStyle: .file)))" }
+        noteUpload(files, origin: origin, pane: pane.id, opener: openedBy)
+        let text = String(localized: "Uploaded \(names.joined(separator: ", ")) to \(origin)",
+                          comment: "sidebar status after an agent gave files to a page; arguments: file names with sizes, the page's origin")
+        try? setStatus(workspaceID: pane.workspaceID, text: text, level: .warning)
+        return result
+    }
+
+    private func resolvePaneIfTerminal(_ id: String) -> Bool { pane(id: id)?.kind == .terminal }
+
+    private func browser(of pane: Pane) -> BrowserPane? { pane.browser }
+
+    /// `https://note.com`, `http://localhost:5173`.
+    static func origin(of url: URL) -> String? {
+        guard let scheme = url.scheme, let host = url.host else { return url.scheme.map { "\($0):" } }
+        return "\(scheme)://\(host)" + (url.port.map { ":\($0)" } ?? "")
+    }
+
+    /// One line per file: time, origin, file name, bytes, browser pane, terminal pane (0600, kept beside the session).
+    private func noteUpload(_ files: [BrowserUpload.File], origin: String, pane: String, opener: String) {
+        let url = CmdsEnv.supportDirectoryURL().appendingPathComponent("uploads.log")
+        let time = ISO8601DateFormatter().string(from: Date())
+        let lines = files.map { "\(time)\t\(origin)\t\($0.name)\t\($0.data.count)\t\(pane)\t\(opener)\n" }.joined()
+        if let handle = try? FileHandle(forWritingTo: url) {
+            handle.seekToEndOfFile()
+            handle.write(Data(lines.utf8))
+            try? handle.close()
+        } else {
+            FileManager.default.createFile(atPath: url.path, contents: Data(lines.utf8), attributes: [.posixPermissions: 0o600])
+        }
+        uploadLog.info("upload of \(files.count) file(s) to \(origin, privacy: .public) in \(pane, privacy: .public) from \(opener, privacy: .public)")
+    }
+
     /// `openedBy` given: the pane must have been opened from that pane (`Pane.openedBy`), never be it.
     private func checkOpener(_ paneID: String?, _ openedBy: String?) throws {
         guard let openedBy else { return }
@@ -605,6 +651,7 @@ final class AppController {
         case .tree(let selector, let maxNodes): return try await browser.pageTree(selector: selector, maxNodes: maxNodes)
         case .click(let target): return try await browser.click(target)
         case .fill(let target, let value): return try await browser.fill(target, value: value)
+        case .upload(let target, let files): return try await browser.upload(target, files: files)
         case .waitFor(let selector, let text, let timeout):
             return try await browser.waitFor(selector: selector, text: text, timeout: timeout)
         }

@@ -102,7 +102,7 @@ final class PositionalArgumentCLITests: XCTestCase {
     /// exit 0 for the agent), as are commands whose bare words are free text or a list.
     func testNoCommandIgnoresAnExtraBareArgument() {
         let exempt: Set<String> = ["hook claude-status", "hook agy-status", "hook claude", "hook codex",
-                                   "send", "notify", "status", "tile"]
+                                   "send", "notify", "status", "tile", "browser upload"]
         for command in CLI.commands where !exempt.contains(command.name) {
             let words = command.name.split(separator: " ").map(String.init) + Array(repeating: "x", count: 4)
             XCTAssertEqual(exitCode(words), CLIError.Code.usage.rawValue, "cmds \(command.name) x x x x")
