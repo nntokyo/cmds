@@ -10494,6 +10494,17 @@
         }
       }
     },
+    "Run when the Mac is back, until the next time": {
+      "comment": "schedule editor: late policy untilNextRun",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac が戻ったら実行（次の予定時刻まで）"
+          }
+        }
+      }
+    },
     "Running: %@": {
       "localizations": {
         "ja": {

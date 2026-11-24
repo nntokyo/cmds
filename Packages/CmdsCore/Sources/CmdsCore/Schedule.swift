@@ -421,6 +421,10 @@ public enum ScheduleLatePolicy: Equatable, Sendable {
     case skip
     /// One catch-up run when late by at most this long.
     case runIfWithin(TimeInterval)
+    /// One catch-up run when late, as long as the schedule's next time has not come (a weekday 09:00 report missed
+    /// while the Mac slept runs when it wakes, never together with the next day's; #45 phase 5). Repeating schedules;
+    /// for others it is the longest window, `ScheduleLimits.maxLateWindow`.
+    case untilNextRun
 
     /// `once` and `limitReset`: up to 6 h late; `weekly`: up to 15 min.
     public static func defaultPolicy(for trigger: ScheduleTrigger) -> ScheduleLatePolicy {
@@ -442,7 +446,7 @@ public enum ScheduleLatePolicy: Equatable, Sendable {
 }
 
 extension ScheduleLatePolicy: Codable {
-    private enum CodingKeys: String, CodingKey { case type, seconds }
+    private enum CodingKeys: String, CodingKey { case type, seconds, untilNext }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -452,7 +456,7 @@ extension ScheduleLatePolicy: Codable {
             guard let seconds = c.lenientDouble(.seconds) else {
                 throw DecodingError.dataCorruptedError(forKey: .seconds, in: c, debugDescription: "missing seconds")
             }
-            self = .runIfWithin(seconds)
+            self = c.lenientBool(.untilNext) == true ? .untilNextRun : .runIfWithin(seconds)
         case let other:
             throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown late policy \(other)")
         }
@@ -466,6 +470,11 @@ extension ScheduleLatePolicy: Codable {
         case .runIfWithin(let seconds):
             try c.encode("runIfWithin", forKey: .type)
             try c.encode(seconds, forKey: .seconds)
+        case .untilNextRun:
+            // Older versions read this as the longest window (and ignore `untilNext`) instead of failing the file.
+            try c.encode("runIfWithin", forKey: .type)
+            try c.encode(ScheduleLimits.maxLateWindow, forKey: .seconds)
+            try c.encode(true, forKey: .untilNext)
         }
     }
 }

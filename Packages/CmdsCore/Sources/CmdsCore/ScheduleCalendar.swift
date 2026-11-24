@@ -98,12 +98,35 @@ public enum ScheduleCatchUp {
         case missed
     }
 
+    /// The last of a repeating schedule's times at or before `now`, starting from `due` (several passed while the Mac
+    /// slept for days); `due` when it is the only one. `next` gives the time after a time.
+    public static func latestPassed(_ due: Date, now: Date, next: (Date) -> Date?) -> (due: Date, next: Date?) {
+        var current = due
+        var following = next(current)
+        var steps = 0
+        while let candidate = following, candidate <= now, steps < 1000 {
+            current = candidate
+            following = next(candidate)
+            steps += 1
+        }
+        return (current, following)
+    }
+
     /// One run at most, however many slots passed: on time, or one `catchUp` within the late policy, else missed.
-    public static func decide(nextFireAt: Date?, now: Date, late: ScheduleLatePolicy) -> Decision {
+    /// `nextSlot`: the schedule's time after `nextFireAt` (weekly), for `untilNextRun`.
+    public static func decide(nextFireAt: Date?, now: Date, late: ScheduleLatePolicy, nextSlot: Date? = nil) -> Decision {
         guard let due = nextFireAt, due <= now else { return .notDue }
         let lateBy = now.timeIntervalSince(due)
         if lateBy <= onTimeGrace { return .run(.scheduled) }
-        if case .runIfWithin(let window) = late, lateBy <= window { return .run(.catchUp) }
-        return .missed
+        switch late {
+        case .runIfWithin(let window) where lateBy <= window:
+            return .run(.catchUp)
+        case .untilNextRun:
+            // `nextFireAt` should be the latest time that passed (`latestPassed`): its next one is still to come.
+            if let nextSlot { return now < nextSlot ? .run(.catchUp) : .missed }
+            return lateBy <= ScheduleLimits.maxLateWindow ? .run(.catchUp) : .missed
+        default:
+            return .missed
+        }
     }
 }

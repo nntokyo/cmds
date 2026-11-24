@@ -99,6 +99,12 @@ ones); otherwise the history notes it as missed and you get a notification ("did
 asleep or cmds was not running"). Several missed times never cause several runs. A one-time schedule that ran or
 was missed is turned off and kept.
 
+For a weekly schedule whose work is still worth doing late, such as a morning report, choose **Run when the Mac is
+back, until the next time** (`--late next`): when the Mac wakes (or cmds starts) after the time, it runs once, as
+long as the schedule's next time has not come. A weekday 09:00 report missed while the Mac slept runs when you open
+it at 10:15; after a weekend asleep only the latest time runs, once. It never adds a second run before the next time.
+For other schedules `next` allows the longest window (7 days).
+
 ## Seeing what happened
 
 The window lists each schedule's trigger, action, next run and last result; the history below shows the runs of

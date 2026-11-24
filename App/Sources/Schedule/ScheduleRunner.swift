@@ -206,8 +206,16 @@ final class ScheduleRunner {
         var changed = false
         for index in schedules.indices where schedules[index].enabled {
             let schedule = schedules[index]
-            let decision = ScheduleCatchUp.decide(nextFireAt: schedule.nextFireAt, now: now, late: schedule.late)
-            guard let due = schedule.nextFireAt else { continue }
+            guard var due = schedule.nextFireAt else { continue }
+            // "Until the next time" (weekly): the latest time that passed is the one to catch up, and its next one
+            // decides (limit triggers have no later time known).
+            var nextSlot: Date?
+            if case .untilNextRun = schedule.late, case .weekly = schedule.trigger, due <= now {
+                (due, nextSlot) = ScheduleCatchUp.latestPassed(due, now: now) {
+                    ScheduleCalendar.nextFire(schedule.trigger, after: $0, accounts: [])
+                }
+            }
+            let decision = ScheduleCatchUp.decide(nextFireAt: due, now: now, late: schedule.late, nextSlot: nextSlot)
             switch decision {
             case .notDue: continue
             case .run(let cause): startRun(schedule, cause: cause, dueAt: due)

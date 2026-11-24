@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Schedules: **Run when the Mac is back, until the next time** (`--late next`): a weekly schedule whose time passed
+  while the Mac slept runs once when it wakes, as long as its next time has not come, so a morning report is not lost
+  and never runs twice (#424).
+
 - Waiting for a command in a terminal pane: `cmds wait` (exits with the command's exit code) and MCP `terminal_wait`
   (exit code, duration and the last lines) wait until the command typed into a pane finishes, from the shell
   integration, so agents no longer read the pane over and over; panes report their `lastCommand` (#422).

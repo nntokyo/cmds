@@ -136,7 +136,9 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         promptScroll.heightAnchor.constraint(equalToConstant: 64).isActive = true
         continuePromptField.placeholderString = ContinueSession.defaultPrompt
 
-        latePopup.addItems(withTitles: [String(localized: "Skip the run"), String(localized: "Run if at most this late:")])
+        latePopup.addItems(withTitles: [String(localized: "Skip the run"), String(localized: "Run if at most this late:"),
+                                        String(localized: "Run when the Mac is back, until the next time",
+                                               comment: "schedule editor: late policy untilNextRun")])
         let lateRow = NSStackView(views: [latePopup, lateField, NSTextField(labelWithString: String(localized: "minutes"))])
         lateRow.spacing = 6
         notifyPopup.addItems(withTitles: [String(localized: "When a run fails, is skipped or missed"), String(localized: "Always"),
@@ -304,6 +306,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         case .runIfWithin(let seconds)?:
             latePopup.selectItem(at: 1)
             lateField.stringValue = ScheduleLatePolicy.minutesText(seconds)
+        case .untilNextRun?:
+            latePopup.selectItem(at: 2)
         case nil:
             latePopup.selectItem(at: 1)
         }
@@ -440,6 +444,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         let late: ScheduleLatePolicy
         if latePopup.indexOfSelectedItem == 0 {
             late = .skip
+        } else if latePopup.indexOfSelectedItem == 2 {
+            late = .untilNextRun
         } else if let parsed = ScheduleLatePolicy.fromMinutes(lateField.stringValue, trigger: trigger) {
             late = parsed
         } else {
