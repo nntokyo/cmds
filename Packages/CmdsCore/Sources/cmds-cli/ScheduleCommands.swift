@@ -5,7 +5,7 @@ import Foundation
 // later (docs/guide/schedules.md, docs/reference/cli.md). Times are parsed here, in the Mac's zone, and sent as epoch seconds.
 extension CLI {
     static let scheduleUsage = """
-        schedule add --name NAME TRIGGER ACTION [--late skip|MINUTES] [--notify failures|always|never] [--no-warn] [--disabled]
+        schedule add --name NAME TRIGGER ACTION [--late skip|next|MINUTES] [--notify failures|always|never] [--no-warn] [--disabled]
           TRIGGER  --at "YYYY-MM-DD HH:MM" | --at HH:MM | --in 90m
                    --every weekdays|daily|weekends|mon,wed,fri --time 09:00[,13:30] [--tz Asia/Tokyo]
                    --after-limit ACCOUNT | --after-codex-limit  [--delay 2m] [--repeat]
@@ -48,8 +48,10 @@ extension CLI {
                     --to shell types it as a command at an empty shell prompt; --to agent pastes it into Claude Code or
                     Codex once it is idle. Otherwise the run is skipped.
                     A notification "starts in 1 minute" with Skip comes before each run (--no-warn: none).
-                    --late: what to do when the time passed while the Mac slept or cmds was not running: skip, or run
-                    when at most MINUTES late (default 360 for one-time schedules, 15 for weekly ones).
+                    --late: what to do when the time passed while the Mac slept or cmds was not running: skip, next (run
+                    once when it is back, as long as the schedule's next time has not come: a daily report missed at 09:00
+                    runs at wake, never twice), or run when at most MINUTES late (default 360 for one-time schedules, 15
+                    for weekly ones).
                     Nothing is typed into a busy agent, a pane running another program, or a pane the schedule did not
                     create or target. Examples:
                       cmds schedule add --name "Continue after reset" --after-limit work --continue
@@ -423,10 +425,11 @@ extension CLI {
         .mon: "monday", .tue: "tuesday", .wed: "wednesday", .thu: "thursday", .fri: "friday", .sat: "saturday", .sun: "sunday",
     ]
 
-    /// `skip` or a number of minutes.
+    /// `skip`, `next` (until the next time) or a number of minutes.
     static func parseLate(_ raw: String) throws -> JSONValue {
         if raw.lowercased() == "skip" { return ["type": "skip"] }
-        guard let minutes = Int(raw), minutes > 0 else { throw CLIError.usage("--late expects skip or a number of minutes") }
+        if raw.lowercased() == "next" { return try JSONValue.from(ScheduleLatePolicy.untilNextRun) }
+        guard let minutes = Int(raw), minutes > 0 else { throw CLIError.usage("--late expects skip, next or a number of minutes") }
         return ["type": "runIfWithin", "seconds": .number(Double(minutes) * 60)]
     }
 
@@ -548,6 +551,7 @@ extension Format {
         switch schedule.late {
         case .skip: out += "if late  skip\n"
         case .runIfWithin(let seconds): out += "if late  run when at most \(duration(seconds)) late\n"
+        case .untilNextRun: out += "if late  run when the Mac is back, until the next time\n"
         }
         out += "notify   \(schedule.notify.rawValue)\(schedule.warn ? ", 1 minute before" : "")\n"
         switch schedule.origin {
