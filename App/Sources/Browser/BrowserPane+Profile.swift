@@ -10,6 +10,7 @@ extension BrowserPane {
         guard name != profile else { return }
         let page = pendingURL == nil ? (loadFailure?.url ?? webView.url) : nil
         profile = name
+        sharedSignIn = nil
         replaceWebView(dataStore: BrowserProfiles.store(for: name))
         if let page, Self.isWebPage(page) {
             if page.isFileURL {

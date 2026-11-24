@@ -339,8 +339,13 @@ final class AppController {
             // A browser's login profile: as asked (`.some(nil)`: the shared data), else a source browser's. A terminal's
             // profile is only for pages opened from it by command (`openBrowser`); a new terminal starts with the shared
             // data: each session picks its own.
+            // Nobody chose one, and not split from a browser: the workspace's own profile (`WorkspaceProfile`).
+            var browserProfile: String? = kind == .browser ? (profile ?? source.browser?.profile) : nil
+            if kind == .browser, profile == nil, source.browser == nil {
+                browserProfile = workspaceBrowserProfile(for: workspace.id)
+            }
             pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account,
-                            profile: kind == .browser ? (profile ?? source.browser?.profile) : nil)
+                            profile: browserProfile)
         }
         if recordOpener, source.kind == .terminal { pane.openedBy = source.id }
         workspace.zoomedPaneID = nil
@@ -568,7 +573,12 @@ final class AppController {
             throw RPCError.invalidParams("cannot load \"\(url.prefix(200))\": not a valid URL")
         }
         let requester = try resolvePane(paneID)
-        let profile: String? = profile ?? (recordOpener ? requester.profileForOpenedPages : requester.browser?.profile)
+        let asked = profile
+        var profile: String? = asked ?? (recordOpener ? requester.profileForOpenedPages : requester.browser?.profile)
+        // Nobody chose one (not asked, not a browser's tab, no profile set for the terminal): the workspace's own.
+        if asked == nil, profile == nil, requester.kind != .browser, !(recordOpener && requester.browserProfileChosen) {
+            profile = workspaceBrowserProfile(for: requester.workspaceID)
+        }
         // An agent (`reuse`: MCP browser_open, `cmds browser open --reuse`) opening a page it already has open (also in
         // a split): that tab again; and it keeps at most `maxAgentTabs` tabs.
         let agent = reuse && recordOpener && requester.kind == .terminal
@@ -629,9 +639,9 @@ final class AppController {
     }
 
     /// `error`: why the page shown did not load, in English (#338).
-    func browserLocation(paneID: String) throws -> (url: String?, title: String, error: String?) {
+    func browserLocation(paneID: String) throws -> (url: String?, title: String, error: String?, warning: String?) {
         let browser = try browser(paneID: paneID)
-        return (browser.currentURL?.absoluteString, browser.pageTitle, browser.loadFailure?.reason)
+        return (browser.currentURL?.absoluteString, browser.pageTitle, browser.loadFailure?.reason, browser.sharedSignInWarning)
     }
 
     func browserEvaluate(paneID: String, script: String, timeout: TimeInterval = BrowserEval.defaultTimeout)
@@ -647,6 +657,16 @@ final class AppController {
     /// `browser.snapshot_tree` / `click` / `fill` / `wait_for` (#167).
     func browserPageAction(paneID: String, _ action: BrowserPageAction) async throws -> JSONValue {
         let browser = try await readyBrowser(paneID: paneID)
+        let result = try await performPageAction(browser, action)
+        // An agent acting on a page signed in through the shared data is told (`SharedSignIn`).
+        if let warning = browser.sharedSignInWarning, case .object(var object) = result {
+            object["warning"] = .string(warning)
+            return .object(object)
+        }
+        return result
+    }
+
+    private func performPageAction(_ browser: BrowserPane, _ action: BrowserPageAction) async throws -> JSONValue {
         switch action {
         case .tree(let selector, let maxNodes): return try await browser.pageTree(selector: selector, maxNodes: maxNodes)
         case .click(let target): return try await browser.click(target)
@@ -1120,7 +1140,8 @@ final class AppController {
                 worktree: workspace.worktreePath,
                 tabGroups: tabGroups.isEmpty ? nil : tabGroups,
                 paneProfiles: paneProfiles.isEmpty ? nil : paneProfiles,
-                environment: workspace.environment.isEmpty ? nil : workspace.environment.lines)
+                environment: workspace.environment.isEmpty ? nil : workspace.environment.lines,
+                browserProfile: workspace.browserProfile)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -1196,6 +1217,7 @@ final class AppController {
             // Line by line: a hand-edited session.json loses only its bad lines.
             let variables = (saved.environment ?? []).compactMap { try? WorkspaceEnvironment.parse($0).entries.first }
             workspace.environment = WorkspaceEnvironment(entries: Array(variables.prefix(WorkspaceEnvironment.maxEntries)))
+            workspace.browserProfile = saved.browserProfile
             leafIndex = 0
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
@@ -1321,6 +1343,15 @@ final class AppController {
         case .browser:
             let browser = BrowserPane(emulation: emulation ?? BrowserEmulation(), profile: profile)
             pane = Pane(id: id, workspaceID: workspace.id, browser: browser)
+            let workspaceID = workspace.id
+            if AppSettings.shared.workspaceProfiles {
+                // The shared-sign-in notice's button: this workspace's own profile (`WorkspaceProfile`).
+                browser.onUseWorkspaceProfile = { [weak self, weak browser, weak pane] in
+                    guard let self, let browser, let name = self.workspaceBrowserProfile(for: pane?.workspaceID ?? workspaceID) else { return }
+                    browser.setProfile(name)
+                    self.emit(.workspace(id: pane?.workspaceID ?? workspaceID))
+                }
+            }
             if deferLoad, let url, !url.isEmpty {
                 browser.deferLoad(url)  // a background tab: loads when first shown
             } else if let url, !url.isEmpty, (try? browser.navigate(to: url)) != nil {} else { browser.showStartPage() }

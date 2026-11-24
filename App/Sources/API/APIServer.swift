@@ -290,6 +290,17 @@ final class APIServer {
                 controller.scheduleRunner.checkDue()
                 connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970),
                                                   "notifications": .array(debugNotifications)])
+            case "debug.shared_signin_site":
+                // Tests only: a local site (`domain`) whose cookie `cookie` counts as signed in, like X's auth_token.
+                BrowserPane.testSites = [SharedSignIn.Site(name: try params.required("name"), domains: [try params.required("domain")],
+                                                           cookies: [try params.required("cookie")])]
+                connection.reply(id: id, result: [:])
+            case "debug.browser_notice":
+                // Tests only: the notice a browser pane shows (its text), and with `move` its "Use This Workspace's Profile".
+                let browser = try controller.browser(paneID: try params.required("pane"))
+                if try params.bool("move") == true { browser.onUseWorkspaceProfile?() }
+                connection.reply(id: id, result: ["notice": browser.debugNoticeText.map(JSONValue.string) ?? .null,
+                                                  "profile": browser.profile.map(JSONValue.string) ?? .null])
             case "debug.block_main":
                 // Tests only: holds the main thread for `seconds` (at most 120), as a hang would (HangWatchdog).
                 guard case .number(let seconds)? = params.value?["seconds"], seconds > 0, seconds <= 120 else {
@@ -746,6 +757,7 @@ final class APIServer {
             let location = try controller.browserLocation(paneID: try browserPaneID(params))
             var result: [String: JSONValue] = ["url": location.url.map { .string($0) } ?? .null, "title": .string(location.title)]
             if let error = location.error { result["error"] = .string(error) }
+            if let warning = location.warning { result["warning"] = .string(warning) }
             return .object(result)
         case "browser.console":
             let request = try BrowserConsoleRequest(params: params.value)

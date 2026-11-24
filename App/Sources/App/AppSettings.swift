@@ -115,6 +115,7 @@ final class AppSettings: NSObject {
     static let browserInspectableKey = "BrowserInspectable"
     static let memoryWarningKey = "MemoryWarning"
     static let browserOpensTabsKey = "BrowserOpensTabs"
+    static let workspaceProfilesKey = "BrowserWorkspaceProfiles"
     static let chromeBookmarksKey = "BrowserChromeBookmarks"
     static let chromeProfileKey = "BrowserChromeProfile"
     static let suspendTabsKey = "BrowserSuspendTabsMinutes"
@@ -126,7 +127,7 @@ final class AppSettings: NSObject {
                                showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey,
                                browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey, suspendTabsKey,
                                bookmarkSourceKey, longCommandKey, confirmedProjectFilesKey,
-                               customShortcutsKey] + MenuBarOption.allCases.map(\.rawValue)
+                               customShortcutsKey, workspaceProfilesKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -241,6 +242,13 @@ final class AppSettings: NSObject {
     var browserOpensTabs: Bool {
         get { defaults.object(forKey: Self.browserOpensTabsKey) as? Bool ?? true }
         set { set(newValue ? nil : false, forKey: Self.browserOpensTabsKey) }
+    }
+
+    /// Browser panes opened in a workspace get that workspace's own login profile unless a profile was chosen
+    /// (`WorkspaceProfile`, Settings › General › Browser). On by default.
+    var workspaceProfiles: Bool {
+        get { defaults.object(forKey: Self.workspaceProfilesKey) as? Bool ?? true }
+        set { set(newValue ? nil : false, forKey: Self.workspaceProfilesKey) }
     }
 
     /// Browser panes show Google Chrome's bookmarks bar when Chrome's bookmarks are found (Settings › General).

@@ -21,7 +21,13 @@ final class BrowserNoticeView: NSVisualEffectView {
         case pointDone(target: String, summary: String?)
         /// `browser.point`: an agent waits for the user to click an element; `prompt` is what it asks for.
         case agentPointing(prompt: String?)
+        /// The page uses the shared sign-ins, and `site` is signed in there (`SharedSignIn`): maybe as another
+        /// workspace's account. `canMove`: the workspace has a profile of its own to move to.
+        case sharedSignIn(site: String, canMove: Bool)
     }
+
+    /// `sharedSignIn`'s "Use This Workspace's Profile".
+    var onMove: (() -> Void)?
 
     /// Point at Element notices: "Show Terminal" focuses the agent's terminal.
     var onShowTerminal: (() -> Void)?
@@ -63,6 +69,15 @@ final class BrowserNoticeView: NSVisualEffectView {
             tint = .systemOrange
             text = name.isEmpty ? String(localized: "Download failed: \(reason)")
                 : String(localized: "Download of “\(name)” failed: \(reason)")
+            buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
+        case .sharedSignIn(let site, let canMove):
+            symbol = "person.2.badge.key"
+            tint = .systemOrange
+            text = String(localized: "Shared sign-ins: \(site) is signed in here for every workspace, maybe as another workspace's account.",
+                          comment: "browser pane notice; site is e.g. X or Amazon")
+            if canMove {
+                buttons.append(button(String(localized: "Use This Workspace's Profile"), #selector(moveClicked), primary: true))
+            }
             buttons.append(button(String(localized: "Dismiss"), #selector(dismissClicked)))
         case .passkey(let host, _):
             symbol = "person.badge.key"
@@ -161,6 +176,11 @@ final class BrowserNoticeView: NSVisualEffectView {
         onDismiss?()
     }
     @objc private func dismissClicked() { onDismiss?() }
+
+    @objc private func moveClicked() {
+        onMove?()
+        onDismiss?()
+    }
 
     @objc private func openInSafariClicked() {
         if case .passkey(_, let page) = notice { Self.openInSafari(page) }

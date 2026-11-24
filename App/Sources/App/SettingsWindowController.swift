@@ -28,6 +28,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let mcpCheckbox = NSButton(checkboxWithTitle: String(localized: "Register cmds’ MCP server with your agents", comment: "Settings › Agents"), target: nil, action: nil)
     private let memoryWarningCheckbox = NSButton(checkboxWithTitle: String(localized: "Warn when memory is short"), target: nil, action: nil)
     private let browserTabsCheckbox = NSButton(checkboxWithTitle: String(localized: "Open new pages in tabs", comment: "Settings › General › Browser"), target: nil, action: nil)
+    private let workspaceProfilesCheckbox = NSButton(checkboxWithTitle: String(localized: "Separate sign-ins per workspace", comment: "Settings › General › Browser: each workspace's own login profile"), target: nil, action: nil)
     private let chromeBookmarksCheckbox = NSButton(checkboxWithTitle: String(localized: "Show a bookmarks bar", comment: "Settings › General › Browser"), target: nil, action: nil)
     private let bookmarkSourcePopup = NSPopUpButton()
     private let chromeProfilePopup = NSPopUpButton()
@@ -174,6 +175,9 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         memoryWarningCheckbox.action = #selector(memoryWarningToggled)
         browserTabsCheckbox.target = self
         browserTabsCheckbox.action = #selector(browserTabsToggled)
+        workspaceProfilesCheckbox.target = self
+        workspaceProfilesCheckbox.action = #selector(workspaceProfilesToggled)
+        workspaceProfilesCheckbox.toolTip = String(localized: "New browser panes in a workspace use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Panes already open and profiles you chose stay as they are.")
         chromeBookmarksCheckbox.target = self
         chromeBookmarksCheckbox.action = #selector(chromeBookmarksToggled)
         chromeProfilePopup.target = self
@@ -229,6 +233,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, inspectableCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
             [NSGridCell.emptyContentView, browserTabsCheckbox],
+            [NSGridCell.emptyContentView, workspaceProfilesCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Links that open a new window, `cmds browser open` and agents' browser_open add a tab to the workspace's browser instead of a split. ⌘T opens a tab beside any pane.", comment: "Settings › General › Browser"))],
             [Self.label(String(localized: "Suspend background tabs:", comment: "Settings › General › Browser")), suspendTabsPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.", comment: "Settings › General › Browser"))],
@@ -493,6 +498,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         inspectableCheckbox.state = settings.browserInspectable ? .on : .off
         memoryWarningCheckbox.state = settings.memoryWarning ? .on : .off
         browserTabsCheckbox.state = settings.browserOpensTabs ? .on : .off
+        workspaceProfilesCheckbox.state = settings.workspaceProfiles ? .on : .off
         // A value set with `defaults` that is not a choice: shown as itself, not as "Never".
         let minutes = settings.suspendTabsMinutes
         if suspendTabsPopup.indexOfItem(withRepresentedObject: minutes) < 0 {
@@ -620,6 +626,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
 
     @objc private func browserTabsToggled() {
         settings.browserOpensTabs = browserTabsCheckbox.state == .on
+    }
+
+    @objc private func workspaceProfilesToggled() {
+        settings.workspaceProfiles = workspaceProfilesCheckbox.state == .on
     }
 
     @objc private func longCommandChanged() {
