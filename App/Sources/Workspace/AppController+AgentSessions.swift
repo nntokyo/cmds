@@ -67,6 +67,8 @@ extension AppController {
         }
         applyAccount(to: &record, in: pane)
         pane.agentSession = record
+        // The agent runs again: no longer a session cut off by a quit (unless it is still to be told to continue).
+        if !pane.continueAfterResume { pane.resumeInterrupted = false }
         if agentHistory.record(record) { agentHistoryDirty = true }
         // A live agent in the pane makes any offer moot (and must never get a resume command typed over it).
         if pane.resumeOffer != nil { clearResumeOffer(pane) }
@@ -109,6 +111,11 @@ extension AppController {
             pane.agentSessionSavedAt = entry.session.lastSeen
             pane.resumeOffer = entry.session
             if mode == .always { pane.resumeRequestedAt = Date() }
+            if entry.interrupted == true {
+                pane.resumeInterrupted = true
+                // Resume Always: nobody may be there to say "continue" (cmds updated while agents worked).
+                pane.continueAfterResume = mode == .always
+            }
         }
         // After all offers exist, so each banner counts the others (Resume All).
         panes.filter { $0.resumeOffer != nil }.forEach(updateResumeBanner)
@@ -328,7 +335,14 @@ extension AppController {
         clearResumeOffer(pane)
         pane.agentSession = offer
         pane.resumedSessionID = offer.sessionID
-        terminal.typeText(command + "\r")
+        var line = command
+        #if DEBUG
+        // Tests of an isolated instance: a stand-in for Claude Code (never the real one).
+        if CmdsEnv.supportDirectoryOverride() != nil, let fake = ProcessInfo.processInfo.environment["CMDS_TEST_CLAUDE"] {
+            line = line.replacingOccurrences(of: #"(?<=^|\s)claude(?=\s|$)"#, with: fake, options: .regularExpression)
+        }
+        #endif
+        terminal.typeText(line + "\r")
         scheduleSave()
     }
 }

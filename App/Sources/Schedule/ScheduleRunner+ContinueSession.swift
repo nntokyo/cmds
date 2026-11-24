@@ -95,3 +95,36 @@ extension ScheduleRunner {
         return session
     }
 }
+
+// MARK: After a restart
+
+extension ScheduleRunner {
+    /// What a session cut off by cmds quitting is told once it is resumed (Resume Always).
+    static let restartPrompt = "cmds was restarted while you were working. Continue where you left off."
+
+    /// Sessions restored as cut off while working (`Pane.continueAfterResume`): each gets one `continueSession` run
+    /// with `restartPrompt`, typed only when it is idle, like a schedule's (it waits for the queued resume). Not a
+    /// stored schedule: the run shows in the history as "Continue after cmds restarted". At most `maxActiveRuns` at a
+    /// time; the others start as runs end.
+    func continueAfterRestart() {
+        for pane in controller.workspaces.flatMap(\.orderedPanes) where pane.continueAfterResume {
+            guard active.count < ScheduleLimits.maxActiveRuns else { return startTickTimerIfNeeded() }
+            guard let session = pane.resumeOffer ?? pane.agentSession else {
+                pane.continueAfterResume = false
+                continue
+            }
+            pane.continueAfterResume = false
+            pane.resumeInterrupted = false
+            let now = now()
+            let draft = ScheduleDraft(name: String(localized: "Continue after cmds restarted",
+                                                   comment: "schedule history: an agent cut off by a restart was told to continue"),
+                                      trigger: .once(at: now),
+                                      action: .continueSession(ContinueSession(agent: session.agent, sessionID: session.sessionID,
+                                                                               cwd: session.cwd, prompt: Self.restartPrompt,
+                                                                               paneTag: controller.scheduleTag(for: pane))),
+                                      late: .skip, notify: .failures, warn: false)
+            let schedule = Schedule(id: "restart-\(pane.id)", draft: draft, origin: .app, createdAt: now)
+            startRun(schedule, cause: .manual, dueAt: now)
+        }
+    }
+}

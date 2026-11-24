@@ -4260,6 +4260,17 @@
         }
       }
     },
+    "Continue after cmds restarted": {
+      "comment": "schedule history: an agent cut off by a restart was told to continue",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmds の再起動後に続ける"
+          }
+        }
+      }
+    },
     "Continue an agent session": {
       "localizations": {
         "ja": {

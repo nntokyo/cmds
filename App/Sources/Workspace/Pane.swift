@@ -90,6 +90,10 @@ final class Pane {
     /// The tag a schedule names this pane by (`PaneTarget.tag`, `ContinueSession.paneTag`; local terminal panes only).
     /// Given when a schedule first names the pane; saved in the session, so it survives a relaunch (pane ids do not).
     var scheduleTag: String?
+    /// The session restored here was cut off while working; until it is told to continue (or the agent ran again),
+    /// later saves keep saying so. `continueAfterResume`: tell it once resumed (Resume Always).
+    var resumeInterrupted = false
+    var continueAfterResume = false
 
     /// The terminal pane an API request (`browser.open`, `pane.open_file`, …) opened this browser, preview or files
     /// pane from: the agent there may close it (`pane.close` with `openedBy`, `cmds mcp` close_pane; #165). Saved in

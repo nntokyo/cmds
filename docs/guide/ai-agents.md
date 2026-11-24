@@ -444,7 +444,12 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
   - *Ask* (default): a bar at the top of the pane — "Resume Claude Code session “topic” (model, 2 h ago)" with
     **Resume**, **Resume All (n)** (every offered pane of the workspace; shown when there is more than one) and **Dismiss** (forget it). Also
     Pane › Resume Agent Session / Resume All Agent Sessions.
-  - *Always*: resumes every remembered session by itself once the pane's shell prompt is ready.
+  - *Always*: resumes every remembered session by itself once the pane's shell prompt is ready. A session whose agent
+    was **working** when cmds quit (an update in the middle of a task) is then told, once, "cmds was restarted while
+    you were working. Continue where you left off." It goes through the same rules as a schedule's Continue: typed
+    only into that session, once it is idle, never into a question or a permission prompt. Sessions that were idle
+    are only resumed. The schedule history shows it as "Continue after cmds restarted" (at most 5 at a time; the
+    others follow).
   - *Never*: forgets them.
 - **What is typed**, into the pane's own shell and only once: `cd '<dir>' && claude --resume <id>` or
   `cd '<dir>' && codex resume <id>` (Return included). Only ids made of letters, digits, `-`, `_`, `.` are accepted;
@@ -464,6 +469,7 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
   resumes (`agent.resume`). From a server, `cmds-remote` sockets only reach their own pane (`--all` is refused).
 
 Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting from `CMDS_AGENT_RESUME=ask|always|never`.
+`session.json` marks a session cut off while working with `interrupted` (absent: it was not).
 
 ### Recent sessions
 
