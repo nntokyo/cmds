@@ -518,6 +518,9 @@ final class APIServer {
             AppDelegate.quitWithoutConfirmation = true
             DispatchQueue.main.async { NSApp.terminate(nil) }
             return [:]
+        case "app.doctor":
+            // What is degraded (#454); read only, local socket only.
+            return try .from(controller.doctorReport())
         case "app.login_item":
             // Open cmds at login (#451); local socket only (not in RemoteAPIPolicy.allowedMethods).
             if let enabled = try params.bool("enabled") { try LoginItem.set(enabled) }

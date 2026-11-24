@@ -3,6 +3,17 @@ import Foundation
 
 /// Human-readable output for `cmds ls` / `cmds panes` / `cmds stats`.
 enum Format {
+    /// `warn  schedules  2 dropped from schedules.json in the last 7 days  → cmds schedule deleted` (`cmds doctor`).
+    static func doctor(_ report: DoctorReport) -> String {
+        let width = report.findings.map(\.id.count).max() ?? 0
+        return report.findings.map { finding in
+            var line = finding.level.rawValue.padding(toLength: 4, withPad: " ", startingAt: 0) + "  "
+                + finding.id.padding(toLength: width, withPad: " ", startingAt: 0) + "  " + finding.text
+            if let fix = finding.fix { line += "  → " + fix }
+            return line + "\n"
+        }.joined()
+    }
+
     static func workspaces(_ workspaces: [WorkspaceInfo], currentPane: String?) -> String {
         guard !workspaces.isEmpty else { return "no workspaces\n" }
         var out = ""

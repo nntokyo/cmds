@@ -574,6 +574,18 @@ extension CLI {
                 print(entry["keychain"]?.stringValue.map { "\(name)  (Keychain: \($0))" } ?? name)
             }
         },
+        Command(name: "doctor", usage: "doctor [--json]",
+                summary: "What is degraded in the running cmds, and what to do: version and pending update, restart settings, schedules, hangs, memory, Bluetooth sync.",
+                details: """
+                    One line per check: ok, note or warn, then what to do after →. Exits 1 when a check warns, so a
+                    script or an agent's schedule can act on it. Read only.
+                    """) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds doctor [--json]")
+            let result = try ctx.call("app.doctor")
+            let report = try perform { try result.decode(DoctorReport.self) }
+            if ctx.json { ctx.printJSON(result) } else { print(Format.doctor(report), terminator: "") }
+            if report.level == .warn { throw CLIError.failure("a check warns (see above)") }
+        },
         Command(name: "launch-at-login", usage: "launch-at-login [on|off]",
                 summary: "Show or set whether cmds opens at login (so agents and schedules continue after a restart).",
                 details: """

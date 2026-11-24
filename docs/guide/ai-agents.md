@@ -466,6 +466,10 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
 
 Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting from `CMDS_AGENT_RESUME=ask|always|never`.
 
+**Is anything wrong?** `cmds doctor` checks the running cmds in one go: an update waiting for a restart, the
+Resume and Open at login settings, schedules that cannot run or were dropped, hangs, memory pressure and Bluetooth
+sync. It exits 1 when something needs attention, so an agent's daily schedule can run it and report.
+
 **After the Mac restarts** nothing resumes until cmds is opened. To have it open by itself, turn on Settings › Agents ›
 **Open cmds at login** (or `cmds launch-at-login on`; off by default). With *Always*, the agents then continue and
 schedules run without anyone opening cmds. Only a cmds in an Applications folder can be a login item; if macOS keeps
