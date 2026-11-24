@@ -322,6 +322,36 @@
         }
       }
     },
+    "%lld changed files" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 個の変更されたファイル"
+          }
+        }
+      }
+    },
+    "%lld commits ahead" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件のコミットが先行"
+          }
+        }
+      }
+    },
+    "%lld commits behind" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件のコミットが遅れ"
+          }
+        }
+      }
+    },
     "%lld d ago" : {
       "comment" : "age of agent figures",
       "localizations" : {
@@ -329,6 +359,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%lld日前"
+          }
+        }
+      }
+    },
+    "%lld files also changed in another worktree" : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のワークツリーでも変更された %lld 個のファイル"
           }
         }
       }

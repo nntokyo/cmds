@@ -175,6 +175,7 @@ final class MockTransport: SyncTransport {
                 workspaces[w].attention = true
                 workspaces[w].panes[p].attention = true
                 workspaces[w].notificationText = "Claude is waiting for your input"
+                workspaces[w].notificationLevel = nil  // a new notification has its own level, as on the Mac
                 emit(.state(currentState))
             }
             emit(.notification(.init(paneID: "p-agent", workspaceID: "w-api", title: "Claude Code",
@@ -448,14 +449,16 @@ enum MockData {
         WorkspaceInfo(
             id: "w-cmds", title: "cmds", selected: true, gitBranch: "main",
             workingDirectory: "~/Source/tools/cmds", ports: [3000],
-            notificationText: "Build succeeded", attention: false,
+            notificationText: "Command failed (exit 1): after 2m 10s in xcodebuild", attention: false,
             panes: [
                 PaneInfo(id: "p-shell", kind: .terminal, title: "zsh", focused: true, attention: false, workingDirectory: "~/Source/tools/cmds"),
                 PaneInfo(id: "p-build", kind: .terminal, title: "xcodebuild", focused: false, attention: false),
                 PaneInfo(id: "p-top", kind: .terminal, title: "top", focused: false, attention: false),
             ],
             layout: .split(axis: .horizontal, ratio: 0.55, first: .pane(id: "p-shell"),
-                           second: .split(axis: .vertical, ratio: 0.5, first: .pane(id: "p-build"), second: .pane(id: "p-top")))),
+                           second: .split(axis: .vertical, ratio: 0.5, first: .pane(id: "p-build"), second: .pane(id: "p-top"))),
+            gitSummary: GitSummary(changes: 0, ahead: 0, behind: 2, upstream: "origin/main"),
+            notificationLevel: .error),
         WorkspaceInfo(
             id: "w-api", title: "api-server", selected: false, gitBranch: "feature/auth-tokens",
             workingDirectory: "~/Source/web/api", ports: [8080, 5432],
@@ -464,7 +467,11 @@ enum MockData {
                 PaneInfo(id: "p-agent", kind: .terminal, title: "claude", focused: true, attention: false),
                 PaneInfo(id: "p-api-shell", kind: .terminal, title: "zsh", focused: false, attention: false),
             ],
-            layout: .split(axis: .vertical, ratio: 0.7, first: .pane(id: "p-agent"), second: .pane(id: "p-api-shell"))),
+            layout: .split(axis: .vertical, ratio: 0.7, first: .pane(id: "p-agent"), second: .pane(id: "p-api-shell")),
+            gitSummary: GitSummary(changes: 3, ahead: 1, behind: 0, upstream: "origin/feature/auth-tokens"),
+            gitOverlaps: [GitOverlap(workspaces: ["w-cmds"], files: ["src/auth.ts", "src/session.ts"], count: 2)],
+            pullRequest: PullRequestSummary(number: 405, state: .open, url: "https://github.com/example/api/pull/405", passed: 4),
+            notificationLevel: .success),
         WorkspaceInfo(
             id: "w-dot", title: "dotfiles", selected: false, gitBranch: "master",
             workingDirectory: "~/.dotfiles", ports: [], notificationText: nil, attention: false,

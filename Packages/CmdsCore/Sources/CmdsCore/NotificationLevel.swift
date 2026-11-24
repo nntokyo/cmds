@@ -33,4 +33,10 @@ public enum NotificationLevel: String, CaseIterable, Codable, Equatable, Sendabl
     public struct Invalid: Error, Equatable, CustomStringConvertible {
         public var description: String
     }
+
+    /// A level a newer Mac adds reads as `info` (an unknown one must not fail the whole workspace list on a phone).
+    public init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = NotificationLevel(rawValue: raw) ?? .info
+    }
 }
