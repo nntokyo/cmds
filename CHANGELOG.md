@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-11-24
+
 ### Added
 
 - After an account switch, the resumed Claude Code is told to continue where it left off (it used to wait for
@@ -1202,7 +1204,26 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.23.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.33.0...master
+[0.33.0]: https://github.com/nntokyo/cmds/compare/v0.32.0...v0.33.0
+[0.32.0]: https://github.com/nntokyo/cmds/compare/v0.31.0...v0.32.0
+[0.31.0]: https://github.com/nntokyo/cmds/compare/v0.30.0...v0.31.0
+[0.30.0]: https://github.com/nntokyo/cmds/compare/v0.29.1...v0.30.0
+[0.29.1]: https://github.com/nntokyo/cmds/compare/v0.29.0...v0.29.1
+[0.29.0]: https://github.com/nntokyo/cmds/compare/v0.28.1...v0.29.0
+[0.28.1]: https://github.com/nntokyo/cmds/compare/v0.28.0...v0.28.1
+[0.28.0]: https://github.com/nntokyo/cmds/compare/v0.27.3...v0.28.0
+[0.27.3]: https://github.com/nntokyo/cmds/compare/v0.27.2...v0.27.3
+[0.27.2]: https://github.com/nntokyo/cmds/compare/v0.27.1...v0.27.2
+[0.27.1]: https://github.com/nntokyo/cmds/compare/v0.27.0...v0.27.1
+[0.27.0]: https://github.com/nntokyo/cmds/compare/v0.26.0...v0.27.0
+[0.26.0]: https://github.com/nntokyo/cmds/compare/v0.25.1...v0.26.0
+[0.25.1]: https://github.com/nntokyo/cmds/compare/v0.25.0...v0.25.1
+[0.25.0]: https://github.com/nntokyo/cmds/compare/v0.24.3...v0.25.0
+[0.24.3]: https://github.com/nntokyo/cmds/compare/v0.24.2...v0.24.3
+[0.24.2]: https://github.com/nntokyo/cmds/compare/v0.24.1...v0.24.2
+[0.24.1]: https://github.com/nntokyo/cmds/compare/v0.24.0...v0.24.1
+[0.24.0]: https://github.com/nntokyo/cmds/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/nntokyo/cmds/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/nntokyo/cmds/compare/v0.21.0...v0.22.0
 [0.21.0]: https://github.com/nntokyo/cmds/compare/v0.20.0...v0.21.0
