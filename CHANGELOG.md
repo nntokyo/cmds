@@ -21,7 +21,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   with one are `schedules.json` version 3; an older cmds opens them read only (#456).
 - `cmds doctor` (API `app.doctor`): what is degraded in the running cmds, with what to do — an update waiting for a
   restart, Resume Agent Sessions and Open at login, schedules that cannot run or were dropped, hangs in the last
-  24 h, memory pressure, Bluetooth sync failing. Exits 1 when a check warns (#454).
+  24 h, memory pressure, Bluetooth sync failing, and Claude Code sessions whose CronCreate jobs are not moved to
+  schedules yet (with the `cmds schedule from-session` to run). Exits 1 when a check warns (#454).
 - Open cmds at login (Settings › Agents, `cmds launch-at-login [on|off]`, API `app.login_item`; off by default): after
   the Mac restarts, cmds opens by itself, so with Resume Always the agents continue and schedules run without anyone
   opening it. Only for a cmds in an Applications folder (#451).
