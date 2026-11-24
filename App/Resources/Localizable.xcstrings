@@ -4271,6 +4271,17 @@
         }
       }
     },
+    "Continue after the account switch": {
+      "comment": "schedule history: an agent moved to another Claude account was told to continue",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウントの切り替え後に続ける"
+          }
+        }
+      }
+    },
     "Continue an agent session": {
       "localizations": {
         "ja": {

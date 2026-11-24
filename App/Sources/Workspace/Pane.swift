@@ -94,6 +94,9 @@ final class Pane {
     /// later saves keep saying so. `continueAfterResume`: tell it once resumed (Resume Always).
     var resumeInterrupted = false
     var continueAfterResume = false
+    /// What it is told then (`ResumeNote`), and the name of that run in the schedule history.
+    var continueNote: String?
+    var continueTitle: String?
 
     /// The terminal pane an API request (`browser.open`, `pane.open_file`, …) opened this browser, preview or files
     /// pane from: the agent there may close it (`pane.close` with `openedBy`, `cmds mcp` close_pane; #165). Saved in

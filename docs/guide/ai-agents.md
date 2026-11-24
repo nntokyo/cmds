@@ -444,12 +444,8 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
   - *Ask* (default): a bar at the top of the pane — "Resume Claude Code session “topic” (model, 2 h ago)" with
     **Resume**, **Resume All (n)** (every offered pane of the workspace; shown when there is more than one) and **Dismiss** (forget it). Also
     Pane › Resume Agent Session / Resume All Agent Sessions.
-  - *Always*: resumes every remembered session by itself once the pane's shell prompt is ready. A session whose agent
-    was **working** when cmds quit (an update in the middle of a task) is then told, once, "cmds was restarted while
-    you were working. Continue where you left off." It goes through the same rules as a schedule's Continue: typed
-    only into that session, once it is idle, never into a question or a permission prompt. Sessions that were idle
-    are only resumed. The schedule history shows it as "Continue after cmds restarted" (at most 5 at a time; the
-    others follow).
+  - *Always*: resumes every remembered session by itself once the pane's shell prompt is ready. A local Claude Code
+    session is then told, once, what it needs to go on (see [What a resumed session is told](#what-a-resumed-session-is-told)).
   - *Never*: forgets them.
 - **What is typed**, into the pane's own shell and only once: `cd '<dir>' && claude --resume <id>` or
   `cd '<dir>' && codex resume <id>` (Return included). Only ids made of letters, digits, `-`, `_`, `.` are accepted;
@@ -473,6 +469,26 @@ Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting fro
 an older cmds, as on the first launch after an update) is judged from its Claude Code transcript: its last turn did
 not end (a tool call or tool result without the final answer, or a prompt without a reply), and the user did not stop
 it (Esc) or run a local command. `cmds sessions` shows such a session as "(cut off while working)".
+
+### What a resumed session is told
+
+A resumed Claude Code waits at its prompt, and the jobs it scheduled in the session (`CronCreate`, a `/loop`'s
+`ScheduleWakeup`) ended with the old process. Nobody may be there to type, so cmds tells it, once:
+
+- **After cmds restarted** (Resume *Always*), if its agent was working when cmds quit: "cmds was restarted while you
+  were working. Continue where you left off."
+- **After an account switch** ([When an account hits its limit](#when-an-account-hits-its-limit)), always: "cmds moved
+  this session to the Claude account “ryo” because “info” hit its limit. Continue where you left off."
+- In both cases, when the session had scheduled jobs that are still meant to run (recurring, session-only
+  `CronCreate` jobs not cancelled with `CronDelete` and younger than their 7-day expiry, or a `/loop` whose last
+  `ScheduleWakeup` within a day did not stop it): "Your scheduled jobs ended with the old Claude Code process …:
+  create them again with CronCreate as before (`3-58/5 * * * *`: “…”), then check them with CronList." (or, for a
+  loop, to schedule its next wake-up again). An idle session without jobs is only resumed.
+
+cmds finds the jobs in the session's transcript (`<config dir>/projects/*/<id>.jsonl`, read off the main thread; a
+100 MB transcript takes about a second). The note goes through the same rules as a schedule's Continue: typed only into
+that session, once it is idle, never into a question or a permission prompt. The schedule history shows it as
+"Continue after cmds restarted" or "Continue after the account switch" (at most 5 at a time; the others follow).
 
 ### Recent sessions
 
@@ -599,7 +615,8 @@ Switching to the next account in order that has not hit its limit, in that pane 
 3. Once the shell is back, types `cd '<dir>' && env CLAUDE_CONFIG_DIR='<next folder>' claude --resume <id>`
    (`env -u CLAUDE_CONFIG_DIR claude …` for `~/.claude`) the way
    [resuming](#resuming-sessions) does (at an empty shell prompt, once). The conversation continues under the next
-   account; ask Claude to go on with what it was doing.
+   account, and once Claude Code is idle cmds tells it to go on, and to create again the jobs it had scheduled
+   ([What a resumed session is told](#what-a-resumed-session-is-told)).
 
 When every other account is limited too, the bar offers **Continue at 15:01** (the notification **Continue When It
 Resets**): a [schedule](schedules.md) types `continue` into the session one minute after the account's reset.

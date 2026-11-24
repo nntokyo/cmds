@@ -114,11 +114,10 @@ extension AppController {
             // As saved; from an older cmds (no mark), as the transcript's last turn says (a local Claude Code session).
             let cutOff = entry.interrupted ?? (entry.session.agent == .claude && entry.session.host == nil
                 ? ClaudeTurnState.cutOff(sessionID: entry.session.sessionID, configDir: entry.session.configDir) ?? false : false)
-            if cutOff {
-                pane.resumeInterrupted = true
-                // Resume Always: nobody may be there to say "continue" (cmds updated while agents worked).
-                pane.continueAfterResume = mode == .always
-            }
+            if cutOff { pane.resumeInterrupted = true }
+            // Resume Always: nobody may be there to say "continue" (cmds updated while agents worked), nor to create
+            // again the jobs the session had scheduled (they died with the old process).
+            if mode == .always { prepareResumeNote(pane, session: entry.session, reason: .restart, cutOff: cutOff) }
         }
         // After all offers exist, so each banner counts the others (Resume All).
         panes.filter { $0.resumeOffer != nil }.forEach(updateResumeBanner)
@@ -348,5 +347,32 @@ extension AppController {
         #endif
         terminal.typeText(line + "\r")
         scheduleSave()
+    }
+}
+
+// MARK: What a resumed session is told
+
+extension AppController {
+    /// Works out off the main thread what `pane`'s session is told once resumed (`ResumeNote`: continue, and its
+    /// scheduled jobs from the transcript), then has the schedule runner type it when the agent is idle. Local Claude
+    /// Code only; nothing for a restart of an idle session without jobs.
+    func prepareResumeNote(_ pane: Pane, session: AgentSession, reason: ResumeNote.Reason, cutOff: Bool) {
+        guard session.agent == .claude, session.host == nil else { return }
+        let sessionID = session.sessionID, configDir = session.configDir
+        let title = reason == .restart
+            ? String(localized: "Continue after cmds restarted", comment: "schedule history: an agent cut off by a restart was told to continue")
+            : String(localized: "Continue after the account switch", comment: "schedule history: an agent moved to another Claude account was told to continue")
+        Task.detached(priority: .utility) {
+            let path = ClaudeTurnState.transcriptPath(sessionID: sessionID, configDir: configDir)
+            let jobs = path.map { ResumeNote.jobs(transcriptLines: ResumeNote.jobLines(path: $0), now: Date()) } ?? []
+            let note = ResumeNote.prompt(reason: reason, cutOff: cutOff, jobs: jobs)
+            await MainActor.run { [weak self, weak pane] in
+                guard let self, let pane, !pane.isClosing, let note else { return }
+                pane.continueNote = note
+                pane.continueTitle = title
+                pane.continueAfterResume = true
+                self.scheduleRunner.continueAfterRestart()
+            }
+        }
     }
 }
