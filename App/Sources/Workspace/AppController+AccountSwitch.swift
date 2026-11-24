@@ -251,6 +251,8 @@ extension AppController {
         scheduleSave()
         emit(.pane(workspaceID: pane.workspaceID, paneID: pane.id))
         let from = AccountSwitch.displayName(change.from)
+        // The resumed Claude Code waits at its prompt: tell it to go on (and to create its scheduled jobs again).
+        prepareResumeNote(pane, session: session, reason: .accountSwitch(from: from, to: target.name), cutOff: true)
         raiseAttention(pane: pane, title: String(localized: "Claude account switched"),
                        body: String(localized: "Continuing the session with “\(target.name)” (was “\(from)”)."))
     }

@@ -40,20 +40,24 @@ public enum ClaudeTurnState {
         return nil
     }
 
-    /// Reads the session's transcript in `configDir` (default `~/.claude`): nil when it cannot be found or told.
-    public static func cutOff(sessionID: String, configDir: String?, home: String = NSHomeDirectory(),
-                              fileManager: FileManager = .default) -> Bool? {
+    /// The session's transcript in `configDir` (default `~/.claude`), if it is there.
+    public static func transcriptPath(sessionID: String, configDir: String?, home: String = NSHomeDirectory(),
+                                      fileManager: FileManager = .default) -> String? {
         guard AgentResume.isValidSessionID(sessionID) else { return nil }
         let projects = ClaudeSessionSharing.projectsPath(configDir ?? "~/.claude", home: home) as NSString
         guard let folders = try? fileManager.contentsOfDirectory(atPath: projects as String) else { return nil }
-        for folder in folders {
-            let path = (projects.appendingPathComponent(folder) as NSString).appendingPathComponent("\(sessionID).jsonl")
-            guard let handle = FileHandle(forReadingAtPath: path) else { continue }
-            defer { try? handle.close() }
-            let size = (try? handle.seekToEnd()) ?? 0
-            try? handle.seek(toOffset: size > UInt64(tailBytes) ? size - UInt64(tailBytes) : 0)
-            return cutOff(transcriptTail: handle.readDataToEndOfFile())
-        }
-        return nil
+        return folders.lazy.map { (projects.appendingPathComponent($0) as NSString).appendingPathComponent("\(sessionID).jsonl") }
+            .first { fileManager.fileExists(atPath: $0) }
+    }
+
+    /// Reads the session's transcript in `configDir` (default `~/.claude`): nil when it cannot be found or told.
+    public static func cutOff(sessionID: String, configDir: String?, home: String = NSHomeDirectory(),
+                              fileManager: FileManager = .default) -> Bool? {
+        guard let path = transcriptPath(sessionID: sessionID, configDir: configDir, home: home, fileManager: fileManager),
+              let handle = FileHandle(forReadingAtPath: path) else { return nil }
+        defer { try? handle.close() }
+        let size = (try? handle.seekToEnd()) ?? 0
+        try? handle.seek(toOffset: size > UInt64(tailBytes) ? size - UInt64(tailBytes) : 0)
+        return cutOff(transcriptTail: handle.readDataToEndOfFile())
     }
 }

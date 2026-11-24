@@ -99,8 +99,8 @@ extension ScheduleRunner {
 // MARK: After a restart
 
 extension ScheduleRunner {
-    /// What a session cut off by cmds quitting is told once it is resumed (Resume Always).
-    static let restartPrompt = "cmds was restarted while you were working. Continue where you left off."
+    /// What a session cut off by cmds quitting is told once it is resumed when nothing else was worked out.
+    static let restartPrompt = ResumeNote.prompt(reason: .restart, cutOff: true, jobs: []) ?? "continue"
 
     /// Sessions restored as cut off while working (`Pane.continueAfterResume`): each gets one `continueSession` run
     /// with `restartPrompt`, typed only when it is idle, like a schedule's (it waits for the queued resume). Not a
@@ -116,11 +116,15 @@ extension ScheduleRunner {
             pane.continueAfterResume = false
             pane.resumeInterrupted = false
             let now = now()
-            let draft = ScheduleDraft(name: String(localized: "Continue after cmds restarted",
-                                                   comment: "schedule history: an agent cut off by a restart was told to continue"),
+            let prompt = pane.continueNote ?? Self.restartPrompt
+            let name = pane.continueTitle ?? String(localized: "Continue after cmds restarted",
+                                                    comment: "schedule history: an agent cut off by a restart was told to continue")
+            pane.continueNote = nil
+            pane.continueTitle = nil
+            let draft = ScheduleDraft(name: name,
                                       trigger: .once(at: now),
                                       action: .continueSession(ContinueSession(agent: session.agent, sessionID: session.sessionID,
-                                                                               cwd: session.cwd, prompt: Self.restartPrompt,
+                                                                               cwd: session.cwd, prompt: prompt,
                                                                                paneTag: controller.scheduleTag(for: pane))),
                                       late: .skip, notify: .failures, warn: false)
             let schedule = Schedule(id: "restart-\(pane.id)", draft: draft, origin: .app, createdAt: now)

@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- After an account switch, the resumed Claude Code is told to continue where it left off (it used to wait for
+  someone to type), and after a switch or a restart a session whose scheduled jobs (`CronCreate`, a `/loop`) died with
+  the old process is told to create them again, with their schedules and prompts read from its transcript (#443).
+
 - Resume Always: an agent that was working when cmds quit (for example for an update) is told to continue once it
   is resumed and idle, so its task goes on without anyone typing "continue"; idle agents are only resumed. Also on the first launch after an update: a session saved without the mark is judged
   from its Claude Code transcript's last turn; `cmds sessions` shows "(cut off while working)" (#440).
