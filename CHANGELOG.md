@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Browser panes: agents can give files to a page, into a file field as if chosen or dropped on a drop zone
+  (`cmds browser upload`, MCP `browser_upload`). Only into a browser pane their terminal opened, never from where
+  secrets are kept (`~/.ssh`, `~/.aws`, `~/.claude*`, `.env`, keys, credentials, `.git`), and every upload is noted in
+  `uploads.log` and shown in the sidebar (#434).
+
 - Hangs are recorded: when cmds' main thread stops answering for 30 s, a sample of every thread goes to
   `<support dir>/hangs` (with `hangs.log`), and meanwhile `cmds ping` says "running but not responding" instead of
   timing out (#430).

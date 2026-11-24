@@ -13920,6 +13920,17 @@
         }
       }
     },
+    "Uploaded %@ to %@": {
+      "comment": "sidebar status after an agent gave files to a page; arguments: file names with sizes, the page's origin",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ を %2$@ にアップロードしました"
+          }
+        }
+      }
+    },
     "Usage": {
       "localizations": {
         "ja": {

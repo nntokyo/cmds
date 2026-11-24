@@ -94,7 +94,7 @@ final class MCPServerTests: XCTestCase {
         let inside = server().handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"]?.arrayValue ?? []
         XCTAssertEqual(inside.compactMap { $0["name"]?.stringValue },
                        ["browser_open", "browser_profile", "browser_navigate", "browser_url", "browser_eval", "browser_snapshot", "browser_set_viewport",
-                        "browser_console", "browser_source", "browser_seo", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_wait_for",
+                        "browser_console", "browser_source", "browser_seo", "browser_snapshot_tree", "browser_click", "browser_fill", "browser_upload", "browser_wait_for",
                         "browser_network", "browser_point", "browser_responsive", "browser_watch", "open_file", "terminal_split", "terminal_read", "terminal_send", "terminal_wait", "list_panes",
                         "list_ports", "system_stats", "list_processes", "close_pane", "set_status"])
         XCTAssertEqual(server(inside: false).handle(line: #"{"jsonrpc":"2.0","id":1,"method":"tools/list"}"#)?["result"]?["tools"], .array([]))
