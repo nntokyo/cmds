@@ -94,6 +94,9 @@ struct SessionState: Codable {
     struct PaneAgentSession: Codable {
         var paneIndex: Int
         var session: AgentSession
+        /// The agent was working when this was saved (cut off by cmds quitting): with Resume Always it is told to
+        /// continue after resuming (`ScheduleRunner.continueAfterRestart`). Added later: absent means no.
+        var interrupted: Bool? = nil
     }
 
     /// The tiled view (several workspaces side by side). Added later: older sessions lack it, older versions ignore it.

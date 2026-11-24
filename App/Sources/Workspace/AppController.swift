@@ -1102,7 +1102,9 @@ final class AppController {
             guard let root = workspace.root else { return nil }
             let agentSessions = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneAgentSession? in
                 guard let pane = workspace.panes[id], let session = savedAgentSession(pane) else { return nil }
-                return SessionState.PaneAgentSession(paneIndex: index, session: session)
+                // Working now, or restored as cut off and not told to continue yet.
+                let interrupted = pane.agentActivity == .busy || pane.resumeInterrupted
+                return SessionState.PaneAgentSession(paneIndex: index, session: session, interrupted: interrupted ? true : nil)
             }
             let paneAccounts = root.paneIDs.enumerated().compactMap { index, id -> SessionState.PaneAccount? in
                 guard let pane = workspace.panes[id], pane.ssh == nil, let account = pane.claudeAccount else { return nil }

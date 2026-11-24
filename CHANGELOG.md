@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Resume Always: an agent that was working when cmds quit (for example for an update) is told to continue once it
+  is resumed and idle, so its task goes on without anyone typing "continue"; idle agents are only resumed (#440).
+
 - Browser sign-ins are kept per workspace: a workspace created from now on gets its own login profile for the
   browser panes opened in it, unless one was chosen (Settings › General › Browser › Separate sign-ins per workspace,
   on). Existing workspaces keep the profile they used, so nothing has to be signed in again; one switches only when

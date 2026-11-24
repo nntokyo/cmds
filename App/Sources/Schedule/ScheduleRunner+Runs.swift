@@ -86,7 +86,7 @@ extension ScheduleRunner {
         }
     }
 
-    private func startTickTimerIfNeeded() {
+    func startTickTimerIfNeeded() {
         guard tickTimer == nil, !active.isEmpty else { return }
         let timer = Timer(timeInterval: ScheduleRunTiming.tickInterval, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.tick() }
@@ -98,6 +98,7 @@ extension ScheduleRunner {
     private func tick() {
         let now = now()
         for run in active { step(run, now: now) }
+        continueAfterRestart()  // sessions waiting for a free run slot
         if active.isEmpty {
             tickTimer?.invalidate()
             tickTimer = nil
