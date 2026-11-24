@@ -37,11 +37,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                                  title: String(localized: "Open Schedules"), options: [.foreground])
         // A schedule starts in a minute: Skip leaves cmds in the background.
         let skipRun = UNNotificationAction(identifier: ScheduleRunner.skipAction, title: String(localized: "Skip"), options: [])
+        // A schedule's time passed while the Mac slept or cmds was not running: run it now, cmds staying in the background.
+        let runNow = UNNotificationAction(identifier: ScheduleRunner.runNowAction, title: String(localized: "Run Now"), options: [])
         center.setNotificationCategories([
             UNNotificationCategory(identifier: AppController.accountNotificationCategory, actions: [switchAccount], intentIdentifiers: []),
             UNNotificationCategory(identifier: AppController.accountLimitLaterCategory, actions: [continueLater], intentIdentifiers: []),
             UNNotificationCategory(identifier: ScheduleRunner.notificationCategory, actions: [openSchedules], intentIdentifiers: []),
             UNNotificationCategory(identifier: ScheduleRunner.noticeCategory, actions: [skipRun, openSchedules], intentIdentifiers: []),
+            UNNotificationCategory(identifier: ScheduleRunner.missedCategory, actions: [runNow, openSchedules], intentIdentifiers: []),
         ])
 
         windowController.showWindow(nil)
@@ -192,8 +195,14 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         let action = response.actionIdentifier
         let noticeSchedule = userInfo[ScheduleRunner.noticeScheduleKey] as? String
         let noticeDue = userInfo[ScheduleRunner.noticeDueKey] as? Double
+        let missedSchedule = userInfo[ScheduleRunner.missedScheduleKey] as? String
         DispatchQueue.main.async {
             MainActor.assumeIsolated {
+                if action == ScheduleRunner.runNowAction, let missedSchedule {
+                    self.controller.scheduleRunner.runFromMissedNotice(id: missedSchedule)
+                    completionHandler()
+                    return
+                }
                 if action == ScheduleRunner.skipAction {
                     if let noticeSchedule, let noticeDue {
                         self.controller.scheduleRunner.skipFromNotice(id: noticeSchedule, dueAt: Date(timeIntervalSince1970: noticeDue))

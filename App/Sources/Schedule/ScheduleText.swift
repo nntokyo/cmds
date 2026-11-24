@@ -9,7 +9,14 @@ enum ScheduleText {
     /// One line for a notification or the history: `Skipped: the pane was running another program.`
     static func outcome(_ run: ScheduleRun) -> String {
         if run.state == .missed {
-            return String(localized: "Did not run at \(ScheduleStrings.time(run.dueAt)): the Mac was asleep or cmds was not running.")
+            switch run.reason {
+            case .macAsleep?:
+                return String(localized: "Did not run at \(ScheduleStrings.time(run.dueAt)): the Mac was asleep.")
+            case .cmdsNotRunning?:
+                return String(localized: "Did not run at \(ScheduleStrings.time(run.dueAt)): cmds was not running.")
+            default:
+                return String(localized: "Did not run at \(ScheduleStrings.time(run.dueAt)): the Mac was asleep or cmds was not running.")
+            }
         }
         guard let reason = run.reason else { return ScheduleStrings.state(run.state) }
         return "\(ScheduleStrings.state(run.state)) — \(ScheduleStrings.reason(reason))"

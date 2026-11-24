@@ -37,6 +37,8 @@ enum ScheduleStrings {
         case .invalidSchedule: return String(localized: "The schedule is not valid any more.")
         case .resumeNotPossible: return String(localized: "The session cannot be resumed.")
         case .missed: return String(localized: "The Mac was asleep or cmds was not running.")
+        case .macAsleep: return String(localized: "The Mac was asleep.")
+        case .cmdsNotRunning: return String(localized: "cmds was not running.")
         case .cancelledByUser: return String(localized: "Cancelled.")
         case .scheduleRemoved: return String(localized: "The schedule was removed.")
         case .appQuit: return String(localized: "cmds quit during the run.")

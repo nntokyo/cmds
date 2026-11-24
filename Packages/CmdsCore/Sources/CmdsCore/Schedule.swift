@@ -832,7 +832,12 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
     case invalidSchedule
     case resumeNotPossible
     // Missed / cancelled
+    /// Not known which (older runs, or neither seen).
     case missed
+    /// The Mac woke after the time (cmds was running).
+    case macAsleep
+    /// cmds started after the time.
+    case cmdsNotRunning
     case cancelledByUser
     case scheduleRemoved
     case appQuit
@@ -871,6 +876,8 @@ public enum ScheduleReason: String, Codable, CaseIterable, Sendable {
         case .invalidSchedule: return "the schedule is not valid any more"
         case .resumeNotPossible: return "the session cannot be resumed"
         case .missed: return "the Mac was asleep or cmds was not running"
+        case .macAsleep: return "the Mac was asleep"
+        case .cmdsNotRunning: return "cmds was not running"
         case .cancelledByUser: return "cancelled"
         case .scheduleRemoved: return "the schedule was removed"
         case .appQuit: return "cmds quit during the run"

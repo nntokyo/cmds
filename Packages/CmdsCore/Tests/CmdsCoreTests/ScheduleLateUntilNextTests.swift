@@ -44,3 +44,25 @@ final class ScheduleLateUntilNextTests: XCTestCase {
         XCTAssertEqual(old, .runIfWithin(900))
     }
 }
+
+/// Why a time was missed (#45 phase 5).
+final class ScheduleMissedReasonTests: XCTestCase {
+    func testReasons() {
+        let due = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertEqual(ScheduleCatchUp.missedReason(due: due, launchedAt: due.addingTimeInterval(600), lastWakeAt: nil), .cmdsNotRunning)
+        XCTAssertEqual(ScheduleCatchUp.missedReason(due: due, launchedAt: due.addingTimeInterval(600),
+                                                    lastWakeAt: due.addingTimeInterval(700)), .cmdsNotRunning, "started after it")
+        XCTAssertEqual(ScheduleCatchUp.missedReason(due: due, launchedAt: due.addingTimeInterval(-86400),
+                                                    lastWakeAt: due.addingTimeInterval(4500)), .macAsleep)
+        XCTAssertEqual(ScheduleCatchUp.missedReason(due: due, launchedAt: due.addingTimeInterval(-86400),
+                                                    lastWakeAt: due.addingTimeInterval(-60)), .missed, "neither seen after it")
+    }
+
+    func testOlderReadersSeeAReason() throws {
+        let data = try JSONEncoder().encode([ScheduleReason.macAsleep, .cmdsNotRunning])
+        XCTAssertEqual(String(decoding: data, as: UTF8.self), #"["macAsleep","cmdsNotRunning"]"#)
+        let newer = #"{"id":"r1","scheduleID":"s1","scheduleName":"x","cause":"scheduled","dueAt":1794441600,"startedAt":1794441600,"state":"missed","reason":"somethingNewer"}"#
+        XCTAssertEqual(try JSONDecoder().decode(ScheduleRun.self, from: Data(newer.utf8)).reason, .other,
+                       "a run record from a newer cmds still reads")
+    }
+}

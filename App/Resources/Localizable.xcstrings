@@ -4910,12 +4910,32 @@
         }
       }
     },
+    "Did not run at %@: cmds was not running.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に実行されませんでした：cmdsが起動していませんでした。"
+          }
+        }
+      }
+    },
     "Did not run at %@: the Mac was asleep or cmds was not running.": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "%@に実行されませんでした：Macがスリープしていたか、cmdsが起動していませんでした。"
+          }
+        }
+      }
+    },
+    "Did not run at %@: the Mac was asleep.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@に実行されませんでした：Macがスリープしていました。"
           }
         }
       }
@@ -12365,6 +12385,16 @@
         }
       }
     },
+    "The Mac was asleep.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Macがスリープしていました。"
+          }
+        }
+      }
+    },
     "The SSH host %@ cannot be used.": {
       "localizations": {
         "ja": {
@@ -14903,6 +14933,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "以前cmdsが「蓋を閉じてもスリープしない」をオンにしたまま、オフにできませんでした（予期せず終了したか、パスワードのダイアログがキャンセルされました）。現在、このMacは蓋を閉じてもスリープしません。今すぐ通常のスリープに戻しますか？ macOSが管理者パスワードを求めます。"
+          }
+        }
+      }
+    },
+    "cmds was not running.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cmdsが起動していませんでした。"
           }
         }
       }

@@ -95,8 +95,10 @@ Schedules run only while cmds runs; cmds keeps the Mac from idle sleep by defaul
 
 When cmds starts, and when the Mac wakes, every schedule whose time has passed gets **one** catch-up run if it is
 late by at most its **If late** setting (default: 6 hours for once and limit schedules, 15 minutes for weekly
-ones); otherwise the history notes it as missed and you get a notification ("did not run at 09:00: the Mac was
-asleep or cmds was not running"). Several missed times never cause several runs. A one-time schedule that ran or
+ones); otherwise the history notes it as missed and you get a notification saying why: "did not run at 09:00: the
+Mac was asleep" (it woke after the time), "…: cmds was not running" (cmds started after it), or both when neither
+was seen. **Run Now** on that notification runs it right away, cmds staying in the background. Several missed times
+never cause several runs. A one-time schedule that ran or
 was missed is turned off and kept.
 
 For a weekly schedule whose work is still worth doing late, such as a morning report, choose **Run when the Mac is
@@ -111,7 +113,7 @@ The window lists each schedule's trigger, action, next run and last result; the 
 the selected schedule (or of all schedules) with why each ended as it did. `cmds schedule history` prints the same.
 
 - **Failed, skipped and missed runs** light the run's pane (or post a notification with **Open Schedules** when
-  there is no pane), unless the schedule's **Notify** is Never.
+  there is no pane; a missed run's also has **Run Now**), unless the schedule's **Notify** is Never.
 - **Successful runs** with Notify **Always** set the workspace's sidebar text, without the attention ring.
 
 Run Now runs a schedule at once (also one that is off); Cancel Run stops an active run (nothing more is typed).
