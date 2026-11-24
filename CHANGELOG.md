@@ -83,6 +83,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Schedules: "Continue" (also Continue When It Resets) no longer skips with "an agent was running in the pane" when
+  that agent is the session to continue and its status line had gone quiet; the prompt is pasted into it (#428).
+
 - Japanese: "Never" in Settings › General › Suspend background tabs and in a schedule's notifications read "再開しない"
   (do not resume); it is "しない".
 - `cmds-remote.sh` (version 2) on macOS servers: a hook, notification or command could fail with "app not reachable"

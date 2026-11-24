@@ -45,6 +45,9 @@ public enum ScheduleRunTiming {
         public var agentReported = false
         /// The session id that agent reports in the pane, if any.
         public var sessionID: String?
+        /// Without a report: the session the pane remembers, when the agent in the foreground is the process that
+        /// reported it (started before its last report). A report that got old drops the usage, not the agent.
+        public var rememberedSessionID: String?
         /// The run's account is limited now; `accountFreeIn` is how long until its (or, with `auto`, the earliest)
         /// reset.
         public var accountLimited = false
@@ -94,6 +97,8 @@ public enum ScheduleRunTiming {
         case type
         /// Paste the prompt now.
         case paste
+        /// The session to resume already runs in the foreground: no resume command, wait to paste into it.
+        case useRunningAgent
         /// Press Return now.
         case enter
         case succeed(ScheduleReason)
@@ -128,6 +133,15 @@ public enum ScheduleRunTiming {
 
     private static func shellStep(_ o: Observation, elapsed: TimeInterval, expect: Expectation) -> Step {
         guard o.paneExists else { return .fail(.paneClosed) }
+        // The session the run would resume is the agent in the foreground (its usage report got old, or it was
+        // started by hand): the prompt goes to it, no command is typed.
+        if o.foreground == .agent, let expected = expect.sessionID {
+            if let wanted = expect.agent, let seen = o.agent, seen != wanted {
+                return .skip(wanted == .codex ? .notCodex : .notClaude)
+            }
+            if (o.sessionID ?? o.rememberedSessionID) == expected { return .useRunningAgent }
+            if o.sessionID != nil { return .skip(.differentSession) }
+        }
         // Never type a command into a running agent.
         if o.foreground == .agent || o.agentOnTerminal { return .skip(.agentRunning) }
         let timedOut = elapsed >= shellReadyTimeout
@@ -160,7 +174,7 @@ public enum ScheduleRunTiming {
             return o.foreground == .shell && !o.agentOnTerminal ? .skip(.agentNotRunning) : .skip(.otherProgram)
         }
         if let expected = expect.sessionID {
-            if let seen = o.sessionID {
+            if let seen = o.sessionID ?? o.rememberedSessionID {
                 if seen != expected { return .skip(.differentSession) }
             } else {
                 // Typing only into the session the run is for: wait for Claude Code to report it.

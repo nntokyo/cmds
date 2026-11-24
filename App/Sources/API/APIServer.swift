@@ -267,6 +267,14 @@ final class APIServer {
                 controller.scheduleRunner.checkDue()
                 connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970),
                                                   "notifications": .array(debugNotifications)])
+            case "debug.drop_agent_usage":
+                // Tests only: the pane's agent usage goes as when a report without a pid gets too old
+                // (`unwatchedAgentTimeout`): the agent may still run, the pane still remembers its session.
+                let pane = try controller.resolvePane(try params.required("pane"))
+                pane.agentUsage = nil
+                pane.agentSource = nil
+                pane.agentSignals.hasUsage = false
+                connection.reply(id: id, result: ["session": pane.agentSession.map { .string($0.sessionID) } ?? .null])
             case "debug.schedule_run_now_notice":
                 // Tests only: the missed notification's Run Now, as AppDelegate does it.
                 controller.scheduleRunner.runFromMissedNotice(id: try params.required("id"))

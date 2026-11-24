@@ -121,6 +121,12 @@ extension ScheduleRunner {
             typeCommand(run, now: now)
         case .paste:
             pastePrompt(run, now: now)
+        case .useRunningAgent:
+            // No resume command: the session runs in the pane already (#45 phase 5).
+            run.stages.removeFirst()
+            run.expect.startsAgent = false
+            scheduleLog.info("run \(run.record.id, privacy: .public): the session already runs in the pane, no resume typed")
+            move(run, to: .waitingForAgent, now: now)
         case .enter:
             pressReturn(run, now: now)
         case .succeed(let reason):
@@ -130,6 +136,10 @@ extension ScheduleRunner {
             if reason == .accountStillLimited, run.automaticAccount { return finish(run, .skipped, .allAccountsLimited) }
             finish(run, .failed, reason)
         case .skip(let reason):
+            if reason == .agentRunning {
+                // What was seen, to tell why (ids and flags only).
+                scheduleLog.info("run \(run.record.id, privacy: .public) skipped: agent \(observation.agent?.rawValue ?? "-", privacy: .public) reported \(observation.sessionID != nil) remembered \(observation.rememberedSessionID != nil) expected \(run.expect.sessionID != nil)")
+            }
             finish(run, .skipped, reason)
         }
     }
@@ -184,6 +194,9 @@ extension ScheduleRunner {
         if let usage = pane.agentUsage, usage.agent == o.agent {
             o.agentReported = true
             o.sessionID = usage.sessionID
+        } else if foreground == .agent, let remembered = pane.agentSession, remembered.agent == o.agent,
+                  let group, let started = PaneProcessProbe.startDate(of: group), started <= remembered.lastSeen {
+            o.rememberedSessionID = remembered.sessionID
         }
         o.accountSwitchInProgress = pane.accountSwitch?.isInProgress == true
         o.resumeQueued = pane.resumeRequestedAt != nil && pane.resumeOffer != nil
