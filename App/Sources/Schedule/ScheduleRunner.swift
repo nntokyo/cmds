@@ -46,6 +46,11 @@ final class ScheduleRunner {
     unowned let controller: AppController
     private let url: URL
     private let runsURL: URL
+    let trashURL: URL
+    /// Removed and dropped schedules (ScheduleRunner+Trash.swift).
+    var trash = ScheduleTrash()
+    /// `schedules-deleted.json` is in place but could not be read: never written over.
+    var trashLocked = false
 
     private(set) var schedules: [Schedule] = []
     /// Ended runs, newest first (`ScheduleHistory.trimmed`).
@@ -91,6 +96,7 @@ final class ScheduleRunner {
         self.controller = controller
         url = ScheduleStore.url(supportDirectory: supportDirectory)
         runsURL = ScheduleStore.runsURL(supportDirectory: supportDirectory)
+        trashURL = ScheduleTrash.url(supportDirectory: supportDirectory)
     }
 
     // MARK: Lifecycle
@@ -132,11 +138,14 @@ final class ScheduleRunner {
     }
 
     private func load() {
+        loadTrash()
+        var dropped: [(json: JSONValue, problem: String)] = []
         switch StoredFile.load(ScheduleFile.self, from: url) {
         case .missing:
             break
         case .loaded(let file):
             schedules = file.schedules
+            dropped = file.droppedElements
             if file.dropped > 0 { scheduleLog.error("dropped \(file.dropped) invalid schedules from \(ScheduleStore.fileName, privacy: .public)") }
             if file.isFromNewerVersion { readOnlyReason = .newerVersion }
         case .unreadable(let error, let movedTo):
@@ -151,6 +160,8 @@ final class ScheduleRunner {
         case .unreadable(let error, let movedTo):
             noteUnreadable(ScheduleStore.runsFileName, error: error, movedTo: movedTo)
         }
+        // Kept before the next save drops them from the file (a read-only file keeps them itself).
+        if !readOnly, !dropped.isEmpty { keepDropped(dropped) }
         if !movedAside.isEmpty { showMovedAsideAlert() }
     }
 
@@ -515,17 +526,22 @@ final class ScheduleRunner {
         return schedules[index]
     }
 
-    /// Removes a schedule; its active run is cancelled, its history kept.
-    func remove(id: String) throws {
+    /// Removes a schedule; its active run is cancelled, its history kept, and the schedule kept in Recently Deleted
+    /// (`schedule.restore`).
+    func remove(id: String, by origin: ScheduleOrigin) throws {
         try requireWritable()
         let index = try index(of: id)
         for run in active where run.record.scheduleID == id { finish(run, .cancelled, .scheduleRemoved, notify: false) }
+        keepRemoved(schedules[index], by: origin)
         schedules.remove(at: index)
-        scheduleLog.info("removed schedule \(id, privacy: .public)")
+        scheduleLog.info("removed schedule \(id, privacy: .public) (by \(origin.logDescription, privacy: .public))")
         save()
         emit(.schedules(id: id))
         arm()
     }
+
+    /// A schedule put back from Recently Deleted (`restore(id:)`), already checked and given a free id.
+    func appendRestored(_ schedule: Schedule) { schedules.append(schedule) }
 
     /// Run Now: a manual run, also of a schedule that is off. Its `nextFireAt` stays.
     @discardableResult

@@ -164,6 +164,7 @@ final class ScheduleCLITests: XCTestCase {
         XCTAssertEqual(Format.duration(5400), "1h30m")
         XCTAssertEqual(Format.duration(90), "90s")
         XCTAssertEqual(Format.scheduleHistory([]), "no runs yet\n")
+        XCTAssertEqual(Format.deletedSchedules(DeletedScheduleList(deleted: [])), "no deleted schedules\n")
     }
 
     func testDetails() {
@@ -228,5 +229,19 @@ final class ScheduleCLITests: XCTestCase {
         ])
         // Codex has no accounts in cmds.
         XCTAssertThrowsError(try CLI.continueAction(target: .pane("p3"), pane: "p3", sessions: sessions, account: "work", prompt: nil))
+    }
+
+    func testDeletedSchedules() throws {
+        let json: JSONValue = ["id": "s1a2b3c4d", "name": "Daily report",
+                               "trigger": ["type": "weekly", "weekdays": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], "times": ["09:00"]],
+                               "action": ["type": "startWorkspace", "cwd": "/src/app", "command": "claude", "prompt": "go"]]
+        let list = DeletedScheduleList(deleted: [
+            DeletedSchedule(schedule: json, deletedAt: now, reason: .removed, removedBy: .api(pane: "p12")),
+            DeletedSchedule(schedule: ["id": "s00000003", "name": "bot"], deletedAt: now, reason: .dropped, problem: "trigger.type: unknown"),
+        ])
+        let lines = Format.deletedSchedules(list, timeZone: tokyo).split(separator: "\n").map(String.init)
+        XCTAssertEqual(lines.count, 2)
+        XCTAssertTrue(lines[0].hasPrefix("s1a2b3c4d  Daily report  removed 2026-11-04 10:00 by p12  daily 09:00 → start /src/app"), lines[0])
+        XCTAssertEqual(lines[1], "s00000003  bot  dropped 2026-11-04 10:00 (trigger.type: unknown)  (cannot be restored; --json shows it)")
     }
 }
