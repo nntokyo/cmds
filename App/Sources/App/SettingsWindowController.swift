@@ -49,6 +49,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// Settings › Agents › Antigravity limits (#290).
     private let agySetupButton = NSButton(title: String(localized: "Set Up…", comment: "Settings › Agents › Antigravity limits"), target: nil, action: nil)
     private let agyNote = SettingsWindowController.note("")
+    private let loginItemCheckbox = NSButton(checkboxWithTitle: String(localized: "Open cmds at login", comment: "Settings › Agents"), target: nil, action: nil)
+    private let loginItemNote = SettingsWindowController.note("")
     private let schedulesButton = NSButton(title: String(localized: "Open…"), target: nil, action: nil)
     private var observer: NSObjectProtocol?
     private var assistantObserver: NSObjectProtocol?
@@ -164,6 +166,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         schedulesButton.bezelStyle = .rounded
         schedulesButton.target = self
         schedulesButton.action = #selector(openSchedules)
+        loginItemCheckbox.target = self
+        loginItemCheckbox.action = #selector(loginItemToggled)
 
         menuBarCheckbox.target = self
         menuBarCheckbox.action = #selector(menuBarToggled)
@@ -262,6 +266,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, agyNote],
             [Self.label(String(localized: "Schedules:")), schedulesButton],
             [NSGridCell.emptyContentView, Self.note(String(localized: "Start a workspace or continue a Claude Code session at a set time, on weekdays, or when an account’s limit resets (also Window › Schedules…)."))],
+            [Self.label(String(localized: "After a restart:", comment: "Settings › Agents › Open cmds at login")), loginItemCheckbox],
+            [NSGridCell.emptyContentView, loginItemNote],
         ]
         let menuBar: [[NSView]] = [
             [NSGridCell.emptyContentView, menuBarCheckbox],
@@ -476,6 +482,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// Shows the stored values (also after changes made elsewhere, e.g. `defaults write`).
     private func refresh() {
         refreshAntigravity()
+        refreshLoginItem()
         if let family = settings.terminalFontFamily {
             if fontPopup.indexOfItem(withRepresentedObject: family) < 0 { fillFontPopup() }
             fontPopup.selectItem(at: fontPopup.indexOfItem(withRepresentedObject: family))
@@ -728,6 +735,32 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let index = chosen.map { chromeProfilePopup.indexOfItem(withRepresentedObject: $0) } ?? 0
         chromeProfilePopup.selectItem(at: max(index, 0))
         chromeProfilePopup.isEnabled = settings.chromeBookmarks && !profiles.isEmpty
+    }
+
+    private func refreshLoginItem() {
+        let state = LoginItem.state
+        loginItemCheckbox.state = state.status == .on || state.status == .needsApproval ? .on : .off
+        loginItemCheckbox.isEnabled = state.status != .unavailable
+        switch state.status {
+        case .needsApproval:
+            loginItemNote.stringValue = String(localized: "macOS has it switched off: turn cmds on in System Settings › General › Login Items.", comment: "Settings › Agents › Open cmds at login")
+        case .unavailable:
+            loginItemNote.stringValue = String(localized: "Move cmds to the Applications folder to use this.", comment: "Settings › Agents › Open cmds at login")
+        case .on, .off:
+            loginItemNote.stringValue = String(localized: "When the Mac restarts, cmds opens by itself. With View › Resume Agent Sessions on Launch › Always, the agents continue and schedules run without anyone opening cmds.", comment: "Settings › Agents › Open cmds at login")
+        }
+    }
+
+    @objc private func loginItemToggled() {
+        do {
+            try LoginItem.set(loginItemCheckbox.state == .on)
+        } catch {
+            let alert = NSAlert()
+            alert.messageText = String(localized: "Could not change Open cmds at login", comment: "Settings › Agents")
+            alert.informativeText = (error as? RPCError)?.message ?? error.localizedDescription
+            if let window { alert.beginSheetModal(for: window) } else { alert.runModal() }
+        }
+        refreshLoginItem()
     }
 
     @objc private func menuBarToggled() {

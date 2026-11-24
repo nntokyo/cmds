@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Open cmds at login (Settings › Agents, `cmds launch-at-login [on|off]`, API `app.login_item`; off by default): after
+  the Mac restarts, cmds opens by itself, so with Resume Always the agents continue and schedules run without anyone
+  opening it. Only for a cmds in an Applications folder (#451).
+
 - Recently deleted schedules: a removed schedule, and one dropped because `schedules.json` had it invalid or
   unreadable, is kept for 30 days as it was (folder, prompt, command), with when, why and which pane removed it.
   `cmds schedule deleted [--json]` lists them, `cmds schedule restore <id>` puts one back (#449).

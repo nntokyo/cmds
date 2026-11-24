@@ -2169,6 +2169,17 @@
         }
       }
     },
+    "After a restart:": {
+      "comment": "Settings › Agents › Open cmds at login",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再起動のあと："
+          }
+        }
+      }
+    },
     "Agent Session": {
       "localizations": {
         "ja": {
@@ -4549,6 +4560,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "読み込めません"
+          }
+        }
+      }
+    },
+    "Could not change Open cmds at login": {
+      "comment": "Settings › Agents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「ログイン時に cmds を開く」を変更できませんでした"
           }
         }
       }
@@ -7637,6 +7659,17 @@
         }
       }
     },
+    "Move cmds to the Applications folder to use this.": {
+      "comment": "Settings › Agents › Open cmds at login",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使うには cmds を「アプリケーション」フォルダに移してください。"
+          }
+        }
+      }
+    },
     "Move extra items to the Trash": {
       "localizations": {
         "ja": {
@@ -8848,6 +8881,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "cmds を開く"
+          }
+        }
+      }
+    },
+    "Open cmds at login": {
+      "comment": "Settings › Agents",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログイン時に cmds を開く"
           }
         }
       }
@@ -14435,6 +14479,17 @@
         }
       }
     },
+    "When the Mac restarts, cmds opens by itself. With View › Resume Agent Sessions on Launch › Always, the agents continue and schedules run without anyone opening cmds.": {
+      "comment": "Settings › Agents › Open cmds at login",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac が再起動すると cmds が自動で開きます。表示 › 起動時にエージェントセッションを再開 › 常に再開 と合わせると、だれも cmds を開かなくてもエージェントが続きを進め、スケジュールも実行されます。"
+          }
+        }
+      }
+    },
     "When “%@” resets": {
       "localizations": {
         "ja": {
@@ -15322,6 +15377,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "上限"
+          }
+        }
+      }
+    },
+    "macOS has it switched off: turn cmds on in System Settings › General › Login Items.": {
+      "comment": "Settings › Agents › Open cmds at login",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 側でオフになっています。システム設定 › 一般 › ログイン項目で cmds をオンにしてください。"
           }
         }
       }

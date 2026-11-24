@@ -574,6 +574,23 @@ extension CLI {
                 print(entry["keychain"]?.stringValue.map { "\(name)  (Keychain: \($0))" } ?? name)
             }
         },
+        Command(name: "launch-at-login", usage: "launch-at-login [on|off]",
+                summary: "Show or set whether cmds opens at login (so agents and schedules continue after a restart).",
+                details: """
+                    Off unless turned on. With View › Resume Agent Sessions on Launch › Always, the agents that ran
+                    continue after the Mac restarts. Only a cmds in an Applications folder can be a login item; macOS
+                    may ask to allow it in System Settings › General › Login Items ("needs approval").
+                    """) { ctx in
+            try ctx.args.expectPositionals(0...1, usage: "cmds launch-at-login [on|off]")
+            var params: [String: JSONValue?] = [:]
+            if let value = ctx.args.positionals.first {
+                guard ["on", "off"].contains(value) else { throw CLIError.usage("expected on or off") }
+                params["enabled"] = .bool(value == "on")
+            }
+            let result = try ctx.call("app.login_item", params)
+            if ctx.json { return ctx.printJSON(result) }
+            print(try perform { try result.decode(LoginItemState.self) }.summary)
+        },
         Command(name: "shortcuts", usage: "shortcuts [set <ID> <KEYS> | reset [<ID>]] [--all]",
                 summary: "List the menu shortcuts, or change one.",
                 details: """

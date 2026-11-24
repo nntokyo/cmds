@@ -465,6 +465,11 @@ gone. cmds remembers per terminal pane the agent session that ran there and offe
   resumes (`agent.resume`). From a server, `cmds-remote` sockets only reach their own pane (`--all` is refused).
 
 Isolated instances (`CMDS_SUPPORT_DIR`) keep the setting in memory, starting from `CMDS_AGENT_RESUME=ask|always|never`.
+
+**After the Mac restarts** nothing resumes until cmds is opened. To have it open by itself, turn on Settings › Agents ›
+**Open cmds at login** (or `cmds launch-at-login on`; off by default). With *Always*, the agents then continue and
+schedules run without anyone opening cmds. Only a cmds in an Applications folder can be a login item; if macOS keeps
+it switched off, `cmds launch-at-login` says "needs approval": turn cmds on in System Settings › General › Login Items.
 `session.json` marks whether a session was cut off while working (`interrupted`). A session saved without the mark (by
 an older cmds, as on the first launch after an update) is judged from its Claude Code transcript: its last turn did
 not end (a tool call or tool result without the final answer, or a prompt without a reply), and the user did not stop
