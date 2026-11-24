@@ -713,6 +713,21 @@ _cmds_location() { printf '\033]7;file://localhost%s\007' "$PWD"; cmds-remote.sh
 The `printf` alone gives the cwd (no process, no helper needed); `cmds-remote.sh prompt` adds the git branch (one
 `git` + one socket call per prompt; drop it if that is too slow). Local git is never consulted for remote paths.
 
+### Dev servers on the server
+
+A dev server on the server prints its own address, `http://localhost:5173`. ⌘-click on such an address (`localhost`,
+`127.0.0.1`, `[::1]`) in an SSH pane opens it in a browser pane beside it **through a port forward you started**,
+never this Mac's own `localhost` (another page):
+
+```sh
+ssh -N -L 15173:localhost:5173 HOST    # in any terminal on this Mac; or LocalForward in ~/.ssh/config
+```
+
+cmds looks at the `ssh` processes running on this Mac whose destination is the pane's host and whose local port is
+listening, reads their `-L` forwards (and the host's `LocalForward` lines through `ssh -G`), and opens
+`http://localhost:15173/…` with the same path. Without a forward to that port nothing opens; the sidebar shows the
+`ssh -L` command that would make one. cmds never starts a forward itself, and the server cannot open pages here.
+
 ## Worktree workspaces
 
 Agents working side by side in one checkout get in each other's way. A worktree workspace gives each its own branch

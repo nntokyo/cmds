@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- SSH panes: ⌘-click on the server's `http://localhost:5173` opens the page in a browser pane through a port forward
+  you started (`ssh -L`, or `LocalForward`), never this Mac's own localhost; without one the sidebar shows the
+  `ssh -N -L` command to start (#416).
+
 - Menu shortcuts can be changed: `cmds shortcuts` lists them, `cmds shortcuts set splitRight ctrl+opt+d` gives an item
   another key (`""` none) and `reset` brings back the defaults. A key another item has is refused; changes apply at
   once and are kept (#414).

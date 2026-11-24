@@ -472,6 +472,11 @@ extension Pane: TerminalSurfaceDelegate {
     /// ⌘-click on a file path opens it in a preview pane; URLs, folders and missing files keep the default
     /// (open with the default app / Finder).
     func terminalSurface(_ surface: TerminalSurface, openLink link: String) -> Bool {
+        // The server's own localhost (its dev server): through the user's port forward, never this Mac's (#174 G24).
+        if surface === terminal, ssh != nil, PortForward.serverPort(of: link) != nil {
+            controller?.openServerPage(link, from: self)
+            return true
+        }
         guard surface === terminal, let path = Self.localPath(fromLink: link, relativeTo: workingDirectory) else {
             return false
         }

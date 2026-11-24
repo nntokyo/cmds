@@ -8210,6 +8210,17 @@
         }
       }
     },
+    "No port forward to :%@ on %@. Start one: ssh -N -L %@:localhost:%@ %@": {
+      "comment": "sidebar status after a click on a server's localhost address without a forward; arguments: port, host, port, port, host",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ の :%1$@ へのポートフォワードがありません。次で開始できます: ssh -N -L %3$@:localhost:%4$@ %5$@"
+          }
+        }
+      }
+    },
     "No project commands": {
       "comment": "alert title: no .cmds.json found or it is invalid",
       "localizations": {

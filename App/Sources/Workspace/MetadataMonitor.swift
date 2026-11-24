@@ -243,7 +243,7 @@ final class ProcessScanner: @unchecked Sendable {
     ///   - paneWorkspaces: every open pane → its workspace now (a moved pane's processes follow it, #218).
     func scan(foregroundGroups: [pid_t: String], paneGroups: [pid_t: String] = [:],
               paneWorkspaces: [String: String] = [:]) -> ProcessScan {
-        let pids = allPIDs()
+        let pids = Self.allPIDs()
         var identities: [ProcessIdentity] = []
         identities.reserveCapacity(pids.count)
         var seen = Set<ProcessKey>()
@@ -315,12 +315,12 @@ final class ProcessScanner: @unchecked Sendable {
                 samples.append(sample)
                 if let origin { sampled[identity.pid] = origin }
             }
-            let listening = listeningPorts(pid: identity.pid)
+            let listening = Self.listeningPorts(pid: identity.pid)
             if !listening.isEmpty { ports[workspace, default: []].formUnion(listening) }
         }
         origins.keep(only: seen)
         // Listed after every sample was read: a sampled process missing here was reaped during the scan.
-        let alive = Set(allPIDs())
+        let alive = Set(Self.allPIDs())
         let usage = accountant.update(samples: samples, alivePIDs: alive, now: nanoseconds(mach_absolute_time()))
         let processes = samples.compactMap { sample -> ScannedProcess? in
             guard alive.contains(sample.pid), let origin = sampled[sample.pid], let detail = details[sample.pid] else { return nil }
@@ -448,7 +448,7 @@ final class ProcessScanner: @unchecked Sendable {
         MachTime.nanoseconds(ticks, numer: timebase.numer, denom: timebase.denom)
     }
 
-    private func allPIDs() -> [pid_t] {
+    static func allPIDs() -> [pid_t] {
         let estimate = proc_listallpids(nil, 0)
         guard estimate > 0 else { return [] }
         var pids = [pid_t](repeating: 0, count: Int(estimate) + 64)
@@ -477,7 +477,8 @@ final class ProcessScanner: @unchecked Sendable {
         }
     }
 
-    private func listeningPorts(pid: pid_t) -> Set<Int> {
+    /// TCP ports the process listens on (also used for port forwards, `PortForwardFinder`).
+    static func listeningPorts(pid: pid_t) -> Set<Int> {
         let bufferSize = proc_pidinfo(pid, PROC_PIDLISTFDS, 0, nil, 0)
         guard bufferSize > 0 else { return [] }
         let stride = MemoryLayout<proc_fdinfo>.stride

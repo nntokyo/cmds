@@ -144,6 +144,7 @@ One JSON object per line, in both directions. Lines are capped at 8 MB.
 | `debug.point` | `pane` (a browser pane), `action` (`start` / `cancel` / `send`), `text` | `{"pointing", "composer", "element", "notice"}`: Point at Element without the mouse (the pick is made with page events from `browser.eval`); DEBUG builds only, for tests |
 | `debug.sidebar_row` | `workspace` | `{"branch", "branchToolTip", "notification", "png_base64"}`: a workspace's sidebar row (its branch line with the change, overlap and pull request badges, the line's tooltip, the notification text as shown, the row drawn); DEBUG builds only, for tests |
 | `debug.pull_requests` | – | `{"<worktree>|<branch>": {"badge", "running", "resting"}}`: what the sidebar's pull request monitor last got; DEBUG builds only, for tests |
+| `debug.open_link` | `pane`, `link` | `{handled}`: a ⌘-click on `link` in a terminal pane as libghostty reports it (no click, nothing brought forward); DEBUG builds only, for tests |
 | `debug.key_equivalent` | `keys` | `{handled, item}`: a synthesized key event handed to the main menu (no window brought forward) and the item that fired; DEBUG builds only, for tests |
 | `debug.workspace_env` | `workspace`, `text` | Sets the workspace's variables from `NAME=value` lines as Save in Workspace › Environment Variables… would; returns what `workspace.env` does. DEBUG builds only, for tests |
 | `debug.project_confirm` | `workspace` | `{"path"}`: confirms the workspace's `.cmds.json` as Run in Workspace › Run Project Commands would; DEBUG builds only, for tests |
