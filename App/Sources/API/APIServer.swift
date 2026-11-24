@@ -312,6 +312,11 @@ final class APIServer {
                 let (path, file) = try controller.projectFile(workspace: workspace)
                 AppSettings.shared.confirmedProjectFiles[path] = file.digest
                 connection.reply(id: id, result: ["path": .string(path)])
+            case "debug.open_link":
+                // Tests only: a ⌘-click on `link` in a terminal pane (no click, no window brought forward).
+                let pane = try controller.resolvePane(try params.required("pane"))
+                guard let terminal = pane.terminal else { throw RPCError.invalidParams("not a terminal pane") }
+                connection.reply(id: id, result: ["handled": .bool(pane.terminalSurface(terminal, openLink: try params.required("link")))])
             case "debug.key_equivalent":
                 // Tests only: a key event handed to the main menu (no window brought forward); whether an item took it.
                 do {
