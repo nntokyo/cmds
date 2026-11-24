@@ -15,6 +15,11 @@ final class BrowserPane: NSView {
     private(set) var webView: WKWebView
     /// Rendering kept on while an agent works on the pane (BrowserPane+AgentRendering).
     let agentRendering = AgentRendering()
+    /// The site signed in in the shared data that this page uses (BrowserPane+SharedSignIn); nil otherwise.
+    var sharedSignIn: String?
+    var sharedSignInWarned: Set<String> = []
+    /// Moves the pane to its workspace's profile; nil when there is none (the setting is off).
+    var onUseWorkspaceProfile: (() -> Void)?
     private let addressField = AddressField()
     private let backButton = BrowserPane.toolbarButton("chevron.left", label: String(localized: "Back"))
     private let forwardButton = BrowserPane.toolbarButton("chevron.right", label: String(localized: "Forward"))
@@ -479,7 +484,11 @@ final class BrowserPane: NSView {
     /// the address bar).
     /// `onCancel` stops a running download.
     /// `onShowTerminal`: the Point at Element notices' "Show Terminal".
-    func showNotice(_ state: BrowserNoticeView.State?, onCancel: (() -> Void)? = nil, onShowTerminal: (() -> Void)? = nil) {
+    /// Tests: the text of the notice shown, if any.
+    var debugNoticeText: String? { noticeBanner?.toolTip }
+
+    func showNotice(_ state: BrowserNoticeView.State?, onCancel: (() -> Void)? = nil, onShowTerminal: (() -> Void)? = nil,
+                    onMove: (() -> Void)? = nil) {
         noticeHide?.cancel()
         noticeHide = nil
         noticeBanner?.removeFromSuperview()
@@ -492,6 +501,7 @@ final class BrowserPane: NSView {
             self?.removeNotice(banner)
         }
         banner.onShowTerminal = onShowTerminal
+        banner.onMove = onMove
         noticeBanner = banner
         banner.translatesAutoresizingMaskIntoConstraints = false
         addSubview(banner)  // above the page and the responsive view
@@ -678,6 +688,7 @@ final class BrowserPane: NSView {
             webView.observe(\.isLoading) { [weak self] webView, _ in
                 MainActor.assumeIsolated {
                     guard !webView.isLoading else { return }
+                    self?.checkSharedSignIn()
                     self?.scheduleBreakpointRefresh()
                     self?.refreshFavicon()
                 }

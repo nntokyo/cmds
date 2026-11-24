@@ -57,6 +57,8 @@ struct SessionState: Codable {
         /// The workspace's environment variables as `NAME=value` lines (`WorkspaceEnvironment.lines`; a secret only
         /// as its Keychain reference). Added later: older sessions lack it, older versions ignore it.
         var environment: [String]? = nil
+        /// `Workspace.browserProfile`. Added later: older sessions lack it, older versions ignore it.
+        var browserProfile: String? = nil
     }
 
     /// The pane at `paneIndex` was opened from the terminal pane at `openerIndex` (reading order of `layout`).
@@ -159,7 +161,7 @@ enum SessionStore {
 extension SessionState.WorkspaceState {
     private enum CodingKeys: String, CodingKey {
         case title, workingDirectory, layout, focusedPaneIndex, agentSessions, paneAccounts, paneTags, paneOpeners, worktree,
-             tabGroups, paneProfiles, environment
+             tabGroups, paneProfiles, environment, browserProfile
     }
 
     init(from decoder: Decoder) throws {
@@ -184,6 +186,7 @@ extension SessionState.WorkspaceState {
             .compactMap(\.value) ?? []
         paneProfiles = profiles.isEmpty ? nil : profiles
         environment = try? c.decodeIfPresent([String].self, forKey: .environment)
+        browserProfile = (try? c.decodeIfPresent(String.self, forKey: .browserProfile)).flatMap { try? BrowserProfile.validated($0) }
     }
 }
 

@@ -380,18 +380,30 @@ sites visited in a browser pane, the icon found there.
 
 ### Login profiles
 
-Browser panes share one set of cookies, storage and sign-ins unless you give them a **login profile**: each named
-profile keeps its own, so two panes can be signed in to the same site as different users, and panes with the same
-profile share their sign-ins. Profiles and their sign-ins are kept across relaunches, and Export / Import Workspaces
+Each **login profile** keeps its own cookies, storage and sign-ins, so two panes can be signed in to the same site as
+different users, and panes with the same profile share their sign-ins.
+
+**Each workspace has its own profile by default** (Settings › General › Browser › Separate sign-ins per workspace,
+on): a browser pane opened in a workspace, by you or by an agent, uses that workspace's profile, named after its
+project folder (`notes · 3fa2`), unless a profile was chosen. One workspace's sign-ins (X, Amazon…) are then never
+another's, so an agent never posts or buys as another workspace's account. Sign in once per workspace. Panes that were
+already open keep their profile, tabs opened from a browser pane keep that pane's, and **Shared (Default)** in the
+person menu (or `--shared`) still uses the shared data.
+
+When a page in the **shared** data is on a site signed in there (X, Amazon, GitHub, Google, note, Facebook, Instagram,
+LinkedIn, told by their sign-in cookies), the pane says "Shared sign-ins: X is signed in here for every workspace,
+maybe as another workspace's account" with **Use This Workspace's Profile**, and agents get the same warning with
+`browser_url` and every page action. Profiles and their sign-ins are kept across relaunches, and Export / Import Workspaces
 keep each pane's profile name (the sign-ins themselves stay on the Mac).
 
 - The person button left of the address bar shows the pane's profile (just the icon for the shared data). Its menu
   moves the pane to **Shared (Default)**, another profile or a **New Profile…**; the page loads again in that profile
   (Back / Forward start over). Pop-ups, the responsive view and screenshots use the pane's profile.
 - New tabs and pages opened from a browser pane keep its profile. A terminal pane has a profile too: the one of the
-  pages opened from it by command (`cmds browser open`, an agent's `browser_open`); a new terminal starts with the
-  shared data. Links from other apps, port clicks in the sidebar and a new browser split (⌘⇧B) next to a terminal
-  use the shared data, so your own browsing never lands in a profile an agent chose.
+  pages opened from it by command (`cmds browser open`, an agent's `browser_open`); until one is set (also `--shared`)
+  they use the workspace's profile. Links from other apps, port clicks in the sidebar and a new browser split (⌘⇧B)
+  next to a terminal use the workspace's profile, never one an agent chose for its terminal. With the setting off,
+  all of these use the shared data, as before.
 - `cmds browser profile [--pane P] [NAME | --shared]` shows or sets the profile of a browser pane or of the pages a
   terminal opens; `cmds browser open --profile NAME <url>` opens one page in a profile; `cmds browser profile --remove
   NAME` deletes a profile's cookies and storage (refused while a pane uses it). A name is at most 64 characters; `""`

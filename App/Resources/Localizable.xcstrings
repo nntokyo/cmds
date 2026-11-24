@@ -7981,6 +7981,16 @@
         }
       }
     },
+    "New browser panes in a workspace use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Panes already open and profiles you chose stay as they are.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースで新しく開くブラウザのペインは、そのワークスペース専用のログインのプロファイルを使います。あるワークスペースのログイン（X・Amazon など）が別のワークスペースで使われることはありません。すでに開いているペインと、選んだプロファイルはそのままです。"
+          }
+        }
+      }
+    },
     "New workspace in %@": {
       "comment": "assistant HUD: where a new session starts",
       "localizations": {
@@ -10920,6 +10930,17 @@
         }
       }
     },
+    "Separate sign-ins per workspace": {
+      "comment": "Settings › General › Browser: each workspace's own login profile",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワークスペースごとにログインを分ける"
+          }
+        }
+      }
+    },
     "Services": {
       "localizations": {
         "ja": {
@@ -11152,6 +11173,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "共有（デフォルト）"
+          }
+        }
+      }
+    },
+    "Shared sign-ins: %@ is signed in here for every workspace, maybe as another workspace's account.": {
+      "comment": "browser pane notice; site is e.g. X or Amazon",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有のログイン：%@ はここで全ワークスペース共通にログインしています。別のワークスペースのアカウントかもしれません。"
           }
         }
       }
@@ -13970,6 +14002,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "自由な言い方の指示をClaudeで読み取る"
+          }
+        }
+      }
+    },
+    "Use This Workspace's Profile": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このワークスペースのプロファイルを使う"
           }
         }
       }

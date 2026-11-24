@@ -21,6 +21,9 @@ final class Workspace {
     /// Variables for the terminals opened in this workspace (Workspace › Environment Variables…, #174 G23). Saved
     /// with the session.
     var environment = WorkspaceEnvironment()
+    /// This workspace's own login profile (`WorkspaceProfile`), named when its first browser pane opens. Saved with the
+    /// session, so the name stays when the folder changes.
+    var browserProfile: String?
     /// Changes and ahead / behind of a local repository (MetadataMonitor, the sidebar's branch line).
     var gitSummary: GitSummary?
     /// Files this workspace's worktree changed that another worktree of the same repository changed too (#174 G18).

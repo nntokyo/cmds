@@ -404,6 +404,22 @@ final class MCPServer {
     }
 
     /// A DevTools request (#167); an app without the method says to update.
+    /// What browser_snapshot_tree / browser_click / browser_fill / browser_wait_for say.
+    private func pageActionContent(_ action: BrowserPageAction, _ result: JSONValue) -> [JSONValue] {
+        switch action {
+        case .tree:
+            var text = "\(result["title"]?.stringValue ?? "") — \(result["url"]?.stringValue ?? "")\n"
+            text += result["text"]?.stringValue ?? ""
+            if result["truncated"]?.boolValue == true { text += "(cut at \(result["count"]?.intValue ?? 0) nodes; pass selector)\n" }
+            return [Self.text(text)]
+        case .click(let target): return [Self.text("Clicked \(result["ref"]?.stringValue ?? target.description).")]
+        case .fill(let target, _): return [Self.text("Filled \(result["ref"]?.stringValue ?? target.description).")]
+        case .upload: return [Self.text("Done.")]  // browser_upload has its own case
+        case .waitFor:
+            return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
+        }
+    }
+
     private func devToolsCall(_ method: String, _ arguments: JSONValue, _ params: [String: JSONValue?]) throws -> JSONValue {
         try newMethod(method) { try browserCall(method, arguments, params, timeout: Self.pageTimeout) }
     }
@@ -456,6 +472,7 @@ final class MCPServer {
             let result = try browserCall("browser.get_url", arguments, timeout: Self.requestTimeout)
             var lines = [result["url"]?.stringValue ?? ""]
             if let title = nonEmpty(result["title"]?.stringValue) { lines.append(title) }
+            if let warning = result["warning"]?.stringValue { lines.append("Warning: " + warning) }
             return [Self.text(lines.joined(separator: "\n"))]
         case "browser_eval":
             let script = try argument(arguments, "script")
@@ -535,18 +552,12 @@ final class MCPServer {
             let method = "browser." + name.dropFirst("browser_".count)
             let action = try toolArguments { try BrowserPageAction(method: method, params: arguments) }
             let result = try devToolsCall(method, arguments, action.params)
-            switch action {
-            case .tree:
-                var text = "\(result["title"]?.stringValue ?? "") — \(result["url"]?.stringValue ?? "")\n"
-                text += result["text"]?.stringValue ?? ""
-                if result["truncated"]?.boolValue == true { text += "(cut at \(result["count"]?.intValue ?? 0) nodes; pass selector)\n" }
-                return [Self.text(text)]
-            case .click(let target): return [Self.text("Clicked \(result["ref"]?.stringValue ?? target.description).")]
-            case .fill(let target, _): return [Self.text("Filled \(result["ref"]?.stringValue ?? target.description).")]
-            case .upload: return [Self.text("Done.")]  // browser_upload has its own case
-            case .waitFor:
-                return [Self.text("Found [ref=\(result["ref"]?.stringValue ?? "")] after \(result["elapsed"]?.intValue ?? 0) ms.")]
+            // The page uses the shared sign-ins of a site (`SharedSignIn`): said first, whatever the tool.
+            let warned = { (content: [JSONValue]) -> [JSONValue] in
+                guard let warning = result["warning"]?.stringValue else { return content }
+                return [Self.text("Warning: " + warning)] + content
             }
+            return warned(pageActionContent(action, result))
         case "browser_upload":
             guard case .array(let rawPaths)? = arguments["paths"], !rawPaths.isEmpty else { throw ToolError(message: "paths must list files") }
             var params = arguments

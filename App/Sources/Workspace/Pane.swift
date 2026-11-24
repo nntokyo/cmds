@@ -69,6 +69,9 @@ final class Pane {
     /// Terminal panes: the login profile (`BrowserProfile`) of browser pages opened from here (`browser.open`, the MCP
     /// server's browser_open); nil for the shared default data. Saved in the session.
     var browserProfile: String?
+    /// `browserProfile` was set on purpose (`browser.profile`, also to the shared data): pages opened from this terminal
+    /// then never get the workspace's profile instead.
+    var browserProfileChosen = false
     /// The profile a browser opened from this pane starts with: a browser's own, a terminal's `browserProfile`.
     var profileForOpenedPages: String? { browser?.profile ?? (kind == .terminal ? browserProfile : nil) }
     /// Limit lines already handled in this pane, per account (`<source>|<account>|…`), until the limit they recorded

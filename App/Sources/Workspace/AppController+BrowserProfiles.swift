@@ -17,14 +17,31 @@ extension AppController {
         if let change {
             if let browser = pane.browser {
                 browser.setProfile(change)
-            } else if pane.browserProfile != change {
-                pane.browserProfile = change
-                scheduleSave()
+            } else {
+                pane.browserProfileChosen = true
+                if pane.browserProfile != change {
+                    pane.browserProfile = change
+                    scheduleSave()
+                }
             }
             if let change { _ = BrowserProfiles.store(for: change) }  // listed from now on
             emit(.workspace(id: pane.workspaceID))
         }
         return BrowserProfileState(pane: pane.id, profile: pane.profileForOpenedPages, profiles: BrowserProfiles.names)
+    }
+
+    /// The workspace's own login profile for a browser pane nobody chose one for (`WorkspaceProfile`); nil with
+    /// Settings › General › Browser › Separate sign-ins per workspace off (the shared data). Named once, from the
+    /// project folder, and kept with the workspace.
+    func workspaceBrowserProfile(for workspaceID: String) -> String? {
+        guard AppSettings.shared.workspaceProfiles, let workspace = workspace(id: workspaceID) else { return nil }
+        if let name = workspace.browserProfile { return name }
+        let folder = workspace.localWorkingDirectory.map { GitInfo.projectRoot(at: $0) ?? $0 }
+        let name = WorkspaceProfile.name(folder: folder, title: DefaultTitle.localized(workspace.title))
+        workspace.browserProfile = name
+        _ = BrowserProfiles.store(for: name)  // listed from now on
+        scheduleSave()
+        return name
     }
 
     /// `browser.profile_remove`: deletes a profile's cookies and storage; refused while a pane uses it.
