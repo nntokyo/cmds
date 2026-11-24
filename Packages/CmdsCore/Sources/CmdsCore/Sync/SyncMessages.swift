@@ -91,9 +91,14 @@ public enum ClientMessage: Equatable, Sendable {
         public var paneID: String
         /// Files panes only: the file, absolute (on the Mac, or on the SSH host of a remote pane).
         public var path: String?
-        public init(paneID: String, path: String? = nil) {
+        /// Browser panes only (`SyncFeature.pageSnapshots`, #174 G25): a picture of the page the Mac shows, as the pane
+        /// shows it (`SyncPageSnapshot.asShown`) or at a device size (`iphone`, `ipad`, `desktop-1440`), answered with
+        /// `file` pieces (a PNG) that repeat it.
+        public var snapshot: String?
+        public init(paneID: String, path: String? = nil, snapshot: String? = nil) {
             self.paneID = paneID
             self.path = path
+            self.snapshot = snapshot
         }
     }
 
@@ -327,9 +332,11 @@ public enum ServerMessage: Equatable, Sendable {
         public var truncated: Bool?
         /// The `requestFile.path` this answers (a file of a files pane); absent for preview panes.
         public var path: String?
+        /// The `requestFile.snapshot` this answers (a browser pane's page); absent otherwise.
+        public var snapshot: String?
 
         public init(paneID: String, name: String, mime: String, size: Int, offset: Int = 0, data: Data,
-                    truncated: Bool? = nil, path: String? = nil) {
+                    truncated: Bool? = nil, path: String? = nil, snapshot: String? = nil) {
             self.paneID = paneID
             self.name = name
             self.mime = mime
@@ -338,6 +345,7 @@ public enum ServerMessage: Equatable, Sendable {
             self.data = data
             self.truncated = truncated
             self.path = path
+            self.snapshot = snapshot
         }
     }
 

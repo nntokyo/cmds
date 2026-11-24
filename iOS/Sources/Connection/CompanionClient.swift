@@ -41,7 +41,7 @@ final class CompanionClient {
     let folders = FolderBrowserStore()
     /// Optional protocol additions this build understands (`hello.features`).
     static let features = [SyncFeature.previewPanes, SyncFeature.scrollbackStream, SyncFeature.filesPanes,
-                           SyncFeature.styles, SyncFeature.schedules, SyncFeature.filesBrowse]
+                           SyncFeature.styles, SyncFeature.schedules, SyncFeature.filesBrowse, SyncFeature.pageSnapshots]
     /// Panes that raised a `notification` and have not been viewed since.
     private(set) var unreadPaneIDs: Set<String> = []
     private(set) var unreadWorkspaceIDs: Set<String> = []
@@ -93,6 +93,9 @@ final class CompanionClient {
     /// The connected Mac lists the folders of files panes (`SyncFeature.filesBrowse`); else a files pane shows its
     /// folder's path only.
     var macBrowsesFiles: Bool { macFeatures.contains(SyncFeature.filesBrowse) }
+    /// The connected Mac sends pictures of browser panes' pages (`SyncFeature.pageSnapshots`); else a page only the
+    /// Mac can load says so.
+    var macSnapshotsPages: Bool { macFeatures.contains(SyncFeature.pageSnapshots) }
     private var historyRequestedAt: [String: Date] = [:]
     /// A request that waits for the end of `historyInterval` (one per pane); with a streaming Mac also the next try of
     /// an unanswered request.
@@ -685,6 +688,13 @@ final class CompanionClient {
 
     /// A file of a files pane (`requestFile` with its path). Only what the phone can show is fetched; other files show
     /// their name only.
+    /// A picture of browser pane `paneID`'s page as the Mac shows it, or at a device size (`SyncPageSnapshot.choices`).
+    func requestPageSnapshot(paneID: String, size: String) {
+        guard status.isLive, macSnapshotsPages else { return }
+        previewFiles.begin(paneID: paneID, snapshot: size)
+        send(.requestFile(.init(paneID: paneID, snapshot: size)))
+    }
+
     func requestFile(paneID: String, path: String) {
         guard status.isLive, PreviewFileStore.isShown(name: RemotePath.name(path), asText: true) else { return }
         previewFiles.begin(paneID: paneID, path: path)

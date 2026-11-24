@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- iPhone and iPad: a browser pane showing a page only the Mac can load (its localhost) shows a picture the Mac takes,
+  as the pane shows it or at iPhone, iPad and desktop sizes (loaded again off screen on the Mac), to check a dev
+  server's layouts from the phone (#420).
+
 - iPhone and iPad: the workspace list shows changes and commits ahead / behind, the pull request and its checks, files
   another worktree changed too, and notification text in its level's colour and symbol, as the Mac's sidebar (#418).
 

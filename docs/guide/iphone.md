@@ -77,8 +77,11 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   rendered like on the Mac (links open in Safari), other text files are shown as text (the first 256 KB); other files
   show their name and **Open on Mac**.
 - **Browser panes**: the pane's page in a web view, with Reload and **Open in Safari**. The phone loads the page
-  itself (its own network, cookies and sign-ins, not the Mac's), so pages the Mac serves itself (`localhost`, files)
-  cannot be shown; the pane says so.
+  itself (its own network, cookies and sign-ins, not the Mac's). Pages the Mac serves itself (`localhost`, files)
+  are shown as a picture the Mac takes instead (with a cmds release after 0.32.0 on the Mac; older ones say the page is
+  the Mac's only): **As on Mac** (the pane as it is; a responsive pane's frames side by side), or **iPhone**, **iPad**
+  and **Desktop**, for which the Mac loads the page again off screen at that size, so you can check a dev server's
+  layouts from the phone. Pinch to zoom; the arrow takes a new picture. The Mac's pane does not change.
 - **Files panes**: with a cmds release after 0.14.0 on the Mac, the folder's contents with icons, sizes and dates. Tap
   a folder to go into it (on the phone only; the Mac pane stays where it is), **Back** to return, pull to refresh, and
   tap an image, PDF or text file to open it. Read only; see [Files](files.md#iphone-and-ipad). Older Macs show

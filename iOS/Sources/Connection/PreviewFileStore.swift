@@ -17,10 +17,11 @@ final class PreviewFileStore {
         case failed(String)
     }
 
-    /// A preview pane's file (`path` nil), or a file of a files pane.
+    /// A preview pane's file (`path` nil), a file of a files pane, or a picture of a browser pane's page (`snapshot`).
     struct Key: Hashable {
         var paneID: String
         var path: String?
+        var snapshot: String?
     }
 
     private(set) var entries: [Key: Entry] = [:]
@@ -48,17 +49,19 @@ final class PreviewFileStore {
             || type.conforms(to: .xml)
     }
 
-    func entry(for paneID: String, path: String? = nil) -> Entry? { entries[Key(paneID: paneID, path: path)] }
+    func entry(for paneID: String, path: String? = nil, snapshot: String? = nil) -> Entry? {
+        entries[Key(paneID: paneID, path: path, snapshot: snapshot)]
+    }
 
-    func begin(paneID: String, path: String? = nil) {
-        let key = Key(paneID: paneID, path: path)
+    func begin(paneID: String, path: String? = nil, snapshot: String? = nil) {
+        let key = Key(paneID: paneID, path: path, snapshot: snapshot)
         assembler.reset(paneID: paneID)
         pending = key
         entries[key] = .loading(received: 0, size: 0)
     }
 
     func receive(_ piece: ServerMessage.File) {
-        let key = Key(paneID: piece.paneID, path: piece.path)
+        let key = Key(paneID: piece.paneID, path: piece.path, snapshot: piece.snapshot)
         switch assembler.add(piece) {
         case .partial(let received, let size):
             entries[key] = .loading(received: received, size: size)

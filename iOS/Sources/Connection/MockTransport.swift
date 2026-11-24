@@ -57,7 +57,7 @@ final class MockTransport: SyncTransport {
         case .hello(let hello):
             phoneStreamsHistory = streamsHistory && hello.features?.contains(SyncFeature.scrollbackStream) == true
             phoneDrawsStyles = hello.features?.contains(SyncFeature.styles) == true
-            let features = [SyncFeature.scrollback, SyncFeature.styles, SyncFeature.schedules]
+            let features = [SyncFeature.scrollback, SyncFeature.styles, SyncFeature.schedules, SyncFeature.pageSnapshots]
                 + (streamsHistory ? [SyncFeature.scrollbackStream] : [])
                 + (browsesFiles ? [SyncFeature.filesBrowse] : [])
             deliver(after: 0.1, .message(.welcome(.init(macName: "Demo Mac", token: "mock-token", features: features))))
@@ -96,6 +96,13 @@ final class MockTransport: SyncTransport {
             emit(.state(currentState))
         case .ping(let ping):
             deliver(after: 0.02, .message(.pong(.init(nonce: ping.nonce))))
+        case .requestFile(let request) where request.snapshot != nil:
+            let size = request.snapshot ?? SyncPageSnapshot.asShown
+            let png = MockData.pagePNG(size: size)
+            for var piece in SyncFile.messages(paneID: request.paneID, name: SyncPageSnapshot.fileName(size), mime: "image/png", data: png) {
+                piece.snapshot = size
+                deliver(after: 0.3, .message(.file(piece)))
+            }
         case .requestFile(let request) where request.path != nil:
             guard browsesFiles, let pieces = MockFiles.file(paneID: request.paneID, path: request.path ?? "") else {
                 return emit(.error(.init(code: .notFound, message: SyncListing.Failure.notFound.rawValue)))
@@ -466,8 +473,12 @@ enum MockData {
             panes: [
                 PaneInfo(id: "p-agent", kind: .terminal, title: "claude", focused: true, attention: false),
                 PaneInfo(id: "p-api-shell", kind: .terminal, title: "zsh", focused: false, attention: false),
+                PaneInfo(id: "p-dev", kind: .browser, title: "Sign in — api", focused: false, attention: false,
+                         url: "http://localhost:5173/login"),
             ],
-            layout: .split(axis: .vertical, ratio: 0.7, first: .pane(id: "p-agent"), second: .pane(id: "p-api-shell")),
+            layout: .split(axis: .horizontal, ratio: 0.6,
+                           first: .split(axis: .vertical, ratio: 0.7, first: .pane(id: "p-agent"), second: .pane(id: "p-api-shell")),
+                           second: .pane(id: "p-dev")),
             gitSummary: GitSummary(changes: 3, ahead: 1, behind: 0, upstream: "origin/feature/auth-tokens"),
             gitOverlaps: [GitOverlap(workspaces: ["w-cmds"], files: ["src/auth.ts", "src/session.ts"], count: 2)],
             pullRequest: PullRequestSummary(number: 405, state: .open, url: "https://github.com/example/api/pull/405", passed: 4),
@@ -514,6 +525,26 @@ enum MockData {
         """
 
     /// A small bar chart for the mock preview pane.
+    /// The page of `p-dev` (the Mac's localhost) as the Mac would picture it at `size` (`SyncPageSnapshot.choices`).
+    static func pagePNG(size: String) -> Data {
+        let width: CGFloat = size == "iphone" ? 393 : size == "ipad" ? 820 : size == "desktop-1440" ? 1440 : 900
+        let canvas = CGSize(width: width, height: width < 600 ? 852 : 700)
+        return UIGraphicsImageRenderer(size: canvas).pngData { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: canvas))
+            (width < 600 ? UIColor.systemRed : UIColor.systemGreen).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: canvas.width, height: 72))
+            ("Sign in" as NSString).draw(at: CGPoint(x: 20, y: 20), withAttributes: [.font: UIFont.boldSystemFont(ofSize: 28),
+                                                                                    .foregroundColor: UIColor.white])
+            ("localhost:5173 at \(Int(width)) px" as NSString).draw(at: CGPoint(x: 20, y: 100), withAttributes: [
+                .font: UIFont.systemFont(ofSize: 20), .foregroundColor: UIColor.darkGray])
+            UIColor.systemGray5.setFill()
+            for row in 0..<2 {
+                context.fill(CGRect(x: 20, y: 150 + CGFloat(row) * 70, width: min(canvas.width - 40, 420), height: 48))
+            }
+        }
+    }
+
     static func chartPNG() -> Data {
         let size = CGSize(width: 640, height: 400)
         let renderer = UIGraphicsImageRenderer(size: size)
