@@ -127,7 +127,7 @@ extension ScheduleRunner {
                                                                                cwd: session.cwd, prompt: prompt,
                                                                                paneTag: controller.scheduleTag(for: pane))),
                                       late: .skip, notify: .failures, warn: false)
-            let schedule = Schedule(id: "restart-\(pane.id)", draft: draft, origin: .app, createdAt: now)
+            let schedule = Schedule(id: "resume-\(pane.id)", draft: draft, origin: .app, createdAt: now)
             startRun(schedule, cause: .manual, dueAt: now)
         }
     }

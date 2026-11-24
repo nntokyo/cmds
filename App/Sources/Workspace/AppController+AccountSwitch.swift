@@ -220,7 +220,7 @@ extension AppController {
     }
 
     /// Claude Code has exited: hand the session to the resume machinery under the new account.
-    private func finishAccountSwitch(_ pane: Pane, _ change: AccountSwitch, now: Date) {
+    func finishAccountSwitch(_ pane: Pane, _ change: AccountSwitch, now: Date) {
         func fail(_ problem: AccountSwitchProblem) {
             var failed = change
             failed.phase = .offered(problem: problem)
