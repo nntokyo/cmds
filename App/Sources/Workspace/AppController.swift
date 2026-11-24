@@ -1141,7 +1141,7 @@ final class AppController {
                 tabGroups: tabGroups.isEmpty ? nil : tabGroups,
                 paneProfiles: paneProfiles.isEmpty ? nil : paneProfiles,
                 environment: workspace.environment.isEmpty ? nil : workspace.environment.lines,
-                browserProfile: workspace.browserProfile)
+                browserProfile: workspace.browserProfile, separateSignIns: workspace.separateSignIns)
         }
         var state = SessionState(workspaces: states, selectedIndex: workspaces.firstIndex { $0.id == selectedWorkspaceID })
         saveTiling(into: &state, savedWorkspaces: workspaces.filter { $0.root != nil })
@@ -1218,6 +1218,8 @@ final class AppController {
             let variables = (saved.environment ?? []).compactMap { try? WorkspaceEnvironment.parse($0).entries.first }
             workspace.environment = WorkspaceEnvironment(entries: Array(variables.prefix(WorkspaceEnvironment.maxEntries)))
             workspace.browserProfile = saved.browserProfile
+            // Saved before workspaces had their own sign-ins (or imported from then): they keep the shared data.
+            workspace.separateSignIns = saved.separateSignIns ?? false
             leafIndex = 0
             accounts = Dictionary((saved.paneAccounts ?? []).compactMap { entry in
                 claudeAccounts.account(named: entry.account).map { (entry.paneIndex, $0) }
@@ -1347,7 +1349,8 @@ final class AppController {
             if AppSettings.shared.workspaceProfiles {
                 // The shared-sign-in notice's button: this workspace's own profile (`WorkspaceProfile`).
                 browser.onUseWorkspaceProfile = { [weak self, weak browser, weak pane] in
-                    guard let self, let browser, let name = self.workspaceBrowserProfile(for: pane?.workspaceID ?? workspaceID) else { return }
+                    guard let self, let browser,
+                          let name = self.workspaceBrowserProfile(for: pane?.workspaceID ?? workspaceID, explicitly: true) else { return }
                     browser.setProfile(name)
                     self.emit(.workspace(id: pane?.workspaceID ?? workspaceID))
                 }

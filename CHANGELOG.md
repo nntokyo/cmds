@@ -9,10 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
-- Browser sign-ins are kept per workspace: a browser pane opened in a workspace uses that workspace's own login
-  profile unless one was chosen (Settings › General › Browser › Separate sign-ins per workspace, on). A page in the
-  shared data on a site signed in there (X, Amazon, GitHub, Google, note…) shows a notice with **Use This Workspace's
-  Profile**, and agents get a warning, so no workspace acts as another's account (#436).
+- Browser sign-ins are kept per workspace: a workspace created from now on gets its own login profile for the
+  browser panes opened in it, unless one was chosen (Settings › General › Browser › Separate sign-ins per workspace,
+  on). Existing workspaces keep the profile they used, so nothing has to be signed in again; one switches only when
+  asked. A page in the shared data on a site signed in there (X, Amazon, GitHub, Google, note…) shows a notice with
+  **Use This Workspace's Profile**, and agents get a warning, so no workspace acts as another's account (#436)
 
 - Browser panes: agents can give files to a page, into a file field as if chosen or dropped on a drop zone
   (`cmds browser upload`, MCP `browser_upload`). Only into a browser pane their terminal opened, never from where
