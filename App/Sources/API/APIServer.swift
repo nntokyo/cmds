@@ -301,6 +301,14 @@ final class APIServer {
                 if try params.bool("move") == true { browser.onUseWorkspaceProfile?() }
                 connection.reply(id: id, result: ["notice": browser.debugNoticeText.map(JSONValue.string) ?? .null,
                                                   "profile": browser.profile.map(JSONValue.string) ?? .null])
+            case "debug.account_switch_finish":
+                // Tests only: the last step of an account switch for `pane` (Claude Code has quit): resume the pane's
+                // session under `to` and tell it to go on, as after a real limit (`from` hit it).
+                let pane = try controller.resolvePane(try params.required("pane"))
+                let change = AccountSwitch(from: try params.string("from"), to: try params.required("to"),
+                                           session: pane.agentSession, phase: .quitting)
+                controller.finishAccountSwitch(pane, change, now: Date())
+                connection.reply(id: id, result: ["account": pane.claudeAccount.map(JSONValue.string) ?? .null])
             case "debug.block_main":
                 // Tests only: holds the main thread for `seconds` (at most 120), as a hang would (HangWatchdog).
                 guard case .number(let seconds)? = params.value?["seconds"], seconds > 0, seconds <= 120 else {
