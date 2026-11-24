@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         windowController = MainWindowController(controller: controller)
         router = CommandRouter(controller: controller, windowController: windowController)
         NSApp.mainMenu = MainMenu.build(router: router)
+        MenuShortcuts.applySaved()  // the user's own shortcuts (`cmds shortcuts set`)
 
         let center = UNUserNotificationCenter.current()
         center.delegate = self

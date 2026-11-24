@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Menu shortcuts can be changed: `cmds shortcuts` lists them, `cmds shortcuts set splitRight ctrl+opt+d` gives an item
+  another key (`""` none) and `reset` brings back the defaults. A key another item has is refused; changes apply at
+  once and are kept (#414).
+
 - Notification levels: sidebar text is green with `✓` for a success, orange with `⚠︎` for a warning and red with `✗`
   for an error, whose pane ring is red too. A long command that failed is an error and one that succeeded a success;
   `cmds notify --level`, `cmds status --level` and MCP `set_status` choose one (#412).

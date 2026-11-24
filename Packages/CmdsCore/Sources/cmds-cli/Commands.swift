@@ -529,6 +529,44 @@ extension CLI {
                 print(entry["keychain"]?.stringValue.map { "\(name)  (Keychain: \($0))" } ?? name)
             }
         },
+        Command(name: "shortcuts", usage: "shortcuts [set <ID> <KEYS> | reset [<ID>]] [--all]",
+                summary: "List the menu shortcuts, or change one.",
+                details: """
+                    `shortcuts` lists each menu item with a key: its id, menu and key (* changed, also when removed). With
+                    --all also items without a key. `set ID KEYS` changes one: KEYS like cmd+shift+d, ctrl+opt+left, cmd+, or f5
+                    (⌘, ⌃ or ⌥ needed except for F1–F20); "" removes it. A key another item has is refused: free it
+                    first. `reset ID` brings back one default, `reset` all of them. Changes apply at once and stay.
+                    --json: the API's answer.
+                    """,
+                flags: ["all"]) { ctx in
+            let usage = "cmds shortcuts [set <ID> <KEYS> | reset [<ID>]] [--all]"
+            let positionals = ctx.args.positionals
+            let result: JSONValue
+            switch positionals.first {
+            case nil:
+                result = try callNewMethod(ctx, "shortcuts.list", [:])
+            case "set":
+                guard positionals.count == 3 else { throw CLIError.usage("usage: " + usage) }
+                result = try callNewMethod(ctx, "shortcuts.set", ["id": .string(positionals[1]), "keys": .string(positionals[2])])
+            case "reset":
+                guard positionals.count <= 2 else { throw CLIError.usage("usage: " + usage) }
+                result = positionals.count == 2
+                    ? try callNewMethod(ctx, "shortcuts.set", ["id": .string(positionals[1])])
+                    : try callNewMethod(ctx, "shortcuts.reset", [:])
+            default:
+                throw CLIError.usage("usage: " + usage)
+            }
+            if ctx.json { return ctx.printJSON(result) }
+            let entries = result["shortcuts"]?.arrayValue ?? [result]
+            let shown = positionals.isEmpty && !ctx.args.has("all") ? entries.filter { $0["shortcut"]?.stringValue != nil || $0["custom"]?.boolValue == true } : entries
+            guard positionals.first != "reset" || positionals.count == 2 else { return print("All shortcuts are back to their defaults.") }
+            for entry in shown {
+                let key = entry["shortcut"]?.stringValue ?? "–"
+                let mark = entry["custom"]?.boolValue == true ? "*" : " "
+                let id = entry["id"]?.stringValue ?? ""
+                print("\(mark) \(key.padding(toLength: 8, withPad: " ", startingAt: 0)) \(id.padding(toLength: 28, withPad: " ", startingAt: 0)) \(entry["menu"]?.stringValue ?? "")")
+            }
+        },
         Command(name: "status", usage: "status [--workspace W] [--level L] <text…>",
                 summary: "Set the workspace's sidebar text without ringing (empty text clears it).",
                 details: "--level info (default), success, warning or error: the text's colour and symbol (✓ ⚠︎ ✗).",
