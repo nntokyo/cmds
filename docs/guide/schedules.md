@@ -91,7 +91,9 @@ the Schedules window.
 ## When the Mac sleeps or cmds is not running
 
 Schedules run only while cmds runs; cmds keeps the Mac from idle sleep by default
-([Keeping the Mac awake](workspaces-and-panes.md#keeping-the-mac-awake)), but a closed lid still sleeps it.
+([Keeping the Mac awake](workspaces-and-panes.md#keeping-the-mac-awake)), but a closed lid still sleeps it. So that a
+restart (a macOS update, a power cut) does not stop them until someone opens cmds, turn on Settings › Agents ›
+**Open cmds at login** (`cmds launch-at-login on`; [Resuming sessions](ai-agents.md#resuming-sessions)).
 
 When cmds starts, and when the Mac wakes, every schedule whose time has passed gets **one** catch-up run if it is
 late by at most its **If late** setting (default: 6 hours for once and limit schedules, 15 minutes for weekly
