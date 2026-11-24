@@ -34,6 +34,8 @@ final class SyncBluetoothPeripheral: NSObject {
     /// After a failed publish, service or advertising (#343): the next try, and how many failed in a row.
     private var retry: DispatchWorkItem?
     private var failures = 0
+    /// Failed publishes, services or advertisings in a row (`cmds doctor`).
+    var consecutiveFailures: Int { failures }
     /// Seconds before trying again after the 1st, 2nd, 3rd… failure in a row (the last one repeats).
     static let retryDelays: [Int] = [5, 15, 60, 300]
 

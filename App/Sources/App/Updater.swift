@@ -28,6 +28,8 @@ final class Updater: NSObject {
     }
 
     private(set) var status = Status.starting
+    /// The version Sparkle downloaded and installs when cmds quits (`cmds doctor`).
+    private(set) var readyOnQuit: String?
     private nonisolated let testFeedURL: String?
     private var controller: SPUStandardUpdaterController?
 
@@ -113,6 +115,14 @@ extension Updater: SPUUpdaterDelegate {
     /// nil keeps `SUFeedURL` from Info.plist.
     nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
         testFeedURL
+    }
+
+    /// Only noted: Sparkle installs it when cmds quits, as before.
+    nonisolated func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem,
+                             immediateInstallationBlock immediateInstallHandler: @escaping () -> Void) -> Bool {
+        let version = item.displayVersionString
+        Task { @MainActor in self.readyOnQuit = version }
+        return false
     }
 }
 

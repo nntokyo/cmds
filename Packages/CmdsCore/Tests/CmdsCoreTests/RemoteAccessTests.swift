@@ -7,7 +7,7 @@ final class RemoteAPIPolicyTests: XCTestCase {
 
     func testRefusesMethodsOutsideTheAllowlist() {
         for method in ["browser.eval", "browser.open", "browser.set_viewport", "browser.set_responsive", "browser.console", "browser.snapshot_tree", "browser.click", "browser.fill", "browser.wait_for", "workspace.close", "workspace.create", "pane.split", "pane.close", "pane.move", "pane.swap",
-                       "pane.focus", "events.subscribe", "system.stats", "agent.list", "sync.status", "sync.devices", "sync.revoke", "state.export", "state.import", "app.login_item", "app.quit", "nope"] {
+                       "pane.focus", "events.subscribe", "system.stats", "agent.list", "sync.status", "sync.devices", "sync.revoke", "state.export", "state.import", "app.login_item", "app.doctor", "app.quit", "nope"] {
             XCTAssertThrowsError(try RemoteAPIPolicy.authorize(method: method, params: nil, scope: scope), method) { error in
                 XCTAssertEqual((error as? RPCError)?.code, 403)
             }
