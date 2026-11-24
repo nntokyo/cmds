@@ -119,6 +119,7 @@ bundled in a Debug build, #247); `--socket PATH` overrides all of them.
 | `cmds schedule show <id>` | A schedule's details, next run and last five runs |
 | `cmds schedule enable\|disable\|remove\|run <id>` | Turn on / off; remove (an active run is cancelled, the history kept; `cmds schedule restore` brings it back for 30 days); run now (also when off; prints the run) |
 | `cmds schedule skip <id>` | Skip the next run, as the notice's Skip does: a `skipped` run is noted and the schedule moves on (a one-time schedule is turned off); prints the run |
+| `cmds schedule from-session [--pane P] [--apply] [--json]` | The recurring session-only `CronCreate` jobs of the pane's Claude Code session (default: this pane) and what each becomes (every N minutes/hours, or weekly), or why it cannot move; `--apply` adds a schedule per job that pastes its prompt into the pane (`--send … --to agent --late next`), not twice; then `CronDelete` them in the session ([Moving a session's CronCreate jobs](../guide/schedules.md#moving-a-sessions-croncreate-jobs)) |
 | `cmds schedule deleted [--json]` | Recently deleted schedules (30 days): removed ones (when, by which pane or the window) and ones dropped while `schedules.json` was read (why); `--json` gives each as it was stored ([Schedules](../guide/schedules.md#recently-deleted)) |
 | `cmds schedule restore <id>` | Put a deleted schedule back (a new id if its id is taken); prints its id and next run |
 | `cmds schedule cancel <run>` | Cancel an active run: nothing more is typed |

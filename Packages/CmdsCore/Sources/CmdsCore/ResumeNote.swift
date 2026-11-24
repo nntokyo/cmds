@@ -20,12 +20,15 @@ public enum ResumeNote {
         }
 
         public var kind: Kind
-        /// Its prompt, at most `maxPromptCharacters`.
+        /// Its prompt, in full (the note shortens it to `maxPromptCharacters`).
         public var prompt: String
+        /// A cron job's id in the session (`CronDelete` takes it).
+        public var id: String?
 
-        public init(kind: Kind, prompt: String) {
+        public init(kind: Kind, prompt: String, id: String? = nil) {
             self.kind = kind
             self.prompt = prompt
+            self.id = id
         }
     }
 
@@ -51,8 +54,8 @@ public enum ResumeNote {
         if !crons.isEmpty {
             parts.append("Your scheduled jobs ended with the old Claude Code process (they lived only in the session): create them again with CronCreate as before ("
                          + crons.joined(separator: "; ") + "), then check them with CronList. "
-                         + "A job that should outlive restarts can be a cmds schedule instead, which types its prompt into this pane: "
-                         + "`cmds schedule add --name NAME --every 5m --send PROMPT --to agent`.")
+                         + "Or move them to cmds schedules, which outlive restarts and type each prompt into this pane: "
+                         + "`cmds schedule from-session --apply` (then CronDelete the ones it moved, if you created them again).")
         }
         if shown.contains(where: { $0.kind == .loop }) {
             parts.append("Your /loop was waiting for its next wake-up, which is gone: schedule it again with ScheduleWakeup as before.")
@@ -117,7 +120,7 @@ public enum ResumeNote {
         var seen = Set<String>()
         var result = crons.filter { !cancelled.contains($0.id) && now.timeIntervalSince($0.at) < week }
             .reversed().filter { seen.insert($0.schedule + "\u{1}" + $0.prompt).inserted }.reversed()
-            .map { Job(kind: .cron($0.schedule), prompt: $0.prompt) }
+            .map { Job(kind: .cron($0.schedule), prompt: $0.prompt, id: $0.id) }
         if let wake = lastWakeup, !wake.stop, now.timeIntervalSince(wake.at) < 86400 {
             result.append(Job(kind: .loop, prompt: wake.prompt))
         }

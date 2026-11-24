@@ -380,6 +380,24 @@ extension AppController {
 extension AppController {
     /// `agent.resume_notes`: per remembered local Claude Code session, whether it counts as cut off and the note it
     /// would get after a restart (null: nothing to say). Read only.
+    /// `schedule.session_jobs`: the session-only recurring `CronCreate` jobs the pane's local Claude Code session holds
+    /// (#458), in full, so they can become cmds schedules.
+    func sessionJobs(paneID: String) async throws -> JSONValue {
+        let pane = try resolvePane(paneID)
+        guard let session = pane.agentSession ?? pane.resumeOffer, session.agent == .claude, session.host == nil else {
+            throw RPCError.invalidParams("no local Claude Code session is remembered in pane \(pane.id)")
+        }
+        let jobs = await Task.detached(priority: .utility) { () -> [ResumeNote.Job] in
+            guard let path = ClaudeTurnState.transcriptPath(sessionID: session.sessionID, configDir: session.configDir) else { return [] }
+            return ResumeNote.jobs(transcriptLines: ResumeNote.jobLines(path: path), now: Date())
+        }.value
+        let crons: [JSONValue] = jobs.compactMap { job in
+            guard case .cron(let cron) = job.kind else { return nil }
+            return .object(["id": job.id.map(JSONValue.string) ?? .null, "cron": .string(cron), "prompt": .string(job.prompt)])
+        }
+        return .object(["pane": .string(pane.id), "sessionID": .string(session.sessionID), "jobs": .array(crons)])
+    }
+
     func resumeNotesPreview(paneID: String?) async throws -> JSONValue {
         let only = try paneID.map { try resolvePane($0).id }
         let sessions: [(pane: String, session: AgentSession)] = workspaces.flatMap(\.orderedPanes).compactMap { pane in

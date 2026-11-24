@@ -9,20 +9,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `cmds schedule from-session [--apply]` (API `schedule.session_jobs`): moves a Claude Code session's recurring
+  `CronCreate` jobs, which end with the session, to cmds schedules that outlive restarts: every N minutes or hours,
+  or weekly at fixed times, typed into the pane as agent prompts; other cron shapes are listed with why. Not added
+  twice; it prints the `CronDelete` to run in the session (#458).
+
 - Schedules that repeat every N minutes or hours (`cmds schedule add --every 5m`, **Repeatedly** in the editor; 5
   minutes to 7 days, counted from midnight when the interval divides a day). Unlike a Claude Code `CronCreate` job
   they outlive restarts: a time missed while the Mac slept runs once when it is back, and a skipped (agent busy) or
-  missed run sends no notification. The note a resumed session gets about lost CronCreate jobs mentions them. Files
+  missed run sends no notification. The note a resumed session gets about lost CronCreate jobs points at `cmds schedule from-session`. Files
   with one are `schedules.json` version 3; an older cmds opens them read only (#456).
-
 - `cmds doctor` (API `app.doctor`): what is degraded in the running cmds, with what to do — an update waiting for a
   restart, Resume Agent Sessions and Open at login, schedules that cannot run or were dropped, hangs in the last
   24 h, memory pressure, Bluetooth sync failing. Exits 1 when a check warns (#454).
-
 - Open cmds at login (Settings › Agents, `cmds launch-at-login [on|off]`, API `app.login_item`; off by default): after
   the Mac restarts, cmds opens by itself, so with Resume Always the agents continue and schedules run without anyone
   opening it. Only for a cmds in an Applications folder (#451).
-
 - Recently deleted schedules: a removed schedule, and one dropped because `schedules.json` had it invalid or
   unreadable, is kept for 30 days as it was (folder, prompt, command), with when, why and which pane removed it.
   `cmds schedule deleted [--json]` lists them, `cmds schedule restore <id>` puts one back (#449).
