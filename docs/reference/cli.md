@@ -30,7 +30,7 @@ bundled in a Debug build, #247); `--socket PATH` overrides all of them.
 
 | Command | What it does |
 |---|---|
-| `cmds ping` / `cmds identify` | Check the app is up / show version, pid, socket path |
+| `cmds ping` / `cmds identify` | Check the app is up / show version, pid, socket path. `ping` exits 1 with "cmds is running but not responding (main thread blocked for N s; sample: …)" while the app hangs |
 | `cmds quit` | Quit the app without the "agents are running" confirmation (scripted updates: `cmds export` → `cmds quit` → start the new build → `cmds import`) |
 | `cmds ls` | Workspaces (branch, cwd, ports, `CPU 12% · 1.2 GB`, `!` attention, sidebar text) with a tree of panes (`>` focused) |
 | `cmds ports [--workspace W]` | TCP ports the workspaces' processes listen on: `http://localhost:PORT`, workspace id and title (`*` = the current workspace). `--json`: `[{port, url, workspace, title}]`. In the sidebar, clicking a port opens it in a browser split |

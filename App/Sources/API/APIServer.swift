@@ -20,6 +20,18 @@ final class APIServer {
         self.scope = scope
         server = SocketServer(path: path ?? controller.socketPath)
         server.onRequest = { [weak self] request, connection in
+            // A ping while the main thread hangs is answered here (busy), so a script or an agent can tell a hung cmds
+            // from one that is not running (HangWatchdog).
+            if request.method == "system.ping" {
+                let blocked = HangWatchdog.shared.mainBlockedFor
+                if blocked >= HangWatchdogPolicy.busyAfter {
+                    connection.reply(id: request.id, result: [
+                        "pong": true, "busy": true, "mainBlockedSeconds": .number(blocked.rounded()),
+                        "hangReport": HangWatchdog.shared.latestReport.map(JSONValue.string) ?? .null,
+                    ])
+                    return
+                }
+            }
             DispatchQueue.main.async {
                 MainActor.assumeIsolated { self?.handle(request, from: connection) }
             }
@@ -267,6 +279,13 @@ final class APIServer {
                 controller.scheduleRunner.checkDue()
                 connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970),
                                                   "notifications": .array(debugNotifications)])
+            case "debug.block_main":
+                // Tests only: holds the main thread for `seconds` (at most 120), as a hang would (HangWatchdog).
+                guard case .number(let seconds)? = params.value?["seconds"], seconds > 0, seconds <= 120 else {
+                    throw RPCError.invalidParams("seconds must be 1 to 120")
+                }
+                connection.reply(id: id, result: [:])
+                DispatchQueue.main.async { Thread.sleep(forTimeInterval: seconds) }
             case "debug.drop_agent_usage":
                 // Tests only: the pane's agent usage goes as when a report without a pid gets too old
                 // (`unwatchedAgentTimeout`): the agent may still run, the pane still remembers its session.

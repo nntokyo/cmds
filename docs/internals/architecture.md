@@ -663,6 +663,21 @@ in `CmdsCore/KeepAwake.swift` (`SleepDisabledCommand`, `LidSleepController`, uni
 [reference/api.md](../reference/api.md); commands: [reference/cli.md](../reference/cli.md). SSH panes get a
 restricted per-pane socket ([ssh.md](ssh.md)).
 
+### Hangs
+
+Everything the user and the API do waits on the main thread, and a hang leaves no crash report. `HangWatchdog`
+(`App/Sources/App/HangWatchdog.swift`, rules in CmdsCore `HangWatchdogPolicy`) posts a beat to the main queue every
+second from a background queue:
+
+- After 5 s without the beat, `system.ping` is answered from the socket's thread as busy (`cmds ping` says "running
+  but not responding"), so scripts and agents can tell a hung cmds from one that is not running.
+- After 30 s, `/usr/bin/sample` records every thread for 3 s into `<support dir>/hangs/hang-YYYYMMDD-HHMMSS.txt`
+  (0600; once per hang, at most every 10 minutes, the newest 5 kept), and `hangs/hangs.log` notes when it started
+  and, once the main thread answers again, how long it lasted. The log category `hang` says the same.
+
+Look at the main thread (`com.apple.main-thread`) in the sample to see what it waited on. To try it,
+`debug.block_main {seconds}` holds the main thread of a DEBUG build.
+
 ## iOS companion sync
 
 The Mac runs a WebSocket server over TLS 1.3 (Network.framework) advertised as `_cmds._tcp`, presenting its own
