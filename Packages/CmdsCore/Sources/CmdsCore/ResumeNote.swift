@@ -110,7 +110,11 @@ public enum ResumeNote {
             }
         }
         let week: TimeInterval = 7 * 86400
+        // The same schedule and prompt once: a job made again after an earlier restart (the old one died without a
+        // CronDelete) must not come back twice.
+        var seen = Set<String>()
         var result = crons.filter { !cancelled.contains($0.id) && now.timeIntervalSince($0.at) < week }
+            .reversed().filter { seen.insert($0.schedule + "\u{1}" + $0.prompt).inserted }.reversed()
             .map { Job(kind: .cron($0.schedule), prompt: $0.prompt) }
         if let wake = lastWakeup, !wake.stop, now.timeIntervalSince(wake.at) < 86400 {
             result.append(Job(kind: .loop, prompt: wake.prompt))

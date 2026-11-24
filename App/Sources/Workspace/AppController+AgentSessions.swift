@@ -376,3 +376,28 @@ extension AppController {
         }
     }
 }
+
+extension AppController {
+    /// `agent.resume_notes`: per remembered local Claude Code session, whether it counts as cut off and the note it
+    /// would get after a restart (null: nothing to say). Read only.
+    func resumeNotesPreview(paneID: String?) async throws -> JSONValue {
+        let only = try paneID.map { try resolvePane($0).id }
+        let sessions: [(pane: String, session: AgentSession)] = workspaces.flatMap(\.orderedPanes).compactMap { pane in
+            guard only == nil || pane.id == only, let session = pane.resumeOffer ?? pane.agentSession,
+                  session.agent == .claude, session.host == nil else { return nil }
+            return (pane.id, session)
+        }
+        let results = await Task.detached(priority: .utility) { () -> [JSONValue] in
+            sessions.map { entry in
+                let path = ClaudeTurnState.transcriptPath(sessionID: entry.session.sessionID, configDir: entry.session.configDir)
+                let cutOff = ClaudeTurnState.cutOff(sessionID: entry.session.sessionID, configDir: entry.session.configDir) ?? false
+                let jobs = path.map { ResumeNote.jobs(transcriptLines: ResumeNote.jobLines(path: $0), now: Date()) } ?? []
+                let note = ResumeNote.prompt(reason: .restart, cutOff: cutOff, jobs: jobs)
+                return .object(["pane": .string(entry.pane), "sessionID": .string(entry.session.sessionID),
+                                "cutOff": .bool(cutOff), "jobs": .number(Double(jobs.count)),
+                                "note": note.map(JSONValue.string) ?? .null])
+            }
+        }.value
+        return .object(["sessions": .array(results)])
+    }
+}

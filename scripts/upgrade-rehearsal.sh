@@ -67,6 +67,8 @@ echo "This build, restoring a copy of its session ($dir):"
 "$cli" --socket "$dir/cmds.sock" ls --json | summary
 echo "Agent sessions it would resume (\"cut off while working\": told to continue with Resume Always):"
 "$cli" --socket "$dir/cmds.sock" sessions | sed -n '2,$p' | grep -v '^ *\$ ' | sed 's/^/  /'
+echo "What each would be told after the restart (Resume Always):"
+"$cli" --socket "$dir/cmds.sock" sessions --notes 2>/dev/null | sed 's/^/  /' || echo "  (this build cannot tell)"
 echo "Schedules in the copy:"
 "$cli" --socket "$dir/cmds.sock" schedule list | sed 's/^/  /'
 if $keep; then echo "Kept: $dir (the instance stops now)"; fi

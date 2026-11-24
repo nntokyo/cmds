@@ -301,6 +301,13 @@ final class APIServer {
                 if try params.bool("move") == true { browser.onUseWorkspaceProfile?() }
                 connection.reply(id: id, result: ["notice": browser.debugNoticeText.map(JSONValue.string) ?? .null,
                                                   "profile": browser.profile.map(JSONValue.string) ?? .null])
+            case "agent.resume_notes":
+                // What each remembered local Claude Code session would be told if cmds restarted now (ResumeNote):
+                // transcripts read off the main thread; nothing is typed or changed.
+                let only = try params.string("pane")
+                Task { @MainActor in
+                    await respond(id, to: connection) { try await self.controller.resumeNotesPreview(paneID: only) }
+                }
             case "debug.account_switch_finish":
                 // Tests only: the last step of an account switch for `pane` (Claude Code has quit): resume the pane's
                 // session under `to` and tell it to go on, as after a real limit (`from` hit it).
