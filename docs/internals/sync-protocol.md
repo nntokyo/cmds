@@ -375,7 +375,7 @@ client message for schedules, so a paired phone cannot add, change, skip or run 
   at most once per second (`SyncSchedules.interval`); a summary equal to the last one broadcast is not sent again.
   Always the whole list.
 - **`schedules`**, in the Mac's order: `id`, `name`, `enabled`, `trigger` (as in `schedules.json`: `once {at}`,
-  `weekly {weekdays, times, timeZone?}`, `limitReset {account, delay, repeats?}`, `codexLimitReset {delay, repeats?}`),
+  `weekly {weekdays, times, timeZone?}`, `limitReset {account, delay, repeats?}`, `codexLimitReset {delay, repeats?}`, `interval {every, from}`),
   `action` = `{type: startWorkspace | continueSession | sendText, agent?: claude | codex (continueSession),
   to?: shell | agent (sendText)}`, `nextFireAt?` (absent when the schedule is off or has no next run), `activeRun?`
   (the run in progress) and `lastRun?` (the latest ended run).

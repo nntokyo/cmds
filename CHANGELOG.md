@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Schedules that repeat every N minutes or hours (`cmds schedule add --every 5m`, **Repeatedly** in the editor; 5
+  minutes to 7 days, counted from midnight when the interval divides a day). Unlike a Claude Code `CronCreate` job
+  they outlive restarts: a time missed while the Mac slept runs once when it is back, and a skipped (agent busy) or
+  missed run sends no notification. The note a resumed session gets about lost CronCreate jobs mentions them. Files
+  with one are `schedules.json` version 3; an older cmds opens them read only (#456).
+
 - `cmds doctor` (API `app.doctor`): what is degraded in the running cmds, with what to do — an update waiting for a
   restart, Resume Agent Sessions and Open at login, schedules that cannot run or were dropped, hangs in the last
   24 h, memory pressure, Bluetooth sync failing. Exits 1 when a check warns (#454).

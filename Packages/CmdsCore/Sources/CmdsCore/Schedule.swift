@@ -116,6 +116,9 @@ public enum ScheduleTrigger: Equatable, Sendable {
     /// When Codex's limit resets (`AgentLimits` of `.codex`: the latest reset of a window at 100 %), plus `delay`
     /// (phase 2).
     case codexLimitReset(delay: TimeInterval, repeats: Bool = false)
+    /// Every `every` seconds (5 minutes … 7 days), at `from + k × every` (#456): a recurring job that, unlike a
+    /// Claude Code CronCreate job, outlives the session and cmds restarts.
+    case interval(every: TimeInterval, from: Date)
 
     public var type: String {
         switch self {
@@ -123,6 +126,7 @@ public enum ScheduleTrigger: Equatable, Sendable {
         case .weekly: return "weekly"
         case .limitReset: return "limitReset"
         case .codexLimitReset: return "codexLimitReset"
+        case .interval: return "interval"
         }
     }
 
@@ -130,7 +134,7 @@ public enum ScheduleTrigger: Equatable, Sendable {
     public var isOneShot: Bool {
         switch self {
         case .once: return true
-        case .weekly: return false
+        case .weekly, .interval: return false
         case .limitReset(_, _, let repeats), .codexLimitReset(_, let repeats): return !repeats
         }
     }
@@ -138,8 +142,17 @@ public enum ScheduleTrigger: Equatable, Sendable {
     /// A limit trigger (its time follows a limit, `ScheduleCalendar.recomputed`).
     public var followsLimit: Bool {
         switch self {
-        case .once, .weekly: return false
+        case .once, .weekly, .interval: return false
         case .limitReset, .codexLimitReset: return true
+        }
+    }
+
+    /// Fires at times known in advance, one after another (`weekly`, `interval`): "until the next time" catches up
+    /// the latest that passed.
+    public var hasFixedTimes: Bool {
+        switch self {
+        case .weekly, .interval: return true
+        case .once, .limitReset, .codexLimitReset: return false
         }
     }
 
@@ -152,12 +165,13 @@ public enum ScheduleTrigger: Equatable, Sendable {
         case .once, .weekly: return 1
         case .limitReset(_, _, let repeats): return repeats ? 2 : 1
         case .codexLimitReset: return 2
+        case .interval: return 3
         }
     }
 }
 
 extension ScheduleTrigger: Codable {
-    private enum CodingKeys: String, CodingKey { case type, at, weekdays, times, timeZone, account, delay, repeats }
+    private enum CodingKeys: String, CodingKey { case type, at, weekdays, times, timeZone, account, delay, repeats, every, from }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -179,6 +193,11 @@ extension ScheduleTrigger: Codable {
             self = .limitReset(account: account, delay: delay, repeats: repeats)
         case "codexLimitReset":
             self = .codexLimitReset(delay: delay, repeats: repeats)
+        case "interval":
+            guard let every = c.lenientDouble(.every), let from = c.lenientDate(.from) else {
+                throw DecodingError.dataCorruptedError(forKey: .every, in: c, debugDescription: "missing every or from")
+            }
+            self = .interval(every: every, from: from)
         default:
             throw DecodingError.dataCorruptedError(forKey: .type, in: c, debugDescription: "unknown trigger type \(type)")
         }
@@ -199,6 +218,9 @@ extension ScheduleTrigger: Codable {
         case .codexLimitReset(let delay, let repeats):
             try c.encode(delay, forKey: .delay)
             if repeats { try c.encode(true, forKey: .repeats) }
+        case .interval(let every, let from):
+            try c.encode(every, forKey: .every)
+            try c.encode(from.timeIntervalSince1970, forKey: .from)
         }
     }
 }
@@ -428,7 +450,8 @@ public enum ScheduleLatePolicy: Equatable, Sendable {
 
     /// `once` and `limitReset`: up to 6 h late; `weekly`: up to 15 min.
     public static func defaultPolicy(for trigger: ScheduleTrigger) -> ScheduleLatePolicy {
-        trigger.isOneShot ? .runIfWithin(6 * 3600) : .runIfWithin(15 * 60)
+        if case .interval = trigger { return .untilNextRun }
+        return trigger.isOneShot ? .runIfWithin(6 * 3600) : .runIfWithin(15 * 60)
     }
 
     /// The editor's "Run if at most this late: N minutes": blank = `defaultPolicy(for:)`; nil = not a number.
@@ -894,6 +917,8 @@ public enum ScheduleLimits {
     public static let maxTimesPerDay = 24
     /// Times of a weekly rule are at least this far apart (also across midnight).
     public static let minTimeGap: TimeInterval = 5 * 60
+    /// `interval` triggers: every 5 minutes at most often, every 7 days at least.
+    public static let intervalRange: ClosedRange<TimeInterval> = 5 * 60...7 * 86400
     public static let maxDelay: TimeInterval = 3600
     public static let defaultDelay: TimeInterval = 60
     /// A late policy of a minute to a week.

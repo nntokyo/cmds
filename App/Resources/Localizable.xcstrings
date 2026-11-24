@@ -5367,6 +5367,28 @@
         }
       }
     },
+    "Every %lld h": {
+      "comment": "schedule trigger: an interval in hours",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 時間ごと"
+          }
+        }
+      }
+    },
+    "Every %lld min": {
+      "comment": "schedule trigger: an interval in minutes",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 分ごと"
+          }
+        }
+      }
+    },
     "Every account has hit its limit.": {
       "localizations": {
         "ja": {
@@ -5433,6 +5455,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "「%@」がリセットされるたび"
+          }
+        }
+      }
+    },
+    "Every:": {
+      "comment": "schedule editor: interval",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "間隔："
           }
         }
       }
@@ -10075,6 +10108,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "修復"
+          }
+        }
+      }
+    },
+    "Repeat every 5 minutes to 7 days.": {
+      "comment": "schedule editor problem",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "間隔は5分から7日までにしてください。"
+          }
+        }
+      }
+    },
+    "Repeatedly": {
+      "comment": "schedule editor trigger: every N minutes",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "繰り返し（一定の間隔）"
           }
         }
       }
@@ -15432,6 +15487,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "分"
+          }
+        }
+      }
+    },
+    "minutes (5 to 10080)": {
+      "comment": "schedule editor: interval unit",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分ごと（5〜10080）"
           }
         }
       }

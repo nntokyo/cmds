@@ -1229,6 +1229,28 @@
         }
       }
     },
+    "Every %lld h" : {
+      "comment" : "schedule trigger: an interval in hours",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 時間ごと"
+          }
+        }
+      }
+    },
+    "Every %lld min" : {
+      "comment" : "schedule trigger: an interval in minutes",
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 分ごと"
+          }
+        }
+      }
+    },
     "Every time “%@” resets" : {
       "localizations" : {
         "ja" : {

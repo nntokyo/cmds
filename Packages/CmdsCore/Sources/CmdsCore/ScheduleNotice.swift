@@ -4,10 +4,14 @@ import Foundation
 public enum ScheduleNotice {
     /// How long before a firing the notice is shown.
     public static let lead: TimeInterval = 60
+    /// Interval schedules more frequent than this get no notice.
+    public static let minIntervalWithNotice: TimeInterval = 3600
 
     /// When the notice for the schedule's next firing is shown; nil when it has none (off, no next firing, `warn` off).
     public static func time(of schedule: Schedule) -> Date? {
         guard schedule.enabled, schedule.warn, let next = schedule.nextFireAt else { return nil }
+        // An interval under an hour would notify all day long.
+        if case .interval(let every, _) = schedule.trigger, every < minIntervalWithNotice { return nil }
         return next.addingTimeInterval(-lead)
     }
 

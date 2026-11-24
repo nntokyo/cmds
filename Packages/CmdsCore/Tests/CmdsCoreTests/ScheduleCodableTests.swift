@@ -109,12 +109,13 @@ final class ScheduleCodableTests: XCTestCase {
     }
 
     func testNewerVersionIsReadOnly() throws {
-        let text = #"{"version": 3, "schedules": [], "runs": []}"#
+        let text = #"{"version": 4, "schedules": [], "runs": []}"#
         XCTAssertTrue(try JSONDecoder().decode(ScheduleFile.self, from: Data(text.utf8)).isFromNewerVersion)
         XCTAssertTrue(try JSONDecoder().decode(ScheduleRunsFile.self, from: Data(text.utf8)).isFromNewerVersion)
         XCTAssertFalse(try JSONDecoder().decode(ScheduleFile.self, from: Data(#"{"schedules": []}"#.utf8)).isFromNewerVersion)
-        // Version 2 (phase 2) is this build's; the history stays at version 1.
+        // Versions 2 (phase 2) and 3 (interval, #456) are this build's; the history stays at version 1.
         XCTAssertFalse(try JSONDecoder().decode(ScheduleFile.self, from: Data(#"{"version": 2, "schedules": []}"#.utf8)).isFromNewerVersion)
+        XCTAssertFalse(try JSONDecoder().decode(ScheduleFile.self, from: Data(#"{"version": 3, "schedules": []}"#.utf8)).isFromNewerVersion)
         XCTAssertTrue(try JSONDecoder().decode(ScheduleRunsFile.self, from: Data(#"{"version": 2, "runs": []}"#.utf8)).isFromNewerVersion)
         XCTAssertEqual(try json(ScheduleRunsFile())["version"] as? Int, 1)
     }

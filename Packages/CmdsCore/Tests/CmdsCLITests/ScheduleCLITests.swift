@@ -50,6 +50,19 @@ final class ScheduleCLITests: XCTestCase {
         usageError(["--time", "09:00"])
     }
 
+    func testInterval() throws {
+        // Wednesday 2026-11-04 10:00 in Tokyo: a 5m interval counts from that midnight.
+        let midnight = 1_793_754_000 - 10 * 3600
+        XCTAssertEqual(try options(["--every", "5m"]).trigger, ["type": "interval", "every": 300, "from": .number(Double(midnight))])
+        XCTAssertEqual(try options(["--every", "2h"]).trigger?["every"], 7200)
+        // 7 minutes does not divide a day: from now.
+        XCTAssertEqual(try options(["--every", "7m"]).trigger?["from"], .number(1_793_754_000))
+        usageError(["--every", "5m", "--tz", "Asia/Tokyo"])
+        usageError(["--every", "5m", "--time", "09:00"])
+        XCTAssertEqual(Format.scheduleTrigger(.interval(every: 300, from: now)), "every 5m")
+        XCTAssertEqual(Format.scheduleTrigger(.interval(every: 5400, from: now)), "every 1h30m")
+    }
+
     func testAfterLimit() throws {
         XCTAssertEqual(try options(["--after-limit", "work"]).trigger, ["type": "limitReset", "account": "work", "delay": 60])
         XCTAssertEqual(try options(["--after-limit", "work", "--delay", "2m"]).trigger?["delay"], 120)

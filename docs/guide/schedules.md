@@ -16,6 +16,7 @@ A schedule has a **trigger** and an **action**.
 | Weekly | On the chosen weekdays at one or more times of day, 5 minutes apart at least (`--every weekdays --time 09:00,13:30`). In a time zone you choose, or the Mac's (`--tz Asia/Tokyo`) |
 | When an account's limit resets | When one of your [Claude accounts](ai-agents.md#several-claude-accounts) is usable again, plus a delay (default 1 minute; `--after-limit work --delay 2m`). It follows the account: a later reset moves it; clearing the limit fires it at once |
 | When Codex's limit resets | When Codex is usable again: the latest reset of a window at 100 % that cmds read in a Codex session file, plus the delay (`--after-codex-limit`). cmds learns Codex's limits only while a Codex runs in one of its panes; after cmds restarts, the time it had stays until Codex reports again |
+| Repeatedly | Every N minutes or hours, 5 minutes to 7 days (`--every 5m`, `--every 2h`; **Repeatedly** in the editor). An interval that divides a day counts from midnight, so `5m` runs at :00, :05, :10 …, as cron would. Unlike a Claude Code `CronCreate` job, which ends with its session, it outlives restarts of Claude Code and cmds. A time missed while the Mac slept runs once when it is back (not once per missed time); a run skipped because the agent was busy, or missed, is only noted in the history (no notification), and there is no "starts in 1 minute" notice under an hour |
 | Every time it resets | Either limit trigger with `--repeat` (**Every time it resets** in the editor): it stays on and runs once for each new reset; a reset it has run (or skipped) never runs again, and a limit cleared early does not run it |
 
 | Action | What happens |
@@ -39,6 +40,9 @@ cmds schedule add --name bench --at "2026-11-04 02:00" --start ~/src/app -- make
 
 # Every time Codex's limit resets: tell the Codex in this pane to go on.
 cmds schedule add --name "Codex goes on" --after-codex-limit --repeat --send continue --to agent
+
+# Every 5 minutes: tell the agent in this pane to look at its queue (it outlives restarts, unlike CronCreate).
+cmds schedule add --name "Queue" --every 5m --send "Check the queue and handle what is new" --to agent
 
 # Weekdays at 18:00: run the tests in the "API" workspace's terminal, if its shell is free.
 cmds schedule add --name "Evening tests" --every weekdays --time 18:00 --send "make test" --to shell --workspace API
@@ -149,7 +153,8 @@ can add it again with `cmds schedule add`.
 
 Going back to an older cmds: as long as your schedules only start workspaces and continue Claude Code sessions once,
 cmds 0.6 keeps running them. Once one types into a pane, continues Codex, follows Codex's limit or repeats, the file
-says so (`version` 2) and cmds 0.6 shows the schedules but runs and changes none of them. Pane tags live in
+says so (`version` 2) and cmds 0.6 shows the schedules but runs and changes none of them. An interval schedule
+(`--every 5m`) makes it `version` 3: a cmds from before it shows the file read only in the same way. Pane tags live in
 `session.json`; an older cmds drops them when it saves, and a schedule that targets a pane then skips its runs
 (`the target pane was not found`) until you choose the pane again (a session schedule then uses the only pane holding
 its session).

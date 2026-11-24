@@ -37,6 +37,7 @@ enum ScheduleText {
         case .timesTooClose: return String(localized: "Times of day must be at least 5 minutes apart.")
         case .unknownTimeZone(let zone): return String(localized: "Unknown time zone “\(zone)”.")
         case .delayOutOfRange: return String(localized: "The delay must be 0 to 60 minutes.")
+        case .intervalOutOfRange: return String(localized: "Repeat every 5 minutes to 7 days.", comment: "schedule editor problem")
         case .lateOutOfRange: return String(localized: "A late run must be allowed for 1 minute to 7 days.")
         case .lateNotANumber: return String(localized: "Give the late window as a number of minutes.")
         case .accountInvalid(let name): return String(localized: "“\(name)” is not a valid account name.")
@@ -61,7 +62,7 @@ enum ScheduleText {
     static func trigger(_ trigger: ScheduleTrigger, accounts: [ClaudeAccount]) -> String {
         var reset: Date?
         switch trigger {
-        case .once, .weekly:
+        case .once, .weekly, .interval:
             break
         case .limitReset(let name, _, _):
             reset = accounts.first { $0.hasName(name) }?.limit.flatMap { $0.isActive() ? $0.resetsAt : nil }
