@@ -11,6 +11,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `cmds sessions --notes` shows what each remembered Claude Code session would be told after a restart (continue,
+  scheduled jobs to create again); `scripts/upgrade-rehearsal.sh` shows it for the running cmds' session (#447).
+
 - After an account switch, the resumed Claude Code is told to continue where it left off (it used to wait for
   someone to type), and after a switch or a restart a session whose scheduled jobs (`CronCreate`, a `/loop`) died with
   the old process is told to create them again, with their schedules and prompts read from its transcript (#443).
