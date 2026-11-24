@@ -109,6 +109,8 @@ notifications. Check them on the signed build before publishing it.
 > (stapled app). Build the DMG from that app as `build-dmg.sh` does and sign it with the Developer ID SHA-1 that does
 > not prompt for keychain access; the app inside is notarized and stapled, the DMG itself is signed only.
 
+0. Run the [upgrade rehearsal](testing.md#upgrade-rehearsal) with this `master`'s Debug build: the running cmds'
+   workspaces, panes and login profiles must come back the same.
 1. Start from a clean, up-to-date `master` with the submodule at the committed revision
    (`git submodule update --init`); rebuild GhosttyKit (`scripts/build-ghostty.sh`) if the submodule or
    `vendor/ghostty-patches` changed.
