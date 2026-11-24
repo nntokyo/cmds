@@ -261,8 +261,16 @@ final class APIServer {
                     throw RPCError.invalidParams("offset must be a number of seconds")
                 }
                 controller.scheduleRunner.clockOffset = offset
+                // `wake`: as after NSWorkspace.didWakeNotification; `capture`: notifications kept, not shown.
+                if try params.bool("capture") == true { debugCapturesNotifications = true }
+                if try params.bool("wake") == true { controller.scheduleRunner.lastWakeAt = controller.scheduleRunner.now() }
                 controller.scheduleRunner.checkDue()
-                connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970)])
+                connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970),
+                                                  "notifications": .array(debugNotifications)])
+            case "debug.schedule_run_now_notice":
+                // Tests only: the missed notification's Run Now, as AppDelegate does it.
+                controller.scheduleRunner.runFromMissedNotice(id: try params.required("id"))
+                connection.reply(id: id, result: [:])
             case "debug.recent_sessions":
                 // Tests only: File › Recent Agent Sessions' items, and `open` (index) as choosing one does.
                 connection.reply(id: id, result: RecentAgentSessionsMenu(controller: controller).debugPerform(params.value))

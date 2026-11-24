@@ -718,6 +718,16 @@
         }
       }
     },
+    "cmds was not running." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "cmdsが起動していませんでした。"
+          }
+        }
+      }
+    },
     "Could not take a picture of the page" : {
       "localizations" : {
         "ja" : {
@@ -2697,6 +2707,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Macがスリープしていたか、cmdsが起動していませんでした。"
+          }
+        }
+      }
+    },
+    "The Mac was asleep." : {
+      "localizations" : {
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macがスリープしていました。"
           }
         }
       }

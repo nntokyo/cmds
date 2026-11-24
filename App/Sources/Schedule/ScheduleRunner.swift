@@ -74,11 +74,18 @@ final class ScheduleRunner {
     /// DEBUG builds: `debug.schedule_clock` moves the runner's clock (a simulated sleep, for catch-up tests).
     var clockOffset: TimeInterval = 0
     func now() -> Date { Date().addingTimeInterval(clockOffset) }
+    /// When the schedules started, and the latest wake seen: why a time was missed (`ScheduleCatchUp.missedReason`).
+    var launchedAt = Date.distantPast
+    var lastWakeAt: Date?
 
     /// The safety check while any schedule is enabled.
     private static let safetyInterval: TimeInterval = 60
     static let notificationCategory = "cmds.schedule"
     static let openSchedulesAction = "cmds.openSchedules"
+    /// A missed run's notification: Run Now (and Open Schedules); the schedule's id is under `missedScheduleKey`.
+    static let missedCategory = "cmds.schedule.missed"
+    static let runNowAction = "cmds.schedule.runNow"
+    static let missedScheduleKey = "cmds.schedule.missedID"
 
     init(controller: AppController, supportDirectory: URL = CmdsEnv.supportDirectoryURL()) {
         self.controller = controller
@@ -107,8 +114,12 @@ final class ScheduleRunner {
         workspaceObservers.append(NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
                 // Timers stopped during sleep: what fell due is caught up (or missed) now.
-                MainActor.assumeIsolated { self?.checkDue() }
+                MainActor.assumeIsolated {
+                    self?.lastWakeAt = self?.now()
+                    self?.checkDue()
+                }
             })
+        launchedAt = now()
         checkDue()
     }
 
@@ -321,7 +332,8 @@ final class ScheduleRunner {
 
     private func recordMissed(_ schedule: Schedule, dueAt: Date) {
         scheduleLog.info("schedule \(schedule.id, privacy: .public) missed its run due \(dueAt.timeIntervalSince1970)")
-        recordEndedRun(of: schedule, cause: .scheduled, dueAt: dueAt, state: .missed, reason: .missed, notify: true)
+        let reason = ScheduleCatchUp.missedReason(due: dueAt, launchedAt: launchedAt, lastWakeAt: lastWakeAt)
+        recordEndedRun(of: schedule, cause: .scheduled, dueAt: dueAt, state: .missed, reason: reason, notify: true)
     }
 
     /// A run that ends as it starts (missed, skipped by the user, refused): added to the history and sent; `notify`
@@ -569,7 +581,8 @@ final class ScheduleRunner {
             if let paneID = run.pane, let pane = controller.pane(id: paneID), !pane.isClosing {
                 controller.raiseAttention(pane: pane, title: title, body: body, level: run.state == .failed ? .error : .warning)
             } else {
-                postNotification(title: title, body: body)
+                // A missed run can still be done now, with one click (`runFromMissedNotice`).
+                postNotification(title: title, body: body, missed: run.state == .missed ? run.scheduleID : nil)
             }
         } else if run.state == .succeeded, policy == .always {
             if let workspace = run.workspace, controller.workspace(id: workspace) != nil {
@@ -581,14 +594,38 @@ final class ScheduleRunner {
         }
     }
 
-    private func postNotification(title: String, body: String) {
+    private func postNotification(title: String, body: String, missed scheduleID: String? = nil) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
-        content.categoryIdentifier = Self.notificationCategory
+        content.categoryIdentifier = scheduleID == nil ? Self.notificationCategory : Self.missedCategory
         content.userInfo = ["schedules": true]
+        if let scheduleID { content.userInfo[Self.missedScheduleKey] = scheduleID }
+        #if DEBUG
+        if debugCapturesNotifications {
+            debugNotifications.append(["title": .string(title), "body": .string(body), "category": .string(content.categoryIdentifier),
+                                       "schedule": scheduleID.map(JSONValue.string) ?? .null])
+            return
+        }
+        #endif
         let request = UNNotificationRequest(identifier: "cmds.schedule.\(UUID().uuidString)", content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }
+
+    /// The missed notification's Run Now: a manual run of that schedule (also when it is off), in the background.
+    func runFromMissedNotice(id: String) {
+        do {
+            let run = try runNow(id: id)
+            scheduleLog.info("schedule \(id, privacy: .public) run \(run.id, privacy: .public) from the missed notification")
+        } catch {
+            scheduleLog.error("Run Now of \(id, privacy: .public) from the notification: \(String(describing: error), privacy: .public)")
+        }
+    }
 }
+
+#if DEBUG
+/// Tests: notifications kept here instead of shown (`debug.schedule_clock` with `capture`), so nothing appears on screen.
+@MainActor var debugCapturesNotifications = false
+@MainActor var debugNotifications: [JSONValue] = []
+#endif

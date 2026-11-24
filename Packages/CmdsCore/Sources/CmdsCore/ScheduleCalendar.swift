@@ -98,6 +98,14 @@ public enum ScheduleCatchUp {
         case missed
     }
 
+    /// Why a time passed without its run (#45 phase 5): cmds started after it, else the Mac woke after it, else not
+    /// known (`missed`). `launchedAt`: when this cmds started its schedules; `lastWakeAt`: the latest wake it saw.
+    public static func missedReason(due: Date, launchedAt: Date, lastWakeAt: Date?) -> ScheduleReason {
+        if launchedAt > due { return .cmdsNotRunning }
+        if let lastWakeAt, lastWakeAt > due { return .macAsleep }
+        return .missed
+    }
+
     /// The last of a repeating schedule's times at or before `now`, starting from `due` (several passed while the Mac
     /// slept for days); `due` when it is the only one. `next` gives the time after a time.
     public static func latestPassed(_ due: Date, now: Date, next: (Date) -> Date?) -> (due: Date, next: Date?) {
