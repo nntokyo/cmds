@@ -13,6 +13,8 @@ final class BrowserPane: NSView {
 
     /// Replaced only when its page stopped responding (`replaceStuckWebView`).
     private(set) var webView: WKWebView
+    /// Rendering kept on while an agent works on the pane (BrowserPane+AgentRendering).
+    let agentRendering = AgentRendering()
     private let addressField = AddressField()
     private let backButton = BrowserPane.toolbarButton("chevron.left", label: String(localized: "Back"))
     private let forwardButton = BrowserPane.toolbarButton("chevron.right", label: String(localized: "Forward"))
@@ -441,6 +443,7 @@ final class BrowserPane: NSView {
     }
 
     func tearDown() {
+        agentRendering.end()  // out of the off-screen window
         responsiveView?.close()  // frees the extra frames' WebContent processes
         responsiveView = nil
         pageDelegate.tearDown()  // answers open dialogs, closes pop-ups

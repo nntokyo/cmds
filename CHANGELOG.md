@@ -87,6 +87,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Browser panes an agent works on keep rendering when they are not on screen (cmds behind other windows, another
+  workspace shown, a background tab, the display asleep): pages such as X no longer draw nothing, and agents no longer
+  need to switch the shown workspace (#432).
+
 - Schedules: "Continue" (also Continue When It Resets) no longer skips with "an agent was running in the pane" when
   that agent is the session to continue and its status line had gone quiet; the prompt is pasted into it (#428).
 

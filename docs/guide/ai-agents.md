@@ -212,6 +212,18 @@ env_vars = ["CMDS_PANE_ID", "CMDS_WORKSPACE_ID", "CMDS_SOCKET_PATH"]
 Other MCP clients take the same command (`cmds mcp`). The [skill](#skill) adds the working rules around it (helper
 panes, dev servers, when to notify); both can be used together.
 
+### Pages that are not on screen
+
+WebKit treats a page as hidden when its pane is not on screen: the cmds window behind other windows, the pane's
+workspace not shown, a background tab, or the Mac's display asleep. The page then reports
+`document.visibilityState` "hidden", `requestAnimationFrame` stops and timers slow down, and sites such as X draw
+nothing. So while an agent works on a browser pane (`browser_eval`, `browser_click`, `browser_fill`,
+`browser_wait_for`, `browser_snapshot_tree`, `browser_snapshot`, `browser_navigate`, and the same `cmds browser`
+commands) and for 20 seconds after its last call, cmds keeps that page rendering: the web view ignores its window
+being covered, and a pane in no window is drawn in an off-screen window meanwhile. Nothing on screen changes and the
+shown workspace stays as it is, so there is no need to switch workspaces to get a page drawn. Pages nobody works on
+are throttled as usual.
+
 ### Memory before heavy jobs
 
 Several agents building and testing at once can run the Mac out of memory. Before a build, a test run, a type check
