@@ -95,7 +95,8 @@ struct SessionState: Codable {
         var paneIndex: Int
         var session: AgentSession
         /// The agent was working when this was saved (cut off by cmds quitting): with Resume Always it is told to
-        /// continue after resuming (`ScheduleRunner.continueAfterRestart`). Added later: absent means no.
+        /// continue after resuming (`ScheduleRunner.continueAfterRestart`). Added later: absent (an older cmds saved it)
+        /// means unknown, and the transcript's last turn tells (`ClaudeTurnState`).
         var interrupted: Bool? = nil
     }
 

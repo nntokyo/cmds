@@ -188,7 +188,7 @@ enum Format {
             let marker = entry.pane == currentPane ? ">" : " "
             out += "\(marker) \(entry.pane.padding(toLength: paneWidth, withPad: " ", startingAt: 0))  "
                 + "\(entry.state.rawValue.padding(toLength: stateWidth, withPad: " ", startingAt: 0))  "
-                + oneLine(entry.session.summary(now: now)) + "\n"
+                + oneLine(entry.session.summary(now: now)) + (entry.interrupted == true ? "  (cut off while working)" : "") + "\n"
             let indent = String(repeating: " ", count: paneWidth + 4)
             var where_ = "id \(entry.session.sessionID)"
             if let host = entry.session.host { where_ += "  on \(oneLine(host))" }
