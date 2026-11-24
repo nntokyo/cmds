@@ -76,4 +76,19 @@ final class DoctorTests: XCTestCase {
         let lenient = try JSONDecoder().decode(DoctorFinding.self, from: Data(#"{"id": "x", "level": "later", "text": "t"}"#.utf8))
         XCTAssertEqual(lenient.level, .note)
     }
+
+    func testSessionJobs() {
+        var s = snapshot()
+        s.sessionJobs = ["p3": 0]
+        XCTAssertNil(finding("session-jobs", s), "nothing to move: no line")
+        s.sessionJobs = ["p12": 2, "p3": 1]
+        let found = finding("session-jobs", s)
+        XCTAssertEqual(found?.level, .note)
+        XCTAssertEqual(found?.text, "3 CronCreate jobs end with their session, not moved to schedules: p3 (1), p12 (2)")
+        XCTAssertEqual(found?.fix, "cmds schedule from-session --pane P --apply for each")
+        s.sessionJobs = ["p3": 1]
+        XCTAssertEqual(finding("session-jobs", s)?.fix, "cmds schedule from-session --pane p3 --apply")
+        XCTAssertEqual(finding("session-jobs", s)?.text, "1 CronCreate job ends with its session, not moved to schedules: p3 (1)")
+        XCTAssertEqual(Doctor.report(s).level, .note, "a note, not a warning (doctor exits 0)")
+    }
 }

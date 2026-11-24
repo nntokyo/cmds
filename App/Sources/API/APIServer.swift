@@ -234,6 +234,11 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.controller.resumeNotesPreview(paneID: only) }
                 }
+            case "app.doctor":
+                // What is degraded (#454); read only, local socket only. Transcripts are read off the main thread.
+                Task { @MainActor in
+                    await respond(id, to: connection) { try .from(await self.controller.doctorReportWithSessionJobs()) }
+                }
             case "schedule.session_jobs":
                 // A pane's Claude Code session's live CronCreate jobs (#458), for `cmds schedule from-session`; read only.
                 let pane = try params.required("pane")
@@ -524,9 +529,6 @@ final class APIServer {
             AppDelegate.quitWithoutConfirmation = true
             DispatchQueue.main.async { NSApp.terminate(nil) }
             return [:]
-        case "app.doctor":
-            // What is degraded (#454); read only, local socket only.
-            return try .from(controller.doctorReport())
         case "app.login_item":
             // Open cmds at login (#451); local socket only (not in RemoteAPIPolicy.allowedMethods).
             if let enabled = try params.bool("enabled") { try LoginItem.set(enabled) }

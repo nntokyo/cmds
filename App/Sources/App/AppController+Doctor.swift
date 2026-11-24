@@ -3,7 +3,35 @@ import CmdsCore
 
 /// `app.doctor` / `cmds doctor` (#454): gathers what `Doctor` checks. Read only; no file is written.
 extension AppController {
-    func doctorReport(now: Date = Date()) -> DoctorReport {
+    /// With the panes whose Claude Code session still holds CronCreate jobs (transcripts read off the main thread).
+    func doctorReportWithSessionJobs() async -> DoctorReport {
+        let sessions: [(pane: String, session: AgentSession)] = workspaces.flatMap(\.orderedPanes).compactMap { pane in
+            guard let session = pane.agentSession ?? pane.resumeOffer, session.agent == .claude, session.host == nil else { return nil }
+            return (pane.id, session)
+        }
+        let found = await Task.detached(priority: .utility) { () -> [(pane: String, jobs: [ResumeNote.Job])] in
+            sessions.map { entry in
+                let path = ClaudeTurnState.transcriptPath(sessionID: entry.session.sessionID, configDir: entry.session.configDir)
+                return (entry.pane, path.map { ResumeNote.jobs(transcriptLines: ResumeNote.jobLines(path: $0), now: Date()) } ?? [])
+            }
+        }.value
+        // A job counts until a schedule types the same prompt into the same pane.
+        let moved = Set(scheduleRunner.schedules.compactMap { schedule -> String? in
+            guard case .sendText(let send) = schedule.action, send.to == .agent,
+                  let pane = scheduleRunner.entry(schedule).targetPane else { return nil }
+            return pane + "\u{1}" + send.text
+        })
+        var counts: [String: Int] = [:]
+        for entry in found {
+            counts[entry.pane] = entry.jobs.filter { job in
+                guard case .cron = job.kind else { return false }
+                return !moved.contains(entry.pane + "\u{1}" + job.prompt)
+            }.count
+        }
+        return doctorReport(sessionJobs: counts)
+    }
+
+    func doctorReport(now: Date = Date(), sessionJobs: [String: Int] = [:]) -> DoctorReport {
         let info = Bundle.main.infoDictionary ?? [:]
         // The bundle on disk now: a newer copy may have replaced the one that started.
         let disk = NSDictionary(contentsOf: Bundle.main.bundleURL.appendingPathComponent("Contents/Info.plist"))
@@ -28,7 +56,8 @@ extension AppController {
             recentHangs: Self.recentHangs(now: now),
             memoryPressure: systemSample?.stats.pressure ?? .unknown,
             bluetoothStatus: report.managerState == "off" ? nil : report.status,
-            bluetoothFailures: bluetooth.consecutiveFailures)
+            bluetoothFailures: bluetooth.consecutiveFailures,
+            sessionJobs: sessionJobs)
         return Doctor.report(snapshot)
     }
 

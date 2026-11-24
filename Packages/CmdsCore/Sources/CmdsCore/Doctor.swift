@@ -69,12 +69,15 @@ public struct DoctorSnapshot: Equatable, Sendable {
     /// Bluetooth sync allowed and running; nil when off or not wanted.
     public var bluetoothStatus: String?
     public var bluetoothFailures: Int
+    /// Panes whose Claude Code session holds recurring CronCreate jobs not yet moved to schedules: pane → count.
+    public var sessionJobs: [String: Int] = [:]
 
     public init(runningVersion: String, runningBuild: String, diskVersion: String? = nil, diskBuild: String? = nil,
                 updateOnQuit: String? = nil, resumeMode: String = "ask", loginItem: LoginItemState = LoginItemState(status: .off),
                 schedulesReadOnly: String? = nil, schedulesMovedAside: [String] = [], scheduleProblems: [String] = [],
                 schedulesDropped: Int = 0, recentHangs: [String] = [], memoryPressure: MemoryPressure = .normal,
-                bluetoothStatus: String? = nil, bluetoothFailures: Int = 0) {
+                bluetoothStatus: String? = nil, bluetoothFailures: Int = 0, sessionJobs: [String: Int] = [:]) {
+        self.sessionJobs = sessionJobs
         self.runningVersion = runningVersion
         self.runningBuild = runningBuild
         self.diskVersion = diskVersion
@@ -98,7 +101,7 @@ public enum Doctor {
     public static let bluetoothWarnAfter = 3
 
     public static func report(_ s: DoctorSnapshot) -> DoctorReport {
-        DoctorReport(findings: [version(s), resume(s), login(s), schedules(s), hangs(s), memory(s), bluetooth(s)].compactMap { $0 })
+        DoctorReport(findings: [version(s), resume(s), login(s), schedules(s), sessionJobs(s), hangs(s), memory(s), bluetooth(s)].compactMap { $0 })
     }
 
     static func version(_ s: DoctorSnapshot) -> DoctorFinding {
@@ -163,6 +166,19 @@ public enum Doctor {
         guard !problems.isEmpty else { return DoctorFinding(id: "schedules", level: .ok, text: "schedules are fine") }
         return DoctorFinding(id: "schedules", level: .warn, text: problems.joined(separator: "; "),
                              fix: fixes.isEmpty ? nil : fixes.joined(separator: ", "))
+    }
+
+    /// Session-only jobs end with their Claude Code (#458); nothing to say when there are none.
+    static func sessionJobs(_ s: DoctorSnapshot) -> DoctorFinding? {
+        let panes = s.sessionJobs.filter { $0.value > 0 }.sorted { $0.key.localizedStandardCompare($1.key) == .orderedAscending }
+        guard !panes.isEmpty else { return nil }
+        let total = panes.reduce(0) { $0 + $1.value }
+        let list = panes.map { "\($0.key) (\($0.value))" }.joined(separator: ", ")
+        return DoctorFinding(id: "session-jobs", level: .note,
+                             text: (total == 1 ? "1 CronCreate job ends with its session" : "\(total) CronCreate jobs end with their session")
+                                 + ", not moved to schedules: \(list)",
+                             fix: panes.count == 1 ? "cmds schedule from-session --pane \(panes[0].key) --apply"
+                                                   : "cmds schedule from-session --pane P --apply for each")
     }
 
     static func hangs(_ s: DoctorSnapshot) -> DoctorFinding {
