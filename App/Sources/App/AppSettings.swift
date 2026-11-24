@@ -121,10 +121,12 @@ final class AppSettings: NSObject {
     static let bookmarkSourceKey = "BrowserBookmarksSource"
     static let longCommandKey = "LongCommandNotificationSeconds"
     static let confirmedProjectFilesKey = "ConfirmedProjectFiles"
+    static let customShortcutsKey = "CustomShortcuts"
     private static let keys = [terminalFontFamilyKey, terminalFontSizeKey, sidebarTextSizeKey, browserZoomKey, previewZoomKey,
                                showSubagentsKey, showInMenuBarKey, browserInspectableKey, memoryWarningKey,
                                browserOpensTabsKey, chromeBookmarksKey, chromeProfileKey, suspendTabsKey,
-                               bookmarkSourceKey, longCommandKey, confirmedProjectFilesKey] + MenuBarOption.allCases.map(\.rawValue)
+                               bookmarkSourceKey, longCommandKey, confirmedProjectFilesKey,
+                               customShortcutsKey] + MenuBarOption.allCases.map(\.rawValue)
         + SidebarItem.allCases.map(\.rawValue) + assistantKeys
 
     static let fontSizeRange: ClosedRange<Double> = 6...72
@@ -277,6 +279,12 @@ final class AppSettings: NSObject {
     var confirmedProjectFiles: [String: String] {
         get { defaults.dictionary(forKey: Self.confirmedProjectFilesKey) as? [String: String] ?? [:] }
         set { set(newValue.isEmpty ? nil : newValue, forKey: Self.confirmedProjectFilesKey) }
+    }
+
+    /// Menu shortcuts the user changed (`cmds shortcuts set`, #174 G14): item id → `KeyShortcut.spec`, "" for none.
+    var customShortcuts: [String: String] {
+        get { defaults.dictionary(forKey: Self.customShortcutsKey) as? [String: String] ?? [:] }
+        set { set(newValue.isEmpty ? nil : newValue, forKey: Self.customShortcutsKey) }
     }
 
     /// A notification when a command that ran at least this many seconds finishes in a pane you are not looking at

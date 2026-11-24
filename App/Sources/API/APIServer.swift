@@ -312,6 +312,14 @@ final class APIServer {
                 let (path, file) = try controller.projectFile(workspace: workspace)
                 AppSettings.shared.confirmedProjectFiles[path] = file.digest
                 connection.reply(id: id, result: ["path": .string(path)])
+            case "debug.key_equivalent":
+                // Tests only: a key event handed to the main menu (no window brought forward); whether an item took it.
+                do {
+                    let pressed = try MenuShortcuts.debugPress(try params.required("keys"))
+                    connection.reply(id: id, result: ["handled": .bool(pressed.handled), "item": pressed.item.map(JSONValue.string) ?? .null])
+                } catch let error as MenuShortcuts.Failure {
+                    throw RPCError.invalidParams(error.message)
+                }
             case "debug.workspace_env":
                 // Tests only: set a workspace's variables as Save in Workspace › Environment Variables… would.
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))
@@ -541,6 +549,19 @@ final class APIServer {
             return try controller.projectShow(workspaceID: try params.string("workspace"))
         case "project.run":
             return try controller.projectRun(workspaceID: try params.string("workspace"))
+        case "shortcuts.list":
+            return MenuShortcuts.list()
+        case "shortcuts.set":
+            // `keys` absent or null: the default; "": no shortcut.
+            let keys = try params.string("keys")
+            do {
+                return try MenuShortcuts.set(id: try params.required("id"), keys: keys)
+            } catch let error as MenuShortcuts.Failure {
+                throw RPCError.invalidParams(error.message)
+            }
+        case "shortcuts.reset":
+            MenuShortcuts.resetAll()
+            return MenuShortcuts.list()
         case "workspace.env":
             return try controller.workspaceEnvironmentInfo(workspaceID: try params.string("workspace"))
         case "workspace.set_secret":

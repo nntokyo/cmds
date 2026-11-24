@@ -2,7 +2,32 @@
 
 > Every default key equivalent of the Mac app, by menu (source of truth: `App/Sources/Shortcuts/MainMenu.swift`).
 
-Help › Keyboard Shortcuts (⌘?) shows a short version in the app. Shortcuts are not configurable yet.
+Help › Keyboard Shortcuts (⌘?) shows a short version in the app (the defaults). To change them, see
+[Changing shortcuts](#changing-shortcuts).
+
+## Changing shortcuts
+
+Every menu item can get another key, or none, from a terminal:
+
+```sh
+cmds shortcuts                              # the items with a key: key, id, menu (* = changed)
+cmds shortcuts --all                        # also the items without a key
+cmds shortcuts set splitRight ctrl+opt+d    # Pane › Split Right becomes ⌃⌥D
+cmds shortcuts set selectWorkspace-1 ""     # Workspace › Workspace 1 loses ⌘1
+cmds shortcuts reset splitRight             # back to ⌘D
+cmds shortcuts reset                        # every item back to its default
+```
+
+- An item's id is its action (`splitRight`), the same in every language; items sharing one get `-1`, `-2`, … in menu
+  order (`selectWorkspace-1` … `selectWorkspace-9`).
+- Keys are written as modifiers and a key joined by `+`: `cmd`, `shift`, `opt` (`alt`), `ctrl`, then a letter, digit
+  or sign (`cmd+,`, `cmd+plus`), `left` / `right` / `up` / `down`, `return`, `tab`, `space`, `delete`, `escape`,
+  `home` / `end`, `pageup` / `pagedown` or `f1`–`f20`. `⇧⌘D` works too. A key needs ⌘, ⌃ or ⌥ (except F1–F20), as
+  it would otherwise be taken from what you type.
+- A key another item has is refused, naming that item: free it first (`cmds shortcuts set <its id> ""`). The hidden
+  alternates (⌃Tab / ⌃⇧Tab for the next / previous workspace, ⌘+ for Bigger) keep their keys.
+- Changes apply at once and are kept in cmds' settings; the menus show the new keys. Help › Keyboard Shortcuts and
+  this page list the defaults. API: `shortcuts.list`, `shortcuts.set`, `shortcuts.reset`.
 
 ## Workspaces
 
