@@ -234,6 +234,12 @@ final class APIServer {
                 Task { @MainActor in
                     await respond(id, to: connection) { try await self.controller.resumeNotesPreview(paneID: only) }
                 }
+            case "schedule.session_jobs":
+                // A pane's Claude Code session's live CronCreate jobs (#458), for `cmds schedule from-session`; read only.
+                let pane = try params.required("pane")
+                Task { @MainActor in
+                    await respond(id, to: connection) { try await self.controller.sessionJobs(paneID: pane) }
+                }
             #if DEBUG
             case "debug.preview_snapshot":
                 // Tests only: picture of a preview pane even when the window is not on screen.

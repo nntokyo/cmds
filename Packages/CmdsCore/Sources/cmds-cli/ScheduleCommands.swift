@@ -136,6 +136,46 @@ extension CLI {
             if ctx.json { return ctx.printJSON(result) }
             print(Format.deletedSchedules(try perform { try result.decode(DeletedScheduleList.self) }), terminator: "")
         },
+        Command(name: "schedule from-session", usage: "schedule from-session [--pane P] [--apply]",
+                summary: "Move the recurring CronCreate jobs of a pane's Claude Code session to cmds schedules, which outlive restarts.",
+                details: """
+                    Lists the session's live session-only CronCreate jobs (default: this pane's session) and what each
+                    becomes: every N minutes or hours (--every 5m), or weekdays at fixed times; other cron shapes are
+                    listed with why they cannot move. --apply adds one schedule per job that types its prompt into the
+                    pane once the agent is idle (--send PROMPT --to agent, --late next); a job moved before is not
+                    added twice. cmds cannot stop a job inside Claude Code: run the CronDelete it prints in that
+                    session, or the job runs twice.
+                    """,
+                options: ["pane"], flags: ["apply"]) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds schedule from-session [--pane P] [--apply]")
+            guard let pane = ctx.args[option: "pane"] ?? ctx.envPane else {
+                throw CLIError.usage("give --pane (or run it in a cmds terminal)")
+            }
+            let found = try perform { try ctx.call("schedule.session_jobs", ["pane": .string(pane)]).decode(SessionJobs.self) }
+            let list = try perform { try ctx.call("schedule.list").decode(ScheduleList.self) }
+            var plan = SessionJobPlan.make(found, existing: list, now: Date())
+            if ctx.args.has("apply") {
+                for index in plan.indices where plan[index].state == .toAdd {
+                    guard let trigger = plan[index].trigger else { continue }
+                    let draft: [String: JSONValue] = [
+                        "name": .string(SessionJobPlan.name(for: plan[index].job.prompt)),
+                        "trigger": try .from(trigger),
+                        "action": ["type": "sendText", "target": ["pane": .string(found.pane)],
+                                   "text": .string(plan[index].job.prompt), "to": "agent"],
+                        "late": try .from(ScheduleLatePolicy.untilNextRun),
+                    ]
+                    do {
+                        let entry = try ctx.call("schedule.add", ["schedule": .object(draft), "pane": .string(found.pane)])
+                            .decode(ScheduleListEntry.self)
+                        plan[index].state = .added(entry.schedule.id)
+                    } catch let error as CLIError {
+                        plan[index].state = .failed(error.message)
+                    }
+                }
+            }
+            if ctx.json { return ctx.printJSON(try .from(plan.map(\.json))) }
+            print(Format.sessionJobPlan(found, plan, applied: ctx.args.has("apply")), terminator: "")
+        },
         Command(name: "schedule restore", usage: "schedule restore <id>",
                 summary: "Put a deleted schedule back (under a new id if its id is taken).") { ctx in
             try ctx.args.expectPositionals(1...1, usage: "cmds schedule restore <id>")
@@ -717,3 +757,97 @@ extension Format {
         return minutes == 0 ? "\(hours)h" : "\(hours)h\(minutes)m"
     }
 }
+
+/// `schedule.session_jobs`.
+struct SessionJobs: Decodable {
+    struct Job: Decodable, Equatable {
+        var id: String?
+        var cron: String
+        var prompt: String
+    }
+
+    var pane: String
+    var sessionID: String
+    var jobs: [Job]
+}
+
+/// What `cmds schedule from-session` does with each job (#458).
+struct SessionJobPlan: Equatable {
+    enum State: Equatable {
+        case toAdd
+        /// A schedule already types this prompt into the pane (moved before).
+        case moved(String)
+        case unsupported(String)
+        case added(String)
+        case failed(String)
+    }
+
+    var job: SessionJobs.Job
+    var trigger: ScheduleTrigger?
+    var state: State
+
+    static func make(_ found: SessionJobs, existing: ScheduleList, now: Date, timeZone: TimeZone = .current) -> [SessionJobPlan] {
+        found.jobs.map { job in
+            let moved = existing.schedules.first { entry in
+                guard case .sendText(let send) = entry.schedule.action, send.to == .agent else { return false }
+                return entry.targetPane == found.pane && send.text == job.prompt
+            }
+            if let moved { return SessionJobPlan(job: job, trigger: moved.schedule.trigger, state: .moved(moved.schedule.id)) }
+            switch CronConversion.trigger(job.cron, now: now, timeZone: timeZone) {
+            case .success(let trigger): return SessionJobPlan(job: job, trigger: trigger, state: .toAdd)
+            case .failure(let failure): return SessionJobPlan(job: job, trigger: nil, state: .unsupported(failure.description))
+            }
+        }
+    }
+
+    /// The schedule's name: the prompt's first line, shortened.
+    static func name(for prompt: String) -> String {
+        let line = prompt.split(whereSeparator: \.isNewline).first.map(String.init)?.trimmingCharacters(in: .whitespaces) ?? ""
+        let clean = String(line.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) })
+        let short = clean.count > 48 ? String(clean.prefix(47)) + "…" : clean
+        return short.isEmpty ? "Session job" : short
+    }
+
+    var json: JSONValue {
+        var object: [String: JSONValue] = ["cron": .string(job.cron), "prompt": .string(job.prompt)]
+        if let id = job.id { object["id"] = .string(id) }
+        switch state {
+        case .toAdd: object["state"] = "toAdd"
+        case .moved(let id): object["state"] = "moved"; object["schedule"] = .string(id)
+        case .unsupported(let why): object["state"] = "unsupported"; object["reason"] = .string(why)
+        case .added(let id): object["state"] = "added"; object["schedule"] = .string(id)
+        case .failed(let why): object["state"] = "failed"; object["reason"] = .string(why)
+        }
+        return .object(object)
+    }
+}
+
+extension Format {
+    /// One line per job, then what to delete in the session.
+    static func sessionJobPlan(_ found: SessionJobs, _ plan: [SessionJobPlan], applied: Bool, timeZone: TimeZone = .current) -> String {
+        guard !plan.isEmpty else { return "no recurring CronCreate jobs in the session of \(found.pane)\n" }
+        var out = ""
+        for item in plan {
+            var line = "\(item.job.id ?? "?")  \(item.job.cron)  "
+            switch item.state {
+            case .toAdd: line += "→ \(item.trigger.map { scheduleTrigger($0, timeZone: timeZone) } ?? "?")  (with --apply)"
+            case .moved(let id): line += "already moved to \(id)"
+            case .added(let id): line += "→ \(item.trigger.map { scheduleTrigger($0, timeZone: timeZone) } ?? "?")  added \(id)"
+            case .unsupported(let why): line += "cannot move: \(why)"
+            case .failed(let why): line += "not added: \(why)"
+            }
+            out += line + "  “" + short(item.job.prompt) + "”\n"
+        }
+        let stop = plan.compactMap { item -> String? in
+            switch item.state { case .added, .moved: return item.job.id; default: return nil }
+        }
+        if !stop.isEmpty {
+            out += "In that Claude Code session, CronDelete " + stop.joined(separator: ", ")
+                + " — otherwise each runs twice (cmds cannot stop it).\n"
+        } else if !applied, plan.contains(where: { $0.state == .toAdd }) {
+            out += "Run again with --apply to add the schedules.\n"
+        }
+        return out
+    }
+}
+

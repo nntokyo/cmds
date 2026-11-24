@@ -31,7 +31,7 @@ final class ResumeNoteTests: XCTestCase {
             use("t6", "ScheduleWakeup", #"{"delaySeconds":600,"prompt":"<<autonomous-loop-dynamic>>"}"#, ago: 300),
         ]
         let jobs = ResumeNote.jobs(transcriptLines: lines, now: now)
-        XCTAssertEqual(jobs, [ResumeNote.Job(kind: .cron("3-58/5 * * * *"), prompt: "run PROCESS.md"),
+        XCTAssertEqual(jobs, [ResumeNote.Job(kind: .cron("3-58/5 * * * *"), prompt: "run PROCESS.md", id: "89b1ef41"),
                               ResumeNote.Job(kind: .loop, prompt: "<<autonomous-loop-dynamic>>")],
                        "cancelled, expired and durable jobs are left out")
         let again = lines + [use("t8", "CronCreate", #"{"cron":"3-58/5 * * * *","prompt":"run PROCESS.md"}"#, ago: 600),
@@ -51,7 +51,7 @@ final class ResumeNoteTests: XCTestCase {
         XCTAssertTrue(withJobs.hasPrefix("cmds moved this session to the Claude account “ryo” because “info” hit its limit."), withJobs)
         XCTAssertTrue(withJobs.contains("`3-58/5 * * * *`: “run PROCESS.md”"), withJobs)
         XCTAssertTrue(withJobs.contains("ScheduleWakeup"))
-        XCTAssertTrue(withJobs.contains("cmds schedule add --name NAME --every 5m --send PROMPT --to agent"), withJobs)
+        XCTAssertTrue(withJobs.contains("cmds schedule from-session --apply"), withJobs)
         XCTAssertFalse(withJobs.contains("\n"), "one line")
         XCTAssertNotNil(ResumeNote.prompt(reason: .restart, cutOff: false, jobs: jobs), "idle, but its jobs are gone")
     }

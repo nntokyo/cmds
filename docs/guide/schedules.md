@@ -44,6 +44,9 @@ cmds schedule add --name "Codex goes on" --after-codex-limit --repeat --send con
 # Every 5 minutes: tell the agent in this pane to look at its queue (it outlives restarts, unlike CronCreate).
 cmds schedule add --name "Queue" --every 5m --send "Check the queue and handle what is new" --to agent
 
+# Move this session's CronCreate jobs to schedules (see "Moving a session's CronCreate jobs" below).
+cmds schedule from-session --apply
+
 # Weekdays at 18:00: run the tests in the "API" workspace's terminal, if its shell is free.
 cmds schedule add --name "Evening tests" --every weekdays --time 18:00 --send "make test" --to shell --workspace API
 ```
@@ -53,6 +56,23 @@ cmds schedule add --name "Evening tests" --every weekdays --time 18:00 --send "m
 When Claude Code hits its limit and no other account is free, the bar in the pane offers **Continue at 15:01**
 (and the notification **Continue When It Resets**): it adds a schedule that types `continue` into the session one
 minute after the account's reset. The sidebar says when.
+
+### Moving a session's CronCreate jobs
+
+Jobs a Claude Code session makes with `CronCreate` live only in that Claude Code: a restart of cmds or Claude Code, or
+an account switch, ends them. `cmds schedule from-session` (in the session's pane, or `--pane P`) lists the session's
+live recurring jobs and what each becomes; `--apply` adds one schedule per job that pastes its prompt into the pane
+once the agent is idle (**Type into a pane** as an agent prompt, **Run when the Mac is back, until the next time**).
+
+| Cron | Becomes |
+|---|---|
+| `*/5 * * * *`, `3-58/5 * * * *`, `7/15 * * * *` (every N minutes, N divides an hour, at least 5) | Every N minutes, keeping the offset (`3-58/5`: :03, :08 …) |
+| `0 * * * *`, `30 */2 * * *` (every N hours at one minute, N divides a day) | Every N hours |
+| `0 9 * * 1-5`, `0,30 9,13 * * *` (fixed minutes and hours, any weekdays) | Weekly at those times |
+| Anything with a day of month or a month, more often than every 5 minutes, or uneven steps | Not moved; the reason is shown |
+
+A job moved before (a schedule already types the same prompt into that pane) is not added again. cmds cannot stop a
+job inside Claude Code: run the `CronDelete <id>` it prints in that session, or the prompt arrives twice.
 
 ## Safety
 
