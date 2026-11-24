@@ -7,77 +7,42 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.33.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.33.0</link>
-      <sparkle:version>51</sparkle:version>
-      <sparkle:shortVersionString>0.33.0</sparkle:shortVersionString>
+      <title>cmds 0.34.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.34.0</link>
+      <sparkle:version>52</sparkle:version>
+      <sparkle:shortVersionString>0.34.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Tue, 24 Nov 2026 03:13:52 GMT</pubDate>
+      <pubDate>Tue, 24 Nov 2026 20:07:36 GMT</pubDate>
       <description><![CDATA[
 <h3>新機能</h3>
 <ul>
-<li>エージェントが止まらないように：アカウントの上限で切り替えたあとと、cmds の再起動のあと（作業の途中だった場合）、再開した Claude Code に「続けて」を送ります。セッション内で予定していた定時の実行（<code>CronCreate</code>・<code>/loop</code>）が消えた場合は、その予定を入れ直すよう伝えます。</li>
-<li>ブラウザのログインはワークスペースごとに：これから作るワークスペースでは、そのワークスペース専用のログインのプロファイルを使います（既存のワークスペースは今のログインのまま）。共有のログインで X・Amazon などを開くと注意を出します。</li>
-<li>エージェントが操作しているブラウザのペインは、画面に出ていなくても描画を続けます（X が空白になる問題の解消）。</li>
-<li>エージェントがページにファイルを渡せます（<code>cmds browser upload</code>・MCP <code>browser_upload</code>）。自分のターミナルが開いたペインだけで、秘密のファイル（<code>~/.ssh</code>・<code>.env</code>・鍵など）は拒否し、毎回記録して表示します。</li>
-<li>再起動後に各セッションへ送る内容の確認：<code>cmds sessions --notes</code>。</li>
-<li>コマンドの終了を待つ：<code>cmds wait</code> と MCP <code>terminal_wait</code>。</li>
-<li>cmds が固まったときの記録：メインスレッドが30秒止まると全スレッドのサンプルを保存し、<code>cmds ping</code> は「動いているが応答しない」と答えます。</li>
-<li>スケジュール：「Mac が戻ったら実行（次の予定時刻まで）」（<code>--late next</code>）、実行されなかった理由（スリープ中／cmds が起動していなかった）と通知の「今すぐ実行」。</li>
-<li>Point at Element（⇧⌘C）：ページの要素をクリックして指摘を書くと、エージェントにソースの位置付きで届きます。エージェントからも頼めます（<code>browser_point</code>）。</li>
-<li>ブラウザのネットワーク要求の一覧（<code>cmds browser network</code>・MCP <code>browser_network</code>）。</li>
-<li>サイドバー：変更数と先行・遅れ（<code>±3 ↑1 ↓2</code>）、プルリクエストとチェックの状態、別のワークツリーとの変更ファイルの重なり（<code>⚠︎N</code>）、進み具合のバー、通知の重要度（成功・警告・エラーの色と記号）。</li>
-<li>時間のかかったコマンドが終わったら通知、全ターミナルの検索（⇧⌘F）、メニューのショートカットの変更（<code>cmds shortcuts</code>）。</li>
-<li>ワークスペースの環境変数（秘密は Keychain に）、プロジェクトのコマンド（<code>.cmds.json</code>、初回は確認）。</li>
-<li>SSH のペイン：サーバーの <code>localhost</code> の開発サーバーを、ポートフォワード経由でブラウザのペインに開きます。</li>
-<li>iPhone・iPad：ワークスペース一覧に変更数・プルリクエスト・通知の重要度、Mac でしか開けないページを Mac が撮った画像で表示（iPhone 側は次のアプリの更新で）。</li>
+<li>セッション内の定期ジョブを cmds のスケジュールへ：N 分・N 時間ごとに繰り返すスケジュール（<code>cmds schedule add --every 5m</code>、編集画面の「繰り返し」、5分〜7日）。Claude Code の <code>CronCreate</code> のジョブと違い、cmds や Claude Code を再起動しても、アカウントを切り替えても残ります。たとえば <code>cmds schedule add --name "管理" --every 5m --send "いつもの指示" --to agent</code> で、そのペインのエージェントに5分ごとに指示を渡せます。スリープ中に過ぎた分は戻ったときに1回だけ実行し、エージェントが作業中で見送った回は通知せず履歴にだけ残します。今あるジョブは <code>cmds schedule from-session --apply</code> でまとめて移せます（cron の書き方から「N 分ごと」「曜日と時刻」に変換し、移せないものは理由を表示。移したあとはセッション側で <code>CronDelete</code> します）。再開したセッションへの「消えたジョブを入れ直して」という案内にも、この方法を書き添えます。</li>
+<li><code>cmds doctor</code>：動いている cmds の不調を一覧で確かめられます（再起動待ちの更新、再開とログイン時の起動の設定、動かないスケジュールや読めずに外れたスケジュール、24時間以内の固まり、メモリの逼迫、Bluetooth 同期の失敗、スケジュールに移していない CronCreate のジョブ）。注意があると終了コード 1 を返すので、定期の確認に使えます。</li>
+<li>ログイン時に cmds を開く（設定 › エージェント、<code>cmds launch-at-login on</code>、既定はオフ）：Mac が再起動しても cmds が自動で開き、「常に再開」と合わせると、だれも開かなくてもエージェントとスケジュールが続きます。</li>
+<li>削除したスケジュールを30日間残します（<code>cmds schedule deleted</code>・<code>cmds schedule restore</code>）。読み込めずに外れたスケジュールも、フォルダやプロンプトごと残ります。</li>
 </ul>
 <h3>修正</h3>
 <ul>
-<li>スケジュールの「続ける」が、続けるべきセッション自身を「エージェントが動いている」として飛ばすことがあった問題。</li>
-<li>サーバー上の <code>cmds-remote.sh</code>（版2）、2つ目の cmds の中のターミナルでの <code>cmds</code>、日本語の「しない」の表記など。</li>
+<li>スケジュールの編集画面：1時間未満の繰り返しでは「1分前に通知」を選べないように（通知しないため）。</li>
+<li>設定 › エージェントの「サブエージェントの表示」「MCP サーバー」のあとのコロンを全角に。</li>
 </ul>
 <h3>Added</h3>
 <ul>
-<li><code>cmds sessions --notes</code> shows what each remembered Claude Code session would be told after a restart (continue, scheduled jobs to create again).</li>
-<li>After an account switch, the resumed Claude Code is told to continue where it left off (it used to wait for someone to type), and after a switch or a restart a session whose scheduled jobs (<code>CronCreate</code>, a <code>/loop</code>) died with the old process is told to create them again, with their schedules and prompts read from its transcript.</li>
-<li>Resume Always: an agent that was working when cmds quit (for example for an update) is told to continue once it is resumed and idle, so its task goes on without anyone typing "continue"; idle agents are only resumed. Also on the first launch after an update: a session saved without the mark is judged from its Claude Code transcript's last turn; <code>cmds sessions</code> shows "(cut off while working)".</li>
-<li>Browser sign-ins are kept per workspace: a workspace created from now on gets its own login profile for the browser panes opened in it, unless one was chosen (Settings › General › Browser › Separate sign-ins per workspace, on). Existing workspaces keep the profile they used, so nothing has to be signed in again; one switches only when asked. A page in the shared data on a site signed in there (X, Amazon, GitHub, Google, note…) shows a notice with <strong>Use This Workspace's Profile</strong>, and agents get a warning, so no workspace acts as another's account</li>
-<li>Browser panes: agents can give files to a page, into a file field as if chosen or dropped on a drop zone (<code>cmds browser upload</code>, MCP <code>browser_upload</code>). Only into a browser pane their terminal opened, never from where secrets are kept (<code>~/.ssh</code>, <code>~/.aws</code>, <code>~/.claude*</code>, <code>.env</code>, keys, credentials, <code>.git</code>), and every upload is noted in <code>uploads.log</code> and shown in the sidebar.</li>
-<li>Hangs are recorded: when cmds' main thread stops answering for 30 s, a sample of every thread goes to <code>&lt;support dir&gt;/hangs</code> (with <code>hangs.log</code>), and meanwhile <code>cmds ping</code> says "running but not responding" instead of timing out.</li>
-<li>Schedules: a missed run says why, "the Mac was asleep" or "cmds was not running", and its notification has <strong>Run Now</strong>.</li>
-<li>Schedules: <strong>Run when the Mac is back, until the next time</strong> (<code>--late next</code>): a weekly schedule whose time passed while the Mac slept runs once when it wakes, as long as its next time has not come, so a morning report is not lost and never runs twice.</li>
-<li>Waiting for a command in a terminal pane: <code>cmds wait</code> (exits with the command's exit code) and MCP <code>terminal_wait</code> (exit code, duration and the last lines) wait until the command typed into a pane finishes, from the shell integration, so agents no longer read the pane over and over; panes report their <code>lastCommand</code>.</li>
-<li>iPhone and iPad: a browser pane showing a page only the Mac can load (its localhost) shows a picture the Mac takes, as the pane shows it or at iPhone, iPad and desktop sizes (loaded again off screen on the Mac), to check a dev server's layouts from the phone.</li>
-<li>iPhone and iPad: the workspace list shows changes and commits ahead / behind, the pull request and its checks, files another worktree changed too, and notification text in its level's colour and symbol, as the Mac's sidebar.</li>
-<li>SSH panes: ⌘-click on the server's <code>http://localhost:5173</code> opens the page in a browser pane through a port forward you started (<code>ssh -L</code>, or <code>LocalForward</code>), never this Mac's own localhost; without one the sidebar shows the <code>ssh -N -L</code> command to start.</li>
-<li>Menu shortcuts can be changed: <code>cmds shortcuts</code> lists them, <code>cmds shortcuts set splitRight ctrl+opt+d</code> gives an item another key (<code>""</code> none) and <code>reset</code> brings back the defaults. A key another item has is refused; changes apply at once and are kept.</li>
-<li>Notification levels: sidebar text is green with <code>✓</code> for a success, orange with <code>⚠︎</code> for a warning and red with <code>✗</code> for an error, whose pane ring is red too. A long command that failed is an error and one that succeeded a success; <code>cmds notify --level</code>, <code>cmds status --level</code> and MCP <code>set_status</code> choose one.</li>
-<li>Workspace › Environment Variables…: variables for the terminals opened in a workspace, saved with the session. Secrets stay in the Keychain (<code>cmds env secret NAME</code>), referenced as <code>keychain:service/account</code> and read when a terminal opens, never with a Keychain dialog.</li>
-<li>Project commands: a <code>.cmds.json</code> lists a project's commands (dev server, test watcher) and pages; Workspace › Run Project Commands opens them in terminals and a browser, after showing a new or changed file; <code>cmds project show|run</code> for scripts and agents runs only a confirmed one.</li>
-<li>Sidebar: the branch's pull request and its checks from your GitHub CLI (<code>#405 ✓</code>, <code>✗</code>, <code>●</code>, <code>merged</code>), asked at most every 2 minutes per branch in GitHub repositories (Settings › Sidebar › Pull request and checks; #406).</li>
-<li>Edit › Find › Find in All Terminals… (⇧⌘F): the lines of every terminal's scrollback that contain the text, with their workspace and pane; Return shows the pane with its find bar.</li>
-<li>A command that ran 30 s or more (Settings › General › Notify when a command finishes: 10 s to 5 minutes, or never) and ends in a pane you are not looking at lights the pane and notifies, saying when it failed (shell integration).</li>
-<li>Sidebar: a thin progress bar under a workspace while a program in it reports progress (OSC 9;4): the percent done, red on failure, sliding while unknown; also <code>progress</code> in the API's pane info.</li>
-<li>Sidebar: after a local workspace's branch, <code>±3 ↑1 ↓2</code> shows uncommitted paths (orange) and commits ahead / behind the upstream, with a tooltip; also <code>gitSummary</code> in the API's workspace info.</li>
-<li>Sidebar: <code>⚠︎N</code> (red) when another worktree of the same repository changed some of the same files, with the other workspaces and the files in the tooltip, so agents in separate worktrees can be stopped before their branches conflict; also <code>gitOverlaps</code> in the API's workspace info.</li>
-<li>Network requests of browser panes: <code>cmds browser network</code> and MCP <code>browser_network</code> list the page's fetch and XHR calls with method, status, duration, size and failure (<code>--failed</code> for failing API calls; <code>--resources</code> adds scripts, styles, images and the document), recorded from the start of each page.</li>
-<li>Agents can ask you to point at an element: MCP <code>browser_point</code> and <code>cmds browser point --prompt "…"</code> show the request in the browser pane and return the element you click (selector, box, styles, components, source line).</li>
-<li>Point at Element (⇧⌘C, the scope button in the browser toolbar): click an element of the page, write what is wrong with it, and the agent in the terminal gets your words with the element's selector, box, styles, the component and source line when the dev build tells them (React, including React 19 through the dev server's source maps; Vue, Svelte, Angular, Astro, react-dev-inspector) and a screenshot with the element outlined in <code>.cmds/reports/</code>. An agent asking a question, or no agent, gets nothing typed: the report goes to the clipboard. Elements inside same-origin iframes (Storybook's preview) and in any frame of the responsive view (named in the report) are picked themselves. The pane's notice then follows the report: working, asking, finished (with the first line of the reply), with Show Terminal. Idea from FixKit (github.com/ostiums/fixkit).</li>
+<li>Session jobs can move to cmds: schedules that repeat every N minutes or hours (<code>cmds schedule add --every 5m</code>, <strong>Repeatedly</strong> in the editor; 5 minutes to 7 days). Unlike a Claude Code <code>CronCreate</code> job they outlive restarts of cmds and Claude Code and account switches; for example <code>cmds schedule add --name "Queue" --every 5m --send "Check the queue" --to agent</code> gives this pane's agent a prompt every 5 minutes. A time missed while the Mac slept runs once when it is back; a run skipped because the agent was busy only goes into the history. Existing jobs move in one step with <code>cmds schedule from-session --apply</code> (cron converted to every N minutes/hours or weekday times; others listed with why; then <code>CronDelete</code> them in the session). A resumed session told to recreate its lost CronCreate jobs is pointed at this too.</li>
+<li><code>cmds doctor</code>: what is degraded in the running cmds, with what to do (an update waiting for a restart, Resume and Open at login settings, schedules that cannot run or were dropped, hangs in the last 24 h, memory pressure, Bluetooth sync failing, CronCreate jobs not moved to schedules yet). Exits 1 when a check warns.</li>
+<li>Open cmds at login (Settings › Agents, <code>cmds launch-at-login on</code>; off by default): after the Mac restarts cmds opens by itself, so with Resume Always agents and schedules continue without anyone opening it.</li>
+<li>Recently deleted schedules: removed ones, and ones dropped because <code>schedules.json</code> had them broken, are kept for 30 days with their folder and prompt (<code>cmds schedule deleted</code>, <code>cmds schedule restore</code>).</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>Browser panes an agent works on keep rendering when they are not on screen (cmds behind other windows, another workspace shown, a background tab, the display asleep): pages such as X no longer draw nothing, and agents no longer need to switch the shown workspace.</li>
-<li>Schedules: "Continue" (also Continue When It Resets) no longer skips with "an agent was running in the pane" when that agent is the session to continue and its status line had gone quiet; the prompt is pasted into it.</li>
-<li>Japanese: "Never" in Settings › General › Suspend background tabs and in a schedule's notifications read "再開しない" (do not resume); it is "しない".</li>
-<li><code>cmds-remote.sh</code> (version 2) on macOS servers: a hook, notification or command could fail with "app not reachable" when the app answered and closed the connection before the script finished sending (python3 transport, ENOTCONN).</li>
-<li>In terminals of a second copy of cmds (a newer download, a Debug build), <code>cmds</code>, its hooks and <code>cmds mcp</code> ran the installed CLI of <code>/Applications/cmds.app</code>, which login shells put first on <code>PATH</code>; the CLI now hands off to the app's own (<code>CMDS_CLI_PATH</code>). Takes effect once the installed CLI has this change.</li>
+<li>Schedule editor: the "Notify 1 minute before" box is off for an interval under an hour, which gets no notice.</li>
+<li>Settings › Agents (Japanese): full-width colons after two labels.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.33.0/cmds-0.33.0.dmg" length="18538956" type="application/octet-stream" sparkle:edSignature="hbp7K6pUFHk+SzLt0vl/MMmQm6H07FMg1J0SQ7CWFm91WckL96C2kap9DsokBFB5J86U+hMc9OejMVrOAjMSDw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.34.0/cmds-0.34.0.dmg" length="18558248" type="application/octet-stream" sparkle:edSignature="VgbEdEZUHxEFTJBcWdphZZ4XFzyRYy+2sdBgTcHOhSFvrLY5Bem5I1Ee3HGUSuGcestD4+BuOnm5wAc4tuu4CQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: AJf9saLzZzp8D9BVr/LYk9xuYRki/f8cf8SXhyiWBpNW/xcRtcJpCiBhbvmjvwOzuJaIKXqXfKtf2G5Z0+jlBQ==
-length: 14570
+edSignature: azf5GgfHtBQkJvo7R3VStaP1PQTKugNTq88vxQ1W4kB/rDJORd4HIU/yoClfUWmokDACr0AQQz8IBEpZhzqnDA==
+length: 5792
 -->
