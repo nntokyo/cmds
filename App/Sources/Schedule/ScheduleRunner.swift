@@ -232,7 +232,7 @@ final class ScheduleRunner {
             // "Until the next time" (weekly): the latest time that passed is the one to catch up, and its next one
             // decides (limit triggers have no later time known).
             var nextSlot: Date?
-            if case .untilNextRun = schedule.late, case .weekly = schedule.trigger, due <= now {
+            if case .untilNextRun = schedule.late, schedule.trigger.hasFixedTimes, due <= now {
                 (due, nextSlot) = ScheduleCatchUp.latestPassed(due, now: now) {
                     ScheduleCalendar.nextFire(schedule.trigger, after: $0, accounts: [])
                 }
@@ -591,6 +591,8 @@ final class ScheduleRunner {
     func notify(_ run: ScheduleRun, schedule: Schedule?) {
         let policy = schedule?.notify ?? .failures
         guard policy != .never else { return }
+        // An interval comes round again soon: a skipped (agent busy) or missed run is only in the history.
+        if case .interval? = schedule?.trigger, run.state == .skipped || run.state == .missed { return }
         let title = String(localized: "Schedule “\(run.scheduleName)”")
         if run.state.isProblem {
             let body = ScheduleText.outcome(run)

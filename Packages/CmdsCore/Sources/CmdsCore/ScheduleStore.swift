@@ -10,7 +10,7 @@ import Foundation
 /// higher version than `currentVersion` read only (shown, never run or saved over), so a phase-1 build never runs a
 /// repeating trigger as a one-shot or drops a `sendText` schedule.
 public struct ScheduleFile: Codable, Equatable, Sendable {
-    public static let currentVersion = 2
+    public static let currentVersion = 3
 
     public var version: Int
     public var schedules: [Schedule]

@@ -386,7 +386,8 @@ CLI `cmds-cli/ScheduleCommands.swift`. Behaviour: [guide/schedules.md](../guide/
   dropped, not the file; each dropped element is kept as it was, with why, in `schedules-deleted.json`
   (`ScheduleTrash`, ScheduleRunner+Trash.swift, #449), as is every removed schedule (with `removedBy`): 30 days, at
   most 100, newest first; `schedule.deleted` / `schedule.restore`. The version written is the lowest that runs every schedule (`Schedule.requiredVersion`):
-  1 for phase-1 schedules, 2 once one uses `sendText`, Codex, `codexLimitReset` or `repeats`, so an older cmds opens
+  1 for phase-1 schedules, 2 once one uses `sendText`, Codex, `codexLimitReset` or `repeats`, 3 once one uses an
+  `interval` trigger (#456), so an older cmds opens
   such a file read only instead of running a repeating trigger once or dropping what it cannot decode.
   `schedule-runs.json` stays at version 1 (unknown reason codes decode as `other`).
 - **Pane tags**: a `sendText` target or a `continueSession` pane given as a pane id becomes that pane's

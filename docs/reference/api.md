@@ -238,7 +238,8 @@ The Swift definitions are in `Packages/CmdsCore/Sources/CmdsCore` (`Models.swift
   `{"type": "weekly", "weekdays": ["mon"…"sun"], "times": ["09:00"], "timeZone"?}` (no zone: the Mac's),
   `{"type": "limitReset", "account", "delay", "repeats"?}` (seconds, 0–3600; `repeats`: every time a limit of the
   account resets, else once), `{"type": "codexLimitReset", "delay", "repeats"?}` (Codex's limit: the latest reset of
-  a window at 100 % in its session files). `action`: `{"type": "startWorkspace", "cwd", "title"?, "account"?` (name or
+  a window at 100 % in its session files), `{"type": "interval", "every", "from"}` (seconds, 300–604800; fires at
+  `from + k × every`; files with one are version 3). `action`: `{"type": "startWorkspace", "cwd", "title"?, "account"?` (name or
   `auto`), `"command"?, "prompt"?}`; `{"type": "continueSession", "agent": "claude"|"codex", "sessionID", "cwd"?,
   "account"?, "prompt", "pane"?, "paneTag"?}` (`pane`, input only: the pane to use when several hold the session,
   stored as that pane's tag `paneTag`; without it, or when that pane no longer holds the session, such a run is skipped

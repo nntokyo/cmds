@@ -86,7 +86,16 @@ enum ScheduleStrings {
         case .codexLimitReset(let delay, let repeats):
             let base = repeats ? String(localized: "Every time Codex resets") : String(localized: "When Codex resets")
             return limitText(base, reset: reset.map { time($0, now: now) }, delay: delay)
+        case .interval(let every, _):
+            return interval(every)
         }
+    }
+
+    /// `Every 5 min`, `Every 2 h`, `Every 90 min`.
+    static func interval(_ every: TimeInterval) -> String {
+        let minutes = Int((every / 60).rounded())
+        if minutes >= 60, minutes % 60 == 0 { return String(localized: "Every \(minutes / 60) h", comment: "schedule trigger: an interval in hours") }
+        return String(localized: "Every \(minutes) min", comment: "schedule trigger: an interval in minutes")
     }
 
     /// `When “work” resets (15:00) + 1 min`.

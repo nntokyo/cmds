@@ -21,6 +21,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     private let zoneBox = NSComboBox()
     private let limitAccountPopup = NSPopUpButton()
     private let delayField = NSTextField()
+    /// `interval`: minutes between runs.
+    private let intervalField = NSTextField()
     private let repeatBox = NSButton(checkboxWithTitle: String(localized: "Every time it resets"), target: nil, action: nil)
     private let actionPopup = NSPopUpButton()
     private let folderField = NSTextField()
@@ -44,6 +46,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     private var onceRows: [NSGridRow] = []
     private var weeklyRows: [NSGridRow] = []
     private var limitRows: [NSGridRow] = []
+    private var intervalRows: [NSGridRow] = []
     private var limitAccountRow: NSGridRow?
     private var startRows: [NSGridRow] = []
     private var continueRows: [NSGridRow] = []
@@ -53,7 +56,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     /// Targets offered in the target popup, by item index; nil = the workspace title typed next to it.
     private var targets: [PaneTarget?] = []
 
-    private enum TriggerKind: Int { case once, weekly, limit, codexLimit }
+    private enum TriggerKind: Int { case once, weekly, limit, codexLimit, interval }
     private enum ActionKind: Int { case start, resume, send }
 
     init(schedule: Schedule?) {
@@ -81,7 +84,8 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
     private func buildContent() {
         triggerPopup.addItems(withTitles: [String(localized: "Once"), String(localized: "Weekly"),
                                            String(localized: "When an account’s limit resets"),
-                                           String(localized: "When Codex’s limit resets")])
+                                           String(localized: "When Codex’s limit resets"),
+                                           String(localized: "Repeatedly", comment: "schedule editor trigger: every N minutes")])
         datePicker.datePickerElements = [.yearMonthDay, .hourMinute]
         datePicker.datePickerStyle = .textFieldAndStepper
         datePicker.dateValue = Date().addingTimeInterval(3600)
@@ -104,6 +108,9 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         let delayRow = NSStackView(views: [delayField, NSTextField(labelWithString: String(localized: "minutes after the reset")),
                                            repeatBox])
         delayRow.spacing = 6
+        intervalField.placeholderString = "30"
+        let intervalRow = NSStackView(views: [intervalField, NSTextField(labelWithString: String(localized: "minutes (5 to 10080)", comment: "schedule editor: interval unit"))])
+        intervalRow.spacing = 6
 
         actionPopup.addItems(withTitles: [String(localized: "Start a workspace"), String(localized: "Continue an agent session"),
                                           String(localized: "Type into a pane")])
@@ -152,13 +159,13 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         datePicker.target = self
         datePicker.action = #selector(changed)
         for field in [nameField, timesField, delayField, folderField, titleField, commandField, continuePromptField, lateField,
-                      targetTitleField, sendTextField] {
+                      targetTitleField, sendTextField, intervalField] {
             field.delegate = self
         }
         zoneBox.target = self
         zoneBox.action = #selector(changed)
         zoneBox.delegate = self
-        for field in [delayField, lateField] { field.widthAnchor.constraint(equalToConstant: 60).isActive = true }
+        for field in [delayField, lateField, intervalField] { field.widthAnchor.constraint(equalToConstant: 60).isActive = true }
         for field in [nameField, timesField, folderField, titleField, commandField, continuePromptField, sendTextField] {
             field.widthAnchor.constraint(greaterThanOrEqualToConstant: 300).isActive = true
         }
@@ -178,6 +185,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             [Self.label(String(localized: "Account:")), limitAccountPopup],
             [Self.label(String(localized: "Delay:")), delayRow],
         ]
+        let intervalSection = [[Self.label(String(localized: "Every:", comment: "schedule editor: interval")), intervalRow]]
         let actionSection = [[Self.label(String(localized: "Action:")), actionPopup]]
         let startSection = [
             [Self.label(String(localized: "Folder:")), folderRow],
@@ -209,6 +217,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         _ = add(nameSection)
         let triggerIndex = add(triggerSection).lowerBound
         let onceIndices = add(onceSection), weeklyIndices = add(weeklySection), limitIndices = add(limitSection)
+        let intervalIndices = add(intervalSection)
         let actionIndex = add(actionSection).lowerBound
         let startIndices = add(startSection), resumeIndices = add(resumeSection), sendIndices = add(sendSection)
         let lateIndex = add(lateSection).lowerBound
@@ -220,6 +229,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         onceRows = onceIndices.map(grid.row(at:))
         weeklyRows = weeklyIndices.map(grid.row(at:))
         limitRows = limitIndices.map(grid.row(at:))
+        intervalRows = intervalIndices.map(grid.row(at:))
         limitAccountRow = grid.row(at: limitIndices.lowerBound)
         sendRows = sendIndices.map(grid.row(at:))
         startRows = startIndices.map(grid.row(at:))
@@ -336,6 +346,9 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
             triggerPopup.selectItem(at: TriggerKind.codexLimit.rawValue)
             delayField.stringValue = ScheduleLatePolicy.minutesText(delay)
             repeatBox.state = repeats ? .on : .off
+        case .interval(let every, _)?:
+            triggerPopup.selectItem(at: TriggerKind.interval.rawValue)
+            intervalField.stringValue = ScheduleLatePolicy.minutesText(every)
         case nil:
             triggerPopup.selectItem(at: TriggerKind.once.rawValue)
             for (day, box) in dayBoxes { box.state = Weekday.workdays.contains(day) ? .on : .off }
@@ -481,6 +494,15 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
                 return nil
             }
             return .limitReset(account: account, delay: max(0, minutes) * 60, repeats: repeats)
+        case .interval:
+            guard let minutes = Double(intervalField.stringValue.trimmingCharacters(in: .whitespaces)), minutes.isFinite else {
+                problems.append(.intervalOutOfRange)
+                return nil
+            }
+            let every = minutes * 60
+            // The same interval keeps its times; a new one counts from midnight (or now).
+            if case .interval(let old, let from)? = original?.trigger, old == every { return .interval(every: every, from: from) }
+            return .interval(every: every, from: ScheduleCalendar.intervalStart(every: every, now: Date()))
         }
     }
 
@@ -527,6 +549,7 @@ final class ScheduleEditorController: NSWindowController, NSTextFieldDelegate, N
         onceRows.forEach { $0.isHidden = triggerKind != .once }
         weeklyRows.forEach { $0.isHidden = triggerKind != .weekly }
         limitRows.forEach { $0.isHidden = triggerKind != .limit && triggerKind != .codexLimit }
+        intervalRows.forEach { $0.isHidden = triggerKind != .interval }
         limitAccountRow?.isHidden = triggerKind != .limit
         startRows.forEach { $0.isHidden = actionKind != .start }
         continueRows.forEach { $0.isHidden = actionKind != .resume }

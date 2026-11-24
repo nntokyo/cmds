@@ -25,7 +25,27 @@ public enum ScheduleCalendar {
         case .codexLimitReset(let delay, let repeats):
             guard let codex else { return nil }
             return limitFire(reset: codex.exhaustedReset, delay: delay, repeats: repeats, after: date)
+        case .interval(let every, let from):
+            return nextInterval(every: every, from: from, after: date)
         }
+    }
+
+    /// Where a new interval counts from: local midnight today when the interval divides a day (so 5 minutes runs at
+    /// :00, :05 …, 2 hours at 00:00, 02:00 …, like cron), else now to the minute.
+    public static func intervalStart(every: TimeInterval, now: Date, timeZone: TimeZone = .current) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let seconds = Int(every.rounded())
+        if seconds > 0, 86400 % seconds == 0 { return calendar.startOfDay(for: now) }
+        return Date(timeIntervalSince1970: (now.timeIntervalSince1970 / 60).rounded(.down) * 60)
+    }
+
+    /// The first `from + k × every` (k ≥ 0) after `date`; nil for an interval that is not positive.
+    public static func nextInterval(every: TimeInterval, from: Date, after date: Date) -> Date? {
+        guard every > 0 else { return nil }
+        guard date >= from else { return from }
+        let steps = (date.timeIntervalSince(from) / every).rounded(.down) + 1
+        return from.addingTimeInterval(steps * every)
     }
 
     private static func limitFire(reset: Date?, delay: TimeInterval, repeats: Bool, after date: Date) -> Date? {

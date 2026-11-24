@@ -50,7 +50,9 @@ public enum ResumeNote {
         }
         if !crons.isEmpty {
             parts.append("Your scheduled jobs ended with the old Claude Code process (they lived only in the session): create them again with CronCreate as before ("
-                         + crons.joined(separator: "; ") + "), then check them with CronList.")
+                         + crons.joined(separator: "; ") + "), then check them with CronList. "
+                         + "A job that should outlive restarts can be a cmds schedule instead, which types its prompt into this pane: "
+                         + "`cmds schedule add --name NAME --every 5m --send PROMPT --to agent`.")
         }
         if shown.contains(where: { $0.kind == .loop }) {
             parts.append("Your /loop was waiting for its next wake-up, which is gone: schedule it again with ScheduleWakeup as before.")

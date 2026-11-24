@@ -6,7 +6,7 @@ import Foundation
 extension CLI {
     static let scheduleUsage = """
         schedule add --name NAME TRIGGER ACTION [--late skip|next|MINUTES] [--notify failures|always|never] [--no-warn] [--disabled]
-          TRIGGER  --at "YYYY-MM-DD HH:MM" | --at HH:MM | --in 90m
+          TRIGGER  --at "YYYY-MM-DD HH:MM" | --at HH:MM | --in 90m | --every 5m (5m … 7 days)
                    --every weekdays|daily|weekends|mon,wed,fri --time 09:00[,13:30] [--tz Asia/Tokyo]
                    --after-limit ACCOUNT | --after-codex-limit  [--delay 2m] [--repeat]
           ACTION   --start DIR [--account NAME|auto] [--title T] [--prompt TEXT|-] [-- command…]
@@ -36,7 +36,11 @@ extension CLI {
                 summary: "Add a schedule.",
                 details: scheduleUsage + "\n\n" + """
                     --at is a local date and time (or the next HH:MM); --in a delay (90m, 2h, 1h30m, 45s).
-                    --every runs on those weekdays at each --time (5 minutes apart at least), in --tz or the Mac's zone.
+                    --every runs on those weekdays at each --time (5 minutes apart at least), in --tz or the Mac's zone;
+                    --every 5m (or 30m, 2h, 1h30m) runs at that interval, counted from midnight when it divides a day
+                    (5m: at :00, :05 …), and outlives cmds restarts, unlike a Claude Code CronCreate job. A run missed
+                    while the Mac slept runs once when it is back; a run skipped (agent busy) or missed sends no
+                    notification, and there is no "starts in 1 minute" notice under an hour.
                     --after-limit runs once when the Claude account's current limit resets, plus --delay (default 1m);
                     --after-codex-limit when Codex's limit resets. With --repeat: every time a limit resets.
                     --start opens a new background workspace in DIR (never selected) and types the command at its
@@ -352,8 +356,14 @@ extension CLI {
             let seconds = try parseDuration(delay, option: "in")
             return ["type": "once", "at": .number(now.addingTimeInterval(seconds).timeIntervalSince1970.rounded())]
         }
+        if let every = args[option: "every"], args[option: "time"] == nil, let seconds = try? parseDuration(every, option: "every") {
+            if args[option: "tz"] != nil { throw CLIError.usage("--tz goes with --every DAYS --time HH:MM") }
+            return try .from(ScheduleTrigger.interval(every: seconds, from: ScheduleCalendar.intervalStart(every: seconds, now: now, timeZone: timeZone)))
+        }
         if let every = args[option: "every"] {
-            guard let rawTimes = args[option: "time"] else { throw CLIError.usage("--every needs --time HH:MM[,HH:MM]") }
+            guard let rawTimes = args[option: "time"] else {
+                throw CLIError.usage("--every takes a duration (5m, 2h) or days with --time HH:MM[,HH:MM]")
+            }
             let times = try rawTimes.split(separator: ",").map { raw -> String in
                 guard let time = TimeOfDay(String(raw)) else { throw CLIError.usage("--time expects HH:MM, got \(raw)") }
                 return time.text
@@ -647,6 +657,8 @@ extension Format {
             return limitTrigger(account, delay: delay, repeats: repeats)
         case .codexLimitReset(let delay, let repeats):
             return limitTrigger("Codex", delay: delay, repeats: repeats)
+        case .interval(let every, _):
+            return "every \(duration(every))"
         }
     }
 

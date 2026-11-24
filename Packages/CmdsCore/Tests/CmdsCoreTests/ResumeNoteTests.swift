@@ -51,6 +51,7 @@ final class ResumeNoteTests: XCTestCase {
         XCTAssertTrue(withJobs.hasPrefix("cmds moved this session to the Claude account “ryo” because “info” hit its limit."), withJobs)
         XCTAssertTrue(withJobs.contains("`3-58/5 * * * *`: “run PROCESS.md”"), withJobs)
         XCTAssertTrue(withJobs.contains("ScheduleWakeup"))
+        XCTAssertTrue(withJobs.contains("cmds schedule add --name NAME --every 5m --send PROMPT --to agent"), withJobs)
         XCTAssertFalse(withJobs.contains("\n"), "one line")
         XCTAssertNotNil(ResumeNote.prompt(reason: .restart, cutOff: false, jobs: jobs), "idle, but its jobs are gone")
     }

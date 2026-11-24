@@ -10,6 +10,7 @@ public enum ScheduleProblem: Equatable, Sendable {
     case timesTooClose
     case unknownTimeZone(String)
     case delayOutOfRange
+    case intervalOutOfRange
     case lateOutOfRange
     /// The editor's late field is not a number.
     case lateNotANumber
@@ -42,6 +43,7 @@ public enum ScheduleProblem: Equatable, Sendable {
         case .timesTooClose: return "times of day must be at least \(Int(ScheduleLimits.minTimeGap / 60)) minutes apart"
         case .unknownTimeZone(let zone): return "unknown time zone \(zone)"
         case .delayOutOfRange: return "the delay must be 0 to \(Int(ScheduleLimits.maxDelay / 60)) minutes"
+        case .intervalOutOfRange: return "the interval must be 5 minutes to 7 days"
         case .lateNotANumber: return "give the late window as a number of minutes"
         case .lateOutOfRange: return "a late run must be allowed for 1 minute to \(Int(ScheduleLimits.maxLateWindow / 86400)) days"
         case .accountInvalid(let name): return "\(name) is not a valid account name"
@@ -84,6 +86,8 @@ public enum ScheduleValidation {
             if !(0...ScheduleLimits.maxDelay).contains(delay) { problems.append(.delayOutOfRange) }
         case .codexLimitReset(let delay, _):
             if !(0...ScheduleLimits.maxDelay).contains(delay) { problems.append(.delayOutOfRange) }
+        case .interval(let every, _):
+            if !ScheduleLimits.intervalRange.contains(every) { problems.append(.intervalOutOfRange) }
         }
         if case .runIfWithin(let seconds) = draft.late, !(ScheduleLimits.minLateWindow...ScheduleLimits.maxLateWindow).contains(seconds) {
             problems.append(.lateOutOfRange)
@@ -165,7 +169,7 @@ public enum ScheduleValidation {
         switch draft.trigger {
         case .once(let at):
             if at <= now { problems.append(.onceInPast) }
-        case .weekly:
+        case .weekly, .interval:
             break
         case .limitReset(let account, _, let repeats):
             if ClaudeAccounts.nameProblem(account) == nil {
