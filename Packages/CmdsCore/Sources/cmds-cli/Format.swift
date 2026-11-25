@@ -360,6 +360,44 @@ enum Format {
         return out
     }
 
+    /// `cmds queue list`.
+    static func queue(_ list: PaneQueueList, timeZone: TimeZone = .current) -> String {
+        guard !list.waiting.isEmpty || !list.recent.isEmpty else { return "nothing waits\n" }
+        var out = list.waiting.isEmpty ? "nothing waits\n" : ""
+        for entry in list.waiting {
+            let place = entry.position == 1 ? "next" : "place \(entry.position)"
+            let state = entry.position == 1 ? (entry.hold.map { "waits: \($0.english)" } ?? "being typed") : "behind \(entry.position - 1)"
+            out += "\(entry.id)  \(entry.pane ?? "-")  \(entry.workspaceTitle.map(oneLine) ?? "-")  \(place) · \(state)  \(oneLine(entry.text))\n"
+        }
+        for ended in list.recent {
+            out += "  \(ended.id)  \(ended.pane ?? "-")  \(ended.outcome.rawValue) \(localTime(ended.endedAt, timeZone: timeZone))\n"
+        }
+        return out
+    }
+
+    /// `cmds idle`.
+    static func idlePanes(_ report: IdlePaneReport, timeZone: TimeZone = .current) -> String {
+        guard !report.panes.isEmpty else { return "no pane has been idle for \(report.minutes) min\n" }
+        var out = ""
+        for pane in report.panes {
+            let state = pane.state == "needsInput" ? "asks for input" : "idle"
+            out += "\(pane.pane)  \(oneLine(pane.workspaceTitle))  \(pane.agent ?? "agent")  \(state) \(pane.sinceIsWatchStart ? "≥" : "")\(duration(pane.idleSeconds))"
+                + " (since \(localTime(pane.since, timeZone: timeZone)))"
+                + (pane.queued > 0 ? " · \(pane.queued) kept instruction\(pane.queued == 1 ? "" : "s") waiting" : "") + "\n"
+        }
+        return out
+    }
+
+    /// An ISO 8601 time as `yyyy-MM-dd HH:mm` in `timeZone`; the text itself when it is not one.
+    private static func localTime(_ iso: String, timeZone: TimeZone) -> String {
+        guard let date = ISO8601DateFormatter().date(from: iso) else { return iso }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
+        formatter.dateFormat = "yyyy-MM-dd HH:mm"
+        return formatter.string(from: date)
+    }
+
     private static func duration(_ seconds: Int) -> String {
         if seconds < 60 { return "\(seconds)s" }
         if seconds < 3600 { return "\(seconds / 60)m\(String(format: "%02d", seconds % 60))s" }

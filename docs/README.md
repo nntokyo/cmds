@@ -14,6 +14,7 @@ Overview, requirements and build steps: [project README](../README.md) ([日本�
 | [guide/files.md](guide/files.md) | Files panes: browsing a folder, preview, copy and move between two panes, conflicts, rename, Trash, Follow Terminal, dropping files on a terminal, folders on SSH hosts, the transfer queue |
 | [guide/iphone.md](guide/iphone.md) | The iPhone/iPad companion: pairing (QR or manual), what it shows, local network / Bluetooth / SSH relay, troubleshooting |
 | [guide/schedules.md](guide/schedules.md) | Schedules: start a workspace or continue a Claude Code session at a time, on weekdays or when a limit resets; safety rules, missed runs, history |
+| [guide/queue.md](guide/queue.md) | Kept instructions (`cmds queue`): hand work to a busy agent, typed in when it is free; `cmds idle`: panes with nothing in progress |
 | [guide/ai-agents.md](guide/ai-agents.md) | Claude Code hooks and status line, the MCP server, the cmds skill, Codex, usage and limits, resuming sessions, moving to a new version, agents on servers |
 | [guide/assistant.md](guide/assistant.md) | The voice assistant (macOS 26+, beta): turning it on, what to say in Japanese and English, confirming actions, the HUD, privacy |
 

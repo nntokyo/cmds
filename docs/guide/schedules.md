@@ -81,7 +81,11 @@ A schedule types only where it may, and only once:
 - **Never into a busy agent.** A prompt is pasted only when Claude Code is in the foreground, not working, not
   asking for input or permission (including its numbered choices such as the folder trust question), no subagent is
   running, its screen has not changed for 2 s and shows no working line (`esc to interrupt`), no account switch is in
-  progress and no resume is queued. It waits for up to 30 minutes, then the run fails.
+  progress and no resume is queued. Its input box must be on screen and empty: a dialog (the folder trust question,
+  whose choices carry no numbers) would take Return as its answer, and text you typed there and have not sent would
+  be sent along with the prompt. A placeholder or a suggested prompt in the box does not count as typed text. It
+  waits for up to 30 minutes, then the run fails. (To hand an agent work without a time limit, keep an instruction
+  for its pane: [`cmds queue`](queue.md).)
 - **Codex, more carefully.** Codex tells cmds less (no hooks), so a prompt goes into Codex only when all of these
   hold: Codex is the foreground process; cmds has matched its session file to the pane and the file has not been
   written for 90 seconds (Codex writes to it while it works); the screen has not changed for 5 seconds (its working
