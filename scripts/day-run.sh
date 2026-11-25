@@ -208,7 +208,7 @@ cli schedule add --name "S$G3" --at "$(ahead $((G3 + 1)))" --send "$(ask "S${G3}
   cli queue add --pane "$C" "$(ask "Q${G3}OK")" | awk '{print $1}' > "$dir/q3"
 ) &
 for pair in "$G1:$A:A" "$G2:$B:B" "$G3:$D:D"; do
-  ( g=${pair%%:*}; rest=${pair#*:}; until_time $((T0 + (g + 1) * 60 - 25)); echo "${rest#*:} before S$g: $(idle_of "${rest%%:*}")" >> "$log" ) &
+  ( g=${pair%%:*}; rest=${pair#*:}; until_time $(( (T0 / 60 + g + 1) * 60 - 20 )); echo "${rest#*:} before S$g: $(idle_of "${rest%%:*}")" >> "$log" ) &
 done
 
 until_time $((T0 + (G1 + 1) * 60))
