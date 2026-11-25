@@ -17,7 +17,9 @@ Offline:
 the SHA-256 shown on the pages is the DMG's. --write-download-files DIR then writes latest.json and SHA256SUMS
 (they are not committed; a deploy needs them). --dmg FILE does the same with a local copy of the release DMG and
 needs no network (for when GitHub is unavailable); the date in latest.json then comes from the existing latest.json
-of the same version, else today. Exit status 0 when every check passes, 1 otherwise.
+of the same version, else today. --release --dmg-cache DIR keeps the downloaded DMG in DIR and uses it again while
+its SHA-256 is still the release asset's digest (GitHub API), so CI downloads a release once, not on every run:
+each download adds to the release's public download count. Exit status 0 when every check passes, 1 otherwise.
 """
 import argparse
 import base64
@@ -152,6 +154,44 @@ def fetch(url, dest):
             out.write(chunk)
 
 
+def release_info(version):
+    headers = {"User-Agent": "cmds-site-check", "Accept": "application/vnd.github+json"}
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    url = f"https://api.github.com/repos/{REPO}/releases/tags/v{version}"
+    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as response:
+        return json.load(response)
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as file:
+        while chunk := file.read(1 << 20):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def cached_release_dmg(item, cache_dir):
+    """The release DMG in cache_dir: kept when it is still the release's asset, else downloaded."""
+    name = f"cmds-{item['version']}.dmg"
+    dmg = Path(cache_dir) / name
+    digest = None
+    try:
+        assets = release_info(item["version"]).get("assets", [])
+        digest = next((a.get("digest") for a in assets if a.get("name") == name), None)
+    except (OSError, ValueError) as error:
+        print(f"release asset digest unavailable ({error}); downloading")
+    if digest and dmg.is_file() and f"sha256:{sha256_file(dmg)}" == digest:
+        print(f"release DMG from {dmg} (same digest as the release asset, not downloaded)")
+        return dmg
+    dmg.parent.mkdir(parents=True, exist_ok=True)
+    for old in dmg.parent.glob("cmds-*.dmg"):
+        old.unlink()
+    fetch(item["url"], dmg)
+    return dmg
+
+
 def release_date(version, offline):
     existing = SITE / "download" / "latest.json"
     if offline:
@@ -162,18 +202,14 @@ def release_date(version, offline):
         except (OSError, ValueError, KeyError):
             pass
         return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d")
-    headers = {"User-Agent": "cmds-site-check", "Accept": "application/vnd.github+json"}
-    token = os.environ.get("GITHUB_TOKEN")
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-    url = f"https://api.github.com/repos/{REPO}/releases/tags/v{version}"
-    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=60) as response:
-        return json.load(response)["published_at"][:10]
+    return release_info(version)["published_at"][:10]
 
 
-def check_release(pages, item, key, write_dir, local_dmg=None):
+def check_release(pages, item, key, write_dir, local_dmg=None, cache_dir=None):
     if local_dmg:
         data = Path(local_dmg).read_bytes()
+    elif cache_dir:
+        data = cached_release_dmg(item, cache_dir).read_bytes()
     else:
         with tempfile.TemporaryDirectory() as tmp:
             dmg = Path(tmp) / "cmds.dmg"
@@ -215,9 +251,12 @@ def main():
     parser.add_argument("--release", action="store_true", help="download and check the release DMG")
     parser.add_argument("--dmg", metavar="FILE", help="check this local copy of the release DMG (no network)")
     parser.add_argument("--write-download-files", metavar="DIR", help="with --release or --dmg: write latest.json, SHA256SUMS")
+    parser.add_argument("--dmg-cache", metavar="DIR", help="with --release: keep the DMG in DIR and download it only when the release asset changed")
     args = parser.parse_args()
     if args.write_download_files and not (args.release or args.dmg):
         parser.error("--write-download-files needs --release or --dmg")
+    if args.dmg_cache and not args.release:
+        parser.error("--dmg-cache needs --release")
 
     pages = sorted(p for p in SITE.rglob("*.html"))
     key = public_key()
@@ -226,7 +265,7 @@ def main():
     if item:
         check_pages(pages, item)
         if (args.release or args.dmg) and not failures:
-            check_release(pages, item, key, args.write_download_files, args.dmg)
+            check_release(pages, item, key, args.write_download_files, args.dmg, args.dmg_cache)
     if failures:
         print(f"{len(failures)} problem(s)")
         return 1
