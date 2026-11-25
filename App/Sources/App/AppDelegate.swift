@@ -61,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         AntigravitySetup.noticeIfNeeded()
         // After the restore: a catch-up run may need the session's pane.
         controller.scheduleRunner.start()
+        controller.paneQueue.start()
         // Agents cut off by the quit (Resume Always): told to continue once resumed.
         controller.scheduleRunner.continueAfterRestart()
         // A hung main thread is sampled into <support dir>/hangs, and pings say it is busy.

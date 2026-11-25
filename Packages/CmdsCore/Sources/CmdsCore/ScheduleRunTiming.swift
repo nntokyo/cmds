@@ -8,7 +8,9 @@ import Foundation
 ///   agent on the terminal.
 /// - A prompt goes into Claude Code only when it is idle (`PaneReadiness.isAgentIdle`), into Codex only by the stricter
 ///   `PaneReadiness.isCodexIdle`; never when it asks for input or permission, shows a choice or its working line, with
-///   an account switch in progress or a resume queued; only into the expected agent and session.
+///   an account switch in progress or a resume queued, or while its input box holds text a person typed
+///   (`AgentInputBox`), and into Claude Code only while its input box is on screen (not a dialog); only into the
+///   expected agent and session.
 /// - Type once: every typing step moves the run on; nothing is retried.
 public enum ScheduleRunTiming {
     /// How often active runs are checked.
@@ -60,6 +62,14 @@ public enum ScheduleRunTiming {
         public var workingOnScreen = false
         /// After Return: Claude Code was seen working (busy, or its `UserPromptSubmit` hook).
         public var promptSubmitted = false
+        /// The agent's input box holds text a person typed (`AgentInputBox.hasTypedText`).
+        public var inputHasText = false
+        /// Claude Code's input box is not on screen (`AgentInputBox.State.missing`): it shows a dialog or a question,
+        /// which a paste and Return would answer.
+        public var inputBoxMissing = false
+        /// Something else is typing into the pane: a queued instruction for a schedule run, a schedule run for a
+        /// queued instruction (`PaneQueue`).
+        public var otherInputInProgress = false
 
         public init() {}
 
@@ -155,6 +165,7 @@ public enum ScheduleRunTiming {
             return .skip(.agentRunning)
         case .shell:
             let ready = PaneReadiness.isShellReady(o.pane) && !o.resumeQueued && !o.accountSwitchInProgress
+                && !o.otherInputInProgress
             if ready { return .type }
             return timedOut ? (expect.ownsPane ? .fail(.shellNotReady) : .skip(.otherProgram)) : .wait
         }
@@ -189,7 +200,7 @@ public enum ScheduleRunTiming {
         case .antigravity?, .other?, nil: idle = false
         }
         if idle, o.activity != .needsInput, !o.choiceOnScreen, !o.workingOnScreen, !o.accountSwitchInProgress,
-           !o.resumeQueued { return .paste }
+           !o.resumeQueued, !o.inputHasText, !o.inputBoxMissing, !o.otherInputInProgress { return .paste }
         return elapsed >= idleWait ? .fail(.agentBusy) : .wait
     }
 

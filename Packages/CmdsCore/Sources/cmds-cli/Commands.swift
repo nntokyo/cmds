@@ -190,7 +190,7 @@ extension CLI {
                 Thread.sleep(forTimeInterval: interval)
             }
         },
-    ] + processCommands + [  // ProcessCommands.swift
+    ] + processCommands + queueCommands + [  // ProcessCommands.swift, QueueCommands.swift
         Command(name: "sync", usage: "sync",
                 summary: "Show the iOS sync status: listener, Bonjour, Bluetooth, SSH remote access and connected devices.",
                 details: """

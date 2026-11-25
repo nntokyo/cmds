@@ -585,6 +585,9 @@ final class APIServer {
 
         case "agent.list":
             return try .from(controller.agentList())
+        case "agent.idle":
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods).
+            return try .from(controller.idlePanes(minutes: try params.int("minutes")))
         case "agent.subagents":
             // Local socket only (not in RemoteAPIPolicy.allowedMethods).
             return try .from(controller.subagentList(paneID: try params.string("pane"),
@@ -836,6 +839,10 @@ final class APIServer {
         case let method where method.hasPrefix("schedule."):
             // Local socket only (not in RemoteAPIPolicy.allowedMethods; RemoteAccessTests keeps it so).
             return try ScheduleAPI.perform(method, params, runner: controller.scheduleRunner)
+
+        case let method where method.hasPrefix("queue."):
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods).
+            return try PaneQueueAPI.perform(method, params, runner: controller.paneQueue)
 
         default:
             throw RPCError.methodNotFound(method)

@@ -175,35 +175,11 @@ extension ScheduleRunner {
             o.paneExists = false
             return o
         }
-        let (foreground, group) = pane.inputForeground(terminal, now: now)
-        let screen = terminal.visibleText()
-        o.pane = pane.inputObservation(terminal, screen: screen, foreground: foreground, stability: &run.screen, now: now)
-        // Looked up only where it decides something (it lists every process): before typing into a shell, and to
-        // tell a quit agent from a backgrounded one.
-        if foreground == .shell, let group,
-           run.record.state == .waitingForPane || run.record.state == .waitingForAgent {
-            o.agentOnTerminal = PaneProcessProbe.agentOnTerminal(of: group)
-        }
-        if foreground == .agent {
-            // Which agent: its process, else what it reports.
-            o.agent = group.flatMap(PaneProcessProbe.agentKind(of:)) ?? pane.agentUsage?.agent
-            o.choiceOnScreen = ScheduleRunTiming.showsChoice(screen: screen)
-            o.workingOnScreen = PaneReadiness.showsWorking(screen: screen)
-        } else {
-            o.agent = pane.agentUsage?.agent
-        }
-        if let usage = pane.agentUsage, usage.agent == o.agent {
-            o.agentReported = true
-            o.sessionID = usage.sessionID
-        } else if foreground == .agent, let remembered = pane.agentSession, remembered.agent == o.agent,
-                  let group, let started = PaneProcessProbe.startDate(of: group), started <= remembered.lastSeen {
-            o.rememberedSessionID = remembered.sessionID
-        }
-        o.accountSwitchInProgress = pane.accountSwitch?.isInProgress == true
-        o.resumeQueued = pane.resumeRequestedAt != nil && pane.resumeOffer != nil
-        if let enterAt = run.enterAt {
-            o.promptSubmitted = pane.agentActivity == .busy || pane.agentSignals.workedSince(enterAt)
-        }
+        let waitsToType = run.record.state == .waitingForPane || run.record.state == .waitingForAgent
+        o = pane.typingObservation(terminal, stability: &run.screen, checksAgentOnTerminal: waitsToType,
+                                   enterAt: run.enterAt, now: now)
+        // An instruction kept for the pane is being typed (`PaneQueueRunner`): wait for it.
+        o.otherInputInProgress = controller.paneQueue.isTyping(in: pane)
         return o
     }
 

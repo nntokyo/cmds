@@ -7,7 +7,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `cmds queue add (--pane P | --workspace TITLE) TEXT` (API `queue.add`, `queue.list`, `queue.cancel`): keeps an
+  instruction for a pane whose agent is working and types it in when the agent is free, so nobody has to come back
+  later to say it. One at a time per pane, oldest first, without a time limit and across a restart of cmds; never
+  into a working agent, a question or dialog, or an input box that holds text a person typed. `cmds queue list`
+  shows what waits and why.
+- `cmds idle [--minutes N]` (API `agent.idle`): the panes whose agent has had nothing in progress for N minutes
+  (default 30), longest first, with how long and since when.
+
 ### Fixed
+
+- Schedules no longer paste a prompt into Claude Code while it shows a dialog instead of its input box: the folder
+  trust question now has choices without numbers, which the numbered-choice check did not see, so Return answered
+  "No, exit". A prompt also waits while the input box holds text you typed and have not sent, instead of being
+  sent together with it.
 
 - Bluetooth sync that failed to publish its channel ("No resources available for L2CAP") tried again on the same
   Bluetooth manager and could keep failing until cmds restarted. From the second failure in a row it now starts
