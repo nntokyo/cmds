@@ -292,14 +292,13 @@ extension AppController {
         let started = paneQueue.watchedSince
         let candidates = workspaces.flatMap { workspace in
             workspace.orderedPanes.filter { $0.kind == .terminal && !$0.isClosing }.map { pane -> IdlePanes.Candidate in
-                let signals = pane.agentSignals
-                // An agent never seen working: idle since its last hook or title change, at the earliest the app's start.
-                let seen = [signals.hookAt, signals.titleChangedAt].compactMap { $0 }.max() ?? .distantPast
+                // An agent never seen working: idle since it started, at the earliest since this cmds did.
+                let agentStarted = pane.terminal?.foregroundProcessGroupID.flatMap(PaneProcessProbe.startDate(of:)) ?? .distantPast
                 let typing = scheduleRunner.active.contains { $0.record.pane == pane.id } || paneQueue.isTyping(in: pane)
                 return IdlePanes.Candidate(pane: pane.id, workspace: workspace.id, workspaceTitle: workspace.title,
                                            agent: pane.agentUsage?.agent, activity: pane.agentActivity,
                                            subagentRunning: pane.hasRunningSubagent, inputInProgress: typing,
-                                           lastWorkAt: signals.lastBusyAt, watchedSince: max(started, seen),
+                                           lastWorkAt: pane.agentSignals.lastBusyAt, watchedSince: max(started, agentStarted),
                                            queued: paneQueue.waitingCount(for: pane))
             }
         }

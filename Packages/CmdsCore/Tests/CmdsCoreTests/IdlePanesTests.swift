@@ -53,6 +53,14 @@ final class IdlePanesTests: XCTestCase {
         XCTAssertTrue(IdlePanes.report([justStarted], minutes: 30, now: now).panes.isEmpty)
     }
 
+    /// A "waiting for your input" notification arrives a minute after the turn ended: the idle time still counts from
+    /// the work, not from what cmds saw last.
+    func testLaterEvidenceDoesNotRestartTheTime() {
+        var candidate = pane("p1", .needsInput, workedMinutesAgo: 40)
+        candidate.watchedSince = now.addingTimeInterval(-60)
+        XCTAssertEqual(IdlePanes.report([candidate], minutes: 30, now: now).panes.first?.idleSeconds, 40 * 60)
+    }
+
     func testQueuedInstructionsAreShown() {
         let report = IdlePanes.report([pane("p1", workedMinutesAgo: 40, queued: 2)], minutes: 30, now: now)
         XCTAssertEqual(report.panes.first?.queued, 2, "idle with instructions waiting: something holds them")

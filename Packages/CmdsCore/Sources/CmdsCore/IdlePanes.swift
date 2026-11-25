@@ -20,7 +20,7 @@ public enum IdlePanes {
         public var inputInProgress: Bool
         /// When the agent last showed it was working (`AgentSignals.lastBusyAt`); nil when cmds never saw it work.
         public var lastWorkAt: Date?
-        /// Since when cmds has watched the pane (the app's start or the pane's): the idle time of an agent never
+        /// Since when cmds has watched the agent (the app's start or the agent's): the idle time of an agent never
         /// seen working counts from here.
         public var watchedSince: Date
         /// Instructions waiting for the pane (`PaneQueue`).
@@ -47,7 +47,8 @@ public enum IdlePanes {
         let formatter = ISO8601DateFormatter()
         let panes = candidates.compactMap { c -> IdlePaneReport.Pane? in
             guard c.activity == .idle || c.activity == .needsInput, !c.subagentRunning, !c.inputInProgress else { return nil }
-            let since = max(c.lastWorkAt ?? .distantPast, c.watchedSince)
+            // Later evidence that is not work (a "waiting for your input" notification) does not restart the time.
+            let since = c.lastWorkAt ?? c.watchedSince
             let idle = Int(now.timeIntervalSince(since))
             guard idle >= minutes * 60 else { return nil }
             return IdlePaneReport.Pane(pane: c.pane, workspace: c.workspace, workspaceTitle: c.workspaceTitle,
