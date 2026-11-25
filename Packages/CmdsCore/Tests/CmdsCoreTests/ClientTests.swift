@@ -110,6 +110,35 @@ final class ClientClaudeHookTests: XCTestCase {
                        .init(title: "Claude Code", body: "Claude needs your permission to use Bash"))
     }
 
+    /// Claude Code's notice a minute after a turn ended is not a question: the agent sits at its prompt.
+    func testIdleNoticeIsNotAQuestion() {
+        func event(_ json: String) -> ClaudeHook.Event? { ClaudeHook.event(fromHookInput: Data(json.utf8)) }
+        let idleNote = ClaudeHook.Notification(title: "Claude Code", body: "Claude is waiting for your input")
+        let idle = #"{"hook_event_name":"Notification","message":"Claude is waiting for your input","notification_type":"idle_prompt"}"#
+        XCTAssertEqual(event(idle), .atPrompt(idleNote))
+        // Older Claude Code: no type, told by the message.
+        XCTAssertEqual(event(#"{"hook_event_name":"Notification","message":"Claude is waiting for your input"}"#), .atPrompt(idleNote))
+        // A permission prompt, with or without a type, asks.
+        let permission = ClaudeHook.Notification(title: "Claude Code", body: "Claude needs your permission to use Bash")
+        XCTAssertEqual(event(#"{"hook_event_name":"Notification","message":"Claude needs your permission to use Bash","notification_type":"permission_prompt"}"#),
+                       .needsInput(permission))
+        XCTAssertEqual(event(#"{"hook_event_name":"Notification","message":"Claude needs your permission to use Bash"}"#), .needsInput(permission))
+        // The type decides, not the words.
+        let worded = #"{"hook_event_name":"Notification","message":"The script is waiting for your input: allow?","notification_type":"permission_prompt"}"#
+        guard case .needsInput? = event(worded) else { return XCTFail("a typed permission prompt must ask") }
+        // What the CLI forwards to the app keeps the difference.
+        for (json, expected) in [(idle, "idle_prompt"), (worded, "permission_prompt")] {
+            let forwarded = ClaudeHook.forwardedInput(fromHookInput: Data(json.utf8), event: event(json)!)
+            XCTAssertEqual(forwarded["notification_type"]?.stringValue, expected)
+            let again = ClaudeHook.event(fromHookInput: try! JSONEncoder().encode(forwarded), readTranscript: false)
+            XCTAssertEqual(again, event(json))
+        }
+        // A prompt without a type whose words say "waiting for your input" is forwarded as a question.
+        let untyped = #"{"hook_event_name":"Notification","message":"Claude needs your permission to use Bash"}"#
+        XCTAssertEqual(ClaudeHook.forwardedInput(fromHookInput: Data(untyped.utf8), event: event(untyped)!)["notification_type"]?.stringValue,
+                       "permission_prompt")
+    }
+
     func testStopEventReadsTranscriptTail() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("cmds-transcript-\(UUID().uuidString).jsonl")
         defer { try? FileManager.default.removeItem(at: url) }

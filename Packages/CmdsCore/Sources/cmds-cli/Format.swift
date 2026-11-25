@@ -388,6 +388,27 @@ enum Format {
         return out
     }
 
+    /// `cmds power`.
+    static func power(_ status: PowerNoticeStatus, timeZone: TimeZone = .current) -> String {
+        var out = "power   "
+        if let power = status.power {
+            out += power.onBattery ? "battery" : "power adapter"
+            out += power.percent.map { ", \($0)%" } ?? " (no battery)"
+        } else {
+            out += "unknown"
+        }
+        out += "\nnotice  "
+        out += status.settings.enabled
+            ? "on: agents are told when the Mac goes on battery and below \(status.settings.belowPercent)%"
+            : "off (cmds power notice on)"
+        out += "\nline    … \(status.settings.request ?? PowerNotice.defaultRequest)\n"
+        if let event = status.lastEvent, let at = status.lastSentAt {
+            let panes = status.lastPanes ?? 0
+            out += "last    \(event == .low ? "low battery" : "on battery") line kept for \(panes) pane\(panes == 1 ? "" : "s") at \(localTime(at, timeZone: timeZone))\n"
+        }
+        return out
+    }
+
     /// An ISO 8601 time as `yyyy-MM-dd HH:mm` in `timeZone`; the text itself when it is not one.
     private static func localTime(_ iso: String, timeZone: TimeZone) -> String {
         guard let date = ISO8601DateFormatter().date(from: iso) else { return iso }

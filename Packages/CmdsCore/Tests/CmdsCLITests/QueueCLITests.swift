@@ -28,6 +28,23 @@ final class QueueCLITests: XCTestCase {
                        "nothing waits\n  q0000000e  p3  delivered 2026-11-25 15:59\n")
     }
 
+    func testPower() {
+        let off = PowerNoticeStatus(settings: .init(), power: .init(onBattery: false, percent: 84))
+        XCTAssertEqual(Format.power(off, timeZone: tokyo),
+                       "power   power adapter, 84%\nnotice  off (cmds power notice on)\nline    … \(PowerNotice.defaultRequest)\n")
+        let on = PowerNoticeStatus(settings: .init(enabled: true, belowPercent: 30, request: "stop cleanly"),
+                                   power: .init(onBattery: true, percent: 24), lastEvent: .low,
+                                   lastSentAt: "2026-11-25T07:00:00Z", lastPanes: 7)
+        XCTAssertEqual(Format.power(on, timeZone: tokyo),
+                       "power   battery, 24%\nnotice  on: agents are told when the Mac goes on battery and below 30%\n"
+                       + "line    … stop cleanly\nlast    low battery line kept for 7 panes at 2026-11-25 16:00\n")
+        let desktop = PowerNoticeStatus(settings: .init(enabled: true), power: .init(onBattery: false, percent: nil),
+                                        lastEvent: .onBattery, lastSentAt: "2026-11-25T07:00:00Z", lastPanes: 1)
+        XCTAssertTrue(Format.power(desktop, timeZone: tokyo).hasPrefix("power   power adapter (no battery)\n"))
+        XCTAssertTrue(Format.power(desktop, timeZone: tokyo).hasSuffix("last    on battery line kept for 1 pane at 2026-11-25 16:00\n"))
+        XCTAssertTrue(Format.power(PowerNoticeStatus(settings: .init(), power: nil)).hasPrefix("power   unknown\n"))
+    }
+
     func testIdlePanes() {
         let report = IdlePaneReport(minutes: 30, panes: [
             .init(pane: "p3", workspace: "w1", workspaceTitle: "sales", agent: "claude", state: "idle", idleSeconds: 45 * 60,
@@ -43,6 +60,6 @@ final class QueueCLITests: XCTestCase {
 
     func testCommandsAreListed() {
         let names = Set(CLI.queueCommands.map(\.name))
-        XCTAssertEqual(names, ["queue add", "queue list", "queue cancel", "idle"])
+        XCTAssertEqual(names, ["queue add", "queue list", "queue cancel", "idle", "power", "power notice"])
     }
 }

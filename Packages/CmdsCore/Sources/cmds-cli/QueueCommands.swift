@@ -4,6 +4,7 @@ import Foundation
 // `cmds queue …` (instructions kept for a busy pane) and `cmds idle` (panes with nothing in progress).
 extension CLI {
     private static let queueAddUsage = "queue add (--pane P | --workspace TITLE) <text…|->"
+    private static let powerNoticeUsage = "power notice [on|off] [--below N] [--request TEXT | --default-request]"
 
     static let queueCommands: [Command] = [
         Command(name: "queue add", usage: queueAddUsage,
@@ -74,6 +75,56 @@ extension CLI {
             let result = try callNewMethod(ctx, "agent.idle", ["minutes": minutes.map { .number(Double($0)) }])
             if ctx.json { return ctx.printJSON(result) }
             print(Format.idlePanes(try perform { try result.decode(IdlePaneReport.self) }), terminator: "")
+        },
+        Command(name: "power", usage: "power",
+                summary: "Show the Mac's power source and whether agents are told when it goes on battery.",
+                details: """
+                    Prints the power source (power adapter or battery, and the charge), whether the notice is on, the
+                    line agents get, and the last one sent since cmds started. Read only; `cmds power notice` changes
+                    it. --json for the API's answer.
+                    """) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds power")
+            let result = try callNewMethod(ctx, "power.status", [:])
+            if ctx.json { return ctx.printJSON(result) }
+            print(Format.power(try perform { try result.decode(PowerNoticeStatus.self) }), terminator: "")
+        },
+        Command(name: "power notice", usage: powerNoticeUsage,
+                summary: "Tell every agent to wrap up when the Mac goes on battery or its battery runs low (off by default).",
+                details: """
+                    When on, cmds keeps one line for every pane that runs Claude Code or Codex (as `cmds queue add` does:
+                    typed in when the agent is free, never into a question or over text a person typed) at two moments:
+                    when the Mac switches from the power adapter to its battery, and when the charge falls below
+                    --below N percent (default \(PowerNotice.defaultBelowPercent), \(PowerNotice.belowRange.lowerBound) to \
+                    \(PowerNotice.belowRange.upperBound)) while it is not charging. The line says which of the two happened and
+                    the charge, then: "\(PowerNotice.defaultRequest)" --request TEXT replaces that sentence (one line);
+                    --default-request puts it back. Each moment is told once: again only after the Mac was back on the
+                    adapter (or, for the level, \(PowerNotice.rearmMargin) points above it), and never twice to a pane that has not
+                    read the last one. Turning it on while the battery is already below the level tells the agents now.
+                    `cmds power` shows the state; `cmds queue list` the lines that wait.
+                    """,
+                options: ["below", "request"], flags: ["default-request"]) { ctx in
+            let words = ctx.args.positionals
+            guard words.count <= 1, words.allSatisfy({ $0 == "on" || $0 == "off" }) else {
+                throw CLIError.usage("usage: cmds \(powerNoticeUsage)")
+            }
+            let below = try ctx.args.int("below")
+            if let below, !PowerNotice.belowRange.contains(below) {
+                throw CLIError.usage("--below expects a number from \(PowerNotice.belowRange.lowerBound) to \(PowerNotice.belowRange.upperBound)")
+            }
+            var request = ctx.args[option: "request"]
+            if ctx.args.has("default-request") {
+                guard request == nil else { throw CLIError.usage("give --request or --default-request, not both") }
+                request = ""
+            } else if let given = request, PowerNotice.oneLine(given) == nil {
+                throw CLIError.usage("--request expects a line of text (--default-request for the usual one)")
+            }
+            guard !words.isEmpty || below != nil || request != nil else { throw CLIError.usage("usage: cmds \(powerNoticeUsage)") }
+            let result = try callNewMethod(ctx, "power.set", [
+                "enabled": words.first.map { .bool($0 == "on") }, "below": below.map { .number(Double($0)) },
+                "request": request.map { .string($0) },
+            ])
+            if ctx.json { return ctx.printJSON(result) }
+            print(Format.power(try perform { try result.decode(PowerNoticeStatus.self) }), terminator: "")
         },
     ]
 }

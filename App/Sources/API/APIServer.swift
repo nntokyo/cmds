@@ -308,6 +308,16 @@ final class APIServer {
                 controller.scheduleRunner.checkDue()
                 connection.reply(id: id, result: ["now": .number(controller.scheduleRunner.now().timeIntervalSince1970),
                                                   "notifications": .array(debugNotifications)])
+            case "debug.power":
+                // Tests only: the power source the power notice reads (`on_battery`, `percent`); `clear` reads the
+                // Mac's again.
+                if try params.bool("clear") == true {
+                    controller.powerNotice.simulated = nil
+                } else {
+                    guard let onBattery = try params.bool("on_battery") else { throw RPCError.invalidParams("on_battery is required") }
+                    controller.powerNotice.simulated = PowerNotice.Power(onBattery: onBattery, percent: try params.int("percent"))
+                }
+                connection.reply(id: id, result: try .from(controller.powerNotice.status()))
             case "debug.shared_signin_site":
                 // Tests only: a local site (`domain`) whose cookie `cookie` counts as signed in, like X's auth_token.
                 BrowserPane.testSites = [SharedSignIn.Site(name: try params.required("name"), domains: [try params.required("domain")],
@@ -843,6 +853,10 @@ final class APIServer {
         case let method where method.hasPrefix("queue."):
             // Local socket only (not in RemoteAPIPolicy.allowedMethods).
             return try PaneQueueAPI.perform(method, params, runner: controller.paneQueue)
+
+        case let method where method.hasPrefix("power."):
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods).
+            return try PowerNoticeAPI.perform(method, params, runner: controller.powerNotice)
 
         default:
             throw RPCError.methodNotFound(method)

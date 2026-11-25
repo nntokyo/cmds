@@ -104,11 +104,10 @@ extension ScheduleRunner {
 
     /// Sessions restored as cut off while working (`Pane.continueAfterResume`): each gets one `continueSession` run
     /// with `restartPrompt`, typed only when it is idle, like a schedule's (it waits for the queued resume). Not a
-    /// stored schedule: the run shows in the history as "Continue after cmds restarted". At most `maxActiveRuns` at a
-    /// time; the others start as runs end.
+    /// stored schedule: the run shows in the history as "Continue after cmds restarted". At most `maxActiveRuns` are at
+    /// work at a time; the others wait for a slot (`ScheduleRunTiming.slotStep`).
     func continueAfterRestart() {
         for pane in controller.workspaces.flatMap(\.orderedPanes) where pane.continueAfterResume {
-            guard active.count < ScheduleLimits.maxActiveRuns else { return startTickTimerIfNeeded() }
             guard let session = pane.resumeOffer ?? pane.agentSession else {
                 pane.continueAfterResume = false
                 continue

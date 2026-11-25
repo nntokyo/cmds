@@ -16,6 +16,9 @@ extension ScheduleRunner {
         case .shell: stage = .shell(command: action.text, resume: nil)
         case .agent: stage = .agent(prompt: action.text)
         }
-        plan(run, [stage], expect: ScheduleRunTiming.Expectation(agent: nil, startsAgent: false, ownsPane: false), now: now)
+        // After a restart the pane's agent is not back yet: its session is still offered for resume.
+        let awaitsResume = action.to == .agent && pane.agentUsage == nil && pane.resumeOffer != nil
+        plan(run, [stage], expect: ScheduleRunTiming.Expectation(agent: nil, startsAgent: false, ownsPane: false,
+                                                                 awaitsResume: awaitsResume), now: now)
     }
 }

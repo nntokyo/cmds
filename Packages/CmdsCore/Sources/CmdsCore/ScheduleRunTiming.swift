@@ -21,8 +21,10 @@ public enum ScheduleRunTiming {
     public static let agentStartTimeout: TimeInterval = 120
     /// Waiting for a busy agent to become idle.
     public static let idleWait: TimeInterval = 30 * 60
-    /// Waiting for another run to finish with the pane (`turnStep`).
+    /// Waiting for another run to finish with the pane, or for a free run slot (`turnStep`).
     public static let turnWait: TimeInterval = idleWait
+    /// A catch-up run waiting for its pane's session to be resumed (after the Mac or cmds restarted).
+    public static let resumeWait: TimeInterval = 15 * 60
     /// Waiting for a person to answer what a just started agent asks before its session begins (the folder trust
     /// question after an account switch, a sign-in).
     public static let startDialogWait: TimeInterval = 12 * 3600
@@ -98,12 +100,18 @@ public enum ScheduleRunTiming {
         public var startsAgent: Bool
         /// The run created the pane (else it is the user's pane holding the session).
         public var ownsPane: Bool
+        /// The run types into the agent of a pane that offers a session to resume (cmds or the Mac restarted, and the
+        /// time passed meanwhile or comes right after): the agent is not running yet, and the run waits `resumeWait`
+        /// for it to be resumed.
+        public var awaitsResume: Bool
 
-        public init(agent: AgentKind? = .claude, sessionID: String? = nil, startsAgent: Bool = false, ownsPane: Bool = false) {
+        public init(agent: AgentKind? = .claude, sessionID: String? = nil, startsAgent: Bool = false, ownsPane: Bool = false,
+                    awaitsResume: Bool = false) {
             self.agent = agent
             self.sessionID = sessionID
             self.startsAgent = startsAgent
             self.ownsPane = ownsPane
+            self.awaitsResume = awaitsResume
         }
     }
 
@@ -190,6 +198,9 @@ public enum ScheduleRunTiming {
             if expect.startsAgent || o.resumeQueued {
                 return elapsed >= agentStartTimeout ? .fail(.agentDidNotStart) : .wait
             }
+            // Right after a restart: the pane's shell is still starting, its session is resumed in a moment (or by
+            // the person).
+            if expect.awaitsResume, elapsed < resumeWait { return .wait }
             return o.foreground == .shell && !o.agentOnTerminal ? .skip(.agentNotRunning) : .skip(.otherProgram)
         }
         if let expected = expect.sessionID {
@@ -236,6 +247,14 @@ public enum ScheduleRunTiming {
     public static func turnStep(paneInUse: Bool, waited: TimeInterval) -> Step {
         guard paneInUse else { return .proceed }
         return waited >= turnWait ? .skip(.paneInUse) : .wait
+    }
+
+    /// A run that would be one too many at work (`inProgress` others are past waiting for their account or turn; at
+    /// most `ScheduleLimits.maxActiveRuns`) waits for a free slot: after the Mac was off, every schedule whose time
+    /// passed catches up at once, and none of them is dropped for that. Skipped (`tooManyRuns`) after `turnWait`.
+    public static func slotStep(inProgress: Int, waited: TimeInterval) -> Step {
+        guard inProgress >= ScheduleLimits.maxActiveRuns else { return .proceed }
+        return waited >= turnWait ? .skip(.tooManyRuns) : .wait
     }
 
     public enum SessionPane: Equatable, Sendable {

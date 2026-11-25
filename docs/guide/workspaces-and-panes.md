@@ -68,7 +68,7 @@ Rows of workspaces where a coding agent runs show its state:
 | State | Shown | Means |
 | --- | --- | --- |
 | **Working** (作業中) | blue text, spinner (pulsing dot in the rail) | the agent is busy |
-| **Needs Input** (入力待ち) | orange | Claude Code asked for permission or input (`Notification` hook) |
+| **Needs Input** (入力待ち) | orange | Claude Code asked for permission or asked a question (`Notification` hook; not its "waiting for your input" notice at an empty prompt, which is Idle) |
 | **Done** (完了) / **Idle** (待機) | green / grey | the turn ended (`Stop`); Done until you have seen the pane |
 | **Stopped** (停止) | grey | the agent that ran here exited |
 

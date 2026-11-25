@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `cmds power` and `cmds power notice [on|off] [--below N] [--request TEXT]` (API `power.status`, `power.set`): when
+  on, every pane that runs Claude Code or Codex gets one line, kept like `cmds queue add`'s, when the Mac switches
+  from the power adapter to its battery and when the charge falls below N percent (default 25) while it is not
+  charging: wrap up, leave nothing half-applied, record the next step. Off by default.
+
+### Fixed
+
+- Schedules and kept instructions were not typed into a Claude Code that had waited at its prompt for a minute: its
+  "Claude is waiting for your input" notice was taken for a question. A schedule run then failed after 30 minutes
+  ("the agent stayed busy") and a kept instruction waited until someone typed there. The notice now counts as idle
+  (the sidebar shows such a pane as idle, with the notification, not as Needs Input).
+- Schedules catching up after the Mac was off or asleep: beyond five at once the others were skipped ("too many runs
+  were active"); they now wait for a free slot. A run that types into an agent was skipped ("no agent was
+  running in the pane", "the pane was running another program") when cmds had just restarted and the session was not resumed yet; it now waits up to 15
+  minutes for the session.
+
 ## [0.36.0] - 2026-11-26
 
 ### Fixed
