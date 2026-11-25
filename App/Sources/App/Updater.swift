@@ -32,6 +32,9 @@ final class Updater: NSObject {
     private(set) var readyOnQuit: String?
     private nonisolated let testFeedURL: String?
     private var controller: SPUStandardUpdaterController?
+    /// Tries made since a daily check failed without a network (`UpdateCheckRetry`).
+    private var retryAttempts = 0
+    private var retryTimer: Timer?
 
     override init() {
         testFeedURL = Self.testFeed()
@@ -115,6 +118,33 @@ extension Updater: SPUUpdaterDelegate {
     /// nil keeps `SUFeedURL` from Info.plist.
     nonisolated func feedURLString(for updater: SPUUpdater) -> String? {
         testFeedURL
+    }
+
+    /// A background check that failed without a network is tried again (`UpdateCheckRetry`): Sparkle would wait a day.
+    nonisolated func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: Error?) {
+        let background = updateCheck == .updatesInBackground
+        let failure = error.map { $0 as NSError }
+        Task { @MainActor in self.checkFinished(background: background, error: failure) }
+    }
+
+    private func checkFinished(background: Bool, error: NSError?) {
+        retryTimer?.invalidate()
+        retryTimer = nil
+        guard background, let error, let delay = UpdateCheckRetry.retryDelay(after: error, attempt: retryAttempts) else {
+            retryAttempts = 0
+            return
+        }
+        retryAttempts += 1
+        NSLog("cmds: update check failed without a network, try \(retryAttempts) in \(Int(delay)) s")
+        let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let updater = self.updater, updater.automaticallyChecksForUpdates,
+                      !updater.sessionInProgress else { return }
+                updater.checkForUpdatesInBackground()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        retryTimer = timer
     }
 
     /// Only noted: Sparkle installs it when cmds quits, as before.

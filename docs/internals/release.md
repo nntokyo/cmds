@@ -158,7 +158,10 @@ Info.plist keys are in `project.yml`).
   Never edit `appcast.xml` by hand: `make-appcast.sh` writes and signs it.
 - **Behaviour**: a check once a day without asking first (`SUEnableAutomaticChecks`, `SUScheduledCheckInterval`),
   automatic download and install when cmds quits (`SUAutomaticallyUpdate`); cmds › Check for Updates… installs
-  right away (cmds asks first if agents are running). Users change both in Settings › Updates.
+  right away (cmds asks first if agents are running). Users change both in Settings › Updates. A daily check that
+  fails because the network is down (a wake of a few seconds while the Mac sleeps) is tried again every 15 minutes,
+  up to 8 times (`UpdateCheckRetry`): Sparkle counts a failed check as the day's check, so a Mac whose check time
+  kept falling on such a moment stayed on its version (0.32.0 missed 0.33.0 to 0.35.0 this way).
 - **Where it runs**: only in builds signed with the Developer ID (releases). Debug and local Release builds and
   isolated instances (`CMDS_SUPPORT_DIR`) never update themselves; `CMDS_UPDATE_FEED_URL` points an isolated instance
   at a test feed and makes it check at launch.

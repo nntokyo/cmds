@@ -21,6 +21,11 @@ public enum ScheduleRunTiming {
     public static let agentStartTimeout: TimeInterval = 120
     /// Waiting for a busy agent to become idle.
     public static let idleWait: TimeInterval = 30 * 60
+    /// Waiting for another run to finish with the pane (`turnStep`).
+    public static let turnWait: TimeInterval = idleWait
+    /// Waiting for a person to answer what a just started agent asks before its session begins (the folder trust
+    /// question after an account switch, a sign-in).
+    public static let startDialogWait: TimeInterval = 12 * 3600
     /// Waiting for a limited account's reset.
     public static let accountWait: TimeInterval = 8 * 3600
     /// Waiting to see Claude Code start working after Return.
@@ -70,6 +75,9 @@ public enum ScheduleRunTiming {
         /// Something else is typing into the pane: a queued instruction for a schedule run, a schedule run for a
         /// queued instruction (`PaneQueue`).
         public var otherInputInProgress = false
+        /// How long ago the agent last showed a dialog in place of its input box while the run waited for it; nil =
+        /// never.
+        public var sinceStartDialog: TimeInterval?
 
         public init() {}
 
@@ -188,8 +196,14 @@ public enum ScheduleRunTiming {
             if let seen = o.sessionID ?? o.rememberedSessionID {
                 if seen != expected { return .skip(.differentSession) }
             } else {
-                // Typing only into the session the run is for: wait for Claude Code to report it.
-                return elapsed >= agentStartTimeout ? .fail(.agentDidNotStart) : .wait
+                // Typing only into the session the run is for: wait for Claude Code to report it. It reports nothing
+                // while it asks something first (the folder trust question under a new account): a person answers
+                // that, and the start is timed from then.
+                if o.choiceOnScreen || o.inputBoxMissing {
+                    return elapsed >= startDialogWait ? .fail(.agentDidNotStart) : .wait
+                }
+                let waited = min(elapsed, o.sinceStartDialog ?? elapsed)
+                return waited >= agentStartTimeout ? .fail(.agentDidNotStart) : .wait
             }
         }
         let idle: Bool
@@ -215,6 +229,13 @@ public enum ScheduleRunTiming {
             guard let digit = rest.first, digit.isNumber else { return false }
             return rest.dropFirst().hasPrefix(".")
         }
+    }
+
+    /// A run whose pane another run is using waits for its turn (two schedules for one pane due in the same minute),
+    /// `waited` so far; it is skipped (`paneInUse`) only when the pane stays in use for `turnWait`.
+    public static func turnStep(paneInUse: Bool, waited: TimeInterval) -> Step {
+        guard paneInUse else { return .proceed }
+        return waited >= turnWait ? .skip(.paneInUse) : .wait
     }
 
     public enum SessionPane: Equatable, Sendable {
