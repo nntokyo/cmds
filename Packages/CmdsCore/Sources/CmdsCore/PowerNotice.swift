@@ -16,9 +16,9 @@ public enum PowerNotice {
     /// `PaneQueue.Item.from` of the lines cmds itself queues.
     public static let queueSource = "cmds:power"
 
-    /// What follows the reason in the line cmds sends.
-    public static let defaultRequest =
-        "Wrap up at a good stopping point, leave nothing half-applied, and record your next step in one line."
+    /// What follows the reason in the line cmds sends. In Japanese, like the reason: the line is for the agents of
+    /// the people cmds is made for, whatever the Mac's language (`cmds power notice --request` replaces it).
+    public static let defaultRequest = "区切りをつけ、途中の反映を残さず、次の一手を 1 行で記録してください。"
 
     public struct Settings: Codable, Equatable, Sendable {
         public var enabled: Bool
@@ -95,13 +95,15 @@ public enum PowerNotice {
 
     /// The one line the agents get.
     public static func line(_ event: Event, power: Power, settings: Settings) -> String {
-        let left = power.percent.map { " (\($0)% left)" } ?? ""
         let reason: String
         switch event {
-        case .onBattery: reason = "This Mac switched to battery power\(left)."
-        case .low: reason = "This Mac's battery is below \(settings.belowPercent)%\(left) and it is not charging."
+        case .onBattery:
+            reason = "この Mac の電源が電池に切り替わりました" + (power.percent.map { "（残り \($0)%）" } ?? "") + "。"
+        case .low:
+            reason = "この Mac の電池の残りが \(settings.belowPercent)% を下回りました（"
+                + (power.percent.map { "残り \($0)%、" } ?? "") + "充電されていません）。"
         }
-        return reason + " " + (settings.request ?? defaultRequest)
+        return reason + (settings.request ?? defaultRequest)
     }
 
     /// `text` as one line (line breaks and tabs become spaces), nil when nothing is left; at most 500 characters.
