@@ -66,14 +66,15 @@ cmds power notice off
 When it is on, cmds keeps one line for every pane that runs Claude Code or Codex, exactly as `cmds queue add` would
 (typed in when the agent is free, never into a question or over text you typed), at two moments:
 
-- the Mac switches from the power adapter to its battery: "This Mac switched to battery power (59% left). Wrap up at a
-  good stopping point, leave nothing half-applied, and record your next step in one line.";
-- on battery, the charge falls below the level: "This Mac's battery is below 25% (24% left) and it is not charging. …"
+- the Mac switches from the power adapter to its battery: 「この Mac の電源が電池に切り替わりました（残り 59%）。区切りをつけ、
+  途中の反映を残さず、次の一手を 1 行で記録してください。」 (the Mac switched to battery power, 59% left; wrap up at a good
+  stopping point, leave nothing half-applied, record your next step in one line);
+- on battery, the charge falls below the level: 「この Mac の電池の残りが 25% を下回りました（残り 24%、充電されていません）。…」
   (also when the adapter is unplugged below the level, in place of the first line, and when the notice is turned on
   or cmds starts in that state).
 
-`--request` replaces the sentence after the reason (one line); `--default-request` puts the usual one back. Each
-moment is told once: the switch again only after the Mac was on the adapter in between, the level again only after
+The line is in Japanese whatever the Mac's language; `--request` replaces the sentence after the reason (one line),
+`--default-request` puts the usual one back. Each moment is told once: the switch again only after the Mac was on the adapter in between, the level again only after
 it was on the adapter or 5 points above the level, and a pane that has not read cmds's last line gets no second one.
 Panes without an agent get nothing. The lines show in `cmds queue list` and can be cancelled there; `cmds power`
 shows the last one sent. The setting is kept in `power-notice.json` in cmds's support folder. A Mac without a

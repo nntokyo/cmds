@@ -95,8 +95,9 @@ extension CLI {
                     typed in when the agent is free, never into a question or over text a person typed) at two moments:
                     when the Mac switches from the power adapter to its battery, and when the charge falls below
                     --below N percent (default \(PowerNotice.defaultBelowPercent), \(PowerNotice.belowRange.lowerBound) to \
-                    \(PowerNotice.belowRange.upperBound)) while it is not charging. The line says which of the two happened and
-                    the charge, then: "\(PowerNotice.defaultRequest)" --request TEXT replaces that sentence (one line);
+                    \(PowerNotice.belowRange.upperBound)) while it is not charging. The line, in Japanese, says which of the
+                    two happened and the charge, then asks to wrap up, leave nothing half-applied and record the next step
+                    in one line ("\(PowerNotice.defaultRequest)"). --request TEXT replaces that sentence (one line);
                     --default-request puts it back. Each moment is told once: again only after the Mac was back on the
                     adapter (or, for the level, \(PowerNotice.rearmMargin) points above it), and never twice to a pane that has not
                     read the last one. Turning it on while the battery is already below the level tells the agents now.

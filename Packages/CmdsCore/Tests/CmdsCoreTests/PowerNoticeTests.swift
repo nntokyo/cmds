@@ -76,12 +76,13 @@ final class PowerNoticeTests: XCTestCase {
 
     func testLine() {
         XCTAssertEqual(P.line(.onBattery, power: battery(79), settings: on),
-                       "This Mac switched to battery power (79% left). " + P.defaultRequest)
+                       "この Mac の電源が電池に切り替わりました（残り 79%）。区切りをつけ、途中の反映を残さず、次の一手を 1 行で記録してください。")
         XCTAssertEqual(P.line(.low, power: battery(24), settings: on),
-                       "This Mac's battery is below 25% (24% left) and it is not charging. " + P.defaultRequest)
-        let own = P.Settings(enabled: true, belowPercent: 30, request: "区切りをつけ、途中の反映を残さず、次の一手を記録してください。")
+                       "この Mac の電池の残りが 25% を下回りました（残り 24%、充電されていません）。" + P.defaultRequest)
+        XCTAssertEqual(P.line(.onBattery, power: battery(nil), settings: on), "この Mac の電源が電池に切り替わりました。" + P.defaultRequest)
+        let own = P.Settings(enabled: true, belowPercent: 30, request: "Stop at a good point.")
         XCTAssertEqual(P.line(.low, power: battery(nil), settings: own),
-                       "This Mac's battery is below 30% and it is not charging. 区切りをつけ、途中の反映を残さず、次の一手を記録してください。")
+                       "この Mac の電池の残りが 30% を下回りました（充電されていません）。Stop at a good point.")
         XCTAssertFalse(P.line(.low, power: battery(24), settings: on).contains("\n"))
     }
 

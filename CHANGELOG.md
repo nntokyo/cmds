@@ -7,12 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-11-26
+
 ### Added
 
 - `cmds power` and `cmds power notice [on|off] [--below N] [--request TEXT]` (API `power.status`, `power.set`): when
   on, every pane that runs Claude Code or Codex gets one line, kept like `cmds queue add`'s, when the Mac switches
   from the power adapter to its battery and when the charge falls below N percent (default 25) while it is not
-  charging: wrap up, leave nothing half-applied, record the next step. Off by default.
+  charging: wrap up, leave nothing half-applied, record the next step (the line is in Japanese; `--request`
+  replaces its request). Off by default.
 
 ### Fixed
 
@@ -1292,7 +1295,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.36.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.37.0...master
+[0.37.0]: https://github.com/nntokyo/cmds/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/nntokyo/cmds/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/nntokyo/cmds/compare/v0.34.0...v0.35.0
 [0.34.0]: https://github.com/nntokyo/cmds/compare/v0.33.0...v0.34.0
