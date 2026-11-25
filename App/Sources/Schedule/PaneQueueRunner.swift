@@ -123,6 +123,12 @@ final class PaneQueueRunner {
         return queue.items.filter { $0.paneTag == tag }.count
     }
 
+    /// An instruction from `source` (`PaneQueue.Item.from`) waits for the pane.
+    func hasWaiting(from source: String, for pane: Pane) -> Bool {
+        guard let tag = pane.scheduleTag else { return false }
+        return queue.items.contains { $0.paneTag == tag && $0.from == source }
+    }
+
     // MARK: Typing
 
     private func pane(tag: String) -> Pane? {

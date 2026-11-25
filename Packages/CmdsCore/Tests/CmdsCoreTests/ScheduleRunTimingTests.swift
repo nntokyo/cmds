@@ -277,6 +277,35 @@ final class ScheduleRunTimingTests: XCTestCase {
         XCTAssertEqual(T.turnStep(paneInUse: false, waited: T.turnWait), .proceed)
     }
 
+    /// After the Mac was off every schedule whose time passed catches up at once: beyond five at work they wait.
+    func testRunsBeyondTheLimitWaitForASlot() {
+        let limit = ScheduleLimits.maxActiveRuns
+        XCTAssertEqual(T.slotStep(inProgress: limit - 1, waited: 0), .proceed)
+        XCTAssertEqual(T.slotStep(inProgress: limit, waited: 0), .wait)
+        XCTAssertEqual(T.slotStep(inProgress: limit + 3, waited: T.turnWait - 1), .wait)
+        XCTAssertEqual(T.slotStep(inProgress: limit, waited: T.turnWait), .skip(.tooManyRuns))
+        XCTAssertEqual(T.slotStep(inProgress: 0, waited: T.turnWait), .proceed)
+    }
+
+    /// A catch-up run right after a restart: the pane is at its shell, its session about to be resumed.
+    func testCatchUpWaitsForTheSessionToBeResumed() {
+        let caughtUp = T.Expectation(agent: nil, awaitsResume: true)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 2, expect: caughtUp), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: T.resumeWait - 1, expect: caughtUp), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: T.resumeWait, expect: caughtUp),
+                       .skip(.agentNotRunning))
+        // Resumed and idle: the prompt goes in.
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: agent(), elapsed: 300, expect: caughtUp), .paste)
+        // The pane's shell is still starting (not a shell at its prompt yet): waited for as well, then left alone.
+        var other = T.Observation()
+        other.foreground = .other
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: other, elapsed: 2, expect: caughtUp), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: other, elapsed: T.resumeWait, expect: caughtUp), .skip(.otherProgram))
+        // A pane that offers no session does not wait.
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 2, expect: T.Expectation(agent: nil)),
+                       .skip(.agentNotRunning))
+    }
+
     func testAgentStartingOrGone() {
         // After typing `claude`: the shell is still in front for a moment.
         XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 2, expect: owned), .wait)

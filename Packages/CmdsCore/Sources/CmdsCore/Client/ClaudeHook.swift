@@ -13,8 +13,12 @@ public enum ClaudeHook {
 
     /// What a hook event means for the pane's agent.
     public enum Event: Equatable, Sendable {
-        /// `Notification`: permission prompt or waiting for input (notifies).
+        /// `Notification`: a permission prompt or a question (notifies).
         case needsInput(Notification)
+        /// `Notification` of type `idle_prompt` ("Claude is waiting for your input", a minute after a turn ended):
+        /// the agent sits at its empty prompt. It notifies, but the agent asks nothing: schedules and kept
+        /// instructions are typed into it as into any idle agent.
+        case atPrompt(Notification)
         /// `Stop`: the turn ended (notifies with the first line of the reply).
         case finished(Notification)
         /// `UserPromptSubmit`, `PreToolUse`, `PostToolUse`: the agent is working again (clears a stale notification).
@@ -27,7 +31,7 @@ public enum ClaudeHook {
 
         public var notification: Notification? {
             switch self {
-            case .needsInput(let note), .finished(let note): return note
+            case .needsInput(let note), .atPrompt(let note), .finished(let note): return note
             case .working, .ended, .subagent: return nil
             }
         }
@@ -57,7 +61,8 @@ public enum ClaudeHook {
         switch event {
         case "Notification":
             let message = input["message"]?.stringValue ?? "Claude Code needs your attention"
-            return .needsInput(Notification(title: title, body: TranscriptText.truncate(message, maxBodyLength)))
+            let note = Notification(title: title, body: TranscriptText.truncate(message, maxBodyLength))
+            return isIdlePrompt(type: input["notification_type"]?.stringValue, message: message) ? .atPrompt(note) : .needsInput(note)
         case "Stop":
             if input["stop_hook_active"]?.boolValue == true { return nil }
             var summary = input["last_assistant_message"]?.stringValue
@@ -86,6 +91,13 @@ public enum ClaudeHook {
         }
     }
 
+    /// Claude Code's notice that it has waited at its prompt for a minute: `notification_type` `idle_prompt`; without
+    /// a type (older versions), by its message.
+    static func isIdlePrompt(type: String?, message: String) -> Bool {
+        if let type { return type == "idle_prompt" }
+        return message.lowercased().contains("waiting for your input")
+    }
+
     /// The payload the CLI sends to the app (`agent.claude_hook`): only the fields the app uses, with `Stop`'s summary
     /// already taken from the transcript (the app never reads files named in a payload).
     public static func forwardedInput(fromHookInput data: Data, event: Event) -> JSONValue {
@@ -96,6 +108,12 @@ public enum ClaudeHook {
         case .needsInput(let note):
             if let title = note.title { object["title"] = .string(title) }
             object["message"] = .string(note.body)
+            // So the app does not take a message that happens to say "waiting for your input" for the idle notice.
+            object["notification_type"] = .string(input["notification_type"]?.stringValue ?? "permission_prompt")
+        case .atPrompt(let note):
+            if let title = note.title { object["title"] = .string(title) }
+            object["message"] = .string(note.body)
+            object["notification_type"] = .string("idle_prompt")
         case .finished(let note):
             if let title = note.title { object["title"] = .string(title) }
             object["last_assistant_message"] = .string(note.body)

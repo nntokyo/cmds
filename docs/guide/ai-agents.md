@@ -30,8 +30,10 @@ notification is shown as well.
 `cmds hook claude` reads the hook JSON from stdin and tells cmds about the pane Claude Code runs in
 (`agent.claude_hook`):
 
-- `Notification` (permission prompts, waiting for input) → notifies `Claude Code: <message>`; the sidebar shows
-  **Needs Input**.
+- `Notification` (permission prompts, questions) → notifies `Claude Code: <message>`; the sidebar shows
+  **Needs Input**. Its idle notice ("Claude is waiting for your input", a minute after a turn ended;
+  `notification_type` `idle_prompt`) notifies too, but the pane stays **Idle**: Claude Code asks nothing, and
+  schedules and kept instructions are typed into it.
 - `Stop` → notifies `Claude Code: <first line of Claude's last reply>` (`last_assistant_message`, else the
   transcript), or `Finished`; the sidebar shows **Done** / **Idle**.
 - `UserPromptSubmit` → you answered: the sidebar shows **Working** and the stale "waiting for your input" text and

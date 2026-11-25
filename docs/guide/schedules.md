@@ -105,8 +105,8 @@ A schedule types only where it may, and only once:
   switch), the run waits for your answer, for up to 12 hours, and types nothing into the question. Once you have
   answered and the session is there, the prompt goes in ("continue" after an account switch or a restart included).
 - **Once.** Nothing is retried. A failed run is reported; Run Now tries again when you choose.
-- **Limits.** At most 50 schedules, one active run per schedule, five active runs at once (waiting ones included)
-  and one typing per pane. A prompt
+- **Limits.** At most 50 schedules, one active run per schedule, five runs at work at once (more wait for a slot, up
+  to 30 minutes) and one typing per pane. A prompt
   is at most 8 KB (line breaks and tabs, no other control characters); a command is one line of at most 1 KB.
 - **Local only.** `schedule.*` is refused on the sockets of SSH panes, so a server cannot create schedules.
 - **Visible origin.** Schedules made with the CLI or the socket API (for example by an agent) are marked in the
@@ -142,6 +142,14 @@ back, until the next time** (`--late next`): when the Mac wakes (or cmds starts)
 long as the schedule's next time has not come. A weekday 09:00 report missed while the Mac slept runs when you open
 it at 10:15; after a weekend asleep only the latest time runs, once. It never adds a second run before the next time.
 For other schedules `next` allows the longest window (7 days).
+
+After the Mac was off or asleep for hours, every schedule whose time passed catches up at the same moment. None is
+dropped for that: at most five runs work at a time and the others wait for a free slot; runs for one pane go one after
+another; and a run that types into an agent waits up to 15 minutes for the pane's session when cmds has just
+restarted and the session is still to be resumed ([Resuming sessions](ai-agents.md#resuming-sessions): by itself
+with Resume Always, else by you). A schedule never runs twice at once, and each catches up once: the latest time
+that passed, never one run per missed time. `cmds schedule from-session` gives the schedules it makes `--late next`;
+for others choose it per schedule with `cmds schedule edit <id> --late next` (or `skip`, or a number of minutes).
 
 ## Seeing what happened
 

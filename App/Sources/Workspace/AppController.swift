@@ -123,6 +123,7 @@ final class AppController {
     private(set) lazy var scheduleRunner = ScheduleRunner(controller: self)
     /// Instructions kept for busy panes (`cmds queue`).
     private(set) lazy var paneQueue = PaneQueueRunner(controller: self)
+    private(set) lazy var powerNotice = PowerNoticeRunner(controller: self)
     let subagentSubject = PassthroughSubject<Void, Never>()
     /// Fires on the main actor when subagent cards changed (current action, tokens, elapsed time). Adding or
     /// dropping a subagent is a pane change in `changes` instead.

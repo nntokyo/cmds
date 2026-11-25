@@ -61,10 +61,12 @@ extension ScheduleRunner {
         return run.record
     }
 
-    /// Why a run of `schedule` does not start: one active run per schedule, `maxActiveRuns` in all, a valid schedule.
+    /// Why a run of `schedule` does not start: one active run per schedule (a schedule never runs twice at once), a
+    /// valid schedule. More runs than `maxActiveRuns` wait for a slot in `begin`; only beyond one per schedule
+    /// (`maxSchedules`) is a run refused.
     private func refusal(of schedule: Schedule) -> ScheduleReason? {
         if active.contains(where: { $0.record.scheduleID == schedule.id }) { return .previousRunActive }
-        if active.count >= ScheduleLimits.maxActiveRuns { return .tooManyRuns }
+        if active.count >= ScheduleLimits.maxSchedules + ScheduleLimits.maxActiveRuns { return .tooManyRuns }
         return ScheduleValidation.problems(schedule.draft).isEmpty ? nil : .invalidSchedule
     }
 
@@ -217,6 +219,15 @@ extension ScheduleRunner {
 
     /// The account is free: open the workspace, or find the session's pane.
     private func begin(_ run: ActiveScheduleRun, now: Date) {
+        // At most `maxActiveRuns` at work: the others wait here, in the order they started.
+        let inProgress = active.filter { $0 !== run && $0.record.state != .waitingForAccount }.count
+        switch ScheduleRunTiming.slotStep(inProgress: inProgress, waited: now.timeIntervalSince(run.turnSince ?? now)) {
+        case .proceed: break
+        case .wait:
+            if run.turnSince == nil { run.turnSince = now }
+            return
+        default: return finish(run, .skipped, .tooManyRuns)
+        }
         let accounts = controller.claudeAccounts.accounts
         if run.automaticAccount {
             guard let account = ClaudeAccounts.firstAvailable(in: accounts, now: now) else {

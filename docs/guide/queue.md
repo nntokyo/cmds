@@ -51,6 +51,34 @@ once and never again. `cmds queue cancel ID` takes out one that still waits.
 
 `cmds send` is unchanged: it types at once, whatever the pane is doing.
 
+## On battery
+
+A closed lid on battery stops every agent in the middle of its turn. cmds can tell them first:
+
+```sh
+cmds power                               # the power source, the charge, whether the notice is on
+cmds power notice on                     # tell the agents (off by default)
+cmds power notice --below 30             # the level in percent (default 25; 5 to 95)
+cmds power notice --request "Stop at a good point and write your next step in NEXT.md."
+cmds power notice off
+```
+
+When it is on, cmds keeps one line for every pane that runs Claude Code or Codex, exactly as `cmds queue add` would
+(typed in when the agent is free, never into a question or over text you typed), at two moments:
+
+- the Mac switches from the power adapter to its battery: "This Mac switched to battery power (59% left). Wrap up at a
+  good stopping point, leave nothing half-applied, and record your next step in one line.";
+- on battery, the charge falls below the level: "This Mac's battery is below 25% (24% left) and it is not charging. …"
+  (also when the adapter is unplugged below the level, in place of the first line, and when the notice is turned on
+  or cmds starts in that state).
+
+`--request` replaces the sentence after the reason (one line); `--default-request` puts the usual one back. Each
+moment is told once: the switch again only after the Mac was on the adapter in between, the level again only after
+it was on the adapter or 5 points above the level, and a pane that has not read cmds's last line gets no second one.
+Panes without an agent get nothing. The lines show in `cmds queue list` and can be cancelled there; `cmds power`
+shows the last one sent. The setting is kept in `power-notice.json` in cmds's support folder. A Mac without a
+battery never sends anything.
+
 ## Panes with nothing in progress
 
 ```sh
@@ -63,7 +91,8 @@ p3  sales  claude  idle 45m00s (since 2026-11-25 15:15)
 p7  legal  codex  asks for input ≥2h05m (since 2026-11-25 13:55) · 2 kept instructions waiting
 ```
 
-A pane is listed when its agent waits for a prompt (`idle`) or asks for input or permission (`asks for input`), no
+A pane is listed when its agent waits for a prompt (`idle`; Claude Code's own "waiting for your input" notice a
+minute after a turn is that, not a question) or asks for input or permission (`asks for input`), no
 subagent runs, nothing is being typed into it by a schedule or a kept instruction, and that has been so for the given
 minutes (default 30; 1 to 10080). Longest first. `≥`: cmds has not seen this agent work since it started watching the
 pane (since cmds started, or the agent did), so it may have been idle for longer. A pane with kept instructions

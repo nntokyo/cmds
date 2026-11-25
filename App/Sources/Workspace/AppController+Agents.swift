@@ -78,6 +78,8 @@ extension AppController {
         let state: AgentSignals.HookState?
         switch event {
         case .needsInput: state = .needsInput
+        // Waiting at its prompt: idle, as after `Stop` (it asks nothing).
+        case .atPrompt: state = .finished
         case .finished: state = .finished
         case .working: state = .busy
         case .ended:
