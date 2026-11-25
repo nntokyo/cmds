@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Bluetooth sync that failed to publish its channel ("No resources available for L2CAP") tried again on the same
+  Bluetooth manager and could keep failing until cmds restarted. From the second failure in a row it now starts
+  over with a new manager, and a Bluetooth reset is handled like power off. `cmds sync` (`sync.status`) shows how
+  many tries failed in a row and since when (#453).
+
 ## [0.34.0] - 2026-11-25
 
 ### Added
