@@ -7,30 +7,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.36.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.36.0</link>
-      <sparkle:version>54</sparkle:version>
-      <sparkle:shortVersionString>0.36.0</sparkle:shortVersionString>
+      <title>cmds 0.37.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.37.0</link>
+      <sparkle:version>55</sparkle:version>
+      <sparkle:shortVersionString>0.37.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Wed, 25 Nov 2026 18:51:44 GMT</pubDate>
+      <pubDate>Wed, 25 Nov 2026 19:45:52 GMT</pubDate>
       <description><![CDATA[
+<h3>新機能</h3>
+<ul>
+<li>電池に切り替わったことをエージェントに伝える <code>cmds power</code>：<code>cmds power notice on</code> にすると、Mac の電源がアダプターから電池に切り替わったときと、充電されないまま残量が決めた割合（既定 25%、<code>--below 30</code> で変更）を下回ったときに、Claude Code / Codex が動いている各ペインへ「区切りをつけ、途中の反映を残さず、次の一手を 1 行で記録する」という 1 行を預かり（<code>cmds queue</code> と同じ仕組み）、エージェントが空いた時点で入力します。文面は日本語で、依頼の部分は <code>--request</code> で変えられます。既定はオフです。<code>cmds power</code> で電源の状態と設定を表示します。</li>
+</ul>
 <h3>修正</h3>
 <ul>
-<li>スケジュール：同じペイン宛ての予定が同じ分に重なると、最初の1件だけが実行され、残りは「another run was using the pane」で飛ばされていました。重なった予定は、時刻が来た順に1件ずつ実行します（ペインが空くのを最長30分待ちます）。</li>
-<li>スケジュール：アカウントの切り替え（または再起動）の後、切り替え先のアカウントでフォルダの信頼確認が出ると、「続けて」の案内が2分で失敗し（「the agent did not start」）、セッションに届きませんでした。確認の画面には何も入力せず、人が答えるのを最長12時間待ち、セッションが始まってから案内を送ります。</li>
-<li>アップデート：1日1回の更新確認が、Mac のスリープ中の短い起動などで通信できずに失敗すると、翌日まで再確認されず、古い版のまま数日たつことがありました。失敗した確認は15分おきに最大8回やり直します。</li>
+<li>スケジュールと預かり指示：Claude Code が入力欄で1分待つと出す「Claude is waiting for your input」の通知を質問と取り違え、待機中のエージェントに入力されませんでした（予定は30分後に「the agent stayed busy」で失敗、預かり指示は誰かが入力するまで待ち続ける）。この通知は待機として扱います。サイドバーでも「入力待ち」ではなく待機と表示します。</li>
+<li>スケジュール：Mac が止まっていた後にまとめて実行し直すとき、同時に5件を超えた分は「too many runs were active」で飛ばされていました。空きを待って順に実行します。cmds の再起動直後でセッションがまだ再開されていないペイン宛ての予定は飛ばさず、再開を最長15分待ちます。</li>
+</ul>
+<h3>Added</h3>
+<ul>
+<li><code>cmds power</code>, telling the agents the Mac is on battery: with <code>cmds power notice on</code>, every pane that runs Claude Code or Codex gets one line when the Mac switches from the power adapter to its battery, and when the charge falls below a level (25% by default, <code>--below 30</code>) while it is not charging: wrap up at a good stopping point, leave nothing half-applied, record the next step in one line. The line is kept like <code>cmds queue add</code>'s and typed in when the agent is free; The line is in Japanese; <code>--request</code> replaces its request. Off by default. <code>cmds power</code> shows the power source and the setting.</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>Schedules: of several schedules for one pane that came due in the same minute, only the first ran and the others were skipped ("another run was using the pane"). They now run one after another, in the order they came due (a run waits up to 30 minutes for the pane).</li>
-<li>Schedules: after an account switch (or a restart) into an account that asks the folder trust question first, the "continue" note failed after 2 minutes ("the agent did not start") and never reached the session. cmds now types nothing into the question, waits up to 12 hours for your answer, and sends the note once the session has started.</li>
-<li>Updates: a daily check that failed because the network was down (a short wake while the Mac sleeps) was not tried again until the next day, so a Mac could stay on an old version for days. A failed check is now tried again every 15 minutes, up to 8 times.</li>
+<li>Schedules and kept instructions were not typed into a Claude Code that had waited at its prompt for a minute: its "Claude is waiting for your input" notice was taken for a question (a schedule run failed after 30 minutes with "the agent stayed busy"; a kept instruction waited until someone typed there). The notice now counts as idle, in the sidebar too.</li>
+<li>Schedules catching up after the Mac was off: beyond five at once the others were skipped ("too many runs were active"); they now wait for a free slot. A run for a pane whose session was not resumed yet after a restart of cmds is no longer skipped: it waits up to 15 minutes for the session.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.36.0/cmds-0.36.0.dmg" length="18833024" type="application/octet-stream" sparkle:edSignature="kuqrXVX2V80iZpsFTGb7gz+lMraW6eiatt01REFDlYzgPM/7EDksHnoznV7hpXwuLO1PB4ktC70jmtTcTwRBAA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.37.0/cmds-0.37.0.dmg" length="18895976" type="application/octet-stream" sparkle:edSignature="KQ0KZlCZT+B0Yox0F9DsJrUfq00h6nmUeOCgaqF893LKiWX+SF1vjDB4DM2Rb4scuCIOLX7exbtDbVlG2MudCA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: srXFKLXSBO8XOVv6Hzt4dHtmmPE/8BzTMuMXxb80p20V7ZI2DRDaTEouU2qnUSIdwa8d5JTreyQZKiXCQAvnAQ==
-length: 3268
+edSignature: Lt7wAldW4TOmUKu6e77/o5LswFauhh/xGeuWMxBLYBHy3TBE44PtS4Hwd7zKVzfTPyK5w8TJnLCjUFcOBuM6CA==
+length: 4394
 -->
