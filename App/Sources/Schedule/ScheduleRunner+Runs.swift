@@ -22,6 +22,10 @@ final class ActiveScheduleRun {
     /// The pane's screen and since when it has looked like that (reset on every state change).
     var screen = ScreenStability()
     var enterAt: Date?
+    /// Since when the run waits for another run to finish with its pane (`ScheduleRunner.claim`).
+    var turnSince: Date?
+    /// When the agent last showed a dialog in place of its input box while the run waited for it.
+    var startDialogAt: Date?
 
     init(record: ScheduleRun, schedule: Schedule, now: Date) {
         self.record = record
@@ -159,6 +163,7 @@ extension ScheduleRunner {
         run.record.state = state
         run.stateSince = now
         run.screen.reset()
+        run.startDialogAt = nil
         log(run.record)
         emit(.run(run.record))
     }
@@ -180,6 +185,10 @@ extension ScheduleRunner {
                                    enterAt: run.enterAt, now: now)
         // An instruction kept for the pane is being typed (`PaneQueueRunner`): wait for it.
         o.otherInputInProgress = controller.paneQueue.isTyping(in: pane)
+        if run.record.state == .waitingForAgent, o.foreground == .agent, o.choiceOnScreen || o.inputBoxMissing {
+            run.startDialogAt = now
+        }
+        o.sinceStartDialog = run.startDialogAt.map { now.timeIntervalSince($0) }
         return o
     }
 
@@ -246,16 +255,30 @@ extension ScheduleRunner {
         }
     }
 
-    /// The run uses `pane` (an existing pane: a `sendText` target, the pane holding a session). False when another
-    /// active run uses it: the run is then skipped.
+    /// The run uses `pane` (an existing pane: a `sendText` target, the pane holding a session). False while another
+    /// active run uses it: the run stays as it is and `begin` asks again on the next tick, so runs for one pane go
+    /// one after another in the order they started (a waiting run has no pane yet, so it holds none); it is skipped
+    /// only when the pane stays in use for `ScheduleRunTiming.turnWait`.
     func claim(_ pane: Pane, for run: ActiveScheduleRun) -> Bool {
-        run.record.workspace = pane.workspaceID
-        run.record.pane = pane.id
-        guard !active.contains(where: { $0 !== run && $0.record.pane == pane.id }) else {
+        let now = now()
+        let inUse = active.contains { $0 !== run && $0.record.pane == pane.id }
+        switch ScheduleRunTiming.turnStep(paneInUse: inUse, waited: now.timeIntervalSince(run.turnSince ?? now)) {
+        case .proceed:
+            run.record.workspace = pane.workspaceID
+            run.record.pane = pane.id
+            return true
+        case .wait:
+            if run.turnSince == nil {
+                run.turnSince = now
+                scheduleLog.info("run \(run.record.id, privacy: .public) waits for its turn in pane \(pane.id, privacy: .public)")
+            }
+            return false
+        default:
+            run.record.workspace = pane.workspaceID
+            run.record.pane = pane.id
             finish(run, .skipped, .paneInUse)
             return false
         }
-        return true
     }
 
     /// A new background workspace for the run (never selected; the keyboard stays where it is); its pane is the run's.

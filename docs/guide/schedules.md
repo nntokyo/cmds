@@ -98,9 +98,15 @@ A schedule types only where it may, and only once:
 - **Only its own panes.** A run types into the pane it created, the pane holding the targeted session id, or the
   pane its target names (a pane's tag, or the only terminal pane of a workspace title); if that pane now runs another
   session or another program, or the target matches no pane or several, the run is skipped. SSH panes are never
-  targets. One run at a time per pane.
+  targets. One run at a time per pane: schedules for one pane that are due in the same minute run one after another,
+  in the order they came due (a run waits up to 30 minutes for the pane, then it is skipped).
+- **A question before the session starts is yours to answer.** When a resumed Claude Code asks something before its
+  session begins (the folder trust question under an account that has not opened the folder, as after an account
+  switch), the run waits for your answer, for up to 12 hours, and types nothing into the question. Once you have
+  answered and the session is there, the prompt goes in ("continue" after an account switch or a restart included).
 - **Once.** Nothing is retried. A failed run is reported; Run Now tries again when you choose.
-- **Limits.** At most 50 schedules, one active run per schedule, five active runs at once and one per pane. A prompt
+- **Limits.** At most 50 schedules, one active run per schedule, five active runs at once (waiting ones included)
+  and one typing per pane. A prompt
   is at most 8 KB (line breaks and tabs, no other control characters); a command is one line of at most 1 KB.
 - **Local only.** `schedule.*` is refused on the sockets of SSH panes, so a server cannot create schedules.
 - **Visible origin.** Schedules made with the CLI or the socket API (for example by an agent) are marked in the

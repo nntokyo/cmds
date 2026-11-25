@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Schedules for one pane that came due in the same minute: only the first ran, the others were skipped ("another run
+  was using the pane"). They now run one after another, in the order they came due.
+- After an account switch (or a restart) into an account that asks the folder trust question first, the session was
+  never told to continue: the run gave up after 2 minutes ("the agent did not start"). It now waits for your answer
+  (up to 12 hours), types nothing into the question, and sends the prompt once the session is there.
+- Updates: a daily check that failed because the network was down (the Mac woke for a few seconds while asleep) was
+  not tried again until the next day, so a Mac could stay on an old version for days. It is now tried again every 15
+  minutes, up to 8 times.
+
 ## [0.35.0] - 2026-11-25
 
 ### Added

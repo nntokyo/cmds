@@ -241,6 +241,42 @@ final class ScheduleRunTimingTests: XCTestCase {
         XCTAssertEqual(T.step(state: .waitingForAgent, observation: codex, elapsed: 1, expect: session), .skip(.notClaude))
     }
 
+    /// Claude Code asks something before the session starts (the folder trust question under a new account): the run
+    /// waits for a person's answer, then for the session, and types nothing into the question.
+    func testWaitsForTheAnswerToAStartDialog() {
+        let resumed = T.Expectation(sessionID: "abc", startsAgent: true, ownsPane: false)
+        var dialog = agent(nil)
+        dialog.inputBoxMissing = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: dialog, elapsed: 120, expect: resumed), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: dialog, elapsed: 7 * 3600, expect: resumed), .wait)
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: dialog, elapsed: T.startDialogWait, expect: resumed),
+                       .fail(.agentDidNotStart))
+        var choice = agent(nil)
+        choice.choiceOnScreen = true
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: choice, elapsed: 600, expect: resumed), .wait)
+        // Answered 5 s ago, after 7 hours: the session has 120 s from the answer to start.
+        var answered = agent(nil)
+        answered.sinceStartDialog = 5
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: answered, elapsed: 7 * 3600, expect: resumed), .wait)
+        answered.sinceStartDialog = 120
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: answered, elapsed: 7 * 3600, expect: resumed),
+                       .fail(.agentDidNotStart))
+        // The session started: the prompt goes in.
+        var started = agent()
+        started.sinceStartDialog = 8
+        XCTAssertEqual(T.step(state: .waitingForAgent, observation: started, elapsed: 7 * 3600, expect: resumed), .paste)
+    }
+
+    /// Two schedules for one pane due in the same minute: the second waits for the first, it is not skipped.
+    func testRunsForOnePaneTakeTurns() {
+        XCTAssertEqual(T.turnStep(paneInUse: false, waited: 0), .proceed)
+        XCTAssertEqual(T.turnStep(paneInUse: true, waited: 0), .wait)
+        XCTAssertEqual(T.turnStep(paneInUse: true, waited: T.turnWait - 1), .wait)
+        XCTAssertEqual(T.turnStep(paneInUse: true, waited: T.turnWait), .skip(.paneInUse))
+        // Free again after a long wait: it goes on.
+        XCTAssertEqual(T.turnStep(paneInUse: false, waited: T.turnWait), .proceed)
+    }
+
     func testAgentStartingOrGone() {
         // After typing `claude`: the shell is still in front for a moment.
         XCTAssertEqual(T.step(state: .waitingForAgent, observation: shell, elapsed: 2, expect: owned), .wait)
