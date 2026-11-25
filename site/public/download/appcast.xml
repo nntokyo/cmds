@@ -7,38 +7,30 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.35.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.35.0</link>
-      <sparkle:version>53</sparkle:version>
-      <sparkle:shortVersionString>0.35.0</sparkle:shortVersionString>
+      <title>cmds 0.36.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.36.0</link>
+      <sparkle:version>54</sparkle:version>
+      <sparkle:shortVersionString>0.36.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Wed, 25 Nov 2026 06:57:31 GMT</pubDate>
+      <pubDate>Wed, 25 Nov 2026 18:51:44 GMT</pubDate>
       <description><![CDATA[
-<h3>新機能</h3>
-<ul>
-<li>作業中のペインへの指示を預かる <code>cmds queue</code>：<code>cmds queue add --pane p12 "ビルドが終わったらテストを実行して報告して"</code>（または <code>--workspace タイトル</code>）と送ると、cmds が指示を預かり、そのペインのエージェント（Claude Code / Codex）が空いた時点で自動的に入力して Return を押します。「あとで伝える」ために待つ必要がなくなります。ペインごとに古い順に1件ずつ、時間切れなし、cmds を再起動しても残ります。作業中・質問や確認の画面・番号付きの選択肢が出ている間は入力せず、入力欄に人が打った文字が残っている間も入力しません（その文字に指示がつながって送られることはありません。欄が空になったら入ります）。<code>cmds queue list</code> で、待っている指示と待っている理由、入力済みの履歴を確かめられます。<code>cmds queue cancel ID</code> で取り消せます。</li>
-<li>止まっているペインの一覧 <code>cmds idle</code>：進行中の作業がないまま30分以上たったペインを、長い順に一覧で返します（<code>--minutes 10</code> で分数を指定）。ペイン、ワークスペース、エージェント、待機中か入力待ちか、どれだけの時間か、いつからか、預かり中の指示の数を表示します。</li>
-</ul>
 <h3>修正</h3>
 <ul>
-<li>スケジュール：Claude Code がフォルダの信頼確認などの画面（番号のない選択肢）を出している間に指示が入力され、Return で「No, exit」が選ばれてしまうことがありました。入力欄が画面に出ているときだけ入力します。入力欄に打ちかけの文字が残っているときも、その文字と一緒に送らずに待ちます。</li>
-<li>Bluetooth 同期：チャネルの公開に失敗（「No resources available for L2CAP」）したあと、同じ Bluetooth の管理オブジェクトで再試行を続け、cmds を再起動するまで失敗し続けることがありました。2回続けて失敗したら管理オブジェクトを作り直してやり直します。Bluetooth のリセット時も電源オフと同じように公開し直します。<code>cmds sync</code> に、連続して失敗した回数といつからかを表示します。</li>
-</ul>
-<h3>Added</h3>
-<ul>
-<li><code>cmds queue</code>, instructions kept for a busy pane: <code>cmds queue add --pane p12 "When the build is done, run the tests and report"</code> (or <code>--workspace TITLE</code>) returns at once; cmds keeps the instruction and types it into the pane's agent (Claude Code or Codex), with Return, when the agent is free. One at a time per pane, oldest first, without a time limit and across a restart of cmds. Nothing is typed while the agent works, asks a question, or shows a dialog or a numbered choice, nor while its input box holds text you typed and have not sent (the instruction is never joined to that text; it goes in once the box is empty). <code>cmds queue list</code> shows what waits and why, and the last ones typed; <code>cmds queue cancel ID</code> takes one out.</li>
-<li><code>cmds idle</code>, panes with nothing in progress: lists the panes whose agent has had no work in progress for 30 minutes or longer (<code>--minutes 10</code> for another threshold), longest first: pane, workspace, agent, idle or asking for input, how long and since when, and how many kept instructions wait for it.</li>
+<li>スケジュール：同じペイン宛ての予定が同じ分に重なると、最初の1件だけが実行され、残りは「another run was using the pane」で飛ばされていました。重なった予定は、時刻が来た順に1件ずつ実行します（ペインが空くのを最長30分待ちます）。</li>
+<li>スケジュール：アカウントの切り替え（または再起動）の後、切り替え先のアカウントでフォルダの信頼確認が出ると、「続けて」の案内が2分で失敗し（「the agent did not start」）、セッションに届きませんでした。確認の画面には何も入力せず、人が答えるのを最長12時間待ち、セッションが始まってから案内を送ります。</li>
+<li>アップデート：1日1回の更新確認が、Mac のスリープ中の短い起動などで通信できずに失敗すると、翌日まで再確認されず、古い版のまま数日たつことがありました。失敗した確認は15分おきに最大8回やり直します。</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>Schedules: a prompt could be pasted while Claude Code showed a dialog instead of its input box (the folder trust question, whose choices carry no numbers), and Return then answered "No, exit". A prompt is now typed only while the input box is on screen, and waits while the box holds text you typed and have not sent instead of being sent together with it.</li>
-<li>Bluetooth sync: after a failed publish of its channel ("No resources available for L2CAP") cmds tried again on the same Bluetooth manager and could keep failing until it restarted. From the second failure in a row it starts over with a new manager, and a Bluetooth reset is handled like power off. <code>cmds sync</code> shows how many tries failed in a row and since when.</li>
+<li>Schedules: of several schedules for one pane that came due in the same minute, only the first ran and the others were skipped ("another run was using the pane"). They now run one after another, in the order they came due (a run waits up to 30 minutes for the pane).</li>
+<li>Schedules: after an account switch (or a restart) into an account that asks the folder trust question first, the "continue" note failed after 2 minutes ("the agent did not start") and never reached the session. cmds now types nothing into the question, waits up to 12 hours for your answer, and sends the note once the session has started.</li>
+<li>Updates: a daily check that failed because the network was down (a short wake while the Mac sleeps) was not tried again until the next day, so a Mac could stay on an old version for days. A failed check is now tried again every 15 minutes, up to 8 times.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.35.0/cmds-0.35.0.dmg" length="18827448" type="application/octet-stream" sparkle:edSignature="xU4BbzTZ1auE+KTOs4beeVU8jSAjVmTOcqCjd46qa3JR8x2B1sgzetuzqtTS49yAxKEV5J6dF6/vDrjrT/bWDw=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.36.0/cmds-0.36.0.dmg" length="18833024" type="application/octet-stream" sparkle:edSignature="kuqrXVX2V80iZpsFTGb7gz+lMraW6eiatt01REFDlYzgPM/7EDksHnoznV7hpXwuLO1PB4ktC70jmtTcTwRBAA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: XcXrA6u4Adjht5c5L9YXi3u/ZCedQiJAim7smIyRPa3u5veGKfzOPRVy5bcWhiLvy64k4nBvD+6fFS5DYiQZDg==
-length: 5670
+edSignature: srXFKLXSBO8XOVv6Hzt4dHtmmPE/8BzTMuMXxb80p20V7ZI2DRDaTEouU2qnUSIdwa8d5JTreyQZKiXCQAvnAQ==
+length: 3268
 -->
