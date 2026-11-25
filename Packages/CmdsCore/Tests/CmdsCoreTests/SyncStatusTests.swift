@@ -27,4 +27,20 @@ final class SyncStatusTests: XCTestCase {
         XCTAssertEqual(clients.first?["peer"]?.stringValue, "bluetooth:1a2b3c4d")
         XCTAssertEqual(try json.decode(SyncStatusReport.self), report)
     }
+
+    /// #453: the failures in a row and since when; absent while it works and from an older cmds.
+    func testBluetoothFailuresAreOptional() throws {
+        var bluetooth = SyncStatusReport.Bluetooth(allowed: true, disabledByEnvironment: false, authorization: "allowedAlways",
+                                                   managerState: "poweredOn", advertising: false, psm: nil, channels: 0,
+                                                   status: "Failed: No resources available for L2CAP. Trying again in 300 s.",
+                                                   failures: 174, failingSince: "2026-11-23T14:51:00Z")
+        let json = try JSONValue.from(bluetooth)
+        XCTAssertEqual(json["failures"]?.intValue, 174)
+        XCTAssertEqual(try json.decode(SyncStatusReport.Bluetooth.self), bluetooth)
+
+        bluetooth.failures = nil
+        bluetooth.failingSince = nil
+        let old = Data(#"{"allowed":true,"disabledByEnvironment":false,"authorization":"allowedAlways","managerState":"poweredOn","advertising":false,"channels":0,"status":"Failed: No resources available for L2CAP. Trying again in 300 s."}"#.utf8)
+        XCTAssertEqual(try JSONDecoder().decode(SyncStatusReport.Bluetooth.self, from: old), bluetooth)
+    }
 }

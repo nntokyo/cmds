@@ -34,8 +34,12 @@ final class SyncBluetoothPeripheral: NSObject {
     /// After a failed publish, service or advertising (#343): the next try, and how many failed in a row.
     private var retry: DispatchWorkItem?
     private var failures = 0
+    /// When the first of the failures in a row happened.
+    private var failingSince: Date?
     /// Failed publishes, services or advertisings in a row (`cmds doctor`).
     var consecutiveFailures: Int { failures }
+    /// From this many failures in a row on, each new try starts over with a new peripheral manager (#453).
+    static let recreateAfterFailures = 2
     /// Seconds before trying again after the 1st, 2nd, 3rd… failure in a row (the last one repeats).
     static let retryDelays: [Int] = [5, 15, 60, 300]
 
@@ -92,7 +96,9 @@ final class SyncBluetoothPeripheral: NSObject {
         return SyncStatusReport.Bluetooth(allowed: isAllowed, disabledByEnvironment: CmdsEnv.isBluetoothDisabled(),
                                           authorization: authorization, managerState: state,
                                           advertising: manager?.isAdvertising ?? false, psm: psm,
-                                          channels: relays.count, status: statusText)
+                                          channels: relays.count, status: statusText,
+                                          failures: failures == 0 ? nil : failures,
+                                          failingSince: failingSince.map { ISO8601DateFormatter().string(from: $0) })
     }
 
     // MARK: - Lifecycle
@@ -111,9 +117,7 @@ final class SyncBluetoothPeripheral: NSObject {
         }
         guard let manager else {
             status = LocalizedStatus("Starting…")
-            // Creating the manager asks for Bluetooth permission the first time.
-            manager = CBPeripheralManager(delegate: self, queue: .main,
-                                          options: [CBPeripheralManagerOptionShowPowerAlertKey: false])
+            createManager()
             return
         }
         // Identity reset or new Mac name: publish the new hint.
@@ -122,8 +126,21 @@ final class SyncBluetoothPeripheral: NSObject {
         }
     }
 
+    /// Its state callback (`poweredOn`) starts publishing.
+    private func createManager() {
+        // Creating the manager asks for Bluetooth permission the first time.
+        manager = CBPeripheralManager(delegate: self, queue: .main,
+                                      options: [CBPeripheralManagerOptionShowPowerAlertKey: false])
+    }
+
     private func stop() {
         cancelRetry()
+        releaseManager()
+        status = LocalizedStatus("Off")
+    }
+
+    /// Gives back everything the manager holds and drops it. Keeps the retry state.
+    private func releaseManager() {
         if let manager {
             manager.stopAdvertising()
             manager.removeAllServices()
@@ -131,13 +148,17 @@ final class SyncBluetoothPeripheral: NSObject {
             manager.delegate = nil
         }
         manager = nil
+        // Relays still being set up see `manager == nil` and close themselves.
+        forgetPublished()
+    }
+
+    /// The L2CAP channel, the service and the relays are gone (Bluetooth off or reset, or the manager dropped).
+    private func forgetPublished() {
         psm = nil
         service = nil
         publishedInfo = nil
-        // Relays still being set up see `manager == nil` and close themselves.
         for relay in relays.values { relay.close() }
         relays.removeAll()
-        status = LocalizedStatus("Off")
     }
 
     private func publishService() {
@@ -233,12 +254,16 @@ extension SyncBluetoothPeripheral {
         retry?.cancel()
         retry = nil
         failures = 0
+        failingSince = nil
     }
 
     /// A publish, service or advertising failure (e.g. "No resources available for L2CAP"): tries again later
-    /// (`retryDelays`) instead of staying off until Bluetooth or cmds restarts (#343).
+    /// (`retryDelays`) instead of staying off until Bluetooth or cmds restarts (#343). Publishing again on the same
+    /// manager kept failing for a day (#453), so from the 2nd failure in a row the next try uses a new manager, as at
+    /// launch, so that bluetoothd can release what the old one held (not yet confirmed on a Mac in that state).
     private func failed(_ error: Error) {
         let delay = Self.retryDelays[min(failures, Self.retryDelays.count - 1)]
+        if failures == 0 { failingSince = Date() }
         failures += 1
         status = LocalizedStatus("Failed: \(error.localizedDescription). Trying again in \(delay) s.")
         retry?.cancel()
@@ -247,7 +272,13 @@ extension SyncBluetoothPeripheral {
                 guard let self, let manager = self.manager, manager.state == .poweredOn else { return }
                 self.retry = nil
                 self.status = LocalizedStatus("Starting…")
-                self.start(manager)
+                if self.failures >= Self.recreateAfterFailures {
+                    syncLog.notice("bluetooth: new peripheral manager after \(self.failures, privacy: .public) failures in a row")
+                    self.releaseManager()
+                    self.createManager()
+                } else {
+                    self.start(manager)
+                }
             }
         }
         retry = work
@@ -271,13 +302,15 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
                 status = LocalizedStatus("Bluetooth is off")
                 // L2CAP channel, services and relays are gone; start over when it comes back.
                 cancelRetry()
-                psm = nil
-                service = nil
-                publishedInfo = nil
-                for relay in relays.values { relay.close() }
-                relays.removeAll()
+                forgetPublished()
             default:
+                // Resetting or unknown: what was published is gone too, so `poweredOn` publishes the channel
+                // again instead of adding the service on a PSM that no longer exists. The failure count stays
+                // (a new manager may report `unknown` first).
                 status = LocalizedStatus("Unavailable")
+                retry?.cancel()
+                retry = nil
+                forgetPublished()
             }
         }
     }
@@ -314,6 +347,7 @@ extension SyncBluetoothPeripheral: CBPeripheralManagerDelegate {
                 failed(error)
             } else {
                 failures = 0
+                failingSince = nil
                 status = LocalizedStatus("Advertising (PSM \(psm.map(String.init) ?? "?"))")
                 syncLog.notice("bluetooth: advertising, PSM \(self.psm ?? 0, privacy: .public)")
             }

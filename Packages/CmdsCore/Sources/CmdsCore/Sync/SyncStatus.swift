@@ -50,9 +50,15 @@ public struct SyncStatusReport: Codable, Equatable, Sendable {
         public var channels: Int
         /// Status as shown in the menu.
         public var status: String
+        /// Failed publishes, services or advertisings in a row; nil when the last try worked (and from a cmds
+        /// older than 0.35).
+        public var failures: Int?
+        /// ISO 8601: when the first of those failures happened.
+        public var failingSince: String?
 
         public init(allowed: Bool, disabledByEnvironment: Bool, authorization: String, managerState: String,
-                    advertising: Bool, psm: UInt16?, channels: Int, status: String) {
+                    advertising: Bool, psm: UInt16?, channels: Int, status: String, failures: Int? = nil,
+                    failingSince: String? = nil) {
             self.allowed = allowed
             self.disabledByEnvironment = disabledByEnvironment
             self.authorization = authorization
@@ -61,6 +67,8 @@ public struct SyncStatusReport: Codable, Equatable, Sendable {
             self.psm = psm
             self.channels = channels
             self.status = status
+            self.failures = failures
+            self.failingSince = failingSince
         }
     }
 

@@ -341,7 +341,9 @@ enum Format {
         out += "bluetooth  \(bt.allowed ? "allowed" : "not allowed")\(bt.disabledByEnvironment ? " (disabled by CMDS_SYNC_NO_BLUETOOTH)" : "")"
             + " · authorization \(bt.authorization) · manager \(bt.managerState)"
             + " · advertising \(yes(bt.advertising))\(bt.psm.map { " · PSM \($0)" } ?? "")"
-            + " · \(bt.channels) channel\(bt.channels == 1 ? "" : "s") · \(bt.status)\n"
+            + " · \(bt.channels) channel\(bt.channels == 1 ? "" : "s") · \(bt.status)"
+            + (bt.failures.map { " · \($0) failure\($0 == 1 ? "" : "s") in a row\(bt.failingSince.map { " since \($0)" } ?? "")" } ?? "")
+            + "\n"
         let remote = report.remote
         out += "ssh relay  \(yes(remote.enabled))"
         if !remote.host.isEmpty { out += " · \(remote.host) 127.0.0.1:\(remote.relayPort)" }
