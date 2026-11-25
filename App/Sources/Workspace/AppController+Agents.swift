@@ -75,15 +75,11 @@ extension AppController {
             return
         }
         pane.agentSignals.hookBusyFollowsSpinner = false
-        let state: AgentSignals.HookState?
+        // The idle notice (`atPrompt`) leaves the pane idle, as `Stop` did: `ClaudeHook.Event.hookState`.
+        let state = event.hookState
         switch event {
-        case .needsInput: state = .needsInput
-        // Waiting at its prompt: idle, as after `Stop` (it asks nothing).
-        case .atPrompt: state = .finished
-        case .finished: state = .finished
-        case .working: state = .busy
+        case .needsInput, .atPrompt, .finished, .working: break
         case .ended:
-            state = nil
             pane.agentSignals.endedAt = now
             // Claude Code exited: its status-line usage goes with it (like a watched process exiting).
             if pane.agentUsage?.agent == .claude {

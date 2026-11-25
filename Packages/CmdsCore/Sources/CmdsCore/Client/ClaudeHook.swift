@@ -29,6 +29,17 @@ public enum ClaudeHook {
         /// Does not change the pane's own state (a background subagent may outlive the turn).
         case subagent(Subagent)
 
+        /// What the event makes of the pane's agent (`AgentSignals.hook`); nil = no hook state (`ended`, subagents).
+        /// The idle notice leaves the agent as `Stop` did: at its prompt, asking nothing.
+        public var hookState: AgentSignals.HookState? {
+            switch self {
+            case .needsInput: return .needsInput
+            case .atPrompt, .finished: return .finished
+            case .working: return .busy
+            case .ended, .subagent: return nil
+            }
+        }
+
         public var notification: Notification? {
             switch self {
             case .needsInput(let note), .atPrompt(let note), .finished(let note): return note

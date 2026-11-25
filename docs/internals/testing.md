@@ -27,7 +27,7 @@ the same jobs here ([ci.md](ci.md)).
 
 | Package | Command | Covers |
 |---|---|---|
-| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), agents' numbered choices for the menu bar's reply panel (`AgentPromptOptionsTests`), cells per character for the phone's grid (`TerminalCellsTests`), a style's text and background colours as the phone and the reply panel draw them (`TerminalStyleColorsTests`), the widget's file (`WidgetSnapshotTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane, a question before the session starts, runs for one pane taking turns; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), when a failed update check is tried again (`UpdateCheckRetryTests`), when agents are told about the battery (`PowerNoticeTests`: the switch and the level each once, the line, the settings file), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
+| `Packages/CmdsCore` | `swift test` (in that directory) | RPC and client, models, agent usage and Claude/Codex parsing, the menu bar lists (`MenuBarSummaryTests`), agents' numbered choices for the menu bar's reply panel (`AgentPromptOptionsTests`), cells per character for the phone's grid (`TerminalCellsTests`), a style's text and background colours as the phone and the reply panel draw them (`TerminalStyleColorsTests`), the widget's file (`WidgetSnapshotTests`), session resume, keep-awake, previews, resource sampling, workspace export bundles, the remote-access policy and helper script (also: `schedule.*` refused on remote sockets), schedules (`ScheduleCalendarTests`: weekly in Tokyo and New York, the DST gap and repeat, a leap day, `limitReset` following a limit, catch-up; `ScheduleRunTimingTests`: every run state, busy / asking / subagent / switch / queued resume, another session or program in the pane, a question before the session starts, runs for one pane taking turns; `PaneReadinessTests`: the one readiness check shared with resuming and account switching; `ScheduleCodableTests` / `ScheduleValidationTests`: file format, lenient decoding, newer versions read only, moving a damaged file aside, history retention, limits), when a failed update check is tried again (`UpdateCheckRetryTests`), from Claude Code's hooks to the decision to type for agents idle for minutes or hours (`IdleAgentDeliveryTests`), when agents are told about the battery (`PowerNoticeTests`: the switch and the level each once, the line, the settings file), the whole sync protocol (codec, pairing, TLS pinning, screens, relays, remote access, status) |
 | `Packages/CmdsCore` | `swift test --filter 'SFTP\|FileLocation\|SSHFileCommand\|RemoteEdit\|FolderSync'` | the SFTP codec and client, ssh arguments and failure classification, `HOST:PATH`, the server Trash, the transfer job and queue, editing a server's file (download, save, the conflict answers, upload timing), and comparing and syncing folders (plans, one-way and two-way runs, the Trash, items changed since the comparison, retry) (in-process server, no network) |
 | `Packages/CmdsCore` | `swift test --filter 'Assistant\|PaidFeatures'` | the voice assistant (#243): addressing by name and the follow-up window (`AssistantAddressingTests`), Japanese and English commands (`AssistantIntentTests`), which actions a spoken yes may confirm (`AssistantSafetyTests`), finding the workspace and pane, asking back, the status text (`AssistantPlannerTests`), the HUD's state machine (`AssistantMachineTests`), which questions go to Claude with web search, the on-device model's `[[NEEDS_WEB]]` answer and Claude's answer made speakable (`AssistantWebTests`), commands for several sessions, the interpreter's JSON, what goes to it and that its result is only a proposal (`AssistantManySessionsTests`), the voice list and the Personal Voice fallback and notes without its permission (`AssistantVoicesTests`), the paid-feature gate and its free beta (`PaidFeaturesTests`) |
 | `Packages/CmdsCore` | `swift test --filter CmdsCLITests` | the CLI's English output, `cmds schedule` argument mapping (`ScheduleCLITests`), the `cmds mcp` server with the app API stubbed (`MCPServerTests`) |
@@ -353,6 +353,39 @@ In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the C
 Quit the instance (`cmds quit`) and delete the temporary folders afterwards.
 
 All switches: [reference/environment.md](../reference/environment.md#app-switches-isolated-and-test-instances).
+
+## Day run
+
+Before a release that touches schedules, kept instructions, agent state or resuming, run a day of cmds in small:
+
+```sh
+xcodebuild -scheme CmdsApp -derivedDataPath build/dd build
+scripts/day-run.sh            # about 80 minutes; --quick: about 25 (idle times of 2, 3 and 4 minutes)
+```
+
+`scripts/day-run.sh` starts an isolated instance of the Debug build with four panes of the **real** Claude Code (a
+stub does not send Claude Code's hooks, and the hooks are what went wrong: 0.35.0 and 0.36.0 typed nothing into an
+agent that had been idle for a minute, because every check until then typed right after the agent had answered) and
+prints one PASS or FAIL line per check:
+
+- a schedule and a kept instruction for agents that have been idle for 5, 30 and 60 minutes;
+- three schedules for one pane due in the same minute (all run, in order);
+- text a person typed in the input box: a schedule and a kept instruction wait, go in once it is cleared, and the
+  text is never sent;
+- an account switch (the trust question of the other account is left alone, then answered as a person would), then
+  a schedule made before it and an instruction kept after it;
+- a restart of the instance with a schedule's time passing meanwhile: the four sessions are resumed, the time runs
+  once (`--late skip`: only noted), an instruction kept before the restart is typed after it;
+- a sleep, as a moved schedule clock (`debug.schedule_clock` with `wake`): the Mac itself is never put to sleep.
+
+Every check that types into an agent comes at least 130 s after the agent last answered. The agents answer one-word
+prompts under the Claude account `--account` (default: the first one without a limit; `--to-account` for the switch).
+Only `claude-accounts.json` is copied from the running cmds; nothing else of it is read or touched. Results and a log
+stay in the run's folder (`cmds-day.*` under `$CMDS_DAY_RUN_DIR`, default `$TMPDIR`); the instance's own folder and
+the agents' folder are removed. What it cannot show: a real sleep, a real power cut, Codex.
+
+The same chain without a Mac to wait for, from a hook's JSON to the decision to type, is `IdleAgentDeliveryTests`
+(idle for 1.5 minutes to a day; a real permission prompt is never typed into).
 
 ## Upgrade rehearsal
 
