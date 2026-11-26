@@ -48,20 +48,26 @@ final class QueueCLITests: XCTestCase {
     func testStall() {
         XCTAssertEqual(Format.stall(StallNoticeStatus(settings: .init(), toPane: nil, stalls: []), timeZone: tokyo),
                        "notice  off (cmds stall notice on --to PANE)\n"
-                       + "after   10 min asking for input, 15 min with a kept instruction not typed in\nstalled none\n")
-        let on = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1", inputMinutes: 5, queueMinutes: 20), toPane: "p3",
+                       + "after   10 min asking for input, 15 min with a kept instruction not typed in, 10 min idle (told once)\nstalled none\n")
+        let on = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1", inputMinutes: 5, queueMinutes: 20, idleMinutes: 0),
+                                   toPane: "p3",
                                    stalls: [.init(pane: "p7", kind: .needsInput, minutes: 240, reason: .permissionOrQuestion, key: "a"),
+                                            .init(pane: "p8", kind: .idle, minutes: 30, reason: .idle, key: "c"),
                                             .init(pane: nil, kind: .undelivered, minutes: 21, reason: .paneClosed, key: "b")],
                                    lastSentAt: "2026-11-25T07:00:00Z", lastLines: 2)
         XCTAssertEqual(Format.stall(on, timeZone: tokyo),
-                       "notice  on: pane p3 is told\nafter   5 min asking for input, 20 min with a kept instruction not typed in\n"
+                       "notice  on: pane p3 is told\n"
+                       + "after   5 min asking for input, 20 min with a kept instruction not typed in, idle agents not told\n"
                        + "stalled p7  asks for input  240 min  permission-or-question\n"
+                       + "        p8  idle  30 min  idle\n"
                        + "        -  kept instruction not typed in  21 min  pane-closed\n"
                        + "last    2 lines kept at 2026-11-25 16:00\n")
         let closed = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1"), toPane: nil, stalls: [])
         XCTAssertTrue(Format.stall(closed).hasPrefix("notice  on: the pane that is told is not open\n"))
         let file = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1"), toPane: "p3", stalls: [], listFile: "/tmp/s/stalls.txt")
         XCTAssertTrue(Format.stall(file).hasSuffix("stalled none\nfile    /tmp/s/stalls.txt\n"))
+        let hourly = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1", idleRepeat: true), toPane: "p3", stalls: [])
+        XCTAssertTrue(Format.stall(hourly).contains(", 10 min idle (told every hour)\n"))
         let chosen = StallNoticeStatus(settings: .init(toTag: "t1"), toPane: "p3", stalls: [])
         XCTAssertTrue(Format.stall(chosen).hasPrefix("notice  off (cmds stall notice on)\n"))
     }
