@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Settings has a Browser tab: page zoom, tabs, suspended tabs, the Web Inspector, separate sign-ins per workspace and
+  the bookmarks bar moved there from General (the settings and their values are the same). General keeps the
+  terminal, preview zoom and the memory warning.
+
+### Fixed
+
+- Settings › General had grown taller than a 13" screen and could not be scrolled, so its last rows were out of
+  reach. Every Settings tab now scrolls when it is taller than the screen allows.
+
 ## [0.38.0] - 2026-11-26
 
 ### Added

@@ -118,7 +118,7 @@ final class BrowserPane: NSView {
     var onUserNavigated: (() -> Void)?
     /// The icon changed (the owner redraws its tab).
     var onFaviconChange: (() -> Void)?
-    /// Chrome's bookmarks under the toolbar (Settings › General).
+    /// Chrome's bookmarks under the toolbar (Settings › Browser).
     let bookmarksBar = ChromeBookmarksBarView()
     private var bookmarksBarHeight: NSLayoutConstraint?
     let pageDelegate = BrowserPageDelegate()

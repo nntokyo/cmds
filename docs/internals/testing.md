@@ -97,7 +97,7 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `synced`). Build groups with `cmds tab`, `cmds browser open` and `cmds pane move --beside P --tab`, check
   `cmds ls` / `PaneInfo.tabs` / `background` after closing, swapping and moving tabs (the focused pane is never a
   background tab), and `tabGroups` in session.json across a relaunch. Without the variable, a Debug build is usually
-  refused Chrome's real folder by macOS: Settings › General then shows the Full Disk Access note.
+  refused Chrome's real folder by macOS: Settings › Browser then shows the Full Disk Access note.
 - A window that is not on screen (another Space, hidden) is not drawn, so `screencapture` shows nothing. DEBUG
   builds answer `debug.preview_snapshot {pane}` → `{"png_base64"}` with a picture of a preview pane drawn off screen
   (web content via WKWebView's snapshot; Quick Look's out-of-process view stays blank), and

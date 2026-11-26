@@ -114,14 +114,14 @@ browser, preview, files), title and an orange icon when it needs attention.
   several terminals), Duplicate Tab (the same page with its device size, responsive view and file watch; the same
   file; the same folder with its hidden-files and Follow Terminal settings; a terminal in the same directory with the
   same Claude account), Reload Page and Move to New Workspace.
-- **Suspended tabs** (Settings › General › Suspend background tabs; after 30 minutes by default, or never): a browser
+- **Suspended tabs** (Settings › Browser › Suspend background tabs; after 30 minutes by default, or never): a browser
   tab not shown and not used for that long is unloaded to save memory (its web view and process are replaced) and
   loads again when shown or used (back / forward history is lost). Never a page with changed form fields (also in
   same-site frames and shadow DOM), focused editable text, a code or rich-text editor (Monaco, CodeMirror, Jupyter…)
   or playing media, nor one that is the answer to a form, still loading or showing a load error, has a pop-up open, or
   has the responsive view, file watch or console open; tabs of a workspace that is not shown are left alone.
   `PaneInfo.suspended` tells.
-- **Browser pages open in tabs** (on by default; Settings › General › Open new pages in tabs): a link that opens a new
+- **Browser pages open in tabs** (on by default; Settings › Browser › Open new pages in tabs): a link that opens a new
   window (`target="_blank"`) becomes a tab of its browser pane, and `cmds browser open` or an agent's `browser_open`
   becomes a tab of the workspace's browser pane (the one on screen first) instead of a new split. Without a browser
   pane they still split. Turned off, every new page gets a split, as before. An agent's `browser_open` (or
@@ -356,7 +356,7 @@ cmds browser find 'Sign in'                          # select the next match on 
 
 ### Chrome bookmarks
 
-A bar under the address bar shows your browser's bookmarks bar (**Settings › General › Bookmarks from**: Google Chrome
+A bar under the address bar shows your browser's bookmarks bar (**Settings › Browser › Bookmarks from**: Google Chrome
 by default; Microsoft Edge, Brave, Vivaldi and Arc read the same way from their folders, Safari its
 `~/Library/Safari/Bookmarks.plist` with the Favorites bar as the bar and the Bookmarks menu as Other Bookmarks). For
 Chrome: a click loads the bookmark
@@ -369,7 +369,7 @@ are not shared (sign in to sites in the pane itself). `javascript:` bookmarklets
 Bookmarks show their icons from Chrome's own icon database (`<profile>/Favicons`, copied and read read-only) or, for
 sites visited in a browser pane, the icon found there.
 
-- **Settings › General › Show Chrome bookmarks** turns the bar off; **Chrome profile** picks a profile (default: the
+- **Settings › Browser › Show a bookmarks bar** turns the bar off; **Profile** picks a profile (default: the
   one Chrome used last).
 - When Chrome keeps a profile's bookmarks only encrypted (it can, for bookmarks saved in the Google Account), cmds
   cannot read them; Settings says so, also when it shows the bookmarks on this Mac but not the account's.
@@ -383,7 +383,7 @@ sites visited in a browser pane, the icon found there.
 Each **login profile** keeps its own cookies, storage and sign-ins, so two panes can be signed in to the same site as
 different users, and panes with the same profile share their sign-ins.
 
-**A workspace created from now on has its own profile** (Settings › General › Browser › Separate sign-ins per
+**A workspace created from now on has its own profile** (Settings › Browser › Separate sign-ins per
 workspace, on): a browser pane opened in it, by you or by an agent, uses that workspace's profile, named after its
 project folder (`notes · 3fa2`), unless a profile was chosen. One workspace's sign-ins (X, Amazon…) are then never
 another's, so an agent never posts or buys as another workspace's account. Sign in once in such a workspace.
@@ -445,7 +445,7 @@ match. Esc closes the bar. `cmds browser find [--backwards] [--case-sensitive] T
   finishes in the pane. ⌘W or the page itself closes it; closing the pane closes its pop-ups. Panes in a workspace that
   is not shown open no pop-ups.
 - **Links that open a new window** (`target="_blank"`) open in a new tab of the pane ([Tabs](#tabs)), or a new
-  browser split beside it when Settings › General › Open new pages in tabs is off.
+  browser split beside it when Settings › Browser › Open new pages in tabs is off.
 - **`alert`, `confirm` and `prompt`** appear as sheets on the window, headed with the page's host.
 - **File fields** (`<input type="file">`) open the usual file panel.
 - **Downloads** (a `download` link, or a file the browser cannot show) go to the Downloads folder, numbered when the
@@ -908,8 +908,8 @@ runs `pmset -a disablesleep 0` when you turn it off or quit cmds. While it is on
 
 ## Settings
 
-**cmds › Settings…** (⌘,) has five tabs — General, Sidebar, Agents, Menu Bar, Updates — and applies every change at
-once to all open panes and remembers it:
+**cmds › Settings…** (⌘,) has a tab per area — General, Browser, Sidebar, Agents, Menu Bar, Assistant (macOS 26 and later), Updates — and
+applies every change at once to all open panes and remembers it. A tab taller than the screen allows scrolls:
 
 - **Terminal font and size**: a font family (installed monospaced fonts) and a custom size in points. Both are
   layered over your Ghostty config (`~/.config/ghostty/config`): left at **Ghostty Default** / unchecked, the config
@@ -921,12 +921,15 @@ once to all open panes and remembers it:
 - **Show in each workspace** (Sidebar): Git branch, directory, listening ports, the agent's model, context and cost,
   the latest notification — turn off what you don't need for shorter rows. The workspace name, the agent's state and
   its task always show. **Footer**: AI limits (Claude Code, Codex), CPU and memory. All on by default.
-- **Browser page zoom** and **Preview zoom**: the starting zoom of browser panes and of rendered previews
-  (Markdown, diffs, text).
-- **Open new pages in tabs** (General): links that open a new window, `cmds browser open` and agents' pages become
+- **Browser page zoom** (Browser) and **Preview zoom** (General): the starting zoom of browser panes and of
+  rendered previews (Markdown, diffs, text).
+- **Open new pages in tabs** (Browser): links that open a new window, `cmds browser open` and agents' pages become
   tabs of a browser pane instead of splits ([Tabs](#tabs)). On by default.
-- **Show Chrome bookmarks** and **Chrome profile** (General): the bar of Chrome's bookmarks in browser panes
-  ([Chrome bookmarks](#chrome-bookmarks)). On by default when Chrome's bookmarks can be read.
+- **Show a bookmarks bar**, **Bookmarks from** and **Profile** (Browser): the bar of your browser's bookmarks in
+  browser panes ([Chrome bookmarks](#chrome-bookmarks)). On by default when the bookmarks can be read.
+- **Separate sign-ins per workspace** (Browser): each new workspace's own login profile
+  ([Login profiles](#login-profiles)); **Suspend background tabs** and **Allow Safari's Web Inspector** are in the
+  same tab.
 - **Show subagents** (Agents): where Claude Code subagent cards appear — Off, In Tiled View Only (default),
   Everywhere ([Tiled view](#tiled-view)).
 - **Menu Bar**: show the item, and what its icon and menu show ([Menu bar](#menu-bar)). All on by default.

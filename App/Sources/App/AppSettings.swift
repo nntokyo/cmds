@@ -237,7 +237,7 @@ final class AppSettings: NSObject {
     }
 
     /// Pages opened by a link that wants a new window (`target="_blank"`), by `cmds browser open` or an agent's
-    /// `browser_open` become a tab of a browser of the workspace instead of a split (Settings › General).
+    /// `browser_open` become a tab of a browser of the workspace instead of a split (Settings › Browser).
     /// On by default; only "off" is stored.
     var browserOpensTabs: Bool {
         get { defaults.object(forKey: Self.browserOpensTabsKey) as? Bool ?? true }
@@ -245,20 +245,20 @@ final class AppSettings: NSObject {
     }
 
     /// Browser panes opened in a workspace get that workspace's own login profile unless a profile was chosen
-    /// (`WorkspaceProfile`, Settings › General › Browser). On by default.
+    /// (`WorkspaceProfile`, Settings › Browser). On by default.
     var workspaceProfiles: Bool {
         get { defaults.object(forKey: Self.workspaceProfilesKey) as? Bool ?? true }
         set { set(newValue ? nil : false, forKey: Self.workspaceProfilesKey) }
     }
 
-    /// Browser panes show Google Chrome's bookmarks bar when Chrome's bookmarks are found (Settings › General).
+    /// Browser panes show Google Chrome's bookmarks bar when Chrome's bookmarks are found (Settings › Browser).
     /// On by default; only "off" is stored.
     var chromeBookmarks: Bool {
         get { defaults.object(forKey: Self.chromeBookmarksKey) as? Bool ?? true }
         set { set(newValue ? nil : false, forKey: Self.chromeBookmarksKey) }
     }
 
-    /// The browser whose bookmarks the bar shows (Settings › General, #377); Google Chrome by default.
+    /// The browser whose bookmarks the bar shows (Settings › Browser, #377); Google Chrome by default.
     var bookmarkSource: BookmarkSource {
         get { defaults.string(forKey: Self.bookmarkSourceKey).flatMap(BookmarkSource.init(rawValue:)) ?? .chrome }
         set { set(newValue == .chrome ? nil : newValue.rawValue, forKey: Self.bookmarkSourceKey) }
@@ -270,7 +270,7 @@ final class AppSettings: NSObject {
         set { set(newValue, forKey: Self.chromeProfileKey) }
     }
 
-    /// Browser tabs not shown and not used for this many minutes are unloaded until shown again (Settings › General,
+    /// Browser tabs not shown and not used for this many minutes are unloaded until shown again (Settings › Browser,
     /// #375); 0 = never. Default `TabSuspension.defaultMinutes`.
     var suspendTabsMinutes: Int {
         get {

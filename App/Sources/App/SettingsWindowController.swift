@@ -1,14 +1,16 @@
 import AppKit
 import CmdsCore
 
-/// cmds › Settings… (⌘,): terminal font and size, sidebar text size, browser/preview zoom, browser tabs and Chrome
-/// bookmarks, subagent cards, Claude
-/// accounts and schedules (their own windows), automatic updates. Every control applies immediately (`AppSettings`, `Updater`); there is no OK button.
 /// The tabs of Settings.
 enum SettingsTab: String {
-    case general, sidebar, agents, menuBar, assistant, updates
+    case general, browser, sidebar, agents, menuBar, assistant, updates
 }
 
+/// cmds › Settings… (⌘,): terminal font and size, preview zoom and the memory warning (General); the browser panes'
+/// zoom, tabs, sign-ins per workspace and bookmarks bar (Browser); sidebar text size and rows; subagent cards, Claude
+/// accounts and schedules (their own windows); the menu bar item; the assistant; automatic updates. Every control
+/// applies immediately (`AppSettings`, `Updater`); there is no OK button. Every tab scrolls when its rows are taller
+/// than the screen allows.
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
@@ -27,16 +29,16 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let inspectableCheckbox = NSButton(checkboxWithTitle: String(localized: "Allow Safari's Web Inspector"), target: nil, action: nil)
     private let mcpCheckbox = NSButton(checkboxWithTitle: String(localized: "Register cmds’ MCP server with your agents", comment: "Settings › Agents"), target: nil, action: nil)
     private let memoryWarningCheckbox = NSButton(checkboxWithTitle: String(localized: "Warn when memory is short"), target: nil, action: nil)
-    private let browserTabsCheckbox = NSButton(checkboxWithTitle: String(localized: "Open new pages in tabs", comment: "Settings › General › Browser"), target: nil, action: nil)
-    private let workspaceProfilesCheckbox = NSButton(checkboxWithTitle: String(localized: "Separate sign-ins per workspace", comment: "Settings › General › Browser: each workspace's own login profile"), target: nil, action: nil)
-    private let chromeBookmarksCheckbox = NSButton(checkboxWithTitle: String(localized: "Show a bookmarks bar", comment: "Settings › General › Browser"), target: nil, action: nil)
+    private let browserTabsCheckbox = NSButton(checkboxWithTitle: String(localized: "Open new pages in tabs", comment: "Settings › Browser"), target: nil, action: nil)
+    private let workspaceProfilesCheckbox = NSButton(checkboxWithTitle: String(localized: "Separate sign-ins per workspace", comment: "Settings › Browser: each workspace's own login profile"), target: nil, action: nil)
+    private let chromeBookmarksCheckbox = NSButton(checkboxWithTitle: String(localized: "Show a bookmarks bar", comment: "Settings › Browser"), target: nil, action: nil)
     private let bookmarkSourcePopup = NSPopUpButton()
     private let chromeProfilePopup = NSPopUpButton()
     private let suspendTabsPopup = NSPopUpButton()
     private let longCommandPopup = NSPopUpButton()
     /// Why Chrome's bookmarks cannot be shown (empty when they can), and the button to Privacy & Security.
     private let chromeProblemNote = SettingsWindowController.note("")
-    private let chromeAccessButton = NSButton(title: String(localized: "Open Privacy Settings…", comment: "Settings › General › Chrome bookmarks without access"), target: nil, action: nil)
+    private let chromeAccessButton = NSButton(title: String(localized: "Open Privacy Settings…", comment: "Settings › Browser › Bookmarks without access"), target: nil, action: nil)
     private var chromeObserver: NSObjectProtocol?
     /// Settings › Sidebar: what the rows and the footer show (#107).
     private let sidebarItemCheckboxes = SettingsWindowController.checkboxes(for: SidebarItem.self)
@@ -58,7 +60,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// Settings › Assistant (#243), shown on macOS 26 and later.
     private let assistantPane = AssistantSettingsPane()
     /// The scrolled tabs' height limits, fitted to the screen when the window opens (#264).
-    private var scrollHeightLimits: [(limit: NSLayoutConstraint, page: NSViewController, rowsHeight: CGFloat)] = []
+    private var scrollHeightLimits: [(limit: NSLayoutConstraint, page: NSViewController, rows: NSView)] = []
     /// A scrolled tab is at most this tall (the content, without the title bar and toolbar), so Settings fits a 13"
     /// display with room to spare (#264).
     private static let scrollHeight: CGFloat = 540
@@ -181,7 +183,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         browserTabsCheckbox.action = #selector(browserTabsToggled)
         workspaceProfilesCheckbox.target = self
         workspaceProfilesCheckbox.action = #selector(workspaceProfilesToggled)
-        workspaceProfilesCheckbox.toolTip = String(localized: "Browser panes in a workspace created from now on use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Existing workspaces keep the sign-ins they use.")
+        // Also as a note under the checkbox: what it does to sign-ins must be readable without hovering.
+        let workspaceProfilesText = String(localized: "Browser panes in a workspace created from now on use its own login profile, so one workspace's sign-ins (X, Amazon…) are never another's. Existing workspaces keep the sign-ins they use.")
+        workspaceProfilesCheckbox.toolTip = workspaceProfilesText
+        let workspaceProfilesNote = Self.note(workspaceProfilesText)
         chromeBookmarksCheckbox.target = self
         chromeBookmarksCheckbox.action = #selector(chromeBookmarksToggled)
         chromeProfilePopup.target = self
@@ -189,8 +194,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         bookmarkSourcePopup.target = self
         bookmarkSourcePopup.action = #selector(bookmarkSourceChanged)
         for minutes in TabSuspension.choices {
-            suspendTabsPopup.addItem(withTitle: minutes == 0 ? String(localized: "Never", comment: "Settings › General › Suspend background tabs")
-                : String(localized: "After \(minutes) minutes", comment: "Settings › General › Suspend background tabs"))
+            suspendTabsPopup.addItem(withTitle: minutes == 0 ? String(localized: "Never", comment: "Settings › Browser › Suspend background tabs")
+                : String(localized: "After \(minutes) minutes", comment: "Settings › Browser › Suspend background tabs"))
             suspendTabsPopup.lastItem?.representedObject = minutes
         }
         suspendTabsPopup.target = self
@@ -231,25 +236,32 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             [NSGridCell.emptyContentView, Self.note(String(localized: "Layered over your Ghostty config. View › Bigger / Smaller / Actual Size (⌘+ / ⌘− / ⌘0) change only the focused pane."))],
             [Self.label(String(localized: "Notify when a command finishes:", comment: "Settings › General › Terminal")), longCommandPopup],
             [NSGridCell.emptyContentView, Self.note(String(localized: "When a command that ran at least that long ends in a pane you are not looking at (a build, tests, a deploy): the pane's ring, the sidebar and, with cmds in the background, a notification; failures say so. Needs the shell integration (on by default for zsh, bash and fish). Not in panes where a coding agent runs: its hooks notify.", comment: "Settings › General › Terminal"))],
-            [Self.header(String(localized: "Browser and Preview")), NSGridCell.emptyContentView],
-            [Self.label(String(localized: "Browser page zoom:")), browserZoomPopup],
+            [Self.header(String(localized: "Preview")), NSGridCell.emptyContentView],
             [Self.label(String(localized: "Preview zoom:")), previewZoomPopup],
-            [NSGridCell.emptyContentView, inspectableCheckbox],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
-            [NSGridCell.emptyContentView, browserTabsCheckbox],
-            [NSGridCell.emptyContentView, workspaceProfilesCheckbox],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "Links that open a new window, `cmds browser open` and agents' browser_open add a tab to the workspace's browser instead of a split. ⌘T opens a tab beside any pane.", comment: "Settings › General › Browser"))],
-            [Self.label(String(localized: "Suspend background tabs:", comment: "Settings › General › Browser")), suspendTabsPopup],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.", comment: "Settings › General › Browser"))],
-            [NSGridCell.emptyContentView, chromeBookmarksCheckbox],
-            [Self.label(String(localized: "Bookmarks from:", comment: "Settings › General › Browser")), bookmarkSourcePopup],
-            [Self.label(String(localized: "Profile:", comment: "Settings › General › Browser bookmarks")), chromeProfilePopup],
-            [NSGridCell.emptyContentView, Self.note(String(localized: "A bar of your browser's bookmarks under the address bar (read only; ⌘-click opens a new tab). Its sign-ins and passwords are not shared.", comment: "Settings › General › Browser"))],
-            [NSGridCell.emptyContentView, chromeProblemNote],
-            [NSGridCell.emptyContentView, chromeAccessButton],
             [Self.header(String(localized: "Memory")), NSGridCell.emptyContentView],
             [NSGridCell.emptyContentView, memoryWarningCheckbox],
             [NSGridCell.emptyContentView, Self.note(String(localized: "A notification when memory pressure stays at warning or worse for a minute (at most every 30 minutes), with the swap in use and the heaviest process started from a cmds terminal."))],
+        ]
+        // Everything about browser panes in one tab (it had outgrown General): pages, sign-ins, the bookmarks bar.
+        let browser: [[NSView]] = [
+            [Self.header(String(localized: "Pages", comment: "Settings › Browser: section")), NSGridCell.emptyContentView],
+            [Self.label(String(localized: "Browser page zoom:")), browserZoomPopup],
+            [NSGridCell.emptyContentView, browserTabsCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Links that open a new window, `cmds browser open` and agents' browser_open add a tab to the workspace's browser instead of a split. ⌘T opens a tab beside any pane.", comment: "Settings › Browser"))],
+            [Self.label(String(localized: "Suspend background tabs:", comment: "Settings › Browser")), suspendTabsPopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.", comment: "Settings › Browser"))],
+            [NSGridCell.emptyContentView, inspectableCheckbox],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "Inspect browser panes with Safari › Develop (turn on Show features for web developers in Safari's Advanced settings)."))],
+            [Self.header(String(localized: "Sign-ins", comment: "Settings › Browser: section (login profiles)")), NSGridCell.emptyContentView],
+            [NSGridCell.emptyContentView, workspaceProfilesCheckbox],
+            [NSGridCell.emptyContentView, workspaceProfilesNote],
+            [Self.header(String(localized: "Bookmarks", comment: "Settings › Browser: section")), NSGridCell.emptyContentView],
+            [NSGridCell.emptyContentView, chromeBookmarksCheckbox],
+            [Self.label(String(localized: "Bookmarks from:", comment: "Settings › Browser")), bookmarkSourcePopup],
+            [Self.label(String(localized: "Profile:", comment: "Settings › Browser › Bookmarks")), chromeProfilePopup],
+            [NSGridCell.emptyContentView, Self.note(String(localized: "A bar of your browser's bookmarks under the address bar (read only; ⌘-click opens a new tab). Its sign-ins and passwords are not shared.", comment: "Settings › Browser"))],
+            [NSGridCell.emptyContentView, chromeProblemNote],
+            [NSGridCell.emptyContentView, chromeAccessButton],
         ]
         let sidebar: [[NSView]] = [[Self.label(String(localized: "Text size:")), sidebarControl]]
             + sidebarRows(SidebarItem.rowItems, String(localized: "Show in each workspace:", comment: "Settings › Sidebar"))
@@ -298,15 +310,17 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let tabs = NSTabViewController()
         tabs.tabStyle = .toolbar
         for (tab, title, symbol, rows, headers) in [
-            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, [0, 4, 19]),
+            (SettingsTab.general, String(localized: "General", comment: "Settings tab"), "gearshape", general, []),
+            (.browser, String(localized: "Browser", comment: "Settings tab"), "globe", browser, []),
             (.sidebar, String(localized: "Sidebar"), "sidebar.left", sidebar, []),
             (.agents, String(localized: "Agents"), "sparkles", agents, []),
             (.menuBar, String(localized: "Menu Bar"), "menubar.rectangle", menuBar, []),
         ] + assistantTab + [
             (.updates, String(localized: "Updates"), "arrow.triangle.2.circlepath", updates, []),
         ] as [(SettingsTab, String, String, [[NSView]], [Int])] {
-            // The Assistant tab is longer than a small screen (#264): it scrolls.
-            let item = NSTabViewItem(viewController: page(rows, headers: headers, scrolls: tab == .assistant))
+            // Every tab scrolls when it is longer than the screen allows (#264): rows are added over time, and a tab
+            // that could not scroll put its last rows out of reach.
+            let item = NSTabViewItem(viewController: page(rows, headers: headers))
             item.label = title
             item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
             item.identifier = tab.rawValue
@@ -317,10 +331,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         window?.toolbarStyle = .preference
     }
 
-    /// One Settings tab: a grid of label / control rows; `headers` are rows with a bold title across both columns.
-    /// A tab that `scrolls` is at most `scrollHeight` tall (less on a small screen) and scrolls the rest; it is as tall
-    /// as its rows when they fit, so a row that comes or goes (the assistant's problem) still resizes the window.
-    private func page(_ rows: [[NSView]], headers: [Int], scrolls: Bool = false) -> NSViewController {
+    /// One Settings tab: a grid of label / control rows; rows that start with a `header` (and the rows in `headers`)
+    /// have a bold title across both columns. The tab is at most `scrollHeight` tall (less on a small screen) and
+    /// scrolls the rest; it is as tall as its rows when they fit, so a row that comes or goes (the assistant's
+    /// problem, the bookmarks' note) still resizes the window.
+    private func page(_ rows: [[NSView]], headers given: [Int]) -> NSViewController {
+        let headers = Set(given).union(rows.indices.filter { rows[$0].first?.identifier == Self.headerIdentifier }).sorted()
         let grid = NSGridView(views: rows)
         grid.rowSpacing = 8
         grid.columnSpacing = 8
@@ -332,7 +348,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             grid.cell(atColumnIndex: 0, rowIndex: row).xPlacement = .leading
         }
         grid.translatesAutoresizingMaskIntoConstraints = false
-        let content = scrolls ? FlippedView() : NSView()
+        let content = FlippedView()
         content.addSubview(grid)
         NSLayoutConstraint.activate([
             grid.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
@@ -342,11 +358,6 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             content.widthAnchor.constraint(greaterThanOrEqualToConstant: 520),
         ])
         let controller = NSViewController()
-        guard scrolls else {
-            controller.view = content
-            controller.preferredContentSize = content.fittingSize
-            return controller
-        }
         scrolled(content, in: controller)
         return controller
     }
@@ -379,7 +390,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             scroll.widthAnchor.constraint(equalToConstant: width),
             limit, follow,
         ])
-        scrollHeightLimits.append((limit, controller, fitting.height))
+        scrollHeightLimits.append((limit, controller, content))
         controller.view = scroll
         controller.preferredContentSize = NSSize(width: width, height: min(fitting.height, Self.scrollHeight))
     }
@@ -391,9 +402,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let chrome = window.frame.height - window.contentLayoutRect.height
         let height = max(min(Self.scrollHeight, screen.visibleFrame.height - max(chrome, Self.minimumChrome) - Self.screenMargin),
                          Self.minimumScrollHeight)
-        for (limit, page, rowsHeight) in scrollHeightLimits {
+        for (limit, page, rows) in scrollHeightLimits {
             limit.constant = height
-            page.preferredContentSize.height = min(rowsHeight, height)
+            // Measured now, not when the tab was built: rows hidden since (the bookmarks' problem note) take no room.
+            page.preferredContentSize.height = min(rows.fittingSize.height, height)
         }
     }
 
@@ -442,9 +454,12 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         tabs.selectedTabViewItemIndex = index
     }
 
+    private static let headerIdentifier = NSUserInterfaceItemIdentifier("cmds.settings.header")
+
     private static func header(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+        label.identifier = headerIdentifier
         return label
     }
 
@@ -525,7 +540,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         // A value set with `defaults` that is not a choice: shown as itself, not as "Never".
         let minutes = settings.suspendTabsMinutes
         if suspendTabsPopup.indexOfItem(withRepresentedObject: minutes) < 0 {
-            suspendTabsPopup.addItem(withTitle: String(localized: "After \(minutes) minutes", comment: "Settings › General › Suspend background tabs"))
+            suspendTabsPopup.addItem(withTitle: String(localized: "After \(minutes) minutes", comment: "Settings › Browser › Suspend background tabs"))
             suspendTabsPopup.lastItem?.representedObject = minutes
         }
         suspendTabsPopup.selectItem(at: max(0, suspendTabsPopup.indexOfItem(withRepresentedObject: minutes)))
@@ -706,15 +721,15 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let browser = settings.bookmarkSource.name
         switch problem {
         case .noAccess:
-            chromeProblemNote.stringValue = String(localized: "macOS keeps other apps from reading \(browser)'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds. That access is for the whole app, including the programs you run in its terminals.", comment: "Settings › General › Browser bookmarks")
+            chromeProblemNote.stringValue = String(localized: "macOS keeps other apps from reading \(browser)'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds. That access is for the whole app, including the programs you run in its terminals.", comment: "Settings › Browser › Bookmarks")
         case .notFound:
-            chromeProblemNote.stringValue = String(localized: "No bookmarks of \(browser) found (for this profile).", comment: "Settings › General › Browser bookmarks")
+            chromeProblemNote.stringValue = String(localized: "No bookmarks of \(browser) found (for this profile).", comment: "Settings › Browser › Bookmarks")
         case .unreadable:
-            chromeProblemNote.stringValue = String(localized: "\(browser)'s bookmarks file could not be read.", comment: "Settings › General › Browser bookmarks")
+            chromeProblemNote.stringValue = String(localized: "\(browser)'s bookmarks file could not be read.", comment: "Settings › Browser › Bookmarks")
         case .encrypted:
-            chromeProblemNote.stringValue = String(localized: "\(browser) keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from the browser.", comment: "Settings › General › Browser bookmarks")
+            chromeProblemNote.stringValue = String(localized: "\(browser) keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from the browser.", comment: "Settings › Browser › Bookmarks")
         case .partlyEncrypted:
-            chromeProblemNote.stringValue = String(localized: "The bookmarks saved in your account are kept encrypted by \(browser) and are not shown; those on this Mac are.", comment: "Settings › General › Browser bookmarks")
+            chromeProblemNote.stringValue = String(localized: "The bookmarks saved in your account are kept encrypted by \(browser) and are not shown; those on this Mac are.", comment: "Settings › Browser › Bookmarks")
         case nil:
             chromeProblemNote.stringValue = ""
         }
@@ -737,8 +752,8 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let (profiles, lastUsed) = ChromeBookmarkStore.profiles(settings.bookmarkSource)
         chromeProfilePopup.removeAllItems()
         let lastName = profiles.first { $0.directory == lastUsed }?.name
-        chromeProfilePopup.addItem(withTitle: lastName.map { String(localized: "Last used (\($0))", comment: "Settings › General › Chrome profile") }
-            ?? String(localized: "Last used", comment: "Settings › General › Chrome profile"))
+        chromeProfilePopup.addItem(withTitle: lastName.map { String(localized: "Last used (\($0))", comment: "Settings › Browser › Bookmarks profile") }
+            ?? String(localized: "Last used", comment: "Settings › Browser › Bookmarks profile"))
         for profile in profiles {
             chromeProfilePopup.addItem(withTitle: profile.name == profile.directory ? profile.name : "\(profile.name) (\(profile.directory))")
             chromeProfilePopup.lastItem?.representedObject = profile.directory
