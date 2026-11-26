@@ -317,6 +317,13 @@ In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the C
   `'{"on_battery": true, "percent": 59}'` (DEBUG builds; `{"clear": true}` reads the Mac's power source again): one
   line is kept for the agent's pane only (`cmds queue list`) and typed in; `percent` 24 keeps the low line once, 23
   nothing more. With the notice off nothing is kept.
+- Stall notice (`cmds stall`): in an isolated instance with Claude Code in three panes (one started with
+  `--permission-mode default`) and a shell in a fourth, `cmds stall notice on --to <first> --input-minutes 2
+  --queue-minutes 2`; ask the second for a shell command (its permission question stays), type words into the third's
+  input box and `cmds queue add` an instruction for it and for the shell pane. After three minutes `cmds stall`
+  lists the three (`permission-or-question`, `typed-input`, `no-agent`), the first pane got three lines
+  (`cmds queue list`: delivered), the question is still there and nothing was typed into the other panes.
+  `cmds rpc debug.stall` (DEBUG builds) checks now instead of at the next minute.
 - `continueSession` with a stub `claude` script first on `PATH` (start the instance with `ZDOTDIR` pointing at a
   temporary `.zshrc` that puts it there, so the real `claude` is never run) that reports a session with
   `cmds hook claude-status` / `cmds hook claude`, and accounts whose `CLAUDE_CONFIG_DIR`s are temporary folders

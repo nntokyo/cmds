@@ -45,6 +45,25 @@ final class QueueCLITests: XCTestCase {
         XCTAssertTrue(Format.power(PowerNoticeStatus(settings: .init(), power: nil)).hasPrefix("power   unknown\n"))
     }
 
+    func testStall() {
+        XCTAssertEqual(Format.stall(StallNoticeStatus(settings: .init(), toPane: nil, stalls: []), timeZone: tokyo),
+                       "notice  off (cmds stall notice on --to PANE)\n"
+                       + "after   10 min asking for input, 15 min with a kept instruction not typed in\nstalled none\n")
+        let on = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1", inputMinutes: 5, queueMinutes: 20), toPane: "p3",
+                                   stalls: [.init(pane: "p7", kind: .needsInput, minutes: 240, reason: .permissionOrQuestion, key: "a"),
+                                            .init(pane: nil, kind: .undelivered, minutes: 21, reason: .paneClosed, key: "b")],
+                                   lastSentAt: "2026-11-25T07:00:00Z", lastLines: 2)
+        XCTAssertEqual(Format.stall(on, timeZone: tokyo),
+                       "notice  on: pane p3 is told\nafter   5 min asking for input, 20 min with a kept instruction not typed in\n"
+                       + "stalled p7  asks for input  240 min  permission-or-question\n"
+                       + "        -  kept instruction not typed in  21 min  pane-closed\n"
+                       + "last    2 lines kept at 2026-11-25 16:00\n")
+        let closed = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1"), toPane: nil, stalls: [])
+        XCTAssertTrue(Format.stall(closed).hasPrefix("notice  on: the pane that is told is not open\n"))
+        let chosen = StallNoticeStatus(settings: .init(toTag: "t1"), toPane: "p3", stalls: [])
+        XCTAssertTrue(Format.stall(chosen).hasPrefix("notice  off (cmds stall notice on)\n"))
+    }
+
     func testIdlePanes() {
         let report = IdlePaneReport(minutes: 30, panes: [
             .init(pane: "p3", workspace: "w1", workspaceTitle: "sales", agent: "claude", state: "idle", idleSeconds: 45 * 60,
@@ -60,6 +79,6 @@ final class QueueCLITests: XCTestCase {
 
     func testCommandsAreListed() {
         let names = Set(CLI.queueCommands.map(\.name))
-        XCTAssertEqual(names, ["queue add", "queue list", "queue cancel", "idle", "power", "power notice"])
+        XCTAssertEqual(names, ["queue add", "queue list", "queue cancel", "idle", "power", "power notice", "stall", "stall notice"])
     }
 }
