@@ -687,7 +687,7 @@
       }
     },
     "%@ keeps this profile's bookmarks encrypted, so cmds cannot read them. Choose another profile, or export them from the browser.": {
-      "comment": "Settings › General › Browser bookmarks",
+      "comment": "Settings › Browser › Bookmarks",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -799,7 +799,7 @@
       }
     },
     "%@'s bookmarks file could not be read.": {
-      "comment": "Settings › General › Browser bookmarks",
+      "comment": "Settings › Browser › Bookmarks",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -1780,7 +1780,7 @@
       }
     },
     "A bar of Google Chrome's bookmarks under the address bar (read only; ⌘-click opens a new tab). Chrome's sign-ins and passwords are not shared.": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "extractionState": "stale",
       "localizations": {
         "ja": {
@@ -1792,7 +1792,7 @@
       }
     },
     "A bar of your browser's bookmarks under the address bar (read only; ⌘-click opens a new tab). Its sign-ins and passwords are not shared.": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -2159,7 +2159,7 @@
       }
     },
     "After %lld minutes": {
-      "comment": "Settings › General › Suspend background tabs",
+      "comment": "Settings › Browser › Suspend background tabs",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -2819,8 +2819,19 @@
         }
       }
     },
+    "Bookmarks": {
+      "comment": "Settings › Browser: section",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ブックマーク"
+          }
+        }
+      }
+    },
     "Bookmarks from:": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -2891,16 +2902,6 @@
         }
       }
     },
-    "Browser and Preview": {
-      "localizations": {
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ブラウザとプレビュー"
-          }
-        }
-      }
-    },
     "Browser page zoom:": {
       "localizations": {
         "ja": {
@@ -2922,7 +2923,7 @@
       }
     },
     "Browser tabs not shown or used for that long are unloaded to save memory and load again when shown. Never pages with unsaved input or playing media.": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -3499,7 +3500,7 @@
       }
     },
     "Chrome profile:": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "extractionState": "stale",
       "localizations": {
         "ja": {
@@ -6910,7 +6911,7 @@
       }
     },
     "Last used": {
-      "comment": "Settings › General › Chrome profile",
+      "comment": "Settings › Browser › Bookmarks profile",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -6921,7 +6922,7 @@
       }
     },
     "Last used (%@)": {
-      "comment": "Settings › General › Chrome profile",
+      "comment": "Settings › Browser › Bookmarks profile",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -7163,7 +7164,7 @@
       }
     },
     "Links that open a new window, `cmds browser open` and agents' browser_open add a tab to the workspace's browser instead of a split. ⌘T opens a tab beside any pane.": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -8267,7 +8268,7 @@
       }
     },
     "No bookmarks of %@ found (for this profile).": {
-      "comment": "Settings › General › Browser bookmarks",
+      "comment": "Settings › Browser › Bookmarks",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -8867,7 +8868,7 @@
       }
     },
     "Open Privacy Settings…": {
-      "comment": "Settings › General › Chrome bookmarks without access",
+      "comment": "Settings › Browser › Bookmarks without access",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -8991,7 +8992,7 @@
       }
     },
     "Open new pages in tabs": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -9124,6 +9125,17 @@
     },
     "Page": {
       "comment": "SEO report",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ページ"
+          }
+        }
+      }
+    },
+    "Pages": {
+      "comment": "Settings › Browser: section",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -9569,7 +9581,7 @@
       }
     },
     "Profile:": {
-      "comment": "Settings › General › Browser bookmarks",
+      "comment": "Settings › Browser › Bookmarks",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -10696,6 +10708,17 @@
         }
       }
     },
+    "Sign-ins": {
+      "comment": "Settings › Browser: section (login profiles)",
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サインイン"
+          }
+        }
+      }
+    },
     "SSH panes count only the local ssh client, not the server": {
       "localizations": {
         "ja": {
@@ -11052,7 +11075,7 @@
       }
     },
     "Separate sign-ins per workspace": {
-      "comment": "Settings › General › Browser: each workspace's own login profile",
+      "comment": "Settings › Browser: each workspace's own login profile",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -11371,7 +11394,7 @@
       }
     },
     "Show Chrome bookmarks": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "extractionState": "stale",
       "localizations": {
         "ja": {
@@ -11443,7 +11466,7 @@
       }
     },
     "Show a bookmarks bar": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -12216,7 +12239,7 @@
       }
     },
     "Suspend background tabs:": {
-      "comment": "Settings › General › Browser",
+      "comment": "Settings › Browser",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -12705,7 +12728,7 @@
       }
     },
     "The bookmarks saved in your account are kept encrypted by %@ and are not shown; those on this Mac are.": {
-      "comment": "Settings › General › Browser bookmarks",
+      "comment": "Settings › Browser › Bookmarks",
       "localizations": {
         "ja": {
           "stringUnit": {
@@ -15448,7 +15471,7 @@
       }
     },
     "macOS keeps other apps from reading %@'s data. To show its bookmarks, turn on cmds in Privacy & Security › Full Disk Access, then come back to cmds. That access is for the whole app, including the programs you run in its terminals.": {
-      "comment": "Settings › General › Browser bookmarks",
+      "comment": "Settings › Browser › Bookmarks",
       "localizations": {
         "ja": {
           "stringUnit": {

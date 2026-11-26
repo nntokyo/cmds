@@ -129,7 +129,7 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   [guide](../guide/workspaces-and-panes.md#pop-ups-dialogs-and-downloads), #235): one `BrowserPageDelegate` per pane
   is the UI and navigation delegate of the pane's web view, the responsive view's other frames and the pane's
   pop-ups. `createWebViewWith` (`BrowserNewWindow.decide`): a link activation without window features to a web page
-  opens a new tab of the pane, or with Settings › General › Open new pages in tabs off a browser split beside it
+  opens a new tab of the pane, or with Settings › Browser › Open new pages in tabs off a browser split beside it
   (`AppController.openBrowser`, focused only when the pane is the focused one; `_blank` links have no opener in WebKit
   anyway), else the same pane; anything else (`window.open`, with or without
   features, forms) is a `BrowserPopupWindow` whose `WKWebView` is made from the configuration WebKit passes (so

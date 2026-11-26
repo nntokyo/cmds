@@ -269,7 +269,7 @@ cmds browser wait-for --text "Welcome" --timeout 10
   policy does not apply to them (the console hook runs in the page's own JavaScript world, everything else in a world
   the page cannot see).
 
-**cmds › Settings… › General › Allow Safari's Web Inspector** (off by default) lets you inspect browser panes with
+**cmds › Settings… › Browser › Allow Safari's Web Inspector** (off by default) lets you inspect browser panes with
 Safari › Develop › (this Mac) › cmds; turn on Show features for web developers in Safari's Advanced settings first.
 
 ## Codex CLI
