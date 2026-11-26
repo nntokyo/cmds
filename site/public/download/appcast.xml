@@ -7,36 +7,34 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.38.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.38.0</link>
-      <sparkle:version>56</sparkle:version>
-      <sparkle:shortVersionString>0.38.0</sparkle:shortVersionString>
+      <title>cmds 0.39.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.39.0</link>
+      <sparkle:version>57</sparkle:version>
+      <sparkle:shortVersionString>0.39.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Thu, 26 Nov 2026 09:48:25 GMT</pubDate>
+      <pubDate>Thu, 26 Nov 2026 12:25:07 GMT</pubDate>
       <description><![CDATA[
-<h3>新機能</h3>
+<h3>変更</h3>
 <ul>
-<li>止まっているペインを 1 つのペインに知らせる <code>cmds stall</code>：<code>cmds stall notice on --to ペイン</code> にすると、エージェントが入力や許可を求めたまま決めた分数（既定 10 分）が過ぎたペイン、預けた指示（<code>cmds queue</code>）が決めた分数（既定 15 分）入力されていないペイン、作業を終えて何もしていないまま決めた分数（既定 10 分、<code>--idle-minutes 0</code> で知らせない）が過ぎたエージェントを、指定したペインへ 1 行ずつ知らせます。行は「ペインの番号・状態・分数・理由の語」だけの決まった形で、ペインの画面の文字は入りません。cmds は許可の確認に答えず、止まっているペインには何も入力せず、ウィンドウも前に出しません。入力待ちと未達は続いている間 1 時間ごとに、待機は手が空いた 1 回につき 1 行だけ知らせます（<code>--idle-repeat on</code> で毎時）。知らせ先が作業中で行が待っている間は同じ詰まりの 2 行目を足さず、解けた詰まりの行は取り下げます。入れている間は、同じ一覧を毎分 <code>stalls.txt</code> にも書き出します。既定はオフです。<code>cmds stall</code> で一覧と設定を表示します。</li>
+<li>設定に「ブラウザ」タブを追加しました。ブラウザのペインに関する設定（拡大率、新しいページをタブで開く、背後のタブを休止、Safari の Web インスペクタ、ワークスペースごとにログインを分ける、ブックマークバー）を「一般」からここに移しました。設定の内容と今の値はそのままです。「一般」にはターミナル、プレビューの拡大率、メモリの通知が残ります。</li>
 </ul>
 <h3>修正</h3>
 <ul>
-<li>ターミナルに出ているファイルのパスを ⌘ クリックして新しいプレビューが開くとき、cmds が応答しなくなり、強制終了するしかなくなることがありました。リンクは、クリックの処理が終わってから開くようにしました。</li>
-<li>サイドバー下部に名前の長い「次の予定」が出ている間、サイドバーの幅を広くも狭くも変えられませんでした。長い名前は省略して表示します。</li>
+<li>設定の「一般」タブが 13 インチの画面より縦に長くなり、スクロールもできなかったため、下の項目に届きませんでした。どのタブも、画面に収まらない分はスクロールできるようにしました。</li>
 </ul>
-<h3>Added</h3>
+<h3>Changed</h3>
 <ul>
-<li><code>cmds stall</code>, telling one pane about panes that are stuck: with <code>cmds stall notice on --to PANE</code>, that pane gets one line for each pane whose agent has asked for input or permission for a number of minutes (10 by default), for each instruction kept with <code>cmds queue</code> that has not been typed in for a number of minutes (15 by default), and for each agent that finished and has had nothing in progress for a number of minutes (10 by default; <code>--idle-minutes 0</code> turns this kind off). The line has a fixed form (pane, state, minutes, kind of reason) with nothing from the pane's screen. cmds never answers the question, never types into the stuck pane and never brings a window forward. A question or an undelivered instruction is told again every hour while it lasts; an idle agent once each time it becomes idle (<code>--idle-repeat on</code>: every hour). While a line still waits for the pane that is told, the same stall gets no second line, and a line whose stall is over is taken back. While the notice is on, the same list is written every minute to <code>stalls.txt</code>. Off by default. <code>cmds stall</code> shows the list and the setting.</li>
+<li>Settings has a Browser tab: the browser panes' settings (page zoom, open new pages in tabs, suspend background tabs, Safari's Web Inspector, separate sign-ins per workspace, the bookmarks bar) moved there from General. The settings and their values are the same. General keeps the terminal, preview zoom and the memory warning.</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>cmds could stop responding for good (it had to be force quit) after a ⌘-click on a file path in a terminal that opened a new preview. The link is now opened after the click is handled.</li>
-<li>The sidebar's edge could not be dragged, wider or narrower, while its footer showed a next schedule with a long name. A long name is now cut.</li>
+<li>Settings › General had grown taller than a 13-inch screen and could not be scrolled, so its last rows were out of reach. Every Settings tab now scrolls when it is taller than the screen allows.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.38.0/cmds-0.38.0.dmg" length="18984696" type="application/octet-stream" sparkle:edSignature="zY+IMs3s82lX8uD2INlvT31PK6WP0MsqCvivumt+OtZ+EEh+NmrNZmAeDpnOeL2haq3GT6CtDgpGe8cPZ4BPCQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.39.0/cmds-0.39.0.dmg" length="18986192" type="application/octet-stream" sparkle:edSignature="DTkJGrgA5/7UwDh8KdZrShjJvbgRKeuHtMA5MmJ5BpO8pM/hNZ0R3IGXAO7GzGohLrEZahInQ3JRXU1DO2WUDA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: OWg6pNKxoaaStMdU7Jp74dsdx8kiJ62qLwZej4ITVlLLGWtv8cdAumSW6sskpYG0/Qxv8dmPcDDzz19BNIWwCQ==
-length: 4825
+edSignature: qPZa1T5lsNHz8uQceFkXh2lt86d8boperhBGvMi1pqWfCyemgJWottuqES37KXiVLYXCLfjr6x+mNCc0kujMAg==
+length: 2686
 -->
