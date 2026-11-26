@@ -19,7 +19,9 @@ the SHA-256 shown on the pages is the DMG's. --write-download-files DIR then wri
 needs no network (for when GitHub is unavailable); the date in latest.json then comes from the existing latest.json
 of the same version, else today. --release --dmg-cache DIR keeps the downloaded DMG in DIR and uses it again while
 its SHA-256 is still the release asset's digest (GitHub API), so CI downloads a release once, not on every run:
-each download adds to the release's public download count. Exit status 0 when every check passes, 1 otherwise.
+each download adds to the release's public download count. --built-dmg-dir DIR (with --dmg-cache) uses DIR's copy of
+the DMG instead, without any download, when its SHA-256 is the release asset's digest: on the Mac that built the
+release the check then never downloads. Exit status 0 when every check passes, 1 otherwise.
 """
 import argparse
 import base64
@@ -172,8 +174,9 @@ def sha256_file(path):
     return digest.hexdigest()
 
 
-def cached_release_dmg(item, cache_dir):
-    """The release DMG in cache_dir: kept when it is still the release's asset, else downloaded."""
+def cached_release_dmg(item, cache_dir, built_dir=None):
+    """The release DMG in cache_dir: kept when it is still the release's asset, else downloaded. A copy in built_dir
+    (where the release was built) with the asset's digest is used as it is: the same bytes, no download."""
     name = f"cmds-{item['version']}.dmg"
     dmg = Path(cache_dir) / name
     digest = None
@@ -182,9 +185,10 @@ def cached_release_dmg(item, cache_dir):
         digest = next((a.get("digest") for a in assets if a.get("name") == name), None)
     except (OSError, ValueError) as error:
         print(f"release asset digest unavailable ({error}); downloading")
-    if digest and dmg.is_file() and f"sha256:{sha256_file(dmg)}" == digest:
-        print(f"release DMG from {dmg} (same digest as the release asset, not downloaded)")
-        return dmg
+    for copy in [dmg] + ([Path(built_dir) / name] if built_dir else []):
+        if digest and copy.is_file() and f"sha256:{sha256_file(copy)}" == digest:
+            print(f"release DMG from {copy} (same digest as the release asset, not downloaded)")
+            return copy
     dmg.parent.mkdir(parents=True, exist_ok=True)
     for old in dmg.parent.glob("cmds-*.dmg"):
         old.unlink()
@@ -205,11 +209,11 @@ def release_date(version, offline):
     return release_info(version)["published_at"][:10]
 
 
-def check_release(pages, item, key, write_dir, local_dmg=None, cache_dir=None):
+def check_release(pages, item, key, write_dir, local_dmg=None, cache_dir=None, built_dir=None):
     if local_dmg:
         data = Path(local_dmg).read_bytes()
     elif cache_dir:
-        data = cached_release_dmg(item, cache_dir).read_bytes()
+        data = cached_release_dmg(item, cache_dir, built_dir).read_bytes()
     else:
         with tempfile.TemporaryDirectory() as tmp:
             dmg = Path(tmp) / "cmds.dmg"
@@ -252,11 +256,14 @@ def main():
     parser.add_argument("--dmg", metavar="FILE", help="check this local copy of the release DMG (no network)")
     parser.add_argument("--write-download-files", metavar="DIR", help="with --release or --dmg: write latest.json, SHA256SUMS")
     parser.add_argument("--dmg-cache", metavar="DIR", help="with --release: keep the DMG in DIR and download it only when the release asset changed")
+    parser.add_argument("--built-dmg-dir", metavar="DIR", help="with --dmg-cache: use DIR's copy of the DMG when it has the release asset's digest")
     args = parser.parse_args()
     if args.write_download_files and not (args.release or args.dmg):
         parser.error("--write-download-files needs --release or --dmg")
     if args.dmg_cache and not args.release:
         parser.error("--dmg-cache needs --release")
+    if args.built_dmg_dir and not args.dmg_cache:
+        parser.error("--built-dmg-dir needs --dmg-cache")
 
     pages = sorted(p for p in SITE.rglob("*.html"))
     key = public_key()
@@ -265,7 +272,7 @@ def main():
     if item:
         check_pages(pages, item)
         if (args.release or args.dmg) and not failures:
-            check_release(pages, item, key, args.write_download_files, args.dmg, args.dmg_cache)
+            check_release(pages, item, key, args.write_download_files, args.dmg, args.dmg_cache, args.built_dmg_dir)
     if failures:
         print(f"{len(failures)} problem(s)")
         return 1
