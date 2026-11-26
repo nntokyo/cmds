@@ -7,36 +7,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.37.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.37.0</link>
-      <sparkle:version>55</sparkle:version>
-      <sparkle:shortVersionString>0.37.0</sparkle:shortVersionString>
+      <title>cmds 0.38.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.38.0</link>
+      <sparkle:version>56</sparkle:version>
+      <sparkle:shortVersionString>0.38.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Wed, 25 Nov 2026 19:45:52 GMT</pubDate>
+      <pubDate>Thu, 26 Nov 2026 09:48:25 GMT</pubDate>
       <description><![CDATA[
 <h3>新機能</h3>
 <ul>
-<li>電池に切り替わったことをエージェントに伝える <code>cmds power</code>：<code>cmds power notice on</code> にすると、Mac の電源がアダプターから電池に切り替わったときと、充電されないまま残量が決めた割合（既定 25%、<code>--below 30</code> で変更）を下回ったときに、Claude Code / Codex が動いている各ペインへ「区切りをつけ、途中の反映を残さず、次の一手を 1 行で記録する」という 1 行を預かり（<code>cmds queue</code> と同じ仕組み）、エージェントが空いた時点で入力します。文面は日本語で、依頼の部分は <code>--request</code> で変えられます。既定はオフです。<code>cmds power</code> で電源の状態と設定を表示します。</li>
+<li>止まっているペインを 1 つのペインに知らせる <code>cmds stall</code>：<code>cmds stall notice on --to ペイン</code> にすると、エージェントが入力や許可を求めたまま決めた分数（既定 10 分）が過ぎたペイン、預けた指示（<code>cmds queue</code>）が決めた分数（既定 15 分）入力されていないペイン、作業を終えて何もしていないまま決めた分数（既定 10 分、<code>--idle-minutes 0</code> で知らせない）が過ぎたエージェントを、指定したペインへ 1 行ずつ知らせます。行は「ペインの番号・状態・分数・理由の語」だけの決まった形で、ペインの画面の文字は入りません。cmds は許可の確認に答えず、止まっているペインには何も入力せず、ウィンドウも前に出しません。入力待ちと未達は続いている間 1 時間ごとに、待機は手が空いた 1 回につき 1 行だけ知らせます（<code>--idle-repeat on</code> で毎時）。知らせ先が作業中で行が待っている間は同じ詰まりの 2 行目を足さず、解けた詰まりの行は取り下げます。入れている間は、同じ一覧を毎分 <code>stalls.txt</code> にも書き出します。既定はオフです。<code>cmds stall</code> で一覧と設定を表示します。</li>
 </ul>
 <h3>修正</h3>
 <ul>
-<li>スケジュールと預かり指示：Claude Code が入力欄で1分待つと出す「Claude is waiting for your input」の通知を質問と取り違え、待機中のエージェントに入力されませんでした（予定は30分後に「the agent stayed busy」で失敗、預かり指示は誰かが入力するまで待ち続ける）。この通知は待機として扱います。サイドバーでも「入力待ち」ではなく待機と表示します。</li>
-<li>スケジュール：Mac が止まっていた後にまとめて実行し直すとき、同時に5件を超えた分は「too many runs were active」で飛ばされていました。空きを待って順に実行します。cmds の再起動直後でセッションがまだ再開されていないペイン宛ての予定は飛ばさず、再開を最長15分待ちます。</li>
+<li>ターミナルに出ているファイルのパスを ⌘ クリックして新しいプレビューが開くとき、cmds が応答しなくなり、強制終了するしかなくなることがありました。リンクは、クリックの処理が終わってから開くようにしました。</li>
+<li>サイドバー下部に名前の長い「次の予定」が出ている間、サイドバーの幅を広くも狭くも変えられませんでした。長い名前は省略して表示します。</li>
 </ul>
 <h3>Added</h3>
 <ul>
-<li><code>cmds power</code>, telling the agents the Mac is on battery: with <code>cmds power notice on</code>, every pane that runs Claude Code or Codex gets one line when the Mac switches from the power adapter to its battery, and when the charge falls below a level (25% by default, <code>--below 30</code>) while it is not charging: wrap up at a good stopping point, leave nothing half-applied, record the next step in one line. The line is kept like <code>cmds queue add</code>'s and typed in when the agent is free; The line is in Japanese; <code>--request</code> replaces its request. Off by default. <code>cmds power</code> shows the power source and the setting.</li>
+<li><code>cmds stall</code>, telling one pane about panes that are stuck: with <code>cmds stall notice on --to PANE</code>, that pane gets one line for each pane whose agent has asked for input or permission for a number of minutes (10 by default), for each instruction kept with <code>cmds queue</code> that has not been typed in for a number of minutes (15 by default), and for each agent that finished and has had nothing in progress for a number of minutes (10 by default; <code>--idle-minutes 0</code> turns this kind off). The line has a fixed form (pane, state, minutes, kind of reason) with nothing from the pane's screen. cmds never answers the question, never types into the stuck pane and never brings a window forward. A question or an undelivered instruction is told again every hour while it lasts; an idle agent once each time it becomes idle (<code>--idle-repeat on</code>: every hour). While a line still waits for the pane that is told, the same stall gets no second line, and a line whose stall is over is taken back. While the notice is on, the same list is written every minute to <code>stalls.txt</code>. Off by default. <code>cmds stall</code> shows the list and the setting.</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>Schedules and kept instructions were not typed into a Claude Code that had waited at its prompt for a minute: its "Claude is waiting for your input" notice was taken for a question (a schedule run failed after 30 minutes with "the agent stayed busy"; a kept instruction waited until someone typed there). The notice now counts as idle, in the sidebar too.</li>
-<li>Schedules catching up after the Mac was off: beyond five at once the others were skipped ("too many runs were active"); they now wait for a free slot. A run for a pane whose session was not resumed yet after a restart of cmds is no longer skipped: it waits up to 15 minutes for the session.</li>
+<li>cmds could stop responding for good (it had to be force quit) after a ⌘-click on a file path in a terminal that opened a new preview. The link is now opened after the click is handled.</li>
+<li>The sidebar's edge could not be dragged, wider or narrower, while its footer showed a next schedule with a long name. A long name is now cut.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.37.0/cmds-0.37.0.dmg" length="18895976" type="application/octet-stream" sparkle:edSignature="KQ0KZlCZT+B0Yox0F9DsJrUfq00h6nmUeOCgaqF893LKiWX+SF1vjDB4DM2Rb4scuCIOLX7exbtDbVlG2MudCA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.38.0/cmds-0.38.0.dmg" length="18984696" type="application/octet-stream" sparkle:edSignature="zY+IMs3s82lX8uD2INlvT31PK6WP0MsqCvivumt+OtZ+EEh+NmrNZmAeDpnOeL2haq3GT6CtDgpGe8cPZ4BPCQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: Lt7wAldW4TOmUKu6e77/o5LswFauhh/xGeuWMxBLYBHy3TBE44PtS4Hwd7zKVzfTPyK5w8TJnLCjUFcOBuM6CA==
-length: 4394
+edSignature: OWg6pNKxoaaStMdU7Jp74dsdx8kiJ62qLwZej4ITVlLLGWtv8cdAumSW6sskpYG0/Qxv8dmPcDDzz19BNIWwCQ==
+length: 4825
 -->

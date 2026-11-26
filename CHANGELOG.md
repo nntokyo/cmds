@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-11-26
+
 ### Added
 
 - `cmds stall` and `cmds stall notice [on|off] [--to PANE] [--input-minutes N] [--queue-minutes N]` (API
@@ -1318,7 +1320,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.37.0...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.38.0...master
+[0.38.0]: https://github.com/nntokyo/cmds/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/nntokyo/cmds/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/nntokyo/cmds/compare/v0.35.0...v0.36.0
 [0.35.0]: https://github.com/nntokyo/cmds/compare/v0.34.0...v0.35.0
