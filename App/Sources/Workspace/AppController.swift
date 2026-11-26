@@ -564,7 +564,7 @@ final class AppController {
     /// Counts agents' tabs as they open (`Pane.agentTabOrder`).
     static var agentTabCounter = 0
 
-    /// A page in a browser pane: with `tabs` (default: Settings › General › Open new pages in tabs) a new tab of the browser
+    /// A page in a browser pane: with `tabs` (default: Settings › Browser › Open new pages in tabs) a new tab of the browser
     /// pane that asked, else of the workspace's browser tabs; a browser split beside the pane otherwise.
     @discardableResult
     /// `profile`: the login profile (`.some(nil)`: the shared data); nil: the asking pane's (`Pane.profileForOpenedPages`)

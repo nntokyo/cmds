@@ -11,7 +11,6 @@ enum SettingsTab: String {
 /// accounts and schedules (their own windows); the menu bar item; the assistant; automatic updates. Every control
 /// applies immediately (`AppSettings`, `Updater`); there is no OK button. Every tab scrolls when its rows are taller
 /// than the screen allows.
-
 @MainActor
 final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     static let shared = SettingsWindowController()
@@ -61,7 +60,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     /// Settings › Assistant (#243), shown on macOS 26 and later.
     private let assistantPane = AssistantSettingsPane()
     /// The scrolled tabs' height limits, fitted to the screen when the window opens (#264).
-    private var scrollHeightLimits: [(limit: NSLayoutConstraint, page: NSViewController, rowsHeight: CGFloat)] = []
+    private var scrollHeightLimits: [(limit: NSLayoutConstraint, page: NSViewController, rows: NSView)] = []
     /// A scrolled tab is at most this tall (the content, without the title bar and toolbar), so Settings fits a 13"
     /// display with room to spare (#264).
     private static let scrollHeight: CGFloat = 540
@@ -391,7 +390,7 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
             scroll.widthAnchor.constraint(equalToConstant: width),
             limit, follow,
         ])
-        scrollHeightLimits.append((limit, controller, fitting.height))
+        scrollHeightLimits.append((limit, controller, content))
         controller.view = scroll
         controller.preferredContentSize = NSSize(width: width, height: min(fitting.height, Self.scrollHeight))
     }
@@ -403,9 +402,10 @@ final class SettingsWindowController: NSWindowController, NSWindowDelegate {
         let chrome = window.frame.height - window.contentLayoutRect.height
         let height = max(min(Self.scrollHeight, screen.visibleFrame.height - max(chrome, Self.minimumChrome) - Self.screenMargin),
                          Self.minimumScrollHeight)
-        for (limit, page, rowsHeight) in scrollHeightLimits {
+        for (limit, page, rows) in scrollHeightLimits {
             limit.constant = height
-            page.preferredContentSize.height = min(rowsHeight, height)
+            // Measured now, not when the tab was built: rows hidden since (the bookmarks' problem note) take no room.
+            page.preferredContentSize.height = min(rows.fittingSize.height, height)
         }
     }
 

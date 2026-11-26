@@ -1,7 +1,7 @@
 import AppKit
 import CmdsCore
 
-/// Google Chrome's bookmarks for the bookmarks bar of browser panes (Settings › General): read from Chrome's profile
+/// Google Chrome's bookmarks for the bookmarks bar of browser panes (Settings › Browser): read from Chrome's profile
 /// folder (`ChromeBookmarks`) off the main thread, again when cmds becomes active or the setting changes, and only when
 /// the file changed. Read only.
 @MainActor

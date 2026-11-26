@@ -36,7 +36,7 @@ extension AppController {
 
     private static var suspensionTimer: Timer?
 
-    /// Checks every minute for background browser tabs to suspend (Settings › General › Suspend background tabs).
+    /// Checks every minute for background browser tabs to suspend (Settings › Browser › Suspend background tabs).
     func startTabSuspension() {
         guard Self.suspensionTimer == nil else { return }
         Self.suspensionTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in

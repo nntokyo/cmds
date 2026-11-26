@@ -369,7 +369,7 @@ are not shared (sign in to sites in the pane itself). `javascript:` bookmarklets
 Bookmarks show their icons from Chrome's own icon database (`<profile>/Favicons`, copied and read read-only) or, for
 sites visited in a browser pane, the icon found there.
 
-- **Settings › Browser › Show a bookmarks bar** turns the bar off; **Chrome profile** picks a profile (default: the
+- **Settings › Browser › Show a bookmarks bar** turns the bar off; **Profile** picks a profile (default: the
   one Chrome used last).
 - When Chrome keeps a profile's bookmarks only encrypted (it can, for bookmarks saved in the Google Account), cmds
   cannot read them; Settings says so, also when it shows the bookmarks on this Mac but not the account's.

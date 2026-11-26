@@ -31,7 +31,7 @@ extension AppController {
     }
 
     /// The workspace's own login profile for a browser pane nobody chose one for (`WorkspaceProfile`); nil with
-    /// Settings › General › Browser › Separate sign-ins per workspace off (the shared data). Named once, from the
+    /// Settings › Browser › Separate sign-ins per workspace off (the shared data). Named once, from the
     /// project folder, and kept with the workspace.
     /// `explicitly`: the user switched (Use This Workspace's Profile): from then on also a workspace from before uses it.
     func workspaceBrowserProfile(for workspaceID: String, explicitly: Bool = false) -> String? {

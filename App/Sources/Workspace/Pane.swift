@@ -232,7 +232,7 @@ final class Pane {
             guard let self else { return nil }
             return self.controller?.defaultWatchFolder(for: self)
         }
-        // A `_blank` link: a new tab of this pane (Settings › General › Open new pages in tabs), else a browser split
+        // A `_blank` link: a new tab of this pane (Settings › Browser › Open new pages in tabs), else a browser split
         // beside it; focused only when this pane has the focus (an agent's click in a background pane does not take
         // the keyboard, #235).
         browser.onOpenInNewPane = { [weak self] url in
