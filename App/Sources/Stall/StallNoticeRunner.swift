@@ -3,7 +3,7 @@ import CmdsCore
 
 /// Tells one pane about panes that are stuck (`cmds stall`, API `stall.*`; docs/guide/queue.md "Stalled panes").
 /// `StallNotice` decides; this class looks at the panes once a minute (the agents that ask for input, as `cmds idle`
-/// counts them, and the first instruction waiting for each pane) and keeps one line per stall for the chosen pane
+/// counts them, the agents that wait at their prompt, and the first instruction waiting for each pane) and keeps one line per stall for the chosen pane
 /// (`PaneQueueRunner`). It never types into the stalled pane, never answers a question and never brings a window
 /// forward. Owned by `AppController`. Off until turned on (`stall-notice.json` in the support directory).
 @MainActor
@@ -43,14 +43,17 @@ final class StallNoticeRunner {
 
     /// The stalls there are at `now`.
     private func stalls(now: Date) -> [StallNotice.Stall] {
-        let asking = ((try? controller.idlePanes(minutes: IdlePanes.minutesRange.lowerBound))?.panes ?? [])
-            .filter { $0.state == AgentActivity.needsInput.rawValue }
+        let quiet = (try? controller.idlePanes(minutes: IdlePanes.minutesRange.lowerBound))?.panes ?? []
+        let asking = quiet.filter { $0.state == AgentActivity.needsInput.rawValue }
+            .map { StallNotice.Asking(pane: $0.pane, seconds: $0.idleSeconds) }
+        // Only where cmds knows an agent runs: a shell is not an idle agent.
+        let idle = quiet.filter { $0.state == AgentActivity.idle.rawValue && $0.agent != nil }
             .map { StallNotice.Asking(pane: $0.pane, seconds: $0.idleSeconds) }
         let waiting = controller.paneQueue.heads().map { head in
             StallNotice.Waiting(pane: head.pane?.id, tag: head.item.paneTag,
                                 seconds: Int(now.timeIntervalSince(head.item.createdAt)), hold: head.hold, from: head.item.from)
         }
-        return StallNotice.stalls(asking: asking, waiting: waiting, settings: settings, toPane: target?.id)
+        return StallNotice.stalls(asking: asking, waiting: waiting, idle: idle, settings: settings, toPane: target?.id)
     }
 
     /// Keeps a line for the chosen pane for every stall that is due. A line that could not be kept (the pane's queue
@@ -88,7 +91,8 @@ final class StallNoticeRunner {
 
     /// Changes what is given (`to`: the id of the pane that is told; it gets a tag, so it is found after a restart)
     /// and checks at once.
-    func set(enabled: Bool?, to: String?, inputMinutes: Int?, queueMinutes: Int?) throws -> StallNoticeStatus {
+    func set(enabled: Bool?, to: String?, inputMinutes: Int?, queueMinutes: Int?, idleMinutes: Int? = nil) throws
+        -> StallNoticeStatus {
         var changed = settings
         if let to {
             let pane = try controller.resolvePane(to)
@@ -101,6 +105,12 @@ final class StallNoticeRunner {
         }
         if let inputMinutes { changed.inputMinutes = inputMinutes }
         if let queueMinutes { changed.queueMinutes = queueMinutes }
+        if let idleMinutes {
+            guard StallNotice.idleMinutesRange.contains(idleMinutes) else {
+                throw RPCError.invalidParams("idle_minutes must be \(StallNotice.idleMinutesRange.lowerBound) to \(StallNotice.idleMinutesRange.upperBound)")
+            }
+            changed.idleMinutes = idleMinutes
+        }
         if let enabled { changed.enabled = enabled }
         if changed.enabled, changed.toTag == nil { throw RPCError.invalidParams("choose the pane that is told first (to)") }
         if changed != settings {
@@ -128,7 +138,8 @@ enum StallNoticeAPI {
             return try .from(runner.status())
         case "stall.set":
             return try .from(runner.set(enabled: try params.bool("enabled"), to: try params.string("to"),
-                                        inputMinutes: try params.int("input_minutes"), queueMinutes: try params.int("queue_minutes")))
+                                        inputMinutes: try params.int("input_minutes"), queueMinutes: try params.int("queue_minutes"),
+                                        idleMinutes: try params.int("idle_minutes")))
         default:
             throw RPCError.methodNotFound(method)
         }

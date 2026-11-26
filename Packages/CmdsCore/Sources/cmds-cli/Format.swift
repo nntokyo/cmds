@@ -418,12 +418,18 @@ enum Format {
         } else {
             out += "off (cmds stall notice on" + (s.toTag == nil ? " --to PANE)" : ")")
         }
-        out += "\nafter   \(s.inputMinutes) min asking for input, \(s.queueMinutes) min with a kept instruction not typed in\n"
+        out += "\nafter   \(s.inputMinutes) min asking for input, \(s.queueMinutes) min with a kept instruction not typed in, "
+            + (s.idleMinutes > 0 ? "\(s.idleMinutes) min idle" : "idle agents not told") + "\n"
         if status.stalls.isEmpty {
             out += "stalled none\n"
         } else {
             for (index, stall) in status.stalls.enumerated() {
-                let state = stall.kind == .needsInput ? "asks for input" : "kept instruction not typed in"
+                let state: String
+                switch stall.kind {
+                case .needsInput: state = "asks for input"
+                case .undelivered: state = "kept instruction not typed in"
+                case .idle: state = "idle"
+                }
                 out += (index == 0 ? "stalled " : "        ")
                     + "\(stall.pane ?? "-")  \(state)  \(stall.minutes) min  \(stall.reason.rawValue)\n"
             }

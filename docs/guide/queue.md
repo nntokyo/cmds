@@ -90,6 +90,7 @@ its input box holds text. cmds can tell one pane (the one that hands out the wor
 cmds stall                                   # the panes that are stuck now, and whether the notice is on
 cmds stall notice on --to p3                 # tell pane p3 (off by default; --to is needed the first time)
 cmds stall notice --input-minutes 5 --queue-minutes 20
+cmds stall notice --idle-minutes 30          # an agent with nothing to do (default 10; 0: not told)
 cmds stall notice off
 ```
 
@@ -99,15 +100,20 @@ When it is on, cmds looks at the panes once a minute and keeps one line for the 
 - an agent that has asked for input or permission for `--input-minutes` (default 10):
   「cmds 詰まり通知: ペイン p7 / 入力待ち / 12 分 / 理由 permission-or-question」;
 - an instruction kept for a pane that has not been typed in for `--queue-minutes` (default 15):
-  「cmds 詰まり通知: ペイン p9 / 預けた指示が未達 / 15 分 / 理由 typed-input」.
+  「cmds 詰まり通知: ペイン p9 / 預けた指示が未達 / 15 分 / 理由 typed-input」;
+- an agent that finished its work and has waited at its prompt, with nothing in progress and nothing asked, for
+  `--idle-minutes` (default 10; 0 turns only this kind off):
+  「cmds 詰まり通知: ペイン p5 / 待機中 / 10 分 / 理由 idle」. So whoever hands out the work need not look at every
+  pane to find the ones with nothing to do.
 
 The line always has this form: the pane, the state, the minutes and one of a fixed set of reasons
-(`permission-or-question`; for a kept instruction `busy`, `needs-input`, `typed-input`, `no-agent`, `other-program`,
+(`permission-or-question`; `idle`; for a kept instruction `busy`, `needs-input`, `typed-input`, `no-agent`, `other-program`,
 `other-input`, `pane-closed`, the reasons `cmds queue list` gives). Nothing from the pane's screen is in it. cmds
 never answers the question, never types into the stuck pane and never brings a window forward: the pane that is told
 decides what to do. A stall that lasts is told again every hour, a pane with both kinds for the same question gets
-one line, and the pane that is told is never reported itself. The minutes of a question count from when the agent
-last worked. A dialog an agent shows without reporting it (the folder trust question at its start) is only seen
+one line (so does an idle agent whose kept instruction is not typed in: that instruction is told), and the pane that is told is never reported itself. The minutes of a question and of an idle agent count from when the agent
+last worked (for an agent cmds never saw working: from when it started, at the earliest when cmds did); a pane
+without an agent is never idle. A dialog an agent shows without reporting it (the folder trust question at its start) is only seen
 through an instruction kept for its pane. `cmds stall` lists the stalls also while the notice is off.
 
 The line for the pane that is told waits, like any kept instruction, while its agent works. So, while the notice is

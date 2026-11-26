@@ -325,7 +325,8 @@ In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the C
   (`cmds queue list`: delivered), the question is still there and nothing was typed into the other panes.
   `cmds rpc debug.stall` (DEBUG builds) checks now instead of at the next minute. While the notice is on,
   `stalls.txt` in the support folder has the time, the number of stalls and the same lines; `cmds stall notice off`
-  removes it.
+  removes it. An agent that answered once and is left alone is listed as `idle` after `--idle-minutes` (default 10)
+  and told in one line; a shell pane never is.
 - `continueSession` with a stub `claude` script first on `PATH` (start the instance with `ZDOTDIR` pointing at a
   temporary `.zshrc` that puts it there, so the real `claude` is never run) that reports a session with
   `cmds hook claude-status` / `cmds hook claude`, and accounts whose `CLAUDE_CONFIG_DIR`s are temporary folders
