@@ -9,7 +9,7 @@ Run on every pull request, on pushes to `master` and by hand (Actions › CI ›
 
 | Job | Runner | What it checks |
 |---|---|---|
-| Website and update feed | ubuntu-latest | `scripts/ci/site_check.py --release --dmg-cache build/ci-dmg`: every page in `site/public` is well-formed HTML; `appcast.xml` has a valid feed signature for `SUPublicEDKey` (so a hand-edited feed fails), one item, and an enclosure on the GitHub release `vX.Y.Z`; every download and release link and the byte count on the pages name the appcast's version; the release DMG has the enclosure's length and Sparkle signature, and its SHA-256 is the one on the pages. The DMG is kept in the Actions cache (key: the appcast) and downloaded again only when its SHA-256 is no longer the release asset's digest, so CI adds one or two downloads to a release's count instead of one per run (until 0.34.0, about 500 of 687 counted downloads were CI). Then `scripts/check-links.py` (Markdown links, `docs/…` mentions) |
+| Website and update feed | ubuntu-latest | `scripts/ci/site_check.py --release --dmg-cache build/ci-dmg`: every page in `site/public` is well-formed HTML; `appcast.xml` has a valid feed signature for `SUPublicEDKey` (so a hand-edited feed fails), one item, and an enclosure on the GitHub release `vX.Y.Z`; every download and release link and the byte count on the pages name the appcast's version; the release DMG has the enclosure's length and Sparkle signature, and its SHA-256 is the one on the pages. The DMG is kept in the Actions cache (key: the appcast) and downloaded again only when its SHA-256 is no longer the release asset's digest, so CI adds one or two downloads to a release's count instead of one per run (until 0.34.0, about 500 of 687 counted downloads were CI). On the Mac, `run-local.sh --release` and `deploy-site.sh` pass `--built-dmg-dir build/release` as well: the DMG built there is used without a download when its SHA-256 is the release asset's digest (the same bytes), so the local runs add nothing to the count. Then `scripts/check-links.py` (Markdown links, `docs/…` mentions) |
 | Swift packages and String Catalogs | macos-latest | every `.xcstrings` compiles (`xcstringstool`); `Packages/CmdsCore`: `swift test` (the library, the CLI and their tests); `Packages/CmdsSSH`: `swift test` (its end-to-end part needs a throwaway sshd and is skipped) |
 | iOS companion builds | macos-latest | `xcodegen generate`, then `CmdsCompanion` built for the iOS Simulator without signing (`scripts/ci/run-local.sh ios`), so a CmdsCore change cannot break the iPhone app unnoticed (#373) |
 
@@ -44,7 +44,8 @@ git switch master && git pull --ff-only && scripts/ci/deploy-site.sh
 `scripts/ci/deploy-site.sh`:
 
 1. refuses anything but a clean checkout of `origin/master`;
-2. runs `site_check.py --release --write-download-files site/public/download`, which also writes `latest.json` and
+2. runs `site_check.py --release --dmg-cache build/ci-dmg --built-dmg-dir build/release --write-download-files
+   site/public/download` (no download when `build/release` has the release's DMG), which also writes `latest.json` and
    `SHA256SUMS` for the appcast's release: they are not committed, and a deploy without them would remove them from
    the site;
 3. deploys hosting target `cmds` of project `startup-project-4f8f8` with your `firebase login`;

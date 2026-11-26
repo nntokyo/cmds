@@ -4,7 +4,8 @@
 #
 #   scripts/ci/run-local.sh                  # every job: site, links, strings, core, ssh, ios
 #   scripts/ci/run-local.sh site strings     # only these jobs
-#   scripts/ci/run-local.sh --release site   # site job with the release DMG check (network)
+#   scripts/ci/run-local.sh --release site   # site job with the release DMG check (network; no download when
+#                                            # build/release has the release's DMG)
 #   scripts/ci/run-local.sh --post 69        # every job, then the summary as a comment on PR 69
 #
 # Heavy jobs (core, ssh: Swift builds and tests) run one after another and only while memory pressure is normal
@@ -21,7 +22,9 @@ post=
 jobs=
 while [ $# -gt 0 ]; do
   case "$1" in
-    --release) release=--release ;;
+    # The DMG built on this Mac when it is the release's asset (same digest), else one download kept in build/ci-dmg:
+    # a download adds to the release's public download count.
+    --release) release="--release --dmg-cache build/ci-dmg --built-dmg-dir build/release" ;;
     --post) post=${2:?--post needs a PR number}; shift ;;
     -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     site|links|strings|core|ssh|ios) jobs="$jobs $1" ;;

@@ -42,7 +42,8 @@ else
     { echo "cannot reach GitHub: use --offline (and --dmg if build/release has no copy of the release DMG)" >&2; exit 1; }
   [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/master)" ] ||
     { echo "HEAD is not origin/master: check out and pull master first" >&2; exit 1; }
-  python3 -I scripts/ci/site_check.py --release --write-download-files site/public/download
+  python3 -I scripts/ci/site_check.py --release --dmg-cache build/ci-dmg --built-dmg-dir build/release \
+    --write-download-files site/public/download
 fi
 rm -f site/public/download/*.dmg
 [ -n "$dry" ] && { echo "dry run: not deployed"; exit 0; }
