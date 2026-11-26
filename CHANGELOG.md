@@ -21,6 +21,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   While it is on, the stalls are also written every minute to `stalls.txt` in the support folder, for when the pane
   that is told is busy.
 
+### Fixed
+
+- cmds could stop responding for good (it had to be force quit) after a ⌘-click on a file path in a terminal that
+  opened a new preview split: the split was made while the terminal still handled the click, and the two waited for
+  each other. The link is now opened after the click is handled.
+
 ## [0.37.0] - 2026-11-26
 
 ### Added
