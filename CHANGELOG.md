@@ -26,6 +26,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - cmds could stop responding for good (it had to be force quit) after a ⌘-click on a file path in a terminal that
   opened a new preview split: the split was made while the terminal still handled the click, and the two waited for
   each other. The link is now opened after the click is handled.
+- The sidebar's edge could not be dragged, wider or narrower, while the footer showed a next schedule with a long
+  name: the line would not be cut and held the sidebar at its widest. It is cut now (so is the leftover processes
+  line).
 
 ## [0.37.0] - 2026-11-26
 

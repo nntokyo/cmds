@@ -145,6 +145,20 @@ final class MainWindowController: NSWindowController, NSWindowDelegate {
     }
 
     /// Clicking anywhere inside a pane focuses it (covers browser panes and engine views alike).
+    #if DEBUG
+    /// For `debug.sidebar_width`: moves the divider to `width` as a drag would (nil: only reads) and gives the
+    /// sidebar's width then, the narrowest its content allows and the item's limits.
+    func debugSidebarWidth(set width: Double?) -> [String: Double] {
+        let split = splitViewController.splitView
+        if let width {
+            split.setPosition(CGFloat(width), ofDividerAt: 0)
+            split.layoutSubtreeIfNeeded()
+        }
+        return ["width": Double(sidebar.view.frame.width), "fitting": Double(sidebar.view.fittingSize.width),
+                "minimum": Double(sidebarItem.minimumThickness), "maximum": Double(sidebarItem.maximumThickness)]
+    }
+    #endif
+
     private func installMouseMonitor() {
         mouseMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
             guard let self, event.window === self.window,

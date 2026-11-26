@@ -253,6 +253,10 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `tokyo.n-n.cmds.isolated.<hash>`, so delete that defaults domain afterwards). `live_recorders` returns who records
   now by Core Audio after the same rules (`[{pid, id}]`; a command-line tool's `id` is its path), without starting
   the microphone or pausing: with `ffmpeg -f avfoundation -i ":0" -t 5 -f null -` running it lists ffmpeg (#310).
+- `debug.sidebar_width {width?}` (DEBUG builds) moves the sidebar's edge to `width` (omitted: only reads) and gives
+  `{width, fitting, minimum, maximum}`: the width then, the narrowest its content allows and the limits. With a
+  schedule whose name is 64 characters long, `fitting` must stay below `minimum` and every width from 180 to 420
+  must be taken (a footer line that would not be cut once held the sidebar at 420).
 - `debug.sidebar_port {workspace?, index?}` (DEBUG builds) clicks port `index` (default 0) in the workspace's sidebar
   row, at the middle of its text as the mouse would, and returns the port opened (in a browser split, #171).
 - `debug.sidebar_account {workspace, pane?, choose?, cancel?}` (DEBUG builds, #284, #296) returns the row's account

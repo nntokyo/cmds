@@ -406,6 +406,13 @@ final class APIServer {
                     throw RPCError.invalidParams("the assistant needs macOS 26")
                 }
                 connection.reply(id: id, result: try assistant.debugPerform(params.value))
+            case "debug.sidebar_width":
+                // Tests only: the sidebar's width after moving its divider to `width` (omitted: as it is), the
+                // narrowest its content allows and its limits.
+                guard let window = controller.window?.windowController as? MainWindowController else {
+                    throw RPCError.notFound("no main window")
+                }
+                connection.reply(id: id, result: .object(window.debugSidebarWidth(set: try params.double("width")).mapValues { .number($0) }))
             case "debug.sidebar_port":
                 // Tests only: a click on port `index` (default 0) of a workspace's sidebar row (#171).
                 let workspace = try controller.resolveWorkspace(try params.string("workspace"))
