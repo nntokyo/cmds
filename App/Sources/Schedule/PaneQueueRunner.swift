@@ -89,9 +89,14 @@ final class PaneQueueRunner {
         if let delivery = deliveries[item.paneTag], delivery.itemID == id, delivery.phase != .waiting {
             throw RPCError.invalidParams("\(id) is being typed")
         }
+        // Only the first instruction of a pane has a delivery and a hold: one taken out behind it leaves them alone
+        // (the first may be pasted and waiting for its Return or its confirmation; it must not be typed again).
+        let first = queue.head(of: item.paneTag)?.id == id
         queue.end(id: id, .cancelled, now: Date())
-        deliveries[item.paneTag] = nil
-        holds[item.paneTag] = nil
+        if first {
+            deliveries[item.paneTag] = nil
+            holds[item.paneTag] = nil
+        }
         save()
     }
 
