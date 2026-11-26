@@ -12,6 +12,7 @@ final class StallNoticeRunner {
 
     unowned let controller: AppController
     private let url: URL
+    private let listURL: URL
     private(set) var settings: StallNotice.Settings
     private var state = StallNotice.State()
     private var timer: Timer?
@@ -20,6 +21,7 @@ final class StallNoticeRunner {
     init(controller: AppController, supportDirectory: URL = CmdsEnv.supportDirectoryURL()) {
         self.controller = controller
         url = StallNotice.url(supportDirectory: supportDirectory)
+        listURL = StallNotice.listURL(supportDirectory: supportDirectory)
         settings = StallNotice.loadSettings(from: url)
     }
 
@@ -54,10 +56,18 @@ final class StallNoticeRunner {
     /// Keeps a line for the chosen pane for every stall that is due. A line that could not be kept (the pane's queue
     /// is full) is tried again at the next check.
     func check() {
-        guard settings.enabled, let target else { return }
+        guard settings.enabled else { return }
         let now = Date()
+        let stalls = stalls(now: now)
+        // Written whether or not the pane that is told is open or free: its lines wait while it works.
+        do {
+            try StallNotice.writeList(stalls, now: now, to: listURL)
+        } catch {
+            scheduleLog.error("stall notice: the list could not be written: \(error.localizedDescription, privacy: .public)")
+        }
+        guard let target else { return }
         var kept = 0
-        for stall in StallNotice.due(stalls(now: now), state: &state, now: now) {
+        for stall in StallNotice.due(stalls, state: &state, now: now) {
             guard (try? controller.paneQueue.add(text: StallNotice.line(stall), paneID: target.id,
                                                  from: StallNotice.queueSource)) != nil else { continue }
             state.sent(stall, at: now)
@@ -72,7 +82,8 @@ final class StallNoticeRunner {
 
     func status() -> StallNoticeStatus {
         StallNoticeStatus(settings: settings, toPane: target?.id, stalls: stalls(now: Date()),
-                          lastSentAt: last.map { ISO8601DateFormatter().string(from: $0.at) }, lastLines: last?.lines)
+                          lastSentAt: last.map { ISO8601DateFormatter().string(from: $0.at) }, lastLines: last?.lines,
+                          listFile: settings.enabled ? listURL.path : nil)
     }
 
     /// Changes what is given (`to`: the id of the pane that is told; it gets a tag, so it is found after a restart)
@@ -100,6 +111,8 @@ final class StallNoticeRunner {
             }
             settings = changed
         }
+        // Off: what the file says would no longer be kept up to date.
+        if !settings.enabled { try? FileManager.default.removeItem(at: listURL) }
         check()
         return status()
     }

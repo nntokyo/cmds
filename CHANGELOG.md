@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   each pane whose agent has asked for input or permission for N minutes (default 10) and for each kept instruction
   that has not been typed in for N minutes (default 15). The line has a fixed form (pane, state, minutes, kind of
   reason; in Japanese) and nothing from the pane's screen; cmds never answers the question. Off by default.
+  While it is on, the stalls are also written every minute to `stalls.txt` in the support folder, for when the pane
+  that is told is busy.
 
 ## [0.37.0] - 2026-11-26
 
