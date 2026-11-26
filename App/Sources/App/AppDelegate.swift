@@ -63,6 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.scheduleRunner.start()
         controller.paneQueue.start()
         controller.powerNotice.start()
+        controller.stallNotice.start()
         // Agents cut off by the quit (Resume Always): told to continue once resumed.
         controller.scheduleRunner.continueAfterRestart()
         // A hung main thread is sampled into <support dir>/hangs, and pings say it is busy.

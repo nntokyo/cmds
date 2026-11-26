@@ -80,6 +80,43 @@ Panes without an agent get nothing. The lines show in `cmds queue list` and can 
 shows the last one sent. The setting is kept in `power-notice.json` in cmds's support folder. A Mac without a
 battery never sends anything.
 
+## Stalled panes
+
+An agent that asks for permission waits until someone answers, and an instruction kept for a pane waits as long as
+its input box holds text. cmds can tell one pane (the one that hands out the work) when that lasts
+(the steps on one page, in Japanese: [stall-notice.ja.md](stall-notice.ja.md)):
+
+```sh
+cmds stall                                   # the panes that are stuck now, and whether the notice is on
+cmds stall notice on --to p3                 # tell pane p3 (off by default; --to is needed the first time)
+cmds stall notice --input-minutes 5 --queue-minutes 20
+cmds stall notice off
+```
+
+When it is on, cmds looks at the panes once a minute and keeps one line for the pane given with `--to`, exactly as
+`cmds queue add` would (typed in when its agent is free), for:
+
+- an agent that has asked for input or permission for `--input-minutes` (default 10):
+  「cmds 詰まり通知: ペイン p7 / 入力待ち / 12 分 / 理由 permission-or-question」;
+- an instruction kept for a pane that has not been typed in for `--queue-minutes` (default 15):
+  「cmds 詰まり通知: ペイン p9 / 預けた指示が未達 / 15 分 / 理由 typed-input」.
+
+The line always has this form: the pane, the state, the minutes and one of a fixed set of reasons
+(`permission-or-question`; for a kept instruction `busy`, `needs-input`, `typed-input`, `no-agent`, `other-program`,
+`other-input`, `pane-closed`, the reasons `cmds queue list` gives). Nothing from the pane's screen is in it. cmds
+never answers the question, never types into the stuck pane and never brings a window forward: the pane that is told
+decides what to do. A stall that lasts is told again every hour, a pane with both kinds for the same question gets
+one line, and the pane that is told is never reported itself. The minutes of a question count from when the agent
+last worked. A dialog an agent shows without reporting it (the folder trust question at its start) is only seen
+through an instruction kept for its pane. `cmds stall` lists the stalls also while the notice is off. The setting is
+kept in `stall-notice.json` in cmds's support folder; the pane is remembered by its tag, so it is found after a
+restart.
+
+While a line still waits for the pane that is told (its agent works), the same stall gets no second line, and at most
+10 lines wait there, so its queue keeps room for instructions; the others follow as lines are typed in. A line still
+waiting when its stall is over is taken back. Turning the notice on or off, or telling another pane, takes back the
+lines that wait and starts over: every stall there is then is told to the pane chosen now. So does a restart of cmds.
+
 ## Panes with nothing in progress
 
 ```sh

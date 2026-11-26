@@ -5,6 +5,7 @@ import Foundation
 extension CLI {
     private static let queueAddUsage = "queue add (--pane P | --workspace TITLE) <text…|->"
     private static let powerNoticeUsage = "power notice [on|off] [--below N] [--request TEXT | --default-request]"
+    private static let stallNoticeUsage = "stall notice [on|off] [--to PANE] [--input-minutes N] [--queue-minutes N]"
 
     static let queueCommands: [Command] = [
         Command(name: "queue add", usage: queueAddUsage,
@@ -126,6 +127,56 @@ extension CLI {
             ])
             if ctx.json { return ctx.printJSON(result) }
             print(Format.power(try perform { try result.decode(PowerNoticeStatus.self) }), terminator: "")
+        },
+        Command(name: "stall", usage: "stall",
+                summary: "Show the panes that are stuck and whether a pane is told about them.",
+                details: """
+                    Prints whether the notice is on and which pane is told, then the panes that are stuck now: an agent
+                    that has asked for input or permission for the set minutes, and a kept instruction (`cmds queue add`)
+                    that has not been typed in for the set minutes, each with the minutes and the kind of reason. Read
+                    only; `cmds stall notice` changes it. --json for the API's answer.
+                    """) { ctx in
+            try ctx.args.expectPositionals(0...0, usage: "cmds stall")
+            let result = try callNewMethod(ctx, "stall.status", [:])
+            if ctx.json { return ctx.printJSON(result) }
+            print(Format.stall(try perform { try result.decode(StallNoticeStatus.self) }), terminator: "")
+        },
+        Command(name: "stall notice", usage: stallNoticeUsage,
+                summary: "Tell one pane when another is stuck on a question or does not get its kept instruction (off by default).",
+                details: """
+                    When on, cmds looks at the panes once a minute and keeps one line for the pane given with --to (as
+                    `cmds queue add` does: typed in when its agent is free) for each pane that is stuck: an agent that
+                    has asked for input or permission for --input-minutes N (default \(StallNotice.defaultInputMinutes)), \
+                    and a kept instruction that has not been typed in for --queue-minutes N (default \
+                    \(StallNotice.defaultQueueMinutes)); both \(StallNotice.minutesRange.lowerBound) to \
+                    \(StallNotice.minutesRange.upperBound). The line has a fixed form, in Japanese: the pane, the state, the
+                    minutes and the kind of reason (permission-or-question, busy, needs-input, typed-input, no-agent,
+                    other-program, other-input, pane-closed), and nothing from the pane's screen. cmds never answers the
+                    question and never types into the stuck pane; no window comes forward. A stall that lasts is told
+                    again every hour; the pane that is told is never reported itself. --to is needed the first time.
+                    `cmds stall` shows the state; `cmds queue list` the lines that wait.
+                    """,
+                options: ["to", "input-minutes", "queue-minutes"]) { ctx in
+            let words = ctx.args.positionals
+            guard words.count <= 1, words.allSatisfy({ $0 == "on" || $0 == "off" }) else {
+                throw CLIError.usage("usage: cmds \(stallNoticeUsage)")
+            }
+            let input = try ctx.args.int("input-minutes")
+            let queue = try ctx.args.int("queue-minutes")
+            for (minutes, name) in [(input, "--input-minutes"), (queue, "--queue-minutes")] {
+                guard let minutes, !StallNotice.minutesRange.contains(minutes) else { continue }
+                throw CLIError.usage("\(name) expects a number from \(StallNotice.minutesRange.lowerBound) to \(StallNotice.minutesRange.upperBound)")
+            }
+            let to = ctx.args[option: "to"]
+            guard !words.isEmpty || to != nil || input != nil || queue != nil else {
+                throw CLIError.usage("usage: cmds \(stallNoticeUsage)")
+            }
+            let result = try callNewMethod(ctx, "stall.set", [
+                "enabled": words.first.map { .bool($0 == "on") }, "to": to.map { .string($0) },
+                "input_minutes": input.map { .number(Double($0)) }, "queue_minutes": queue.map { .number(Double($0)) },
+            ])
+            if ctx.json { return ctx.printJSON(result) }
+            print(Format.stall(try perform { try result.decode(StallNoticeStatus.self) }), terminator: "")
         },
     ]
 }

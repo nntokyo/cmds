@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `cmds stall` and `cmds stall notice [on|off] [--to PANE] [--input-minutes N] [--queue-minutes N]` (API
+  `stall.status`, `stall.set`): when on, the pane given with `--to` gets one line, kept like `cmds queue add`'s, for
+  each pane whose agent has asked for input or permission for N minutes (default 10) and for each kept instruction
+  that has not been typed in for N minutes (default 15). The line has a fixed form (pane, state, minutes, kind of
+  reason; in Japanese) and nothing from the pane's screen; cmds never answers the question. Off by default.
+
 ## [0.37.0] - 2026-11-26
 
 ### Added

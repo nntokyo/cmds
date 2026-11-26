@@ -89,9 +89,14 @@ final class PaneQueueRunner {
         if let delivery = deliveries[item.paneTag], delivery.itemID == id, delivery.phase != .waiting {
             throw RPCError.invalidParams("\(id) is being typed")
         }
+        // Only the first instruction of a pane has a delivery and a hold: one taken out behind it leaves them alone
+        // (the first may be pasted and waiting for its Return or its confirmation; it must not be typed again).
+        let first = queue.head(of: item.paneTag)?.id == id
         queue.end(id: id, .cancelled, now: Date())
-        deliveries[item.paneTag] = nil
-        holds[item.paneTag] = nil
+        if first {
+            deliveries[item.paneTag] = nil
+            holds[item.paneTag] = nil
+        }
         save()
     }
 
@@ -127,6 +132,16 @@ final class PaneQueueRunner {
     func hasWaiting(from source: String, for pane: Pane) -> Bool {
         guard let tag = pane.scheduleTag else { return false }
         return queue.items.contains { $0.paneTag == tag && $0.from == source }
+    }
+
+    /// The first instruction waiting for each pane: its pane (nil: not open) and why it is not typed yet
+    /// (`StallNotice`).
+    func heads() -> [(item: PaneQueue.Item, pane: Pane?, hold: PaneQueueHold?)] {
+        queue.paneTags.compactMap { tag in
+            guard let item = queue.head(of: tag) else { return nil }
+            let pane = pane(tag: tag).flatMap { $0.isClosing ? nil : $0 }
+            return (item, pane, pane == nil ? .paneNotFound : holds[tag])
+        }
     }
 
     // MARK: Typing

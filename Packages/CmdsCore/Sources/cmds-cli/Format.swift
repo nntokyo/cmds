@@ -409,6 +409,32 @@ enum Format {
         return out
     }
 
+    /// `cmds stall`.
+    static func stall(_ status: StallNoticeStatus, timeZone: TimeZone = .current) -> String {
+        let s = status.settings
+        var out = "notice  "
+        if s.enabled {
+            out += "on: " + (status.toPane.map { "pane \($0) is told" } ?? "the pane that is told is not open")
+        } else {
+            out += "off (cmds stall notice on" + (s.toTag == nil ? " --to PANE)" : ")")
+        }
+        out += "\nafter   \(s.inputMinutes) min asking for input, \(s.queueMinutes) min with a kept instruction not typed in\n"
+        if status.stalls.isEmpty {
+            out += "stalled none\n"
+        } else {
+            for (index, stall) in status.stalls.enumerated() {
+                let state = stall.kind == .needsInput ? "asks for input" : "kept instruction not typed in"
+                out += (index == 0 ? "stalled " : "        ")
+                    + "\(stall.pane ?? "-")  \(state)  \(stall.minutes) min  \(stall.reason.rawValue)\n"
+            }
+        }
+        if let at = status.lastSentAt {
+            let lines = status.lastLines ?? 0
+            out += "last    \(lines) line\(lines == 1 ? "" : "s") kept at \(localTime(at, timeZone: timeZone))\n"
+        }
+        return out
+    }
+
     /// An ISO 8601 time as `yyyy-MM-dd HH:mm` in `timeZone`; the text itself when it is not one.
     private static func localTime(_ iso: String, timeZone: TimeZone) -> String {
         guard let date = ISO8601DateFormatter().date(from: iso) else { return iso }

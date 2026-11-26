@@ -318,6 +318,10 @@ final class APIServer {
                     controller.powerNotice.simulated = PowerNotice.Power(onBattery: onBattery, percent: try params.int("percent"))
                 }
                 connection.reply(id: id, result: try .from(controller.powerNotice.status()))
+            case "debug.stall":
+                // Tests only: the stall notice looks at the panes now instead of at its next minute.
+                controller.stallNotice.check()
+                connection.reply(id: id, result: try .from(controller.stallNotice.status()))
             case "debug.shared_signin_site":
                 // Tests only: a local site (`domain`) whose cookie `cookie` counts as signed in, like X's auth_token.
                 BrowserPane.testSites = [SharedSignIn.Site(name: try params.required("name"), domains: [try params.required("domain")],
@@ -857,6 +861,10 @@ final class APIServer {
         case let method where method.hasPrefix("power."):
             // Local socket only (not in RemoteAPIPolicy.allowedMethods).
             return try PowerNoticeAPI.perform(method, params, runner: controller.powerNotice)
+
+        case let method where method.hasPrefix("stall."):
+            // Local socket only (not in RemoteAPIPolicy.allowedMethods).
+            return try StallNoticeAPI.perform(method, params, runner: controller.stallNotice)
 
         default:
             throw RPCError.methodNotFound(method)
