@@ -323,7 +323,9 @@ In an isolated instance (`CMDS_SUPPORT_DIR`, `CMDS_SYNC_DISABLED=1`), with the C
   input box and `cmds queue add` an instruction for it and for the shell pane. After three minutes `cmds stall`
   lists the three (`permission-or-question`, `typed-input`, `no-agent`), the first pane got three lines
   (`cmds queue list`: delivered), the question is still there and nothing was typed into the other panes.
-  `cmds rpc debug.stall` (DEBUG builds) checks now instead of at the next minute.
+  `cmds rpc debug.stall` (DEBUG builds) checks now instead of at the next minute. While the notice is on,
+  `stalls.txt` in the support folder has the time, the number of stalls and the same lines; `cmds stall notice off`
+  removes it.
 - `continueSession` with a stub `claude` script first on `PATH` (start the instance with `ZDOTDIR` pointing at a
   temporary `.zshrc` that puts it there, so the real `claude` is never run) that reports a session with
   `cmds hook claude-status` / `cmds hook claude`, and accounts whose `CLAUDE_CONFIG_DIR`s are temporary folders

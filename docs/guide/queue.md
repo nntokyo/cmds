@@ -108,7 +108,14 @@ never answers the question, never types into the stuck pane and never brings a w
 decides what to do. A stall that lasts is told again every hour, a pane with both kinds for the same question gets
 one line, and the pane that is told is never reported itself. The minutes of a question count from when the agent
 last worked. A dialog an agent shows without reporting it (the folder trust question at its start) is only seen
-through an instruction kept for its pane. `cmds stall` lists the stalls also while the notice is off. The setting is
+through an instruction kept for its pane. `cmds stall` lists the stalls also while the notice is off.
+
+The line for the pane that is told waits, like any kept instruction, while its agent works. So, while the notice is
+on, every check also writes the stalls to `stalls.txt` in cmds's support folder (`cmds stall` prints the path): a
+first line `cmds stall <time, ISO 8601> <number of stalls>`, then one line per stall in the same fixed form. It is
+written again every minute, also when there is no stall (the time shows it is fresh), and removed when the notice is
+turned off. Anything may read it without asking cmds: a person, a status line, an agent's hook.
+ The setting is
 kept in `stall-notice.json` in cmds's support folder; the pane is remembered by its tag, so it is found after a
 restart.
 

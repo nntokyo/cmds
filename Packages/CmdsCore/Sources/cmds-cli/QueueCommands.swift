@@ -154,6 +154,8 @@ extension CLI {
                     other-program, other-input, pane-closed), and nothing from the pane's screen. cmds never answers the
                     question and never types into the stuck pane; no window comes forward. A stall that lasts is told
                     again every hour; the pane that is told is never reported itself. --to is needed the first time.
+                    While on, the same lines are also written every minute to stalls.txt in the support folder
+                    (`cmds stall` prints the path), for when the pane that is told is busy; off removes the file.
                     `cmds stall` shows the state; `cmds queue list` the lines that wait.
                     """,
                 options: ["to", "input-minutes", "queue-minutes"]) { ctx in

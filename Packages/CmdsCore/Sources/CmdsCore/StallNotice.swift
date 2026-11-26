@@ -220,6 +220,31 @@ public enum StallNotice {
         return "cmds 詰まり通知: ペイン \(stall.pane ?? "-") / \(state) / \(stall.minutes) 分 / 理由 \(stall.reason.rawValue)"
     }
 
+    // MARK: List file
+
+    public static let listFileName = "stalls.txt"
+
+    /// The file the stalls are written to at every check while the notice is on: the pane that is told may be busy
+    /// for an hour, and its line waits until it is free; the file can be read meanwhile (by a person, a status line or
+    /// an agent's hook). Removed when the notice is turned off.
+    public static func listURL(supportDirectory: URL = CmdsEnv.supportDirectoryURL()) -> URL {
+        supportDirectory.appendingPathComponent(listFileName)
+    }
+
+    /// The file's text: when it was written (ISO 8601) and how many stalls there are, then one line per stall in the
+    /// form of `line` (pane, state, minutes, kind of reason; nothing from a pane's screen).
+    public static func listText(_ stalls: [Stall], now: Date) -> String {
+        let head = "cmds stall \(ISO8601DateFormatter().string(from: now)) \(stalls.count)"
+        return ([head] + stalls.map(line)).joined(separator: "\n") + "\n"
+    }
+
+    public static func writeList(_ stalls: [Stall], now: Date, to url: URL) throws {
+        let fm = FileManager.default
+        try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(listText(stalls, now: now).utf8).write(to: url, options: [.atomic])
+        try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+    }
+
     // MARK: File
 
     public static func url(supportDirectory: URL = CmdsEnv.supportDirectoryURL()) -> URL {
@@ -252,9 +277,12 @@ public struct StallNoticeStatus: Codable, Equatable, Sendable {
     /// The last lines sent since cmds started: when (ISO 8601) and how many.
     public var lastSentAt: String?
     public var lastLines: Int?
+    /// Where the stalls are written at every check while the notice is on (`StallNotice.listURL`).
+    public var listFile: String?
 
     public init(settings: StallNotice.Settings, toPane: String?, stalls: [StallNotice.Stall], lastSentAt: String? = nil,
-                lastLines: Int? = nil) {
+                lastLines: Int? = nil, listFile: String? = nil) {
+        self.listFile = listFile
         self.settings = settings
         self.toPane = toPane
         self.stalls = stalls

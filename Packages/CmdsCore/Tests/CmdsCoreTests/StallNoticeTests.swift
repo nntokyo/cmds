@@ -161,6 +161,29 @@ final class StallNoticeTests: XCTestCase {
         }
     }
 
+    func testListTextHasTheTimeTheCountAndTheSameLines() {
+        let asking = StallNotice.Stall(pane: "p12", kind: .needsInput, minutes: 240, reason: .permissionOrQuestion, key: "a")
+        let closed = StallNotice.Stall(pane: nil, kind: .undelivered, minutes: 15, reason: .paneClosed, key: "b")
+        XCTAssertEqual(StallNotice.listText([asking, closed], now: t0),
+                       "cmds stall 2027-01-15T08:00:00Z 2\n\(StallNotice.line(asking))\n\(StallNotice.line(closed))\n")
+        // No stall: still written, so a reader knows the file is fresh.
+        XCTAssertEqual(StallNotice.listText([], now: t0), "cmds stall 2027-01-15T08:00:00Z 0\n")
+    }
+
+    func testListFileIsReplacedAndPrivate() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("stall-list-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = StallNotice.listURL(supportDirectory: dir)
+        XCTAssertEqual(url.lastPathComponent, "stalls.txt")
+        let stall = StallNotice.Stall(pane: "p1", kind: .undelivered, minutes: 20, reason: .typedInput, key: "k")
+        try StallNotice.writeList([stall], now: t0, to: url)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8).split(separator: "\n").count, 2)
+        try StallNotice.writeList([], now: t0 + 60, to: url)
+        XCTAssertEqual(try String(contentsOf: url, encoding: .utf8), "cmds stall 2027-01-15T08:01:00Z 0\n")
+        let mode = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? Int
+        XCTAssertEqual(mode, 0o600)
+    }
+
     func testSettingsFileRoundTripAndLenientReading() throws {
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("stall-notice-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: dir) }

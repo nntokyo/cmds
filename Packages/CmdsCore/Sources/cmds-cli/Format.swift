@@ -432,6 +432,7 @@ enum Format {
             let lines = status.lastLines ?? 0
             out += "last    \(lines) line\(lines == 1 ? "" : "s") kept at \(localTime(at, timeZone: timeZone))\n"
         }
+        if let file = status.listFile { out += "file    \(file)\n" }
         return out
     }
 

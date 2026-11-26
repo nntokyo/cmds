@@ -60,6 +60,8 @@ final class QueueCLITests: XCTestCase {
                        + "last    2 lines kept at 2026-11-25 16:00\n")
         let closed = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1"), toPane: nil, stalls: [])
         XCTAssertTrue(Format.stall(closed).hasPrefix("notice  on: the pane that is told is not open\n"))
+        let file = StallNoticeStatus(settings: .init(enabled: true, toTag: "t1"), toPane: "p3", stalls: [], listFile: "/tmp/s/stalls.txt")
+        XCTAssertTrue(Format.stall(file).hasSuffix("stalled none\nfile    /tmp/s/stalls.txt\n"))
         let chosen = StallNoticeStatus(settings: .init(toTag: "t1"), toPane: "p3", stalls: [])
         XCTAssertTrue(Format.stall(chosen).hasPrefix("notice  off (cmds stall notice on)\n"))
     }
