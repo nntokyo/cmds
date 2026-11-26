@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   for each agent that finished and has waited at its prompt with nothing in progress (once each time it becomes
   idle; every hour with `--idle-repeat on`). The line has a fixed form (pane, state, minutes, kind of
   reason; in Japanese) and nothing from the pane's screen; cmds never answers the question. Off by default.
+  While a line still waits for the pane that is told, the same stall gets no second line, at most 10 wait, and a
+  line whose stall is over is taken back.
   While it is on, the stalls are also written every minute to `stalls.txt` in the support folder, for when the pane
   that is told is busy.
 

@@ -21,6 +21,9 @@ public enum StallNotice {
     /// The check that falls on the hour may come a moment early (a timer's minute is not exact): it counts, or the
     /// line would wait for the next check and come after 61 minutes.
     public static let repeatSlack: TimeInterval = 30
+    /// At most this many lines wait for the pane that is told (of `PaneQueue.maxPerPane`): the rest of its queue
+    /// stays free for instructions and the battery line.
+    public static let maxWaitingLines = 10
     public static let fileName = "stall-notice.json"
     /// `PaneQueue.Item.from` of the lines cmds itself queues.
     public static let queueSource = "cmds:stall"
@@ -184,12 +187,46 @@ public enum StallNotice {
     /// When each stall was last told (in memory: after a restart of cmds a lasting stall is told once more).
     public struct State: Equatable, Sendable {
         public var sentAt: [String: Date] = [:]
+        /// By stall key: the id of its kept line (`PaneQueue.Item.id`), while that may still wait.
+        public var lines: [String: String] = [:]
 
         public init() {}
 
-        public mutating func sent(_ stall: Stall, at now: Date) {
+        public mutating func sent(_ stall: Stall, at now: Date, line: String? = nil) {
             sentAt[stall.key] = now
+            if let line { lines[stall.key] = line }
         }
+    }
+
+    /// The ids of the lines to take back: kept earlier, still waiting (`waiting`: the ids of the lines of cmds that
+    /// wait), for a stall that is over. Lines that were typed in are forgotten.
+    public static func stale(_ stalls: [Stall], state: inout State, waiting: Set<String>) -> [String] {
+        let keys = Set(stalls.map(\.key))
+        let still = state.lines.filter { waiting.contains($0.value) }
+        state.lines = still.filter { keys.contains($0.key) }
+        return still.filter { !keys.contains($0.key) }.map(\.value).sorted()
+    }
+
+    /// Of the stalls that are due, those a line is kept for now (after `stale`). Not one whose earlier line still
+    /// waits: the pane that is told has not read it yet, so it counts as told now. And no more than leave
+    /// `maxWaitingLines` waiting; the others are due again at the next check.
+    public static func toKeep(_ due: [Stall], state: inout State, now: Date) -> [Stall] {
+        var room = max(0, maxWaitingLines - state.lines.count)
+        return due.filter { stall in
+            if state.lines[stall.key] != nil {
+                state.sentAt[stall.key] = now
+                return false
+            }
+            guard room > 0 else { return false }
+            room -= 1
+            return true
+        }
+    }
+
+    /// A change of the settings after which every stall is told anew and the lines still waiting are taken back:
+    /// turned on or off, or another pane is told.
+    public static func startsOver(from old: Settings, to new: Settings) -> Bool {
+        old.enabled != new.enabled || old.toTag != new.toTag
     }
 
     /// The stalls to tell now: those not told yet and those last told `repeatInterval` ago (`repeatSlack`); an idle
