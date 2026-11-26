@@ -15,6 +15,8 @@ enum LeftoverIndicator {
         button.imagePosition = .imageLeading
         button.imageHugsTitle = true
         button.lineBreakMode = .byTruncatingTail
+        // Cut when the sidebar is narrow, never a reason for its width (`NextScheduleIndicator`).
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         button.isHidden = true
         button.toolTip = String(localized: "Processes started from cmds terminals that still run after their pane or workspace was closed. Click to see and stop them.")
         return button

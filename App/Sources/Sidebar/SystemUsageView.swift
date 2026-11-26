@@ -587,6 +587,9 @@ enum NextScheduleIndicator {
         button.imagePosition = .imageLeading
         button.imageHugsTitle = true
         button.lineBreakMode = .byTruncatingTail
+        // A long schedule name is cut, never a reason for the sidebar's width: a title that resists being cut held
+        // the sidebar at its widest, and its edge could not be dragged either way.
+        button.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         button.isHidden = true
         return button
     }

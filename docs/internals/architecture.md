@@ -54,7 +54,8 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   the file is missing the pane shows a placeholder and polls once a second. Opened by `pane.open_file`, File › Open in
   Preview… (⇧⌘O) and ⌘-click on a file path in a terminal: libghostty detects links (its default regex covers URLs and
   paths, resolving relative paths against the shell's OSC 7 directory when the file exists) and reports
-  `GHOSTTY_ACTION_OPEN_URL`; `TerminalSurfaceDelegate.terminalSurface(_:openLink:)` turns an existing local file
+  `GHOSTTY_ACTION_OPEN_URL` (handled after the call returns: libghostty holds the surface's lock while it reports
+  the click, and a new split calls back into the surface); `TerminalSurfaceDelegate.terminalSurface(_:openLink:)` turns an existing local file
   (also `path:line[:col]`) into a preview (reusing the workspace's preview pane, keyboard stays in the terminal);
   URLs, folders and missing files keep the default (open with the default app). In SSH panes a path link only beeps
   (the file is on the server). Session restore keeps preview panes (path, forced format).

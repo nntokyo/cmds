@@ -270,9 +270,15 @@ final class GhosttyRuntime {
             let v = action.action.open_url
             guard let ptr = v.url, v.len > 0 else { return false }
             let str = String(decoding: UnsafeRawBufferPointer(start: ptr, count: Int(v.len)), as: UTF8.self)
-            if view.owner?.handleOpenLink(str) == true { return true } // file paths → preview pane
-            let url = URL(string: str) ?? URL(fileURLWithPath: str)
-            NSWorkspace.shared.open(url)
+            // After this call returns: libghostty reports the click while it holds the surface's lock, and opening
+            // a preview split moves this view in the window, which calls back into the surface (occlusion, focus)
+            // and would wait for that lock forever.
+            DispatchQueue.main.async { [weak view] in
+                MainActor.assumeIsolated {
+                    if view?.owner?.handleOpenLink(str) == true { return } // file paths → preview pane
+                    NSWorkspace.shared.open(URL(string: str) ?? URL(fileURLWithPath: str))
+                }
+            }
             return true
 
         case GHOSTTY_ACTION_CLOSE_WINDOW, GHOSTTY_ACTION_CLOSE_TAB:
