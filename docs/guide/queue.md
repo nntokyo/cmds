@@ -83,7 +83,8 @@ battery never sends anything.
 ## Stalled panes
 
 An agent that asks for permission waits until someone answers, and an instruction kept for a pane waits as long as
-its input box holds text. cmds can tell one pane (the one that hands out the work) when that lasts:
+its input box holds text. cmds can tell one pane (the one that hands out the work) when that lasts
+(the steps on one page, in Japanese: [stall-notice.ja.md](stall-notice.ja.md)):
 
 ```sh
 cmds stall                                   # the panes that are stuck now, and whether the notice is on
