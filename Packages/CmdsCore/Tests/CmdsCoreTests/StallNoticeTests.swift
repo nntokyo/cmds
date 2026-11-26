@@ -83,6 +83,71 @@ final class StallNoticeTests: XCTestCase {
         XCTAssertEqual(StallNotice.due([stall], state: &state, now: t0 + 3760), [stall])
     }
 
+    func testNoSecondLineWhileTheFirstStillWaits() {
+        var state = StallNotice.State()
+        let stall = StallNotice.stalls(asking: [.init(pane: "p1", seconds: 600)], waiting: [], settings: on, toPane: "p9")
+        XCTAssertEqual(StallNotice.stale(stall, state: &state, waiting: []), [])
+        XCTAssertEqual(StallNotice.toKeep(StallNotice.due(stall, state: &state, now: t0), state: &state, now: t0), stall)
+        state.sent(stall[0], at: t0, line: "q1")
+        // An hour on the pane that is told has not read it: no second line, and the hour counts from now.
+        let hour = t0.addingTimeInterval(3600)
+        XCTAssertEqual(StallNotice.stale(stall, state: &state, waiting: ["q1"]), [])
+        XCTAssertEqual(StallNotice.toKeep(StallNotice.due(stall, state: &state, now: hour), state: &state, now: hour), [])
+        XCTAssertEqual(StallNotice.due(stall, state: &state, now: hour.addingTimeInterval(1800)), [])
+        // Typed in since: the next hour's line is kept.
+        let later = hour.addingTimeInterval(3600)
+        XCTAssertEqual(StallNotice.stale(stall, state: &state, waiting: []), [])
+        XCTAssertEqual(StallNotice.toKeep(StallNotice.due(stall, state: &state, now: later), state: &state, now: later), stall)
+    }
+
+    func testAWaitingLineIsTakenBackWhenItsStallIsOver() {
+        var state = StallNotice.State()
+        let stalls = StallNotice.stalls(asking: [.init(pane: "p1", seconds: 600), .init(pane: "p2", seconds: 600)], waiting: [],
+                                        settings: on, toPane: "p9")
+        state.sent(stalls[0], at: t0, line: "q1")
+        state.sent(stalls[1], at: t0, line: "q2")
+        // p1 was answered while both lines wait; an instruction of someone else (q7) is never touched.
+        let left = stalls.filter { $0.pane == "p2" }
+        XCTAssertEqual(StallNotice.stale(left, state: &state, waiting: ["q1", "q2", "q7"]), ["q1"])
+        XCTAssertEqual(state.lines, [left[0].key: "q2"])
+        // A line that was typed in is not taken back.
+        XCTAssertEqual(StallNotice.stale([], state: &state, waiting: ["q7"]), [])
+        XCTAssertEqual(state.lines, [:])
+    }
+
+    func testTheLinesLeaveRoomInTheQueueOfThePaneThatIsTold() {
+        XCTAssertLessThan(StallNotice.maxWaitingLines, PaneQueue.maxPerPane)
+        var state = StallNotice.State()
+        let asking = (1...14).map { StallNotice.Asking(pane: "p\($0)", seconds: 600 + $0) }
+        let stalls = StallNotice.stalls(asking: asking, waiting: [], settings: on, toPane: "p99")
+        let first = StallNotice.toKeep(StallNotice.due(stalls, state: &state, now: t0), state: &state, now: t0)
+        XCTAssertEqual(first.count, StallNotice.maxWaitingLines)
+        for (index, stall) in first.enumerated() { state.sent(stall, at: t0, line: "q\(index)") }
+        // All still wait: nothing more is kept, and the other four stay due.
+        let minute = t0.addingTimeInterval(60)
+        let waiting = Set(state.lines.values)
+        XCTAssertEqual(StallNotice.stale(stalls, state: &state, waiting: waiting), [])
+        let due = StallNotice.due(stalls, state: &state, now: minute)
+        XCTAssertEqual(due.count, 4)
+        XCTAssertEqual(StallNotice.toKeep(due, state: &state, now: minute), [])
+        // Three were typed in: three more are kept.
+        let read = Set(waiting.sorted().dropFirst(3))
+        XCTAssertEqual(StallNotice.stale(stalls, state: &state, waiting: read), [])
+        XCTAssertEqual(StallNotice.toKeep(StallNotice.due(stalls, state: &state, now: minute), state: &state, now: minute).count, 3)
+    }
+
+    func testTurningOnOrOffOrTellingAnotherPaneStartsOver() {
+        var other = on
+        other.inputMinutes = 30
+        XCTAssertFalse(StallNotice.startsOver(from: on, to: other))
+        other.toTag = "t-other"
+        XCTAssertTrue(StallNotice.startsOver(from: on, to: other))
+        var off = on
+        off.enabled = false
+        XCTAssertTrue(StallNotice.startsOver(from: on, to: off))
+        XCTAssertTrue(StallNotice.startsOver(from: off, to: on))
+    }
+
     func testTheLineHasTheFixedFormAndNothingElse() {
         let asking = StallNotice.Stall(pane: "p12", kind: .needsInput, minutes: 240, reason: .permissionOrQuestion, key: "k")
         XCTAssertEqual(StallNotice.line(asking), "cmds 詰まり通知: ペイン p12 / 入力待ち / 240 分 / 理由 permission-or-question")
