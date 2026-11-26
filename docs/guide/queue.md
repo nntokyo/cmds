@@ -119,6 +119,11 @@ turned off. Anything may read it without asking cmds: a person, a status line, a
 kept in `stall-notice.json` in cmds's support folder; the pane is remembered by its tag, so it is found after a
 restart.
 
+While a line still waits for the pane that is told (its agent works), the same stall gets no second line, and at most
+10 lines wait there, so its queue keeps room for instructions; the others follow as lines are typed in. A line still
+waiting when its stall is over is taken back. Turning the notice on or off, or telling another pane, takes back the
+lines that wait and starts over: every stall there is then is told to the pane chosen now. So does a restart of cmds.
+
 ## Panes with nothing in progress
 
 ```sh

@@ -33,6 +33,18 @@ final class StallNoticeRunner {
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
+        // Lines that waited when cmds quit: what they say is told anew.
+        withdrawLines()
+    }
+
+    /// The lines of this notice that wait in any pane's queue.
+    private var waitingLines: [String] {
+        controller.paneQueue.queue.items.filter { $0.from == StallNotice.queueSource }.map(\.id)
+    }
+
+    /// Takes back every line that still waits (not one that is being typed).
+    private func withdrawLines() {
+        for id in waitingLines { try? controller.paneQueue.cancel(id: id) }
     }
 
     /// The pane that is told, when it is open.
@@ -53,8 +65,10 @@ final class StallNoticeRunner {
         return StallNotice.stalls(asking: asking, waiting: waiting, settings: settings, toPane: target?.id)
     }
 
-    /// Keeps a line for the chosen pane for every stall that is due. A line that could not be kept (the pane's queue
-    /// is full) is tried again at the next check.
+    /// Keeps a line for the chosen pane for every stall that is due, and takes back the lines still waiting there
+    /// for stalls that are over. A stall whose earlier line still waits gets no second one, and at most
+    /// `StallNotice.maxWaitingLines` wait. A line that could not be kept (the pane's queue is full) is tried again at
+    /// the next check.
     func check() {
         guard settings.enabled else { return }
         let now = Date()
@@ -65,12 +79,14 @@ final class StallNoticeRunner {
         } catch {
             scheduleLog.error("stall notice: the list could not be written: \(error.localizedDescription, privacy: .public)")
         }
+        for id in StallNotice.stale(stalls, state: &state, waiting: Set(waitingLines)) { try? controller.paneQueue.cancel(id: id) }
         guard let target else { return }
         var kept = 0
-        for stall in StallNotice.due(stalls, state: &state, now: now) {
-            guard (try? controller.paneQueue.add(text: StallNotice.line(stall), paneID: target.id,
-                                                 from: StallNotice.queueSource)) != nil else { continue }
-            state.sent(stall, at: now)
+        let due = StallNotice.due(stalls, state: &state, now: now)
+        for stall in StallNotice.toKeep(due, state: &state, now: now) {
+            guard let line = try? controller.paneQueue.add(text: StallNotice.line(stall), paneID: target.id,
+                                                           from: StallNotice.queueSource) else { continue }
+            state.sent(stall, at: now, line: line.item.id)
             kept += 1
         }
         guard kept > 0 else { return }
@@ -109,7 +125,12 @@ final class StallNoticeRunner {
             } catch {
                 throw RPCError(code: 500, message: "the setting could not be saved: \(error.localizedDescription)")
             }
+            let startsOver = StallNotice.startsOver(from: settings, to: changed)
             settings = changed
+            if startsOver {
+                state = StallNotice.State()
+                withdrawLines()
+            }
         }
         // Off: what the file says would no longer be kept up to date.
         if !settings.enabled { try? FileManager.default.removeItem(at: listURL) }
