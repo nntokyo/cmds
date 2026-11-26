@@ -18,6 +18,9 @@ public enum StallNotice {
     public static let minutesRange = 1...24 * 60
     /// A stall that lasts is told again after this long.
     public static let repeatInterval: TimeInterval = 60 * 60
+    /// The check that falls on the hour may come a moment early (a timer's minute is not exact): it counts, or the
+    /// line would wait for the next check and come after 61 minutes.
+    public static let repeatSlack: TimeInterval = 30
     public static let fileName = "stall-notice.json"
     /// `PaneQueue.Item.from` of the lines cmds itself queues.
     public static let queueSource = "cmds:stall"
@@ -183,14 +186,14 @@ public enum StallNotice {
         }
     }
 
-    /// The stalls to tell now: those not told yet and those last told `repeatInterval` ago. A stall that is over is
+    /// The stalls to tell now: those not told yet and those last told `repeatInterval` ago (`repeatSlack`). A stall that is over is
     /// forgotten, so the next one of the pane is told at once.
     public static func due(_ stalls: [Stall], state: inout State, now: Date) -> [Stall] {
         let keys = Set(stalls.map(\.key))
         state.sentAt = state.sentAt.filter { keys.contains($0.key) }
         return stalls.filter { stall in
             guard let last = state.sentAt[stall.key] else { return true }
-            return now.timeIntervalSince(last) >= repeatInterval
+            return now.timeIntervalSince(last) >= repeatInterval - repeatSlack
         }
     }
 

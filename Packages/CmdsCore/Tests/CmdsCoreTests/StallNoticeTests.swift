@@ -114,7 +114,9 @@ final class StallNoticeTests: XCTestCase {
         XCTAssertEqual(StallNotice.due([stall], state: &state, now: t0 + 60), [stall])
         state.sent(stall, at: t0 + 60)
         XCTAssertEqual(StallNotice.due([stall], state: &state, now: t0 + 120), [])
-        XCTAssertEqual(StallNotice.due([stall], state: &state, now: t0 + 60 + 3599), [])
+        XCTAssertEqual(StallNotice.due([stall], state: &state, now: t0 + 60 + 3540), [])
+        // The check an hour later, a moment early or late: told then, not a minute after.
+        XCTAssertEqual(StallNotice.due([stall], state: &state, now: t0 + 60 + 3599.9), [stall])
         XCTAssertEqual(StallNotice.due([stall], state: &state, now: t0 + 60 + 3600), [stall])
         state.sent(stall, at: t0 + 3660)
         // Over, then stalled again: told at once.
