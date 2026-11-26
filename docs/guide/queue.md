@@ -91,6 +91,7 @@ cmds stall                                   # the panes that are stuck now, and
 cmds stall notice on --to p3                 # tell pane p3 (off by default; --to is needed the first time)
 cmds stall notice --input-minutes 5 --queue-minutes 20
 cmds stall notice --idle-minutes 30          # an agent with nothing to do (default 10; 0: not told)
+cmds stall notice --idle-repeat on           # tell about an idle agent every hour, not once
 cmds stall notice off
 ```
 
@@ -110,7 +111,9 @@ The line always has this form: the pane, the state, the minutes and one of a fix
 (`permission-or-question`; `idle`; for a kept instruction `busy`, `needs-input`, `typed-input`, `no-agent`, `other-program`,
 `other-input`, `pane-closed`, the reasons `cmds queue list` gives). Nothing from the pane's screen is in it. cmds
 never answers the question, never types into the stuck pane and never brings a window forward: the pane that is told
-decides what to do. A stall that lasts is told again every hour, a pane with both kinds for the same question gets
+decides what to do. A question or an instruction that stays stuck is told again every hour; an idle agent is told once each
+time it becomes idle (a night with every agent idle is one line per agent), every hour only with `--idle-repeat on`.
+A pane with both kinds for the same question gets
 one line (so does an idle agent whose kept instruction is not typed in: that instruction is told), and the pane that is told is never reported itself. The minutes of a question and of an idle agent count from when the agent
 last worked (for an agent cmds never saw working: from when it started, at the earliest when cmds did); a pane
 without an agent is never idle. A dialog an agent shows without reporting it (the folder trust question at its start) is only seen

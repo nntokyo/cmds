@@ -12,6 +12,7 @@ final class StallNoticeTests: XCTestCase {
         XCTAssertEqual(settings.inputMinutes, 10)
         XCTAssertEqual(settings.queueMinutes, 15)
         XCTAssertEqual(settings.idleMinutes, 10)
+        XCTAssertFalse(settings.idleRepeat)
     }
 
     func testAgentAskingForInputIsAStallOnlyAfterTheMinutes() {
@@ -96,6 +97,36 @@ final class StallNoticeTests: XCTestCase {
         XCTAssertEqual(StallNotice.stalls(asking: [], waiting: [young], idle: idle, settings: on, toPane: nil).map(\.kind), [.idle])
     }
 
+    func testIdleAgentIsToldOnceEachTimeItBecomesIdle() {
+        let idle = StallNotice.Stall(pane: "p1", kind: .idle, minutes: 10, reason: .idle, key: "p1:idle")
+        let other = StallNotice.Stall(pane: "p2", kind: .idle, minutes: 10, reason: .idle, key: "p2:idle")
+        let asking = StallNotice.Stall(pane: "p3", kind: .needsInput, minutes: 10, reason: .permissionOrQuestion, key: "p3:needsInput")
+        var state = StallNotice.State()
+        // A night with every agent idle: one line per agent, however long it lasts; the question is told every hour.
+        var lines: [StallNotice.Stall] = []
+        for minute in 0..<600 {
+            let now = t0 + Double(minute) * 60
+            for stall in StallNotice.due([idle, other, asking], state: &state, now: now) {
+                state.sent(stall, at: now)
+                lines.append(stall)
+            }
+        }
+        XCTAssertEqual(lines.filter { $0.kind == .idle }.map(\.pane), ["p1", "p2"])
+        XCTAssertEqual(lines.filter { $0.kind == .needsInput }.count, 10)
+        // It worked (the stall was over), then became idle again: one more line.
+        XCTAssertEqual(StallNotice.due([other], state: &state, now: t0 + 36060), [])
+        XCTAssertEqual(StallNotice.due([idle, other], state: &state, now: t0 + 36120), [idle])
+    }
+
+    func testIdleAgentIsToldEveryHourWhenAskedFor() {
+        let idle = StallNotice.Stall(pane: "p1", kind: .idle, minutes: 10, reason: .idle, key: "p1:idle")
+        var state = StallNotice.State()
+        state.sent(idle, at: t0)
+        XCTAssertEqual(StallNotice.due([idle], state: &state, now: t0 + 3600, repeatsIdle: false), [])
+        XCTAssertEqual(StallNotice.due([idle], state: &state, now: t0 + 1800, repeatsIdle: true), [])
+        XCTAssertEqual(StallNotice.due([idle], state: &state, now: t0 + 3600, repeatsIdle: true), [idle])
+    }
+
     func testSettingsWithoutIdleMinutesTakeTheDefault() throws {
         let old = Data(#"{"enabled":true,"toTag":"t1","inputMinutes":5,"queueMinutes":20}"#.utf8)
         XCTAssertEqual(try JSONDecoder().decode(StallNotice.Settings.self, from: old),
@@ -104,6 +135,9 @@ final class StallNoticeTests: XCTestCase {
         XCTAssertEqual(try JSONDecoder().decode(StallNotice.Settings.self, from: odd).idleMinutes, 10)
         let off = Data(#"{"enabled":true,"toTag":"t1","idleMinutes":0}"#.utf8)
         XCTAssertEqual(try JSONDecoder().decode(StallNotice.Settings.self, from: off).idleMinutes, 0)
+        XCTAssertFalse(try JSONDecoder().decode(StallNotice.Settings.self, from: off).idleRepeat)
+        let hourly = Data(#"{"enabled":true,"toTag":"t1","idleRepeat":true}"#.utf8)
+        XCTAssertTrue(try JSONDecoder().decode(StallNotice.Settings.self, from: hourly).idleRepeat)
     }
 
     func testAStallIsToldOnceThenEveryHourAndAgainAfterItEnded() {

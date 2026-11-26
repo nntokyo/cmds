@@ -419,7 +419,7 @@ enum Format {
             out += "off (cmds stall notice on" + (s.toTag == nil ? " --to PANE)" : ")")
         }
         out += "\nafter   \(s.inputMinutes) min asking for input, \(s.queueMinutes) min with a kept instruction not typed in, "
-            + (s.idleMinutes > 0 ? "\(s.idleMinutes) min idle" : "idle agents not told") + "\n"
+            + (s.idleMinutes > 0 ? "\(s.idleMinutes) min idle (\(s.idleRepeat ? "told every hour" : "told once"))" : "idle agents not told") + "\n"
         if status.stalls.isEmpty {
             out += "stalled none\n"
         } else {

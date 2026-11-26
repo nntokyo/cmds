@@ -35,9 +35,14 @@ public enum StallNotice {
         public var queueMinutes: Int
         /// An agent with nothing in progress (waiting at its prompt) for this long is told; 0 = never.
         public var idleMinutes: Int
+        /// An agent that stays idle is told again every hour, like the other kinds. Off: one line each time an
+        /// agent becomes idle (a night with every agent idle is one line per agent, not one per agent and hour).
+        public var idleRepeat: Bool
 
         public init(enabled: Bool = false, toTag: String? = nil, inputMinutes: Int = StallNotice.defaultInputMinutes,
-                    queueMinutes: Int = StallNotice.defaultQueueMinutes, idleMinutes: Int = StallNotice.defaultIdleMinutes) {
+                    queueMinutes: Int = StallNotice.defaultQueueMinutes, idleMinutes: Int = StallNotice.defaultIdleMinutes,
+                    idleRepeat: Bool = false) {
+            self.idleRepeat = idleRepeat
             self.enabled = enabled
             self.toTag = toTag
             self.inputMinutes = inputMinutes
@@ -45,7 +50,7 @@ public enum StallNotice {
             self.idleMinutes = idleMinutes
         }
 
-        private enum CodingKeys: String, CodingKey { case enabled, toTag, inputMinutes, queueMinutes, idleMinutes }
+        private enum CodingKeys: String, CodingKey { case enabled, toTag, inputMinutes, queueMinutes, idleMinutes, idleRepeat }
 
         /// Lenient: a missing or odd field takes its default.
         public init(from decoder: Decoder) throws {
@@ -58,6 +63,7 @@ public enum StallNotice {
             queueMinutes = StallNotice.minutesRange.contains(queue) ? queue : StallNotice.defaultQueueMinutes
             let idle = (try? c.decodeIfPresent(Int.self, forKey: .idleMinutes)) ?? StallNotice.defaultIdleMinutes
             idleMinutes = StallNotice.idleMinutesRange.contains(idle) ? idle : StallNotice.defaultIdleMinutes
+            idleRepeat = (try? c.decodeIfPresent(Bool.self, forKey: .idleRepeat)) ?? false
         }
     }
 
@@ -186,13 +192,15 @@ public enum StallNotice {
         }
     }
 
-    /// The stalls to tell now: those not told yet and those last told `repeatInterval` ago (`repeatSlack`). A stall that is over is
-    /// forgotten, so the next one of the pane is told at once.
-    public static func due(_ stalls: [Stall], state: inout State, now: Date) -> [Stall] {
+    /// The stalls to tell now: those not told yet and those last told `repeatInterval` ago (`repeatSlack`); an idle
+    /// agent only once unless `repeatsIdle` (`Settings.idleRepeat`). A stall that is over is forgotten, so the next
+    /// one of the pane is told at once: an agent that worked and is idle again gets its one line again.
+    public static func due(_ stalls: [Stall], state: inout State, now: Date, repeatsIdle: Bool = false) -> [Stall] {
         let keys = Set(stalls.map(\.key))
         state.sentAt = state.sentAt.filter { keys.contains($0.key) }
         return stalls.filter { stall in
             guard let last = state.sentAt[stall.key] else { return true }
+            if stall.kind == .idle, !repeatsIdle { return false }
             return now.timeIntervalSince(last) >= repeatInterval - repeatSlack
         }
     }

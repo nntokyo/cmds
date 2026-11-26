@@ -5,7 +5,7 @@ import Foundation
 extension CLI {
     private static let queueAddUsage = "queue add (--pane P | --workspace TITLE) <text…|->"
     private static let powerNoticeUsage = "power notice [on|off] [--below N] [--request TEXT | --default-request]"
-    private static let stallNoticeUsage = "stall notice [on|off] [--to PANE] [--input-minutes N] [--queue-minutes N] [--idle-minutes N]"
+    private static let stallNoticeUsage = "stall notice [on|off] [--to PANE] [--input-minutes N] [--queue-minutes N] [--idle-minutes N] [--idle-repeat on|off]"
 
     static let queueCommands: [Command] = [
         Command(name: "queue add", usage: queueAddUsage,
@@ -152,16 +152,17 @@ extension CLI {
                     \(StallNotice.defaultQueueMinutes)); both \(StallNotice.minutesRange.lowerBound) to \
                     \(StallNotice.minutesRange.upperBound). Also for an agent that finished and has waited at its prompt, with
                     nothing in progress and nothing asked, for --idle-minutes N (default \(StallNotice.defaultIdleMinutes); \
-                    0: not told). The line has a fixed form, in Japanese: the pane, the state, the
+                    0: not told); an idle agent is told once each time it becomes idle, and every hour only with \
+                    --idle-repeat on. The line has a fixed form, in Japanese: the pane, the state, the
                     minutes and the kind of reason (permission-or-question, busy, needs-input, typed-input, no-agent,
                     other-program, other-input, pane-closed, idle), and nothing from the pane's screen. cmds never answers the
-                    question and never types into the stuck pane; no window comes forward. A stall that lasts is told
-                    again every hour; the pane that is told is never reported itself. --to is needed the first time.
+                    question and never types into the stuck pane; no window comes forward. A question or an
+                    instruction that stays stuck is told again every hour; the pane that is told is never reported itself. --to is needed the first time.
                     While on, the same lines are also written every minute to stalls.txt in the support folder
                     (`cmds stall` prints the path), for when the pane that is told is busy; off removes the file.
                     `cmds stall` shows the state; `cmds queue list` the lines that wait.
                     """,
-                options: ["to", "input-minutes", "queue-minutes", "idle-minutes"]) { ctx in
+                options: ["to", "input-minutes", "queue-minutes", "idle-minutes", "idle-repeat"]) { ctx in
             let words = ctx.args.positionals
             guard words.count <= 1, words.allSatisfy({ $0 == "on" || $0 == "off" }) else {
                 throw CLIError.usage("usage: cmds \(stallNoticeUsage)")
@@ -176,14 +177,16 @@ extension CLI {
             if let idle, !StallNotice.idleMinutesRange.contains(idle) {
                 throw CLIError.usage("--idle-minutes expects a number from \(StallNotice.idleMinutesRange.lowerBound) to \(StallNotice.idleMinutesRange.upperBound) (0: idle agents are not told)")
             }
+            let idleRepeat = ctx.args[option: "idle-repeat"]
+            if let idleRepeat, idleRepeat != "on", idleRepeat != "off" { throw CLIError.usage("--idle-repeat expects on or off") }
             let to = ctx.args[option: "to"]
-            guard !words.isEmpty || to != nil || input != nil || queue != nil || idle != nil else {
+            guard !words.isEmpty || to != nil || input != nil || queue != nil || idle != nil || idleRepeat != nil else {
                 throw CLIError.usage("usage: cmds \(stallNoticeUsage)")
             }
             let result = try callNewMethod(ctx, "stall.set", [
                 "enabled": words.first.map { .bool($0 == "on") }, "to": to.map { .string($0) },
                 "input_minutes": input.map { .number(Double($0)) }, "queue_minutes": queue.map { .number(Double($0)) },
-                "idle_minutes": idle.map { .number(Double($0)) },
+                "idle_minutes": idle.map { .number(Double($0)) }, "idle_repeat": idleRepeat.map { .bool($0 == "on") },
             ])
             if ctx.json { return ctx.printJSON(result) }
             print(Format.stall(try perform { try result.decode(StallNoticeStatus.self) }), terminator: "")

@@ -70,7 +70,7 @@ final class StallNoticeRunner {
         }
         guard let target else { return }
         var kept = 0
-        for stall in StallNotice.due(stalls, state: &state, now: now) {
+        for stall in StallNotice.due(stalls, state: &state, now: now, repeatsIdle: settings.idleRepeat) {
             guard (try? controller.paneQueue.add(text: StallNotice.line(stall), paneID: target.id,
                                                  from: StallNotice.queueSource)) != nil else { continue }
             state.sent(stall, at: now)
@@ -91,8 +91,8 @@ final class StallNoticeRunner {
 
     /// Changes what is given (`to`: the id of the pane that is told; it gets a tag, so it is found after a restart)
     /// and checks at once.
-    func set(enabled: Bool?, to: String?, inputMinutes: Int?, queueMinutes: Int?, idleMinutes: Int? = nil) throws
-        -> StallNoticeStatus {
+    func set(enabled: Bool?, to: String?, inputMinutes: Int?, queueMinutes: Int?, idleMinutes: Int? = nil,
+             idleRepeat: Bool? = nil) throws -> StallNoticeStatus {
         var changed = settings
         if let to {
             let pane = try controller.resolvePane(to)
@@ -111,6 +111,7 @@ final class StallNoticeRunner {
             }
             changed.idleMinutes = idleMinutes
         }
+        if let idleRepeat { changed.idleRepeat = idleRepeat }
         if let enabled { changed.enabled = enabled }
         if changed.enabled, changed.toTag == nil { throw RPCError.invalidParams("choose the pane that is told first (to)") }
         if changed != settings {
@@ -139,7 +140,7 @@ enum StallNoticeAPI {
         case "stall.set":
             return try .from(runner.set(enabled: try params.bool("enabled"), to: try params.string("to"),
                                         inputMinutes: try params.int("input_minutes"), queueMinutes: try params.int("queue_minutes"),
-                                        idleMinutes: try params.int("idle_minutes")))
+                                        idleMinutes: try params.int("idle_minutes"), idleRepeat: try params.bool("idle_repeat")))
         default:
             throw RPCError.methodNotFound(method)
         }
