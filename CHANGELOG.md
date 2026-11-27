@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Documentation: the design of browser panes on the iPhone (one data store for the app's run, what Reload loads,
+  new windows) is described in the architecture notes, and the iPhone guide says how long a sign-in on the phone
+  lasts.
+
 ## [0.40.0] - 2026-11-27
 
 ### Fixed

@@ -77,7 +77,9 @@ If a phone is lost, revoke it on the Mac: a paired phone can type into every ter
   rendered like on the Mac (links open in Safari), other text files are shown as text (the first 256 KB); other files
   show their name and **Open on Mac**.
 - **Browser panes**: the pane's page in a web view, with Reload and **Open in Safari**. The phone loads the page
-  itself (its own network, cookies and sign-ins, not the Mac's). Pages the Mac serves itself (`localhost`, files)
+  itself (its own network, cookies and sign-ins, not the Mac's). A sign-in made on the phone stays while the app
+  runs, also when you switch panes or workspaces, and ends when the app is closed; Reload reloads the page shown
+  (not the Mac's address), and links that open a new window open in the same view. Pages the Mac serves itself (`localhost`, files)
   are shown as a picture the Mac takes instead (with a cmds release after 0.32.0 on the Mac; older ones say the page is
   the Mac's only): **As on Mac** (the pane as it is; a responsive pane's frames side by side), or **iPhone**, **iPad**
   and **Desktop**, for which the Mac loads the page again off screen at that size, so you can check a dev server's
