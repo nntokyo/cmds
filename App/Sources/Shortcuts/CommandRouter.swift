@@ -228,6 +228,7 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
     @objc func filesEnclosingFolder(_ sender: Any?) { focusedFiles?.goUp() }
     @objc func filesGoToFolder(_ sender: Any?) { focusedFiles?.goToFolder() }
     @objc func filesToggleHidden(_ sender: Any?) { focusedFiles?.toggleHiddenFiles() }
+    @objc func filesToggleTree(_ sender: Any?) { focusedFiles?.toggleFolderTree() }
     @objc func filesToggleFollow(_ sender: Any?) { focusedFiles?.toggleFollowTerminal() }
     @objc func filesOpenTerminal(_ sender: Any?) { focusedFiles?.openTerminalHere() }
 
@@ -551,6 +552,9 @@ final class CommandRouter: NSObject, NSMenuItemValidation {
             return focusedBrowser != nil
         case #selector(filesToggleHidden(_:)):
             menuItem.state = focusedFiles?.showHidden == true ? .on : .off
+            return focusedFiles != nil
+        case #selector(filesToggleTree(_:)):
+            menuItem.state = focusedFiles?.showsFolderTree == true ? .on : .off
             return focusedFiles != nil
         case #selector(filesToggleFollow(_:)):
             menuItem.state = focusedFiles?.followsTerminal == true ? .on : .off

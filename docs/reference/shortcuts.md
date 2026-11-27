@@ -121,7 +121,11 @@ as menu shortcuts, so programs in terminals keep them.
 | New folder | F7 | Pane › Files |
 | Move to Trash | ⌘⌫ | Pane › Files |
 | Copy items / paste (copy) here / move here | ⌘C / ⌘V / ⌥⌘V | Edit (⌘C, ⌘V) |
-| Reload the folder | ⌘R | View |
+| Reload the folder (and the folder tree) | ⌘R | View |
+| Show or hide the folder tree | – | Pane › Files › Show Folder Tree |
+| In the folder tree: open or close a folder / open a file | Return, double-click | – |
+| In the folder tree: show a file in the preview pane | Space | – |
+| In the folder tree: back to the list | Tab | – |
 
 ## Text size
 

@@ -230,6 +230,7 @@ enum MainMenu {
         menu.addItem(.separator())
         menu.addItem(item("Enclosing Folder", #selector(CommandRouter.filesEnclosingFolder(_:)), "", target: router))
         menu.addItem(item("Go to Folder…", #selector(CommandRouter.filesGoToFolder(_:)), "", target: router))
+        menu.addItem(item("Show Folder Tree", #selector(CommandRouter.filesToggleTree(_:)), "", target: router))
         menu.addItem(item("Show Hidden Files", #selector(CommandRouter.filesToggleHidden(_:)), "", target: router))
         menu.addItem(item("Follow Terminal", #selector(CommandRouter.filesToggleFollow(_:)), "", target: router))
         menu.addItem(item("Open Terminal Here", #selector(CommandRouter.filesOpenTerminal(_:)), "", target: router))

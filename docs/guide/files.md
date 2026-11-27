@@ -31,7 +31,7 @@ SSH pane instead.
 
 - Columns: **Name**, **Git** (only inside a Git repository), **Size**, **Date Modified** and **Kind**. Click a column
   header to sort by it, again to reverse. Folders stay above files.
-- The bar above the list has **Back** / **Forward** (⌘[ / ⌘]), **Enclosing Folder** (⌘↑), the path (click a folder
+- The bar above the list has the **folder tree** button ([below](#folder-tree)), **Back** / **Forward** (⌘[ / ⌘]), **Enclosing Folder** (⌘↑), the path (click a folder
   in it to go there), **Show Hidden Files** (⇧⌘.), **Follow Terminal** and **Open Terminal Here**. The line below the
   list counts the items and the selection, or shows a running copy.
 - Type the first letters of a name to select it. ⇧⌘G (**Pane › Files › Go to Folder…**) takes a path: absolute,
@@ -44,6 +44,30 @@ SSH pane instead.
   installed. It is read again when the folder changes, when Git changes the repository (commit, `git add`, checkout,
   also from a terminal) and when the window becomes active again. Editing a tracked file inside a subfolder from the
   same window shows up at the next of those (or ⌘R).
+
+## Folder tree
+
+The sidebar button at the left of the bar (also **Pane › Files › Show Folder Tree** and the context menu) shows a
+folder tree on the left of the list, like the navigation pane of Windows Explorer or the explorer of VS Code. Drag the
+line between them to make the tree wider or narrower.
+
+- The tree starts at the folder the list showed when you turned it on. Folders open in place with their triangle
+  (or Return); files are listed under their folder, folders first, by name. Hidden items follow **Show Hidden
+  Files**.
+- The tree and the list follow each other. Click a folder in the tree to show it in the list (Back returns), click a
+  file to show its folder with the file selected; double-click a file (or Return) to open it, Space shows it in the
+  preview pane. Whenever the list goes to another folder (opening a folder, Back, ⌘↑, the path, Go to Folder,
+  Follow Terminal), the tree selects it and opens the folders above it.
+- While the list stays inside the tree's top folder, the tree keeps it; going to a folder outside it, or above it,
+  starts the tree there.
+- The shown folder is read again when it changes on disk, like the list; other open folders of the tree are read again
+  with ⌘R and when you open them again.
+- Drop files on a folder of the tree to copy or move them into it, with the same rules as a drop on a folder of the
+  list ([Copying and moving](#copying-and-moving)).
+- Tab goes from the tree back to the list. Rename, Move to Trash and the other commands work in the list.
+- Folders on SSH hosts get a tree too, read over the same connection (a pane restored from the session reads it after
+  Connect).
+- The tree and its top folder are kept when cmds restarts. The iPhone and iPad keep showing the list.
 
 ## Opening and previewing files
 

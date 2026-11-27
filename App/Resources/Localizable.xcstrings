@@ -5785,6 +5785,16 @@
         }
       }
     },
+    "Folder Tree": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダツリー"
+          }
+        }
+      }
+    },
     "Folder:": {
       "localizations": {
         "ja": {
@@ -6124,6 +6134,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "コンソールを隠す"
+          }
+        }
+      }
+    },
+    "Hide Folder Tree": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダツリーを隠す"
           }
         }
       }
@@ -10704,6 +10724,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "SFTPのプロトコルエラー: %@"
+          }
+        }
+      }
+    },
+    "Show Folder Tree": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダツリーを表示"
           }
         }
       }
