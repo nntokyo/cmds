@@ -34,7 +34,7 @@ extension AppController {
                 defer { next += 1 }
                 // `source` is newer than bundle version 1: older cmds would refuse the bundle.
                 return .pane(WorkspaceBundle.Pane(kind: .preview, path: path, format: format == PreviewFormat.source.rawValue ? nil : format))
-            case .files(let path, _, _, let host):
+            case .files(let path, _, _, let host, _):
                 defer { next += 1 }
                 return .pane(WorkspaceBundle.Pane(kind: .files, host: host, path: path))
             }

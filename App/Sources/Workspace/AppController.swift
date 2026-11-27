@@ -1094,7 +1094,7 @@ final class AppController {
             if let preview = pane?.preview { return .preview(path: preview.path, format: preview.forcedFormat?.rawValue) }
             if let files = pane?.files {
                 return .files(path: files.folder, showHidden: files.showHidden ? true : nil,
-                              follow: files.followsTerminal ? true : nil, host: files.host)
+                              follow: files.followsTerminal ? true : nil, host: files.host, tree: files.treeRoot)
             }
             if let pane, let ssh = pane.ssh {
                 let cwd = (try? SSHLaunch.validateRemoteCwd(pane.workingDirectory)) ?? ssh.launch.remoteCwd
@@ -1198,12 +1198,12 @@ final class AppController {
                 // A missing file shows a placeholder (and appears when it is created again).
                 let target = PreviewTarget(path: path, format: format.flatMap(PreviewFormat.init(rawValue:)))
                 return SplitNode(paneID: makePane(kind: .preview, in: workspace, cwd: nil, command: nil, url: nil, file: target).id)
-            case .files(let path, let showHidden, let follow, let host):
+            case .files(let path, let showHidden, let follow, let host, let tree):
                 // A folder on an SSH host never connects on launch: the pane offers Connect (⌘R).
                 let remote = host.flatMap { try? SSHLaunch.validateHost($0) }
                 let pane = remote.map { makeRemoteFilesPane(host: $0, path: path, in: workspace, connect: false) }
                     ?? makePane(kind: .files, in: workspace, cwd: existing(path), command: nil, url: nil)
-                pane.files?.restore(showHidden: showHidden ?? false, followsTerminal: follow ?? false)
+                pane.files?.restore(showHidden: showHidden ?? false, followsTerminal: follow ?? false, tree: tree)
                 return SplitNode(paneID: pane.id)
             case .ssh(let host, let remoteCwd):
                 // Never connects on launch: the pane shows "Not connected — Connect (⌘R)".

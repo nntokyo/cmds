@@ -54,6 +54,24 @@ extension FilesPane {
             editRemoteFiles(files, open: params?["open"]?.boolValue ?? false)
         case "stopEditing": stopEditing()
         case "compare": compareWithOtherPane()
+        case "tree": setFolderTree(params?["on"] != .bool(false) ? (treeRoot ?? folder) : nil)
+        case "treeClick":
+            // As a click on the row: the list follows (a folder is shown, a file's folder with it selected).
+            guard let path = params?["path"]?.stringValue, let row = treePanel.debugRow(path) else {
+                throw RPCError.invalidParams("path: a row of the tree")
+            }
+            treePanel.outline.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        case "treeExpand", "treeCollapse":
+            guard let path = params?["path"]?.stringValue, let row = treePanel.debugRow(path) else {
+                throw RPCError.invalidParams("path: a row of the tree")
+            }
+            let item = treePanel.outline.item(atRow: row)
+            if action == "treeExpand" { treePanel.outline.expandItem(item) } else { treePanel.outline.collapseItem(item) }
+        case "treeDoubleClick":
+            guard let path = params?["path"]?.stringValue, treePanel.debugRow(path) != nil else {
+                throw RPCError.invalidParams("path: a row of the tree")
+            }
+            treePanel.debugOpen(path)
         default: throw RPCError.invalidParams("unknown action \(action)")
         }
         return .object([
@@ -71,6 +89,9 @@ extension FilesPane {
             "forward": .number(Double(forwardStack.count)),
             "showHidden": .bool(showHidden),
             "follow": .bool(followsTerminal),
+            "tree": treeRoot.map(JSONValue.string) ?? .null,
+            // Rows of the tree as shown: "  " per level, "▸"/"▾" for closed/open folders, "*" for the selected row.
+            "treeRows": .array(showsFolderTree ? treePanel.debugRows().map(JSONValue.string) : []),
             "editing": .array(RemoteEdits.shared.sessions(of: self).map { session in
                 .object([
                     "name": .string(session.name),

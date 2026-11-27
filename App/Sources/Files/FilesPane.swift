@@ -31,6 +31,9 @@ final class FilesPane: NSView {
     private(set) var folder: String
     private(set) var showHidden = false
     private(set) var followsTerminal = false
+    /// The folder tree's root (FilesPane+Tree.swift); nil while the tree is hidden.
+    var treeRoot: String?
+    var treeWidth = FilesPane.defaultTreeWidth
     var sortKey: FileSortKey = .name
     var ascending = true
 
@@ -81,6 +84,12 @@ final class FilesPane: NSView {
     let terminalButton = FilesPane.barButton("terminal", label: String(localized: "Open Terminal Here"))
     /// Remote panes show `host:/path` here instead of the path control.
     let remotePathLabel = NSTextField(labelWithString: "")
+    let treeButton = FilesPane.barButton("sidebar.left", label: String(localized: "Show Folder Tree"))
+    // Folder tree (FilesPane+Tree.swift)
+    let treePanel = FolderTreePanel(frame: .zero)
+    let treeDivider = FolderTreeDivider()
+    var treeWidthConstraint: NSLayoutConstraint?
+    var treeDividerWidthConstraint: NSLayoutConstraint?
     // List
     let tableView = FilesTableView()
     let scrollView = NSScrollView()
@@ -115,6 +124,7 @@ final class FilesPane: NSView {
         layer?.backgroundColor = NSColor.textBackgroundColor.cgColor
         buildLayout()
         configureTable()
+        configureTree()
         updateHeader()
         startWatching()
         observeTransfers()
@@ -211,6 +221,7 @@ final class FilesPane: NSView {
         startWatching()
         load()
         updateHeader()
+        treeFolderChanged()
         onStateChange?()
         return true
     }
@@ -259,16 +270,19 @@ final class FilesPane: NSView {
         guard on != showHidden else { return }
         showHidden = on
         updateHeader()
+        treePanel.showHidden = on
         applyRows(keepSelection: true)
         onStateChange?()
     }
 
-    /// Restores the settings saved with the session.
-    func restore(showHidden: Bool, followsTerminal: Bool) {
+    /// Restores the settings saved with the session (`tree`: the folder tree's root, nil when it was hidden).
+    func restore(showHidden: Bool, followsTerminal: Bool, tree: String? = nil) {
         self.showHidden = showHidden
         self.followsTerminal = followsTerminal
+        treePanel.showHidden = showHidden
         updateHeader()
         applyRows(keepSelection: true)
+        if let tree { setFolderTree(tree) }
     }
 
     nonisolated static func isFolder(_ path: String) -> Bool {
@@ -282,6 +296,7 @@ final class FilesPane: NSView {
     @objc func reload() {
         waitingForConnect = false
         load()
+        if showsFolderTree { treePanel.reloadAll() }
     }
 
     func load() {
@@ -326,6 +341,7 @@ final class FilesPane: NSView {
         let selected = keepSelection ? selectedEntries.map(\.name) : []
         rows = FileSorting.sorted(FileSorting.visible(allEntries, showHidden: showHidden), by: sortKey, ascending: ascending)
         tableView.reloadData()
+        treeListingChanged()
         if let names = pendingSelection {
             pendingSelection = nil
             selectNames(names)
@@ -400,6 +416,7 @@ final class FilesPane: NSView {
         guard resolved != folder else { return }
         folder = resolved
         updateHeader()
+        treeFolderChanged()
         onStateChange?()
     }
 
@@ -488,7 +505,7 @@ final class FilesPane: NSView {
 
     // MARK: - Header and footer
 
-    private static func barButton(_ symbol: String, label: String) -> NSButton {
+    static func barButton(_ symbol: String, label: String) -> NSButton {
         let button = NSButton(image: NSImage(systemSymbolName: symbol, accessibilityDescription: label) ?? NSImage(),
                               target: nil, action: nil)
         button.bezelStyle = .accessoryBarAction
@@ -502,11 +519,14 @@ final class FilesPane: NSView {
         for (button, action) in [(backButton, #selector(goBack)), (forwardButton, #selector(goForward)),
                                  (upButton, #selector(goUp)), (hiddenButton, #selector(toggleHiddenFiles)),
                                  (followButton, #selector(toggleFollowTerminal)),
-                                 (terminalButton, #selector(openTerminalHere))] {
+                                 (terminalButton, #selector(openTerminalHere)),
+                                 (treeButton, #selector(toggleFolderTree))] {
             button.target = self
             button.action = action
         }
         hiddenButton.setButtonType(.toggle)
+        treeButton.setButtonType(.toggle)
+        treeButton.setAccessibilityIdentifier("files.treeButton")
         followButton.setButtonType(.toggle)
         pathControl.pathStyle = .standard
         pathControl.controlSize = .small
@@ -524,7 +544,7 @@ final class FilesPane: NSView {
         remotePathLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         remotePathLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         remotePathLabel.setAccessibilityIdentifier("files.remotePath")
-        let header = NSStackView(views: [backButton, forwardButton, upButton, pathControl, remotePathLabel, hiddenButton,
+        let header = NSStackView(views: [treeButton, backButton, forwardButton, upButton, pathControl, remotePathLabel, hiddenButton,
                                          followButton, terminalButton])
         header.orientation = .horizontal
         header.spacing = 4
@@ -582,7 +602,15 @@ final class FilesPane: NSView {
         messageLabel.isHidden = true
         messageLabel.translatesAutoresizingMaskIntoConstraints = false
         messageLabel.setAccessibilityIdentifier("files.message")
-        for view in [header, topSeparator, scrollView, messageLabel, bottomSeparator, footer] { addSubview(view) }
+        treePanel.translatesAutoresizingMaskIntoConstraints = false
+        treeDivider.translatesAutoresizingMaskIntoConstraints = false
+        for view in [header, topSeparator, treePanel, treeDivider, scrollView, messageLabel, bottomSeparator, footer] {
+            addSubview(view)
+        }
+        let treeWidthConstraint = treePanel.widthAnchor.constraint(equalToConstant: 0)
+        let treeDividerWidthConstraint = treeDivider.widthAnchor.constraint(equalToConstant: 0)
+        self.treeWidthConstraint = treeWidthConstraint
+        self.treeDividerWidthConstraint = treeDividerWidthConstraint
         NSLayoutConstraint.activate([
             header.leadingAnchor.constraint(equalTo: leadingAnchor),
             header.trailingAnchor.constraint(equalTo: trailingAnchor),
@@ -591,7 +619,15 @@ final class FilesPane: NSView {
             topSeparator.leadingAnchor.constraint(equalTo: leadingAnchor),
             topSeparator.trailingAnchor.constraint(equalTo: trailingAnchor),
             topSeparator.topAnchor.constraint(equalTo: header.bottomAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            treePanel.leadingAnchor.constraint(equalTo: leadingAnchor),
+            treePanel.topAnchor.constraint(equalTo: topSeparator.bottomAnchor),
+            treePanel.bottomAnchor.constraint(equalTo: bottomSeparator.topAnchor),
+            treeWidthConstraint,
+            treeDivider.leadingAnchor.constraint(equalTo: treePanel.trailingAnchor),
+            treeDivider.topAnchor.constraint(equalTo: topSeparator.bottomAnchor),
+            treeDivider.bottomAnchor.constraint(equalTo: bottomSeparator.topAnchor),
+            treeDividerWidthConstraint,
+            scrollView.leadingAnchor.constraint(equalTo: treeDivider.trailingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: topSeparator.bottomAnchor),
             scrollView.bottomAnchor.constraint(equalTo: bottomSeparator.topAnchor),
@@ -629,6 +665,7 @@ final class FilesPane: NSView {
         hiddenButton.contentTintColor = showHidden ? .controlAccentColor : nil
         followButton.state = followsTerminal ? .on : .off
         followButton.contentTintColor = followsTerminal ? .controlAccentColor : nil
+        treeButton.toolTip = showsFolderTree ? String(localized: "Hide Folder Tree") : String(localized: "Show Folder Tree")
         followButton.toolTip = followsTerminal
             ? String(localized: "Following the terminal's directory (click to stop)")
             : String(localized: "Follow Terminal")

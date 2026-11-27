@@ -147,7 +147,8 @@ extension AppController {
         if let files = pane.files {
             let info = try split(paneID: pane.id, direction: .right, kind: .files, cwd: files.folder,
                                  filesHost: files.host, asTab: true)
-            self.pane(id: info.id)?.files?.restore(showHidden: files.showHidden, followsTerminal: files.followsTerminal)
+            self.pane(id: info.id)?.files?.restore(showHidden: files.showHidden, followsTerminal: files.followsTerminal,
+                                                   tree: files.treeRoot)
             return try paneInfo(id: info.id)
         }
         // A local terminal keeps its Claude account (its shell gets the account's CLAUDE_CONFIG_DIR).

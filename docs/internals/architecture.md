@@ -18,7 +18,7 @@ cmds is a native macOS terminal workspace for coding agents. Swift + AppKit, ter
 | `App/Sources/Panes` | Split container views, pane container with notification ring, SSH connect sheet and overlay, agent resume banner. |
 | `App/Sources/Browser` | WKWebView browser pane. |
 | `App/Sources/Preview` | File preview pane (`PreviewPane`: header, Quick Look / image view / rendered HTML, file watcher). Renderers in `CmdsCore/Preview` (`MarkdownHTML`, `DiffHTML`, `PreviewHTML`). |
-| `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `+Remote` folders on SSH hosts; `GitStatusReader`), `RemoteConnections` (one SFTP connection per host), `TransferCenter` (the transfer queue, `transfer.*`) and the Transfers window. Logic in `CmdsCore/Files` (`FileSorting`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git; `FileLocation`, `SFTPPacket`/`SFTPClient`, `SSHFileConnection`, `FileTree`, `RemoteTrash`, `TransferJob`/`TransferQueue`; [files-sftp.md](files-sftp.md)). |
+| `App/Sources/Files` | Files pane (`FilesPane`: bar, list, footer; `+Table` cells, sorting, rename, drag and drop; `+Actions` commands, copy/move, conflicts; `+Remote` folders on SSH hosts; `+Tree` and `FolderTreePanel` the folder tree; `GitStatusReader`), `RemoteConnections` (one SFTP connection per host), `TransferCenter` (the transfer queue, `transfer.*`) and the Transfers window. Logic in `CmdsCore/Files` (`FileSorting`, `FolderTree`, `FileNames`, `FileSelection`, `ShellQuoting`, `GitStatus`, `FileOperation`, `CommandOutput` for running git; `FileLocation`, `SFTPPacket`/`SFTPClient`, `SSHFileConnection`, `FileTree`, `RemoteTrash`, `TransferJob`/`TransferQueue`; [files-sftp.md](files-sftp.md)). |
 | `App/Sources/Schedule` | Schedules: `ScheduleRunner` (owned by `AppController`; files, timers, runs, the 1-minute notice), the Schedules window and editor sheet, `ScheduleAPI` (`schedule.*`), pane tags, the limit banner's Continue at, UI text. Rules in `CmdsCore` (`Schedule`, `ScheduleStore`, `ScheduleCalendar`, `ScheduleRunTiming`, `ScheduleTarget`). |
 | `Widget/Sources` | The cmds widget (#96, WidgetKit extension `CmdsWidget`, embedded at `cmds.app/Contents/PlugIns/CmdsWidget.appex`). It reads `widget.json` (CmdsCore `WidgetSnapshot`), which `WidgetPublisher` in the app writes to the support folder; the extension is sandboxed with a read-only exception for that one file (`Widget/CmdsWidget.entitlements`, resolved from the real home, not the sandbox container). The menu bar item and the widget share `AgentOverview`. Clicks open `cmds://workspace/<id>`. |
 | `App/Sources/Assistant` | The voice assistant (#243, macOS 26+): `AssistantController` (ties it together), `AssistantListener` (microphone → SpeechAnalyzer), `AssistantVoice` (AVSpeechSynthesizer), `AssistantBrain` (Foundation Models, `claude -p`; the process: `AssistantClaudeProcess`), `AssistantTuning` (timings and caps), `AssistantHUD` / `AssistantOrbView` (the panel), `AssistantIdleOrb` (the orb while waiting), `AssistantHotkeys` (Carbon hot keys), Settings › Assistant, `debug.assistant`. Rules in `CmdsCore/Assistant`. |
@@ -184,6 +184,21 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   A files pane with a `host` lists a folder on an SSH host over SFTP through the user's `ssh`; copies and moves that
   touch a host go through the transfer queue ([files-sftp.md](files-sftp.md)). Restored remote panes wait for
   Connect; the workspace's location never follows a files pane.
+  **Folder tree** (#484; `Files/FolderTreePanel.swift` the view, `Files/FilesPane+Tree.swift` the wiring, rules in
+  `CmdsCore/Files/FolderTree.swift`): an `NSOutlineView` (source list) left of the list, with a draggable
+  `FolderTreeDivider`; hidden, its width constraint is 0. One `Node` object per path, kept in a dictionary while the
+  root stays, so rebuilt children reuse them and open folders stay open. A folder's children are read the first time
+  the outline asks for them, off the main thread (`FilesPane.read`, or `readRemote` over the pane's SFTP connection;
+  nothing while a restored remote pane waits for Connect); the shown folder's node takes the list's own listing
+  (`applyRows` → `treeListingChanged`), so the folder watcher updates both. Other open folders are read again on
+  ⌘R (`reloadAll`) and after a copy, move or transfer into or out of them (`treeFolderContentsChanged`). Every
+  navigation calls `treeFolderChanged`: `FolderTree.root` keeps the root while the folder is inside it, else the
+  folder becomes the root; `FolderTree.chain` lists the folders to open (each read first when needed) before the
+  folder's row is selected. A row chosen in the tree navigates the list (a file: its folder with it selected, and
+  the file stays selected in the tree); rows the tree selects itself do not report back. Drops onto a tree folder use
+  the list's drop rules with that folder as the destination. Saved as `tree` (the root) in the session's `files`
+  node, only while shown (older versions ignore it). `debug.files` drives it (`tree`, `treeClick`, `treeExpand`,
+  `treeCollapse`, `treeDoubleClick`; `treeRows` in the answer).
 - **SSH pane** ([ssh.md](ssh.md)): a terminal running the user's `ssh` with the pane's own restricted API socket
   forwarded to the server (`ssh -R`); `PaneInfo.remote` = `{host, connected, branch?}`, `WorkspaceInfo.remoteHost`
   while the focused pane is one (its cwd/branch are then remote). Survives `ssh` exiting (Reconnect overlay).

@@ -390,6 +390,10 @@ extension FilesPane {
             }
             load()
         }
+        // The tree reads the folders the job changed (on this pane's side) again.
+        for changed in [job.destination] + job.sources.map(\.parent) where changed.isSameTree(as: shown) {
+            treeFolderContentsChanged(changed.path)
+        }
         updateStatus()
         // A failed upload of an edited file is reported by RemoteEdits.
         if job.state == .failed, job.mode != .save, startedTransfers.contains(job.id) {

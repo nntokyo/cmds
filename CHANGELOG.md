@@ -7,6 +7,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Files panes have a folder tree (#484): the sidebar button at the left of the bar (also Pane › Files › Show Folder
+  Tree and the context menu) shows the folder and everything below it as a tree on the left of the list, like the
+  navigation pane of Windows Explorer or the explorer of VS Code. Folders open in place; clicking a folder or a file
+  in the tree moves the list there, and the tree follows every move of the list. Files dropped on a folder of the
+  tree are copied or moved into it. Works for folders on SSH hosts too, and is kept when cmds restarts.
+
 ## [0.40.1] - 2026-11-27
 
 ### Changed

@@ -237,7 +237,7 @@ extension FilesPane {
             self.askConflict(name: name, isFolder: isFolder, several: sources.count > 1, reply: reply)
         }
         operation.onFinish = { [weak self] created, failures, cancelled in
-            self?.finish(created: created, failures: failures, cancelled: cancelled, destination: destination)
+            self?.finish(created: created, failures: failures, cancelled: cancelled, sources: sources, destination: destination)
         }
         self.operation = operation
         progressIndicator.isHidden = false
@@ -271,11 +271,16 @@ extension FilesPane {
         statusLabel.stringValue = text
     }
 
-    private func finish(created: [URL], failures: [FileOperation.Failure], cancelled: Bool, destination: URL) {
+    private func finish(created: [URL], failures: [FileOperation.Failure], cancelled: Bool, sources: [URL],
+                        destination: URL) {
         operation = nil
         progressIndicator.isHidden = true
         cancelButton.isHidden = true
         updateStatus()
+        // The tree reads the destination and the folders items were moved out of again.
+        for changed in Set([destination.path] + sources.map { $0.deletingLastPathComponent().path }) {
+            treeFolderContentsChanged(changed)
+        }
         let names = created.filter { FileNames.isSamePath($0.deletingLastPathComponent(), destination) }
             .map(\.lastPathComponent)
         if FileNames.isSamePath(destination, folderURL), !names.isEmpty {
@@ -383,6 +388,7 @@ extension FilesPane {
             enabled: otherPane?() != nil)
         add(isRemote ? String(localized: "Open SSH Terminal Here") : String(localized: "Open Terminal Here"),
             #selector(openTerminalHere))
+        add(String(localized: "Show Folder Tree"), #selector(toggleFolderTree), checked: showsFolderTree)
         add(String(localized: "Show Hidden Files"), #selector(toggleHiddenFiles), checked: showHidden)
         if !isRemote {
             add(String(localized: "Follow Terminal"), #selector(toggleFollowTerminal), checked: followsTerminal)
