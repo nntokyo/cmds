@@ -71,7 +71,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>インストールと初回起動</h2>
       <ol>
-        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.40.1/cmds-0.40.1.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
+        <li><a href="https://github.com/nntokyo/cmds/releases/download/v0.41.0/cmds-0.41.0.dmg">DMG</a> を開き、<code>cmds.app</code> を「アプリケーション」フォルダ（または <code>~/Applications</code>）にドラッグして開きます。ソースからビルドする場合は <a href="https://github.com/nntokyo/cmds#build-from-source">README の手順</a>を参照してください（Xcode、XcodeGen、Zig が必要）。</li>
         <li>macOS のファイアウォールが有効な場合、受信接続の確認が出ます。iPhone/iPad コンパニオンを使うなら<strong>「許可」</strong>を選びます（ターミナル自体はどちらでも動きます）。</li>
         <li>通知も許可してください。cmds が背面にあるときに、入力待ちのペインを macOS の通知で知らせます。</li>
         <li>ウィンドウを閉じても cmds とターミナル（エージェント）は動き続けます。Dock のアイコンか <kbd>⌘N</kbd> でウィンドウが戻ります。エージェントの実行中に終了しようとすると確認が出ます。</li>
@@ -296,6 +296,7 @@ cmds stats                                # ワークスペースごとと Mac �
         <li><kbd>↩</kbd> で開く、<kbd>Space</kbd> でプレビューペインに表示。Git のリポジトリでは変更の状態（<code>M</code>・<code>A</code>・<code>?</code> など）の列が出ます。「ターミナルに追従」をオンにすると、ターミナルで <code>cd</code> した先へ一緒に移動します。</li>
         <li><kbd>F5</kbd> / <kbd>F6</kbd> でもう一方のペインにコピー・移動。ドラッグ＆ドロップ、Finder との間、<kbd>⌘C</kbd> / <kbd>⌘V</kbd> も使えます。同じ名前があるときは「両方とも残す」「置き換える」「スキップ」から選べます。</li>
         <li><kbd>F2</kbd> で名前を変更、<kbd>F7</kbd> で新規フォルダ、<kbd>⌘⌫</kbd> でゴミ箱に入れる。完全に削除することはありません。</li>
+        <li>バーの左端のボタン（ペイン › ファイル › フォルダツリーを表示）で、一覧の左にフォルダツリーが出ます。▶ でフォルダをその場で開き、クリックすると一覧がそのフォルダへ移ります。一覧で移動するとツリーも追従します。ツリーのフォルダにファイルをドロップするとコピー・移動でき、SSH ホストのフォルダでも使えます。</li>
         <li>ファイルをターミナルにドロップすると、シェル用にクォートされたパスが入力されます。</li>
       </ul>
       <h3>SSH ホストのフォルダ</h3>

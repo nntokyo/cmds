@@ -71,7 +71,7 @@
     <div class="wrap narrow">
       <h2><span class="step-num">1</span>Install and first launch</h2>
       <ol>
-        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.40.1/cmds-0.40.1.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
+        <li>Open the <a href="https://github.com/nntokyo/cmds/releases/download/v0.41.0/cmds-0.41.0.dmg">DMG</a> and drag <code>cmds.app</code> to Applications (or <code>~/Applications</code>), then open it from there. To build from source, see the <a href="https://github.com/nntokyo/cmds#build-from-source">README</a> (needs Xcode, XcodeGen and Zig).</li>
         <li>If the macOS firewall is on, macOS asks about incoming connections. Choose <strong>Allow</strong> if you want to use the iPhone/iPad companion; the terminal works either way.</li>
         <li>Allow notifications, so panes that need you can notify you while cmds is in the background.</li>
         <li>Updates are automatic (0.2.0 and later): cmds checks once a day, downloads a new version and installs it when cmds quits. <strong>cmds › Check for Updates…</strong> installs it now; turn it off in <strong>cmds › Settings… › Updates</strong>.</li>
@@ -295,6 +295,7 @@ cmds stats                                # CPU and memory per workspace and for
         <li><kbd>↩</kbd> opens, <kbd>Space</kbd> shows the file in the preview pane. Inside a Git repository a column shows what changed (<code>M</code>, <code>A</code>, <code>?</code>…). With Follow Terminal on, the pane goes wherever you <code>cd</code> in the terminal.</li>
         <li><kbd>F5</kbd> / <kbd>F6</kbd> copy or move to the other pane; drag and drop, the Finder and <kbd>⌘C</kbd> / <kbd>⌘V</kbd> work too. When a name is taken, choose Keep Both, Replace or Skip.</li>
         <li><kbd>F2</kbd> renames, <kbd>F7</kbd> makes a new folder, <kbd>⌘⌫</kbd> moves to the Trash. Nothing is ever deleted for good.</li>
+        <li>The button at the left of the bar (Pane › Files › Show Folder Tree) shows a folder tree on the left of the list. Folders open in place with ▶; a click moves the list there, and the tree follows the list. Drop files on a folder of the tree to copy or move them into it. Folders on SSH hosts get one too.</li>
         <li>Dropping files on a terminal types their paths, quoted for the shell.</li>
       </ul>
       <h3>Folders on SSH hosts</h3>

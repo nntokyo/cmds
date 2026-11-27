@@ -7,26 +7,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.40.1</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.40.1</link>
-      <sparkle:version>59</sparkle:version>
-      <sparkle:shortVersionString>0.40.1</sparkle:shortVersionString>
+      <title>cmds 0.41.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.41.0</link>
+      <sparkle:version>60</sparkle:version>
+      <sparkle:shortVersionString>0.41.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 27 Nov 2026 03:56:40 GMT</pubDate>
+      <pubDate>Fri, 27 Nov 2026 07:46:31 GMT</pubDate>
       <description><![CDATA[
-<h3>変更</h3>
+<h3>新機能</h3>
 <ul>
-<li>設計資料（英語）に、iPhone アプリのブラウザのペインの仕組みを書き足しました（ログイン情報をアプリの起動中だけ保つこと、再読み込みで読み直すページ、新しいウィンドウで開くリンクの扱い）。iPhone の使い方の説明にも、ログインが残る期間を書きました。アプリの動きは 0.40.0 と同じです。</li>
+<li>ファイル一覧ペインにフォルダツリーを追加しました（#484）。バーの左端のボタン（ペイン › ファイル › フォルダツリーを表示、右クリックメニューからも）で、一覧の左にフォルダとその中身がツリーで出ます。Windows のエクスプローラーや VS Code のエクスプローラーのように、▶ でフォルダをその場で開けます。ツリーのフォルダやファイルをクリックすると一覧がそこへ移り、一覧で移動するとツリーも追従します。ツリーのフォルダにファイルをドロップするとコピー・移動できます。SSH ホストのフォルダでも使え、cmds を再起動しても残ります。</li>
 </ul>
-<h3>Changed</h3>
+<h3>Added</h3>
 <ul>
-<li>Documentation: the design of browser panes on the iPhone (one data store for the app's run, what Reload loads, new windows) is described in the architecture notes, and the iPhone guide says how long a sign-in on the phone lasts. The app behaves as in 0.40.0.</li>
+<li>Files panes have a folder tree (#484): the button at the left of the bar (also Pane › Files › Show Folder Tree and the context menu) shows the folder and everything below it as a tree on the left of the list, like the navigation pane of Windows Explorer or the explorer of VS Code. Folders open in place; clicking a folder or a file in the tree moves the list there, and the tree follows every move of the list. Files dropped on a folder of the tree are copied or moved into it. Works for folders on SSH hosts too, and is kept when cmds restarts.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.40.1/cmds-0.40.1.dmg" length="18986160" type="application/octet-stream" sparkle:edSignature="LxvtyBUA470p2nM1CiBexbz3/W2faqCOq8f6FLLr1xMS6OlcBp83D6JIdx6WLLoHOHWNrd7Cf8qvGwroBUYbAQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.41.0/cmds-0.41.0.dmg" length="19011074" type="application/octet-stream" sparkle:edSignature="TihNTsnIs6H+DneMNQKkX1fr7zvi2jiXMlGI4FJYrlMC4y3JRWjytwkHLjyCc2AzZx3CHKNULhTRnLhv/0UOAQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: WjpqCcnH3MO59Qx7oMAAO0YwPJR2VX4BMWWvfPUdUfrrIuCp5vzkfbvihW6wiyp4mWqRLq/JVqHpr1kryBzPDQ==
-length: 1992
+edSignature: 97BIgipfD+TiHk9nUG5McVxlqbM8AIn0ntCM5YEs2sjxYiXscWmQLJNm7i0c06qXWZ2ac0dlIRYs+3of/7cxAA==
+length: 2634
 -->

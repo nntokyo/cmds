@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-11-27
+
 ### Added
 
 - Files panes have a folder tree (#484): the sidebar button at the left of the bar (also Pane › Files › Show Folder
@@ -1357,7 +1359,8 @@ First release (`MARKETING_VERSION` 0.1.0, build 1). Development started 2026-10-
 - Website for cmds.n-n.tokyo in `site/` (Japanese and English, usage guide with screenshots, privacy policy;
   Firebase Hosting configuration).
 
-[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.40.1...master
+[Unreleased]: https://github.com/nntokyo/cmds/compare/v0.41.0...master
+[0.41.0]: https://github.com/nntokyo/cmds/compare/v0.40.1...v0.41.0
 [0.40.1]: https://github.com/nntokyo/cmds/compare/v0.40.0...v0.40.1
 [0.40.0]: https://github.com/nntokyo/cmds/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/nntokyo/cmds/compare/v0.38.0...v0.39.0
