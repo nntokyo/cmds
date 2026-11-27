@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- iPhone app: signing in to a site in a browser pane (DMM, for example) no longer starts over on the sign-in page.
+  The sign-in now stays while the app runs, also after switching panes or workspaces; Reload loads the page shown
+  instead of the Mac's address; and links that open a new window open in the pane instead of doing nothing.
+
 ## [0.39.0] - 2026-11-26
 
 ### Changed
