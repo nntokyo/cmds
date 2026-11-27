@@ -52,7 +52,7 @@
       <h1>AIエージェントを、<br><span class="accent">並べて走らせる</span>ターミナル。</h1>
       <p class="lead">cmds は Claude Code や Codex を何本も同時に動かすための、macOS ネイティブのターミナルワークスペースです。どのエージェントが作業中で、どれがあなたの入力を待っているかがサイドバーで分かり、待っているペインはオレンジのリングで光ります。</p>
       <div class="cta">
-        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.40.1/cmds-0.40.1.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
+        <a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.41.0/cmds-0.41.0.dmg">Mac 版をダウンロード <small>macOS 14 以降・Apple シリコン</small></a>
         <a class="btn" href="/guide/">使い方を見る</a>
       </div>
       <p class="note">無料・オープンソース（GPL-3.0）。アカウント登録もテレメトリもありません。</p>
@@ -80,7 +80,7 @@
         <div class="card"><h3>タブ</h3><p>ターミナル、ブラウザ、プレビュー、ファイル一覧をレイアウトのどこにでもタブで重ねられます（<kbd>⌘T</kbd>、<kbd>⌥⌘]</kbd> / <kbd>⌥⌘[</kbd>）。ドラッグでタブを別のペインのタブにしたり、取り出して分割したり。見えていないタブのプログラムも動き続けます。</p></div>
         <div class="card"><h3>分割とタイル表示</h3><p>右・下への入れ子の分割、ペインのズーム。ペインはドラッグで別の位置や別のワークスペースへ移動でき、動いているプログラムはそのまま続きます。複数のワークスペースを最大 9 枚のライブタイルとして並べ、5 つの Claude Code を同時に見ることも。サイドバーからドラッグして配置できます。</p></div>
         <div class="card"><h3>ファイルプレビュー</h3><p>画像、PDF、動画、Office（Quick Look）、GitHub 風の Markdown、色付きの diff。ファイルが変わると自動で再読み込み。ターミナル上のパスを <kbd>⌘</kbd>-クリックでも開けます。</p></div>
-        <div class="card"><h3>ファイル一覧ペイン</h3><p>Mac や SSH ホストのフォルダをターミナルの隣に一覧表示。2 つ並べてコピー・移動でき、サーバーとの間のファイルは転送キューで一時停止・再試行も。SSH はいつもの <code>ssh</code> の設定と鍵を使い、パスワードは保存しません。</p></div>
+        <div class="card"><h3>ファイル一覧ペイン</h3><p>Mac や SSH ホストのフォルダをターミナルの隣に一覧表示。左にフォルダツリーも出せて、エクスプローラーのように階層をたどれます。2 つ並べてコピー・移動でき、サーバーとの間のファイルは転送キューで一時停止・再試行も。SSH はいつもの <code>ssh</code> の設定と鍵を使い、パスワードは保存しません。</p></div>
         <div class="card"><h3>CLI とソケット API</h3><p>同梱の <code>cmds</code> コマンドで分割、入力、画面の読み取り、通知、ブラウザ操作、統計を。すべて <code>--json</code> 対応で、スクリプトやエージェントから扱えます。</p></div>
         <div class="card"><h3>libghostty の GPU 描画</h3><p>ターミナルの描画は Ghostty のエンジン（libghostty）による Metal の GPU 描画。true color、<code>xterm-ghostty</code> の terminfo とシェル統合を同梱。</p></div>
         <div class="card"><h3>Swift と AppKit でネイティブ</h3><p>Electron ではなく Swift と AppKit で書かれた Mac アプリ。メニュー、ショートカット、通知、Quick Look など macOS の作法に沿って動きます。</p></div>
@@ -216,14 +216,14 @@
       <p class="eyebrow">Download</p>
       <h2>ダウンロード</h2>
       <div class="download-box">
-        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.40.1/cmds-0.40.1.dmg">cmds 0.40.1 をダウンロード（DMG、18.1 MB）</a></p>
-        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.40.1">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
+        <p><a class="btn btn-primary" href="https://github.com/nntokyo/cmds/releases/download/v0.41.0/cmds-0.41.0.dmg">cmds 0.41.0 をダウンロード（DMG、18.1 MB）</a></p>
+        <p class="note">Developer ID（N.N. LLC.）で署名され、Apple による公証（notarization）を受けています。変更履歴は <a href="https://github.com/nntokyo/cmds/releases/tag/v0.41.0">GitHub のリリース</a>を参照してください。0.2.0 からはアプリが自動でアップデートされます（0.1.x からは一度だけ手動で入れ替えてください）。</p>
         <dl>
-          <dt>ファイル</dt><dd><code>cmds-0.40.1.dmg</code>（18,986,160 バイト、2026-11-27）</dd>
-          <dt>SHA-256</dt><dd><code>04449e00bdf9ff7e7b1fb13dd5ad306b67d07d09dac1932731a94d0455a049a6</code></dd>
+          <dt>ファイル</dt><dd><code>cmds-0.41.0.dmg</code>（19,011,074 バイト、2026-11-27）</dd>
+          <dt>SHA-256</dt><dd><code>f3422b53c259483fe15abf506639b6ad882bf354a0fafba0a90111e02680a04b</code></dd>
           <dt>対応</dt><dd>Apple シリコン、macOS 14 以降</dd>
         </dl>
-        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.40.1.dmg</code> で SHA-256 を照合できます。</p>
+        <p class="note">ダウンロード後は <code>shasum -a 256 cmds-0.41.0.dmg</code> で SHA-256 を照合できます。</p>
       </div>
     </div>
   </section>
