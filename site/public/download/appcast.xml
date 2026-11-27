@@ -7,34 +7,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.39.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.39.0</link>
-      <sparkle:version>57</sparkle:version>
-      <sparkle:shortVersionString>0.39.0</sparkle:shortVersionString>
+      <title>cmds 0.40.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.40.0</link>
+      <sparkle:version>58</sparkle:version>
+      <sparkle:shortVersionString>0.40.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Thu, 26 Nov 2026 12:25:07 GMT</pubDate>
+      <pubDate>Fri, 27 Nov 2026 02:53:02 GMT</pubDate>
       <description><![CDATA[
-<h3>変更</h3>
-<ul>
-<li>設定に「ブラウザ」タブを追加しました。ブラウザのペインに関する設定（拡大率、新しいページをタブで開く、背後のタブを休止、Safari の Web インスペクタ、ワークスペースごとにログインを分ける、ブックマークバー）を「一般」からここに移しました。設定の内容と今の値はそのままです。「一般」にはターミナル、プレビューの拡大率、メモリの通知が残ります。</li>
-</ul>
 <h3>修正</h3>
 <ul>
-<li>設定の「一般」タブが 13 インチの画面より縦に長くなり、スクロールもできなかったため、下の項目に届きませんでした。どのタブも、画面に収まらない分はスクロールできるようにしました。</li>
-</ul>
-<h3>Changed</h3>
-<ul>
-<li>Settings has a Browser tab: the browser panes' settings (page zoom, open new pages in tabs, suspend background tabs, Safari's Web Inspector, separate sign-ins per workspace, the bookmarks bar) moved there from General. The settings and their values are the same. General keeps the terminal, preview zoom and the memory warning.</li>
+<li>iPhone アプリ：ブラウザのペインでサイト（DMM など）にログインしても、ログインページに戻ってしまうことがありました。アプリを起動している間はログインが残るようにしました。ペインやワークスペースを切り替えても消えません。再読み込みは Mac のアドレスではなく今のページを読み直し、新しいウィンドウで開くリンクも同じ画面で開くようにしました。</li>
 </ul>
 <h3>Fixed</h3>
 <ul>
-<li>Settings › General had grown taller than a 13-inch screen and could not be scrolled, so its last rows were out of reach. Every Settings tab now scrolls when it is taller than the screen allows.</li>
+<li>iPhone app: signing in to a site in a browser pane (DMM, for example) no longer starts over on the sign-in page. The sign-in now stays while the app runs, also after switching panes or workspaces; Reload loads the page shown instead of the Mac's address; and links that open a new window open in the pane instead of doing nothing.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.39.0/cmds-0.39.0.dmg" length="18986192" type="application/octet-stream" sparkle:edSignature="DTkJGrgA5/7UwDh8KdZrShjJvbgRKeuHtMA5MmJ5BpO8pM/hNZ0R3IGXAO7GzGohLrEZahInQ3JRXU1DO2WUDA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.40.0/cmds-0.40.0.dmg" length="18986163" type="application/octet-stream" sparkle:edSignature="6qLGdIz7ykc3PNsu5XrZ+vEWbdeekafCtPizuA47qZMvETQDQNFF9p+GM2pmHa0auUQraarPvwIHveojaKCjCA=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: qPZa1T5lsNHz8uQceFkXh2lt86d8boperhBGvMi1pqWfCyemgJWottuqES37KXiVLYXCLfjr6x+mNCc0kujMAg==
-length: 2686
+edSignature: yvxR+c+b58Vj6efyHBW3vJyeFbhbIQyKTibwO9YCIuah/S+rFSZosMOciXfsb4ifSxlXOfmD4J2LmK7Nn8S7Cw==
+length: 2149
 -->
