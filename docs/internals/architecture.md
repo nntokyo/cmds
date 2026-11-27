@@ -692,6 +692,23 @@ a short fingerprint) before it sends the code, and afterwards accepts only that 
 sends `input` (text/keys) and `select`/`focus` commands. The same TLS session can also run over Bluetooth LE or
 through an SSH relay host. Protocol, pairing and threat model: [sync-protocol.md](sync-protocol.md).
 
+**Browser panes on the phone** (`iOS/Sources/Views/BrowserPaneView.swift`, `WebPageView.swift`; URL check in
+`CmdsCore` `BrowserPaneURL`; #154, #480): the phone loads the Mac pane's URL in its own `WKWebView`; it never gets the
+Mac's cookies, and the Mac pane does not follow what the phone does. Pages only the Mac can reach (`localhost`,
+files) are pictures the Mac takes (`PageSnapshotView`). The rules:
+
+- **One data store for the app's run.** Every browser pane's web view uses `WebPageView.dataStore`, a single
+  `WKWebsiteDataStore.nonPersistent()`: a sign-in made on the phone stays while the user switches panes or
+  workspaces (SwiftUI rebuilds the view each time, and a store per view lost it, so the pane opened on the
+  sign-in page again), and nothing a page leaves outlives the app. Rendered previews (`.html`) keep a store of
+  their own and never see those sign-ins.
+- **The Mac's URL is loaded when it changes; Reload reloads the page shown.** `updateUIView` loads the content
+  again only when the Mac pane's URL (or the HTML) changes; the Reload button calls `reload()` on the page the
+  view shows, so a page reached after signing in is not replaced by the Mac's address (often the sign-in page).
+- **New windows open in the same view.** The coordinator is the `WKUIDelegate`: `createWebViewWith` for a
+  top-level request (`target=_blank`, `window.open`) loads it in this view and returns nil (the phone has no
+  second window); without a UI delegate WebKit dropped those links.
+
 ## See also
 
 - [ssh.md](ssh.md): SSH panes, the forwarded socket and its allowlist.
