@@ -7,26 +7,26 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.40.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.40.0</link>
-      <sparkle:version>58</sparkle:version>
-      <sparkle:shortVersionString>0.40.0</sparkle:shortVersionString>
+      <title>cmds 0.40.1</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.40.1</link>
+      <sparkle:version>59</sparkle:version>
+      <sparkle:shortVersionString>0.40.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 27 Nov 2026 02:53:02 GMT</pubDate>
+      <pubDate>Fri, 27 Nov 2026 03:56:40 GMT</pubDate>
       <description><![CDATA[
-<h3>修正</h3>
+<h3>変更</h3>
 <ul>
-<li>iPhone アプリ：ブラウザのペインでサイト（DMM など）にログインしても、ログインページに戻ってしまうことがありました。アプリを起動している間はログインが残るようにしました。ペインやワークスペースを切り替えても消えません。再読み込みは Mac のアドレスではなく今のページを読み直し、新しいウィンドウで開くリンクも同じ画面で開くようにしました。</li>
+<li>設計資料（英語）に、iPhone アプリのブラウザのペインの仕組みを書き足しました（ログイン情報をアプリの起動中だけ保つこと、再読み込みで読み直すページ、新しいウィンドウで開くリンクの扱い）。iPhone の使い方の説明にも、ログインが残る期間を書きました。アプリの動きは 0.40.0 と同じです。</li>
 </ul>
-<h3>Fixed</h3>
+<h3>Changed</h3>
 <ul>
-<li>iPhone app: signing in to a site in a browser pane (DMM, for example) no longer starts over on the sign-in page. The sign-in now stays while the app runs, also after switching panes or workspaces; Reload loads the page shown instead of the Mac's address; and links that open a new window open in the pane instead of doing nothing.</li>
+<li>Documentation: the design of browser panes on the iPhone (one data store for the app's run, what Reload loads, new windows) is described in the architecture notes, and the iPhone guide says how long a sign-in on the phone lasts. The app behaves as in 0.40.0.</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.40.0/cmds-0.40.0.dmg" length="18986163" type="application/octet-stream" sparkle:edSignature="6qLGdIz7ykc3PNsu5XrZ+vEWbdeekafCtPizuA47qZMvETQDQNFF9p+GM2pmHa0auUQraarPvwIHveojaKCjCA=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.40.1/cmds-0.40.1.dmg" length="18986160" type="application/octet-stream" sparkle:edSignature="LxvtyBUA470p2nM1CiBexbz3/W2faqCOq8f6FLLr1xMS6OlcBp83D6JIdx6WLLoHOHWNrd7Cf8qvGwroBUYbAQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: yvxR+c+b58Vj6efyHBW3vJyeFbhbIQyKTibwO9YCIuah/S+rFSZosMOciXfsb4ifSxlXOfmD4J2LmK7Nn8S7Cw==
-length: 2149
+edSignature: WjpqCcnH3MO59Qx7oMAAO0YwPJR2VX4BMWWvfPUdUfrrIuCp5vzkfbvihW6wiyp4mWqRLq/JVqHpr1kryBzPDQ==
+length: 1992
 -->
