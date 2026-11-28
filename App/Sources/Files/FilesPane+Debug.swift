@@ -44,6 +44,7 @@ extension FilesPane {
         case "hidden": setShowHidden(params?["on"] != .bool(false))
         case "follow": setFollowsTerminal(params?["on"] != .bool(false))
         case "preview": previewSelection()
+        case "open": openSelection()  // as Return on the selection
         case "terminal": openTerminalHere()
         case "back": goBack()
         case "forward": goForward()

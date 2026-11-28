@@ -107,13 +107,15 @@ extension FilesPane {
         return allEntries.first { $0.name == name }
     }
 
+    /// Like opening one file of the list: in the preview pane, or its default app (`opensInPane`).
     private func openFromTree(_ path: String) {
+        let inPane = Self.opensInPane(RemotePath.name(path))
         guard isRemote else {
-            NSWorkspace.shared.open(URL(fileURLWithPath: path))
+            if inPane { onPreview?(path) } else { NSWorkspace.shared.open(URL(fileURLWithPath: path)) }
             return
         }
         guard let entry = listEntry(path) else { return NSSound.beep() }
-        openRemoteFiles([entry])
+        if inPane { previewRemote(entry) } else { openRemoteFiles([entry]) }
     }
 
     private func previewFromTree(_ path: String) {

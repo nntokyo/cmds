@@ -106,7 +106,8 @@ as menu shortcuts, so programs in terminals keep them.
 
 | Action | Key | Menu |
 |---|---|---|
-| Open (folder in the pane, file in its default app) | Return, ⌘↓, double-click | right-click › Open |
+| Open (folder in the pane, file in the preview pane; disk images, installers, archives and apps in their default app) | Return, ⌘↓, double-click | right-click › Open |
+| Open a file in its default app | ⌥Return, ⌥-double-click | right-click › Open in Default App |
 | Show in the preview pane | Space | Pane › Files |
 | Enclosing folder | ⌘↑ | Pane › Files |
 | Back / forward | ⌘[ / ⌘] | View |

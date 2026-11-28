@@ -104,10 +104,10 @@ cmds --socket /tmp/cmds-test/cmds.sock ls
   `debug.files_snapshot {pane}` the same for a files pane. `debug.files {pane, action?, …}` drives a files pane
   without UI scripting and returns its folder, rows, selection, Git states and status line: `select {names}`,
   `copyToOther`, `moveToOther`, `newFolder`, `rename {name, newName}`, `paste {paths, move?}`, `hidden {on?}`,
-  `follow {on?}`, `preview`, `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
+  `follow {on?}`, `preview`, `open` (as Return), `terminal`, `back`, `forward`, `up`; `conflict` (`keepBoth`/`replace`/`skip`/`stop`)
   answers name conflicts instead of the alert. The folder tree (#484): `tree {on?}`, `treeClick {path}` (as a click:
-  the list follows), `treeExpand {path}` / `treeCollapse {path}`, `treeDoubleClick {path}` (a file opens in its
-  app); the answer's `tree` is the root and `treeRows` the rows as shown (two spaces per level, `▸`/`▾` for closed
+  the list follows), `treeExpand {path}` / `treeCollapse {path}`, `treeDoubleClick {path}` (a file opens as from
+  the list); the answer's `tree` is the root and `treeRows` the rows as shown (two spaces per level, `▸`/`▾` for closed
   and open folders, `*` after the selected row; children appear once read, so wait a moment after opening a folder).
   Point it only at folders the test created.
 - Browser DevTools (#167): a local page that logs at every level, throws an uncaught error and leaves a promise

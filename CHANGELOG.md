@@ -7,6 +7,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- Opening a file in a files pane (double-click, Return, also in the folder tree) shows it in the workspace's preview
+  pane, beside the list, instead of an outside app. Disk images, installers, archives, apps and web links still open
+  in their default app, as do several files at once; ⌥-double-click or ⌥Return opens any file in its default app
+  (also right-click › Open in Default App).
+- Agents are told to give files to a page with `browser_upload` instead of turning to Chrome for uploads, and the
+  `browser_navigate` and `browser_url` tool descriptions say when loading is done and about shared sign-ins.
+
 ## [0.41.0] - 2026-11-27
 
 ### Added

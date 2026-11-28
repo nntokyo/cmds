@@ -7,7 +7,9 @@ import CmdsCore
 extension FilesPane {
     // MARK: - Open
 
-    /// Return / ⌘↓ / double-click: a folder opens in the pane, files open in their default app.
+    /// Return / ⌘↓ / double-click: a folder opens in the pane; one file in the workspace's preview pane, as Space
+    /// shows it, unless it only means something to its own app (`FileOpening`: disk images, installers, archives…) or
+    /// ⌥ is held; several files open in their default app.
     @objc func openSelection() {
         let entries = targetEntries
         guard !entries.isEmpty else { return }
@@ -15,13 +17,20 @@ extension FilesPane {
             navigate(to: isRemote ? remotePath(entry) : url(of: entry).path)
             return
         }
-        if isRemote {
-            guard entries.contains(where: { !$0.isFolder }) else { return NSSound.beep() }
-            return openRemoteFiles(entries)
-        }
-        let files = entries.filter { !$0.isFolder }.map(url(of:))
+        let files = entries.filter { !$0.isFolder }
         if files.isEmpty { return NSSound.beep() }
-        files.forEach { NSWorkspace.shared.open($0) }
+        if files.count == 1, let file = files.first, Self.opensInPane(file.name) {
+            if isRemote { return previewRemote(file) }
+            onPreview?(url(of: file).path)
+            return
+        }
+        if isRemote { return openRemoteFiles(files) }
+        files.map(url(of:)).forEach { NSWorkspace.shared.open($0) }
+    }
+
+    /// Whether opening the file `name` shows it in the preview pane (not with ⌥, which opens the default app).
+    static func opensInPane(_ name: String) -> Bool {
+        FileOpening.opensInPane(name) && !NSEvent.modifierFlags.contains(.option)
     }
 
     /// Double-click on a row (not on the header or below the rows).

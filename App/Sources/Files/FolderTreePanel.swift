@@ -355,7 +355,7 @@ final class FolderTreeOutlineView: NSOutlineView {
         guard let panel else { return super.keyDown(with: event) }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         switch (event.keyCode, flags) {
-        case (36, []), (76, []): // Return, keypad Enter
+        case (36, []), (76, []), (36, [.option]): // Return, keypad Enter; ⌥Return opens a file in its default app
             guard let node = panel.selectedNode else { return }
             if node.isFolder {
                 if isItemExpanded(node) { collapseItem(node) } else { expandItem(node) }
