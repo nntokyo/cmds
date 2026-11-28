@@ -343,10 +343,10 @@ final class AppController {
             // A browser's login profile: as asked (`.some(nil)`: the shared data), else a source browser's. A terminal's
             // profile is only for pages opened from it by command (`openBrowser`); a new terminal starts with the shared
             // data: each session picks its own.
-            // Nobody chose one, and not split from a browser: the workspace's own profile (`WorkspaceProfile`).
+            // Nobody chose one, and not split from a browser: the one the workspace uses (`defaultBrowserProfile`).
             var browserProfile: String? = kind == .browser ? (profile ?? source.browser?.profile) : nil
             if kind == .browser, profile == nil, source.browser == nil {
-                browserProfile = workspaceBrowserProfile(for: workspace.id)
+                browserProfile = defaultBrowserProfile(for: workspace.id)
             }
             pane = makePane(kind: kind, in: workspace, cwd: directory, command: command, url: url, file: file, account: account,
                             profile: browserProfile)
@@ -579,9 +579,9 @@ final class AppController {
         let requester = try resolvePane(paneID)
         let asked = profile
         var profile: String? = asked ?? (recordOpener ? requester.profileForOpenedPages : requester.browser?.profile)
-        // Nobody chose one (not asked, not a browser's tab, no profile set for the terminal): the workspace's own.
+        // Nobody chose one (not asked, not a browser's tab, no profile set for the terminal): the one the workspace uses.
         if asked == nil, profile == nil, requester.kind != .browser, !(recordOpener && requester.browserProfileChosen) {
-            profile = workspaceBrowserProfile(for: requester.workspaceID)
+            profile = defaultBrowserProfile(for: requester.workspaceID)
         }
         // An agent (`reuse`: MCP browser_open, `cmds browser open --reuse`) opening a page it already has open (also in
         // a split): that tab again; and it keeps at most `maxAgentTabs` tabs.

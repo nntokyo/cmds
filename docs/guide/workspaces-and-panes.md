@@ -394,6 +394,11 @@ say so (**Use This Workspace's Profile** on the notice below); a pane moved to a
 choice along. Tabs opened from a browser pane keep that pane's profile, and **Shared (Default)** in the person menu
 (or `--shared`) still uses the shared data.
 
+A browser pane opened without a profile (File › New Browser, a link, an agent that set none) takes the one the
+workspace already uses: that of its browser panes (the one focused last), else the one a terminal of it was set to
+(`browser_profile`, `cmds browser profile`). Only a workspace with neither gets its own profile, so a new page is
+signed in like the pages beside it.
+
 When a page in the **shared** data is on a site signed in there (X, Amazon, GitHub, Google, note, Facebook, Instagram,
 LinkedIn, told by their sign-in cookies), the pane says "Shared sign-ins: X is signed in here for every workspace,
 maybe as another workspace's account" with **Use This Workspace's Profile**, and agents get the same warning with

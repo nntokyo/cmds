@@ -43,9 +43,9 @@ final class MCPServer {
         You are running inside cmds, a terminal workspace app; these tools act on the cmds window next to your terminal.
         To open, check or show a web page (a dev server, docs, a page you changed), use browser_open and the other \
         browser_* tools instead of Chrome or another browser (no Chrome extension, no `open <url>`), so the user sees the \
-        page beside the terminal. Use Chrome only when the user asks for it, when the page needs the user's Chrome \
-        sign-ins or saved passwords (cmds browser panes do not share them), or for what browser_eval cannot do (file \
-        uploads, native dialogs). To keep this session's sign-ins apart from other sessions' (or share them), set a \
+        page beside the terminal; give files to a page with browser_upload. Use Chrome only when the user asks for it, \
+        when the page needs the user's Chrome sign-ins or saved passwords (cmds browser panes do not share them), or for \
+        what the browser_* tools cannot do (native dialogs). To keep this session's sign-ins apart from other sessions' (or share them), set a \
         login profile with browser_profile. For front-end work, browser_console, browser_network, browser_source and browser_seo give the \
         page's console and errors, its fetch/XHR requests (failing API calls), its HTML and an SEO check. When it is unclear which element of a page the user means, ask them \
         to click it with browser_point (you get its selector and source line). Show generated files (images, PDFs, Markdown reports, diffs) with open_file. Run a dev \
@@ -192,9 +192,9 @@ final class MCPServer {
              description: "Show or set the login profile of cmds browser pages: each named profile keeps its own cookies, storage and sign-ins; pages without one share the default data. Panes with the same profile share their sign-ins, so use a name of your own to keep this session's logins apart, or the same name as another session to share its logins. Without pane: the profile of pages you open from now on (browser_open). With pane (one you opened): moves that browser pane to the profile and loads its page again there. Without profile: just shows the current one and the existing profiles. Use a profile another session or the user made only when the user asks.",
              properties: ["profile": string("Profile name (at most \(BrowserProfile.maxLength) characters; created when first used), or \"\" for the shared default."),
                           "pane": string("Browser pane id opened from your terminal. Default: your terminal (pages opened from now on).")]),
-        Tool(name: "browser_navigate", description: "Load a URL in a cmds browser pane.",
+        Tool(name: "browser_navigate", description: "Load a URL in an existing cmds browser pane, in place (same tab, history and login profile). Returns as soon as loading starts, not when the page has loaded: wait with browser_wait_for (or check browser_console) before reading or acting on it. To open a page beside the current one, use browser_open.",
              properties: ["url": string("URL to load."), "pane": browserPane], required: ["url"]),
-        Tool(name: "browser_url", description: "The URL and title of a cmds browser pane.",
+        Tool(name: "browser_url", description: "The URL and title of a cmds browser pane's page as it is now (after redirects and in-page navigation). Adds a warning line when the page uses the shared sign-ins of a site such as X or Amazon, where the signed-in account may be another workspace's: check it before acting there.",
              properties: ["pane": browserPane]),
         Tool(name: "browser_eval",
              description: "Run JavaScript in a cmds browser pane and return its JSON value. The script may use top-level await (then `return` the value). Use it to read the page (document.body.innerText), click (el.click()) and fill inputs (set el.value, then dispatch an 'input' event).",

@@ -55,8 +55,8 @@ line between them to make the tree wider or narrower.
   (or Return); files are listed under their folder, folders first, by name. Hidden items follow **Show Hidden
   Files**.
 - The tree and the list follow each other. Click a folder in the tree to show it in the list (Back returns), click a
-  file to show its folder with the file selected; double-click a file (or Return) to open it, Space shows it in the
-  preview pane. Whenever the list goes to another folder (opening a folder, Back, ⌘↑, the path, Go to Folder,
+  file to show its folder with the file selected; double-click a file (or Return) to open it like in the list (in
+  the preview pane), Space shows it in the preview pane. Whenever the list goes to another folder (opening a folder, Back, ⌘↑, the path, Go to Folder,
   Follow Terminal), the tree selects it and opens the folders above it.
 - While the list stays inside the tree's top folder, the tree keeps it; going to a folder outside it, or above it,
   starts the tree there.
@@ -71,7 +71,10 @@ line between them to make the tree wider or narrower.
 
 ## Opening and previewing files
 
-- Return, ⌘↓ or a double-click opens a folder in the pane and files in their default app.
+- Return, ⌘↓ or a double-click opens a folder in the pane, and a file in the workspace's preview pane, as Space does
+  (opening one to the right if there is none). Disk images, installers, archives, apps, `.command` scripts and web
+  links (`.dmg`, `.pkg`, `.zip`, `.tar.gz`, `.app`, `.webloc`…) open in their default app as in the Finder, and so do
+  several files opened at once. ⌥Return or ⌥-double-click opens a file in its default app.
 - Space shows the selected file in the workspace's preview pane (opening one to the right if there is none): images,
   PDF, Markdown, diffs and whatever Quick Look shows ([Preview panes](workspaces-and-panes.md#preview-panes)). The
   keyboard stays in the list, so you can walk through files with ↑/↓ and Space.
@@ -144,8 +147,8 @@ A files pane can list a folder on any host you reach with `ssh`, over SFTP. Noth
 - **The list**: like a local one, without the Git column and Follow Terminal. The bar shows `host:/path`. It is read in
   the background; ⌘R reads it again (the server's folder is not watched; the pane's own changes and finished
   transfers show up by themselves). Connection problems show in the list with **Connect** to try again.
-- **Open and Space** download a copy of the file (read only, in cmds' cache) and open it in its default app or show it
-  in the preview pane. Editing that copy does not change the server's file; to change it, use **Edit** (F4, see
+- **Open and Space** download a copy of the file (read only, in cmds' cache) and show it in the preview pane (Open:
+  in its default app for the kinds above, several files or with ⌥). Editing that copy does not change the server's file; to change it, use **Edit** (F4, see
   [Editing files on a server](#editing-files-on-a-server)).
 - **Rename** (F2), **New Folder** (F7) and **Copy Path** (`host:/path`) work as locally. **Open Terminal Here** opens
   an SSH pane at the folder.

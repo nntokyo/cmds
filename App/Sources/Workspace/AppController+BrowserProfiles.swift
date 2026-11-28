@@ -30,6 +30,22 @@ extension AppController {
         return BrowserProfileState(pane: pane.id, profile: pane.profileForOpenedPages, profiles: BrowserProfiles.names)
     }
 
+    /// The login profile for a browser pane nobody chose one for: the one the workspace already uses, so a new pane is
+    /// signed in like the others: its browser panes' (the most recently focused one), else the profile a terminal of
+    /// it was set to (`browser_profile`, `cmds browser profile`); only when there is neither, the workspace's own
+    /// (`workspaceBrowserProfile`). Before, the workspace's own was made beside a profile its panes used, and a page
+    /// opened from the menu came up signed out.
+    func defaultBrowserProfile(for workspaceID: String) -> String? {
+        if let workspace = workspace(id: workspaceID) {
+            let panes = workspace.orderedPanes.sorted { $0.focusedAt > $1.focusedAt }
+            if let browser = panes.lazy.compactMap(\.browser).first { return browser.profile }
+            if let profile = panes.first(where: { $0.kind == .terminal && $0.browserProfile != nil })?.browserProfile {
+                return profile
+            }
+        }
+        return workspaceBrowserProfile(for: workspaceID)
+    }
+
     /// The workspace's own login profile for a browser pane nobody chose one for (`WorkspaceProfile`); nil with
     /// Settings › Browser › Separate sign-ins per workspace off (the shared data). Named once, from the
     /// project folder, and kept with the workspace.

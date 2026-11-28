@@ -179,6 +179,9 @@ Targets: `cmds` (Mac app; scheme `CmdsApp`), `cmds-cli` (the CLI, embedded at `c
   also cancels (the partial item is removed), renames within a volume, copy + Trash across volumes; a taken name
   asks the main thread (semaphore) for skip / replace (Trash) / keep both (`FileNames.keepBoth`). Nothing is ever
   deleted for good. "The other pane" is the workspace's other files pane focused most recently (`Pane.focusedAt`).
+  Opening one file (Return, double-click, the tree) shows it in the workspace's preview pane like Space
+  (`openFileFromTerminal`); `FileOpening` keeps disk images, installers, archives, apps and links for their default app,
+  as do several files and ⌥.
   Follow Terminal follows the workspace's local terminal pane focused most recently (`followedTerminal`), on its
   OSC 7 changes and when it takes focus. Session restore keeps the folder, hidden files and Follow Terminal.
   A files pane with a `host` lists a folder on an SSH host over SFTP through the user's `ssh`; copies and moves that

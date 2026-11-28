@@ -389,7 +389,8 @@ final class FilesTableView: NSTableView, NSMenuItemValidation {
         guard let pane else { return super.keyDown(with: event) }
         let flags = event.modifierFlags.intersection([.command, .option, .control, .shift])
         switch (event.keyCode, flags) {
-        case (Self.returnKeyCode, []), (Self.keypadEnterKeyCode, []), (Self.downArrowKeyCode, [.command]):
+        case (Self.returnKeyCode, []), (Self.keypadEnterKeyCode, []), (Self.downArrowKeyCode, [.command]),
+             (Self.returnKeyCode, [.option]): // ⌥Return: the default app (FilesPane.opensInPane)
             pane.openSelection()
         case (Self.upArrowKeyCode, [.command]): pane.goUp()
         case (Self.spaceKeyCode, []): pane.previewSelection()
