@@ -7,26 +7,36 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <description>Updates of cmds for macOS</description>
     <language>en</language>
     <item>
-      <title>cmds 0.41.0</title>
-      <link>https://github.com/nntokyo/cmds/releases/tag/v0.41.0</link>
-      <sparkle:version>60</sparkle:version>
-      <sparkle:shortVersionString>0.41.0</sparkle:shortVersionString>
+      <title>cmds 0.42.0</title>
+      <link>https://github.com/nntokyo/cmds/releases/tag/v0.42.0</link>
+      <sparkle:version>61</sparkle:version>
+      <sparkle:shortVersionString>0.42.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <pubDate>Fri, 27 Nov 2026 07:46:31 GMT</pubDate>
+      <pubDate>Sat, 28 Nov 2026 07:34:16 GMT</pubDate>
       <description><![CDATA[
-<h3>新機能</h3>
+<h3>変更</h3>
 <ul>
-<li>ファイル一覧ペインにフォルダツリーを追加しました（#484）。バーの左端のボタン（ペイン › ファイル › フォルダツリーを表示、右クリックメニューからも）で、一覧の左にフォルダとその中身がツリーで出ます。Windows のエクスプローラーや VS Code のエクスプローラーのように、▶ でフォルダをその場で開けます。ツリーのフォルダやファイルをクリックすると一覧がそこへ移り、一覧で移動するとツリーも追従します。ツリーのフォルダにファイルをドロップするとコピー・移動できます。SSH ホストのフォルダでも使え、cmds を再起動しても残ります。</li>
+<li>ファイル一覧ペインでファイルを開く（ダブルクリック、Return。フォルダツリーからも）と、外部の App ではなく、一覧の隣のプレビューペインに表示するようにしました。ディスクイメージ・インストーラ・圧縮ファイル・App・Web リンクと、複数のファイルをまとめて開いたときは、これまでどおり既定の App で開きます。⌥ を押しながらのダブルクリック（⌥Return）や右クリックの「デフォルトの App で開く」で、どのファイルも既定の App で開けます。</li>
+<li>エージェントへの案内を更新しました。ファイルのアップロードは Chrome に頼らず <code>browser_upload</code> で行うよう伝え、<code>browser_navigate</code> と <code>browser_url</code> の説明に、読み込みの完了の待ち方と共有ログインの注意を加えました。</li>
 </ul>
-<h3>Added</h3>
+<h3>修正</h3>
 <ul>
-<li>Files panes have a folder tree (#484): the button at the left of the bar (also Pane › Files › Show Folder Tree and the context menu) shows the folder and everything below it as a tree on the left of the list, like the navigation pane of Windows Explorer or the explorer of VS Code. Folders open in place; clicking a folder or a file in the tree moves the list there, and the tree follows every move of the list. Files dropped on a folder of the tree are copied or moved into it. Works for folders on SSH hosts too, and is kept when cmds restarts.</li>
+<li>プロファイルを指定せずに開いたブラウザペイン（ファイル › 新規ブラウザ、リンク、プロファイルを決めていないエージェント）が、ワークスペースのほかのブラウザペインが使っているログインプロファイルではなく、ワークスペース専用のプロファイルを新しく作って使い、ログインしていない状態で開いていた問題を修正しました。ワークスペースのブラウザペインのプロファイル（なければターミナルに設定されたもの）を使います。</li>
+</ul>
+<h3>Changed</h3>
+<ul>
+<li>Opening a file in a files pane (double-click, Return, also in the folder tree) shows it in the workspace's preview pane beside the list instead of an outside app. Disk images, installers, archives, apps and web links still open in their default app, as do several files at once; ⌥-double-click or ⌥Return (and right-click › Open in Default App) opens any file in its default app.</li>
+<li>Agents are told to give files to a page with <code>browser_upload</code> instead of turning to Chrome, and the <code>browser_navigate</code> and <code>browser_url</code> descriptions say how to wait for a page and warn about shared sign-ins.</li>
+</ul>
+<h3>Fixed</h3>
+<ul>
+<li>A browser pane opened without a profile (File › New Browser, a link, an agent that set none) made and used the workspace's own login profile instead of the one the workspace's other browser panes use, and came up signed out. It now takes that profile (else the one a terminal of the workspace was set to).</li>
 </ul>
       ]]></description>
-      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.41.0/cmds-0.41.0.dmg" length="19011074" type="application/octet-stream" sparkle:edSignature="TihNTsnIs6H+DneMNQKkX1fr7zvi2jiXMlGI4FJYrlMC4y3JRWjytwkHLjyCc2AzZx3CHKNULhTRnLhv/0UOAQ=="></enclosure>
+      <enclosure url="https://github.com/nntokyo/cmds/releases/download/v0.42.0/cmds-0.42.0.dmg" length="19013893" type="application/octet-stream" sparkle:edSignature="KWoZrcUTMZKR4gzkX9N+u4db+gmpCdEG19+3DymVcyQ328b+42x6ZYBe5qLNPPEkFQB4l6MPgLfuCyq05uCdBQ=="></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 97BIgipfD+TiHk9nUG5McVxlqbM8AIn0ntCM5YEs2sjxYiXscWmQLJNm7i0c06qXWZ2ac0dlIRYs+3of/7cxAA==
-length: 2634
+edSignature: ytqiR1IX+N/uihH2WuRbObgJer6NEGJ1xpSl9iXON6BdcHPxt5ytSO6FnAUen42UNd3KOe/OuNGNcXGzRC0eAQ==
+length: 3893
 -->
