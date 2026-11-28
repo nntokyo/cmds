@@ -178,7 +178,7 @@ terminal panes opened from the agent's terminal (`terminal_split`, `cmds split` 
 panes or another agent's; both the server and the app check it. In an SSH pane the server can only reach that pane (the
 [remote socket](../internals/ssh.md) allows no splits), so the terminal tools refuse there. The server's instructions tell the
 agent to use these tools rather than Chrome inside cmds, and Chrome only when you ask for it, for pages that need your
-Chrome sign-ins (browser panes do not share them), or for what `browser_eval` cannot do (file uploads). Outside a cmds
+Chrome sign-ins (browser panes do not share them), or for what the browser tools cannot do (native dialogs; files are given with `browser_upload`). Outside a cmds
 terminal (`CMDS_PANE_ID` not set) the server offers no tools, so registering it for every project is harmless.
 
 cmds registers it by itself: when it starts, when you add a Claude account, and when Claude Code reports a config

@@ -142,7 +142,9 @@ public enum AssistantClaude {
         return arguments(prompt: prompt, model: answerModel, tools: noToolArguments)
     }
 
-    /// The interpreter: no tools, the small model.
+    /// The interpreter: no tools, the small model. The JSON is asked for in the prompt, not with `--json-schema`:
+    /// that adds a turn (the StructuredOutput tool), and in four Japanese commands (2026-11-28, Claude Code 2.1.332)
+    /// it took 1.5–1.8 s of API time instead of 0.7–1.3 s, while the prompt alone gave valid JSON every time.
     public static func interpreterArguments(utterance: String, world: AssistantWorld, language: String) -> [String] {
         arguments(prompt: interpreterPrompt(utterance: utterance, world: world, language: language),
                   model: interpreterModel, tools: noToolArguments)
