@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- A browser pane opened without a profile (File › New Browser, a link, an agent that set none) takes the login
+  profile the workspace's other browser panes use (else the one a terminal of it was set to), instead of making the
+  workspace's own profile beside it and coming up signed out.
+
 ### Changed
 
 - Opening a file in a files pane (double-click, Return, also in the folder tree) shows it in the workspace's preview
